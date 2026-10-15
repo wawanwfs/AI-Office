@@ -115,3 +115,7 @@
 ## 2026-10-15 21:33 WIB — logo resepsionis + zona tim
 - Logo resepsionis dibuat via canvas (SVG sebagai tekstur tidak andal), dipasang dua sisi; terkonfirmasi vision.
 - Karpet tim berwarna (backend biru, frontend pink, desain/devops hijau, QA/marketing/PM oranye) dengan polygonOffset.
+
+## 2026-10-15 21:47 WIB — tes vitest
+- Tambah 2 tes api (fallback HTTP status, detail objek). Bukti: vitest hasil di atas. Tidak ada perubahan src/ lain.
+- Berikutnya: meja per tim.

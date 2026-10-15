@@ -27,4 +27,13 @@ describe('api', () => {
     mock(500, { detail: 'boom' })
     await expect(api('x')).rejects.toThrow('boom')
   })
+  it('fallback HTTP status & path tanpa slash awal', async () => {
+    mock(503, null)
+    await expect(api('/tasks')).rejects.toThrow('HTTP 503')
+    expect(fetch.mock.calls[0][0]).toBe('/wfs-api/tasks')
+  })
+  it('detail objek di-stringify', async () => {
+    mock(422, { detail: { f: 1 } })
+    await expect(api('x')).rejects.toThrow('{"f":1}')
+  })
 })
