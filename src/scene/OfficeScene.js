@@ -1094,17 +1094,50 @@ const __wallObjs=[];
     F(wallRight,B(.1,2.1,.1),FM(null,FR),12.36,2.5,z-1.55);F(wallRight,B(.1,2.1,.1),FM(null,FR),12.36,2.5,z+1.55);
   });
   // fade: tembus pandang bila kamera berada di luar sisi dinding itu; ikut menyembunyikan saat nyaris tak terlihat
-  window.__wallFade=(cam)=>{window.__wallLast=null;
-    // dinding depan: kamera di z < -9.5+margin  -> pudar; kanan: kamera x > 12.5-margin
-    const near=(v,edge,sign)=>sign*(v-edge);
-    const cz=near(cam.z,-9.5,-1), cx=near(cam.x,12.5,1);       // >0 = kamera di luar dinding
-    const f=(d)=>Math.max(0,Math.min(1,1-(d+1.5)/6));         // 1=solid, 0=hilang
-    const af=f(cz), ar=f(cx);
-    const setA=(arr,a)=>{arr.forEach(m=>{const v=a>0.04;m.visible=v;});};
-    fadeMats.forEach(m=>{m.userData.__t=m.userData.__t||0});
-    wallFront.forEach(m=>{m.visible=af>0.04;m.material.opacity=af});
-    wallRight.forEach(m=>{m.visible=ar>0.04;m.material.opacity=ar});
-    window.__wallLast={front:+af.toFixed(2),right:+ar.toFixed(2),cam:[+cam.x.toFixed(1),+cam.y.toFixed(1),+cam.z.toFixed(1)]};
+  // Empat dinding: tiap dinding punya daftar objek (dinding + dekor menempel + tiang sudut) dan sisi "luar".
+  const wallDefs={
+    front:{objs:wallFront,out:(c)=>-9.5-c.z},      // kamera di z < -9.5 => luar
+    right:{objs:wallRight,out:(c)=>c.x-12.5},
+    back :{objs:[],out:(c)=>c.z-9.5},
+    left :{objs:[],out:(c)=>-12.5-c.x},
+  };
+  let collected=false;
+  const collect=()=>{
+    collected=true;
+    const known=new Set([...wallFront,...wallRight]);
+    office.children.forEach(m=>{
+      if(known.has(m)||!m.position||m===fl||m===ceil)return;
+      if(!(m.isMesh||m.isSprite||m.isLight===false&&m.isGroup))return;
+      const {x,y,z}=m.position, thin=0.55;
+      if(y>4.3||y<0.0)return;
+      const nearBack=Math.abs(z-9.5)<thin&&Math.abs(x)<=13, nearLeft=Math.abs(x+12.5)<thin&&Math.abs(z)<=10;
+      if(nearBack&&!nearLeft)wallDefs.back.objs.push(m);
+      else if(nearLeft&&!nearBack)wallDefs.left.objs.push(m);
+    });
+    __wallObjs.forEach(m=>{ if(!wallDefs.back.objs.includes(m)&&!wallDefs.left.objs.includes(m)){
+      if(m.position.z>9)wallDefs.back.objs.push(m); else if(m.position.x<-12)wallDefs.left.objs.push(m)}});
+    // semua material dinding belakang/kiri jadi transparan-bisa-diatur (klon agar tak bocor ke objek lain)
+    ['back','left'].forEach(k=>wallDefs[k].objs.forEach(m=>{
+      if(m.material&&!Array.isArray(m.material)&&!m.userData.__fm){m.material=m.material.clone();m.material.transparent=true;m.userData.__fm=1}}));
+    // tiang sudut mengikuti dinding yang lebih terlihat
+    window.__corners=office.children.filter(m=>m.isMesh&&Math.abs(Math.abs(m.position.x)-12.5)<.01&&Math.abs(Math.abs(m.position.z)-9.5)<.01&&Math.abs(m.position.y-2)<.01);
+  };
+  const fadeOf=(d)=>Math.max(0,Math.min(1,1-(d+1.5)/6));   // 1 = solid, 0 = hilang
+  window.__wallFade=(cam)=>{
+    if(!collected)collect();
+    const val={};
+    for(const k in wallDefs){
+      const a=fadeOf(wallDefs[k].out(cam)); val[k]=+a.toFixed(2);
+      wallDefs[k].objs.forEach(m=>{
+        const on=a>0.04; m.visible=on;
+        if(on&&m.material&&!Array.isArray(m.material)){m.material.transparent=true;m.material.opacity=a;}
+      });
+    }
+    (window.__corners||[]).forEach(m=>{
+      const kx=m.position.x<0?'left':'right', kz=m.position.z<0?'front':'back';
+      m.visible=Math.max(val[kx],val[kz])>0.5;                // tiang hanya bila dinding di sebelahnya terlihat
+    });
+    window.__wallLast={...val,cam:[+cam.x.toFixed(1),+cam.y.toFixed(1),+cam.z.toFixed(1)]};
     return window.__wallLast;
   };
   window.__wallState=()=>window.__wallLast;
