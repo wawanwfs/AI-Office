@@ -804,6 +804,7 @@ zoneData.forEach(z=>{
   const zt=new THREE.CanvasTexture(zc);zt.minFilter=THREE.LinearFilter;
   const zl=new THREE.Mesh(new THREE.PlaneGeometry(3.4,.64),new THREE.MeshBasicMaterial({map:zt,transparent:true}));
   zl.rotation.x=-Math.PI/2;zl.rotation.z=Math.PI;const zly=(z.label==='MEETING')?z.z+3.4:(z.label==='SERVER ROOM')?z.z+1.8:z.z;
+  zl.renderOrder=5;zl.material.depthTest=false;zl.material.transparent=true;
   zl.position.set(z.x,.05,zly);office.add(zl);
 });
 
@@ -1332,8 +1333,8 @@ office.add(pulseRing);
 // ═══════════════════════════════════════════════════
 const chatBubbles=[];
 const chatPhrases=[
-  'pushing to prod...','merge conflict 😤','coffee?','ship it!',
-  'lgtm 👍','who broke CI?','standup in 5','nice refactor',
+  'pushing to prod...','merge conflict!!','coffee?','ship it!',
+  'lgtm +1','who broke CI?','standup in 5','nice refactor',
   'read the ADR','need a review','lunch?','one more bug...',
   'deploying...','v10.8 is live','taste > speed','type safe pls',
 ];
