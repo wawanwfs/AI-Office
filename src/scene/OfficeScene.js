@@ -170,12 +170,6 @@ fl.position.y=-.075;fl.receiveShadow=true;office.add(fl);
 const cp=new THREE.Mesh(new THREE.BoxGeometry(10,.02,8),M(0xD0D8E0));
 cp.position.set(-3,.01,0);cp.receiveShadow=true;office.add(cp);
 
-// ALL WALLS TRANSPARENT GLASS
-[[0,-9.5,26,4,.06],[12.5,0,.06,4,20]].forEach(([x,z,w,h,d])=>{
-  const wall=new THREE.Mesh(new THREE.BoxGeometry(w,h,d),Glass());
-  wall.position.set(x,h/2,z);office.add(wall);
-});
-
 // Wainscot band (panel bawah dinding, warna hangat)
 [].forEach(([wx,wz,ww])=>{
   const band=new THREE.Mesh(new THREE.BoxGeometry(ww,1.1,.1),M(0xEFE9DD));
@@ -1060,9 +1054,60 @@ const __wallObjs=[];
   W(B(.28,.14,20),new THREE.MeshBasicMaterial({color:NAVY}),-12.47,.07,0);
   [-9.5,-3.2,3.2,9.5].forEach(z=>W(B(.32,4,.3),new THREE.MeshBasicMaterial({color:0xC7D0DE}),-12.45,2,z));
 
-  // ---- Plint rendah di dinding dekat kamera (kaca tetap transparan) ----
-  W(B(26,.22,.12),new THREE.MeshBasicMaterial({color:NAVY}),0,.11,-9.44);
-  W(B(.12,.22,20),new THREE.MeshBasicMaterial({color:NAVY}),12.44,.11,0);
+  // ---- DINDING DEPAN (z=-9.5) & KANAN (x=+12.5): solid, memudar otomatis bila kamera ada di sisinya ----
+  const fadeMats=[];
+  const FM=(map,color)=>{const m=new THREE.MeshBasicMaterial(map?{map,transparent:true}:{color,transparent:true});fadeMats.push(m);return m};
+  const upperF=tex('#E6EAF1','rgba(130,145,170,.30)');upperF.repeat.set(6,1);
+  const woodF=tex('#8A6244','rgba(40,25,10,.40)',512,256,32);woodF.repeat.set(6,1);
+  const upperR=tex('#E6EAF1','rgba(130,145,170,.30)');upperR.repeat.set(5,1);
+  const woodR=tex('#8A6244','rgba(40,25,10,.40)',512,256,32);woodR.repeat.set(5,1);
+  const wallFront=[], wallRight=[];
+  const F=(arr,geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);office.add(m);arr.push(m);return m};
+  // depan (z=-9.5), menghadap +Z
+  F(wallFront,B(26,4,.2),FM(upperF),0,2,-9.6);
+  F(wallFront,B(26,1.15,.24),FM(woodF),0,.575,-9.5);
+  F(wallFront,B(26,.08,.3),FM(null,NAVY),0,1.19,-9.46);
+  F(wallFront,B(26,.2,.34),FM(null,TRIM),0,3.9,-9.44);
+  F(wallFront,B(26,.14,.28),FM(null,NAVY),0,.07,-9.47);
+  [-13,-6.5,0,6.5,13].forEach(x=>F(wallFront,B(.3,4,.32),FM(null,0xC7D0DE),x,2,-9.45));
+  // jendela di dinding depan
+  [-8,-2,4,10].forEach(x=>{
+    const wm=new THREE.MeshBasicMaterial({map:skyTex,transparent:true});fadeMats.push(wm);
+    const win=new THREE.Mesh(new THREE.PlaneGeometry(3.0,1.9),wm);win.position.set(x,2.5,-9.38);office.add(win);wallFront.push(win);
+    const FR=0x2B3446;
+    F(wallFront,B(3.2,.1,.1),FM(null,FR),x,3.5,-9.36);F(wallFront,B(3.2,.1,.1),FM(null,FR),x,1.5,-9.36);
+    F(wallFront,B(.1,2.1,.1),FM(null,FR),x-1.55,2.5,-9.36);F(wallFront,B(.1,2.1,.1),FM(null,FR),x+1.55,2.5,-9.36);
+    F(wallFront,B(3.3,.07,.2),FM(null,TRIM),x,1.45,-9.3);
+  });
+  // kanan (x=+12.5), menghadap -X
+  F(wallRight,B(.2,4,20),FM(upperR),12.6,2,0);
+  F(wallRight,B(.24,1.15,20),FM(woodR),12.5,.575,0);
+  F(wallRight,B(.3,.08,20),FM(null,NAVY),12.46,1.19,0);
+  F(wallRight,B(.34,.2,20),FM(null,TRIM),12.44,3.9,0);
+  F(wallRight,B(.28,.14,20),FM(null,NAVY),12.47,.07,0);
+  [-9.5,-3.2,3.2,9.5].forEach(z=>F(wallRight,B(.32,4,.3),FM(null,0xC7D0DE),12.45,2,z));
+  [-5.5,0.5,6].forEach(z=>{
+    const wm=new THREE.MeshBasicMaterial({map:skyTex,transparent:true});fadeMats.push(wm);
+    const win=new THREE.Mesh(new THREE.PlaneGeometry(3.0,1.9),wm);win.position.set(12.38,2.5,z);win.rotation.y=-Math.PI/2;office.add(win);wallRight.push(win);
+    const FR=0x2B3446;
+    F(wallRight,B(.1,.1,3.2),FM(null,FR),12.36,3.5,z);F(wallRight,B(.1,.1,3.2),FM(null,FR),12.36,1.5,z);
+    F(wallRight,B(.1,2.1,.1),FM(null,FR),12.36,2.5,z-1.55);F(wallRight,B(.1,2.1,.1),FM(null,FR),12.36,2.5,z+1.55);
+  });
+  // fade: tembus pandang bila kamera berada di luar sisi dinding itu; ikut menyembunyikan saat nyaris tak terlihat
+  window.__wallFade=(cam)=>{window.__wallLast=null;
+    // dinding depan: kamera di z < -9.5+margin  -> pudar; kanan: kamera x > 12.5-margin
+    const near=(v,edge,sign)=>sign*(v-edge);
+    const cz=near(cam.z,-9.5,-1), cx=near(cam.x,12.5,1);       // >0 = kamera di luar dinding
+    const f=(d)=>Math.max(0,Math.min(1,1-(d+1.5)/6));         // 1=solid, 0=hilang
+    const af=f(cz), ar=f(cx);
+    const setA=(arr,a)=>{arr.forEach(m=>{const v=a>0.04;m.visible=v;});};
+    fadeMats.forEach(m=>{m.userData.__t=m.userData.__t||0});
+    wallFront.forEach(m=>{m.visible=af>0.04;m.material.opacity=af});
+    wallRight.forEach(m=>{m.visible=ar>0.04;m.material.opacity=ar});
+    window.__wallLast={front:+af.toFixed(2),right:+ar.toFixed(2),cam:[+cam.x.toFixed(1),+cam.y.toFixed(1),+cam.z.toFixed(1)]};
+    return window.__wallLast;
+  };
+  window.__wallState=()=>window.__wallLast;
 
   // ---- LOGO WFS PROJECT besar di dinding belakang ----
   const lc=document.createElement('canvas');lc.width=2048;lc.height=640;const l=lc.getContext('2d');
@@ -1486,6 +1531,7 @@ function animate(){
   // Labels
   agentData.forEach((a,i)=>{if(a.state==='sitting')a.label.position.y=LABEL_Y+Math.sin(elapsed*1.1+i*1.3)*.02});
   // Atap & lampu panel disembunyikan saat kamera di atas (agar isi kantor terlihat), dimunculkan dari sudut rendah
+  if(window.__wallFade)window.__wallFade(camera.position);
   { const hide = sph.phi < 1.15; ceil.visible=!hide; __ceilObjs.forEach(o=>{o.visible=!hide}); }
   // Anti-tumpuk label: dorong ke atas bila label lain terlalu dekat di layar (iterasi ringan)
   sizeLabels();

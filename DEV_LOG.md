@@ -136,3 +136,10 @@
 - Label: sprite ukuran layar tetap (sizeAttenuation=false), nama saja saat jauh, +role saat dekat; anti-tumpuk dihitung ulang.
 - Robot Bantuin AI: parts/robot.js (kepala kubah logam, mata LED, antena glow, panel dada).
 - Modul baru: daycycle.js (waktu, neon, shift).
+
+## 15-10 23:50 WIB — health check
+- Tanpa perubahan src/. Shot 627KB, vitest 9/9. Temuan vision: label SERVER tertutup rak, emoji bubble gagal render, label zona miring. Berikutnya: perbaiki itu.
+
+## 2026-10-15 22:52 WIB — 4 dinding solid + auto-fade
+- Dinding depan (z=-9.5) & kanan (x=+12.5) kini solid (panel, wainscot kayu, list navy, jendela), bukan kaca.
+- window.__wallFade(cam): dinding yang menghadap kamera memudar/hilang otomatis saat kamera di sisi luarnya. Terbukti 5 sudut (e2e_walls.py): theta 0 -> front 1,right 1; 90deg -> right 0; 180deg -> front 0; dst.
