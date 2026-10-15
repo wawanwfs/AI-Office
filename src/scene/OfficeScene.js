@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createFurniture } from './parts/furniture.js';
+import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets } from './parts/effects.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 
@@ -666,114 +667,6 @@ function pickCollab(ad){
   return options.length?options[Math.floor(Math.random()*options.length)]:null;
 }
 
-function updateWalkers(delta){
-  agentData.forEach(ad=>{
-    if(ad.state==='sitting'){
-      ad.timer-=delta;
-      if(ad.timer<=0){
-        // Stand up and walk
-        ad.state='walking_out';
-        ad.sittingChar.visible=false;
-        ad.walker.visible=true;
-        ad.walker.position.set(ad.home.x,0,ad.home.z);
-        const col=Math.random()<.75?pickCollab(ad):null;
-        if(col){
-          ad.collab=col; ad.partner=col.partner; ad._talk=-1;
-          window.__collabCount=(window.__collabCount||0)+1; window.__collabLast=ad.agent.name+'->'+col.partner.agent.name;
-          ad.walkTarget={x:col.partner.home.x+0.95,z:col.partner.home.z-0.15};
-        } else {
-          ad.collab=null; ad.partner=null;
-          const dest=walkDestinations[rng.i(0,walkDestinations.length-1)];
-          ad.walkTarget={x:dest.x+rng.r(-.5,.5),z:dest.z+rng.r(-.5,.5)};
-        }
-        ad.walkPause=0;
-      }
-    } else if(ad.state==='walking_out'){
-      const dx=ad.walkTarget.x-ad.walker.position.x;
-      const dz=ad.walkTarget.z-ad.walker.position.z;
-      const dist=Math.sqrt(dx*dx+dz*dz);
-
-      if(dist<.2){
-        // Arrived at destination — pause, then walk back
-        ad.walkPause+=delta;
-        if(ad.collab&&ad.partner){
-          ad.walker.rotation.y=Math.atan2(ad.partner.home.x-ad.walker.position.x,ad.partner.home.z-ad.walker.position.z);
-          ad.partner.sittingChar.rotation.y=Math.atan2(ad.walker.position.x-ad.partner.home.x,ad.walker.position.z-ad.partner.home.z);
-          const L=ad.collab.lines, step=Math.floor(ad.walkPause/1.8);
-          if(step!==ad._talk&&step<L.length){
-            ad._talk=step;
-            const mine=(step%2===0);
-            const sp=mine?ad.walker.position:{x:ad.partner.home.x,z:ad.partner.home.z};
-            createBubble(sp.x,2.6,sp.z,L[step],(mine?ad:ad.partner).agent.hex);
-          }
-          if(ad.walkPause>1.8*L.length+1.2){ ad.partner.sittingChar.rotation.y=0; ad.collab=null; ad.partner=null; ad.state='walking_back'; }
-        } else if(ad.walkPause>2+rng.r(0,2)){
-          ad.state='walking_back';
-        }
-      } else {
-        const speed=1.6*delta;
-        const nx=dx/dist, nz=dz/dist;
-        ad.walker.position.x+=nx*speed;
-        ad.walker.position.z+=nz*speed;
-        ad.walker.rotation.y=Math.atan2(nx,nz);
-        // Leg animation — alternating gait
-        const t=performance.now()*.01;
-        ad.walker.children.forEach(c=>{
-          if(c.userData&&c.userData.isLeg){
-            c.position.z=Math.sin(t+c.userData.phase)*.08;
-          }
-        });
-      }
-      // Label follows walker
-      ad.label.position.set(ad.walker.position.x,2.5,ad.walker.position.z);
-    } else if(ad.state==='walking_back'){
-      const dx=ad.home.x-ad.walker.position.x;
-      const dz=ad.home.z-ad.walker.position.z;
-      const dist=Math.sqrt(dx*dx+dz*dz);
-
-      if(dist<.2){
-        // Back at desk — sit down
-        ad.state='sitting';
-        ad.walker.visible=false;
-        ad.sittingChar.visible=true;
-        ad.label.position.set(ad.home.x,2.5,ad.home.z);
-        ad.timer=6+rng.r(0,14);
-        // Reset legs
-        ad.walker.children.forEach(c=>{if(c.userData&&c.userData.isLeg)c.position.z=0});
-      } else {
-        const speed=1.6*delta;
-        const nx=dx/dist,nz=dz/dist;
-        ad.walker.position.x+=nx*speed;
-        ad.walker.position.z+=nz*speed;
-        ad.walker.rotation.y=Math.atan2(nx,nz);
-        const t=performance.now()*.01;
-        ad.walker.children.forEach(c=>{
-          if(c.userData&&c.userData.isLeg)c.position.z=Math.sin(t+c.userData.phase)*.08;
-        });
-      }
-      ad.label.position.set(ad.walker.position.x,2.5,ad.walker.position.z);
-    } else if(ad.state==='leaving'){
-      // Walking toward exit
-      const dx=ad.walkTarget.x-ad.walker.position.x;
-      const dz=ad.walkTarget.z-ad.walker.position.z;
-      const dist=Math.sqrt(dx*dx+dz*dz);
-      if(dist<.5){
-        // Reached exit
-        ad.walker.visible=false;
-        ad.state='offsite';
-        ad.label.position.set(ad.home.x,2.5,ad.home.z);
-      } else {
-        const speed=2*delta;
-        const nx=dx/dist,nz=dz/dist;
-        ad.walker.position.x+=nx*speed;ad.walker.position.z+=nz*speed;
-        ad.walker.rotation.y=Math.atan2(nx,nz);
-        const t=performance.now()*.01;
-        ad.walker.children.forEach(c=>{if(c.userData&&c.userData.isLeg)c.position.z=Math.sin(t+c.userData.phase)*.08});
-      }
-      ad.label.position.set(ad.walker.position.x,2.5,ad.walker.position.z);
-    }
-  });
-}
 
 // ═══════════════════════════════════════════════════
 // MEETING LOGIC
@@ -1707,6 +1600,18 @@ function playMeetingChime(){
 // Track keyboard sounds
 let keyTimer=0;
 let stepTimer=0;
+// Tujuan jalan-jalan agent: pantry, dispenser, printer, lounge, ruang meeting, resepsionis
+const walkDestinations=[
+  {x:-9.4,z:3.6},   // pantry
+  {x:-9.5,z:0.9},   // dispenser air
+  {x:2.2,z:-7.0},   // printer
+  {x:9.4,z:4.8},    // lounge
+  {x:6.0,z:-0.6},   // pintu ruang meeting
+  {x:6.8,z:4.9},    // depan resepsionis
+  {x:-0.5,z:4.2},   // jalur tengah
+  {x:-3.2,z:-6.2},  // dekat tanaman belakang
+];
+const updateWalkers=createMotion({rng,agentData,walkDestinations,pickCollab,createBubble});
 let lastMeetingState=false;
 const clock=new THREE.Clock();
 function animate(){
