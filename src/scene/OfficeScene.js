@@ -582,7 +582,7 @@ allAgents.forEach((agent,i)=>{
   });
 });
 
-  window.__agentData=agentData; window.__cam={sph,tgt,upd:()=>updCam()}; // debug/e2e
+  window.__agentData=agentData; window.__screens=screenData; window.__cam={sph,tgt,upd:()=>updCam()}; // debug/e2e
   // Badge status real-time: poll gateway tiap 20s, warnai badge dada sesuai status task
   const __intervals=[];
   const __timeouts=[];
