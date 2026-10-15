@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createFurniture } from './parts/furniture.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets } from './parts/effects.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 
 export function createOfficeScene(container, callbacks = {}) {
@@ -1262,124 +1263,11 @@ for(let i=-3;i<=3;i++){
   }
 }
 
-// ═══════════════════════════════════════════════════
-// DESK MICRO DETAILS — headphones, mini plants
-// ═══════════════════════════════════════════════════
-// Mini desk plants (on every other desk)
-desks.forEach((dp,i)=>{
-  if(i%2===0){
-    // Small pot
-    const mpot=new THREE.Mesh(new THREE.BoxGeometry(.08,.08,.08),M(0xBCAAA4));
-    mpot.position.set(dp.x-.55,.8,dp.z+.2);office.add(mpot);
-    // Tiny leaves
-    for(let l=0;l<2;l++){
-      const ml=new THREE.Mesh(new THREE.BoxGeometry(.06,.1+rng.r(0,.06),.06),M(0x66BB6A));
-      ml.position.set(dp.x-.55+rng.r(-.02,.02),.88+l*.07,dp.z+.2+rng.r(-.02,.02));
-      office.add(ml);
-    }
-  }
-});
-
-// Headphones on some desks
-[0,2,4,6].forEach(i=>{
-  const dp=desks[i];
-  const hpBand=new THREE.Mesh(new THREE.BoxGeometry(.2,.03,.15),M(0x333333));
-  hpBand.position.set(dp.x-.5,.82,dp.z-.1);hpBand.rotation.z=.15;office.add(hpBand);
-  // Ear cups
-  [-1,1].forEach(s=>{
-    const cup=new THREE.Mesh(new THREE.BoxGeometry(.06,.08,.08),M(0x222222));
-    cup.position.set(dp.x-.5+s*.1,.8,dp.z-.1);office.add(cup);
-    // Padding
-    const pad=new THREE.Mesh(new THREE.BoxGeometry(.04,.06,.06),M(0x444444));
-    pad.position.set(dp.x-.5+s*.1,.8,dp.z-.1);office.add(pad);
-  });
-});
-
-// ═══════════════════════════════════════════════════
-// FLYING PAPERS — real physics-like floating papers
-// ═══════════════════════════════════════════════════
-const flyingPapers=[];
-const paperCount=22;
-const paperColors=[0x0DEEF3,0xF5A623,0x00E676,0xE040FB,0x448AFF,0xFF9100,0x7C4DFF,0xFF5252,0xFFF8E0,0x18FFFF,0xFF4081,0x69F0AE];
-
-for(let i=0;i<paperCount;i++){
-  const pw=rng.r(.12,.2),ph=rng.r(.15,.25);
-  const paper=new THREE.Mesh(
-    new THREE.PlaneGeometry(pw,ph),
-    new THREE.MeshLambertMaterial({color:rng.pick(paperColors),side:THREE.DoubleSide,transparent:true,opacity:0.85})
-  );
-  paper.position.set(rng.r(-8,6),rng.r(.5,3),rng.r(-6,7));
-  paper.rotation.set(rng.r(0,Math.PI),rng.r(0,Math.PI),rng.r(0,Math.PI));
-  paper.castShadow=true;
-  office.add(paper);
-
-  flyingPapers.push({
-    mesh:paper,
-    // Each paper has its own drift parameters
-    baseY:rng.r(1,2.8),
-    driftSpeedX:rng.r(.15,.4)*(rng.n()>.5?1:-1),
-    driftSpeedZ:rng.r(.1,.3)*(rng.n()>.5?1:-1),
-    bobSpeed:rng.r(.5,1.5),
-    bobAmp:rng.r(.2,.5),
-    tumbleSpeedX:rng.r(.3,1.2)*(rng.n()>.5?1:-1),
-    tumbleSpeedY:rng.r(.2,.8)*(rng.n()>.5?1:-1),
-    tumbleSpeedZ:rng.r(.1,.6)*(rng.n()>.5?1:-1),
-    flutterSpeed:rng.r(2,5), // fast wobble
-    flutterAmp:rng.r(.05,.15),
-    phase:rng.r(0,Math.PI*2),
-  });
-}
-
-// ═══════════════════════════════════════════════════
-// SCREEN ANIMATIONS
-// ═══════════════════════════════════════════════════
+// ═══ EFEK (modul parts/effects.js) ═══
+addDeskTrinkets({THREE,office,M,rng},desks);
+const __pages=createDriftingPages({THREE,office,rng});
 let frame=0;
-function drawScreen(s){
-  const{ctx:c,canvas:cv,type,hex}=s;
-  const w=cv.width,h=cv.height;
-  c.fillStyle='#0D1117';c.fillRect(0,0,w,h);
-  const t=frame*.02;
-  c.globalAlpha=1;
-
-  if(type==='lead'){
-    c.fillStyle=hex;c.globalAlpha=.12;
-    c.beginPath();c.moveTo(w/2,10);c.lineTo(w/2-18,38);c.lineTo(w/2-8,33);c.lineTo(w/2,40);c.lineTo(w/2+8,33);c.lineTo(w/2+18,38);c.closePath();c.fill();
-    c.globalAlpha=1;c.fillStyle=hex;
-    for(let i=0;i<8;i++){const y=(48+i*5+Math.floor(t*3))%h;c.globalAlpha=.2+Math.sin(i+t)*.1;c.fillRect(8,y,15+Math.sin(i*2.3+t)*20+20,2)}
-  }else if(type==='charts'){
-    c.fillStyle=hex;for(let i=0;i<6;i++){const bh=10+Math.abs(Math.sin(t+i*.8))*40;c.globalAlpha=.5;c.fillRect(10+i*18,h-8-bh,12,bh)}
-    c.strokeStyle=hex;c.globalAlpha=.7;c.lineWidth=1.5;c.beginPath();for(let x=0;x<w;x+=4){const y=25+Math.sin(x*.04+t)*12;x===0?c.moveTo(x,y):c.lineTo(x,y)}c.stroke();
-  }else if(type==='terminal'){
-    c.font='6px monospace';c.fillStyle=hex;
-    for(let i=0;i<12;i++){const y=(8+i*6+Math.floor(t*5))%(h+10);c.globalAlpha=.3+(i%3)*.15;c.fillText('const deploy=async()=>{await ship()}'.substr(Math.floor(t*2+i*5)%30,22),4,y)}
-    if(Math.sin(t*4)>0){c.globalAlpha=.8;c.fillRect(4,h-12,5,7)}
-  }else if(type==='palette'){
-    ['#E040FB','#FF4081','#7C4DFF','#448AFF','#18FFFF','#69F0AE'].forEach((cl,i)=>{c.fillStyle=cl;c.globalAlpha=.6;c.fillRect(8+(i%3)*38,8+Math.floor(i/3)*22,30,16)});
-    c.globalAlpha=.3;c.strokeStyle=hex;c.lineWidth=1;c.beginPath();c.arc(w/2,h/2+8,12+Math.sin(t)*4,0,Math.PI*2);c.stroke();
-  }else if(type==='map'){
-    c.strokeStyle=hex;c.globalAlpha=.2;c.lineWidth=.5;
-    for(let i=0;i<8;i++){c.beginPath();c.moveTo(0,i*10+5);c.lineTo(w,i*10+5);c.stroke();c.beginPath();c.moveTo(i*16+5,0);c.lineTo(i*16+5,h);c.stroke()}
-    c.globalAlpha=.6;c.fillStyle=hex;
-    [[30,20],[70,45],[100,30],[50,60]].forEach(([dx,dy])=>{c.beginPath();c.arc(dx+Math.sin(t+dx)*.5,dy,3,0,Math.PI*2);c.fill()});
-    c.strokeStyle=hex;c.globalAlpha=.4;c.lineWidth=1;c.beginPath();c.moveTo(30,20);c.lineTo(70,45);c.lineTo(100,30);c.stroke();
-  }else if(type==='deploy'){
-    c.fillStyle=hex;c.globalAlpha=.15;c.fillRect(10,10,w-20,12);
-    c.globalAlpha=.6;c.fillRect(10,10,(w-20)*((Math.sin(t*.5)+1)/2),12);
-    c.font='6px monospace';c.fillStyle=hex;c.globalAlpha=.8;c.fillText('Deploying...',10,38);c.fillText(`Build #${Math.floor(t*3)%999+100}`,10,50);
-    c.fillStyle='#00E676';c.fillText('✓ Tests passed',10,64);
-  }else if(type==='docs'){
-    c.fillStyle='rgba(255,255,255,.08)';c.fillRect(8,8,w-16,h-16);
-    c.font='6px monospace';c.fillStyle=hex;c.globalAlpha=.6;
-    ['# Research Notes','','> Architecture of','  taste memory needs','  branching context','','## Key Findings','- Semantic retrieval','- Temporal weighting'].forEach((l,i)=>c.fillText(l,14,20+i*7));
-  }else if(type==='bugs'){
-    c.font='6px monospace';
-    [['● PASS',hex],['● PASS','#00E676'],['● FAIL','#FF5252'],['● PASS',hex],['● RUNNING...',hex]].forEach(([txt,cl],i)=>{
-      c.fillStyle=cl;c.globalAlpha=(txt==='● RUNNING...'&&Math.sin(t*3)>0)?.3:.7;
-      c.fillText(txt,10,14+i*13);c.fillStyle='rgba(255,255,255,.3)';c.fillText(`test_${i+1}.js`,60,14+i*13);
-    });
-  }
-  c.globalAlpha=1;s.tex.needsUpdate=true;
-}
+const drawScreen=s=>drawScreenFrame(s,frame);
 
 // ═══════════════════════════════════════════════════
 // TIME SYSTEM
@@ -1868,15 +1756,7 @@ function animate(){
   }
   nxLabel.position.y=1.8+Math.sin(elapsed*1.1+9)*.03;
   // Papers
-  flyingPapers.forEach(fp=>{
-    const p=fp.mesh;
-    p.position.x+=fp.driftSpeedX*delta;p.position.z+=fp.driftSpeedZ*delta;
-    p.position.y=fp.baseY+Math.sin(elapsed*fp.bobSpeed+fp.phase)*fp.bobAmp;
-    p.rotation.x+=fp.tumbleSpeedX*delta;p.rotation.y+=fp.tumbleSpeedY*delta;
-    p.rotation.z+=Math.sin(elapsed*fp.flutterSpeed+fp.phase)*fp.flutterAmp*delta;
-    if(p.position.x>10)p.position.x=-10;if(p.position.x<-10)p.position.x=10;
-    if(p.position.z>8)p.position.z=-7;if(p.position.z<-7)p.position.z=8;
-  });
+  __pages.update(delta,elapsed);
   drawClock(timeOfDay);
 
   // Sounds — meeting chime only
