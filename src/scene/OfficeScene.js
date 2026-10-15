@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import { createFurniture } from './parts/furniture.js';
+import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 
 export function createOfficeScene(container, callbacks = {}) {
   const { onTimeUpdate, onStatusUpdate, onMeetingChange } = callbacks;
@@ -230,66 +232,9 @@ for(let i=-2;i<=2;i++){for(let j=-1;j<=1;j++){
   }
 }}
 
-// ═══════════════════════════════════════════════════
-// MEETING ROOM (right side)
-// ═══════════════════════════════════════════════════
-const MRX=8,MRZ=-3;
-// Glass partitions
-const mrGlass=Glass();
-// Left partition
-let w=new THREE.Mesh(new THREE.BoxGeometry(.06,3.5,5.5),mrGlass);w.position.set(MRX-2.8,1.75,MRZ);office.add(w);
-// Front — two panels with door gap
-w=new THREE.Mesh(new THREE.BoxGeometry(1.8,3.5,.06),mrGlass);w.position.set(MRX-1.9,1.75,MRZ+2.75);office.add(w);
-w=new THREE.Mesh(new THREE.BoxGeometry(1.8,3.5,.06),mrGlass);w.position.set(MRX+1.9,1.75,MRZ+2.75);office.add(w);
-
-// Frame lines
-[[MRX-2.8,MRZ-2.75],[MRX-2.8,MRZ+2.75],[MRX+2.8,MRZ-2.75],[MRX+2.8,MRZ+2.75]].forEach(([fx,fz])=>{
-  const f=new THREE.Mesh(new THREE.BoxGeometry(.05,3.5,.05),M(0x99AABB));
-  f.position.set(fx,1.75,fz);office.add(f);
-});
-
-// Meeting table
-const mt=new THREE.Mesh(new THREE.BoxGeometry(3.8,.07,1.5),M(0xDDE4EC));
-mt.position.set(MRX,.72,MRZ);mt.castShadow=true;mt.receiveShadow=true;office.add(mt);
-[[-1.6,-.55],[-1.6,.55],[1.6,-.55],[1.6,.55]].forEach(([tx,tz])=>{
-  const l=new THREE.Mesh(new THREE.BoxGeometry(.06,.7,.06),M(0xBBCCDD));
-  l.position.set(MRX+tx,.35,MRZ+tz);office.add(l);
-});
-
-// Meeting chairs
-const meetSeats=[
-  {x:MRX-1.4,z:MRZ-1.1,ry:0},{x:MRX,z:MRZ-1.1,ry:0},{x:MRX+1.4,z:MRZ-1.1,ry:0},
-  {x:MRX-1.4,z:MRZ+1.1,ry:Math.PI},{x:MRX,z:MRZ+1.1,ry:Math.PI},{x:MRX+1.4,z:MRZ+1.1,ry:Math.PI},
-];
-meetSeats.forEach(s=>{
-  const seat=new THREE.Mesh(new THREE.BoxGeometry(.35,.04,.35),M(0x37474F));
-  seat.position.set(s.x,.42,s.z);office.add(seat);
-  const bk=new THREE.Mesh(new THREE.BoxGeometry(.35,.32,.04),M(0x37474F));
-  const bz=s.z+(s.ry===0?-.19:.19);
-  bk.position.set(s.x,.6,bz);office.add(bk);
-  [-.12,.12].forEach(ox=>{[-.12,.12].forEach(oz=>{
-    const l=new THREE.Mesh(new THREE.BoxGeometry(.03,.4,.03),M(0x90A4AE));
-    l.position.set(s.x+ox,.2,s.z+oz);office.add(l);
-  })});
-});
-
-// Whiteboard
-const wbB=new THREE.Mesh(new THREE.BoxGeometry(2.6,1.1,.03),M(0xCCCCCC));
-wbB.position.set(MRX,2.2,MRZ-2.73);office.add(wbB);
-const wbF=new THREE.Mesh(new THREE.BoxGeometry(2.4,.96,.02),M(0xFAFAFA));
-wbF.position.set(MRX,2.2,MRZ-2.71);office.add(wbF);
-// WB text
-const wbc=document.createElement('canvas');wbc.width=256;wbc.height=100;
-const wbx=wbc.getContext('2d');
-wbx.fillStyle='#FAFAFA';wbx.fillRect(0,0,256,100);
-wbx.font='bold 18px sans-serif';wbx.fillStyle='#F59E0B';wbx.fillText('WFS',20,28);
-wbx.font='11px monospace';wbx.fillStyle='#888';
-wbx.fillText('Sprint 10 · Day 9',20,48);
-wbx.fillText('▸ Ship preview pane',20,66);
-wbx.fillText('▸ Forge wiring v2',20,82);
-const wbt=new THREE.CanvasTexture(wbc);
-const wbm=new THREE.Mesh(new THREE.PlaneGeometry(2.3,.92),new THREE.MeshBasicMaterial({map:wbt}));
-wbm.position.set(MRX,2.2,MRZ-2.7);office.add(wbm);
+// ═══ RUANG MEETING (modul parts/room.js) ═══
+const __mr=createMeetingRoom({THREE,office,M},Glass());
+const MRX=__mr.MRX,MRZ=__mr.MRZ,meetSeats=__mr.meetSeats;
 
 // ═══════════════════════════════════════════════════
 // DESK POSITIONS — agents face NEGATIVE Z (toward monitor)
@@ -873,37 +818,9 @@ function updateMeeting(minutes){
   }
 }
 
-// ═══════════════════════════════════════════════════
-// OFFICE DETAILS
-// ═══════════════════════════════════════════════════
-// Water cooler
-let wc=new THREE.Mesh(new THREE.BoxGeometry(.28,.55,.28),M(0xE0E0E0));
-wc.position.set(-10.5,.275,0);office.add(wc);
-let wt=new THREE.Mesh(new THREE.BoxGeometry(.22,.25,.22),M(0x90CAF9));
-wt.position.set(-10.5,.675,0);office.add(wt);
-
-// Plants
-function addPlant(px,pz,big=false){
-  const s=big?1.3:1;
-  const pot=new THREE.Mesh(new THREE.BoxGeometry(.28*s,.22*s,.28*s),M(0xECEFF1));
-  pot.position.set(px,.11*s,pz);pot.castShadow=true;office.add(pot);
-  for(let i=0;i<(big?4:3);i++){
-    const leaf=new THREE.Mesh(new THREE.BoxGeometry((.12+rng.r(0,.12))*s,(.2+rng.r(0,.25))*s,.12*s),M(rng.n()>.5?0x66BB6A:0x388E3C));
-    leaf.position.set(px+rng.r(-.06,.06)*s,.32*s+i*.18*s,pz+rng.r(-.06,.06)*s);
-    leaf.rotation.y=rng.r(0,Math.PI);leaf.castShadow=true;office.add(leaf);
-  }
-}
-addPlant(-11,8,true);addPlant(-11,-8);addPlant(11,-8);addPlant(-2,-8);addPlant(-6,8,true);
-
-// Bookshelf
-for(let r=0;r<3;r++){
-  const sh=new THREE.Mesh(new THREE.BoxGeometry(1.8,.04,.3),M(0xDDE4EC));
-  sh.position.set(-11.5,.5+r*.55,-5);office.add(sh);
-  for(let b=0;b<5;b++){
-    const bk=new THREE.Mesh(new THREE.BoxGeometry(.12,.35+rng.r(0,.15),.22),M([0x448AFF,0xFF5252,0xF5A623,0x7C4DFF,0x00E676][b]));
-    bk.position.set(-12.2+b*.3,.5+r*.55+.2,-5);office.add(bk);
-  }
-}
+// ═══ PERABOT (modul terpisah: parts/furniture.js) ═══
+const __furn=createFurniture({THREE,office,M,MB,rng});
+const addPlant=__furn.addPlant;
 
 // ═══════════════════════════════════════════════════
 // RECEPTION DESK WITH WFS LOGO (front-right, near meeting room)
@@ -988,145 +905,6 @@ nxLabel.scale.set(3.2,.8,1);nxLabel.position.set(RCX-.4,3.3,RCZ-.4);
 reception.add(nxLabel);
 
 office.add(reception);
-
-// ═══════════════════════════════════════════════════
-// SOFA / LOUNGE AREA (right of reception, placed vertically)
-// ═══════════════════════════════════════════════════
-const lounge=new THREE.Group();
-const SX=10.5,SZ=6;
-// Sofa base (rotated — depth along Z axis)
-const sofaBase=new THREE.Mesh(new THREE.BoxGeometry(.7,.35,2),M(0x37474F));
-sofaBase.position.set(SX,.175,SZ);sofaBase.castShadow=true;lounge.add(sofaBase);
-// Seat cushion
-const sofaSeat=new THREE.Mesh(new THREE.BoxGeometry(.55,.12,1.9),M(0x455A64));
-sofaSeat.position.set(SX-.05,.41,SZ);lounge.add(sofaSeat);
-// Back cushion (against wall side)
-const sofaBack=new THREE.Mesh(new THREE.BoxGeometry(.12,.4,1.9),M(0x455A64));
-sofaBack.position.set(SX+.35,.55,SZ);lounge.add(sofaBack);
-// Armrests
-[-1,1].forEach(s=>{
-  const arm=new THREE.Mesh(new THREE.BoxGeometry(.7,.25,.15),M(0x37474F));
-  arm.position.set(SX,.3,SZ+s*1.05);lounge.add(arm);
-});
-// Coffee table (in front of sofa, along Z)
-const cTable=new THREE.Mesh(new THREE.BoxGeometry(.5,.04,1),M(0xDDE4EC));
-cTable.position.set(SX-.7,.38,SZ);lounge.add(cTable);
-// Table legs
-[[-0.18,-.4],[-.18,.4],[.18,-.4],[.18,.4]].forEach(([tx,tz])=>{
-  const tl=new THREE.Mesh(new THREE.BoxGeometry(.04,.36,.04),M(0xBBCCDD));
-  tl.position.set(SX-.7+tx,.18,SZ+tz);lounge.add(tl);
-});
-// Magazines on table
-const mag1=new THREE.Mesh(new THREE.BoxGeometry(.3,.015,.22),M(0xFF5252));
-mag1.position.set(SX-.7,.4,SZ-.15);mag1.rotation.y=.2;lounge.add(mag1);
-const mag2=new THREE.Mesh(new THREE.BoxGeometry(.3,.015,.22),M(0x448AFF));
-mag2.position.set(SX-.7,.4,SZ+.15);mag2.rotation.y=-.15;lounge.add(mag2);
-
-office.add(lounge);
-
-// ═══════════════════════════════════════════════════
-// PRINTER / COPIER (near back wall)
-// ═══════════════════════════════════════════════════
-const printer=new THREE.Group();
-// Body
-const prBody=new THREE.Mesh(new THREE.BoxGeometry(.7,.45,.5),M(0xE0E0E0));
-prBody.position.set(3,.225,-8);prBody.castShadow=true;printer.add(prBody);
-// Top cover (darker)
-const prTop=new THREE.Mesh(new THREE.BoxGeometry(.72,.04,.52),M(0xCCCCCC));
-prTop.position.set(3,.47,-8);printer.add(prTop);
-// Paper tray
-const prTray=new THREE.Mesh(new THREE.BoxGeometry(.5,.03,.35),M(0xFAFAFA));
-prTray.position.set(3,.15,-7.7);printer.add(prTray);
-// Status light
-const prLED=new THREE.Mesh(new THREE.BoxGeometry(.04,.04,.02),MB(0x00E676));
-prLED.position.set(3.25,.4,-7.74);printer.add(prLED);
-// Control panel
-const prPanel=new THREE.Mesh(new THREE.BoxGeometry(.2,.12,.02),M(0x333333));
-prPanel.position.set(3,.42,-7.74);printer.add(prPanel);
-// Stand
-const prStand=new THREE.Mesh(new THREE.BoxGeometry(.6,.5,.45),M(0xBBBBBB));
-prStand.position.set(3,.25,-8);office.add(prStand);
-// Legs
-[[-0.25,-.18],[.25,-.18],[-.25,.18],[.25,.18]].forEach(([px,pz])=>{
-  const pl=new THREE.Mesh(new THREE.BoxGeometry(.04,.5,.04),M(0x999999));
-  pl.position.set(3+px,.25,-8+pz);office.add(pl);
-});
-
-office.add(printer);
-
-// ═══════════════════════════════════════════════════
-// SNACK COUNTER / COFFEE MACHINE (near water cooler)
-// ═══════════════════════════════════════════════════
-const snackArea=new THREE.Group();
-// Counter
-const counter=new THREE.Mesh(new THREE.BoxGeometry(1.6,.8,.5),M(0xDDE4EC));
-counter.position.set(-10.5,.4,2.5);counter.castShadow=true;snackArea.add(counter);
-// Counter top
-const ctrTop=new THREE.Mesh(new THREE.BoxGeometry(1.7,.04,.6),M(0xE8ECF0));
-ctrTop.position.set(-10.5,.82,2.5);snackArea.add(ctrTop);
-
-// Coffee machine
-const coffMachine=new THREE.Mesh(new THREE.BoxGeometry(.25,.35,.2),M(0x333333));
-coffMachine.position.set(-10.8,1.0,2.5);coffMachine.castShadow=true;snackArea.add(coffMachine);
-// Coffee machine top
-const coffTop=new THREE.Mesh(new THREE.BoxGeometry(.27,.03,.22),M(0x222222));
-coffTop.position.set(-10.8,1.18,2.5);snackArea.add(coffTop);
-// Nozzle area
-const coffNoz=new THREE.Mesh(new THREE.BoxGeometry(.15,.04,.04),M(0x666666));
-coffNoz.position.set(-10.8,.88,2.42);snackArea.add(coffNoz);
-// Status light
-const coffLED=new THREE.Mesh(new THREE.BoxGeometry(.03,.03,.01),MB(0x0DEEF3));
-coffLED.position.set(-10.72,1.1,2.39);snackArea.add(coffLED);
-
-// Snack bowls
-const bowl1=new THREE.Mesh(new THREE.BoxGeometry(.2,.08,.2),M(0xFFFFFF));
-bowl1.position.set(-10.2,.88,2.5);snackArea.add(bowl1);
-// Colorful snacks inside
-[0xFF5252,0xF5A623,0x00E676].forEach((c,i)=>{
-  const snack=new THREE.Mesh(new THREE.BoxGeometry(.04,.04,.04),M(c));
-  snack.position.set(-10.2+rng.r(-.06,.06),.93,2.5+rng.r(-.06,.06));
-  snackArea.add(snack);
-});
-
-// Microwave
-const micro=new THREE.Mesh(new THREE.BoxGeometry(.35,.22,.25),M(0xE0E0E0));
-micro.position.set(-10.5,.95,2.5);snackArea.add(micro);
-const microDoor=new THREE.Mesh(new THREE.BoxGeometry(.3,.18,.02),M(0x111111));
-microDoor.position.set(-10.5,.95,2.36);snackArea.add(microDoor);
-
-office.add(snackArea);
-
-// ═══════════════════════════════════════════════════
-// WALL POSTERS / ART FRAMES (on glass walls, floating)
-// ═══════════════════════════════════════════════════
-const posterData=[
-  {x:-11.4,z:-2,color:0x0DEEF3,text:'SHIP IT'},
-  {x:-11.4,z:3,color:0xF5A623,text:'TASTE > SPEED'},
-  {x:-11.4,z:6,color:0xFF5252,text:'BUILD DAILY'},
-  {x:11.4,z:-2,color:0x7C4DFF,text:'LESS HEDGE'},
-  {x:11.4,z:3,color:0x00E676,text:'MORE CRAFT'},
-];
-posterData.forEach(p=>{
-  // Frame
-  const frame=new THREE.Mesh(new THREE.BoxGeometry(.04,.7,.5),M(0x2A2A2A));
-  frame.position.set(p.x,2.2,p.z);frame.castShadow=true;office.add(frame);
-  // Canvas texture
-  const pc=document.createElement('canvas');pc.width=100;pc.height=140;
-  const px=pc.getContext('2d');
-  px.fillStyle='#1A1A2E';px.fillRect(0,0,100,140);
-  px.font='bold 14px sans-serif';px.textAlign='center';
-  px.fillStyle=new THREE.Color(p.color).getStyle();
-  px.shadowColor=px.fillStyle;px.shadowBlur=6;
-  // Split text into lines
-  const words=p.text.split(' ');
-  words.forEach((w,i)=>px.fillText(w,50,55+i*22));
-  const ptex=new THREE.CanvasTexture(pc);
-  const poster=new THREE.Mesh(new THREE.PlaneGeometry(.45,.65),new THREE.MeshBasicMaterial({map:ptex}));
-  poster.position.set(p.x+(p.x<0?.03:-.03),2.2,p.z);
-  poster.rotation.y=p.x<0?Math.PI/2:-Math.PI/2;
-  office.add(poster);
-});
-
 
 // ═══════════════════════════════════════════════════
 // WFS EXTRAS — kafe, server room, rak buku, water cooler, zona lantai
@@ -1453,67 +1231,13 @@ const __wallObjs=[];
   });
 })();
 
-// ═══════════════════════════════════════════════════
-// ANIMATED WALL CLOCK
-// ═══════════════════════════════════════════════════
-// Clock body (on back glass wall)
-const clockBody=new THREE.Mesh(new THREE.BoxGeometry(.5,.5,.04),M(0xFAFAFA));
-clockBody.position.set(-4.6,2.9,9.3);office.add(clockBody);
-const clockFrame=new THREE.Mesh(new THREE.BoxGeometry(.55,.55,.03),M(0x333333));
-clockFrame.position.set(-4.6,2.9,9.32);office.add(clockFrame);
-// Clock face (canvas — animated in render loop)
-const clockCanvas=document.createElement('canvas');clockCanvas.width=80;clockCanvas.height=80;
-const clockCtx=clockCanvas.getContext('2d');
-const clockTex=new THREE.CanvasTexture(clockCanvas);clockTex.minFilter=THREE.LinearFilter;
-const clockFace=new THREE.Mesh(new THREE.PlaneGeometry(.44,.44),new THREE.MeshBasicMaterial({map:clockTex}));
-clockFace.position.set(-4.6,2.9,9.27);clockFace.rotation.y=Math.PI;office.add(clockFace);
+// ═══ JAM DINDING (modul parts/room.js) ═══
+const __clk=createWallClock({THREE,office,M},-4.6,2.9,9.27,Math.PI);
+const drawClock=__clk.draw;
 
-function drawClock(minutes){
-  const c=clockCtx,w=80,h=80,cx=w/2,cy=h/2;
-  c.fillStyle='#FAFAFA';c.fillRect(0,0,w,h);
-  // Hour marks
-  c.fillStyle='#333';
-  for(let i=0;i<12;i++){
-    const a=i*Math.PI/6-Math.PI/2;
-    c.fillRect(cx+Math.cos(a)*30-1,cy+Math.sin(a)*30-1,3,3);
-  }
-  const hrs=(minutes/60)%12;
-  const mins=minutes%60;
-  // Hour hand
-  const ha=hrs*Math.PI/6-Math.PI/2;
-  c.strokeStyle='#333';c.lineWidth=2.5;c.beginPath();
-  c.moveTo(cx,cy);c.lineTo(cx+Math.cos(ha)*16,cy+Math.sin(ha)*16);c.stroke();
-  // Minute hand
-  const ma=mins*Math.PI/30-Math.PI/2;
-  c.strokeStyle='#555';c.lineWidth=1.5;c.beginPath();
-  c.moveTo(cx,cy);c.lineTo(cx+Math.cos(ma)*24,cy+Math.sin(ma)*24);c.stroke();
-  // Second hand (teal, ticking with real time)
-  const sec=(Date.now()/1000)%60;
-  const sa=sec*Math.PI/30-Math.PI/2;
-  c.strokeStyle='#0DEEF3';c.lineWidth=.8;c.beginPath();
-  c.moveTo(cx,cy);c.lineTo(cx+Math.cos(sa)*26,cy+Math.sin(sa)*26);c.stroke();
-  // Center dot
-  c.fillStyle='#0DEEF3';c.beginPath();c.arc(cx,cy,2,0,Math.PI*2);c.fill();
-  clockTex.needsUpdate=true;
-}
 
-// ═══════════════════════════════════════════════════
-// HANGING PENDANT LIGHTS OVER DESKS
-// ═══════════════════════════════════════════════════
-desks.forEach((dp,i)=>{
-  // Cable
-  const cable=new THREE.Mesh(new THREE.BoxGeometry(.02,.8,.02),M(0x333333));
-  cable.position.set(dp.x,3.65,dp.z);office.add(cable);
-  // Shade (cone-ish = inverted truncated box)
-  const shade=new THREE.Mesh(new THREE.BoxGeometry(.35,.15,.35),M(0x2A2A2A));
-  shade.position.set(dp.x,3.2,dp.z);office.add(shade);
-  // Bulb (glowing)
-  const bulb=new THREE.Mesh(new THREE.BoxGeometry(.1,.08,.1),MB(0xFFF8E0));
-  bulb.position.set(dp.x,3.12,dp.z);office.add(bulb);
-  // Warm light
-  const pLight=new THREE.PointLight(0xFFE8CC,0.15,4,2);
-  pLight.position.set(dp.x,3.1,dp.z);office.add(pLight);
-});
+// ═══ LAMPU GANTUNG (modul parts/room.js) ═══
+createCeilingFixtures({THREE,office,M,MB},desks);
 
 // ═══════════════════════════════════════════════════
 // AC VENTS / DUCTS ON CEILING
