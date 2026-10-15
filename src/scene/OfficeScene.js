@@ -921,13 +921,25 @@ const rcSide=new THREE.Mesh(new THREE.BoxGeometry(.6,.9,.04),M(0x1A2A3A));
 rcSide.position.set(RCX+1.25,.45,RCZ-.3);reception.add(rcSide);
 
 // Logo WFS Project di depan meja resepsionis
-const wfsLogoTex=new THREE.TextureLoader().load('./wfs-logo.svg');
-wfsLogoTex.minFilter=THREE.LinearFilter;
+const wfsLogoTex=(()=>{
+  const c=document.createElement('canvas');c.width=1024;c.height=320;const x=c.getContext('2d');
+  x.fillStyle='#0F1B2E';x.fillRect(0,0,1024,320);
+  x.strokeStyle='#D4AF37';x.lineWidth=8;x.strokeRect(6,6,1012,308);
+  const g=x.createLinearGradient(40,40,240,280);g.addColorStop(0,'#FBBF24');g.addColorStop(1,'#F97316');
+  const hx=(cx,cy,r)=>{x.beginPath();for(let i=0;i<6;i++){const a=Math.PI/6+i*Math.PI/3;x.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));}x.closePath();};
+  hx(150,160,115);x.fillStyle=g;x.fill();hx(150,160,98);x.fillStyle='#0F1B2E';x.fill();
+  x.fillStyle=g;x.font='900 130px Arial,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('W',150,168);
+  x.textAlign='left';x.textBaseline='alphabetic';
+  x.fillStyle='#fff';x.font='900 150px Arial,sans-serif';x.fillText('WFS',300,175);
+  x.fillStyle='#FBBF24';x.font='800 78px Arial,sans-serif';x.fillText('PROJECT',306,265);
+  const t=new THREE.CanvasTexture(c);t.minFilter=THREE.LinearFilter;return t;
+})();
 const rcLogoMesh=new THREE.Mesh(
   new THREE.PlaneGeometry(1.8,.5625),
   new THREE.MeshBasicMaterial({map:wfsLogoTex,transparent:true})
 );
 rcLogoMesh.position.set(RCX,.5,RCZ+.31);reception.add(rcLogoMesh);
+const rcLogoFront=rcLogoMesh.clone();rcLogoFront.position.set(RCX,.5,RCZ-.31);rcLogoFront.rotation.y=Math.PI;reception.add(rcLogoFront);
 
 // Teal glow strip under desk front
 const rcGlow=new THREE.Mesh(new THREE.BoxGeometry(2.2,.02,.02),MB(0x0DEEF3));
