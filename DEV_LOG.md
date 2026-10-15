@@ -111,3 +111,7 @@
 - Ticker dilebarkan (920px) dan fade tepi dikurangi agar teks tidak terpotong.
 - Verifikasi: build OK, shot=627KB.
 - Berikutnya: tata ruang meja per tim.
+
+## 2026-10-15 21:33 WIB — logo resepsionis + zona tim
+- Logo resepsionis dibuat via canvas (SVG sebagai tekstur tidak andal), dipasang dua sisi; terkonfirmasi vision.
+- Karpet tim berwarna (backend biru, frontend pink, desain/devops hijau, QA/marketing/PM oranye) dengan polygonOffset.

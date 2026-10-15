@@ -1156,6 +1156,22 @@ zoneData.forEach(z=>{
   zl.position.set(z.x,.05,zly);office.add(zl);
 });
 
+// --- ZONA TIM: karpet tipis + papan nama per kelompok meja ---
+(function(){
+  const teams=[
+    {label:'TIM BACKEND & AI', color:0x3B82F6, cx:-6, cz:-3,  w:7.4, d:3.2},
+    {label:'TIM FRONTEND & MOBILE', color:0xF472B6, cx:-2, cz:1.5, w:7.4, d:3.2},
+    {label:'TIM DESAIN & DEVOPS', color:0x34D399, cx:-6, cz:6,   w:7.4, d:3.2},
+    {label:'TIM QA, MARKETING & PM', color:0xFB923C, cx:4, cz:1.5, w:3.6, d:11.0},
+  ];
+  teams.forEach(t=>{
+    const m=new THREE.Mesh(new THREE.BoxGeometry(t.w,.012,t.d),new THREE.MeshBasicMaterial({color:t.color,transparent:true,opacity:.22,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));
+    m.position.set(t.cx,.045,t.cz);m.renderOrder=1;office.add(m);
+    const e=new THREE.Mesh(new THREE.BoxGeometry(t.w,.014,.06),new THREE.MeshBasicMaterial({color:t.color,transparent:true,opacity:.55}));
+    e.position.set(t.cx,.05,t.cz+t.d/2);office.add(e);
+  });
+})();
+
 // --- CAFÉ / COFFEE BAR (depan kiri) ---
 const cafe=new THREE.Group();
 const CFX=-9.5, CFZ=7.5;
