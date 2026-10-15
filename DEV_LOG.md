@@ -137,8 +137,10 @@
 - Robot Bantuin AI: parts/robot.js (kepala kubah logam, mata LED, antena glow, panel dada).
 - Modul baru: daycycle.js (waktu, neon, shift).
 
-## 15-10 23:50 WIB — health check
-- Tanpa perubahan src/. Shot 627KB, vitest 9/9. Temuan vision: label SERVER tertutup rak, emoji bubble gagal render, label zona miring. Berikutnya: perbaiki itu.
+## 15-10 23:35 WIB — label zona selalu terlihat + emoji bubble diganti ASCII
+- Label zona lantai (termasuk SERVER ROOM): renderOrder=5 + depthTest=false, tak lagi tertutup rak server. Emoji bubble ('merge conflict 😤'→'merge conflict!!', 'lgtm 👍'→'lgtm +1') diganti ASCII karena gagal render di canvas swiftshader.
+- Verifikasi: build OK (430ms), deploy ke ~/wfs-hq, shot e1.png 620KB (scene normal), e2e_bubbles: 11 agent sitting, 9 kolaborasi, bubble tanpa emoji. Catatan jujur: vision_analyze mati (503/403 provider), inspeksi visual diganti cek piksel amber label (242 px) + e2e perilaku.
+- vitest 9/9. Backup 1015-2335. Berikutnya: perbaiki label zona miring (rotasi menghadap kamera) & tata ruang meja per tim.
 
 ## 2026-10-15 22:52 WIB — 4 dinding solid + auto-fade
 - Dinding depan (z=-9.5) & kanan (x=+12.5) kini solid (panel, wainscot kayu, list navy, jendela), bukan kaca.
