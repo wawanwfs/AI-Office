@@ -1,0 +1,8 @@
+node_modules
+dist
+.env
+.env.*
+*.log
+*.tgz
+.wfs_ui_token
+*.png.tmp
