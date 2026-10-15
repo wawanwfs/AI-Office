@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { createFurniture } from './parts/furniture.js';
+import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets } from './parts/effects.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
@@ -583,7 +584,7 @@ allAgents.forEach((agent,i)=>{
   });
 });
 
-  window.__agentData=agentData; window.__screens=screenData; window.__cam={sph,tgt,upd:()=>updCam()}; // debug/e2e
+  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__cam={sph,tgt,upd:()=>updCam()}; // debug/e2e
   // Badge status real-time: poll gateway tiap 20s, warnai badge dada sesuai status task
   const __intervals=[];
   const __timeouts=[];
@@ -671,46 +672,10 @@ function pickCollab(ad){
 // ═══════════════════════════════════════════════════
 // MEETING LOGIC
 // ═══════════════════════════════════════════════════
-let inMeeting=false;
-// badge handled by React
-const meetChars=[];
-// Pre-build meeting room sitting chars for first 6 agents
-AGENTS.slice(0,6).forEach((agent,i)=>{
-  const mc=buildChar(agent,false);
-  mc.scale.setScalar(1.7);
-  const s=meetSeats[i];
-  mc.position.set(s.x,0,s.z);
-  // Sitting char eyes face -Z in local space.
-  // Back row (lower z, behind table): need to face +Z toward table → rotation.y = PI
-  // Front row (higher z, in front of table): need to face -Z toward table → rotation.y = 0
-  mc.rotation.y = s.z < MRZ ? Math.PI : 0;
-  mc.visible=false;
-  office.add(mc);
-  meetChars.push(mc);
-});
+const __meet=createMeeting({THREE,office,rng,agents:AGENTS,agentData,buildChar,seats:meetSeats,roomZ:MRZ,onChange:onMeetingChange});
+const meetChars=__meet.figures;
+const updateMeeting=m=>__meet.update(m);
 
-function updateMeeting(minutes){
-  const shouldMeet=(minutes>=600&&minutes<=630)||(minutes>=840&&minutes<=870);
-  if(shouldMeet&&!inMeeting){
-    inMeeting=true;if(onMeetingChange)onMeetingChange(true);
-    meetChars.forEach(c=>c.visible=true);
-    // Pause walking for meeting agents
-    agentData.slice(0,6).forEach(ad=>{
-      if(ad.state!=='sitting'){
-        ad.walker.visible=false;ad.sittingChar.visible=false;
-      } else { ad.sittingChar.visible=false; }
-      ad.state='meeting';
-    });
-  } else if(!shouldMeet&&inMeeting){
-    inMeeting=false;if(onMeetingChange)onMeetingChange(false);
-    meetChars.forEach(c=>c.visible=false);
-    agentData.slice(0,6).forEach(ad=>{
-      ad.state='sitting';ad.sittingChar.visible=true;
-      ad.label.position.set(ad.home.x,2.5,ad.home.z);
-      ad.timer=3+rng.r(0,6);
-    });
-  }
-}
 
 // ═══ PERABOT (modul terpisah: parts/furniture.js) ═══
 const __furn=createFurniture({THREE,office,M,MB,rng});
@@ -1665,8 +1630,8 @@ function animate(){
   drawClock(timeOfDay);
 
   // Sounds — meeting chime only
-  if(inMeeting&&!lastMeetingState&&soundsStarted)playMeetingChime();
-  lastMeetingState=inMeeting;
+  if(__meet.active&&!lastMeetingState&&soundsStarted)playMeetingChime();
+  lastMeetingState=__meet.active;
 
   renderer.render(scene,camera);
 }
@@ -1695,7 +1660,7 @@ const onResize=()=>{camera.aspect=container.clientWidth/container.clientHeight;c
           ad.label.position.set(ad.home.x,2.5,ad.home.z);
         }
       });
-      if(inMeeting){inMeeting=false;if(onMeetingChange)onMeetingChange(false);meetChars.forEach(c=>c.visible=false)}
+      if(__meet.active){__meet.update(-1)}
     } else if(action==='tour'){
       agentData.forEach(ad=>{ if(ad.state==='sitting'){ad.timer=0.1;} });
     }

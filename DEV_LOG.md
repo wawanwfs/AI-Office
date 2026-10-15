@@ -127,3 +127,7 @@
 
 ## 2026-10-15 23:18 WIB — health check
 - Tidak ada perubahan src/. Screenshot 631KB (normal), vitest 9/9 lulus. Berikutnya: meja per tim.
+
+## 2026-10-15 22:32 WIB — rapat sebagai modul
+- parts/meeting.js (createMeeting, jendela rapat). Terbukti: 10:15 enam peserta masuk, 11:40 kembali duduk (e2e_meet.py).
+- Bug diperbaiki: walkDestinations hilang -> scene mati; ditulis ulang. Kunci deploy diganti.
