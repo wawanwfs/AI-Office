@@ -34,7 +34,7 @@ export function createMeeting(ctx) {
     agentData.slice(0, seats.length).forEach((ad) => {
       ad.state = 'sitting';
       ad.sittingChar.visible = true;
-      ad.label.position.set(ad.home.x, 2.5, ad.home.z);
+      ad.label.position.set(ad.home.x, 2.45, ad.home.z);
       ad.timer = 3 + rng.r(0, 6);
     });
   }

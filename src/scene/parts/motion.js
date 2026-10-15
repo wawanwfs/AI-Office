@@ -13,7 +13,7 @@ export function createMotion(ctx) {
   function resetStride(ad) {
     ad.walker.children.forEach((c) => { if (c.userData && c.userData.isLeg) c.position.z = 0; });
   }
-  function follow(ad) { ad.label.position.set(ad.walker.position.x, 2.5, ad.walker.position.z); }
+  function follow(ad) { ad.label.position.set(ad.walker.position.x, 2.45, ad.walker.position.z); }
   function stepToward(ad, target, speed, delta) {
     const { dx, dz, d } = dist2(ad.walker.position, target);
     if (d < ARRIVE) return true;
@@ -82,7 +82,7 @@ export function createMotion(ctx) {
         ad.state = 'sitting';
         ad.walker.visible = false;
         ad.sittingChar.visible = true;
-        ad.label.position.set(ad.home.x, 2.5, ad.home.z);
+        ad.label.position.set(ad.home.x, 2.45, ad.home.z);
         ad.timer = 6 + rng.r(0, 14);
         resetStride(ad);
         return;
@@ -93,7 +93,7 @@ export function createMotion(ctx) {
       const { d } = dist2(ad.walker.position, ad.walkTarget);
       if (d < 0.5) {
         ad.walker.visible = false; ad.state = 'offsite';
-        ad.label.position.set(ad.home.x, 2.5, ad.home.z);
+        ad.label.position.set(ad.home.x, 2.45, ad.home.z);
         return;
       }
       stepToward(ad, ad.walkTarget, EXIT, delta);

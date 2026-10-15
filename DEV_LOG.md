@@ -131,3 +131,8 @@
 ## 2026-10-15 22:32 WIB — rapat sebagai modul
 - parts/meeting.js (createMeeting, jendela rapat). Terbukti: 10:15 enam peserta masuk, 11:40 kembali duduk (e2e_meet.py).
 - Bug diperbaiki: walkDestinations hilang -> scene mati; ditulis ulang. Kunci deploy diganti.
+
+## 2026-10-15 22:47 WIB — label & robot
+- Label: sprite ukuran layar tetap (sizeAttenuation=false), nama saja saat jauh, +role saat dekat; anti-tumpuk dihitung ulang.
+- Robot Bantuin AI: parts/robot.js (kepala kubah logam, mata LED, antena glow, panel dada).
+- Modul baru: daycycle.js (waktu, neon, shift).

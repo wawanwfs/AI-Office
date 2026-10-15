@@ -1,5 +1,7 @@
 import * as THREE from 'three';
 import { createFurniture } from './parts/furniture.js';
+import { buildRobot } from './parts/robot.js';
+import { createLighting, createNeonMode, createShift, mixHex } from './parts/daycycle.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets } from './parts/effects.js';
@@ -316,6 +318,7 @@ function addAccessories(g,agent,headY,fz,torsoY){
 }
 
 function buildChar(agent, standing=false){
+  if(agent.name==='BANTUIN AI')return buildRobot(THREE,agent,standing,M,MB);
   const g=new THREE.Group();
   const skin=looksOf(agent).skin;
   const isHairLong = String(agent.name||'').match(/DEWI|MAYA|RINA|LINA|SARI/i);
@@ -482,26 +485,43 @@ function buildChar(agent, standing=false){
 const agentData=[];
 const screenData=[];
 
+const LABEL_Y=2.45; // tepat di atas kepala (tinggi duduk ≈1.95)
 function makeLabel(agent){
-  const lc=document.createElement('canvas');lc.width=512;lc.height=128;
-  const lctx=lc.getContext('2d');
-  lctx.clearRect(0,0,512,128);
-  lctx.fillStyle='rgba(8,10,18,0.78)';
-  lctx.beginPath();
-  if(lctx.roundRect){lctx.roundRect(6,6,500,116,26);}else{lctx.rect(6,6,500,116);}
-  lctx.fill();
-  lctx.lineWidth=5;lctx.strokeStyle=agent.hex;lctx.stroke();
-  lctx.textAlign='center';lctx.textBaseline='middle';
-  lctx.font='800 50px "Segoe UI",Arial,sans-serif';
-  lctx.fillStyle='#ffffff';lctx.shadowColor='rgba(0,0,0,0.9)';lctx.shadowBlur=6;
-  lctx.fillText(agent.name,256,46);
-  lctx.shadowBlur=0;lctx.font='700 34px "Segoe UI",Arial,sans-serif';
-  lctx.fillStyle=agent.hex;
-  lctx.fillStyle='#cfd8e3';lctx.fillText(String(agent.role).toUpperCase(),256,93);
-  const lTex=new THREE.CanvasTexture(lc);lTex.minFilter=THREE.LinearFilter;
-  const label=new THREE.Sprite(new THREE.SpriteMaterial({map:lTex,transparent:true,depthTest:false}));
-  label.scale.set(__portrait?3.4:2.1,__portrait?.85:.52,1);
+  // Dua kanvas: ringkas (nama saja) dan lengkap (nama + role). Ringkas dipakai saat jauh / layar kecil.
+  const mk=(full)=>{
+    const W=full?360:210,H=full?84:50,lc=document.createElement('canvas');lc.width=W;lc.height=H;
+    const c=lc.getContext('2d');
+    c.fillStyle='rgba(10,14,24,0.84)';
+    c.beginPath(); if(c.roundRect)c.roundRect(2,2,W-4,H-4,full?18:14); else c.rect(2,2,W-4,H-4); c.fill();
+    c.fillStyle=agent.hex; c.fillRect(2,full?14:10,6,H-(full?28:20));
+    c.textAlign='center'; c.textBaseline='middle';
+    const nm=String(agent.name).toLowerCase().replace(/(^|\s)\w/g,m=>m.toUpperCase()).slice(0,12);
+    c.font=(full?'800 36px':'800 28px')+' "Segoe UI",Arial,sans-serif'; c.fillStyle='#fff';
+    c.fillText(nm,W/2+4,full?32:H/2+1);
+    if(full){c.font='600 22px "Segoe UI",Arial,sans-serif'; c.fillStyle='#b8c4d4'; c.fillText(String(agent.role),W/2+4,62)}
+    const tex=new THREE.CanvasTexture(lc); tex.minFilter=THREE.LinearFilter; return {tex,as:W/H};
+  };
+  const full=mk(true), short=mk(false);
+  const label=new THREE.Sprite(new THREE.SpriteMaterial({map:short.tex,transparent:true,depthTest:false,sizeAttenuation:false}));
+  label.userData={full,short,mode:'short'};
+  label.renderOrder=20;
   return label;
+}
+// Ukuran label tetap di layar (sizeAttenuation=false): tinggi ≈ fraksi tinggi viewport
+function sizeLabels(){
+  const w=container.clientWidth||800, h=container.clientHeight||600;
+  const near=camera.position.distanceTo(tgt);
+  const wantFull=(w>=700&&near<30)||near<17;           // lengkap hanya bila dekat
+  const t2=2*Math.tan(camera.fov*Math.PI/360);
+  const hPx=w<600?15:19;                              // tinggi label (px) — kecil
+  const frac=hPx/h*t2*(wantFull?1.0:1.0);
+  const apply=L=>{
+    const u=L.userData; const mode=wantFull?'full':'short';
+    if(u.mode!==mode){u.mode=mode;L.material.map=u[mode].tex;L.material.needsUpdate=true}
+    const as=u[mode].as, f=frac*(wantFull?1.55:1);
+    L.scale.set(f*as,f,1);
+  };
+  agentData.forEach(a=>apply(a.label)); if(nxLabel)apply(nxLabel);
 }
 
 function buildDesk(agent,dp){
@@ -574,7 +594,7 @@ allAgents.forEach((agent,i)=>{
   office.add(walker);
   // Label
   const label=makeLabel(agent);
-  label.position.set(dp.x,2.5,dp.z+.55);
+  label.position.set(dp.x,LABEL_Y,dp.z+.55);
   office.add(label);
   agentData.push({
     agent,state:'sitting',timer:rng.r(8,25),
@@ -584,7 +604,7 @@ allAgents.forEach((agent,i)=>{
   });
 });
 
-  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__cam={sph,tgt,upd:()=>updCam()}; // debug/e2e
+  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__cam={sph,tgt,upd:()=>updCam()}; // debug/e2e
   // Badge status real-time: poll gateway tiap 20s, warnai badge dada sesuai status task
   const __intervals=[];
   const __timeouts=[];
@@ -1134,37 +1154,9 @@ const drawScreen=s=>drawScreenFrame(s,frame);
 // clock handled by React
 // status handled by React
 let timeOfDay=660;
-
-function lC(a,b,t){const ar=(a>>16)&0xff,ag=(a>>8)&0xff,ab=a&0xff,br=(b>>16)&0xff,bg=(b>>8)&0xff,bb=b&0xff;return(Math.round(ar+(br-ar)*t)<<16)|(Math.round(ag+(bg-ag)*t)<<8)|Math.round(ab+(bb-ab)*t)}
-
-const getStatus = (m) => {
-  if(m<360)return'Night Shift · WFS Online';if(m<540)return'Early Birds Arriving';
-  if(m>=600&&m<=630)return'Stand-up Meeting';if(m<720)return'Deep Work · All Online';
-  if(m<780)return'Lunch Break';if(m>=840&&m<=870)return'Sprint Review';
-  if(m<1020)return'Afternoon Focus';if(m<1140)return'Winding Down';
-  return'Night Shift · WFS Online';
-}
-
-function updateTime(min){
-  timeOfDay=min;
-  if(onTimeUpdate)onTimeUpdate(min);
-  if(onStatusUpdate)onStatusUpdate(getStatus(min));
-  // Office stays well-lit. Only subtle variation.
-  let df;if(min<360)df=0.3;else if(min<480)df=0.3+(min-360)/120*0.7;else if(min<1020)df=1;else if(min<1140)df=1-(min-1020)/120*0.7;else df=0.3;
-  sun.intensity=.7+df*.7;ambient.intensity=.55+df*.35;
-  // Background ALWAYS dark navy
-  scene.background=new THREE.Color(0x000C1E);scene.fog.color=new THREE.Color(0x000C1E);
-  renderer.toneMappingExposure=1.0+df*.3;
-  // Golden hour sun color
-  if(min>960&&min<1080){sun.color=new THREE.Color(lC(0xFFF8F0,0xFFAA66,(min-960)/120))}
-  else if(min>300&&min<420){sun.color=new THREE.Color(lC(0xFFF8F0,0xFFCC88,1-(min-300)/120))}
-  else{sun.color=new THREE.Color(0xFFF8F0)}
-  // Desk glows slightly stronger at night
-  const nightF=1-df;
-  agentData.forEach(a=>a.dGlow.intensity=.15+nightF*.3);
-  updateMeeting(min);
-}
-
+const lC=mixHex; // kompatibilitas nama lama
+const __light=createLighting({THREE,scene,renderer,sun,ambient,agentData,onTimeUpdate,onStatusUpdate,onTick:m=>updateMeeting(m)});
+function updateTime(min){timeOfDay=min;__light.apply(min)}
 updateTime(660);
 
 // ═══════════════════════════════════════════════════
@@ -1199,72 +1191,14 @@ agentData.forEach(ad=>{
   if(ad.screenLight)screenLights.push(ad.screenLight);
 });
 
-function toggleCyberpunk(){
-  cyberpunkMode=!cyberpunkMode;
-  
-  
-  
-
-  if(cyberpunkMode){
-    // Dim main lights but keep some ambient
-    ambient.intensity=0.12;
-    sun.intensity=0.08;
-    renderer.toneMappingExposure=0.55;
-
-    // Tube lights ON — dim blue volumetric glow
-    tubeLights.forEach(tl=>{tl.intensity=0.35;tl.color.set(0x1a3355)});
-    tubeMeshes.forEach(tm=>{tm.material.color.set(0x2244aa);tm.material.opacity=0.7});
-
-    // Desk glows AMPLIFY
-    agentData.forEach(a=>{a.dGlow.intensity=0.9;a.dGlow.distance=4.5});
-
-    // Screen lights ON — illuminate agent faces with their color
-    screenLights.forEach(sl=>{sl.intensity=0.5});
-
-    // Floor dim
-    fl.material.color.set(0x060C18);
-    cp.material.color.set(0x080E1A);
-    ceil.material.opacity=0.65;
-
-    // Pendant lights go to agent colors (neon mode)
-    let pIdx=0;
-    office.children.forEach(c=>{
-      // Dim ceiling panel point lights
-      if(c.isPointLight&&c.position.y>3.5&&c.position.y<3.95)c.intensity=0.03;
-      // Pendant bulbs — make them subtle warm
-      if(c.isMesh&&c.material&&c.material.isMeshBasicMaterial&&c.position&&c.position.y>3.1&&c.position.y<3.15){
-        c.material.color.set(0x222233);
-      }
-      // Pendant lights — dim warm
-      if(c.isPointLight&&c.position.y>3.0&&c.position.y<3.15){
-        c.intensity=0.08;
-        c.color.set(0x334455);
-      }
-    });
-
-    // Reception glow boost
-    rcLight.intensity=0.7;
-  } else {
-    // Restore everything
-    updateTime(timeOfDay);
-    fl.material.color.set(0xE8E8E8);
-    cp.material.color.set(0xD0D8E0);
-    ceil.material.opacity=0.45;
-    tubeLights.forEach(tl=>{tl.intensity=0});
-    tubeMeshes.forEach(tm=>{tm.material.color.set(0x334466);tm.material.opacity=0.3});
-    screenLights.forEach(sl=>{sl.intensity=0});
-    rcLight.intensity=0.4;
-    office.children.forEach(c=>{
-      if(c.isPointLight&&c.position.y>3.5&&c.position.y<3.95)c.intensity=0.25;
-      if(c.isMesh&&c.material&&c.material.isMeshBasicMaterial&&c.position&&c.position.y>3.1&&c.position.y<3.15){
-        c.material.color.set(0xFFF8E0);
-      }
-      if(c.isPointLight&&c.position.y>3.0&&c.position.y<3.15){
-        c.intensity=0.15;c.color.set(0xFFE8CC);
-      }
-    });
-  }
-}
+const __neon=createNeonMode({ambient,sun,renderer,floor:fl,carpet:cp,ceiling:ceil,tubes:tubeMeshes,tubeLights,agentData,screenLights,
+  reception:rcLight,
+  pendants:{
+    bulbs:office.children.filter(c=>c.isMesh&&c.material&&c.material.isMeshBasicMaterial&&c.position.y>3.1&&c.position.y<3.15),
+    lights:office.children.filter(c=>c.isPointLight&&c.position.y>3.0&&c.position.y<3.15)},
+  panelLights:office.children.filter(c=>c.isPointLight&&c.position.y>3.5&&c.position.y<3.95),
+  restoreTime:()=>updateTime(timeOfDay)});
+function toggleCyberpunk(){cyberpunkMode=__neon.toggle()}
 
 // ═══════════════════════════════════════════════════
 // PARTICLES
@@ -1453,65 +1387,8 @@ function updateBubbles(delta){
 // ═══════════════════════════════════════════════════
 // SHIFT CHANGE — Agents arrive/leave
 // ═══════════════════════════════════════════════════
-let shiftState='working'; // 'arriving' | 'working' | 'leaving'
-const arrivalOrder=[0,2,4,1,5,3,6,7]; // agent utama datang pertama
-const departOrder=[7,6,3,5,1,4,2,0]; // agent utama pulang terakhir
-
-function updateShift(minutes){
-  // 8:00-8:30 arrival, 18:00-18:30 departure
-  if(minutes>=480&&minutes<=510&&shiftState!=='arriving'&&shiftState!=='working'){
-    shiftState='arriving';
-    // Stagger arrival
-    arrivalOrder.forEach((idx,i)=>{
-      const ad=agentData[idx];
-      if(ad.state==='offsite'){
-        setTimeout(()=>{
-          ad.walker.visible=true;
-          ad.walker.position.set(-12,0,8); // from door
-          ad.state='walking_back'; // walk to desk
-          ad.sittingChar.visible=false;
-        },i*800);
-      }
-    });
-  }
-  if(minutes>510&&minutes<1080) shiftState='working';
-  if(minutes>=1080&&minutes<=1110&&shiftState!=='leaving'){
-    shiftState='leaving';
-    departOrder.forEach((idx,i)=>{
-      const ad=agentData[idx];
-      setTimeout(()=>{
-        if(ad.state==='sitting'){
-          ad.sittingChar.visible=false;
-          ad.walker.visible=true;
-          ad.walker.position.copy(new THREE.Vector3(ad.home.x,0,ad.home.z));
-          ad.walkTarget={x:-12,z:8}; // toward door
-          ad.state='leaving';
-        }
-      },i*800);
-    });
-  }
-  if(minutes>1110||minutes<480){
-    // Malam — sembunyikan semua kecuali agent utama
-    agentData.forEach((ad,i)=>{
-      if(i===0)return; // agent utama tetap
-      if(ad.state!=='offsite'){
-        ad.sittingChar.visible=false;
-        ad.walker.visible=false;
-        ad.state='offsite';
-      }
-    });
-    shiftState='night';
-  }
-  if(minutes>=480&&shiftState==='night'){
-    shiftState='arriving';
-    agentData.forEach(ad=>{
-      ad.sittingChar.visible=true;
-      ad.walker.visible=false;
-      ad.state='sitting';
-      ad.timer=4+rng.r(0,8);
-    });
-  }
-}
+const __shift=createShift({THREE,agentData,rng});
+const updateShift=m=>__shift.update(m);
 
 // ═══════════════════════════════════════════════════
 // SOUND SYSTEM — Web Audio API
@@ -1607,15 +1484,16 @@ function animate(){
   for(let i=0;i<pN;i++){pP[i*3]+=Math.sin(elapsed+i)*.0006;pP[i*3+1]+=Math.cos(elapsed*.4+i*.5)*.0003;if(pP[i*3+1]>3.6)pP[i*3+1]=.5}
   pG.attributes.position.needsUpdate=true;
   // Labels
-  agentData.forEach((a,i)=>{if(a.state==='sitting')a.label.position.y=2.5+Math.sin(elapsed*1.1+i*1.3)*.03});
+  agentData.forEach((a,i)=>{if(a.state==='sitting')a.label.position.y=LABEL_Y+Math.sin(elapsed*1.1+i*1.3)*.02});
   // Atap & lampu panel disembunyikan saat kamera di atas (agar isi kantor terlihat), dimunculkan dari sudut rendah
   { const hide = sph.phi < 1.15; ceil.visible=!hide; __ceilObjs.forEach(o=>{o.visible=!hide}); }
   // Anti-tumpuk label: dorong ke atas bila label lain terlalu dekat di layar (iterasi ringan)
+  sizeLabels();
   if(namesVisible){
     const vis=agentData.filter(a=>a.label.visible);
     const pts=vis.map(a=>{const v=a.label.position.clone().project(camera);return {a,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,off:0}});
     pts.sort((p,q)=>p.y-q.y);
-    const lw=Math.max(70,Math.min(150,container.clientWidth*.105)), lh=Math.max(32,Math.min(56,container.clientHeight*.068));
+    const __L=agentData[0].label, __k=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360)), lh=__L.scale.y*__k*1.1, lw=__L.scale.x*__k*1.05;
     for(let i=0;i<pts.length;i++){for(let j=0;j<i;j++){
       const dx=Math.abs(pts[i].x-pts[j].x), dy=Math.abs((pts[i].y+pts[i].off)-(pts[j].y+pts[j].off));
       if(dx<lw && dy<lh) pts[i].off+= (lh-dy);
@@ -1624,7 +1502,7 @@ function animate(){
     const dist=camera.position.distanceTo(tgt), worldPerPx=2*dist*Math.tan(camera.fov*Math.PI/360)/container.clientHeight;
     pts.forEach(p=>{p.a.label.position.y+=Math.min(6,p.off*worldPerPx*1.4)});
   }
-  nxLabel.position.y=1.8+Math.sin(elapsed*1.1+9)*.03;
+  nxLabel.position.y=LABEL_Y-.5+Math.sin(elapsed*1.1+9)*.03;
   // Papers
   __pages.update(delta,elapsed);
   drawClock(timeOfDay);
@@ -1657,7 +1535,7 @@ const onResize=()=>{camera.aspect=container.clientWidth/container.clientHeight;c
         if(ad.state==='meeting'||ad.state==='walking_out'||ad.state==='walking_back'){
           ad.walker.visible=false;ad.sittingChar.visible=true;
           ad.state='sitting';ad.timer=rng.r(8,20);
-          ad.label.position.set(ad.home.x,2.5,ad.home.z);
+          ad.label.position.set(ad.home.x,LABEL_Y,ad.home.z);
         }
       });
       if(__meet.active){__meet.update(-1)}
