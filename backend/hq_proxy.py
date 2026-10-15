@@ -1,0 +1,120 @@
+import http.server, socketserver, os, urllib.request, urllib.error, json, secrets, re
+os.chdir(os.path.dirname(os.path.abspath(__file__)))
+GATEWAY = "http://127.0.0.1:8787/api/"
+TOKEN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".wfs_ui_token")
+
+def get_token():
+    if os.path.exists(TOKEN_FILE):
+        return open(TOKEN_FILE).read().strip()
+    t = secrets.token_hex(16)
+    with open(TOKEN_FILE, "w") as f:
+        os.chmod(TOKEN_FILE, 0o600)
+        f.write(t)
+    return t
+
+UI_TOKEN = get_token()
+
+class H(http.server.SimpleHTTPRequestHandler):
+    def end_headers(self):
+        self.send_header('Cache-Control','no-store')
+        super().end_headers()
+
+    def log_message(self,*a): pass
+
+    def _inject_token(self, data):
+        # Sisipkan token UI ke index.html (same-origin) agar frontend bisa memakainya untuk POST
+        html = data.decode("utf-8", "replace")
+        meta = '<meta name="wfs-ui-token" content="%s">' % UI_TOKEN
+        if "<head>" in html:
+            html = html.replace("<head>", "<head>" + meta, 1)
+        else:
+            html = meta + html
+        return html.encode("utf-8")
+
+    def _proxy(self):
+        path = self.path[len("/wfs-api/"):]
+        url = GATEWAY + path
+        body = None
+        if self.command == "POST":
+            # Semua POST ke gateway wajib token UI (same-origin, diinject ke index.html)
+            if self.headers.get("X-WFS-Token") != UI_TOKEN:
+                msg = json.dumps({"error": "unauthorized"}).encode()
+                self.send_response(401)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(msg)))
+                self.end_headers()
+                self.wfile.write(msg)
+                return
+            ln = int(self.headers.get("Content-Length", 0))
+            body = self.rfile.read(ln) if ln else b"{}"
+        req = urllib.request.Request(url, data=body, method=self.command)
+        req.add_header("Content-Type", "application/json")
+        try:
+            with urllib.request.urlopen(req, timeout=120) as r:
+                data = r.read()
+                self.send_response(r.status)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+        except urllib.error.HTTPError as e:
+            data = e.read()
+            self.send_response(e.code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+        except Exception as e:
+            msg = json.dumps({"error": str(e)}).encode()
+            self.send_response(502)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(msg)))
+            self.end_headers()
+            self.wfile.write(msg)
+
+    def do_GET(self):
+        if self.path.startswith("/wfs-api/"):
+            return self._proxy()
+        if self.path.split("?")[0] in ("/", "/index.html"):
+            try:
+                data = open("index.html","rb").read()
+                data = self._inject_token(data)
+                self.send_response(200)
+                self.send_header("Content-Type","text/html; charset=utf-8")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+                return
+            except Exception:
+                pass
+        super().do_GET()
+
+    def do_POST(self):
+        if self.path.startswith("/wfs-api/"):
+            return self._proxy()
+        self.send_response(404); self.end_headers()
+
+    def do_GET_static_guard(self): pass
+
+_orig_send_head = http.server.SimpleHTTPRequestHandler.send_head
+def _send_head_with_token(self):
+    f, code, headers = None, None, None
+    path = self.translate_path(self.path)
+    if os.path.basename(path) == "index.html" and os.path.isfile(path):
+        try:
+            data = open(path, "rb").read()
+            data = self._inject_token(data)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            return data
+        except Exception:
+            pass
+    return _orig_send_head(self)
+
+http.server.SimpleHTTPRequestHandler.send_head = _send_head_with_token
+
+socketserver.TCPServer.allow_reuse_address = True
+with socketserver.TCPServer(("0.0.0.0", 9503), H) as s:
+    s.serve_forever()

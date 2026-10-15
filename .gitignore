@@ -6,3 +6,11 @@ dist
 *.tgz
 .wfs_ui_token
 *.png.tmp
+
+backend/.env
+backend/.venv
+backend/*.db
+backend/__pycache__
+backend/config
+backend/.wfs_ui_token
+__pycache__

@@ -906,7 +906,7 @@ for(let r=0;r<3;r++){
 }
 
 // ═══════════════════════════════════════════════════
-// RECEPTION DESK WITH RONIN LOGO (front-right, near meeting room)
+// RECEPTION DESK WITH WFS LOGO (front-right, near meeting room)
 // ═══════════════════════════════════════════════════
 const reception=new THREE.Group();
 const RCX=8,RCZ=6.5;
@@ -920,12 +920,12 @@ rcTop.position.set(RCX,.92,RCZ);reception.add(rcTop);
 const rcSide=new THREE.Mesh(new THREE.BoxGeometry(.6,.9,.04),M(0x1A2A3A));
 rcSide.position.set(RCX+1.25,.45,RCZ-.3);reception.add(rcSide);
 
-// RONIN logo on front — load from actual image
-const roninLogoTex=new THREE.TextureLoader().load('./ronin-logo.png');
-roninLogoTex.minFilter=THREE.LinearFilter;
+// Logo WFS Project di depan meja resepsionis
+const wfsLogoTex=new THREE.TextureLoader().load('./wfs-logo.svg');
+wfsLogoTex.minFilter=THREE.LinearFilter;
 const rcLogoMesh=new THREE.Mesh(
-  new THREE.PlaneGeometry(1.8,.6),
-  new THREE.MeshBasicMaterial({map:roninLogoTex,transparent:true})
+  new THREE.PlaneGeometry(1.8,.5625),
+  new THREE.MeshBasicMaterial({map:wfsLogoTex,transparent:true})
 );
 rcLogoMesh.position.set(RCX,.5,RCZ+.31);reception.add(rcLogoMesh);
 
@@ -1119,7 +1119,7 @@ posterData.forEach(p=>{
 // ═══════════════════════════════════════════════════
 // WFS EXTRAS — kafe, server room, rak buku, water cooler, zona lantai
 // ═══════════════════════════════════════════════════
-// --- ZONA LANTAI (patch warna + label, ala Pixel AI Office) ---
+// --- ZONA LANTAI (patch warna + label) ---
 const zoneData=[
   {x:-6, z:-1.2, w:11, d:7.5, color:0x1E3A5F, label:'DEV DESK'},
   {x:8,  z:-3,  w:5.4, d:5.4, color:0x4A3A1A, label:'MEETING', op:.9},
@@ -1589,7 +1589,7 @@ function drawScreen(s){
   const t=frame*.02;
   c.globalAlpha=1;
 
-  if(type==='ronin'){
+  if(type==='lead'){
     c.fillStyle=hex;c.globalAlpha=.12;
     c.beginPath();c.moveTo(w/2,10);c.lineTo(w/2-18,38);c.lineTo(w/2-8,33);c.lineTo(w/2,40);c.lineTo(w/2+8,33);c.lineTo(w/2+18,38);c.closePath();c.fill();
     c.globalAlpha=1;c.fillStyle=hex;
@@ -1777,44 +1777,44 @@ pG.setAttribute('position',new THREE.BufferAttribute(pP,3));
 office.add(new THREE.Points(pG,new THREE.PointsMaterial({color:0xFFFFFF,size:.02,transparent:true,opacity:.25})));
 
 // ═══════════════════════════════════════════════════
-// RONIN'S SPECIAL DESK — The Protagonist Space
+// MEJA UTAMA — ruang kerja agent pertama (lead)
 // ═══════════════════════════════════════════════════
-const roninDesk=desks[0];
+const leadDesk=desks[0];
 // Second monitor
 const rm2Stand=new THREE.Mesh(new THREE.BoxGeometry(.03,.22,.03),M(0xAABBCC));
-rm2Stand.position.set(roninDesk.x+.5,.88,roninDesk.z-.2);office.add(rm2Stand);
+rm2Stand.position.set(leadDesk.x+.5,.88,leadDesk.z-.2);office.add(rm2Stand);
 const rm2Body=new THREE.Mesh(new THREE.BoxGeometry(.65,.42,.03),M(0x2A2A2A));
-rm2Body.position.set(roninDesk.x+.5,1.28,roninDesk.z-.24);office.add(rm2Body);
+rm2Body.position.set(leadDesk.x+.5,1.28,leadDesk.z-.24);office.add(rm2Body);
 const rm2Screen=new THREE.Mesh(new THREE.BoxGeometry(.58,.36,.01),MB(0x051015));
-rm2Screen.position.set(roninDesk.x+.5,1.28,roninDesk.z-.22);office.add(rm2Screen);
+rm2Screen.position.set(leadDesk.x+.5,1.28,leadDesk.z-.22);office.add(rm2Screen);
 
 // Helmet trophy on desk
 const helmetBase=new THREE.Mesh(new THREE.BoxGeometry(.15,.03,.15),M(0x1A2A3A));
-helmetBase.position.set(roninDesk.x+.55,.79,roninDesk.z+.2);office.add(helmetBase);
+helmetBase.position.set(leadDesk.x+.55,.79,leadDesk.z+.2);office.add(helmetBase);
 // Tiny helmet shape (V-visor)
 const helmetBody=new THREE.Mesh(new THREE.BoxGeometry(.12,.12,.1),M(0xDDDDDD));
-helmetBody.position.set(roninDesk.x+.55,.87,roninDesk.z+.2);office.add(helmetBody);
+helmetBody.position.set(leadDesk.x+.55,.87,leadDesk.z+.2);office.add(helmetBody);
 const helmetVisor=new THREE.Mesh(new THREE.BoxGeometry(.1,.04,.02),MB(0x0DEEF3));
-helmetVisor.position.set(roninDesk.x+.55,.88,roninDesk.z+.15);office.add(helmetVisor);
+helmetVisor.position.set(leadDesk.x+.55,.88,leadDesk.z+.15);office.add(helmetVisor);
 // Tiny helmet glow
 const helmetGlow=new THREE.PointLight(0x0DEEF3,0.15,1,2);
-helmetGlow.position.set(roninDesk.x+.55,.9,roninDesk.z+.15);office.add(helmetGlow);
+helmetGlow.position.set(leadDesk.x+.55,.9,leadDesk.z+.15);office.add(helmetGlow);
 
-// Teal floor ring around RONIN's workspace
+// Cincin lantai di sekitar meja utama
 const ringGeo=new THREE.RingGeometry(1.2,1.25,32);
 const ringMat=new THREE.MeshBasicMaterial({color:0x0DEEF3,transparent:true,opacity:0.15,side:THREE.DoubleSide});
 const floorRing=new THREE.Mesh(ringGeo,ringMat);
 floorRing.rotation.x=-Math.PI/2;
-floorRing.position.set(roninDesk.x,.02,roninDesk.z+.2);
+floorRing.position.set(leadDesk.x,.02,leadDesk.z+.2);
 office.add(floorRing);
 // Inner ring
 const ringInner=new THREE.Mesh(new THREE.RingGeometry(1.05,1.08,32),new THREE.MeshBasicMaterial({color:0x0DEEF3,transparent:true,opacity:0.08,side:THREE.DoubleSide}));
-ringInner.rotation.x=-Math.PI/2;ringInner.position.set(roninDesk.x,.02,roninDesk.z+.2);
+ringInner.rotation.x=-Math.PI/2;ringInner.position.set(leadDesk.x,.02,leadDesk.z+.2);
 office.add(ringInner);
 
 // Pulse ring (animated in render loop)
 const pulseRing=new THREE.Mesh(new THREE.RingGeometry(1.3,1.33,32),new THREE.MeshBasicMaterial({color:0x0DEEF3,transparent:true,opacity:0,side:THREE.DoubleSide}));
-pulseRing.rotation.x=-Math.PI/2;pulseRing.position.set(roninDesk.x,.02,roninDesk.z+.2);
+pulseRing.rotation.x=-Math.PI/2;pulseRing.position.set(leadDesk.x,.02,leadDesk.z+.2);
 office.add(pulseRing);
 
 // ═══════════════════════════════════════════════════
@@ -1956,8 +1956,8 @@ function updateBubbles(delta){
 // SHIFT CHANGE — Agents arrive/leave
 // ═══════════════════════════════════════════════════
 let shiftState='working'; // 'arriving' | 'working' | 'leaving'
-const arrivalOrder=[0,2,4,1,5,3,6,7]; // RONIN first
-const departOrder=[7,6,3,5,1,4,2,0]; // RONIN last
+const arrivalOrder=[0,2,4,1,5,3,6,7]; // agent utama datang pertama
+const departOrder=[7,6,3,5,1,4,2,0]; // agent utama pulang terakhir
 
 function updateShift(minutes){
   // 8:00-8:30 arrival, 18:00-18:30 departure
@@ -1993,9 +1993,9 @@ function updateShift(minutes){
     });
   }
   if(minutes>1110||minutes<480){
-    // Night — hide everyone except RONIN
+    // Malam — sembunyikan semua kecuali agent utama
     agentData.forEach((ad,i)=>{
-      if(i===0)return; // RONIN stays
+      if(i===0)return; // agent utama tetap
       if(ad.state!=='offsite'){
         ad.sittingChar.visible=false;
         ad.walker.visible=false;
@@ -2086,7 +2086,7 @@ function animate(){
   // Shift
   updateShift(timeOfDay);
 
-  // RONIN pulse ring
+  // cincin denyut agent utama
   const pulseT=(elapsed*.5)%1;
   pulseRing.scale.set(1+pulseT*.3,1,1+pulseT*.3);
   pulseRing.material.opacity=.15*(1-pulseT);

@@ -1,7 +1,7 @@
 {
-  "name": "ai-office",
+  "name": "wfs-ai-office",
   "private": true,
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -29,24 +29,23 @@
     "vite": "^8.0.1",
     "vitest": "^5.0.4"
   },
-  "description": "A miniature isometric 3D office where AI agents work, walk, talk, and hold meetings. Built with React + Three.js.",
-  "author": "Gaurav Mishra <gaurav@roninos.app>",
+  "description": "WFS Project HQ — kantor virtual 3D isometrik tempat tim agent AI bekerja, ngobrol, rapat, dan mengerjakan task nyata. React + Three.js.",
+  "author": "Wahyu Fajar Setiawan <https://github.com/wawanwfs>",
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Gaurav2693/ai-office.git"
+    "url": "https://github.com/wawanwfs/AI-Office.git"
   },
   "keywords": [
     "ai",
     "agents",
+    "ai-office",
     "three.js",
     "react",
     "isometric",
     "3d",
-    "visualization",
-    "diorama",
-    "voxel",
-    "ronin"
+    "dashboard",
+    "wfs-project"
   ],
-  "homepage": "https://github.com/Gaurav2693/ai-office"
+  "homepage": "https://github.com/wawanwfs/AI-Office"
 }
