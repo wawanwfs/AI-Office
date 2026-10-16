@@ -67,7 +67,7 @@ let namesVisible=true;
 const __asp=container.clientWidth/Math.max(1,container.clientHeight);
 const __portrait=__asp<0.8;
 if(__portrait){camera.fov=__asp<0.6?66:54;camera.updateProjectionMatrix();}
-let sph={theta:__portrait?Math.PI:Math.PI*0.78,phi:__portrait?0.72:1.0,radius:__asp<0.6?50:__asp<0.8?46:__asp<1.2?56:__asp<1.5?47:40};
+let sph={theta:__portrait?2.0:Math.PI*0.78,phi:__portrait?0.5:1.0,radius:__asp<0.6?50:__asp<0.8?46:__asp<1.2?56:__asp<1.5?47:40};
 const tgt=new THREE.Vector3(0,1.8,0);
 let autoRot=true,autoTmr;
 let focusGoal=null;const HOME_TGT=new THREE.Vector3(0,1.8,0);let homeRadius=null;
