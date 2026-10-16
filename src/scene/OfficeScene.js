@@ -66,8 +66,8 @@ let isDrag=false,prev={x:0,y:0};
 let namesVisible=true;
 const __asp=container.clientWidth/Math.max(1,container.clientHeight);
 const __portrait=__asp<0.8;
-if(__portrait){camera.fov=__asp<0.6?58:46;camera.updateProjectionMatrix();}
-let sph={theta:__portrait?Math.PI:Math.PI*0.78,phi:__portrait?0.82:1.0,radius:__asp<0.6?64:__asp<0.8?58:__asp<1.2?56:__asp<1.5?47:40};
+if(__portrait){camera.fov=__asp<0.6?66:54;camera.updateProjectionMatrix();}
+let sph={theta:__portrait?Math.PI:Math.PI*0.78,phi:__portrait?0.72:1.0,radius:__asp<0.6?50:__asp<0.8?46:__asp<1.2?56:__asp<1.5?47:40};
 const tgt=new THREE.Vector3(0,1.8,0);
 let autoRot=true,autoTmr;
 let focusGoal=null;const HOME_TGT=new THREE.Vector3(0,1.8,0);let homeRadius=null;
@@ -505,17 +505,19 @@ function makeLabel(agent){
 function sizeLabels(){
   const w=container.clientWidth||800, h=container.clientHeight||600;
   const near=camera.position.distanceTo(tgt);
-  const wantFull=(w>=700&&near<30)||near<17;           // lengkap hanya bila dekat
+  const wantFull=(w>=700&&near<30)||near<17;
   const t2=2*Math.tan(camera.fov*Math.PI/360);
-  const hPx=w<600?15:19;                              // tinggi label (px) — kecil
-  const frac=hPx/h*t2*(wantFull?1.0:1.0);
+  const hPx=(w<600?14:19)*(wantFull?1.0:1.0);
+  const hFrac=hPx*Math.min(1.35,h/900*1.2)/h;          // layar pendek: label sedikit lebih besar relatif
+  const frac=hFrac*t2;
   const apply=L=>{
     const u=L.userData; const mode=wantFull?'full':'short';
     if(u.mode!==mode){u.mode=mode;L.material.map=u[mode].tex;L.material.needsUpdate=true}
-    const as=u[mode].as, f=frac*(wantFull?1.55:1);
-    L.scale.set(f*as,f,1);
+    const as=u[mode].as;
+    L.scale.set(frac*as,frac,1);
   };
   agentData.forEach(a=>apply(a.label)); if(nxLabel)apply(nxLabel);
+  window.__labelFrac=+frac.toFixed(4);
 }
 
 function buildDesk(agent,dp){
@@ -598,7 +600,7 @@ allAgents.forEach((agent,i)=>{
   });
 });
 
-  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__cam={sph,tgt,upd:()=>updCam()}; // debug/e2e
+  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
   // Badge status real-time: poll gateway tiap 20s, warnai badge dada sesuai status task
   const __intervals=[];
   const __timeouts=[];
@@ -1340,21 +1342,24 @@ const chatPhrases=[
 ];
 
 function createBubble(x,y,z,text,color){
-  const bc=document.createElement('canvas');bc.width=200;bc.height=48;
+  const W=360,H=76,bc=document.createElement('canvas');bc.width=W;bc.height=H;
   const bx=bc.getContext('2d');
-  bx.fillStyle='rgba(10,22,40,0.85)';
-  // Rounded rect
-  const rr=(cx,cy,cw,ch,cr)=>{bx.beginPath();bx.moveTo(cx+cr,cy);bx.lineTo(cx+cw-cr,cy);bx.quadraticCurveTo(cx+cw,cy,cx+cw,cy+cr);bx.lineTo(cx+cw,cy+ch-cr);bx.quadraticCurveTo(cx+cw,cy+ch,cx+cw-cr,cy+ch);bx.lineTo(cx+cr,cy+ch);bx.quadraticCurveTo(cx,cy+ch,cx,cy+ch-cr);bx.lineTo(cx,cy+cr);bx.quadraticCurveTo(cx,cy,cx+cr,cy);bx.closePath();bx.fill()};
-  rr(4,4,192,36,8);
-  bx.strokeStyle=color;bx.lineWidth=1;rr(4,4,192,36,8);bx.stroke();
-  bx.beginPath();bx.moveTo(92,40);bx.lineTo(100,47);bx.lineTo(108,40);bx.closePath();bx.fillStyle='rgba(10,22,40,0.85)';bx.fill();
-  bx.font='bold 12px sans-serif';bx.fillStyle='#fff';bx.textAlign='center';
-  bx.fillText(text.length>30?text.slice(0,29)+'…':text,100,27);
+  bx.fillStyle='rgba(7,16,32,0.94)';                       // lebih pekat dari 0.85 agar terbaca
+  const rr=(cx,cy,cw,ch,cr)=>{bx.beginPath();bx.moveTo(cx+cr,cy);bx.lineTo(cx+cw-cr,cy);bx.quadraticCurveTo(cx+cw,cy,cx+cw,cy+cr);bx.lineTo(cx+cw,cy+ch-cr);bx.quadraticCurveTo(cx+cw,cy+ch,cx+cw-cr,cy+ch);bx.lineTo(cx+cr,cy+ch);bx.quadraticCurveTo(cx,cy+ch,cx,cy+ch-cr);bx.lineTo(cx,cy+cr);bx.quadraticCurveTo(cx,cy,cx+cr,cy);bx.closePath()};
+  rr(3,3,W-6,H-14,10);bx.fill();
+  bx.strokeStyle=color;bx.lineWidth=2.5;rr(3,3,W-6,H-14,10);bx.stroke();
+  bx.beginPath();bx.moveTo(W/2-9,H-11);bx.lineTo(W/2,H-3);bx.lineTo(W/2+9,H-11);bx.closePath();bx.fillStyle='rgba(7,16,32,0.94)';bx.fill();
+  bx.font='700 24px "Segoe UI",Arial,sans-serif';bx.fillStyle='#fff';bx.textAlign='center';
+  let t=String(text); if(t.length>32)t=t.slice(0,31)+'…';
+  bx.fillText(t,W/2,32);
   const btex=new THREE.CanvasTexture(bc);btex.minFilter=THREE.LinearFilter;
-  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:btex,transparent:true,depthTest:false}));
-  sprite.scale.set(3.4,.85,1);sprite.position.set(x,y+1.0,z);
+  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:btex,transparent:true,depthTest:false,sizeAttenuation:false}));
+  sprite.userData.aspect=W/H; sprite.renderOrder=30;
+  const hFrac=0.034;                                       // ≈ 3.4% tinggi layar
+  sprite.scale.set(hFrac*sprite.userData.aspect,hFrac,1);
+  sprite.position.set(x,y+1.1,z);
   office.add(sprite);
-  chatBubbles.push({sprite,life:3.0,startY:y+1.0});
+  chatBubbles.push({sprite,life:3.5,startY:y+1.1});
   window.__bubbleCount=chatBubbles.length; window.__lastBubble=text;
 }
 
