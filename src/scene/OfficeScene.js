@@ -1816,8 +1816,9 @@ function animate(){
           const pi=byY[i];
           let minY=-Infinity;
           for(let j=0;j<i;j++){
-            const pj=byY[j];if(Math.abs(pi.x+pi.offX-(pj.x+pj.offX))>=((pi.sw||pi.zw||0)+(pj.sw||pj.zw||0))/2+14)continue;
-            const need=(pj.y+pj.offY)+((pi.sh||pi.zh||0)+(pj.sh||pj.zh||0))/2+14;
+            const pj=byY[j];
+            if(Math.abs(pi.x+pi.offX-(pj.x+pj.offX))>=((pi.sw||pi.zw||0)+(pj.sw||pj.zw||0))/2+22)continue;
+            const need=(pj.y+pj.offY)+((pi.sh||pi.zh||0)+(pj.sh||pj.zh||0))/2+20;
             if(need>minY)minY=need;
           }
           if(minY>-Infinity&&(pi.y+pi.offY)<minY)pi.offY=minY-(pi.y);
@@ -1828,7 +1829,7 @@ function animate(){
       pts.forEach(p=>{
         const fy=p.y+p.offY, half=(p.sh||p.zh||0)/2;
         if(fy+half>BOT){p.offY=BOT+half-p.y;violated=true;}       // masuk toolbar -> naik
-        else if(fy-half<-(TOP)){p.offY=-(TOP)+half-p.y;violated=true;} // keluar layar atas -> turun
+        else if(fy-half<-(TOP)){p.offY=-(TOP)+half-p.y+Math.random()*6;violated=true;} // keluar layar atas -> turun (jitter 0-6px hindari ties)
       });
       if(!violated)break; // sweep+clamp sudah konsisten, tidak ada pelanggaran batas
       }
