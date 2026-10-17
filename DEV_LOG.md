@@ -160,3 +160,6 @@
 - Toast pindah ke atas (tidak menimpa label scene).
 - 3 meja+agent baru: Trainer AI, Integrator Bot, Support Human (scene kini 15 = data API).
 - Kemiripan kode asli: 15%.
+## 2026-10-17 09:20 WIB — label zona billboard
+- Label zona (DEV DESK, MEETING, WELCOME & LOUNGE, CAFÉ, SERVER ROOM) dari plane lantai (miring sesuai perspektif) jadi THREE.Sprite billboard: selalu menghadap kamera, depthTest=false, renderOrder=5, skala 1.25x untuk label >9 karakter.
+- Bukti: build OK, vitest 9/9, shot ck2.png 494KB (scene hidup), vision: label zona terbaca jelas, orientasi billboard tanpa distorsi.
