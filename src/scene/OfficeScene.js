@@ -1756,7 +1756,8 @@ function animate(){
       let hsh=0;for(const ch of zt.userData.label||'')hsh=(hsh*31+ch.charCodeAt(0))|0;
       const jy=(hsh%7)-3, jx=((hsh>>3)%9)-4;
       pts.push({a:null,zone:true,zt,zw:zt.scale.x*__k,zh:zt.scale.y*__k,baseY:zb.y+jy*0.06,baseX:zb.x+jx*0.08,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});}
-    const __L=agentData[0].label, __k=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360)), lh=__L.scale.y*__k*1.08, lw=__L.scale.x*__k*1.02;
+    const __L=agentData[0].label, __k=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360)), lh=__L.scale.y*__k*1.18, lw=__L.scale.x*__k*1.02;
+    for(let iter=0;iter<3;iter++){ // multi-pass: satu pass hanya menggeser sedikit, 3 pass menjamin kluster padat benar2 terpisah
     for(let i=0;i<pts.length;i++){for(let j=0;j<i;j++){
       const dx=Math.abs(pts[i].x-pts[j].x), dy=Math.abs((pts[i].y+pts[i].offY)-(pts[j].y+pts[j].offY));
       if(dx<lw && dy<lh){
@@ -1765,10 +1766,11 @@ function animate(){
         const lwi=Math.max(lw,pts[i].zw||0), lhi=Math.max(lh,pts[i].zh||0), lwj=Math.max(lw,pts[j].zw||0), lhj=Math.max(lh,pts[j].zh||0);
         if(!(dx<(lwi+lwj)/2 && dy<(lhi+lhj)/2))continue;
         const h2=((lhi+lhj)/2)-dy, w2=((lwi+lwj)/2)-dx;
-        if(!pts[i].zone){pts[i].offY+=h2;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.6;}
-        else if(!pts[j].zone){pts[j].offY-=h2;const dir=(pts[j].x>=pts[i].x)?1:-1;pts[j].offX+=dir*w2*0.6;}
+        if(!pts[i].zone){pts[i].offY+=h2*1.4;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.6;}
+        else if(!pts[j].zone){pts[j].offY-=h2*1.4;const dir=(pts[j].x>=pts[i].x)?1:-1;pts[j].offX+=dir*w2*0.6;}
       }
     }}
+    } // end 2-pass anti-overlap
     // konversi offset piksel ke satuan dunia (~ jarak/tinggi layar), cap supaya label tidak melayang jauh
     const dist=camera.position.distanceTo(tgt), worldPerPx=2*dist*Math.tan(camera.fov*Math.PI/360)/container.clientHeight;
     pts.forEach(p=>{
