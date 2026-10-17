@@ -1787,11 +1787,13 @@ function animate(){
           pts[i].offY+=h2*0.8;pts[j].offY-=h2*0.8;
           const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.45;pts[j].offX-=dir*w2*0.45;
         }
-        else if(!pts[i].zone){ // agent vs penghalang: hanya agent yang bergeser
+        else if(!pts[i].zone){ // agent vs penghalang: agent bergeser penuh, bubble ikut mundur sedikit (mutual)
           pts[i].offY+=h2*1.6;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.9;
+          if(pts[j].bub){pts[j].offY-=h2*0.35;pts[j].offX-=dir*w2*0.25;}
         }
         else if(!pts[j].zone){
           pts[j].offY-=h2*1.6;const dir=(pts[j].x>=pts[i].x)?1:-1;pts[j].offX+=dir*w2*0.9;
+          if(pts[i].bub){pts[i].offY+=h2*0.35;pts[i].offX+=dir*w2*0.25;}
         }
       }
     }}
