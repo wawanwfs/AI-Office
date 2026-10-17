@@ -226,6 +226,23 @@ const skyTex=(()=>{const c=document.createElement('canvas');c.width=256;c.height
   [[40,38,60,14],[130,60,80,12],[190,30,55,10],[80,90,70,12]].forEach(([cx,cy,cw,ch])=>{
     x.beginPath();x.ellipse(cx,cy,cw/2,ch/2,0,0,7);x.fill();});
   return new THREE.CanvasTexture(c);})();
+// sheen kaca: pantulan diagonal + tint biru — overlay plane di tiap jendela
+const glassSheen=(()=>{const c=document.createElement('canvas');c.width=256;c.height=128;
+  const x=c.getContext('2d');
+  const g=x.createLinearGradient(0,128,256,0);
+  g.addColorStop(0,'rgba(255,255,255,0.00)');
+  g.addColorStop(.42,'rgba(210,235,255,0.05)');
+  g.addColorStop(.5,'rgba(255,255,255,0.22)');
+  g.addColorStop(.58,'rgba(210,235,255,0.05)');
+  g.addColorStop(1,'rgba(255,255,255,0.00)');
+  x.fillStyle=g;x.fillRect(0,0,256,128);
+  const g2=x.createLinearGradient(256,128,60,0);
+  g2.addColorStop(0,'rgba(255,255,255,0.00)');
+  g2.addColorStop(.46,'rgba(255,255,255,0.11)');
+  g2.addColorStop(.54,'rgba(255,255,255,0.00)');
+  x.fillStyle=g2;x.fillRect(0,0,256,128);
+  x.fillStyle='rgba(140,200,255,0.10)';x.fillRect(0,0,256,128);
+  return new THREE.CanvasTexture(c);})();
 // (jendela sky-view dinding belakang & kiri dibangun di blok dinding __wallFade di bawah —
 //  blok lama di sini dead code dengan array kosong dan sudah dihapus)
 
@@ -1371,6 +1388,17 @@ const __wallObjs=[];
     W(B(.1,2.0,.05),new THREE.MeshBasicMaterial({color:FR}),-12.28,2.5,z);
     W(B(.2,.07,3.3),new THREE.MeshBasicMaterial({color:TRIM}),-12.25,1.45,z);
   });
+
+  // ---- Sheen kaca: overlay pantulan diagonal di semua jendela (tampak seperti kaca sungguhan) ----
+  const sh=(x,y,z,ry,w,h)=>{
+    const s=new THREE.Mesh(new THREE.PlaneGeometry(w,h),
+      new THREE.MeshBasicMaterial({map:glassSheen,transparent:true,depthWrite:false}));
+    s.position.set(x,y,z);s.rotation.y=ry;s.renderOrder=3;office.add(s);
+  };
+  [[-8,-9.37,0],[-2,-9.37,0],[4,-9.37,0],[10,-9.37,0]].forEach(([x,z,ry])=>sh(x,2.5,z,ry,3.0,1.9));      // depan
+  [[-5.5],[0.5],[6]].forEach(([z])=>sh(12.37,2.5,z,-Math.PI/2,3.0,1.9));                                  // kanan
+  [[6.6],[10.8]].forEach(([x])=>sh(x,2.6,9.27,Math.PI,3.4,1.9));                                          // belakang
+  [[-3.4],[1.4]].forEach(([z])=>sh(-12.29,2.5,z,Math.PI/2,3.0,1.9));                                      // kiri
 })();
 
 // ═══ JAM DINDING (modul parts/room.js) ═══
