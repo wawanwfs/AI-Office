@@ -810,10 +810,14 @@ zoneData.forEach(z=>{
   let zfs=44;zx.font='800 '+zfs+'px "Segoe UI",Arial,sans-serif';while(zx.measureText(z.label).width>460&&zfs>20){zfs-=2;zx.font='800 '+zfs+'px "Segoe UI",Arial,sans-serif';}zx.textAlign='center';zx.textBaseline='middle';
   zx.fillStyle='#FFFFFF';zx.fillText(z.label,256,50);
   const zt=new THREE.CanvasTexture(zc);zt.minFilter=THREE.LinearFilter;
-  const zl=new THREE.Mesh(new THREE.PlaneGeometry(3.4,.64),new THREE.MeshBasicMaterial({map:zt,transparent:true}));
-  zl.rotation.x=-Math.PI/2;zl.rotation.z=Math.PI;const zly=(z.label==='MEETING')?z.z+3.4:(z.label==='SERVER ROOM')?z.z+1.8:z.z;
-  zl.renderOrder=5;zl.material.depthTest=false;zl.material.transparent=true;
-  zl.position.set(z.x,.05,zly);office.add(zl);
+  // Billboard: sprite selalu menghadap kamera (sebelumnya plane di lantai, terlihat miring)
+  const zl=new THREE.Sprite(new THREE.SpriteMaterial({map:zt,transparent:true,depthTest:false}));
+  zl.center.set(.5,1);
+  const zly=(z.label==='MEETING')?z.z+3.4:(z.label==='SERVER ROOM')?z.z+1.8:z.z;
+  zl.renderOrder=5;
+  const zsc=(z.label.length>9)?1.25:1; // label panjang lebih besar
+  zl.scale.set(3.4*zsc,.64*zsc,1);
+  zl.position.set(z.x,1.15,zly);office.add(zl);
 });
 
 // --- ZONA TIM: karpet tipis + papan nama per kelompok meja ---
