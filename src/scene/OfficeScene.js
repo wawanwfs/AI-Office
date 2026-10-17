@@ -1740,37 +1740,42 @@ function animate(){
   if(namesVisible){
     const vis=agentData.filter(a=>a.label.visible);
     const __k=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360));
+    // jarak kamera per-agent (ukuran layar sprite berbanding terbalik dgn jarak)
     // baseY/baseX dicatat SEBELUM offset diterapkan, sehingga offset tidak terakumulasi antar frame
     // (dulu label meeting/walker naik terus karena position.y di-adjust tanpa reset).
-    const pts=vis.map(a=>{const u=a.label.userData, v=a.label.position.clone().project(camera);
+    const pts=vis.map(a=>{const u=a.label.userData, v=a.label.position.clone().project(camera); const da={dist:Math.max(2,camera.position.distanceTo(a.label.position))};
       // baseY/baseX = posisi state (sitting/meeting/walker) minus offset anti-tumpuk frame sebelumnya,
       // sehingga offset TIDAK terakumulasi antar frame.
-      return {a,zone:false,sw:a.label.scale.x*__k*1.06,sh:a.label.scale.y*__k*1.35,baseY:a.label.position.y-(u.antiY||0),baseX:a.label.position.x-(u.antiX||0),x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0}});
+      // ukuran piksel sprite = scale dunia × (px per unit @ dist 1) / jarak kamera (sprite menyusut dgn jarak)
+      return {a,zone:false,sw:a.label.scale.x*__k/da.dist,sh:a.label.scale.y*__k/da.dist,baseY:a.label.position.y-(u.antiY||0),baseX:a.label.position.x-(u.antiX||0),x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0}});
     // label ZONA statis ikut dihitung (sebagai penghalang): agent yang menumpuk zona digeser, zona tidak bergerak
     pts.sort((p,q)=>p.y-q.y);
     if(window.__zoneLabels){const __kz=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360));
       window.__zoneLabels.forEach(zt=>{if(!zt.visible)return;
         const v=zt.position.clone().project(camera);if(v.z>1)return;
+        const dz=Math.max(2,camera.position.distanceTo(zt.position));
         // jitter deterministik per zona (hash label) supaya kluster label zona+agent tidak membentuk tumpukan simetris
       // base dari posisi ASLI (bukan position.y yang sudah digeser frame lalu) -> tidak terakumulasi
       const zb=(window.__zoneBase&&window.__zoneBase.get(zt))||{y:zt.position.y,x:zt.position.x};
       let hsh=0;for(const ch of zt.userData.label||'')hsh=(hsh*31+ch.charCodeAt(0))|0;
       const jy=(hsh%7)-3, jx=((hsh>>3)%9)-4;
-      pts.push({a:null,zone:true,zt,zw:zt.scale.x*__kz*1.08,zh:zt.scale.y*__kz*1.25,baseY:zb.y+jy*0.06,baseX:zb.x+jx*0.08,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});}
+      pts.push({a:null,zone:true,zt,zw:zt.scale.x*__kz/dz*1.06,zh:zt.scale.y*__kz/dz*1.25,baseY:zb.y+jy*0.06,baseX:zb.x+jx*0.08,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});}
     // bubble dialog ikut sebagai penghalang statis: label zona digeser menjauh dari bubble (bubble tidak bergerak)
     chatBubbles.forEach(bb=>{const v=bb.sprite.position.clone().project(camera);if(v.z>1)return;
-      pts.push({a:null,zone:true,zt:null,bub:bb.sprite,zw:bb.sprite.scale.x*container.clientWidth/2*1.02,zh:bb.sprite.scale.y*container.clientHeight/2*1.05,baseY:bb.sprite.position.y,baseX:bb.sprite.position.x,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});
+      const db=Math.max(2,camera.position.distanceTo(bb.sprite.position)), pk=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360));
+      pts.push({a:null,zone:true,zt:null,bub:bb.sprite,zw:bb.sprite.scale.x*pk/db*1.02,zh:bb.sprite.scale.y*pk/db*1.05,baseY:bb.sprite.position.y,baseX:bb.sprite.position.x,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});
     const __L=agentData[0].label;
     for(let iter=0;iter<3;iter++){ // multi-pass: satu pass hanya menggeser sedikit, 3 pass menjamin kluster padat benar2 terpisah
     for(let i=0;i<pts.length;i++){for(let j=0;j<i;j++){
-      const lwi=Math.max(pts[i].sw||0,(pts[i].zw||0)), lhi=Math.max(pts[i].sh||0,(pts[i].zh||0)),
-            lwj=Math.max(pts[j].sw||0,(pts[j].zw||0)), lhj=Math.max(pts[j].sh||0,(pts[j].zh||0));
+      // PAD = breathing room: box diperluas 10px per sisi supaya label tak "menempel" (<5px gap)
+      const PAD=18, lwi=(pts[i].sw||pts[i].zw||0)+PAD, lhi=(pts[i].sh||pts[i].zh||0)+PAD,
+            lwj=(pts[j].sw||pts[j].zw||0)+PAD, lhj=(pts[j].sh||pts[j].zh||0)+PAD;
       const dx=Math.abs(pts[i].x-pts[j].x), dy=Math.abs((pts[i].y+pts[i].offY)-(pts[j].y+pts[j].offY));
       if(dx<(lwi+lwj)/2 && dy<(lhi+lhj)/2){
         // geser vertikal dulu; bila vertikal mentok, geser horizontal ke arah bebas
         const h2=((lhi+lhj)/2)-dy, w2=((lwi+lwj)/2)-dx;
-        if(!pts[i].zone){pts[i].offY+=h2*1.4;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.8;}
-        else if(!pts[j].zone){pts[j].offY-=h2*1.4;const dir=(pts[j].x>=pts[i].x)?1:-1;pts[j].offX+=dir*w2*0.8;}
+        if(!pts[i].zone){pts[i].offY+=h2*1.6;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.9;}
+        else if(!pts[j].zone){pts[j].offY-=h2*1.6;const dir=(pts[j].x>=pts[i].x)?1:-1;pts[j].offX+=dir*w2*0.9;}
       }
     }}
     } // end 2-pass anti-overlap
