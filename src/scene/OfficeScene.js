@@ -191,8 +191,12 @@ cp.position.set(-3,.01,0);cp.receiveShadow=true;office.add(cp);
 const skyTex=(()=>{const c=document.createElement('canvas');c.width=256;c.height=128;
   const x=c.getContext('2d');
   const g=x.createLinearGradient(0,0,0,128);
-  g.addColorStop(0,'#7EC8F5');g.addColorStop(.7,'#BDE3F7');g.addColorStop(1,'#E8F4FB');
+  g.addColorStop(0,'#4EA8EE');g.addColorStop(.65,'#93D0F5');g.addColorStop(1,'#D6EDFB');
   x.fillStyle=g;x.fillRect(0,0,256,128);
+  // pita cahaya matahari utk depth (hindari langit flat/pucat)
+  const sun=x.createRadialGradient(210,22,4,210,22,80);
+  sun.addColorStop(0,'rgba(255,250,220,0.95)');sun.addColorStop(1,'rgba(255,250,220,0)');
+  x.fillStyle=sun;x.fillRect(0,0,256,128);
   x.fillStyle='rgba(255,255,255,0.85)';
   [[40,38,60,14],[130,60,80,12],[190,30,55,10],[80,90,70,12]].forEach(([cx,cy,cw,ch])=>{
     x.beginPath();x.ellipse(cx,cy,cw/2,ch/2,0,0,7);x.fill();});
@@ -836,6 +840,9 @@ zoneData.forEach(z=>{
   const zsc=(z.label.length>9)?1.25:1; // label panjang lebih besar
   zl.scale.set(3.4*zsc,.64*zsc,1);
   zl.position.set(z.x,1.15,zly);office.add(zl);
+  (window.__zoneLabels=window.__zoneLabels||[]).push(zl); // dipakai anti-tumpuk label
+  zl.userData.label=z.label;
+  (window.__zoneBase=window.__zoneBase||new Map()).set(zl,{y:zl.position.y,x:zl.position.x});
 });
 
 // --- ZONA TIM: karpet tipis + papan nama per kelompok meja ---
@@ -1690,23 +1697,36 @@ function animate(){
     const pts=vis.map(a=>{const u=a.label.userData, v=a.label.position.clone().project(camera);
       // baseY/baseX = posisi state (sitting/meeting/walker) minus offset anti-tumpuk frame sebelumnya,
       // sehingga offset TIDAK terakumulasi antar frame.
-      return {a,baseY:a.label.position.y-(u.antiY||0),baseX:a.label.position.x-(u.antiX||0),x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0}});
+      return {a,zone:false,baseY:a.label.position.y-(u.antiY||0),baseX:a.label.position.x-(u.antiX||0),x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0}});
+    // label ZONA statis ikut dihitung (sebagai penghalang): agent yang menumpuk zona digeser, zona tidak bergerak
     pts.sort((p,q)=>p.y-q.y);
+    if(window.__zoneLabels){const __k=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360));
+      window.__zoneLabels.forEach(zt=>{if(!zt.visible)return;
+        const v=zt.position.clone().project(camera);if(v.z>1)return;
+        // jitter deterministik per zona (hash label) supaya kluster label zona+agent tidak membentuk tumpukan simetris
+      // base dari posisi ASLI (bukan position.y yang sudah digeser frame lalu) -> tidak terakumulasi
+      const zb=(window.__zoneBase&&window.__zoneBase.get(zt))||{y:zt.position.y,x:zt.position.x};
+      let hsh=0;for(const ch of zt.userData.label||'')hsh=(hsh*31+ch.charCodeAt(0))|0;
+      const jy=(hsh%7)-3, jx=((hsh>>3)%9)-4;
+      pts.push({a:null,zone:true,zt,zw:zt.scale.x*__k,zh:zt.scale.y*__k,baseY:zb.y+jy*0.06,baseX:zb.x+jx*0.08,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});}
     const __L=agentData[0].label, __k=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360)), lh=__L.scale.y*__k*1.08, lw=__L.scale.x*__k*1.02;
     for(let i=0;i<pts.length;i++){for(let j=0;j<i;j++){
       const dx=Math.abs(pts[i].x-pts[j].x), dy=Math.abs((pts[i].y+pts[i].offY)-(pts[j].y+pts[j].offY));
       if(dx<lw && dy<lh){
         const h=lh-dy, w=(lw-dx)/2;
         // geser vertikal dulu; bila vertikal mentok, geser horizontal ke arah bebas
-        pts[i].offY+= h;
-        const dir=(pts[i].x>=pts[j].x)?1:-1;
-        pts[i].offX+= dir*w*0.6;
+        const lwi=Math.max(lw,pts[i].zw||0), lhi=Math.max(lh,pts[i].zh||0), lwj=Math.max(lw,pts[j].zw||0), lhj=Math.max(lh,pts[j].zh||0);
+        if(!(dx<(lwi+lwj)/2 && dy<(lhi+lhj)/2))continue;
+        const h2=((lhi+lhj)/2)-dy, w2=((lwi+lwj)/2)-dx;
+        if(!pts[i].zone){pts[i].offY+=h2;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.6;}
+        else if(!pts[j].zone){pts[j].offY-=h2;const dir=(pts[j].x>=pts[i].x)?1:-1;pts[j].offX+=dir*w2*0.6;}
       }
     }}
     // konversi offset piksel ke satuan dunia (~ jarak/tinggi layar), cap supaya label tidak melayang jauh
     const dist=camera.position.distanceTo(tgt), worldPerPx=2*dist*Math.tan(camera.fov*Math.PI/360)/container.clientHeight;
     pts.forEach(p=>{
       const dy=Math.min(6,p.offY*worldPerPx*1.2), dx=Math.max(-2.5,Math.min(2.5,p.offX*worldPerPx));
+      if(p.zone){p.zt.position.y=p.baseY+dy; p.zt.position.x=p.baseX+dx; return;} // zona: diterapkan langsung (tanpa akumulasi, dihitung dari project() tiap frame)
       p.a.label.position.y=p.baseY+dy; p.a.label.position.x=p.baseX+dx;
       p.a.label.userData.antiY=dy; p.a.label.userData.antiX=dx; // utk base frame berikutnya
     });
