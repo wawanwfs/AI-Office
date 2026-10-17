@@ -1819,6 +1819,16 @@ function animate(){
         if(minY>-Infinity&&(pi.y+pi.offY)<minY)pi.offY=minY-(pi.y);
       }
     }
+    // CLAMP viewport: label tidak boleh keluar layar atas maupun masuk area toolbar bawah
+    // (sweep greedy hanya mendorong ke bawah; tanpa clamp label dekat tepi bawah terpotong toolbar).
+    {
+      const H2=container.clientHeight/2, TOP=H2-40, BOT=H2-90; // 90px utk toolbar bawah, 40px utk tepi atas
+      pts.forEach(p=>{
+        const fy=p.y+p.offY, half=(p.sh||p.zh||0)/2;
+        if(fy+half> BOT)p.offY=BOT+half-p.y;       // terlalu ke bawah (masuk toolbar)
+        else if(fy-half< -(H2-40))p.offY=-(H2-40)+half-p.y; // terlalu ke atas (keluar layar)
+      });
+    }
     // konversi offset piksel ke satuan dunia (~ jarak/tinggi layar), cap supaya label tidak melayang jauh
     const dist=camera.position.distanceTo(tgt), worldPerPx=2*dist*Math.tan(camera.fov*Math.PI/360)/container.clientHeight;
     pts.forEach(p=>{

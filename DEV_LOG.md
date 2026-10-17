@@ -348,3 +348,7 @@
 - Anti-overlap diperkuat: sweep final greedy pad 8→14px, cap offset agent label dy 16→24 (cluster padat benar-benar terpisah, tidak mentok cap).
 - Bukti: build OK (1.8s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, agents 14; shot ck.png 514KB (scene hidup). Vision audit rating 8/10 — SEMUA 5 label zona terbaca penuh, tak ada teks-atas-teks total; sisa hanya sudut "Lina" menyentuh border WELCOME & LOUNGE.
 - Sisa backlog: adjacency sudut WELCOME & LOUNGE × Lina; tag dekat toolbar bawah terpotong; verifikasi audio di browser asli.
+## 2026-10-18 03:45 WIB — clamp viewport: label tidak masuk toolbar / keluar layar
+- Backlog "tag dekat toolbar bawah terpotong": sweep greedy hanya mendorong ke bawah tanpa batas — kini ditambah pass clamp viewport setelahnya (bottom = H2-90px utk toolbar, top = tepi atas +40px); label dipaksa kembali ke dalam area aman.
+- Bukti: build OK, vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, agents 14; shot ck.png 518KB. Vision: label terendah (Trainer AI/MEETING) utuh di atas toolbar, TIDAK ada label terpotong bawah; sisa hanya adjacency rapat Rina/Integrator, Dewi/Andi + ticker tepi kanan (normal).
+- Sisa backlog: adjacency cluster padat (Rina/Integrator, Dewi/Andi); verifikasi audio di browser asli.
