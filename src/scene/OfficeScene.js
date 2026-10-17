@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { createFurniture } from './parts/furniture.js';
 import { buildRobot } from './parts/robot.js';
 import { createLighting, createNeonMode, createShift, mixHex } from './parts/daycycle.js';
+import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets } from './parts/effects.js';
@@ -894,53 +895,7 @@ office.add(reception);
 // WFS EXTRAS — kafe, server room, rak buku, water cooler, zona lantai
 // ═══════════════════════════════════════════════════
 // --- ZONA LANTAI (patch warna + label) ---
-const zoneData=[
-  {x:-6, z:-1.2, w:11, d:7.5, color:0x1E3A5F, label:'DEV DESK'},
-  {x:8,  z:-3,  w:5.4, d:5.4, color:0x4A3A1A, label:'MEETING', op:.9},
-  {x:6,  z:6,   w:8,   d:4.5, color:0x143326, label:'WELCOME & LOUNGE'},
-  {x:0,  z:6.5, w:5,   d:4,   color:0x2E1533, label:'CAFÉ'},
-  {x:2.5,z:-8,  w:4,   d:2.6, color:0x1F1F2E, label:'SERVER ROOM'},
-];
-zoneData.forEach(z=>{
-  const patch=new THREE.Mesh(new THREE.BoxGeometry(z.w,.02,z.d),
-    new THREE.MeshLambertMaterial({color:z.color,transparent:true,opacity:z.op||.55}));
-  patch.position.set(z.x,.015,z.z);patch.receiveShadow=true;office.add(patch);
-  const zc=document.createElement('canvas');zc.width=512;zc.height=96;
-  const zx=zc.getContext('2d');
-  zx.fillStyle='rgba(5,10,22,0.75)';
-  zx.beginPath();zx.roundRect(4,4,504,88,20);zx.fill();
-  zx.strokeStyle='#F59E0B';zx.lineWidth=3;zx.stroke();
-  let zfs=44;zx.font='800 '+zfs+'px "Segoe UI",Arial,sans-serif';while(zx.measureText(z.label).width>460&&zfs>20){zfs-=2;zx.font='800 '+zfs+'px "Segoe UI",Arial,sans-serif';}zx.textAlign='center';zx.textBaseline='middle';
-  zx.fillStyle='#FFFFFF';zx.fillText(z.label,256,50);
-  const zt=new THREE.CanvasTexture(zc);zt.minFilter=THREE.LinearFilter;
-  // Billboard: sprite selalu menghadap kamera (sebelumnya plane di lantai, terlihat miring)
-  const zl=new THREE.Sprite(new THREE.SpriteMaterial({map:zt,transparent:true,depthTest:false}));
-  zl.center.set(.5,1);
-  const zly=(z.label==='MEETING')?z.z+3.4:(z.label==='SERVER ROOM')?z.z+1.8:z.z;
-  zl.renderOrder=5;
-  const zsc=(z.label.length>9)?1.25:1; // label panjang lebih besar
-  zl.scale.set(3.4*zsc,.64*zsc,1);
-  zl.position.set(z.x,1.15,zly);office.add(zl);
-  (window.__zoneLabels=window.__zoneLabels||[]).push(zl); // dipakai anti-tumpuk label
-  zl.userData.label=z.label;
-  (window.__zoneBase=window.__zoneBase||new Map()).set(zl,{y:zl.position.y,x:zl.position.x});
-});
-
-// --- ZONA TIM: karpet tipis + papan nama per kelompok meja ---
-(function(){
-  const teams=[
-    {label:'TIM BACKEND & AI', color:0x3B82F6, cx:-6, cz:-3,  w:7.4, d:3.2},
-    {label:'TIM FRONTEND & MOBILE', color:0xF472B6, cx:-2, cz:1.5, w:7.4, d:3.2},
-    {label:'TIM DESAIN & DEVOPS', color:0x34D399, cx:-6, cz:6,   w:7.4, d:3.2},
-    {label:'TIM QA, MARKETING & PM', color:0xFB923C, cx:4, cz:1.5, w:3.6, d:11.0},
-  ];
-  teams.forEach(t=>{
-    const m=new THREE.Mesh(new THREE.BoxGeometry(t.w,.012,t.d),new THREE.MeshBasicMaterial({color:t.color,transparent:true,opacity:.22,depthWrite:false,polygonOffset:true,polygonOffsetFactor:-2,polygonOffsetUnits:-2}));
-    m.position.set(t.cx,.045,t.cz);m.renderOrder=1;office.add(m);
-    const e=new THREE.Mesh(new THREE.BoxGeometry(t.w,.014,.06),new THREE.MeshBasicMaterial({color:t.color,transparent:true,opacity:.55}));
-    e.position.set(t.cx,.05,t.cz+t.d/2);office.add(e);
-  });
-})();
+createZones({THREE,office});
 
 // --- CAFÉ / COFFEE BAR (depan kiri) ---
 const cafe=new THREE.Group();
