@@ -1772,7 +1772,7 @@ function animate(){
     for(let iter=0;iter<5;iter++){ // multi-pass: satu pass hanya menggeser sedikit, 3 pass menjamin kluster padat benar2 terpisah
     for(let i=0;i<pts.length;i++){for(let j=0;j<i;j++){
       // PAD = breathing room: box diperluas 10px per sisi supaya label tak "menempel" (<5px gap)
-      const PAD=18, lwi=(pts[i].sw||pts[i].zw||0)+PAD, lhi=(pts[i].sh||pts[i].zh||0)+PAD,
+      const PAD=28, lwi=(pts[i].sw||pts[i].zw||0)+PAD, lhi=(pts[i].sh||pts[i].zh||0)+PAD,
             lwj=(pts[j].sw||pts[j].zw||0)+PAD, lhj=(pts[j].sh||pts[j].zh||0)+PAD;
       const dx=Math.abs(pts[i].x-pts[j].x), dy=Math.abs((pts[i].y+pts[i].offY)-(pts[j].y+pts[j].offY));
       if(dx<(lwi+lwj)/2 && dy<(lhi+lhj)/2){
@@ -1784,8 +1784,8 @@ function animate(){
             pts[zi].offY+=up*h2b*1.8; const dz2=(pts[zi].x>=pts[other].x)?1:-1; pts[zi].offX+=dz2*w2b*1.0;}
         }
         else if(!pts[i].zone&&!pts[j].zone){ // agent-agent: saling dorong dua arah
-          pts[i].offY+=h2*0.8;pts[j].offY-=h2*0.8;
-          const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.45;pts[j].offX-=dir*w2*0.45;
+          pts[i].offY+=h2*1.0;pts[j].offY-=h2*1.0;
+          const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.6;pts[j].offX-=dir*w2*0.6;
         }
         else if(!pts[i].zone){ // agent vs penghalang: agent bergeser penuh, bubble ikut mundur sedikit (mutual)
           pts[i].offY+=h2*1.6;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.9;
