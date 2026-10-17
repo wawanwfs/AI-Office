@@ -1803,31 +1803,35 @@ function animate(){
       }
     }}
     } // end multi-pass anti-overlap
-    // PASS FINAL deterministik: sweep dari atas ke bawah, tiap label didorong ke bawah dari
-    // posisi terendah yang sudah "aman" terhadap semua label sebelumnya -> jaminan nol overlap
-    // (multi-pass mutual push bisa saling meniadakan; sweep greedy tidak).
-    {
-      const byY=pts.slice().sort((p,q)=>(p.y+p.offY)-(q.y+q.offY));
-      for(let i=1;i<byY.length;i++){
-        const pi=byY[i];
-        let minY=-Infinity;
-        for(let j=0;j<i;j++){
-          const pj=byY[j];if(Math.abs(pi.x+pi.offX-(pj.x+pj.offX))>=((pi.sw||pi.zw||0)+(pj.sw||pj.zw||0))/2+14)continue;
-          const need=(pj.y+pj.offY)+((pi.sh||pi.zh||0)+(pj.sh||pj.zh||0))/2+14;
-          if(need>minY)minY=need;
-        }
-        if(minY>-Infinity&&(pi.y+pi.offY)<minY)pi.offY=minY-(pi.y);
-      }
-    }
-    // CLAMP viewport: label tidak boleh keluar layar atas maupun masuk area toolbar bawah
-    // (sweep greedy hanya mendorong ke bawah; tanpa clamp label dekat tepi bawah terpotong toolbar).
+    // SWEEP+CLAMP SIKLIKAL: sweep greedy bisa mendorong label melewati batas viewport,
+    // dan clamp bisa menimbulkan overlap baru -> ulangi (sweep→clamp) sampai stabil (max 3x).
+    // Konvergen: total ruang vertikal aman melebihi kebutuhan, tiap iterasi hanya mengurangi pelanggaran.
     {
       const H2=container.clientHeight/2, TOP=H2-40, BOT=H2-90; // 90px utk toolbar bawah, 40px utk tepi atas
+      for(let round=0;round<3;round++){
+      // sweep: dari atas ke bawah, tiap label didorong ke bawah dari posisi terendah yang bebas overlap
+      {
+        const byY=pts.slice().sort((p,q)=>(p.y+p.offY)-(q.y+q.offY));
+        for(let i=1;i<byY.length;i++){
+          const pi=byY[i];
+          let minY=-Infinity;
+          for(let j=0;j<i;j++){
+            const pj=byY[j];if(Math.abs(pi.x+pi.offX-(pj.x+pj.offX))>=((pi.sw||pi.zw||0)+(pj.sw||pj.zw||0))/2+14)continue;
+            const need=(pj.y+pj.offY)+((pi.sh||pi.zh||0)+(pj.sh||pj.zh||0))/2+14;
+            if(need>minY)minY=need;
+          }
+          if(minY>-Infinity&&(pi.y+pi.offY)<minY)pi.offY=minY-(pi.y);
+        }
+      }
+      // clamp viewport: batas atas tepi layar, bawah toolbar
+      let violated=false;
       pts.forEach(p=>{
         const fy=p.y+p.offY, half=(p.sh||p.zh||0)/2;
-        if(fy+half> BOT)p.offY=BOT+half-p.y;       // terlalu ke bawah (masuk toolbar)
-        else if(fy-half< -(H2-40))p.offY=-(H2-40)+half-p.y; // terlalu ke atas (keluar layar)
+        if(fy+half>BOT){p.offY=BOT+half-p.y;violated=true;}       // masuk toolbar -> naik
+        else if(fy-half<-(TOP)){p.offY=-(TOP)+half-p.y;violated=true;} // keluar layar atas -> turun
       });
+      if(!violated)break; // sweep+clamp sudah konsisten, tidak ada pelanggaran batas
+      }
     }
     // konversi offset piksel ke satuan dunia (~ jarak/tinggi layar), cap supaya label tidak melayang jauh
     const dist=camera.position.distanceTo(tgt), worldPerPx=2*dist*Math.tan(camera.fov*Math.PI/360)/container.clientHeight;
