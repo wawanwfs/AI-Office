@@ -352,3 +352,9 @@
 - Backlog "tag dekat toolbar bawah terpotong": sweep greedy hanya mendorong ke bawah tanpa batas — kini ditambah pass clamp viewport setelahnya (bottom = H2-90px utk toolbar, top = tepi atas +40px); label dipaksa kembali ke dalam area aman.
 - Bukti: build OK, vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, agents 14; shot ck.png 518KB. Vision: label terendah (Trainer AI/MEETING) utuh di atas toolbar, TIDAK ada label terpotong bawah; sisa hanya adjacency rapat Rina/Integrator, Dewi/Andi + ticker tepi kanan (normal).
 - Sisa backlog: adjacency cluster padat (Rina/Integrator, Dewi/Andi); verifikasi audio di browser asli.
+## 2026-10-18 04:10 WIB — anti-overlap #7: sweep+clamp siklikal + dorongan vs zona diperkuat
+- Backlog "adjacency cluster padat": akar masalah — sweep greedy bisa mendorong label melewati batas viewport lalu clamp menimbulkan overlap baru (satu pass tidak konvergen). Kini sweep→clamp diulang siklikal (maks 3 round, berhenti bila tanpa pelanggaran batas).
+- Dorongan agent vs penghalang (zona/bubble) dinaikkan 1.6×→1.9× vertikal, 0.9×→1.0× horizontal — mengatasi "Maya menimpa CAFE" & "Lina menyentuh WELCOME & LOUNGE" yang terlihat vision audit run lalu.
+- Bukti: build OK (1.6s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, agents 14; shot ck.png 517KB (scene hidup). Vision audit: Maya↔CAFE terpisah ~125px ✅, Lina↔W&L gap ~90px ✅, NOL overlap antar pil nama.
+- Catatan: overlap "ticker atas menutup WELCOME & LOUNGE" adalah teks HTML header (di luar canvas 3D, marquee by design) — bukan cakupan anti-overlap scene; dicatat sebagai backlog UI terpisah.
+- Sisa backlog: ticker header vs label zona (lane terpisah); verifikasi audio di browser asli.

@@ -1793,7 +1793,7 @@ function animate(){
           const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.6;pts[j].offX-=dir*w2*0.6;
         }
         else if(!pts[i].zone){ // agent vs penghalang: agent bergeser penuh, bubble ikut mundur sedikit (mutual)
-          pts[i].offY+=h2*1.6;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.9;
+          pts[i].offY+=h2*1.9;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*1.0;
           if(pts[j].bub){pts[j].offY-=h2*0.35;pts[j].offX-=dir*w2*0.25;}
         }
         else if(!pts[j].zone){
