@@ -1747,7 +1747,8 @@ function animate(){
       // baseY/baseX = posisi state (sitting/meeting/walker) minus offset anti-tumpuk frame sebelumnya,
       // sehingga offset TIDAK terakumulasi antar frame.
       // ukuran piksel sprite = scale dunia × (px per unit @ dist 1) / jarak kamera (sprite menyusut dgn jarak)
-      return {a,zone:false,sw:a.label.scale.x*__k/da.dist,sh:a.label.scale.y*__k/da.dist,baseY:a.label.position.y-(u.antiY||0),baseX:a.label.position.x-(u.antiX||0),x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0}});
+      // agent label: sizeAttenuation=false -> ukuran piksel KONSTAN, TIDAK dibagi jarak kamera
+      return {a,zone:false,sw:a.label.scale.x*__k,sh:a.label.scale.y*__k,baseY:a.label.position.y-(u.antiY||0),baseX:a.label.position.x-(u.antiX||0),x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0}});
     // label ZONA statis ikut dihitung (sebagai penghalang): agent yang menumpuk zona digeser, zona tidak bergerak
     pts.sort((p,q)=>p.y-q.y);
     if(window.__zoneLabels){const __kz=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360));
@@ -1763,7 +1764,8 @@ function animate(){
     // bubble dialog ikut sebagai penghalang statis: label zona digeser menjauh dari bubble (bubble tidak bergerak)
     chatBubbles.forEach(bb=>{const v=bb.sprite.position.clone().project(camera);if(v.z>1)return;
       const db=Math.max(2,camera.position.distanceTo(bb.sprite.position)), pk=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360));
-      pts.push({a:null,zone:true,zt:null,bub:bb.sprite,zw:bb.sprite.scale.x*pk/db*1.02,zh:bb.sprite.scale.y*pk/db*1.05,baseY:bb.sprite.position.y,baseX:bb.sprite.position.x,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});
+      // bubble: sizeAttenuation=false -> piksel konstan (scale sudah fraksi tinggi layar × __k)
+      pts.push({a:null,zone:true,zt:null,bub:bb.sprite,zw:bb.sprite.scale.x*pk,zh:bb.sprite.scale.y*pk,baseY:bb.sprite.position.y,baseX:bb.sprite.position.x,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});
     const __L=agentData[0].label;
     for(let iter=0;iter<3;iter++){ // multi-pass: satu pass hanya menggeser sedikit, 3 pass menjamin kluster padat benar2 terpisah
     for(let i=0;i<pts.length;i++){for(let j=0;j<i;j++){
