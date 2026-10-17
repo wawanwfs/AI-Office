@@ -316,3 +316,9 @@
 - Backlog "bubble statis" dibereskan: saat bubble tabrakan dgn label agent, bubble kini mundur 0.35x (vertikal) + 0.25x (horizontal) sementara agent bergeser penuh 1.6x/0.9x — dorongan dua arah ringan agar bubble tidak menutup name tag.
 - Bukti: build OK, vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, agents 14; shot ck.png 510KB (vision audit timeout 2x — dicoba lagi run berikutnya).
 - Sisa backlog: 2 pasangan menempel sisa; tofu digit jam headless; verifikasi di browser asli; vision audit bubble mutual tertunda.
+
+## 2026-10-18 01:10 WIB — verifikasi tofu digit jam: RESOLVED (font selfhost Orbitron bekerja)
+- Verifikasi CDP: font.check('600 16px Orbitron')=true, families loaded (Orbitron/loaded), canvas probe fillText '11:00' Orbitron=1737px vs fallback monospace=1616px → glyph Orbitron benar dipakai (bukan fallback).
+- Vision audit shot fnt.png (512KB): jam "11:00" dirender penuh, TIDAK ada tofu/glyph kosong di seluruh screenshot; hanya clipping marquee ticker (perilaku normal).
+- Kesimpulan: fix selfhost woff2 sebelumnya terbukti efektif; item backlog "tofu digit jam headless" ditutup.
+- Sisa backlog: 2 pasangan label menempel 2-4px; verifikasi audio & label di browser asli; truncation ellipsis.
