@@ -1743,7 +1743,7 @@ function animate(){
     // jarak kamera per-agent (ukuran layar sprite berbanding terbalik dgn jarak)
     // baseY/baseX dicatat SEBELUM offset diterapkan, sehingga offset tidak terakumulasi antar frame
     // (dulu label meeting/walker naik terus karena position.y di-adjust tanpa reset).
-    const pts=vis.map(a=>{const u=a.label.userData, v=a.label.position.clone().project(camera); const da={dist:Math.max(2,camera.position.distanceTo(a.label.position))};
+    const pts=vis.map(a=>{const u=a.label.userData, v=a.label.position.clone().project(camera);
       // baseY/baseX = posisi state (sitting/meeting/walker) minus offset anti-tumpuk frame sebelumnya,
       // sehingga offset TIDAK terakumulasi antar frame.
       // ukuran piksel sprite = scale dunia × (px per unit @ dist 1) / jarak kamera (sprite menyusut dgn jarak)
@@ -1765,7 +1765,7 @@ function animate(){
       pts.push({a:null,zone:true,zt,zw:zt.scale.x*__kz/dz*1.06,zh:zt.scale.y*__kz/dz*1.25,baseY:zb.y+jy*0.06+zay,baseX:zb.x+jx*0.08+zax,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});}
     // bubble dialog ikut sebagai penghalang statis: label zona digeser menjauh dari bubble (bubble tidak bergerak)
     chatBubbles.forEach(bb=>{const v=bb.sprite.position.clone().project(camera);if(v.z>1)return;
-      const db=Math.max(2,camera.position.distanceTo(bb.sprite.position)), pk=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360));
+      const pk=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360));
       // bubble: sizeAttenuation=false -> piksel konstan (scale sudah fraksi tinggi layar × __k)
       pts.push({a:null,zone:true,zt:null,bub:bb.sprite,zw:bb.sprite.scale.x*pk,zh:bb.sprite.scale.y*pk,baseY:bb.sprite.position.y,baseX:bb.sprite.position.x,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});
     const __L=agentData[0].label;
@@ -1778,7 +1778,12 @@ function animate(){
       if(dx<(lwi+lwj)/2 && dy<(lhi+lhj)/2){
         // geser vertikal dulu; bila vertikal mentok, geser horizontal ke arah bebas
         const h2=((lhi+lhj)/2)-dy, w2=((lwi+lwj)/2)-dx;
-        if(!pts[i].zone&&!pts[j].zone){ // agent-agent: saling dorong dua arah
+        if(pts[i].zone&&pts[j].zone){ // dua penghalang (zona vs bubble): zona label yang digeser menjauh
+          const zi=pts[i].zt?i:(pts[j].zt?j:-1), other=zi===i?j:i;
+          if(zi>=0){const h2b=((lhi+lhj)/2)-dy, w2b=((lwi+lwj)/2)-dx, up=pts[zi].y<pts[other].y?-1:1;
+            pts[zi].offY+=up*h2b*1.8; const dz2=(pts[zi].x>=pts[other].x)?1:-1; pts[zi].offX+=dz2*w2b*1.0;}
+        }
+        else if(!pts[i].zone&&!pts[j].zone){ // agent-agent: saling dorong dua arah
           pts[i].offY+=h2*0.8;pts[j].offY-=h2*0.8;
           const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.45;pts[j].offX-=dir*w2*0.45;
         }
