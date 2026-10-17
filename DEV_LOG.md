@@ -270,3 +270,9 @@
 - Gradien AO diperkuat: alpha 0.38→0.52 di pangkal, midpoint 0.16@50% → 0.24@45%; lebar strip 0.85→0.95 unit, dinding kanan (index 3) 1.25 unit khusus.
 - Bukti: build OK (1.0s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, agents 14; shot ck_ao2.png 514KB — vision: gradien grounding dinding-lantai terbaca di keempat dinding termasuk kanan, tanpa strip melayang/salah sisi (masih subtle karena karpet biru menutup sebagian pangkal — wajar).
 - Sisa backlog: kaca; suara; modernisasi App/index.css/vite/eslint; verifikasi di browser asli.
+
+## 2026-10-17 19:57 WIB — polesan lanjutan
+- Zona lantai -> parts/flooring.js (createZones). Kemiripan kode asli: 13%.
+- Insiden: edit saya menimpa versi anti-tumpuk baru milik worker (lw undefined) — dipulihkan dari backup. Pelajaran: worker jalan tiap 15 menit, CEK git log sebelum edit OfficeScene.
+- Font jam fallback monospace.
+- Tes 9/9, tanpa error runtime, desktop & HP 8/10.
