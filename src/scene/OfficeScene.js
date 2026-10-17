@@ -1622,6 +1622,7 @@ const onResize=()=>{camera.aspect=container.clientWidth/container.clientHeight;c
         ad.state='walking_out';ad.sittingChar.visible=false;ad.walker.visible=true;
         ad.walker.position.set(ad.home.x,0,ad.home.z);
         ad.walkTarget={x:-9.5+rng.r(-1,1),z:7.5+rng.r(-.5,.5)}; // area kafe
+        ad._route=null; // recalc otomatis: tanpa rute, stepRoute jatuh ke walkTarget
         ad.walkPause=12;
       });
     } else if(action==='work'){
