@@ -162,10 +162,11 @@ function addBlobShadow(obj,r=0.55){
 // AO kontak: strip gradien gelap di pangkal 4 dinding (palsu ambient occlusion, membumikan dinding ke lantai)
 const aoMat=()=>new THREE.MeshBasicMaterial({map:(()=>{const c=document.createElement('canvas');c.width=16;c.height=64;
   const x=c.getContext('2d');const g=x.createLinearGradient(0,0,0,64);
-  g.addColorStop(0,'rgba(0,0,0,0.38)');g.addColorStop(.5,'rgba(0,0,0,0.16)');g.addColorStop(1,'rgba(0,0,0,0)');
+  g.addColorStop(0,'rgba(0,0,0,0.52)');g.addColorStop(.45,'rgba(0,0,0,0.24)');g.addColorStop(1,'rgba(0,0,0,0)');
   x.fillStyle=g;x.fillRect(0,0,16,64);return new THREE.CanvasTexture(c);})(),transparent:true,depthWrite:false});
-[[0,-9.5,25.4,0],[0,9.5,25.4,Math.PI],[-12.5,0,19.4,Math.PI/2],[12.5,0,19.4,-Math.PI/2]].forEach(([ax,az,len,rot])=>{
-  const s=new THREE.Mesh(new THREE.PlaneGeometry(len,0.85),aoMat());
+[[0,-9.5,25.4,0],[0,9.5,25.4,Math.PI],[-12.5,0,19.4,Math.PI/2],[12.5,0,19.4,-Math.PI/2]].forEach(([ax,az,len,rot],i)=>{
+  const wide=i===3?1.25:0.95; // dinding kanan lebih lebar & pekat (di backlog tercatat tipis)
+  const s=new THREE.Mesh(new THREE.PlaneGeometry(len,wide),aoMat());
   s.rotation.x=-Math.PI/2;s.rotation.z=rot;
   s.position.set(ax + (Math.abs(az)>Math.abs(ax)?(ax<0?0.42:-0.42):0),
                  0.006,
