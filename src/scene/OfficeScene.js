@@ -142,6 +142,16 @@ const office=new THREE.Group();scene.add(office);
 const M=(c,o={})=>new THREE.MeshLambertMaterial({color:c,...o});
 const MB=c=>new THREE.MeshBasicMaterial({color:c});
 const Glass=()=>new THREE.MeshPhysicalMaterial({color:0xBBCCDD,transparent:true,opacity:0.08,roughness:0});
+// contact blob shadow — bidang radial gradient semi-transparan di lantai, anchor bayangan objek
+const __blobTex=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
+  const g=x.createRadialGradient(64,64,4,64,64,62);g.addColorStop(0,'rgba(10,14,18,0.55)');g.addColorStop(0.55,'rgba(10,14,18,0.30)');g.addColorStop(1,'rgba(10,14,18,0)');
+  x.fillStyle=g;x.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
+const __blobMat=new THREE.MeshBasicMaterial({map:__blobTex,transparent:true,depthWrite:false,opacity:1});
+function addBlobShadow(obj,r=0.55){
+  const b=new THREE.Mesh(new THREE.PlaneGeometry(r*2,r*2),__blobMat);
+  b.rotation.x=-Math.PI/2;b.position.y=0.012;b.renderOrder=2;
+  b.userData.blob=true;obj.add(b);return b;
+}
 
 // ═══════════════════════════════════════════════════
 // OFFICE STRUCTURE
@@ -610,12 +620,14 @@ allAgents.forEach((agent,i)=>{
   const sittingChar=buildChar(agent,false);
   sittingChar.scale.set(1.7,1.7*looksOf(agent).h,1.7);
   sittingChar.position.set(dp.x,0,dp.z+.55);
+  addBlobShadow(sittingChar,0.62);
   sittingChar.traverse(o=>{if(o.isMesh&&o.material&&!o.material.isMeshBasicMaterial){o.castShadow=true;}});
   office.add(sittingChar);
   // Walker
   const walker=buildChar(agent,true);
   walker.scale.set(1.7,1.7*looksOf(agent).h,1.7);
   walker.visible=false;
+  addBlobShadow(walker,0.62);
   walker.traverse(o=>{if(o.isMesh&&o.material&&!o.material.isMeshBasicMaterial){o.castShadow=true;}});
   office.add(walker);
   // Label
