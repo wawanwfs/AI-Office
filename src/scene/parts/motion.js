@@ -43,6 +43,7 @@ export function createMotion(ctx) {
       window.__collabCount = (window.__collabCount || 0) + 1;
       window.__collabLast = ad.agent.name + '->' + col.partner.agent.name;
       ad.walkTarget = { x: col.partner.home.x + 0.95, z: col.partner.home.z - 0.15 };
+      ad.collab.viaRoute = true; // catatan: rute dihitung normal
     } else {
       ad.collab = null; ad.partner = null;
       const dest = walkDestinations[rng.i(0, walkDestinations.length - 1)];
@@ -53,23 +54,22 @@ export function createMotion(ctx) {
   }
 
   // ── Routing koridor: hindari menembus meja & kursi ──
-  // Baris meja di z=-3 / 1.5 / 6. Koridor antar-baris (gang) di z=-0.75 dan z=3.75,
-  // koridor depan tiap baris di z=row-1.15 (di depan meja, bebas rintangan).
-  const ROWS = [-3, 1.5, 6], GANGS = [-0.75, 3.75];
+  // Baris meja di z=-3 / 1.5 / 6. Koridor depan baris (row-1.15) dan gang antar-baris
+  // (z=-0.75 / 3.75) bebas rintangan; semua lintasan lewat sana.
+  const FRONT = [-4.15, 0.35, 4.85], GANGS = [-0.75, 3.75];
   const bandOf = (z) => (z < -0.75 ? 0 : z < 3.75 ? 1 : 2);
   function routePath(a, b) {
     const ba = bandOf(a.z), bb = bandOf(b.z), path = [];
     if (ba !== bb) {
-      // lewat gang pemisah antar baris (0→2: pakai gang terdekat dari titik awal)
-      let gz;
-      if (Math.max(ba, bb) - Math.min(ba, bb) === 1) gz = GANGS[Math.min(ba, bb)];
-      else gz = Math.abs(a.z - GANGS[0]) + Math.abs(b.z - GANGS[0]) < Math.abs(a.z - GANGS[1]) + Math.abs(b.z - GANGS[1]) ? GANGS[0] : GANGS[1];
-      path.push({ x: a.x, z: gz }, { x: b.x, z: gz });
+      const gz = (Math.max(ba, bb) - Math.min(ba, bb) === 1)
+        ? GANGS[Math.min(ba, bb)]
+        : (Math.abs(a.z - GANGS[0]) + Math.abs(b.z - GANGS[0]) < Math.abs(a.z - GANGS[1]) + Math.abs(b.z - GANGS[1]) ? GANGS[0] : GANGS[1]);
+      // keluar baris asal via koridor depan, turun/naik ke gang di x asal, seberang, masuk koridor depan baris tujuan
+      path.push({ x: a.x, z: FRONT[ba] }, { x: a.x, z: gz }, { x: b.x, z: gz }, { x: b.x, z: FRONT[bb] });
     } else if (Math.abs(b.x - a.x) > 2.2) {
-      // satu baris tapi jauh: lewat koridor depan baris agar tidak menembus meja rekan
-      const row = ROWS.reduce((r, v) => (Math.abs(v - a.z) < Math.abs(r - a.z) ? v : r), ROWS[0]);
-      const cz = row - 1.15;
-      path.push({ x: a.x, z: cz }, { x: b.x, z: cz });
+      // satu band tapi jauh: lewat koridor depan band agar tidak menembus meja rekan
+      const fr = FRONT[ba];
+      path.push({ x: a.x, z: fr }, { x: b.x, z: fr });
     }
     return path;
   }
