@@ -358,3 +358,7 @@
 - Bukti: build OK (1.6s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, agents 14; shot ck.png 517KB (scene hidup). Vision audit: Maya↔CAFE terpisah ~125px ✅, Lina↔W&L gap ~90px ✅, NOL overlap antar pil nama.
 - Catatan: overlap "ticker atas menutup WELCOME & LOUNGE" adalah teks HTML header (di luar canvas 3D, marquee by design) — bukan cakupan anti-overlap scene; dicatat sebagai backlog UI terpisah.
 - Sisa backlog: ticker header vs label zona (lane terpisah); verifikasi audio di browser asli.
+## 2026-10-18 04:40 WIB — lane HUD atas dicadangkan: label tak lagi di bawah header/ticker
+- Backlog "ticker header vs label zona (lane terpisah)": clamp viewport pass atas diperketat TOP 40→110px dari tepi — area header (judul+subtitle, sampai ~y100) + ticker marquee kini lane HUD murni, label scene didorong turun keluar zona itu.
+- Bukti: build OK, vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, agents 14; shot ck.png 514KB (scene hidup). Vision audit: label tertinggi "Rizky" y~110 & "Bantuin AI" y~145 — keduanya di bawah ticker dgn jarak jelas; NOL label menempel header/ticker ✅.
+- Sisa backlog: adjacency tipis CAFE×Maya & Support…×WELCOME & LOUNGE (cluster padat); verifikasi audio di browser asli; tooltip menutup ujung subtitle header (minor).
