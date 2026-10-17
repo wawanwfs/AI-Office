@@ -173,18 +173,19 @@ fl.position.y=-.075;fl.receiveShadow=true;office.add(fl);
 const cp=new THREE.Mesh(new THREE.BoxGeometry(10,.02,8),M(0xD0D8E0));
 cp.position.set(-3,.01,0);cp.receiveShadow=true;office.add(cp);
 
-// Wainscot band (panel bawah dinding, warna hangat)
-[].forEach(([wx,wz,ww])=>{
+// Wainscot band (panel bawah dinding belakang & depan — dinding kanan/kiri punya panel sendiri di blok dinding)
+[[0,-9.5,26],[0,9.5,26]].forEach(([wx,wz,ww])=>{
   const band=new THREE.Mesh(new THREE.BoxGeometry(ww,1.1,.1),M(0xEFE9DD));
   band.position.set(wx,.55,wz+(wz<0?.06:-.06));office.add(band);
   const trim=new THREE.Mesh(new THREE.BoxGeometry(ww,.06,.14),M(0xC9BFA8));
   trim.position.set(wx,1.12,wz+(wz<0?.06:-.06));office.add(trim);
 });
-[].forEach(([wx,wz,wd])=>{
+// Wainscot band vertikal dinding kiri & kanan
+[[-12.5,0,20],[12.5,0,20]].forEach(([wx,wz,wd])=>{
   const band=new THREE.Mesh(new THREE.BoxGeometry(.1,1.1,wd),M(0xEFE9DD));
-  band.position.set(wx,.55,wz);office.add(band);
+  band.position.set(wx+(wx<0?.06:-.06),.55,wz);office.add(band);
   const trim=new THREE.Mesh(new THREE.BoxGeometry(.14,.06,wd),M(0xC9BFA8));
-  trim.position.set(wx,1.12,wz);office.add(trim);
+  trim.position.set(wx+(wx<0?.06:-.06),1.12,wz);office.add(trim);
 });
 // Jendela dengan pemandangan langit (dinding belakang & depan, atas wainscot)
 const skyTex=(()=>{const c=document.createElement('canvas');c.width=256;c.height=128;
@@ -196,22 +197,8 @@ const skyTex=(()=>{const c=document.createElement('canvas');c.width=256;c.height
   [[40,38,60,14],[130,60,80,12],[190,30,55,10],[80,90,70,12]].forEach(([cx,cy,cw,ch])=>{
     x.beginPath();x.ellipse(cx,cy,cw/2,ch/2,0,0,7);x.fill();});
   return new THREE.CanvasTexture(c);})();
-[].forEach(([wx,wz,ry])=>{
-  for(let i=-2;i<=2;i++){
-    if(i===0)continue;
-    const win=new THREE.Mesh(new THREE.PlaneGeometry(3.4,2.2),
-      new THREE.MeshBasicMaterial({map:skyTex}));
-    win.position.set(i*5,2.6,wz);win.rotation.y=ry;office.add(win);
-    const sill=new THREE.Mesh(new THREE.BoxGeometry(3.6,.08,.2),M(0xFFFFFF));
-    sill.position.set(i*5,1.46,wz+(wz<0?.05:-.05));office.add(sill);
-    [[-1.75,0],[1.75,0],[0,-1.15],[0,1.15]].forEach(([ox,oy])=>{
-      const fr=new THREE.Mesh(new THREE.BoxGeometry(Math.abs(ox)?0.08:3.6,Math.abs(oy)?0.08:2.3,.06),M(0x8A9BAA));
-      fr.position.set(wx+(ry===0?ox:ox),2.6+oy,wz+(wz<0?0.03:-0.03));
-      if(!ox&&!oy)fr.position.set(wx,2.6,wz+(wz<0?0.03:-0.03));
-      office.add(fr);
-    });
-  }
-});
+// (jendela sky-view dinding belakang & kiri dibangun di blok dinding __wallFade di bawah —
+//  blok lama di sini dead code dengan array kosong dan sudah dihapus)
 
 // Glass edge frames (subtle structural lines)
 [[-12.5,-9.5],[-12.5,9.5],[12.5,-9.5],[12.5,9.5]].forEach(([x,z])=>{
@@ -1149,6 +1136,8 @@ const __wallObjs=[];
   const upperB=tex('#E6EAF1','rgba(130,145,170,.30)');upperB.repeat.set(5,1);
   const woodB=tex('#8A6244','rgba(40,25,10,.40)',512,256,32);woodB.repeat.set(5,1);
   const NAVY=0x24304A, GOLD=0xD4AF37, TRIM=0xF4F6FA;
+  const wallBack=[];
+  const WB=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);office.add(m);wallBack.push(m);return m};
 
   // ---- DINDING BELAKANG (z=+9.5), menghadap -Z ----
   W(B(26,4,.2),lit(upperA),0,2,9.6);
@@ -1210,7 +1199,7 @@ const __wallObjs=[];
   const wallDefs={
     front:{objs:wallFront,out:(c)=>-9.5-c.z},      // kamera di z < -9.5 => luar
     right:{objs:wallRight,out:(c)=>c.x-12.5},
-    back :{objs:[],out:(c)=>c.z-9.5},
+    back :{objs:wallBack,out:(c)=>c.z-9.5},
     left :{objs:[],out:(c)=>-12.5-c.x},
   };
   let collected=false;
@@ -1278,6 +1267,17 @@ const __wallObjs=[];
     W(B(.3,.04,.1),new THREE.MeshBasicMaterial({color:0xFFE9A8}),x,3.93,9.1);
   });
   const spot=new THREE.PointLight(0xFFE2A0,.9,8,1.5);spot.position.set(1,3.4,8.2);office.add(spot);
+
+  // ---- Jendela sky-view di dinding belakang (sisi kanan logo, area kosong) ----
+  [6.6,10.8].forEach(x=>{
+    const wm=new THREE.MeshBasicMaterial({map:skyTex,transparent:true});fadeMats.push(wm);
+    const win=new THREE.Mesh(new THREE.PlaneGeometry(3.4,1.9),wm);
+    win.position.set(x,2.6,9.26);win.rotation.y=Math.PI;office.add(win);wallBack.push(win);
+    const FR=0x2B3446;
+    W(B(3.6,.1,.1),new THREE.MeshBasicMaterial({color:FR}),x,3.6,9.24);WB(B(3.6,.1,.1),new THREE.MeshBasicMaterial({color:FR}),x,1.6,9.24);
+    WB(B(.1,2.1,.1),new THREE.MeshBasicMaterial({color:FR}),x-1.75,2.6,9.24);WB(B(.1,2.1,.1),new THREE.MeshBasicMaterial({color:FR}),x+1.75,2.6,9.24);
+    WB(B(3.7,.07,.2),new THREE.MeshBasicMaterial({color:TRIM}),x,1.55,9.24);
+  });
 
   // ---- Papan sambutan di dinding kiri ----
   const nc=document.createElement('canvas');nc.width=1024;nc.height=320;const n=nc.getContext('2d');
