@@ -1817,8 +1817,8 @@ function animate(){
           let minY=-Infinity;
           for(let j=0;j<i;j++){
             const pj=byY[j];
-            if(Math.abs(pi.x+pi.offX-(pj.x+pj.offX))>=((pi.sw||pi.zw||0)+(pj.sw||pj.zw||0))/2+22)continue;
-            const need=(pj.y+pj.offY)+((pi.sh||pi.zh||0)+(pj.sh||pj.zh||0))/2+20;
+            if(Math.abs(pi.x+pi.offX-(pj.x+pj.offX))>=((pi.sw||pi.zw||0)+(pj.sw||pj.zw||0))/2+30)continue;
+            const need=(pj.y+pj.offY)+((pi.sh||pi.zh||0)+(pj.sh||pj.zh||0))/2+24;
             if(need>minY)minY=need;
           }
           if(minY>-Infinity&&(pi.y+pi.offY)<minY)pi.offY=minY-(pi.y);
@@ -1837,7 +1837,7 @@ function animate(){
     // konversi offset piksel ke satuan dunia (~ jarak/tinggi layar), cap supaya label tidak melayang jauh
     const dist=camera.position.distanceTo(tgt), worldPerPx=2*dist*Math.tan(camera.fov*Math.PI/360)/container.clientHeight;
     pts.forEach(p=>{
-      const dy=Math.min(24,p.offY*worldPerPx*1.2), dx=Math.max(-5,Math.min(5,p.offX*worldPerPx));
+      const dy=Math.min(24,p.offY*worldPerPx*1.2), dx=Math.max(-6,Math.min(6,p.offX*worldPerPx));
       if(p.zone){if(p.zt){const dyz=Math.max(-25,Math.min(25,p.offY*worldPerPx*1.2)), dxz=Math.max(-6,Math.min(6,p.offX*worldPerPx)); p.zt.position.y=p.baseY+dyz; p.zt.position.x=p.baseX+dxz; const zu=p.zt.userData; zu.antiY=(zu.antiY||0)+dyz; zu.antiX=(zu.antiX||0)+dxz;} else if(p.bub){p.bub.position.y=p.baseY+dy*0.4; p.bub.position.x=p.baseX+dx*0.5;} return;} // zona/bubble
       p.a.label.position.y=p.baseY+dy; p.a.label.position.x=p.baseX+dx;
       p.a.label.userData.antiY=dy; p.a.label.userData.antiX=dx; // utk base frame berikutnya
