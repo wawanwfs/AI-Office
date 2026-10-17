@@ -1,4 +1,14 @@
-@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@300;400&family=Orbitron:wght@400;500;600;700&display=swap');
+
+/* Orbitron di-selfhost (latin, digits lengkap): Google Fonts CSS memecah per unicode-range
+   dan di headless sering hanya subset awal yang termuat -> digit menit jam HUD jadi tofu. */
+@font-face {
+  font-family: 'Orbitron';
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url('/fonts/orbitron-latin.woff2') format('woff2');
+  unicode-range: U+0000-00FF;
+}
 
 :root {
   --bg: #000C1E;
@@ -74,7 +84,7 @@ button { font-family: inherit; }
   background: rgba(8,16,32,0.72); backdrop-filter: blur(14px); border: 1px solid rgba(255,255,255,0.1); border-radius: 18px;
   animation: fadeUp .9s ease .5s both;
 }
-.hud .clock { font-family: 'Orbitron', sans-serif; font-size: 16px; font-weight: 600; color: var(--teal); letter-spacing: 1px; }
+.hud .clock { font-family: 'Orbitron', 'DejaVu Sans Mono', ui-monospace, monospace; font-size: 16px; font-weight: 600; color: var(--teal); letter-spacing: 1px; font-variant-numeric: tabular-nums; }
 .hud .stat { font-family: 'DM Sans', sans-serif; font-size: 12px; color: var(--text-secondary); display: flex; align-items: center; gap: 6px; }
 .hud .stat i { width: 8px; height: 8px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
 .hud .stat.off i { background: #ef4444; box-shadow: 0 0 8px #ef4444; }
