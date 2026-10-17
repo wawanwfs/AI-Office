@@ -1757,17 +1757,19 @@ function animate(){
         const dz=Math.max(2,camera.position.distanceTo(zt.position));
         // jitter deterministik per zona (hash label) supaya kluster label zona+agent tidak membentuk tumpukan simetris
       // base dari posisi ASLI (bukan position.y yang sudah digeser frame lalu) -> tidak terakumulasi
+      // base zona = posisi ASLI (antiY/antiX diakumulasi di userData, bukan di posisi)
       const zb=(window.__zoneBase&&window.__zoneBase.get(zt))||{y:zt.position.y,x:zt.position.x};
+      const zay=(zt.userData.antiY||0), zax=(zt.userData.antiX||0);
       let hsh=0;for(const ch of zt.userData.label||'')hsh=(hsh*31+ch.charCodeAt(0))|0;
       const jy=(hsh%7)-3, jx=((hsh>>3)%9)-4;
-      pts.push({a:null,zone:true,zt,zw:zt.scale.x*__kz/dz*1.06,zh:zt.scale.y*__kz/dz*1.25,baseY:zb.y+jy*0.06,baseX:zb.x+jx*0.08,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});}
+      pts.push({a:null,zone:true,zt,zw:zt.scale.x*__kz/dz*1.06,zh:zt.scale.y*__kz/dz*1.25,baseY:zb.y+jy*0.06+zay,baseX:zb.x+jx*0.08+zax,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});}
     // bubble dialog ikut sebagai penghalang statis: label zona digeser menjauh dari bubble (bubble tidak bergerak)
     chatBubbles.forEach(bb=>{const v=bb.sprite.position.clone().project(camera);if(v.z>1)return;
       const db=Math.max(2,camera.position.distanceTo(bb.sprite.position)), pk=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360));
       // bubble: sizeAttenuation=false -> piksel konstan (scale sudah fraksi tinggi layar × __k)
       pts.push({a:null,zone:true,zt:null,bub:bb.sprite,zw:bb.sprite.scale.x*pk,zh:bb.sprite.scale.y*pk,baseY:bb.sprite.position.y,baseX:bb.sprite.position.x,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});
     const __L=agentData[0].label;
-    for(let iter=0;iter<3;iter++){ // multi-pass: satu pass hanya menggeser sedikit, 3 pass menjamin kluster padat benar2 terpisah
+    for(let iter=0;iter<5;iter++){ // multi-pass: satu pass hanya menggeser sedikit, 3 pass menjamin kluster padat benar2 terpisah
     for(let i=0;i<pts.length;i++){for(let j=0;j<i;j++){
       // PAD = breathing room: box diperluas 10px per sisi supaya label tak "menempel" (<5px gap)
       const PAD=18, lwi=(pts[i].sw||pts[i].zw||0)+PAD, lhi=(pts[i].sh||pts[i].zh||0)+PAD,
@@ -1776,8 +1778,16 @@ function animate(){
       if(dx<(lwi+lwj)/2 && dy<(lhi+lhj)/2){
         // geser vertikal dulu; bila vertikal mentok, geser horizontal ke arah bebas
         const h2=((lhi+lhj)/2)-dy, w2=((lwi+lwj)/2)-dx;
-        if(!pts[i].zone){pts[i].offY+=h2*1.6;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.9;}
-        else if(!pts[j].zone){pts[j].offY-=h2*1.6;const dir=(pts[j].x>=pts[i].x)?1:-1;pts[j].offX+=dir*w2*0.9;}
+        if(!pts[i].zone&&!pts[j].zone){ // agent-agent: saling dorong dua arah
+          pts[i].offY+=h2*0.8;pts[j].offY-=h2*0.8;
+          const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.45;pts[j].offX-=dir*w2*0.45;
+        }
+        else if(!pts[i].zone){ // agent vs penghalang: hanya agent yang bergeser
+          pts[i].offY+=h2*1.6;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.9;
+        }
+        else if(!pts[j].zone){
+          pts[j].offY-=h2*1.6;const dir=(pts[j].x>=pts[i].x)?1:-1;pts[j].offX+=dir*w2*0.9;
+        }
       }
     }}
     } // end 2-pass anti-overlap
@@ -1785,7 +1795,7 @@ function animate(){
     const dist=camera.position.distanceTo(tgt), worldPerPx=2*dist*Math.tan(camera.fov*Math.PI/360)/container.clientHeight;
     pts.forEach(p=>{
       const dy=Math.min(10,p.offY*worldPerPx*1.2), dx=Math.max(-2.5,Math.min(2.5,p.offX*worldPerPx));
-      if(p.zone){if(p.zt){p.zt.position.y=p.baseY+dy; p.zt.position.x=p.baseX+dx;} else if(p.bub){p.bub.position.y=p.baseY+dy*0.4; p.bub.position.x=p.baseX+dx*0.5;} return;} // zona/bubble
+      if(p.zone){if(p.zt){const dyz=Math.max(-25,Math.min(25,p.offY*worldPerPx*1.2)), dxz=Math.max(-6,Math.min(6,p.offX*worldPerPx)); p.zt.position.y=p.baseY+dyz; p.zt.position.x=p.baseX+dxz; const zu=p.zt.userData; zu.antiY=(zu.antiY||0)+dyz; zu.antiX=(zu.antiX||0)+dxz;} else if(p.bub){p.bub.position.y=p.baseY+dy*0.4; p.bub.position.x=p.baseX+dx*0.5;} return;} // zona/bubble
       p.a.label.position.y=p.baseY+dy; p.a.label.position.x=p.baseX+dx;
       p.a.label.userData.antiY=dy; p.a.label.userData.antiX=dx; // utk base frame berikutnya
     });
