@@ -322,3 +322,9 @@
 - Vision audit shot fnt.png (512KB): jam "11:00" dirender penuh, TIDAK ada tofu/glyph kosong di seluruh screenshot; hanya clipping marquee ticker (perilaku normal).
 - Kesimpulan: fix selfhost woff2 sebelumnya terbukti efektif; item backlog "tofu digit jam headless" ditutup.
 - Sisa backlog: 2 pasangan label menempel 2-4px; verifikasi audio & label di browser asli; truncation ellipsis.
+## 2026-10-18 01:45 WIB — anti-overlap #4: breathing room diperbesar + push agent diperkuat + probe gap CDP
+- Backlog "2 pasangan label menempel 2-4px" dikerjakan: PAD collision box 18→28px per sisi, dorongan agent-agent 0.8→1.0x vertikal & 0.45→0.6x horizontal (label tidak lagi hanya "tidak overlap" tapi ada jarak).
+- Tool baru: ~/.hermes/cache/scratch/gapcheck.py — probe CDP yang menghitung gap piksel antar SEMUA pasangan label (agent+zona) langsung dari scene state (bukan menebak dari screenshot); menemukan 19 label, 9 pasangan masih <8px gap (kebanyakan zona vs agent di sudut kamera dalam, kemungkinan kena cap dunia ±25/±10).
+- Bukti: build OK (1.5s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, agents 14; shot ck.png 516KB (scene hidup). Vision audit timeout 3x (infra), audit ulang run berikutnya.
+- Catatan: e2e_err.py ws.settimeout 2→12s (evaluasi CDP lambat, bukan bug aplikasi).
+- Sisa backlog: 9 pasangan gap <8px (utama zona vs agent, cap saturasi) — teliti cap/iterasi; truncation ellipsis; verifikasi audio & label di browser asli.
