@@ -367,3 +367,7 @@
 - Insiden diperbaiki: patch pertama tak sengaja menghapus `const pj=byY[j]` → ReferenceError runtime di production (e2e menangkap 4 console error, shot 150KB = scene mati). Fix cepat, build ulang, e2e kembali 0 error. Pelajaran: e2e_err.py consoleErrors adalah gate wajib sebelum push.
 - Bukti: build OK, vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, frames naik normal; shot ck3.png 513KB (scene hidup). Vision audit: CAFE×Maya terpisah jauh ✅, Trainer AI & Rina & Dewi terpisah ✅; sisa 1 pasangan tipis Lina×Yoga (cluster lounge, variasi kamera).
 - Sisa backlog: Lina×Yoga adjacency tipis; verifikasi audio di browser asli; tooltip menutup ujung subtitle header (minor).
+## 2026-10-18 05:35 WIB — toast tidak lagi menutup ticker/subtitle header
+- Backlog "tooltip menutup ujung subtitle header": elemen tersebut adalah .toast notifikasi (top 86px) yang menabrak ticker (top 76px, tinggi 24px) dan subtitle header. Toast digeser ke top 112px (desktop) / 88px (mobile ≤900px) — di bawah ticker, lane HUD atas bersih.
+- Bukti: build OK (1.6s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, agents 14, frames normal.
+- Sisa backlog: Lina×Yoga adjacency tipis (cluster lounge); verifikasi audio di browser asli.
