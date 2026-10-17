@@ -384,3 +384,8 @@
 - Backlog "Sari×Trainer AI" ditutup: vision audit ck.png (518KB) menegaskan false positive — terpisah ~115px antar-tepi, NOL pasangan label overlap total. Sisa adjacency minor: Integrator…×Support…/Wahyu Fs gap 3–8px (cluster kiri, terbaca utuh).
 - Bukti: build OK (1.5s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, label 14, frames normal; shot ck.png 518KB (scene hidup).
 - Sisa backlog: Integrator×Support adjacency tipis (3–8px); DEV DESK×Bantuin Ai gap 5–10px; verifikasi suara secara subjektif (volume/timbre) tetap butuh telinga manusia.
+## 2026-10-18 07:20 WIB — anti-overlap #11: pad & cap diperbesar utk cluster zona×agent
+- Backlog "Integrator×Support / DEV DESK×Bantuin Ai / Budi×DEV DESK": sweep PAD 28→30, spacing sweep 32→36, cap offset agent dy 24→34 & dx ±6→±12, zona dx cap ±6→±14; dorongan horizontal zona vs agent 0.4→0.9 (Budi×DEV DESK overlap total kini terdorong).
+- Bukti: build OK (1.6s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, label 14, frames normal; shot ck4.png 496KB (scene hidup).
+- Vision audit ck4: Support Human×Wahyu Fs TIDAK saling menutup (rapat tapi terbaca). Sisa: Wahyu×WELCOME & LOUNGE & MEETING×Trainer AI masih menempel; beberapa nama pill tampil ellipsis (truncasi teks, bukan overlap) — dicatat backlog terpisah.
+- Sisa backlog: adjacency zona×agent sisa (Wahyu×W&L, MEETING×Trainer AI); pill nama panjang terpotong ellipsis; verifikasi subjektif suara.
