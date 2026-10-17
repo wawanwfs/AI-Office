@@ -22,10 +22,12 @@ export function createZones(ctx){
     zx.textAlign='center';zx.textBaseline='middle';
     zx.fillStyle='#FFFFFF';zx.fillText(z.label,256,50);
     const zt=new THREE.CanvasTexture(zc);zt.minFilter=THREE.LinearFilter;
-    const zl=new THREE.Mesh(new THREE.PlaneGeometry(3.4,.64),new THREE.MeshBasicMaterial({map:zt,transparent:true}));
-    zl.rotation.x=-Math.PI/2;zl.rotation.z=Math.PI;
+    const zl=new THREE.Sprite(new THREE.SpriteMaterial({map:zt,transparent:true,depthTest:false}));
+    zl.center.set(.5,1);
     const zly=(z.label==='MEETING')?z.z+3.4:(z.label==='SERVER ROOM')?z.z+1.8:z.z;
-    zl.renderOrder=5;zl.material.depthTest=false;zl.material.transparent=true;
+    zl.renderOrder=5;
+    const zsc=(z.label.length>9)?1.25:1; // label panjang lebih besar
+    zl.scale.set(3.4*zsc,.64*zsc,1);
     zl.position.set(z.x,1.15,zly);office.add(zl);
     (window.__zoneLabels=window.__zoneLabels||[]).push(zl); // dipakai anti-tumpuk label
     zl.userData.label=z.label;
