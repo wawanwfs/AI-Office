@@ -48,8 +48,8 @@ export function createLighting(ctx) {
     onTimeUpdate && onTimeUpdate(min);
     onStatusUpdate && onStatusUpdate(statusAt(min));
     const d = daylight(min);
-    sun.intensity = 0.7 + d * 0.7;
-    ambient.intensity = 0.55 + d * 0.35;
+    sun.intensity = 0.9 + d * 1.1;
+    ambient.intensity = 0.32 + d * 0.24;
     scene.background = new THREE.Color(NAVY);
     scene.fog.color = new THREE.Color(NAVY);
     renderer.toneMappingExposure = 1.0 + d * 0.3;

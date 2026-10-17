@@ -128,14 +128,14 @@ addEventListener('pointermove',e=>{if(!isDrag)return;sph.theta-=(e.clientX-prev.
 renderer.domElement&&renderer.domElement.addEventListener('wheel',e=>{sph.radius=Math.max(12,Math.min(130,sph.radius+e.deltaY*.04));updCam()},{passive:true});
 
 // ─── LIGHTS ────────────────────────────────────────
-const ambient=new THREE.AmbientLight(0xffffff,0.55);scene.add(ambient);
-const sun=new THREE.DirectionalLight(0xFFF8F0,0.9);
+const ambient=new THREE.AmbientLight(0xffffff,0.38);scene.add(ambient);
+const sun=new THREE.DirectionalLight(0xFFF8F0,1.35);
 sun.position.set(12,20,10);sun.castShadow=true;
-sun.shadow.mapSize.set(1024,1024);
-sun.shadow.camera.left=-22;sun.shadow.camera.right=22;sun.shadow.camera.top=22;sun.shadow.camera.bottom=-22;sun.shadow.bias=-.001;
+sun.shadow.mapSize.set(2048,2048);
+sun.shadow.camera.left=-20;sun.shadow.camera.right=20;sun.shadow.camera.top=20;sun.shadow.camera.bottom=-20;sun.shadow.bias=-.0006;sun.shadow.normalBias=.02;
 scene.add(sun);
-scene.add(new THREE.DirectionalLight(0xCCDDFF,0.4).translateX(-10).translateY(12));
-scene.add(new THREE.HemisphereLight(0xDDE8F0,0x607080,0.35));
+scene.add(new THREE.DirectionalLight(0xCCDDFF,0.3).translateX(-10).translateY(12));
+scene.add(new THREE.HemisphereLight(0xDDE8F0,0x607080,0.28));
 
 // ─── HELPERS ───────────────────────────────────────
 const office=new THREE.Group();scene.add(office);
@@ -610,11 +610,13 @@ allAgents.forEach((agent,i)=>{
   const sittingChar=buildChar(agent,false);
   sittingChar.scale.set(1.7,1.7*looksOf(agent).h,1.7);
   sittingChar.position.set(dp.x,0,dp.z+.55);
+  sittingChar.traverse(o=>{if(o.isMesh&&o.material&&!o.material.isMeshBasicMaterial){o.castShadow=true;}});
   office.add(sittingChar);
   // Walker
   const walker=buildChar(agent,true);
   walker.scale.set(1.7,1.7*looksOf(agent).h,1.7);
   walker.visible=false;
+  walker.traverse(o=>{if(o.isMesh&&o.material&&!o.material.isMeshBasicMaterial){o.castShadow=true;}});
   office.add(walker);
   // Label
   const label=makeLabel(agent);
@@ -735,10 +737,10 @@ const rcDesk=new THREE.Mesh(new THREE.BoxGeometry(2.5,.9,.6),M(0x1A2A3A));
 rcDesk.position.set(RCX,.45,RCZ);rcDesk.castShadow=true;reception.add(rcDesk);
 // Top surface
 const rcTop=new THREE.Mesh(new THREE.BoxGeometry(2.6,.04,.7),M(0xDDE4EC));
-rcTop.position.set(RCX,.92,RCZ);reception.add(rcTop);
+rcTop.position.set(RCX,.92,RCZ);rcTop.castShadow=true;reception.add(rcTop);
 // Side panel
 const rcSide=new THREE.Mesh(new THREE.BoxGeometry(.6,.9,.04),M(0x1A2A3A));
-rcSide.position.set(RCX+1.25,.45,RCZ-.3);reception.add(rcSide);
+rcSide.position.set(RCX+1.25,.45,RCZ-.3);rcSide.castShadow=true;reception.add(rcSide);
 
 // Logo WFS Project di depan meja resepsionis
 const wfsLogoTex=(()=>{
@@ -953,7 +955,8 @@ const armChair=(cx,cz,ry)=>{
     const leg=new THREE.Mesh(new THREE.BoxGeometry(.05,.15,.05),M(0x4E342E));
     leg.position.set(ox,.075,oz);g.add(leg);
   });
-  g.position.set(cx,0,cz);g.rotation.y=ry;g.castShadow=true;
+  g.position.set(cx,0,cz);g.rotation.y=ry;
+  g.traverse(o=>{if(o.isMesh&&!o.material.isMeshBasicMaterial)o.castShadow=true;});
   lounge.add(g);return g;
 };
 armChair(8.7,7.7,Math.PI*.5);     // menghadap +X (ke arah sofa)
@@ -1003,6 +1006,7 @@ const serverRack=(x,z,idx)=>{
     });
   }
   g.position.set(x,0,z);
+  g.traverse(o=>{if(o.isMesh&&!o.material.isMeshBasicMaterial)o.castShadow=true;});
   office.add(g);
   return g;
 };
