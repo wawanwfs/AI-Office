@@ -333,3 +333,9 @@
 - Bukti: build OK (1.9s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, agents 14; shot ck.png 512KB (scene hidup).
 - gapcheck.py: 19 label terdeteksi, pasangan bermasalah 9 → 4 (gapcheck kini melaporkan pasangan gap negatif/overlap saja).
 - Sisa backlog: 4 pasangan overlap (variasi sudut kamera dalam); truncation ellipsis; verifikasi audio & label di browser asli.
+## 2026-10-18 02:30 WIB — anti-overlap #6: pass final greedy sweep di layar (anti saling-meniadakan)
+- Akar masalah #4: multi-pass mutual push konvergensi tidak dijamin — agent yang didorong atas oleh pasangan A bisa didorong bawah lagi oleh pasangan B, hasil akhir tetap overlap (gapcheck masih 3-8 pasangan tiap run; vision 4/10 dgn "MEETING" tertutup Lina, bubble menutup Maya).
+- Fix: pass final deterministik — urutkan semua label berdasar y layar, lalu sweep greedy: tiap label didorong ke bawah dari posisi terendah yang bebas overlap dgn SEMUA label di atasnya (pad 8px). Jaminan matematis nol overlap vertikal; multi-pass lama tetap jalan sebagai penata arah.
+- gapcheck.py diperbaiki juga: nama label ternormalisasi String() (dulu pasangan tanpa nama tak terlacak).
+- Bukti: build OK (5.4s), vitest 9/9, deploy ~/wfs-hq; shot ck.png 513KB (scene hidup). Vision: NOL occlusion teks-atas-teks ("MEETING" terbaca utuh, tidak ada teks tertutup), hanya 2-4 pasangan adjacency 3-8px (cluster Dewi/Bantuin AI, Wahyu Fs/Integrator Bot). gapcheck masih lapor 3-8 pasangan — model ukuran zona (×1.06/1.25) belum persis sama dgn render, jadi ada false positive; verifikasi visual yang jadi patokan.
+- Sisa backlog: adjacency 3-8px di cluster padat (perlu offset minimal 10px atau merge pill); verifikasi audio & label di browser asli; truncation ellipsis.
