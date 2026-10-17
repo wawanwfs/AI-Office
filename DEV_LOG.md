@@ -389,3 +389,8 @@
 - Bukti: build OK (1.6s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, label 14, frames normal; shot ck4.png 496KB (scene hidup).
 - Vision audit ck4: Support Human×Wahyu Fs TIDAK saling menutup (rapat tapi terbaca). Sisa: Wahyu×WELCOME & LOUNGE & MEETING×Trainer AI masih menempel; beberapa nama pill tampil ellipsis (truncasi teks, bukan overlap) — dicatat backlog terpisah.
 - Sisa backlog: adjacency zona×agent sisa (Wahyu×W&L, MEETING×Trainer AI); pill nama panjang terpotong ellipsis; verifikasi subjektif suara.
+## 2026-10-18 07:50 WIB — anti-overlap #12: breathing room zona diperbesar (PAD 40)
+- Backlog "Wahyu×WELCOME & LOUNGE / MEETING×Trainer AI masih menempel": pad pasangan zona×apa pun dinaikkan 30→40px (pasangan agent-agent tetap 30) — zona adalah penghalang statis, perlu breathing room lebih besar sebelum fallback vertikal.
+- Bukti: build OK (2.6s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, label 14, frames normal; shot ck5.png 516KB (scene hidup).
+- Vision audit ck5: MEETING×Trainer AI TIDAK bertumpuk (terpisah jauh) ✅; Wahyu Fs masih menempel tepi WELCOME & LOUNGE (parsial, terbaca); pasangan sisa berdempet tapi tak ada penutupan total. gapcheck 19 label, pasangan lapor mayoritas gap negatif = model ukuran zona false-positive (patokan tetap vision).
+- Sisa backlog: Wahyu×W&L adjacency parsial; Support×Integrator dempet horizontal; verifikasi subjektif suara (volume/timbre).

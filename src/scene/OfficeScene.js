@@ -1785,7 +1785,8 @@ function animate(){
     for(let iter=0;iter<5;iter++){ // multi-pass: satu pass hanya menggeser sedikit, 3 pass menjamin kluster padat benar2 terpisah
     for(let i=0;i<pts.length;i++){for(let j=0;j<i;j++){
       // PAD = breathing room: box diperluas 10px per sisi supaya label tak "menempel" (<5px gap)
-      const PAD=30, lwi=(pts[i].sw||pts[i].zw||0)+PAD, lhi=(pts[i].sh||pts[i].zh||0)+PAD,
+      const zi=(pts[i].zone||pts[j].zone), PAD=zi?40:30, // zona lebih sensitif: breathing room lebih besar
+            lwi=(pts[i].sw||pts[i].zw||0)+PAD, lhi=(pts[i].sh||pts[i].zh||0)+PAD,
             lwj=(pts[j].sw||pts[j].zw||0)+PAD, lhj=(pts[j].sh||pts[j].zh||0)+PAD;
       const dx=Math.abs(pts[i].x-pts[j].x), dy=Math.abs((pts[i].y+pts[i].offY)-(pts[j].y+pts[j].offY));
       if(dx<(lwi+lwj)/2 && dy<(lhi+lhj)/2){
