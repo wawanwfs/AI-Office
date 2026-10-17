@@ -1648,14 +1648,20 @@ const updateShift=m=>__shift.update(m);
 // ═══════════════════════════════════════════════════
 let audioCtx=null;
 let soundsStarted=false;
+const __audioCalls={key:0,step:0,chime:0};
 
 function initAudio(){
   if(soundsStarted)return;
   soundsStarted=true;
   audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  updateAudioDbg();
 }
+// debug/e2e hook: status audio tanpa browser asli
+function updateAudioDbg(){window.__audio={started:soundsStarted,state:audioCtx?audioCtx.state:'none',calls:__audioCalls}}
+updateAudioDbg();
 
 function playKeyClick(){
+  __audioCalls.key++;updateAudioDbg();
   if(!audioCtx)return;
   const osc=audioCtx.createOscillator();
   osc.type='square';osc.frequency.value=800+Math.random()*400;
@@ -1666,6 +1672,7 @@ function playKeyClick(){
 }
 
 function playStep(){
+  __audioCalls.step++;updateAudioDbg();
   if(!audioCtx)return;
   const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*0.04,audioCtx.sampleRate);
   const data=buf.getChannelData(0);
@@ -1677,6 +1684,7 @@ function playStep(){
 }
 
 function playMeetingChime(){
+  __audioCalls.chime++;updateAudioDbg();
   if(!audioCtx)return;
   [523.25,659.25,783.99].forEach((freq,i)=>{
     setTimeout(()=>{
