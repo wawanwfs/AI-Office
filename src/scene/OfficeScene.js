@@ -571,6 +571,37 @@ function buildDesk(agent,dp){
   // Glow di bawah meja (dGlow — dipakai updateShift/cyberpunk)
   const dGlow=new THREE.PointLight(agent.color,.15,3,2);
   dGlow.position.set(0,.3,-.1);g.add(dGlow);
+  // Nameplate pribadi: nama + role di sisi depan meja (menghadap keluar dari monitor)
+  (()=>{
+    const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');
+    x.fillStyle='rgba(8,12,22,0.88)';x.beginPath();if(x.roundRect)x.roundRect(2,2,252,60,12);else x.rect(2,2,252,60);x.fill();
+    x.fillStyle=agent.hex;x.fillRect(2,10,7,44);
+    x.textAlign='center';x.textBaseline='middle';
+    const nm=String(agent.name).toLowerCase().replace(/(^|\s)\w/g,m=>m.toUpperCase()).slice(0,16);
+    x.font='800 22px "Segoe UI",Arial,sans-serif';x.fillStyle='#fff';x.fillText(nm,132,24);
+    x.font='500 14px "Segoe UI",Arial,sans-serif';x.fillStyle='#a8b4c6';x.fillText(String(agent.role).slice(0,24),132,45);
+    const tex=new THREE.CanvasTexture(c);tex.minFilter=THREE.LinearFilter;
+    const plate=new THREE.Mesh(new THREE.PlaneGeometry(.62,.155),new THREE.MeshBasicMaterial({map:tex,transparent:true}));
+    plate.position.set(0,.68,.42);g.add(plate);
+    const stand=new THREE.Mesh(new THREE.BoxGeometry(.62,.02,.05),M(0x2E3642));
+    stand.position.set(0,.66,.44);g.add(stand);
+  })();
+  // Laci kabinet di bawah meja (sisi kiri) dengan handel
+  const cab=new THREE.Mesh(new THREE.BoxGeometry(.42,.5,.6),M(0x46525E));
+  cab.position.set(-.5,.25,.05);cab.castShadow=true;g.add(cab);
+  [.1,.32].forEach(ly=>{
+    const drw=new THREE.Mesh(new THREE.BoxGeometry(.4,.18,.55),M(0x526270));
+    drw.position.set(-.5,ly,.03);g.add(drw);
+    const hd=new THREE.Mesh(new THREE.BoxGeometry(.14,.02,.02),M(0x9AA7B4));
+    hd.position.set(-.5,ly,.32);g.add(hd);
+  });
+  // Tanaman kecil di meja (sisi kanan belakang)
+  const pot=new THREE.Mesh(new THREE.CylinderGeometry(.05,.04,.08,8),M(0xB08050));
+  pot.position.set(.58,.815,-.28);g.add(pot);
+  [[0,.9,0,.07],[.03,.95,.02,.05],[-.03,.94,-.02,.05]].forEach(([px,py,pz,r])=>{
+    const leaf=new THREE.Mesh(new THREE.SphereGeometry(r,6,5),M(0x43A047));
+    leaf.position.set(.58+px,py,-.28+pz);g.add(leaf);
+  });
   g.position.set(dp.x,0,dp.z);
   office.add(g);
   return {dGlow,screenLight:sLight};
