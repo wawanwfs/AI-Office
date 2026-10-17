@@ -564,10 +564,13 @@ function makeLabel(agent){
     c.beginPath(); if(c.roundRect)c.roundRect(2,2,W-4,H-4,full?18:14); else c.rect(2,2,W-4,H-4); c.fill();
     c.fillStyle=agent.hex; c.fillRect(2,full?14:10,6,H-(full?28:20));
     c.textAlign='center'; c.textBaseline='middle';
-    const nm=String(agent.name).toLowerCase().replace(/(^|\s)\w/g,m=>m.toUpperCase()).slice(0,14);
-    c.font=(full?'800 36px':'800 28px')+' "Segoe UI",Arial,sans-serif'; c.fillStyle='#fff';
+    const title=(s,max,font)=>{const t=String(s);if(c.measureText(t).width<=max)return t;let e=t;while(e.length>1&&c.measureText(e+'…').width>max)e=e.slice(0,-1);return e+'…'};
+    const nmFull=String(agent.name).toLowerCase().replace(/(^|\s)\w/g,m=>m.toUpperCase());
+    c.font=(full?'800 36px':'800 28px')+' "Segoe UI",Arial,sans-serif';
+    const nm=title(nmFull,full?W-60:W-50,c.font);
+    c.fillStyle='#fff';
     c.fillText(nm,W/2+4,full?32:H/2+1);
-    if(full){c.font='600 22px "Segoe UI",Arial,sans-serif'; c.fillStyle='#b8c4d4'; c.fillText(String(agent.role),W/2+4,62)}
+    if(full){c.font='600 22px "Segoe UI",Arial,sans-serif'; c.fillStyle='#b8c4d4'; c.fillText(title(agent.role,W-60,c.font),W/2+4,62)}
     const tex=new THREE.CanvasTexture(lc); tex.minFilter=THREE.LinearFilter; return {tex,as:W/H};
   };
   const full=mk(true), short=mk(false);
@@ -646,9 +649,11 @@ function buildDesk(agent,dp){
     x.fillStyle='rgba(8,12,22,0.88)';x.beginPath();if(x.roundRect)x.roundRect(2,2,252,60,12);else x.rect(2,2,252,60);x.fill();
     x.fillStyle=agent.hex;x.fillRect(2,10,7,44);
     x.textAlign='center';x.textBaseline='middle';
-    const nm=String(agent.name).toLowerCase().replace(/(^|\s)\w/g,m=>m.toUpperCase()).slice(0,16);
-    x.font='800 22px "Segoe UI",Arial,sans-serif';x.fillStyle='#fff';x.fillText(nm,132,24);
-    x.font='500 14px "Segoe UI",Arial,sans-serif';x.fillStyle='#a8b4c6';x.fillText(String(agent.role).slice(0,24),132,45);
+    const nm=String(agent.name).toLowerCase().replace(/(^|\s)\w/g,m=>m.toUpperCase());
+    const ell=(t,max,font)=>{x.font=font;if(x.measureText(t).width<=max)return t;let e=t;while(e.length>1&&x.measureText(e+'…').width>max)e=e.slice(0,-1);return e+'…'};
+    const f1='800 22px "Segoe UI",Arial,sans-serif',f2='500 14px "Segoe UI",Arial,sans-serif';
+    x.font=f1;x.fillStyle='#fff';x.fillText(ell(nm,220,f1),132,24);
+    x.fillStyle='#a8b4c6';x.fillText(ell(agent.role,220,f2),132,45);
     const tex=new THREE.CanvasTexture(c);tex.minFilter=THREE.LinearFilter;
     const plate=new THREE.Mesh(new THREE.PlaneGeometry(.62,.155),new THREE.MeshBasicMaterial({map:tex,transparent:true}));
     plate.position.set(0,.68,.42);g.add(plate);
