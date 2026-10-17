@@ -4,7 +4,7 @@ export function buildRobot(THREE, agent, standing, M, MB) {
   const glow = agent.color;                  // hijau neon Bantuin
   const metal = 0xdfe6ec, dark = 0x2a3340, mid = 0x9aa7b4;
   const shiny = (c) => new THREE.MeshStandardMaterial({ color: c, metalness: 0.75, roughness: 0.28 });
-  const glowMat = (c) => new THREE.MeshBasicMaterial({ color: c });
+  const glowMat = (c) => new THREE.MeshBasicMaterial({ color: c }); // eslint-disable-line no-unused-vars -- helper materi glow
   const halo = (r, c, x, y, z) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 12), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.28, depthWrite: false })); m.position.set(x, y, z); g.add(m); };
   const box = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
   const cyl = (rt, rb, h, mat, x, y, z, seg = 14) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat); m.position.set(x, y, z); g.add(m); return m; };

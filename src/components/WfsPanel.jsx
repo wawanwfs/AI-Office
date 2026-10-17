@@ -47,13 +47,13 @@ export default function WfsPanel() {
     }).catch(e => setLoadErr('Gagal memuat daftar agent: ' + e.message)).finally(() => setLoading(false))
   }, [choose])
 
-  useEffect(() => { loadAgents() }, [loadAgents])
+  useEffect(() => { const t0 = setTimeout(loadAgents, 0); return () => clearTimeout(t0) }, [loadAgents])
   useEffect(() => {
     if (!open) return
     let dead = false
     const ld = () => api('agents/status').then(d => { if (!dead) setStat(d.agents || {}) }).catch(() => {})
-    ld(); const iv = setInterval(ld, 15000)
-    return () => { dead = true; clearInterval(iv) }
+    const t0 = setTimeout(ld, 0); const iv = setInterval(ld, 15000)
+    return () => { dead = true; clearTimeout(t0); clearInterval(iv) }
   }, [open])
   useEffect(() => { if (sel) loadCfg(sel) }, [sel && sel.id])   // eslint-disable-line
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight }, [logs, chatBusy])

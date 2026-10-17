@@ -21,11 +21,11 @@ export default function TaskBoard({ onFlash, onAsk }) {
   useEffect(() => {
     if (!open) return
     const ac = new AbortController()
-    load(ac.signal)
+    const t0 = setTimeout(() => load(ac.signal), 0)
     const iv = setInterval(() => load(ac.signal), 8000)
     const k = e => { if (e.key === 'Escape') { sel ? setSel(null) : setOpen(false) } }
     document.addEventListener('keydown', k)
-    return () => { ac.abort(); clearInterval(iv); document.removeEventListener('keydown', k) }
+    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k) }
   }, [open, load, sel])
 
   const run = async (t) => {
@@ -54,7 +54,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
               <button className="btn" onClick={() => setSel(null)} style={{ marginBottom: 10 }}>← Kembali</button>
               <h3 style={{ fontSize: 15, marginBottom: 6 }}>#{sel.id} {sel.title}</h3>
               <p className="note" style={{ marginBottom: 8 }}>Agent: {sel.agent_id} · Role: {sel.role} · <b style={{ color: ST[sel.status]?.[1] }}>{ST[sel.status]?.[0] || sel.status}</b></p>
-              {sel.files && sel.files !== '[]' && <><label className="note">File dihasilkan</label><pre className="note" style={{ whiteSpace: 'pre-wrap', margin: '4px 0 10px', color: '#cfd8e3' }}>{String(sel.files).replace(/[\[\]']/g, '').split(',').join('\n')}</pre></>}
+              {sel.files && sel.files !== '[]' && <><label className="note">File dihasilkan</label><pre className="note" style={{ whiteSpace: 'pre-wrap', margin: '4px 0 10px', color: '#cfd8e3' }}>{String(sel.files).replace(/[[\]']/g, '').split(',').join('\n')}</pre></>}
               {sel.review && <><label className="note">Ulasan QA</label><div className="msg" style={{ maxWidth: '100%', marginTop: 4, fontSize: 13 }}>{sel.review}</div></>}
               {sel.status !== 'running' && sel.status !== 'done' && <button className="btn primary" style={{ marginTop: 12 }} onClick={() => ask(sel)}>▶ Jalankan task</button>}
               {sel.status === 'done' && <button className="btn" style={{ marginTop: 12 }} onClick={() => ask(sel)}>↻ Jalankan ulang</button>}

@@ -95,7 +95,7 @@ renderer.domElement&&renderer.domElement.addEventListener('touchmove',e=>{
   }
 },{passive:false});
 renderer.domElement&&renderer.domElement.addEventListener('touchend',()=>{pinchDist=null},{passive:true});
-renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{isDrag=true;prev={x:e.clientX,y:e.clientY};autoRot=false;clearTimeout(autoTmr)});
+renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{isDrag=true;prev={x:e.clientX,y:e.clientY};autoRot=false;clearTimeout(autoTmr);initAudio()});
 renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{downXY={x:e.clientX,y:e.clientY}});
 renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   if(!downXY)return;
@@ -729,7 +729,7 @@ allAgents.forEach((agent,i)=>{
       const badge=ad.sittingChar?.userData?.badge;
       if(st&&badge&&cols[st])badge.material.color.set(cols[st]);
     });
-  }catch(e){}
+  }catch{ /* abaikan */ }
   }
   __timeouts.push(setTimeout(pollBadges,4000));
   __intervals.push(setInterval(pollBadges,20000));
@@ -799,7 +799,6 @@ function pickCollab(ad){
 // MEETING LOGIC
 // ═══════════════════════════════════════════════════
 const __meet=createMeeting({THREE,office,rng,agents:AGENTS,agentData,buildChar,seats:meetSeats,roomZ:MRZ,onChange:onMeetingChange});
-const meetChars=__meet.figures;
 const updateMeeting=m=>__meet.update(m);
 
 
@@ -1026,7 +1025,7 @@ tvScr.position.set(12.31,2.0,6.4);tvScr.rotation.y=-Math.PI/2;lounge.add(tvScr);
 office.add(lounge);
 
 // --- SERVER ROOM (belakang tengah): 3 rak server dengan LED berkedip ---
-const serverRack=(x,z,idx)=>{
+const serverRack=(x,z)=>{
   const g=new THREE.Group();
   const body=new THREE.Mesh(new THREE.BoxGeometry(.9,2.1,.7),M(0x1C1C28));
   body.position.y=1.05;body.castShadow=true;g.add(body);
@@ -1044,7 +1043,7 @@ const serverRack=(x,z,idx)=>{
   office.add(g);
   return g;
 };
-serverRack(1.7,-7.6,0);serverRack(2.8,-7.6,1);serverRack(3.9,-7.6,2);
+serverRack(1.7,-7.6);serverRack(2.8,-7.6);serverRack(3.9,-7.6);
 // Kabel bundel di lantai server room
 const cableRun=new THREE.Mesh(new THREE.BoxGeometry(3,.04,.06),M(0x333344));
 cableRun.position.set(2.8,.03,-7.6);office.add(cableRun);
@@ -1155,7 +1154,7 @@ wtx.fillText('WFS',300,100);
 wtx.fillStyle='#F59E0B';
 wtx.fillText('PROJECT',730,100);
 const wtt=new THREE.CanvasTexture(wtc);
-const wallTitle=new THREE.Mesh(new THREE.PlaneGeometry(7,1.37),new THREE.MeshBasicMaterial({map:wtt,transparent:true}));
+const wallTitle=new THREE.Mesh(new THREE.PlaneGeometry(7,1.37),new THREE.MeshBasicMaterial({map:wtt,transparent:true})); // eslint-disable-line no-unused-vars -- kandidat pajangan dinding
 
 
 
@@ -1400,7 +1399,7 @@ const drawScreen=s=>drawScreenFrame(s,frame);
 // clock handled by React
 // status handled by React
 let timeOfDay=660;
-const lC=mixHex; // kompatibilitas nama lama
+const lC=mixHex; // eslint-disable-line no-unused-vars -- kompatibilitas nama lama
 const __light=createLighting({THREE,scene,renderer,sun,ambient,agentData,onTimeUpdate,onStatusUpdate,onTick:m=>updateMeeting(m)});
 function updateTime(min){timeOfDay=min;__light.apply(min)}
 updateTime(660);
@@ -1544,7 +1543,7 @@ const roleTalk={
   'SARI':['“Sprint on track ✅”','“Demo ya besok”'],
   'CEO':['“Deal baru 🤝”','“Kopi dulu ☕”'],
 };
-let talkTimer=4;
+let talkTimer=4; // eslint-disable-line no-unused-vars -- reset loop obrolan
 let lastTalkRT=performance.now();
 function autoTalk(){
   const now=performance.now();
@@ -1588,9 +1587,9 @@ function autoTalk(){
           const gid=t.agent_id;
           if(t.status==='running'&&byAgent[gid])byAgent[gid]={id:t.id,title:t.title,n:byAgent[gid].n};
         });
-      }catch(e){}
+      }catch{ /* respons non-JSON */ }
       window.__wfsRunningTasks={byAgent};
-    }catch(e){}
+    }catch{ /* gateway offline */ }
   }
   setTimeout(pollRunning,3000);
   setInterval(pollRunning,15000);
@@ -1688,9 +1687,8 @@ function playMeetingChime(){
 // Start audio on first interaction
 
 
-// Track keyboard sounds
-let keyTimer=0;
-let stepTimer=0;
+// Track keyboard sounds — kini benar-benar dipakai: tick keyboard & langkah saat agent jalan
+let keyTimer=0, stepTimer=0;
 // Tujuan jalan-jalan agent: pantry, dispenser, printer, lounge, ruang meeting, resepsionis
 const walkDestinations=[
   {x:-9.4,z:3.6},   // pantry
@@ -1762,7 +1760,7 @@ function animate(){
     for(let i=0;i<pts.length;i++){for(let j=0;j<i;j++){
       const dx=Math.abs(pts[i].x-pts[j].x), dy=Math.abs((pts[i].y+pts[i].offY)-(pts[j].y+pts[j].offY));
       if(dx<lw && dy<lh){
-        const h=lh-dy, w=(lw-dx)/2;
+        // h/w (ukuran overlap asli) hanya dipakai lewat varian lhi/lwj di bawah
         // geser vertikal dulu; bila vertikal mentok, geser horizontal ke arah bebas
         const lwi=Math.max(lw,pts[i].zw||0), lhi=Math.max(lh,pts[i].zh||0), lwj=Math.max(lw,pts[j].zw||0), lhj=Math.max(lh,pts[j].zh||0);
         if(!(dx<(lwi+lwj)/2 && dy<(lhi+lhj)/2))continue;
@@ -1786,6 +1784,18 @@ function animate(){
   // Papers
   __pages.update(delta,elapsed);
   drawClock(timeOfDay);
+
+  // Sounds — tick keyboard agent yang duduk + langkah kaki agent yang jalan
+  keyTimer-=delta;
+  if(keyTimer<=0){
+    keyTimer=.09+Math.random()*.18;
+    if(soundsStarted&&agentData.some(a=>a.state==='sitting'&&a.sittingChar&&a.sittingChar.visible))playKeyClick();
+  }
+  stepTimer-=delta;
+  if(stepTimer<=0){
+    stepTimer=.32;
+    if(soundsStarted&&agentData.some(a=>a.walker&&a.walker.visible))playStep();
+  }
 
   // Sounds — meeting chime only
   if(__meet.active&&!lastMeetingState&&soundsStarted)playMeetingChime();

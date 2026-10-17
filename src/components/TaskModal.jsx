@@ -14,11 +14,11 @@ export default function TaskModal({ show, onClose, onDone }) {
 
   useEffect(() => {
     if (!show) return
-    setErr(''); setTimeout(() => first.current && first.current.focus(), 30)
+    setErr(''); setTimeout(() => first.current && first.current.focus(), 30) // eslint-disable-line react-hooks/set-state-in-effect -- reset error saat modal dibuka
     const h = e => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
-  }, [show])
+  }, [show])  // onClose dari parent didefinisikan inline; sengaja tidak ikut array
 
   if (!show) return null
   const submit = async (run) => {

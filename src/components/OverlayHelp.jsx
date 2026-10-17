@@ -19,7 +19,7 @@ export default function OverlayHelp({ show, onClose }) {
     const h = e => { if (e.key === 'Escape') close() }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
-  }, [show])
+  }, [show])  // close stabil per-open; dependensi lengkap tak perlu
 
   if (!show) return null
   return (

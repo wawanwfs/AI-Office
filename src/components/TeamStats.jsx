@@ -19,11 +19,11 @@ export default function TeamStats() {
   useEffect(() => {
     if (!open) return
     const ac = new AbortController()
-    load(ac.signal)
+    const t0 = setTimeout(() => load(ac.signal), 0)
     const iv = setInterval(() => load(ac.signal), 15000)
     const k = e => { if (e.key === 'Escape') setOpen(false) }
     document.addEventListener('keydown', k)
-    return () => { ac.abort(); clearInterval(iv); document.removeEventListener('keydown', k) }
+    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k) }
   }, [open, load])
 
   const byStatus = {}

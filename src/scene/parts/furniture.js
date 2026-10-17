@@ -1,6 +1,6 @@
 // Perabot kantor WFS Project — ditulis ulang dengan pola "builder" berbasis data.
 // Setiap builder menerima konteks { THREE, office, M, MB, rng } dan mengembalikan referensi yang dibutuhkan scene.
-export function createFurniture(ctx, hooks = {}) {
+export function createFurniture(ctx /* hooks disiapkan utk ekstensi */) {
   const { THREE, office, M, MB, rng } = ctx;
   const box = (w, h, d, mat, x, y, z, parent = office, cast = false) => {
     const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);

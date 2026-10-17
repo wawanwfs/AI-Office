@@ -6,7 +6,7 @@ export default function ConfirmModal({ show, title, text, confirmLabel = 'Ya, la
     const h = e => { if (e.key === 'Escape') onCancel() }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
-  }, [show])
+  }, [show, onCancel])
   if (!show) return null
   return (
     <div className="modal-scrim" onClick={onCancel}>
