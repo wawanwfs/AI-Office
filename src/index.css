@@ -153,10 +153,13 @@ button { font-family: inherit; }
 .meeting-badge i { width: 7px; height: 7px; border-radius: 50%; background: #04121f; animation: pulse 1.5s ease infinite; }
 
 /* ===== Ticker: pita tipis di bawah header, tepi memudar ===== */
-.ticker { position: fixed; top: 76px; left: 0; right: 0; margin: 0 auto; width: min(920px, calc(100vw - 20px)); mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent); -webkit-mask-image: linear-gradient(to right, transparent, #000 40px, #000 calc(100% - 40px), transparent); z-index: var(--z-hud); pointer-events: none; overflow: hidden; height: 24px;
+.ticker { position: fixed; top: 76px; left: 0; right: 0; margin: 0 auto; width: min(920px, calc(100vw - 20px)); z-index: var(--z-hud); pointer-events: none; overflow: hidden; height: 24px;
   animation: fadeUp 1s ease 1.4s both; }
-.ticker .track { display: flex; white-space: nowrap; width: max-content; animation: tickerScroll 60s linear infinite; padding-left: 24px; }
-.ticker span { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; margin-right: 40px; text-shadow: 0 1px 6px rgba(0,0,0,.9); line-height: 24px; }
+.ticker::before, .ticker::after { content: ''; position: absolute; top: 0; bottom: 0; width: 44px; z-index: 2; pointer-events: none; }
+.ticker::before { left: 0; background: linear-gradient(to right, var(--bg) 8%, transparent); }
+.ticker::after { right: 0; background: linear-gradient(to left, var(--bg) 8%, transparent); }
+.ticker .track { display: flex; white-space: nowrap; width: max-content; animation: tickerScroll 60s linear infinite; }
+.ticker span { font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; margin-right: 0; padding: 0 20px; text-shadow: 0 1px 6px rgba(0,0,0,.9); line-height: 24px; }
 
 @media (max-width: 760px) {
   .dock { gap: 2px; padding: 4px; border-radius: 20px; bottom: calc(18px + var(--safe-b)); }
