@@ -251,11 +251,11 @@ const ceil=new THREE.Mesh(new THREE.BoxGeometry(26,.1,20),new THREE.MeshLambertM
 ceil.position.y=4.05;office.add(ceil);
 // balok rangka penopang (beams) — memecah kepolosan bidang langit
 [[0,-6],[0,0],[0,6]].forEach(([,z])=>{
-  const b=new THREE.Mesh(new THREE.BoxGeometry(26,.22,.4),M(0x14243D));
+  const b=new THREE.Mesh(new THREE.BoxGeometry(24.9,.22,.4),M(0x14243D));
   b.position.set(0,3.9,z);office.add(b);__ceilObjsSafe.push(b);
 });
-[[ -9.5],[0],[9.5]].forEach(([x])=>{
-  const b=new THREE.Mesh(new THREE.BoxGeometry(.4,.22,20),M(0x14243D));
+[[ -9.2],[0],[9.2]].forEach(([x])=>{
+  const b=new THREE.Mesh(new THREE.BoxGeometry(.4,.22,18.9),M(0x14243D));
   b.position.set(x,3.9,0);office.add(b);__ceilObjsSafe.push(b);
 });
 
