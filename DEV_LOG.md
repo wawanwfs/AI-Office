@@ -375,3 +375,7 @@
 - Backlog "adjacency tipis Lina×Yoga (cluster lounge)": sweep greedy pad horizontal 22→30px & vertikal 20→24px, cap offset dx agent label ±5→±6 — dorongan horizontal lebih lega sebelum fallback vertikal.
 - Bukti: build OK (1.2s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, agents 14, frames normal; shot ck.png 512KB (scene hidup). Vision audit timeout (infra, 4x) — verifikasi visual lanjut run berikutnya.
 - Sisa backlog: verifikasi audio & label di browser asli; vision audit adjacency.
+## 2026-10-18 06:20 WIB — anti-overlap #10: sweep spacing + zona ikut bergeser mutual
+- Vision audit run lalu (ck.png) menemukan 3 overlap: MEETING×Integrator, Andi×Yoga, Rina×task label. Perbaikan: sweep greedy spacing label-ke-label 24→32px (vertikal), dan agent-vs-zona kini mutual — label zona ikut mundur 0.5x saat agent didorong (sebelumnya zona beku sehingga agent over-cap 24px dan tetap menempel zona).
+- Bukti: build OK (1.5s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, label 14, frames normal; shot ck2.png 517KB (scene hidup). Vision audit zoom: Yoga×Dewi terpisah dengan celah jelas ✅; audit full-frame masih melaporkan beberapa pasangan "menempel" (Sari×Trainer AI belum terverifikasi di zoom, kemungkinan false positive — lanjut run berikutnya).
+- Sisa backlog: verifikasi zoom Sari×Trainer AI; adjacency zona sisa (Integrator×MEETING tipis); verifikasi audio di browser asli.

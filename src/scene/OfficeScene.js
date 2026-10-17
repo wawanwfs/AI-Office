@@ -1795,6 +1795,8 @@ function animate(){
         else if(!pts[i].zone){ // agent vs penghalang: agent bergeser penuh, bubble ikut mundur sedikit (mutual)
           pts[i].offY+=h2*1.9;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*1.0;
           if(pts[j].bub){pts[j].offY-=h2*0.35;pts[j].offX-=dir*w2*0.25;}
+          // jika penghalang adalah label zona, zona ikut geser sedikit (0.5x) — kluster padat zona+agent bisa over-cap agent
+          else if(pts[j].zt){pts[j].offY-=h2*0.5;pts[j].offX-=dir*w2*0.4;}
         }
         else if(!pts[j].zone){
           pts[j].offY-=h2*1.6;const dir=(pts[j].x>=pts[i].x)?1:-1;pts[j].offX+=dir*w2*0.9;
@@ -1818,7 +1820,7 @@ function animate(){
           for(let j=0;j<i;j++){
             const pj=byY[j];
             if(Math.abs(pi.x+pi.offX-(pj.x+pj.offX))>=((pi.sw||pi.zw||0)+(pj.sw||pj.zw||0))/2+30)continue;
-            const need=(pj.y+pj.offY)+((pi.sh||pi.zh||0)+(pj.sh||pj.zh||0))/2+24;
+            const need=(pj.y+pj.offY)+((pi.sh||pi.zh||0)+(pj.sh||pj.zh||0))/2+32;
             if(need>minY)minY=need;
           }
           if(minY>-Infinity&&(pi.y+pi.offY)<minY)pi.offY=minY-(pi.y);
