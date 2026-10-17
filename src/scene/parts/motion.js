@@ -103,6 +103,19 @@ export function createMotion(ctx) {
       chooseTrip(ad);
     },
     walking_out(ad, delta) {
+      if (ad.lunch) {
+        // Lunch: jalan ke kafe dulu, sampai di sana diam & ngobrol acak
+        if (stepRoute(ad, WALK, delta)) {
+          ad.walkPause += delta;
+          if (Math.random() < delta * 0.12) {
+            createBubble(ad.walker.position.x, 2.6, ad.walker.position.z,
+              ['“makan siang dulu”', '“kopi wajib”', '“paket nasi goreng”', '“sesh sore nanti?”'][Math.floor(Math.random() * 4)],
+              ad.agent.hex);
+          }
+        }
+        follow(ad);
+        return;
+      }
       if (stepRoute(ad, WALK, delta)) {
         ad.walkPause += delta;
         if (ad.collab && ad.partner) converse(ad);

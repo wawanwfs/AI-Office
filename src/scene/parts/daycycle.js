@@ -145,15 +145,53 @@ export function createShift(ctx) {
     });
   }
 
+  // ── Lunch break 12:00–13:00: agent ramai-ramai ke CAFÉ, lalu kembali ──
+  // Dipicu dari OfficeScene: saat menit masuk window lunch, setLunch(true);
+  // saat keluar window, setLunch(false) → semua yang sedang lunch pulang ke meja.
+  function sendToLunch() {
+    phase = 'lunch';
+    agentData.forEach((ad) => {
+      if (ad.state !== 'sitting') return;
+      ad.sittingChar.visible = false; ad.walker.visible = true;
+      ad.walker.position.set(ad.home.x, 0, ad.home.z);
+      ad.lunch = true;
+      ad.state = 'walking_out';
+      ad.walkTarget = { x: -9.5 + rng.r(-1.4, 1.4), z: 8.3 + rng.r(0, 0.7) }; // depan counter kafe
+      ad._route = null;
+      ad.walkPause = rng.r(6, 14); // rencana ngopi lama
+    });
+  }
+  function endLunch() {
+    phase = 'working';
+    agentData.forEach((ad) => {
+      ad.lunch = false;
+      if (ad.state === 'sitting') return;
+      // yang sedang di luar (walker visible, bukan rapat) dipulangkan ke mejanya
+      if (ad.state === 'meeting') return;
+      ad.state = 'walking_back';
+      ad.collab = null; ad.partner = null;
+      ad.walkTarget = { x: ad.home.x, z: ad.home.z };
+      ad._route = null;
+    });
+  }
+  let inLunch = false;
+  function updateLunch(m) {
+    if (m >= 720 && m < 780 && !inLunch) { inLunch = true; sendToLunch(); }
+    else if ((m < 720 || m >= 780) && inLunch) { inLunch = false; endLunch(); }
+  }
+
   return {
     update(m) {
+      updateLunch(m);
       if (m >= 480 && m <= 510 && phase !== 'arriving' && phase !== 'working') { phase = 'arriving'; arrive(); }
-      if (m > 510 && m < 1080) phase = 'working';
+      if (m > 510 && m < 720) phase = 'working';
+      if (m >= 780 && m < 1080) phase = 'working';
       if (m >= 1080 && m <= 1110 && phase !== 'leaving') { phase = 'leaving'; depart(); }
       if (m > 1110 || m < 480) { nightfall(); phase = 'night'; }
       if (m >= 480 && phase === 'night') { phase = 'arriving'; dawn(); }
     },
     dispose() { timers.forEach(clearTimeout); timers.clear(); },
     get phase() { return phase; },
+    get lunch() { return inLunch; },
   };
 }
