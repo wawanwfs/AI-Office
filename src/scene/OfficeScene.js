@@ -1521,9 +1521,9 @@ function createBubble(x,y,z,text,color){
   sprite.userData.aspect=W/H; sprite.renderOrder=30;
   const hFrac=0.034;                                       // ≈ 3.4% tinggi layar
   sprite.scale.set(hFrac*sprite.userData.aspect,hFrac,1);
-  sprite.position.set(x,y+1.1,z);
+  sprite.position.set(x,y+1.35,z);
   office.add(sprite);
-  chatBubbles.push({sprite,life:3.5,startY:y+1.1});
+  chatBubbles.push({sprite,life:3.5,startY:y+1.35});
   window.__bubbleCount=chatBubbles.length; window.__lastBubble=text;
 }
 
@@ -1739,15 +1739,16 @@ function animate(){
   sizeLabels();
   if(namesVisible){
     const vis=agentData.filter(a=>a.label.visible);
+    const __k=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360));
     // baseY/baseX dicatat SEBELUM offset diterapkan, sehingga offset tidak terakumulasi antar frame
     // (dulu label meeting/walker naik terus karena position.y di-adjust tanpa reset).
     const pts=vis.map(a=>{const u=a.label.userData, v=a.label.position.clone().project(camera);
       // baseY/baseX = posisi state (sitting/meeting/walker) minus offset anti-tumpuk frame sebelumnya,
       // sehingga offset TIDAK terakumulasi antar frame.
-      return {a,zone:false,baseY:a.label.position.y-(u.antiY||0),baseX:a.label.position.x-(u.antiX||0),x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0}});
+      return {a,zone:false,sw:a.label.scale.x*__k*1.06,sh:a.label.scale.y*__k*1.35,baseY:a.label.position.y-(u.antiY||0),baseX:a.label.position.x-(u.antiX||0),x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0}});
     // label ZONA statis ikut dihitung (sebagai penghalang): agent yang menumpuk zona digeser, zona tidak bergerak
     pts.sort((p,q)=>p.y-q.y);
-    if(window.__zoneLabels){const __k=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360));
+    if(window.__zoneLabels){const __kz=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360));
       window.__zoneLabels.forEach(zt=>{if(!zt.visible)return;
         const v=zt.position.clone().project(camera);if(v.z>1)return;
         // jitter deterministik per zona (hash label) supaya kluster label zona+agent tidak membentuk tumpukan simetris
@@ -1755,27 +1756,29 @@ function animate(){
       const zb=(window.__zoneBase&&window.__zoneBase.get(zt))||{y:zt.position.y,x:zt.position.x};
       let hsh=0;for(const ch of zt.userData.label||'')hsh=(hsh*31+ch.charCodeAt(0))|0;
       const jy=(hsh%7)-3, jx=((hsh>>3)%9)-4;
-      pts.push({a:null,zone:true,zt,zw:zt.scale.x*__k,zh:zt.scale.y*__k,baseY:zb.y+jy*0.06,baseX:zb.x+jx*0.08,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});}
-    const __L=agentData[0].label, __k=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360)), lh=__L.scale.y*__k*1.18, lw=__L.scale.x*__k*1.02;
+      pts.push({a:null,zone:true,zt,zw:zt.scale.x*__kz*1.08,zh:zt.scale.y*__kz*1.25,baseY:zb.y+jy*0.06,baseX:zb.x+jx*0.08,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});}
+    // bubble dialog ikut sebagai penghalang statis: label zona digeser menjauh dari bubble (bubble tidak bergerak)
+    chatBubbles.forEach(bb=>{const v=bb.sprite.position.clone().project(camera);if(v.z>1)return;
+      pts.push({a:null,zone:true,zt:null,bub:bb.sprite,zw:bb.sprite.scale.x*container.clientWidth/2*1.02,zh:bb.sprite.scale.y*container.clientHeight/2*1.05,baseY:bb.sprite.position.y,baseX:bb.sprite.position.x,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});
+    const __L=agentData[0].label;
     for(let iter=0;iter<3;iter++){ // multi-pass: satu pass hanya menggeser sedikit, 3 pass menjamin kluster padat benar2 terpisah
     for(let i=0;i<pts.length;i++){for(let j=0;j<i;j++){
+      const lwi=Math.max(pts[i].sw||0,(pts[i].zw||0)), lhi=Math.max(pts[i].sh||0,(pts[i].zh||0)),
+            lwj=Math.max(pts[j].sw||0,(pts[j].zw||0)), lhj=Math.max(pts[j].sh||0,(pts[j].zh||0));
       const dx=Math.abs(pts[i].x-pts[j].x), dy=Math.abs((pts[i].y+pts[i].offY)-(pts[j].y+pts[j].offY));
-      if(dx<lw && dy<lh){
-        // h/w (ukuran overlap asli) hanya dipakai lewat varian lhi/lwj di bawah
+      if(dx<(lwi+lwj)/2 && dy<(lhi+lhj)/2){
         // geser vertikal dulu; bila vertikal mentok, geser horizontal ke arah bebas
-        const lwi=Math.max(lw,pts[i].zw||0), lhi=Math.max(lh,pts[i].zh||0), lwj=Math.max(lw,pts[j].zw||0), lhj=Math.max(lh,pts[j].zh||0);
-        if(!(dx<(lwi+lwj)/2 && dy<(lhi+lhj)/2))continue;
         const h2=((lhi+lhj)/2)-dy, w2=((lwi+lwj)/2)-dx;
-        if(!pts[i].zone){pts[i].offY+=h2*1.4;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.6;}
-        else if(!pts[j].zone){pts[j].offY-=h2*1.4;const dir=(pts[j].x>=pts[i].x)?1:-1;pts[j].offX+=dir*w2*0.6;}
+        if(!pts[i].zone){pts[i].offY+=h2*1.4;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.8;}
+        else if(!pts[j].zone){pts[j].offY-=h2*1.4;const dir=(pts[j].x>=pts[i].x)?1:-1;pts[j].offX+=dir*w2*0.8;}
       }
     }}
     } // end 2-pass anti-overlap
     // konversi offset piksel ke satuan dunia (~ jarak/tinggi layar), cap supaya label tidak melayang jauh
     const dist=camera.position.distanceTo(tgt), worldPerPx=2*dist*Math.tan(camera.fov*Math.PI/360)/container.clientHeight;
     pts.forEach(p=>{
-      const dy=Math.min(6,p.offY*worldPerPx*1.2), dx=Math.max(-2.5,Math.min(2.5,p.offX*worldPerPx));
-      if(p.zone){p.zt.position.y=p.baseY+dy; p.zt.position.x=p.baseX+dx; return;} // zona: diterapkan langsung (tanpa akumulasi, dihitung dari project() tiap frame)
+      const dy=Math.min(10,p.offY*worldPerPx*1.2), dx=Math.max(-2.5,Math.min(2.5,p.offX*worldPerPx));
+      if(p.zone){if(p.zt){p.zt.position.y=p.baseY+dy; p.zt.position.x=p.baseX+dx;} else if(p.bub){p.bub.position.y=p.baseY+dy*0.4; p.bub.position.x=p.baseX+dx*0.5;} return;} // zona/bubble
       p.a.label.position.y=p.baseY+dy; p.a.label.position.x=p.baseX+dx;
       p.a.label.userData.antiY=dy; p.a.label.userData.antiX=dx; // utk base frame berikutnya
     });
