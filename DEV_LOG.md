@@ -343,3 +343,8 @@
 - makeLabel (name tag agent) & nameplate meja: slice(0,14/16/24) kaku diganti pengukuran nyata canvas measureText — teks dipotong per karakter + '…' sampai muat lebar pill (W-60 / 220px). Nama panjang ("Support Human", "Integrator Bot", role panjang) kini berakhir "…" rapi, bukan dipotong mentah.
 - Bukti: build OK (1.5s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, agents 14; shot ck.png 517KB (scene hidup). Vision audit: "Support …" dan "Integrator …" berakhir ellipsis rapi; tak ada lagi potongan tanpa tanda (sisa hanya adjacency label & ticker tepi — perilaku marquee normal).
 - Sisa backlog: adjacency 3-8px cluster padat; "Wahyu Fs" tertutup label zona (anti-overlap berikutnya); verifikasi audio di browser asli.
+## 2026-10-18 03:20 WIB — label zona pindah ke tepi depan zona + breathing room sweep final
+- Backlog "\"Wahyu Fs\" tertutup label zona": label zona (flooring.js) dari tengah zona pindah ke tepi DEPAN (z - d/2 + 0.7) — keluar dari area duduk agent sehingga tidak lagi di bawah name tag. Berlaku semua 5 zona (MEETING/SERVER ROOM hardcode lama dihapus).
+- Anti-overlap diperkuat: sweep final greedy pad 8→14px, cap offset agent label dy 16→24 (cluster padat benar-benar terpisah, tidak mentok cap).
+- Bukti: build OK (1.8s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, agents 14; shot ck.png 514KB (scene hidup). Vision audit rating 8/10 — SEMUA 5 label zona terbaca penuh, tak ada teks-atas-teks total; sisa hanya sudut "Lina" menyentuh border WELCOME & LOUNGE.
+- Sisa backlog: adjacency sudut WELCOME & LOUNGE × Lina; tag dekat toolbar bawah terpotong; verifikasi audio di browser asli.

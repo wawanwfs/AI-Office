@@ -24,7 +24,9 @@ export function createZones(ctx){
     const zt=new THREE.CanvasTexture(zc);zt.minFilter=THREE.LinearFilter;
     const zl=new THREE.Sprite(new THREE.SpriteMaterial({map:zt,transparent:true,depthTest:false}));
     zl.center.set(.5,1);
-    const zly=(z.label==='MEETING')?z.z+3.4:(z.label==='SERVER ROOM')?z.z+1.8:z.z;
+    // label zona ditempatkan di tepi DEPAN zona (bukan tengah) supaya tidak menumpuk
+    // name tag agent yang duduk/berdiri di dalam area zona
+    const zly=z.z-z.d/2+0.7;
     zl.renderOrder=5;
     const zsc=(z.label.length>9)?1.25:1; // label panjang lebih besar
     zl.scale.set(3.4*zsc,.64*zsc,1);
