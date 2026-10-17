@@ -1807,7 +1807,7 @@ function animate(){
     // dan clamp bisa menimbulkan overlap baru -> ulangi (sweep→clamp) sampai stabil (max 3x).
     // Konvergen: total ruang vertikal aman melebihi kebutuhan, tiap iterasi hanya mengurangi pelanggaran.
     {
-      const H2=container.clientHeight/2, TOP=H2-40, BOT=H2-90; // 90px utk toolbar bawah, 40px utk tepi atas
+      const H2=container.clientHeight/2, TOP=H2-110, BOT=H2-90; // atas: 110px cadangan lane header+ticker (HUD HTML, di luar canvas); bawah: 90px toolbar
       for(let round=0;round<3;round++){
       // sweep: dari atas ke bawah, tiap label didorong ke bawah dari posisi terendah yang bebas overlap
       {
