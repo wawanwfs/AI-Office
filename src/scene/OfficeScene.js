@@ -1797,7 +1797,23 @@ function animate(){
         }
       }
     }}
-    } // end 2-pass anti-overlap
+    } // end multi-pass anti-overlap
+    // PASS FINAL deterministik: sweep dari atas ke bawah, tiap label didorong ke bawah dari
+    // posisi terendah yang sudah "aman" terhadap semua label sebelumnya -> jaminan nol overlap
+    // (multi-pass mutual push bisa saling meniadakan; sweep greedy tidak).
+    {
+      const byY=pts.slice().sort((p,q)=>(p.y+p.offY)-(q.y+q.offY));
+      for(let i=1;i<byY.length;i++){
+        const pi=byY[i];
+        let minY=-Infinity;
+        for(let j=0;j<i;j++){
+          const pj=byY[j];if(Math.abs(pi.x+pi.offX-(pj.x+pj.offX))>=((pi.sw||pi.zw||0)+(pj.sw||pj.zw||0))/2+8)continue;
+          const need=(pj.y+pj.offY)+((pi.sh||pi.zh||0)+(pj.sh||pj.zh||0))/2+8;
+          if(need>minY)minY=need;
+        }
+        if(minY>-Infinity&&(pi.y+pi.offY)<minY)pi.offY=minY-(pi.y);
+      }
+    }
     // konversi offset piksel ke satuan dunia (~ jarak/tinggi layar), cap supaya label tidak melayang jauh
     const dist=camera.position.distanceTo(tgt), worldPerPx=2*dist*Math.tan(camera.fov*Math.PI/360)/container.clientHeight;
     pts.forEach(p=>{
