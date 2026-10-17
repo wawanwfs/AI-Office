@@ -1738,7 +1738,7 @@ function animate(){
   agentData.forEach((a,i)=>{if(a.state==='sitting')a.label.position.y=LABEL_Y+Math.sin(elapsed*1.1+i*1.3)*.02});
   // Atap & lampu panel disembunyikan saat kamera di atas (agar isi kantor terlihat), dimunculkan dari sudut rendah
   if(window.__wallFade)window.__wallFade(camera.position);
-  { const hide = sph.phi < 1.15; ceil.visible=!hide; __ceilObjs.forEach(o=>{o.visible=!hide}); }
+  { const hide = sph.phi < 1.15; ceil.visible=!hide; __ceilObjs.forEach(o=>{o.visible=!hide}); __ceilObjsSafe.forEach(o=>{o.visible=!hide}); }
   // Anti-tumpuk label: dorong ke atas bila label lain terlalu dekat di layar (iterasi ringan)
   sizeLabels();
   if(namesVisible){
