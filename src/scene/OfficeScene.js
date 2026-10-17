@@ -495,7 +495,7 @@ function makeLabel(agent){
     c.beginPath(); if(c.roundRect)c.roundRect(2,2,W-4,H-4,full?18:14); else c.rect(2,2,W-4,H-4); c.fill();
     c.fillStyle=agent.hex; c.fillRect(2,full?14:10,6,H-(full?28:20));
     c.textAlign='center'; c.textBaseline='middle';
-    const nm=String(agent.name).toLowerCase().replace(/(^|\s)\w/g,m=>m.toUpperCase()).slice(0,12);
+    const nm=String(agent.name).toLowerCase().replace(/(^|\s)\w/g,m=>m.toUpperCase()).slice(0,14);
     c.font=(full?'800 36px':'800 28px')+' "Segoe UI",Arial,sans-serif'; c.fillStyle='#fff';
     c.fillText(nm,W/2+4,full?32:H/2+1);
     if(full){c.font='600 22px "Segoe UI",Arial,sans-serif'; c.fillStyle='#b8c4d4'; c.fillText(String(agent.role),W/2+4,62)}
@@ -1685,16 +1685,33 @@ function animate(){
   sizeLabels();
   if(namesVisible){
     const vis=agentData.filter(a=>a.label.visible);
-    const pts=vis.map(a=>{const v=a.label.position.clone().project(camera);return {a,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,off:0}});
+    // baseY/baseX dicatat SEBELUM offset diterapkan, sehingga offset tidak terakumulasi antar frame
+    // (dulu label meeting/walker naik terus karena position.y di-adjust tanpa reset).
+    const pts=vis.map(a=>{const u=a.label.userData, v=a.label.position.clone().project(camera);
+      // baseY/baseX = posisi state (sitting/meeting/walker) minus offset anti-tumpuk frame sebelumnya,
+      // sehingga offset TIDAK terakumulasi antar frame.
+      return {a,baseY:a.label.position.y-(u.antiY||0),baseX:a.label.position.x-(u.antiX||0),x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0}});
     pts.sort((p,q)=>p.y-q.y);
-    const __L=agentData[0].label, __k=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360)), lh=__L.scale.y*__k*1.1, lw=__L.scale.x*__k*1.05;
+    const __L=agentData[0].label, __k=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360)), lh=__L.scale.y*__k*1.08, lw=__L.scale.x*__k*1.02;
     for(let i=0;i<pts.length;i++){for(let j=0;j<i;j++){
-      const dx=Math.abs(pts[i].x-pts[j].x), dy=Math.abs((pts[i].y+pts[i].off)-(pts[j].y+pts[j].off));
-      if(dx<lw && dy<lh) pts[i].off+= (lh-dy);
+      const dx=Math.abs(pts[i].x-pts[j].x), dy=Math.abs((pts[i].y+pts[i].offY)-(pts[j].y+pts[j].offY));
+      if(dx<lw && dy<lh){
+        const h=lh-dy, w=(lw-dx)/2;
+        // geser vertikal dulu; bila vertikal mentok, geser horizontal ke arah bebas
+        pts[i].offY+= h;
+        const dir=(pts[i].x>=pts[j].x)?1:-1;
+        pts[i].offX+= dir*w*0.6;
+      }
     }}
-    // konversi offset piksel ke satuan dunia (~ jarak/tinggi layar)
+    // konversi offset piksel ke satuan dunia (~ jarak/tinggi layar), cap supaya label tidak melayang jauh
     const dist=camera.position.distanceTo(tgt), worldPerPx=2*dist*Math.tan(camera.fov*Math.PI/360)/container.clientHeight;
-    pts.forEach(p=>{p.a.label.position.y+=Math.min(6,p.off*worldPerPx*1.4)});
+    pts.forEach(p=>{
+      const dy=Math.min(6,p.offY*worldPerPx*1.2), dx=Math.max(-2.5,Math.min(2.5,p.offX*worldPerPx));
+      p.a.label.position.y=p.baseY+dy; p.a.label.position.x=p.baseX+dx;
+      p.a.label.userData.antiY=dy; p.a.label.userData.antiX=dx; // utk base frame berikutnya
+    });
+  } else {
+    // bila nama disembunyikan lalu dimunculkan lagi, posisi direset oleh state (sitting/meeting/walker) — tak ada sisa offset
   }
   nxLabel.position.y=LABEL_Y-.5+Math.sin(elapsed*1.1+9)*.03;
   // Papers
