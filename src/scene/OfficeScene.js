@@ -1785,7 +1785,7 @@ function animate(){
     for(let iter=0;iter<5;iter++){ // multi-pass: satu pass hanya menggeser sedikit, 3 pass menjamin kluster padat benar2 terpisah
     for(let i=0;i<pts.length;i++){for(let j=0;j<i;j++){
       // PAD = breathing room: box diperluas 10px per sisi supaya label tak "menempel" (<5px gap)
-      const PAD=28, lwi=(pts[i].sw||pts[i].zw||0)+PAD, lhi=(pts[i].sh||pts[i].zh||0)+PAD,
+      const PAD=30, lwi=(pts[i].sw||pts[i].zw||0)+PAD, lhi=(pts[i].sh||pts[i].zh||0)+PAD,
             lwj=(pts[j].sw||pts[j].zw||0)+PAD, lhj=(pts[j].sh||pts[j].zh||0)+PAD;
       const dx=Math.abs(pts[i].x-pts[j].x), dy=Math.abs((pts[i].y+pts[i].offY)-(pts[j].y+pts[j].offY));
       if(dx<(lwi+lwj)/2 && dy<(lhi+lhj)/2){
@@ -1804,7 +1804,7 @@ function animate(){
           pts[i].offY+=h2*1.9;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*1.0;
           if(pts[j].bub){pts[j].offY-=h2*0.35;pts[j].offX-=dir*w2*0.25;}
           // jika penghalang adalah label zona, zona ikut geser sedikit (0.5x) — kluster padat zona+agent bisa over-cap agent
-          else if(pts[j].zt){pts[j].offY-=h2*0.5;pts[j].offX-=dir*w2*0.4;}
+          else if(pts[j].zt){pts[j].offY-=h2*0.5;pts[j].offX-=dir*w2*0.9;}
         }
         else if(!pts[j].zone){
           pts[j].offY-=h2*1.6;const dir=(pts[j].x>=pts[i].x)?1:-1;pts[j].offX+=dir*w2*0.9;
@@ -1828,7 +1828,7 @@ function animate(){
           for(let j=0;j<i;j++){
             const pj=byY[j];
             if(Math.abs(pi.x+pi.offX-(pj.x+pj.offX))>=((pi.sw||pi.zw||0)+(pj.sw||pj.zw||0))/2+30)continue;
-            const need=(pj.y+pj.offY)+((pi.sh||pi.zh||0)+(pj.sh||pj.zh||0))/2+32;
+            const need=(pj.y+pj.offY)+((pi.sh||pi.zh||0)+(pj.sh||pj.zh||0))/2+36;
             if(need>minY)minY=need;
           }
           if(minY>-Infinity&&(pi.y+pi.offY)<minY)pi.offY=minY-(pi.y);
@@ -1847,8 +1847,8 @@ function animate(){
     // konversi offset piksel ke satuan dunia (~ jarak/tinggi layar), cap supaya label tidak melayang jauh
     const dist=camera.position.distanceTo(tgt), worldPerPx=2*dist*Math.tan(camera.fov*Math.PI/360)/container.clientHeight;
     pts.forEach(p=>{
-      const dy=Math.min(24,p.offY*worldPerPx*1.2), dx=Math.max(-6,Math.min(6,p.offX*worldPerPx));
-      if(p.zone){if(p.zt){const dyz=Math.max(-25,Math.min(25,p.offY*worldPerPx*1.2)), dxz=Math.max(-6,Math.min(6,p.offX*worldPerPx)); p.zt.position.y=p.baseY+dyz; p.zt.position.x=p.baseX+dxz; const zu=p.zt.userData; zu.antiY=(zu.antiY||0)+dyz; zu.antiX=(zu.antiX||0)+dxz;} else if(p.bub){p.bub.position.y=p.baseY+dy*0.4; p.bub.position.x=p.baseX+dx*0.5;} return;} // zona/bubble
+      const dy=Math.min(34,p.offY*worldPerPx*1.2), dx=Math.max(-12,Math.min(12,p.offX*worldPerPx));
+      if(p.zone){if(p.zt){const dyz=Math.max(-25,Math.min(25,p.offY*worldPerPx*1.2)), dxz=Math.max(-14,Math.min(14,p.offX*worldPerPx)); p.zt.position.y=p.baseY+dyz; p.zt.position.x=p.baseX+dxz; const zu=p.zt.userData; zu.antiY=(zu.antiY||0)+dyz; zu.antiX=(zu.antiX||0)+dxz;} else if(p.bub){p.bub.position.y=p.baseY+dy*0.4; p.bub.position.x=p.baseX+dx*0.5;} return;} // zona/bubble
       p.a.label.position.y=p.baseY+dy; p.a.label.position.x=p.baseX+dx;
       p.a.label.userData.antiY=dy; p.a.label.userData.antiX=dx; // utk base frame berikutnya
     });
