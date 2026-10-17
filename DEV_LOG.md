@@ -155,3 +155,8 @@
 - Temuan+fix: bubble tidak terbaca -> sizeAttenuation=false 3.4% tinggi layar + kontras 0.94 (desktop 9/10).
 - HP framing 36% -> kamera diagonal (theta 2.0, phi 0.5) via grid search proyeksi: scene 43% tinggi, vision 8/10 "diorama".
 - Sisa: toast menimpa 1 label; data 15 agent API vs 12 scene.
+
+## 2026-10-17 08:55 WIB — backlog audit
+- Toast pindah ke atas (tidak menimpa label scene).
+- 3 meja+agent baru: Trainer AI, Integrator Bot, Support Human (scene kini 15 = data API).
+- Kemiripan kode asli: 15%.

@@ -111,7 +111,7 @@ button { font-family: inherit; }
 .stat-grid span { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .5px; }
 
 .toast {
-  position: fixed; left: 0; right: 0; margin: 0 auto; width: max-content; bottom: calc(100px + var(--safe-b));
+  position: fixed; left: 0; right: 0; margin: 0 auto; width: max-content; top: calc(86px + var(--safe-t));
   z-index: var(--z-toast); background: #fff; color: #111; font-weight: 600;
   padding: 11px 20px; border-radius: 14px; font-size: 14px; box-shadow: 0 8px 30px rgba(0,0,0,.5);
   max-width: calc(100vw - 24px); text-align: center; animation: fadeUp .25s ease both;
@@ -160,7 +160,7 @@ button { font-family: inherit; }
   .ticker { top: 52px; }
   .meeting-badge { top: 132px; }
   .panel, .panel.left { left: 0; right: 0; bottom: 0; width: 100%; max-height: 82dvh; border-radius: 18px 18px 0 0; padding-bottom: var(--safe-b); }
-  .toast { bottom: calc(86px + var(--safe-b)); }
+  .toast { top: calc(74px + var(--safe-t)); }
   .pop { left: 0; }
   input, select, textarea { font-size: 16px !important; }
 }
