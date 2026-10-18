@@ -555,3 +555,8 @@
 - Bukti probe CDP (probe_drag.py, chrome headless DISPLAY=:0, Input.dispatchMouseEvent jalur nyata): init '' → mousePressed+move → 'grabbing' ✓ → mouseReleased → '' ✓; lalu hover koordinat proyeksi agent[0] (815,283 via __camCam) → 'pointer' ✓ (feedback hover tetap bekerja). 0 console error.
 - Build OK, vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, canvas3d 1366x625, frames naik, 0 console error.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-18 23:35 WIB — double-click: zoom ke titik / fokus agent
+- Fitur UX OfficeScene.js: dblclick di canvas — kena agent/papan → focusGoal ke titik hit (r≤18, zoom dekat); area kosong → maju 30% (r max(14, r*0.7)). Plus guard: homeRadius awal di-clamp 24–60 saat pertama kali di-set (konsisten dengan setView), mencegah radius ekstrem ikut tersimpan.
+- Bukti probe CDP (probe_dbl9/dblA/dblB, jalur input nyata Input.dispatchMouseEvent): dblclick area kosong dist 37→28 (zoom-in ~30% ✓); dblclick pada koordinat proyeksi agent[0] → dist turun menuju ≤28 (fokus agent ✓, run lain 40→17); dblclick tidak trigger saat drag (moved>6 di click path tetap terjaga). 0 console error.
+- Build OK, vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, canvas3d 1366x625, frames naik, 0 console error.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
