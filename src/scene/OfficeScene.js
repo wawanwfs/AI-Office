@@ -1851,7 +1851,7 @@ function animate(){
   // Labels
   agentData.forEach((a,i)=>{if(a.state==='sitting')a.label.position.y=LABEL_Y+Math.sin(elapsed*1.1+i*1.3)*.02});
   // cincin emas mengikuti agent terpilih (juga saat berjalan/meeting)
-  if(selRing&&selRing.visible&&selectedIdx>=0&&selectedIdx<agentData.length){
+  if(selRing&&selectedIdx>=0&&selectedIdx<agentData.length){
     const a=agentData[selectedIdx];
     const p=selAnchor(a);
     if(!p){selRing.visible=false}
