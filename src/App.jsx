@@ -115,10 +115,20 @@ export default function App() {
         // sinkron state awal dari scene (mute) saat scene (re)created
         if (sceneRef.current.isAudioMuted) setMuted(!!sceneRef.current.isAudioMuted())
         // dua arah: pilih agent di panel chat → tampilkan cincin emas di scene
+        // peta id gateway → nama agent di scene (desk 3D). ceo tidak ada di scene (diabaikan).
+        const SCENE_BY_ID = {
+          'be1': 'BUDI', 'be2': 'RIZKY', 'fe1': 'DEWI', 'fe2': 'ANDI',
+          'mob1': 'YOGA', 'ux1': 'MAYA', 'devops1': 'TONI', 'qa1': 'RINA',
+          'ai-cs': 'BANTUIN AI', 'ai-train': 'TRAINER AI', 'integ': 'INTEGRATOR BOT',
+          'mkt1': 'LINA', 'cs-h': 'SUPPORT HUMAN', 'pm1': 'SARI',
+        }
         window.__wfsSceneSelect = (name) => {
           const s = sceneRef.current
           if (!s || !s.setSelected) return
-          const idx = (window.__agentData || []).findIndex(ad => ad.agent && ad.agent.name === name)
+          const idMap = {}
+          ;(window.__wfsAgentIdList || []).forEach(x => { idMap[x.name] = x.id })
+          const sceneName = SCENE_BY_ID[idMap[name]] || name
+          const idx = (window.__agentData || []).findIndex(ad => ad.agent && ad.agent.name === sceneName)
           if (idx >= 0) s.setSelected(idx)
         }
       } catch (err) {
