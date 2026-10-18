@@ -581,3 +581,9 @@
 - Bukti probe CDP (probe_saved0.py, jalur input nyata): base Iso theta 2.454/phi 1.0/r 40 → dblclick agent (saved=True) → drag keras theta 6.754/phi 0.18/r 34.1 → tekan '0' → theta **2.454**/phi **1.0**/r **40**, focus False (persis base ✓). 0 console error.
 - Build OK, vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, 14 label, canvas3d 1366x625, frames naik, 0 console error.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-19 02:40 WIB — hover highlight ring: feedback visual di bawah agent saat di-hover
+- Fitur OfficeScene.js: selain cursor 'pointer' (fitur 22:35), kini muncul **cincin biru semi-transparan (CanvasTexture radial ring, 2.6 unit)** di lantai tepat di bawah agent yang di-hover — feedback visual yang terlihat jelas dari jarak jauh, bukan hanya kursor kecil. Dibuat lazy (`ensureHoverRing`, hindari TDZ `office`), hook debug `window.__sceneRing`.
+- Perbaikan proses: TDZ terdeteksi saat probe (scene init failed "Cannot access 'M' before initialization") karena versi awal membuat mesh di top-level sebelum `office` dideklarasikan — diperbaiki lazy-init; e2e_err kembali hijau.
+- Bukti probe CDP (probe_ring6.py, chrome headless DISPLAY=:0, jalur input nyata): hover koordinat proyeksi agent[0] → cursor 'pointer' + ring {vis:true, pos:[-8,-1.9]}; hover 3 titik area kosong → cursor '' + ring vis:false (hilang); pindah agent lain → ring ikut pindah posisi. 0 console error.
+- Build OK (1.9s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, 14 label, canvas3d 1366x625, frames naik (23), 0 console error.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
