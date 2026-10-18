@@ -82,8 +82,10 @@ export function createMotion(ctx) {
     if (step !== ad._talk && step < lines.length) {
       ad._talk = step;
       const mine = step % 2 === 0;
-      const at = mine ? me : { x: pr.home.x, z: pr.home.z };
-      createBubble(at.x, 2.6, at.z, lines[step], (mine ? ad : pr).agent.hex);
+      const anchor = mine
+        ? { get x(){return me.x}, get z(){return me.z}, y:2.0 }
+        : { get x(){return pr.home.x}, get z(){return pr.home.z}, y:2.0 };
+      createBubble(anchor.x, 2.6, anchor.z, lines[step], (mine ? ad : pr).agent.hex, anchor);
     }
     if (ad.walkPause > LINE_SEC * lines.length + 1.2) {
       pr.sittingChar.rotation.y = 0;

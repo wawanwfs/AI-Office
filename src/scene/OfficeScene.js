@@ -1516,10 +1516,10 @@ const chatPhrases=[
   'deploying...','v10.8 is live','taste > speed','type safe pls',
 ];
 
-function createBubble(x,y,z,text,color){
+function createBubble(x,y,z,text,color,anchor){
   const W=360,H=76,bc=document.createElement('canvas');bc.width=W;bc.height=H;
   const bx=bc.getContext('2d');
-  bx.fillStyle='rgba(7,16,32,0.94)';                       // lebih pekat dari 0.85 agar terbaca
+  bx.fillStyle='rgba(7,16,32,0.94)';
   const rr=(cx,cy,cw,ch,cr)=>{bx.beginPath();bx.moveTo(cx+cr,cy);bx.lineTo(cx+cw-cr,cy);bx.quadraticCurveTo(cx+cw,cy,cx+cw,cy+cr);bx.lineTo(cx+cw,cy+ch-cr);bx.quadraticCurveTo(cx+cw,cy+ch,cx+cw-cr,cy+ch);bx.lineTo(cx+cr,cy+ch);bx.quadraticCurveTo(cx,cy+ch,cx,cy+ch-cr);bx.lineTo(cx,cy+cr);bx.quadraticCurveTo(cx,cy,cx+cr,cy);bx.closePath()};
   rr(3,3,W-6,H-14,10);bx.fill();
   bx.strokeStyle=color;bx.lineWidth=2.5;rr(3,3,W-6,H-14,10);bx.stroke();
@@ -1530,12 +1530,14 @@ function createBubble(x,y,z,text,color){
   const btex=new THREE.CanvasTexture(bc);btex.minFilter=THREE.LinearFilter;
   const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:btex,transparent:true,depthTest:false,sizeAttenuation:false}));
   sprite.userData.aspect=W/H; sprite.renderOrder=30;
-  const hFrac=0.034;                                       // ≈ 3.4% tinggi layar
+  const hFrac=0.034;
   sprite.scale.set(hFrac*sprite.userData.aspect,hFrac,1);
+  sprite.material.opacity=0;                              // fade-in
   sprite.position.set(x,y+1.35,z);
   office.add(sprite);
-  chatBubbles.push({sprite,life:3.5,startY:y+1.35});
-  window.__bubbleCount=chatBubbles.length; window.__lastBubble=text;
+  chatBubbles.push({sprite,life:3.5,startY:y+1.35,anchor:anchor||null});
+  window.__bubbles=chatBubbles;window.__bubbleCount=chatBubbles.length; window.__lastBubble=text;
+  window.__lastBubbleAt=performance.now();
 }
 
 
@@ -1633,8 +1635,15 @@ function updateBubbles(delta){
   for(let i=chatBubbles.length-1;i>=0;i--){
     const b=chatBubbles[i];
     b.life-=delta;
-    b.sprite.position.y=b.startY+(3-b.life)*.12; // float up
-    b.sprite.material.opacity=Math.max(0,b.life/3);
+    if(b.anchor){ // ikuti pembicara: tidak melompat antar posisi
+      b.sprite.position.x=b.anchor.x;
+      b.sprite.position.z=b.anchor.z;
+      b.sprite.position.y=(b.anchor.y||2.0)+1.35+(3-b.life)*.10;
+    } else {
+      b.sprite.position.y=b.startY+(3-b.life)*.12; // float up
+    }
+    const age=3.5-b.life;
+    b.sprite.material.opacity=Math.min(1,age/.22)*Math.max(0,Math.min(1,b.life/.5));
     if(b.life<=0){
       office.remove(b.sprite);
       b.sprite.material.dispose();
@@ -1805,7 +1814,7 @@ function animate(){
         }
         else if(!pts[i].zone&&!pts[j].zone){ // agent-agent: saling dorong dua arah
           pts[i].offY+=h2*1.0;pts[j].offY-=h2*1.0;
-          const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*0.6;pts[j].offX-=dir*w2*0.6;
+          const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*1.0;pts[j].offX-=dir*w2*1.0;
         }
         else if(!pts[i].zone){ // agent vs penghalang: agent bergeser penuh, bubble ikut mundur sedikit (mutual)
           pts[i].offY+=h2*1.9;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*1.0;
@@ -1834,7 +1843,7 @@ function animate(){
           let minY=-Infinity;
           for(let j=0;j<i;j++){
             const pj=byY[j];
-            if(Math.abs(pi.x+pi.offX-(pj.x+pj.offX))>=((pi.sw||pi.zw||0)+(pj.sw||pj.zw||0))/2+30)continue;
+            if(Math.abs(pi.x+pi.offX-(pj.x+pj.offX))>=((pi.sw||pi.zw||0)+(pj.sw||pj.zw||0))/2+36)continue;
             const need=(pj.y+pj.offY)+((pi.sh||pi.zh||0)+(pj.sh||pj.zh||0))/2+36;
             if(need>minY)minY=need;
           }
