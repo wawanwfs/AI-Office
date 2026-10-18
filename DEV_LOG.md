@@ -487,3 +487,8 @@
 - Bukti probe CDP (probe_neon.py): tombol awal {on:false, aria:false} → klik → {on:true, aria:true} → klik lagi → {on:false}; toggle dua arah benar, class/aria sinkron.
 - Build OK (2.9s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM OK, 14 btns, 14 label, frames naik, 0 console error.
 - Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.
+## 2026-10-18 17:00 WIB — fix state tombol mute tak sinkron + sinkron awal saat scene remount
+- Pola bug sama dengan run 16:15/16:40: tombol dock "Suara" menulis state React dari hasil toggle lokal (`setMuted(v)`) bukan dari scene; bila scene remount (WebGL reinit) state bisa tidak cocok. Efek sinkron awal yang ada juga hanya jalan sekali di mount ([]), tidak saat scene dibuat ulang via dynamic import.
+- Fix App.jsx: (a) setelah toggle, state dibaca ulang dari scene `isAudioMuted()` (anti-desync); (b) efek scene-init kini sinkron `muted` dari scene tepat setelah `createOfficeScene` sukses.
+- Bukti probe CDP (probe_mute2.py): initMuted False → klik → muted True → klik → False (toggle dua arah, __audio.muted sinkron). Build OK (2.8s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM OK, 14 btns, 14 label, frames naik, 0 console error.
+- Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.

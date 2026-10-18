@@ -46,7 +46,8 @@ export default function App() {
     if (!s || !s.isAudioMuted) { setMuted(m => !m); return }
     const v = !s.isAudioMuted()
     s.setAudioMuted(v)
-    setMuted(v)
+    // baca state scene sungguhan (anti-desync, pola sama dgn tombol Neon)
+    setMuted(!!s.isAudioMuted())
   }
   const [logItems, setLogItems] = useState(() => {
     try { return JSON.parse(localStorage.getItem('wfs_activity') || '[]') } catch { return [] }
@@ -108,6 +109,8 @@ export default function App() {
           onStatusUpdate: () => {},
           onMeetingChange: (m) => setInMeeting(m),
         })
+        // sinkron state awal dari scene (mute) saat scene (re)created
+        if (sceneRef.current.isAudioMuted) setMuted(!!sceneRef.current.isAudioMuted())
       } catch (err) {
         console.error('Scene init failed — UI-only mode:', err)
         flash('WebGL tidak tersedia — mode UI saja', true)
