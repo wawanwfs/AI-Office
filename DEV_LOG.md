@@ -544,3 +544,9 @@
 - Bukti probe CDP (probe_views.py, headless DISPLAY=:0): drag kamera dulu (theta 2.46→1.21) → klik Depan → posisi kamera 0,16,37 (theta 0 ✓) → klik Atas → 9,39,-11 (phi 0.35 ✓) → klik Iso → 21,23,-26 (theta 2.45 ✓). 3 preset berpindah benar dari keadaan kamera acak.
 - Build OK (4.7s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, **17 btns** (14+3 baru), 14 label, canvas3d 1366x625, frames naik, 0 console error; screenshot ck.png 516KB (scene hidup).
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-18 22:35 WIB — hover cursor pointer di atas agent/papan proyek (isyarat bisa diklik)
+- UX: agent & papan proyek sudah sejak lama bisa diklik (kamera zoom + bubble), tapi tidak ada feedback saat hover. Kini pointermove di canvas me-raycast (throttle 80ms) ke agent (sittingChar/walker) + mesh papan → cursor 'pointer' saat di atas objek yang bisa diklik, kembali normal saat kosong.
+- Bukti probe CDP (probe_hoverA.py, chrome headless DISPLAY=:0): Input.dispatchMouseEvent mouseMoved di koordinat proyeksi agent[0] (893,277) → canvas.style.cursor='pointer' ✓; hover koordinat papan (-8.6,2.55,9.2) → 'pointer' ✓; hover area kosong → '' ✓; 0 console error.
+- Catatan: dispatch PointerEvent sintetis via JS tidak selalu memicu listener di headless ini — verifikasi memakai jalur input nyata CDP (jalur yang sama dengan user).
+- Build OK (1.4s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, canvas3d 1366x625, frames naik, 0 console error.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
