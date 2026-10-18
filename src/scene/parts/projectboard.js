@@ -11,7 +11,7 @@ export function createProjectBoard(office, THREE) {
 
   const tex = new THREE.CanvasTexture(cv)
   const mesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(5.6, 3.06),
+    new THREE.PlaneGeometry(7.4, 4.04),
     new THREE.MeshBasicMaterial({ map: tex, fog: false })
   )
   mesh.position.set(-8.6, 2.6, 9.3)
