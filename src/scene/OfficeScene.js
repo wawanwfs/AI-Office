@@ -108,8 +108,15 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   ray.setFromCamera(ndc,camera);
   const targets=[];
   agentData.forEach(ad=>{ if(ad.sittingChar.visible)targets.push(ad.sittingChar); if(ad.walker.visible)targets.push(ad.walker); });
-  const hits=ray.intersectObjects(targets.map(t=>t),true);
+  // papan proyek juga bisa diklik → kamera zoom ke papan
+  const boardMesh=window.__projectBoard&&window.__projectBoard.mesh;
+  const hits=ray.intersectObjects(boardMesh?[...targets,boardMesh]:targets,true);
   if(!hits.length){ if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius,reset:true}} return; }
+  if(boardMesh&&hits[0].object===boardMesh){
+    focusGoal={t:new THREE.Vector3(-8.6,2.55,9.2),r:8.5};
+    createBubble(-8.6,4.4,7.8,'“Proyek bantuin.com — klik tombol Proyek untuk detail 👆”','#10E5A0');
+    return;
+  }
   let obj=hits[0].object;let root=null;
   agentData.forEach(ad=>{ if(ad.sittingChar===obj||ad.walker===obj)root=ad; });
   if(!root){
@@ -722,7 +729,7 @@ allAgents.forEach((agent,i)=>{
   });
 });
 
-  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
+  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
   // Badge status real-time: poll gateway tiap 20s, warnai badge dada sesuai status task
   const __intervals=[];
   const __timeouts=[];

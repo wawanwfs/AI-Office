@@ -5,21 +5,21 @@
 
 export function createProjectBoard(office, THREE) {
   // --- kanvas papan ---
-  const W = 1024, H = 560
+  const W = 1536, H = 840
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H
   const g = cv.getContext('2d')
 
   const tex = new THREE.CanvasTexture(cv)
   const mesh = new THREE.Mesh(
-    new THREE.PlaneGeometry(4.6, 2.52),
+    new THREE.PlaneGeometry(5.6, 3.06),
     new THREE.MeshBasicMaterial({ map: tex })
   )
-  mesh.position.set(-8.6, 2.4, 9.2)
+  mesh.position.set(-8.6, 2.55, 9.2)
   mesh.rotation.y = Math.PI
   office.add(mesh)
   // bingkai (menggantikan bingkai kanban lama yang dipasang di OfficeScene)
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(4.75, 2.67, .05), new THREE.MeshLambertMaterial({ color: 0x23324d }))
-  frame.position.set(-8.6, 2.4, 9.25)
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(5.75, 3.21, .05), new THREE.MeshLambertMaterial({ color: 0x23324d }))
+  frame.position.set(-8.6, 2.55, 9.25)
   office.add(frame)
 
   // --- data ---
@@ -71,18 +71,18 @@ export function createProjectBoard(office, THREE) {
 
     // judul
     g.fillStyle = '#10E5A0'
-    g.font = 'bold 34px sans-serif'; g.textAlign = 'left'
-    g.fillText('PROYEK: bantuin.com', 28, 52)
-    g.fillStyle = '#8fa3bd'; g.font = '20px sans-serif'
-    g.fillText('Data live · task engine + SaaS · ' + new Date(lastOk).toLocaleTimeString('id-ID'), 28, 82)
+    g.font = 'bold 52px sans-serif'; g.textAlign = 'left'
+    g.fillText('PROYEK: bantuin.com', 36, 66)
+    g.fillStyle = '#8fa3bd'; g.font = '30px sans-serif'
+    g.fillText('Data live · task engine + SaaS · ' + new Date(lastOk).toLocaleTimeString('id-ID'), 36, 112)
 
     // progress bar
-    g.fillStyle = 'rgba(255,255,255,.08)'; roundRect(28, 100, W - 56, 20, 8); g.fill()
+    g.fillStyle = 'rgba(255,255,255,.08)'; roundRect(36, 132, W - 72, 28, 10); g.fill()
     const grd = g.createLinearGradient(28, 0, W - 28, 0)
     grd.addColorStop(0, '#10E5A0'); grd.addColorStop(1, '#448AFF')
-    g.fillStyle = grd; roundRect(28, 100, Math.max(10, (W - 56) * pct / 100), 20, 8); g.fill()
-    g.fillStyle = '#fff'; g.font = 'bold 18px sans-serif'; g.textAlign = 'right'
-    g.fillText(pct + '% selesai', W - 32, 116)
+    g.fillStyle = grd; roundRect(36, 132, Math.max(12, (W - 72) * pct / 100), 28, 10); g.fill()
+    g.fillStyle = '#fff'; g.font = 'bold 26px sans-serif'; g.textAlign = 'right'
+    g.fillText(pct + '% selesai', W - 40, 154)
 
     // tiga kolom: Antri / Jalan / Selesai
     const cols = [
@@ -91,26 +91,26 @@ export function createProjectBoard(office, THREE) {
       ['SELESAI', '#10E5A0', T.done || 0],
     ]
     cols.forEach(([t, c, n], i) => {
-      const x = 24 + i * 332
-      g.fillStyle = '#17233a'; roundRect(x, 138, 320, 396, 10); g.fill()
-      g.fillStyle = c; g.font = 'bold 26px sans-serif'; g.textAlign = 'center'
-      g.fillText(t + ' (' + n + ')', x + 160, 176)
+      const x = 34 + i * 496
+      g.fillStyle = '#17233a'; roundRect(x, 178, 470, 630, 12); g.fill()
+      g.fillStyle = c; g.font = 'bold 38px sans-serif'; g.textAlign = 'center'
+      g.fillText(t + ' (' + n + ')', x + 235, 226)
 
       // kartu task nyata per status (dari recent)
-      const items = (T.recent || []).filter(r => r.status === (i === 0 ? 'pending' : i === 1 ? 'running' : 'done')).slice(0, 4)
+      const items = (T.recent || []).filter(r => r.status === (i === 0 ? 'pending' : i === 1 ? 'running' : 'done')).slice(0, 6)
       items.forEach((r, ri) => {
-        const y = 196 + ri * 82
-        g.fillStyle = c; roundRect(x + 16, y, 288, 72, 8); g.fill()
+        const y = 252 + ri * 92
+        g.fillStyle = c; roundRect(x + 22, y, 426, 82, 10); g.fill()
         g.fillStyle = 'rgba(0,0,0,.55)'
-        g.font = '600 17px sans-serif'; g.textAlign = 'left'
+        g.font = '600 26px sans-serif'; g.textAlign = 'left'
         const title = '#' + r.id + ' ' + (r.title || '').slice(0, 30)
-        g.fillText(title, x + 30, y + 30, 262)
-        g.fillStyle = 'rgba(0,0,0,.4)'; g.font = '15px sans-serif'
-        g.fillText((r.status === 'done' ? '✓ selesai' : r.status), x + 30, y + 56)
+        g.fillText(title, x + 44, y + 36, 392)
+        g.fillStyle = 'rgba(0,0,0,.4)'; g.font = '22px sans-serif'
+        g.fillText((r.status === 'done' ? '✓ selesai' : r.status), x + 44, y + 68)
       })
       if (!items.length) {
-        g.fillStyle = 'rgba(255,255,255,.25)'; g.font = '18px sans-serif'; g.textAlign = 'center'
-        g.fillText(i === 2 ? 'semua beres 🎉' : 'kosong', x + 160, 250)
+        g.fillStyle = 'rgba(255,255,255,.25)'; g.font = '26px sans-serif'; g.textAlign = 'center'
+        g.fillText(i === 2 ? 'semua beres 🎉' : 'kosong', x + 235, 320)
       }
     })
     tex.needsUpdate = true
@@ -121,5 +121,5 @@ export function createProjectBoard(office, THREE) {
   const iv = setInterval(pull, 60000)
 
   function destroy() { clearInterval(iv) }
-  return { destroy, refresh: pull }
+  return { destroy, refresh: pull, mesh }
 }
