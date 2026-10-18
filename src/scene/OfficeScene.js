@@ -1879,15 +1879,14 @@ function animate(){
           pts[i].offY+=h2*1.2;pts[j].offY-=h2*1.2;
           const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*1.2;pts[j].offX-=dir*w2*1.2;
         }
-        else if(!pts[i].zone){ // agent vs penghalang: agent bergeser penuh, bubble ikut mundur sedikit (mutual)
+        else if(!pts[i].zone){ // agent vs penghalang: agent bergeser penuh
           pts[i].offY+=h2*1.9;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*1.0;
-          if(pts[j].bub){pts[j].offY-=h2*0.35;pts[j].offX-=dir*w2*0.25;}
           // jika penghalang adalah label zona, zona ikut geser sedikit (0.5x) — kluster padat zona+agent bisa over-cap agent
-          else if(pts[j].zt){pts[j].offY-=h2*0.5;pts[j].offX-=dir*w2*0.9;}
+          if(pts[j].zt){pts[j].offY-=h2*0.5;pts[j].offX-=dir*w2*0.9;}
         }
         else if(!pts[j].zone){
           pts[j].offY-=h2*1.6;const dir=(pts[j].x>=pts[i].x)?1:-1;pts[j].offX+=dir*w2*0.9;
-          if(pts[i].bub){pts[i].offY+=h2*0.35;pts[i].offX+=dir*w2*0.25;}
+
         }
       }
     }}
@@ -1919,7 +1918,7 @@ function animate(){
         const fy=p.y+p.offY, half=(p.sh||p.zh||0)/2;
         const topLim=p.zone?TOP-24:TOP; // zona margin ekstra: label zona paling sering bocor ke lane ticker
         if(fy+half>BOT){p.offY=BOT+half-p.y;violated=true;}       // masuk toolbar -> naik
-        else if(fy-half<-(topLim)){p.offY=-(topLim)+half-p.y+Math.random()*6;violated=true;} // keluar layar atas -> turun (jitter 0-6px hindari ties)
+        else if(fy-half<-(topLim)){p.offY=-(topLim)+half-p.y;violated=true;} // keluar layar atas -> turun (tanpa jitter: jitter acak bikin label loncat tiap frame)
       });
       if(!violated)break; // sweep+clamp sudah konsisten, tidak ada pelanggaran batas
       }
@@ -1928,7 +1927,7 @@ function animate(){
     const dist=camera.position.distanceTo(tgt), worldPerPx=2*dist*Math.tan(camera.fov*Math.PI/360)/container.clientHeight;
     pts.forEach(p=>{
       const dy=Math.min(34,p.offY*worldPerPx*1.2), dx=Math.max(-12,Math.min(12,p.offX*worldPerPx));
-      if(p.zone){if(p.zt){const dyz=Math.max(-6,Math.min(34,p.offY*worldPerPx*1.2)), dxz=Math.max(-24,Math.min(24,p.offX*worldPerPx)); p.zt.position.y=p.baseY+dyz; p.zt.position.x=p.baseX+dxz; const zu=p.zt.userData; zu.antiY=(zu.antiY||0)+dyz; zu.antiX=(zu.antiX||0)+dxz;} else if(p.bub){p.bub.position.y=p.baseY+dy*0.4; p.bub.position.x=p.baseX+dx*0.5;} return;} // zona/bubble (zona naik maks -6px: jangan masuk lane HUD atas)
+      if(p.zone){if(p.zt){const dyz=Math.max(-6,Math.min(34,p.offY*worldPerPx*1.2)), dxz=Math.max(-24,Math.min(24,p.offX*worldPerPx)); p.zt.position.y=p.baseY+dyz; p.zt.position.x=p.baseX+dxz; const zu=p.zt.userData; zu.antiY=(zu.antiY||0)+dyz; zu.antiX=(zu.antiX||0)+dxz;} return;} // BUBBLE tidak disentuh anti-overlap (dianimasikan updateBubbles — menyentuhnya bikin loncat)
       p.a.label.position.y=p.baseY+dy; p.a.label.position.x=p.baseX+dx;
       p.a.label.userData.antiY=dy; p.a.label.userData.antiX=dx; // utk base frame berikutnya
     });
