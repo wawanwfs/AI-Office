@@ -6,7 +6,7 @@ const STEPS = [
   { title: 'Aksi Tim', text: 'Tombol ⚡ Aksi Tim: kumpulkan meeting, coffee break, kembali kerja, atau office tour.' },
   { title: 'Task', text: '＋ Task membuat task baru, ⏸ Jeda menghentikan semua task yang berjalan, ▶ Lanjut menjalankan ulang task yang menunggu.' },
   { title: 'Warna Badge', text: 'Warna dada karakter = status task: hijau selesai, kuning berjalan, merah gagal, biru review.' },
-  { title: 'Shortcut Keyboard', text: 'M = mute suara · N = mode neon · L = log aktivitas · H = bantuan ini · 1 / 2 / 3 = kamera Iso/Depan/Atas · + / − = zoom · Esc = tutup panel.' },
+  { title: 'Shortcut Keyboard', text: 'M = mute suara · N = mode neon · L = log aktivitas · H = bantuan ini · 1 / 2 / 3 = kamera Iso/Depan/Atas · 0 = reset kamera · + / − = zoom · Esc = tutup panel.' },
 ]
 
 export default function OverlayHelp({ show, onClose }) {

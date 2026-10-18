@@ -160,6 +160,11 @@ export default function App() {
         const s = sceneRef.current
         if (s && s.setView) s.setView(k === '1' ? 'iso' : k === '2' ? 'front' : 'top')
       }
+      else if (k === '0') {
+        e.preventDefault()
+        const s = sceneRef.current
+        if (s && s.setView) { s.setView('iso'); if (s.resetFocus) s.resetFocus() }
+      }
       else if (k === '+' || k === '=') zoom(1)
       else if (k === '-') zoom(-1)
       else if (k === 'escape') { setShowLog(false); setShowHelp(false) }

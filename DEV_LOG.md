@@ -571,3 +571,8 @@
 - Bukti probe CDP (probe6.py, chromium headless DISPLAY=:78, jalur input nyata Input.dispatchKeyEvent): init theta 2.453/phi 1.0 → tekan '2' → theta 0.002/phi 1.2 (Depan ✓) → tekan '3' → theta 2.453/phi 0.35 (Atas ✓) → tekan '1' → theta 2.453/phi 1.0 (Iso ✓). 0 exception console.
 - Build OK (1.4s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, 14 label, canvas3d 1366x625, frames naik, 0 console error.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-19 01:20 WIB — shortcut keyboard 0 = reset kamera
+- Fitur App.jsx: tombol **0** kini reset kamera ke kondisi normal — `scene.setView('iso')` (sudah meng-null-kan focusGoal & kembali ke HOME_TGT/homeRadius) + `scene.resetFocus()` sebagai pengaman tambahan. Melengkapi 1/2/3: setelah eksplorasi bebas (drag/zoom/dblclick-fokus), satu tombol mengembalikan semua. Guard identik dengan shortcut lain (input/textarea/select/contenteditable, Ctrl/Meta/Alt, modal terbuka). OverlayHelp langkah 6 diperbarui ('0 = reset kamera').
+- Bukti probe CDP (probe_reset0.py, chrome headless DISPLAY=:0, jalur input nyata Input.dispatchKeyEvent): kamera diacak (theta 1.102, phi 1.366, r 44) → tekan '0' → theta **2.453** / phi **1.0** (Iso ✓), 0 exception console. radius tetap 44 (dalam clamp 24–60, homeRadius tersimpan = 44 — wajar).
+- Build OK (0.8s), vitest **9/9**, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, 14 label, canvas3d 1366x625, frames naik, 0 console error.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
