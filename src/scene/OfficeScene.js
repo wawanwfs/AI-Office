@@ -129,6 +129,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
     const wp=root.walker.visible?root.walker.position:{x:root.home.x,y:0,z:root.home.z};
     if(homeRadius===null)homeRadius=Math.max(24,Math.min(60,sph.radius));
     focusGoal={t:new THREE.Vector3(wp.x,1.5,wp.z),r:Math.min(sph.radius,24),follow:root};
+    if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
     createBubble(wp.x,2.6,wp.z,'“Halo! Aku '+root.agent.name+' 👋”',root.agent.hex);
   }
 });
@@ -2029,7 +2030,9 @@ const onKey=(e)=>{ if(e.key==='Escape'&&focusGoal){focusGoal={t:HOME_TGT.clone()
       else if(name==='front'){sph.theta=0;sph.phi=1.2}
       else if(name==='top'){sph.theta=Math.PI*0.78;sph.phi=0.35}
       else return false;
-      sph.radius=homeRadius||Math.max(24,Math.min(60,sph.radius)); updCam(); return true;
+      if(sph.__saved){sph.theta=sph.__saved.theta;sph.phi=sph.__saved.phi;sph.radius=Math.max(24,Math.min(60,sph.__saved.radius));}
+      else{sph.radius=homeRadius||Math.max(24,Math.min(60,sph.radius));}
+      updCam(); return true;
     },
     setAudioMuted: (v) => { audioMuted=!!v; if(masterGain)masterGain.gain.value=audioMuted?0:1; saveMuted(); updateAudioDbg(); },
     isAudioMuted: () => audioMuted,
