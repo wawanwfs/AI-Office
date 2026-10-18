@@ -10,6 +10,7 @@ import OverlayHelp from './components/OverlayHelp'
 import TaskModal from './components/TaskModal'
 import ConfirmModal from './components/ConfirmModal'
 import TaskBoard from './components/TaskBoard'
+import ProjectPanel from './components/ProjectPanel'
 import ActivityLog from './components/ActivityLog'
 import { api } from './lib/api'
 
@@ -173,6 +174,7 @@ export default function App() {
         <span className="sep" />
         <ActionMenu sceneRef={sceneRef} onFlash={flash} />
         <TaskBoard onFlash={flash} onAsk={setAsk} />
+        <ProjectPanel onFlash={flash} />
         <TeamStats />
         <button className="ibtn" onClick={() => setShowLog(true)} aria-label="Log aktivitas"><span className="ic">📜</span><span className="lb">Log</span></button>
         <span className="sep" />

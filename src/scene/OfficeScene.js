@@ -7,6 +7,7 @@ import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets } from './parts/effects.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
+import { createProjectBoard } from './parts/projectboard.js';
 
 export function createOfficeScene(container, callbacks = {}) {
   const { onTimeUpdate, onStatusUpdate, onMeetingChange } = callbacks;
@@ -1092,29 +1093,8 @@ office.add(shelf);
 
 // --- DEKORASI TAMBAHAN: kanban board, poster, tanaman besar, partisi kaca per tim ---
 (function(){
-  // Papan kanban di dinding belakang (kolom To Do / Doing / Done dengan kartu warna)
-  const kc=document.createElement('canvas');kc.width=1024;kc.height=512;
-  const k=kc.getContext('2d');
-  k.fillStyle='#10192b';k.fillRect(0,0,1024,512);
-  k.strokeStyle='#2c3e5c';k.lineWidth=4;k.strokeRect(6,6,1012,500);
-  k.font='bold 40px sans-serif';k.textAlign='center';
-  const cols=[['TO DO','#9aa7b8'],['DOING','#F59E0B'],['DONE','#10E5A0']];
-  const cards=['#F472B6','#60A5FA','#A78BFA','#22D3EE','#FB923C','#34D399'];
-  cols.forEach(([t,c],i)=>{
-    const x=24+i*332;
-    k.fillStyle='#17233a';k.fillRect(x,20,320,470);
-    k.fillStyle=c;k.fillText(t,x+160,70);
-    for(let r=0;r<4;r++){
-      if(i===0&&r>2)continue; if(i===1&&r>1)continue;
-      k.fillStyle=cards[(i*3+r)%cards.length];k.fillRect(x+16,100+r*92,288,74);
-      k.fillStyle='rgba(0,0,0,.35)';k.fillRect(x+30,120+r*92,180,10);k.fillRect(x+30,142+r*92,120,10);
-    }
-  });
-  const kt=new THREE.CanvasTexture(kc);
-  const kb=new THREE.Mesh(new THREE.PlaneGeometry(4.6,2.3),new THREE.MeshBasicMaterial({map:kt}));
-  kb.position.set(-8.6,2.4,9.2);kb.rotation.y=Math.PI;office.add(kb);
-  const kf=new THREE.Mesh(new THREE.BoxGeometry(4.75,2.45,.05),M(0x23324d));
-  kf.position.set(-8.6,2.4,9.25);office.add(kf);
+  // Papan PROYEK NYATA bantuin.com — kartu dari task engine sungguhan (parts/projectboard.js)
+  window.__projectBoard = createProjectBoard(office, THREE);
   // Poster motivasi
   [['SHIP IT','#F59E0B',3.0],['CODE\nCOFFEE','#F472B6',5.2]].forEach(([txt,col,x])=>{
     const pc=document.createElement('canvas');pc.width=256;pc.height=340;

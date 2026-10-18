@@ -428,3 +428,9 @@
 - Catatan: commit auto ab9fb53 (10:30 WIB) sudah mem-push perubahan follow ini; verifikasi push ulang OK (exit 0).
 - Bukti: build OK, vitest 9/9, deploy ~/wfs-hq (OfficeScene chunk hash sama dengan dist), e2e CDP 0 console error, 14 label, frames naik.
 - Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia; shot infra headless perlu alternatif (mis. Xvfb + screencapture) bila audit visual dibutuhkan lagi.
+## 2026-10-18 12:30 WIB — BUG KRITIS fixed: scene mati total di chrome windowed (ASI hazard) + pipeline screenshot Xvfb baru
+- Akar masalah shot blank ditemukan BUKAN infra: di OfficeScene.js, `import('./parts/projectboard.js').then(...).catch(()=>{})` TANPA titik-koma langsung disambung baris berikutnya yang diawali `[[` → ASI membentuk ekspresi `.catch(...)[['SHIP IT',...]].forEach(...)` → `undefined.forEach` → TypeError "reading 'forEach'" → catch luar App.jsx → scene UI-only (canvas hitam). Ini terjadi di chrome windowed headful (Xvfb) dan menjelaskan mengapa headless lama blank.
+- Fix: tambah `;` setelah `.catch(()=>{})` (1 baris). Patch mini, risiko nol.
+- Bukti: build OK (2.3s), vitest 9/9, deploy ~/wfs-hq (chunk baru OfficeScene-DZUlUGXV; lama dihapus). e2e CDP windowed: frames jalan, 14 label, window.__projectBoard=true, 0 console error. Screenshot xwd (Xvfb :78 + Chrome windowed + SwiftShader) 508KB → vision audit: scene 3D TAMPIL PENUH (15 karakter voxel, label nama, zona MEETING/SERVER ROOM/DEV DESK, speech bubble).
+- Infra baru: ~/.hermes/cache/scratch/xshot.sh — Xvfb :77 + Chrome windowed (Playwright chromium-1208, --no-sandbox --no-first-run --use-angle=swiftshader) + `import -window root` → PNG asli. Audit visual kini bisa jalan lagi tanpa compositor headless.
+- Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.
