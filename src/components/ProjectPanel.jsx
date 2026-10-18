@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 
-// Panel Proyek Nyata: data live bantuin.com dari endpoint /wfs-project (server 9503).
+// Panel Proyek Nyata: data live dibantuin.com dari endpoint /wfs-project (server 9503).
 // Semua data diambil server-side — tidak ada kredensial di frontend.
 const ST = { done: ['Selesai', '#10E5A0'], running: ['Jalan', '#F59E0B'], review: ['Review', '#448AFF'], failed: ['Gagal', '#ef4444'], pending: ['Antri', '#9aa7b8'] }
 
@@ -37,9 +37,9 @@ export default function ProjectPanel({ onFlash }) {
         <span className="ic">🚀</span><span className="lb">Proyek</span>
       </button>
       {open && (
-        <section id="project-panel" className="panel left" role="dialog" aria-label="Proyek bantuin.com">
+        <section id="project-panel" className="panel left" role="dialog" aria-label="Proyek dibantuin.com">
           <div className="ph">
-            <div className="t">🚀 Proyek: bantuin.com<small>{err ? 'gagal memuat' : 'data live · refresh 15 dtk'}</small></div>
+            <div className="t">🚀 Proyek: dibantuin.com<small>{err ? 'gagal memuat' : 'data live · refresh 15 dtk'}</small></div>
             <button className="x" onClick={() => setOpen(false)} aria-label="Tutup panel proyek">✕</button>
           </div>
           <div style={{ padding: '12px 14px', overflowY: 'auto' }}>

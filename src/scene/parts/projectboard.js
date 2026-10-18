@@ -1,4 +1,4 @@
-// Papan proyek nyata bantuin.com di dinding kantor.
+// Papan proyek nyata dibantuin.com di dinding kantor.
 // Menggantikan kanban statis: kartu diambil dari data task engine sungguhan via /wfs-project,
 // diperbarui otomatis setiap 60 detik. Jika fetch gagal → fallback ke data terakhir.
 // Modul murni-canvas; dipasang di OfficeScene dengan satu pemanggilan.
@@ -72,7 +72,7 @@ export function createProjectBoard(office, THREE) {
     // judul
     g.fillStyle = '#10E5A0'
     g.font = 'bold 52px sans-serif'; g.textAlign = 'left'
-    g.fillText('PROYEK: bantuin.com', 36, 66)
+    g.fillText('PROYEK: dibantuin.com', 36, 66)
     g.fillStyle = '#8fa3bd'; g.font = '30px sans-serif'
     g.fillText('Data live · task engine + SaaS · ' + new Date(lastOk).toLocaleTimeString('id-ID'), 36, 112)
 

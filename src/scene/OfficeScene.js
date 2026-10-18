@@ -114,7 +114,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   if(!hits.length){ if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius,reset:true}} return; }
   if(boardMesh&&hits[0].object===boardMesh){
     focusGoal={t:new THREE.Vector3(-8.6,2.55,9.2),r:8.5};
-    createBubble(-8.6,4.4,7.8,'“Proyek bantuin.com — klik tombol Proyek untuk detail 👆”','#10E5A0');
+    createBubble(-8.6,4.4,7.8,'“Proyek dibantuin.com — klik tombol Proyek untuk detail 👆”','#10E5A0');
     return;
   }
   let obj=hits[0].object;let root=null;
@@ -1100,7 +1100,7 @@ office.add(shelf);
 
 // --- DEKORASI TAMBAHAN: kanban board, poster, tanaman besar, partisi kaca per tim ---
 (function(){
-  // Papan PROYEK NYATA bantuin.com — kartu dari task engine sungguhan (parts/projectboard.js)
+  // Papan PROYEK NYATA dibantuin.com — kartu dari task engine sungguhan (parts/projectboard.js)
   window.__projectBoard = createProjectBoard(office, THREE);
   // Poster motivasi
   [['SHIP IT','#F59E0B',3.0],['CODE\nCOFFEE','#F472B6',5.2]].forEach(([txt,col,x])=>{
