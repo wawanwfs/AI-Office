@@ -401,3 +401,8 @@
 - Bukti: build OK (1.6s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, label 14, frames normal; shot ck7.png 514KB (scene hidup).
 - Verifikasi tekstur CDP: INTEGRATOR BOT & SUPPORT HUMAN (mode short) utuh tanpa ellipsis; BANTUIN AI full mode "Bantuin Ai / AI Customer Service" benar. Vision audit ck7: semua label = nama agent, tidak ada teks kode.
 - Sisa backlog: Wahyu×W&L adjacency parsial; Support×Integrator dempet horizontal; verifikasi subjektif suara.
+
+## 2026-10-18 08:00 WIB — bubble tidak loncat
+- Akar masalah: bubble percakapan bergantian melekat ke 2 posisi berbeda (muncul di kepala A lalu kepala B) tanpa transisi -> terasa loncat/loncatan acak.
+- Fix: createBubble menerima anchor {x,z getter} yang mengikuti pembicara; fade-in 0.22s + fade-out 0.5s; float up tetap.
+- Bukti (e2e_bub2.py): opacity naik bertahap 0.23->0.45->0.68->1; bubble mengikuti posisi anchor.
