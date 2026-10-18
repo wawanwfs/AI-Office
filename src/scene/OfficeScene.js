@@ -133,6 +133,20 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
 });
 addEventListener('pointerup',()=>{isDrag=false;autoTmr=setTimeout(()=>autoRot=true,6000)});
 addEventListener('pointermove',e=>{if(!isDrag)return;sph.theta-=(e.clientX-prev.x)*.005;sph.phi+=(e.clientY-prev.y)*.005;prev={x:e.clientX,y:e.clientY};updCam()});
+// hover pointer di atas agent/papan: isyarat "bisa diklik" (raycast throttled)
+const hoverRay=new THREE.Raycaster();let hoverTmr=null,hoverNdc={x:0,y:0},hoverPend=false;
+renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
+  hoverNdc={x:(e.clientX/innerWidth)*2-1,y:-(e.clientY/innerHeight)*2+1};
+  if(!hoverPend){hoverPend=true;hoverTmr=setTimeout(()=>{
+    hoverPend=false;
+    if(!agentData.length)return;
+    hoverRay.setFromCamera(hoverNdc,camera);
+    const targets=[];agentData.forEach(ad=>{if(ad.sittingChar.visible)targets.push(ad.sittingChar);if(ad.walker.visible)targets.push(ad.walker)});
+    const bm=window.__projectBoard&&window.__projectBoard.mesh;
+    const hh=hoverRay.intersectObjects(bm?[...targets,bm]:targets,true);
+    renderer.domElement.style.cursor=hh.length?'pointer':'';
+  },80)};
+},{passive:true});
 renderer.domElement&&renderer.domElement.addEventListener('wheel',e=>{sph.radius=Math.max(12,Math.min(130,sph.radius+e.deltaY*.04));updCam()},{passive:true});
 
 // ─── LIGHTS ────────────────────────────────────────
