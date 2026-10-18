@@ -57,7 +57,8 @@ scene.name = 'Office3D';
   }
   if(renderer){
     renderer.setSize(container.clientWidth,container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+    __perfWin.basePR=Math.min(window.devicePixelRatio||1,1.5);
+    renderer.setPixelRatio(__perfWin.basePR);
     renderer.shadowMap.enabled=true;
     renderer.shadowMap.type=THREE.PCFSoftShadowMap;
     renderer.toneMapping=THREE.ACESFilmicToneMapping;
@@ -1919,7 +1920,16 @@ function animate(){
       __perfWin.fps=fps;
       if(fps<18){
         const pr=Math.max(.75,renderer.getPixelRatio()-.25);
-        if(pr<renderer.getPixelRatio()){renderer.setPixelRatio(pr);__perfWin.downgraded=true;}
+        if(pr<renderer.getPixelRatio()){renderer.setPixelRatio(pr);__perfWin.downgraded=true;__perfWin.goodStreak=0;}
+      } else if(__perfWin.downgraded&&__perfWin.basePR){
+        // recovery: bila FPS sehat stabil 4 cek berturut-turut (4s), naikkan pixelRatio
+        // bertahap kembali ke basePR — visual kembali tajam setelah beban turun.
+        __perfWin.goodStreak=(__perfWin.goodStreak||0)+1;
+        if(__perfWin.goodStreak>=4&&fps>=28){
+          const pr=Math.min(__perfWin.basePR,renderer.getPixelRatio()+.25);
+          if(pr>renderer.getPixelRatio()){renderer.setPixelRatio(pr);}
+          if(renderer.getPixelRatio()>=__perfWin.basePR){__perfWin.downgraded=false;__perfWin.goodStreak=0;}
+        }
       }
     }
   }
