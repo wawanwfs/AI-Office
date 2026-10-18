@@ -539,3 +539,8 @@
 - Bukti probe CDP (probe_keys.py, chrome headless DISPLAY=:0 tanpa flag swiftshader): M → __audio.muted True → M lagi → False (dua arah); L → modal log terbuka; Esc → tertutup; H → help "Navigasi 3D (1/6)" (6 langkah kini); N → tombol Neon class 'on'; fokus input + tekan L → input tetap kosong & log tak terbuka (guard ✓); frames 21, scene hidup.
 - e2e_err: DOM True, 14 btns, canvas3d 1366x625, 0 console error. Build OK (4.7s), vitest 9/9, deploy ~/wfs-hq.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-18 22:10 WIB — preset sudut kamera (Iso / Depan / Atas) di dock
+- Fitur: 3 tombol preset kamera di QuickToolbar — **Iso** (sudut isometrik default, theta π·0.78 / phi 1.0), **Depan** (theta 0 / phi 1.2), **Atas** (phi 0.35, tampak atas). API scene baru `setView(name)` di OfficeScene.js: reset focusGoal & target ke HOME_TGT, radius kembali ke homeRadius (clamp 24–60), lalu updCam() instan. App.jsx pass onSetView dengan guard scene aktif.
+- Bukti probe CDP (probe_views.py, headless DISPLAY=:0): drag kamera dulu (theta 2.46→1.21) → klik Depan → posisi kamera 0,16,37 (theta 0 ✓) → klik Atas → 9,39,-11 (phi 0.35 ✓) → klik Iso → 21,23,-26 (theta 2.45 ✓). 3 preset berpindah benar dari keadaan kamera acak.
+- Build OK (4.7s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, **17 btns** (14+3 baru), 14 label, canvas3d 1366x625, frames naik, 0 console error; screenshot ck.png 516KB (scene hidup).
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
