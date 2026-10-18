@@ -14,12 +14,12 @@ export function createProjectBoard(office, THREE) {
     new THREE.PlaneGeometry(5.6, 3.06),
     new THREE.MeshBasicMaterial({ map: tex, fog: false })
   )
-  mesh.position.set(-8.6, 2.55, 9.31)
+  mesh.position.set(-8.6, 2.55, 9.8)
   mesh.rotation.y = Math.PI
   office.add(mesh)
   // bingkai (menggantikan bingkai kanban lama yang dipasang di OfficeScene)
   const frame = new THREE.Mesh(new THREE.BoxGeometry(5.75, 3.21, .05), new THREE.MeshLambertMaterial({ color: 0x23324d }))
-  frame.position.set(-8.6, 2.55, 9.25)
+  frame.position.set(-8.6, 2.55, 9.75)
   office.add(frame)
 
   // --- data ---
