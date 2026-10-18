@@ -1737,8 +1737,8 @@ const clock=new THREE.Clock();
 // delta sudah di-clamp .05 sehingga aman).
 let rafId=null, pageHidden=document.visibilityState==='hidden';
 function animate(){
+  if(pageHidden)return; // loop berhenti total saat tab hidden (hemat CPU/GPU)
   rafId=requestAnimationFrame(animate);
-  if(pageHidden)return; // jangan render saat tab tidak terlihat
   if(!renderer)return; // UI-only mode (tanpa WebGL)
   const delta=Math.min(clock.getDelta(),.05);
   const elapsed=clock.getElapsedTime();
@@ -1926,6 +1926,7 @@ const __perfWin={t0:0,fps:0,downgraded:false};
 window.__perf=__perfWin;
 animate();
 const onVis=()=>{ pageHidden=document.visibilityState==='hidden';
+  if(!pageHidden&&!rafId)animate(); // hidupkan lagi loop render saat kembali visible
   try{
     if(pageHidden){ if(audioCtx&&audioCtx.state==='running')audioCtx.suspend(); }
     else {
@@ -1986,6 +1987,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&focusGoal){focusGoal={t:HOME_TGT.clone()
       __timeouts.forEach(clearTimeout);
       window.removeEventListener('resize', onResize);
       document.removeEventListener('visibilitychange', onVis);
+      if(rafId){cancelAnimationFrame(rafId);rafId=null;}
       window.removeEventListener('keydown', onKey);
       if(renderer){renderer.dispose();container.removeChild(renderer.domElement);}
     }
