@@ -651,3 +651,8 @@
 - Bukti probe CDP (chromium-1248 headless swiftshader DISPLAY :78, klik agent via PointerEvent): klik agent[0] → ring true, focus {r:24}, saved true → tekan '2' → **ring false, focus null, savedCleared true** ✓; klik ulang → ring true (pilih ulang normal) → tekan '1' → ring false ✓. 0 console error.
 - Build OK (1.4s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 8→13, 0 error.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-19 08:35 WIB — shortcut keyboard F = fullscreen toggle
+- Fitur App.jsx: shortcut **F** = toggle fullscreen browser (document.documentElement.requestFullscreen / exitFullscreen), guard identik shortcut lain (input/textarea/select/contenteditable, Ctrl/Meta/Alt, modal showTask/confirm/ask/showHelp terbuka). Ditolak browser → flash error. OverlayHelp langkah Shortcut diperbarui dgn "F = fullscreen".
+- Bukti (chrome headless 9381, DISPLAY :78): Runtime.requestFullscreen via documentElement → 'called' tanpa exception, 0 console error setelah dispatchKeyEvent F real-key; fullscreenElement false di headless (keterbatasan headless, normal — requestFullscreen butuh user gesture terverifikasi browser; handler + guard tidak melempar error). Scene 1 canvas tetap hidup.
+- Build OK (0.4s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 8→13, 0 error.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).

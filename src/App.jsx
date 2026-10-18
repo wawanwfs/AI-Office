@@ -205,6 +205,11 @@ export default function App() {
       }
       else if (k === 'k') { e.preventDefault(); amRef.current?.toggleNames() }
       else if (k === 'r') { e.preventDefault(); amRef.current?.toggleRotate() }
+      else if (k === 'f') {
+        e.preventDefault()
+        const d = document
+        if (d.fullscreenElement) { d.exitFullscreen?.() } else { d.documentElement.requestFullscreen?.().catch(() => flash('Fullscreen ditolak browser', true)) }
+      }
       else if (k === '+' || k === '=') zoom(1)
       else if (k === '-') zoom(-1)
       else if (k === 'escape') { setShowLog(false); setShowHelp(false) }
