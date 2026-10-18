@@ -526,3 +526,11 @@
 - Bukti probe CDP (chromium swiftshader headless, hook window.fetch): 90 detik penuh tab hidden → **0 fetch** ke /wfs-api/* (sebelumnya ±6 fetch/90s: agents/status ×4-5 + tasks ×3-4). Guard terverifikasi di bundle terdeploy (md5 dist=wfs-hq).
 - Build OK (±2.8s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM OK, 14 btns, 14 label, canvas3d 1366x625, frames naik, 0 console error.
 - Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.
+## 2026-10-18 21:05 WIB — FIX KRITIS: scene mati (TDZ __perfWin) + pixelRatio recovery dua arah
+- Bug kritis ditemukan saat run ini: adaptive pixelRatio (fitur run lama) membaca `__perfWin` di init renderer padahal const dideklarasikan di bawah → TDZ "Cannot access 'Zn' before initialization" → createOfficeScene throw → **scene 3D mati total (UI-only) di build terdeploy**. Tersembunyi karena e2e_err lama memakai flag `--enable-unsafe-swiftshader` yang membuat GPU process Chrome gagal init (WebGL null) sehingga canvas NONE dianggap "wajar"; dengan DISPLAY=:0 + Xvfb tanpa flag swiftshader WebGL jalan dan bug terlihat.
+- Fix: (a) hapus penugasan `__perfWin.basePR` di init (TDZ), basePR dihitung on-demand di loop; (b) pixelRatio kini dua arah — setelah downgrade, 4 cek FPS sehat berturut (≥28fps) menaikkan PR bertahap +0.25 kembali ke base (min(devicePixelRatio,1.5)); visual kembali tajam saat beban turun, sebelumnya hanya bisa turun.
+- Probe CDP (/tmp/probe_prE.py): sebelum fix canvas NONE + console error TDZ; sesudah fix canvas 1366x625, perf {downgraded:false}, 0 error.
+- e2e_err (koreksi flag): DOM True, 14 btns, 14 label, canvas3d 1366x625, frames naik, 0 console error.
+- Build OK, vitest 9/9, deploy ~/wfs-hq.
+- Catatan lingkungan: headless check harus DISPLAY=:0 (Xvfb) TANPA --use-angle=swiftshader; flag swiftshader membuat WebGL2 selalu null di chrome ini.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
