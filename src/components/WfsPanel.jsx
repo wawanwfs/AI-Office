@@ -1,9 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
+import { useModalFlag } from '../lib/modal'
 
 // Panel chat AI + konfigurasi per agent — gateway :8787 via /wfs-api
 export default function WfsPanel() {
   const [open, setOpen] = useState(false)
+  useModalFlag(open)
   const [tab, setTab] = useState('chat')
   const [agents, setAgents] = useState([])
   const [loading, setLoading] = useState(true)

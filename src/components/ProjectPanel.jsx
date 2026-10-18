@@ -6,6 +6,7 @@ const ST = { done: ['Selesai', '#10E5A0'], running: ['Jalan', '#F59E0B'], review
 
 export default function ProjectPanel({ onFlash }) {
   const [open, setOpen] = useState(false)
+  useModalFlag(open)
   const [d, setD] = useState(null)
   const [err, setErr] = useState(false)
 

@@ -13,6 +13,7 @@ import TaskBoard from './components/TaskBoard'
 import ProjectPanel from './components/ProjectPanel'
 import ActivityLog from './components/ActivityLog'
 import { api } from './lib/api'
+import { anyModalOpen } from './lib/modal'
 
 const CsWidget = lazy(() => import('./components/CsWidget'))
 
@@ -169,7 +170,7 @@ export default function App() {
   // ---- flag modal utk scene: Escape saat overlay terbuka TIDAK boleh reset kamera ----
   // Set saat render (bukan useEffect): update discrete-event React di-flush sinkron
   // sebelum listener window scene jalan, jadi flag pasti sudah benar saat Escape dicek.
-  window.__wfsModalOpen = !!(showTask || confirm || ask || showHelp || showLog)
+  window.__wfsModalOpen = !!(showTask || confirm || ask || showHelp || showLog) || anyModalOpen()
 
   // Snapshot flag di fase CAPTURE (window capture jalan sebelum semua bubble handler):
   // handler Escape overlay menutup modal & React flush sinkron, sehingga saat handler

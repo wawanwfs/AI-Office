@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
+import { useModalFlag } from '../lib/modal'
 
 /* Widget AI CS dibantuin — iframe ke widget container */
 export default function CsWidget() {
   const [open, setOpen] = useState(false)
+  useModalFlag(open)
   useEffect(() => {
     if (!open) return
     const h = e => { if (e.key === 'Escape') setOpen(false) }

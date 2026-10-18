@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
+import { useModalFlag } from '../lib/modal'
 
 /* Statistik Tim — data nyata dari task engine + resource host */
 export default function TeamStats() {
@@ -7,6 +8,7 @@ export default function TeamStats() {
   const [data, setData] = useState(null)
   const [res, setRes] = useState(null)
   const [err, setErr] = useState(false)
+  useModalFlag(open)
 
   const load = useCallback(async (signal) => {
     try {

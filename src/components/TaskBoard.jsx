@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
+import { useModalFlag } from '../lib/modal'
 
 const ST = { done: ['Selesai', '#10E5A0'], running: ['Jalan', '#F59E0B'], review: ['Review', '#448AFF'], failed: ['Gagal', '#ef4444'], pending: ['Antri', '#9aa7b8'] }
 const FILTERS = [['all', 'Semua'], ['pending', 'Antri'], ['running', 'Jalan'], ['done', 'Selesai'], ['failed', 'Gagal']]
@@ -12,6 +13,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const [filter, setFilter] = useState('all')
   const [q, setQ] = useState('')
   const [sel, setSel] = useState(null)
+  useModalFlag(open || !!sel)
 
   const load = useCallback(async (signal) => {
     try { const d = await api('tasks', { signal }); setTasks(d.tasks || []); setErr(false) }
