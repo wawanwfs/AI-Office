@@ -53,8 +53,9 @@ scene.name = 'Office3D';
     renderer=new THREE.WebGLRenderer({antialias:true,failIfMajorPerformanceCaveat:false});
     if(!renderer.getContext()){renderer=null;throw new Error('WebGL context unavailable')}
   }catch(e){
-    // WebGL tidak tersedia (mis. headless / GPU block) — render UI 2D saja, scene 3D dilewati
-    console.warn('WebGL unavailable, running in UI-only mode:',e.message);
+    // WebGL tidak tersedia — hentikan seluruh init scene; App menangkap & menampilkan pesan UI-only.
+    console.warn('WebGL unavailable:',e.message);
+    throw e;
   }
   if(renderer){
     renderer.setSize(container.clientWidth,container.clientHeight);

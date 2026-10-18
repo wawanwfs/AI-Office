@@ -101,6 +101,8 @@ export default function App() {
     return () => clearInterval(iv)
   }, [refreshStatus])
 
+  const [sceneReady, setSceneReady] = useState(false)
+  const [sceneErr, setSceneErr] = useState(false)
   // ---- scene 3D (lazy) ----
   useEffect(() => {
     if (!canvasRef.current || sceneRef.current) return
@@ -113,6 +115,7 @@ export default function App() {
           onStatusUpdate: () => {},
           onMeetingChange: (m) => setInMeeting(m),
         })
+        setSceneReady(true)
         // sinkron state awal dari scene (mute, neon) saat scene (re)created —
         // useEffect sinkron lama bergantung [flash] tidak jalan lagi setelah init async,
         // jadi neon persist di localStorage tidak terpantul di tombol dock Neon.
@@ -137,10 +140,12 @@ export default function App() {
         }
       } catch (err) {
         console.error('Scene init failed — UI-only mode:', err)
+        setSceneErr(true)
         flash('WebGL tidak tersedia — mode UI saja', true)
       }
     }).catch((err) => {
       console.error('Scene chunk load failed:', err)
+      setSceneErr(true)
       flash('Gagal memuat scene 3D', true)
     })
     return () => {
@@ -248,6 +253,8 @@ export default function App() {
   return (
     <>
       <div ref={canvasRef} style={{ position: 'fixed', inset: 0, zIndex: 0 }} aria-hidden="true" />
+      {!sceneReady && !sceneErr && <div className="scene-loading" role="status">Memuat ruangan…</div>}
+      {sceneErr && <div className="scene-loading err" role="alert">Scene 3D tidak aktif — mode UI saja. Muat ulang halaman untuk mencoba lagi.</div>}
       <div style={{ position: 'fixed', inset: 0, zIndex: 5, pointerEvents: 'none', background: 'radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(0,6,16,0.5) 100%)' }} />
 
       <Header />
@@ -279,12 +286,12 @@ export default function App() {
         <TaskBoard onFlash={flash} onAsk={setAsk} />
         <ProjectPanel onFlash={flash} />
         <TeamStats />
-        <button className="ibtn" onClick={toggleMute} aria-label={muted ? 'Nyalakan suara' : 'Bisukan suara'}><span className="ic">{muted ? '🔇' : '🔊'}</span><span className="lb">{muted ? 'Suara Mati' : 'Suara'}</span></button>
-        <button className="ibtn" onClick={() => setShowLog(true)} aria-label="Log aktivitas"><span className="ic">📜</span><span className="lb">Log</span></button>
+        <button className="ibtn" onClick={toggleMute} title={muted ? 'Nyalakan suara notifikasi' : 'Bisukan suara notifikasi'} aria-label={muted ? 'Nyalakan suara' : 'Bisukan suara'}><span className="ic">{muted ? '🔇' : '🔊'}</span><span className="lb">{muted ? 'Suara Mati' : 'Suara'}</span></button>
+        <button className="ibtn" onClick={() => setShowLog(true)} title="Log aktivitas kantor" aria-label="Log aktivitas"><span className="ic">📜</span><span className="lb">Log</span></button>
         <span className="sep" />
         <WfsPanel />
         <Suspense fallback={null}><CsWidget /></Suspense>
-        <button className="ibtn" onClick={() => setShowHelp(true)} aria-label="Bantuan"><span className="ic">❔</span><span className="lb">Bantuan</span></button>
+        <button className="ibtn" onClick={() => setShowHelp(true)} title="Panduan penggunaan kantor" aria-label="Bantuan"><span className="ic">❔</span><span className="lb">Bantuan</span></button>
       </div>
 
       <ActivityLog show={showLog} items={logItems} onClose={() => setShowLog(false)} onClear={clearLog} />
