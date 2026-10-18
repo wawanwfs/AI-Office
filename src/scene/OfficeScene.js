@@ -95,7 +95,7 @@ renderer.domElement&&renderer.domElement.addEventListener('touchmove',e=>{
   }
 },{passive:false});
 renderer.domElement&&renderer.domElement.addEventListener('touchend',()=>{pinchDist=null},{passive:true});
-renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{isDrag=true;prev={x:e.clientX,y:e.clientY};autoRot=false;clearTimeout(autoTmr);initAudio()});
+renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{isDrag=true;prev={x:e.clientX,y:e.clientY};autoRot=false;clearTimeout(autoTmr);initAudio();if(renderer.domElement.style.cursor!=='pointer')renderer.domElement.style.cursor='grabbing'});
 renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{downXY={x:e.clientX,y:e.clientY}});
 renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   if(!downXY)return;
@@ -131,7 +131,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
     createBubble(wp.x,2.6,wp.z,'“Halo! Aku '+root.agent.name+' 👋”',root.agent.hex);
   }
 });
-addEventListener('pointerup',()=>{isDrag=false;autoTmr=setTimeout(()=>autoRot=true,6000)});
+addEventListener('pointerup',()=>{isDrag=false;autoTmr=setTimeout(()=>autoRot=true,6000);if(renderer.domElement&&renderer.domElement.style.cursor==='grabbing')renderer.domElement.style.cursor=''});
 addEventListener('pointermove',e=>{if(!isDrag)return;sph.theta-=(e.clientX-prev.x)*.005;sph.phi+=(e.clientY-prev.y)*.005;prev={x:e.clientX,y:e.clientY};updCam()});
 // hover pointer di atas agent/papan: isyarat "bisa diklik" (raycast throttled)
 const hoverRay=new THREE.Raycaster();let hoverTmr=null,hoverNdc={x:0,y:0},hoverPend=false;
@@ -140,6 +140,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
   if(!hoverPend){hoverPend=true;hoverTmr=setTimeout(()=>{
     hoverPend=false;
     if(!agentData.length)return;
+    if(renderer.domElement.style.cursor==='grabbing')return; // jangan ganggu feedback drag
     hoverRay.setFromCamera(hoverNdc,camera);
     const targets=[];agentData.forEach(ad=>{if(ad.sittingChar.visible)targets.push(ad.sittingChar);if(ad.walker.visible)targets.push(ad.walker)});
     const bm=window.__projectBoard&&window.__projectBoard.mesh;
