@@ -1727,8 +1727,13 @@ const walkDestinations=[
 const updateWalkers=createMotion({rng,agentData,walkDestinations,pickCollab,createBubble});
 let lastMeetingState=false;
 const clock=new THREE.Clock();
+// Hemat CPU/GPU: saat tab tersembunyi, hentikan loop render (visibilitas
+// tak mengubah logika clock — THREE.Clock.getDelta melompat saat resume,
+// delta sudah di-clamp .05 sehingga aman).
+let rafId=null, pageHidden=document.visibilityState==='hidden';
 function animate(){
-  requestAnimationFrame(animate);
+  rafId=requestAnimationFrame(animate);
+  if(pageHidden)return; // jangan render saat tab tidak terlihat
   if(!renderer)return; // UI-only mode (tanpa WebGL)
   const delta=Math.min(clock.getDelta(),.05);
   const elapsed=clock.getElapsedTime();
@@ -1899,6 +1904,14 @@ function animate(){
   renderer.render(scene,camera);
 }
 animate();
+const onVis=()=>{ pageHidden=document.visibilityState==='hidden';
+  try{
+    if(pageHidden){ if(audioCtx&&audioCtx.state==='running')audioCtx.suspend(); }
+    else { if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume(); }
+  }catch(e){}
+  updateAudioDbg();
+};
+document.addEventListener('visibilitychange',onVis);
 const onResize=()=>{camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();__vo();renderer.setSize(container.clientWidth,container.clientHeight)};window.addEventListener('resize',onResize);
 const onKey=(e)=>{ if(e.key==='Escape'&&focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius||sph.radius,reset:true}} };window.addEventListener('keydown',onKey);
 
@@ -1946,6 +1959,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&focusGoal){focusGoal={t:HOME_TGT.clone()
       __intervals.forEach(clearInterval);
       __timeouts.forEach(clearTimeout);
       window.removeEventListener('resize', onResize);
+      document.removeEventListener('visibilitychange', onVis);
       window.removeEventListener('keydown', onKey);
       if(renderer){renderer.dispose();container.removeChild(renderer.domElement);}
     }

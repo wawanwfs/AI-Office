@@ -465,3 +465,8 @@
 - Bukti probe CDP (probe_mute_persist.py, chrome headless DISPLAY=:0): initMuted False → klik tombol → muted True, localStorage '1' → Page.reload → muted True (persist ✓) → toggle balik → False/'0'. Label tombol sinkron (🔇Suara Mati / 🔊Suara).
 - Build OK (2.65s), vitest 9/9, deploy ~/wfs-hq; e2e CDP: 0 console error, 14 label, 14 tombol dock, frames naik.
 - Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.
+## 2026-10-18 15:40 WIB — hemat CPU/GPU: loop render berhenti saat tab tersembunyi + audio suspend
+- Perbaikan performa OfficeScene.js: (a) animate() kini cek `pageHidden` (dari document.visibilityState) — saat tab hidden, rAF masih terjadwal tapi render/logika dilewati (delta tetap di-clamp .05 sehingga resume aman tanpa lompatan simulasi); (b) listener visibilitychange menambah/menahan audioCtx.suspend()/resume() agar audio engine tidak jalan sia-sia; (c) listener dihapus di destroy() (tanpa leak).
+- Bukti probe CDP (probe_vis2.py, chrome headless DISPLAY=:0): visible fps ~1.5 (SwiftShader) → hidden fps 0.0 → resumed fps ~1.0 (loop hidup kembali). window.__audio bersih, e2e_err: 0 console error, DOM OK, 14 label, canvas3d 1366x625.
+- Build OK (1.4s), vitest 9/9, deploy ~/wfs-hq.
+- Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.
