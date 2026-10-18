@@ -130,7 +130,13 @@ export default function App() {
   const handleCyberpunk = useCallback(() => {
     if (!sceneRef.current) return flash('Scene 3D tidak aktif (WebGL tidak tersedia)', true)
     sceneRef.current.toggleCyberpunk()
-    setCyberpunk(prev => !prev)
+    // baca state scene sungguhan (anti-desync, pola sama dgn ActionMenu)
+    setCyberpunk(!!sceneRef.current.isCyberpunk())
+  }, [flash])
+
+  // sinkron state awal dari scene saat scene baru dibuat
+  useEffect(() => {
+    if (sceneRef.current) setCyberpunk(!!sceneRef.current.isCyberpunk())
   }, [flash])
 
   const zoom = (dir) => {

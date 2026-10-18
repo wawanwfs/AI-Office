@@ -481,3 +481,9 @@
 - Bukti probe CDP (probe_menu2.py): buka menu → "Putar otomatis: ON" (sinkron ✓); klik → OFF; buka ulang → masih OFF (persist ✓); klik lagi → ON. Label nama: "Sembunyikan nama" sesuai namesVisible=true. e2e_err: DOM OK, 14 btns, 14 label, canvas3d 1366x625, frames naik, 0 console error.
 - Build OK (846ms), vitest 9/9, deploy ~/wfs-hq.
 - Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.
+## 2026-10-18 16:40 WIB — fix state tombol Neon tak sinkron dengan scene
+- Bug lanjutan pola run 16:15: tombol dock "Neon" memakai state React `cyberpunk` yang fluktuatif saat scene remount (WebGL gagal→reinit), label/class `on` bisa tidak cocok dengan mode neon scene sungguhan; toggle memakai `prev=>!prev` (tebakan).
+- Fix App.jsx: (a) setelah toggle, state dibaca ulang dari scene `isCyberpunk()` (bukan tebakan); (b) efek sinkron awal saat scene (re)created meng-set state dari scene.
+- Bukti probe CDP (probe_neon.py): tombol awal {on:false, aria:false} → klik → {on:true, aria:true} → klik lagi → {on:false}; toggle dua arah benar, class/aria sinkron.
+- Build OK (2.9s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM OK, 14 btns, 14 label, frames naik, 0 console error.
+- Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.
