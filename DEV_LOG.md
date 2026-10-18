@@ -460,3 +460,8 @@
 - Bukti probe CDP (probe_esc.py): klik DEWI & SARI → focus {r:24, reset:false}; dispatch Escape → focus {r:40, reset:true} (kembali ke home) untuk keduanya; Escape tanpa fokus aktif = no-op tanpa error; e2e CDP 0 console error, label 14, frames 21 naik.
 - Build OK, vitest 9/9, deploy ~/wfs-hq.
 - Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.
+## 2026-10-18 15:20 WIB — preferensi mute disimpan (localStorage) + sinkron UI awal
+- Lanjutan fitur mute run 15:00: sebelumnya refresh halaman me-reset mute ke ON. Kini (a) OfficeScene menyimpan `wfs_audio_muted` ke localStorage saat setAudioMuted dan membacanya saat init (mute tetap berlaku walau AudioContext dibuat belakangan); (b) App.jsx menyinkronkan state tombol dock dari scene/localStorage saat mount.
+- Bukti probe CDP (probe_mute_persist.py, chrome headless DISPLAY=:0): initMuted False → klik tombol → muted True, localStorage '1' → Page.reload → muted True (persist ✓) → toggle balik → False/'0'. Label tombol sinkron (🔇Suara Mati / 🔊Suara).
+- Build OK (2.65s), vitest 9/9, deploy ~/wfs-hq; e2e CDP: 0 console error, 14 label, 14 tombol dock, frames naik.
+- Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.

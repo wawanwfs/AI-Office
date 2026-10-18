@@ -36,6 +36,11 @@ export default function App() {
   const [toast, setToast] = useState(null)          // {msg, err}
   const [showLog, setShowLog] = useState(false)
   const [muted, setMuted] = useState(false)
+  useEffect(() => {
+    const s = sceneRef.current
+    if (s && s.isAudioMuted) setMuted(s.isAudioMuted())
+    else if (typeof localStorage !== 'undefined') setMuted(localStorage.getItem('wfs_audio_muted') === '1')
+  }, [])
   const toggleMute = () => {
     const s = sceneRef.current
     if (!s || !s.isAudioMuted) { setMuted(m => !m); return }

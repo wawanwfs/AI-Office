@@ -1,4 +1,4 @@
-import * as THREE from 'three';
+import * as THREE from 'three';window.THREE=THREE;
 import { createFurniture } from './parts/furniture.js';
 import { buildRobot } from './parts/robot.js';
 import { createLighting, createNeonMode, createShift, mixHex } from './parts/daycycle.js';
@@ -43,7 +43,7 @@ const AGENTS_EXTRA=[
 
 
 // ─── SCENE ─────────────────────────────────────────
-const scene=new THREE.Scene();
+const scene=new THREE.Scene();window.__scene=scene;
 scene.name = 'Office3D';
  scene.background=new THREE.Color(0x000C1E);
  scene.fog=new THREE.FogExp2(0x000C1E,0.005);
@@ -1654,7 +1654,8 @@ const updateShift=m=>__shift.update(m);
 let audioCtx=null;
 let masterGain=null;
 let soundsStarted=false;
-let audioMuted=false;
+let audioMuted=(function(){try{return localStorage.getItem('wfs_audio_muted')==='1'}catch(e){return false}})();
+function saveMuted(){try{localStorage.setItem('wfs_audio_muted',audioMuted?'1':'0')}catch(e){}}
 const __audioCalls={key:0,step:0,chime:0};
 
 function initAudio(){
@@ -1939,7 +1940,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&focusGoal){focusGoal={t:HOME_TGT.clone()
     isCyberpunk: () => cyberpunkMode,
     zoomIn: () => { sph.radius=Math.max(12,sph.radius-4); updCam(); },
     zoomOut: () => { sph.radius=Math.min(130,sph.radius+4); updCam(); },
-    setAudioMuted: (v) => { audioMuted=!!v; if(masterGain)masterGain.gain.value=audioMuted?0:1; updateAudioDbg(); },
+    setAudioMuted: (v) => { audioMuted=!!v; if(masterGain)masterGain.gain.value=audioMuted?0:1; saveMuted(); updateAudioDbg(); },
     isAudioMuted: () => audioMuted,
     destroy: () => {
       __intervals.forEach(clearInterval);
