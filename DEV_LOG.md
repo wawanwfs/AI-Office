@@ -550,7 +550,13 @@
 - Catatan: dispatch PointerEvent sintetis via JS tidak selalu memicu listener di headless ini — verifikasi memakai jalur input nyata CDP (jalur yang sama dengan user).
 - Build OK (1.4s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, canvas3d 1366x625, frames naik, 0 console error.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
-## 2026-10-18 22:58 WIB — feedback drag: cursor 'grabbing' saat menggeser scene
+## 2026-10-19 03:55 WIB — sinkron dua arah panel chat <-> scene (pilih agent di chat = cincin emas)
+- Fitur App.jsx + WfsPanel.jsx: memilih agent di dropdown panel Chat kini menyalakan **cincin emas** di meja 3D agent tersebut (sebelumnya hanya klik scene → panel, sekarang dua arah). Implementasi: `window.__wfsSceneSelect(name)` (App, dibuat saat scene ready, dihapus saat unmount) dipanggil dari `choose()` WfsPanel; peta id gateway → nama scene (be1→BUDI, qa1→RINA, pm1→SARI, dst. — 14 agent; 'ceo' tidak ada di scene, diabaikan aman).
+- Debug proses: percobaan pertama gagal karena nama gateway ("Budi Santoso") ≠ nama scene ("BUDI") — cincin tidak muncul. Ditemukan lewat dbg probe: panggilan langsung `__wfsSceneSelect("BUDI")` berhasil → akar masalah pemetaan nama. Fix: peta eksplisit SCENE_BY_ID (gateway id stabil, nama bebas berubah).
+- Bukti probe CDP (probe_panelsel.py, chrome headless DISPLAY=:0): pilih "Budi Santoso" di dropdown panel (React native setter + event change) → selRing `{vis:true, pos:[-4,-1.9]}` = home BUDI ✓; dbg4.py: jalur balik klik scene agent[1] → panel terbuka, dropdown = "Rizky Pratama", selRing pos [-8,2.6] ✓ (dua arah utuh). Screenshot 633KB (scene hidup), 0 console exception.
+- Build OK, vitest 9/9, deploy ~/wfs-hq, push b929598.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+
 - Polanjut run hover-pointer: saat drag kamera (pointerdown → move) canvas kini cursor 'grabbing' (isyarat "sedang digeser"), kembali normal saat pointerup; guard: tidak menimpa 'pointer' bila menekan di atas agent/papan, dan hover-raycast di-skip selama cursor 'grabbing' agar tidak menimpa feedback drag.
 - Bukti probe CDP (probe_drag.py, chrome headless DISPLAY=:0, Input.dispatchMouseEvent jalur nyata): init '' → mousePressed+move → 'grabbing' ✓ → mouseReleased → '' ✓; lalu hover koordinat proyeksi agent[0] (815,283 via __camCam) → 'pointer' ✓ (feedback hover tetap bekerja). 0 console error.
 - Build OK, vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, canvas3d 1366x625, frames naik, 0 console error.
