@@ -143,6 +143,11 @@ export default function App() {
     if (sceneRef.current) setCyberpunk(!!sceneRef.current.isCyberpunk())
   }, [flash])
 
+  // ---- flag modal utk scene: Escape saat overlay terbuka TIDAK boleh reset kamera ----
+  useEffect(() => {
+    window.__wfsModalOpen = !!(showTask || confirm || ask || showHelp)
+  }, [showTask, confirm, ask, showHelp])
+
   // ---- shortcut keyboard (abaikan saat fokus di input/textarea/modal) ----
   useEffect(() => {
     const onKey = (e) => {
