@@ -1552,18 +1552,20 @@ function autoTalk(){
   const ad=agentData[Math.floor(Math.random()*agentData.length)];
   if(!ad)return;
   const wp=ad.walker.visible?ad.walker.position:{x:ad.home.x,z:ad.home.z};
+  // anchor mengikuti agent agar bubble tidak tertinggal di posisi lama saat agent berjalan
+  const anc={get x(){return ad.walker.visible?ad.walker.position.x:ad.home.x},get z(){return ad.walker.visible?ad.walker.position.z:ad.home.z},y:2.6};
   // Prioritas: kalau ada task running untuk agent ini, tampilkan status kerja nyata
   const rt=window.__wfsRunningTasks;
   if(rt&&rt.byAgent){
     const rid=window.__wfsAgentIdMap&&window.__wfsAgentIdMap[ad.agent.name];
     const run=rid&&rt.byAgent[rid];
     if(run){
-      createBubble(wp.x,2.6,wp.z,'🔧 Task #'+run.id+': '+run.title.slice(0,26)+'…',ad.agent.hex);
+      createBubble(wp.x,2.6,wp.z,'🔧 Task #'+run.id+': '+run.title.slice(0,26)+'…',ad.agent.hex,anc);
       return;
     }
   }
   const lines=roleTalk[ad.agent.name]||['“Fokus dulu…”'];
-  createBubble(wp.x,2.6,wp.z,lines[Math.floor(Math.random()*lines.length)],ad.agent.hex);
+  createBubble(wp.x,2.6,wp.z,lines[Math.floor(Math.random()*lines.length)],ad.agent.hex,anc);
 }
 // Sinkron task running dari gateway tiap 15 detik
 (function(){
@@ -1605,11 +1607,10 @@ function checkConversations(){
       const dz=a.walker.position.z-b.walker.position.z;
       const dist=Math.sqrt(dx*dx+dz*dz);
       if(dist<1.5&&!a._chatCooldown&&!b._chatCooldown){
-        // Conversation!
-        const mx=(a.walker.position.x+b.walker.position.x)/2;
-        const mz=(a.walker.position.z+b.walker.position.z)/2;
+        // Conversation! Bubble ber-anchor ke pembicara (a) supaya tidak melayang di tengah ruangan
         const phrase=chatPhrases[Math.floor(Math.random()*chatPhrases.length)];
-        createBubble(mx,1.4,mz,phrase,a.agent.hex);
+        const anc={get x(){return a.walker.position.x},get z(){return a.walker.position.z},y:1.4};
+        createBubble(a.walker.position.x,1.4,a.walker.position.z,phrase,a.agent.hex,anc);
         a._chatCooldown=8;b._chatCooldown=8;
       }
     }
@@ -1625,7 +1626,7 @@ function updateBubbles(delta){
     if(b.anchor){ // ikuti pembicara: tidak melompat antar posisi
       b.sprite.position.x=b.anchor.x;
       b.sprite.position.z=b.anchor.z;
-      b.sprite.position.y=(b.anchor.y||2.0)+1.35+(3-b.life)*.10;
+      b.sprite.position.y=(b.anchor.y||2.0)+1.35+(3-b.life)*.10; // anchor.y=2.6 (berdiri) / 1.4 (ngobrol)
     } else {
       b.sprite.position.y=b.startY+(3-b.life)*.12; // float up
     }

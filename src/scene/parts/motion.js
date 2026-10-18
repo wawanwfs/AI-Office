@@ -110,9 +110,10 @@ export function createMotion(ctx) {
         if (stepRoute(ad, WALK, delta)) {
           ad.walkPause += delta;
           if (Math.random() < delta * 0.12) {
+            const lunchAnc={get x(){return ad.walker.position.x},get z(){return ad.walker.position.z},y:2.6};
             createBubble(ad.walker.position.x, 2.6, ad.walker.position.z,
               ['“makan siang dulu”', '“kopi wajib”', '“paket nasi goreng”', '“sesh sore nanti?”'][Math.floor(Math.random() * 4)],
-              ad.agent.hex);
+              ad.agent.hex, lunchAnc);
           }
         }
         follow(ad);
