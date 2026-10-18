@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react'
+import { useModalFlag } from '../lib/modal'
 
 // Panel Proyek Nyata: data live dibantuin.com dari endpoint /wfs-project (server 9503).
 // Semua data diambil server-side — tidak ada kredensial di frontend.

@@ -176,7 +176,7 @@ export default function App() {
   // handler Escape overlay menutup modal & React flush sinkron, sehingga saat handler
   // window scene (bubble) jalan flag sudah false lagi — scene wajib baca snapshot ini.
   useEffect(() => {
-    const snap = (e) => { if (e.key === 'Escape') window.__escModalAtDispatch = window.__wfsModalOpen }
+    const snap = (e) => { if (e.key === 'Escape') window.__escModalAtDispatch = window.__wfsModalOpen || anyModalOpen() }
     window.addEventListener('keydown', snap, true)
     return () => window.removeEventListener('keydown', snap, true)
   }, [])
