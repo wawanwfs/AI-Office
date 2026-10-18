@@ -417,3 +417,8 @@
 - Catatan vision: audit infra timeout beruntun (4x); shot ck11 audit menemukan sisa adjacency tipis Rina×Andi & DEV DESK menyentuh tepi ticker (zona naik dibatasi setelahnya) — lanjut run berikutnya.
 - Bukti: build OK, vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, label 14, frames normal; shot ck11.png 522KB (scene hidup).
 - Sisa backlog: adjacency tipis Rina×Andi; DEV DESK×ticker tepi; verifikasi subjektif suara (volume/timbre).
+## 2026-10-18 10:45 WIB — anti-overlap #15: backlog #14 diverifikasi + fix bocor ticker & clipping toolbar
+- Verifikasi #14 (vision audit ck_zfix 523KB): Rina×Andi = false positive (Rina terpotong toolbar, Andi tak terlihat di frame) — backlog ditutup. Temuan nyata: DEV DESK masih bocor ke lane ticker (terbaca "DESK" di y≈88), Sari menutupi awal teks zona WELCOME & LOUNGE, Rina terpotong toolbar bawah.
+- Fix: (a) PAD pasangan zona×apa pun 40→46px; (b) batas bawah viewport clamp BOT 90→110px dari bawah (label agent tak lagi terpotong toolbar); (c) clamp atas zona margin ekstra -24px (TOP-24) — label zona paling sering bocor ke ticker.
+- Bukti: build OK, vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, label 14, frames naik; shot baru 520KB (scene hidup). Vision audit post-fix: NOL label zona di y<100 (DEV DESK y≈107), NOL label agent terpotong toolbar, satu-satunya "overlap" Sari×Budi di-check numerik 6 sampel @5s via CDP (__camCam + canvas): tak ada sampel dengan dx DAN dy kecil sekaligus (dy12→dx216, dy19→dx337) = pasangan transien akibat agent berjalan, bukan tumpukan statis.
+- Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia; adjacency transien antar agent berjalan diterima sebagai dinamika normal.

@@ -1800,7 +1800,7 @@ function animate(){
     for(let iter=0;iter<5;iter++){ // multi-pass: satu pass hanya menggeser sedikit, 3 pass menjamin kluster padat benar2 terpisah
     for(let i=0;i<pts.length;i++){for(let j=0;j<i;j++){
       // PAD = breathing room: box diperluas 10px per sisi supaya label tak "menempel" (<5px gap)
-      const zi=(pts[i].zone||pts[j].zone), PAD=zi?40:30, // zona lebih sensitif: breathing room lebih besar
+      const zi=(pts[i].zone||pts[j].zone), PAD=zi?46:30, // zona lebih sensitif: breathing room lebih besar
             lwi=(pts[i].sw||pts[i].zw||0)+PAD, lhi=(pts[i].sh||pts[i].zh||0)+PAD,
             lwj=(pts[j].sw||pts[j].zw||0)+PAD, lhj=(pts[j].sh||pts[j].zh||0)+PAD;
       const dx=Math.abs(pts[i].x-pts[j].x), dy=Math.abs((pts[i].y+pts[i].offY)-(pts[j].y+pts[j].offY));
@@ -1833,7 +1833,7 @@ function animate(){
     // dan clamp bisa menimbulkan overlap baru -> ulangi (sweep→clamp) sampai stabil (max 3x).
     // Konvergen: total ruang vertikal aman melebihi kebutuhan, tiap iterasi hanya mengurangi pelanggaran.
     {
-      const H2=container.clientHeight/2, TOP=H2-140, BOT=H2-90; // atas: 140px cadangan lane header+ticker (HUD HTML, di luar canvas); bawah: 90px toolbar
+      const H2=container.clientHeight/2, TOP=H2-140, BOT=H2-110; // atas: 140px cadangan lane header+ticker (HUD HTML, di luar canvas); bawah: 110px toolbar (Rina pernah terpotong @90)
       for(let round=0;round<3;round++){
       // sweep: dari atas ke bawah, tiap label didorong ke bawah dari posisi terendah yang bebas overlap
       {
@@ -1854,8 +1854,9 @@ function animate(){
       let violated=false;
       pts.forEach(p=>{
         const fy=p.y+p.offY, half=(p.sh||p.zh||0)/2;
+        const topLim=p.zone?TOP-24:TOP; // zona margin ekstra: label zona paling sering bocor ke lane ticker
         if(fy+half>BOT){p.offY=BOT+half-p.y;violated=true;}       // masuk toolbar -> naik
-        else if(fy-half<-(TOP)){p.offY=-(TOP)+half-p.y+Math.random()*6;violated=true;} // keluar layar atas -> turun (jitter 0-6px hindari ties)
+        else if(fy-half<-(topLim)){p.offY=-(topLim)+half-p.y+Math.random()*6;violated=true;} // keluar layar atas -> turun (jitter 0-6px hindari ties)
       });
       if(!violated)break; // sweep+clamp sudah konsisten, tidak ada pelanggaran batas
       }
