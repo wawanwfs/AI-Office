@@ -2080,6 +2080,11 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
     zoomIn: () => { if(focusGoal&&!focusGoal.reset)focusGoal=null; sph.radius=Math.max(12,sph.radius-4); updCam(); },
     zoomOut: () => { if(focusGoal&&!focusGoal.reset)focusGoal=null; sph.radius=Math.min(130,sph.radius+4); updCam(); },
     setView: (name) => {
+      if(name==='iso'||name==='front'||name==='top'){
+        // ganti sudut kamera = batalkan fokus/pilihan agent (konsisten dgn Escape & klik kosong)
+        if(selectedIdx!==-1){selectedIdx=-1;applySelected();}
+        delete sph.__saved;
+      }
       focusGoal=null; tgt.copy(HOME_TGT);
       if(name==='iso'){sph.theta=Math.PI*0.78;sph.phi=1.0}
       else if(name==='front'){sph.theta=0;sph.phi=1.2}

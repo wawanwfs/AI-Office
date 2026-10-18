@@ -645,3 +645,9 @@
 - Bukti probe CDP (chromium-1248 headless swiftshader DISPLAY :78, klik agent via PointerEvent proyeksi home): klik agent[0] → ring true, focus {r:24,reset:false}, saved true → Escape → **ring false, focus {r:40,reset:true}, savedCleared true** ✓; klik ulang → ring true lagi (pilih ulang normal) → Escape → ring false ✓. 0 console error.
 - Build OK (1.5s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 7→12, 0 error.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-19 08:05 WIB — shortcut kamera 1/2/3/0 kini batalkan pilihan agent (cincin emas mati)
+- Lanjutan konsistensi Escape (07:40): setView('iso'/'front'/'top') menghapus focusGoal tapi cincin emas agent terpilih tetap menyala di sudut kamera baru — sama inkonsistennya dgn bug Escape kemarin. Juga `sph.__saved` tidak dibersihkan.
+- Implementasi OfficeScene.js `setView`: untuk ketiga sudut → `selectedIdx=-1;applySelected();delete sph.__saved;` sebelum reposition kamera. (Zoom +/- sengaja tidak mengubah pilihan.)
+- Bukti probe CDP (chromium-1248 headless swiftshader DISPLAY :78, klik agent via PointerEvent): klik agent[0] → ring true, focus {r:24}, saved true → tekan '2' → **ring false, focus null, savedCleared true** ✓; klik ulang → ring true (pilih ulang normal) → tekan '1' → ring false ✓. 0 console error.
+- Build OK (1.4s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 8→13, 0 error.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
