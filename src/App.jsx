@@ -51,6 +51,7 @@ export default function App() {
   }
   const toggleMuteRef = useRef(toggleMute); toggleMuteRef.current = toggleMute
   const actionMenuApi = useRef(null) // diisi ActionMenu: {toggleNames, toggleRotate} utk shortcut K/R
+  const amRef = actionMenuApi
   const [logItems, setLogItems] = useState(() => {
     try { return JSON.parse(localStorage.getItem('wfs_activity') || '[]') } catch { return [] }
   })
