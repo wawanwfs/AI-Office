@@ -120,7 +120,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
     window.__wfsSelectAgent(idMap[root.agent.name]||root.agent.name);
     const wp=root.walker.visible?root.walker.position:{x:root.home.x,y:0,z:root.home.z};
     if(homeRadius===null)homeRadius=sph.radius;
-    focusGoal={t:new THREE.Vector3(wp.x,1.5,wp.z),r:Math.min(sph.radius,24)};
+    focusGoal={t:new THREE.Vector3(wp.x,1.5,wp.z),r:Math.min(sph.radius,24),follow:root};
     createBubble(wp.x,2.6,wp.z,'“Halo! Aku '+root.agent.name+' 👋”',root.agent.hex);
   }
 });
@@ -1738,7 +1738,14 @@ function animate(){
   const elapsed=clock.getElapsedTime();
   frame++;
   window.__animFrames=frame;
-  if(focusGoal){tgt.lerp(focusGoal.t,.06);sph.radius+=(focusGoal.r-sph.radius)*.06;updCam();if(focusGoal.reset&&tgt.distanceTo(HOME_TGT)<.05){focusGoal=null}}
+  if(focusGoal){
+    if(focusGoal.follow&&!focusGoal.reset){ // follow agent berjalan: target kamera ikut posisi agent saat ini
+      const f=focusGoal.follow, fp=f.walker.visible?f.walker.position:{x:f.home.x,y:0,z:f.home.z};
+      focusGoal.t.set(fp.x,1.5,fp.z);
+      if(f.state==='offsite')focusGoal={t:HOME_TGT.clone(),r:homeRadius||sph.radius,reset:true};
+    }
+    tgt.lerp(focusGoal.t,.06);sph.radius+=(focusGoal.r-sph.radius)*.06;updCam();if(focusGoal.reset&&tgt.distanceTo(HOME_TGT)<.05){focusGoal=null}
+  }
   if(autoRot){sph.theta+=.0012;updCam()}
   screenData.forEach(drawScreen);
   updateWalkers(delta);
