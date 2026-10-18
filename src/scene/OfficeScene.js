@@ -1251,8 +1251,10 @@ const __wallObjs=[];
     office.children.forEach(m=>{
       if(known.has(m)||!m.position||m===fl||m===ceil)return;
       if(!(m.isMesh||m.isSprite||m.isLight===false&&m.isGroup))return;
-      const {x,y,z}=m.position, thin=0.55;
+      const {x,y,z}=m, thin=0.55;
       if(y>4.3||y<0.0)return;
+      // papan proyek nyata tidak ikut fade — data harus selalu terlihat
+      if(m===window.__projectBoard||m===window.__projectBoard?.mesh)return;
       const nearBack=Math.abs(z-9.5)<thin&&Math.abs(x)<=13, nearLeft=Math.abs(x+12.5)<thin&&Math.abs(z)<=10;
       if(nearBack&&!nearLeft)wallDefs.back.objs.push(m);
       else if(nearLeft&&!nearBack)wallDefs.left.objs.push(m);

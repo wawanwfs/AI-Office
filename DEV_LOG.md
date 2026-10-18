@@ -440,3 +440,7 @@
 - Data terverifikasi dari endpoint: localhost:9503/wfs-project → tasks 23/23 done (100%), saas.online=true stats{tenants:2,conversations:16,messages:32}, agents 4 Up.
 - Catatan infra: shot Xvfb+chrome windowed (xshot.sh) kembali menghasilkan canvas gelap (regresi / bukan scene mati — e2e CDP tetap sehat: frames naik, 14 label, 0 error). Alternatif patokan visual: Page.captureScreenshot CDP headless TERBUKTI berisi render penuh saat flag --remote-allow-origins=* dan env DISPLAY=:0 dipakai (strip4.png).
 - Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.
+## 2026-10-18 13:55 WIB — strip bawah papan diberi band latar + divider; fix koordinat gradient progress bar
+- Perbaikan visual projectboard.js: (a) strip SaaS/AGENT sebelumnya digambar dengan roundRect tinggi 0 (latar tak tampak) — kini band #0b1424 1496x32px dengan border #2c3e5c di y794, teks baseline 817; (b) gradient progress bar createLinearGradient(28..W-28) tidak match posisi bar (36..W-36) — diperbaiki, warna gradient kini sejajar dengan bar.
+- Bukti: build OK (715ms), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, label 14, frames naik. Probe pixel CDP via __projectBoard.mesh texture canvas 1536x840: bandPx=39161 (band tergambar), greenPx=1257 (teks hijau strip), progBlue=39529 (progress bar 100% gradient terisi). Screenshot kamera-dekat-papan diambil untuk arsip (render blur low-fps SwiftShader, verifikasi tetap via pixel probe).
+- Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.

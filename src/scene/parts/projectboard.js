@@ -14,7 +14,7 @@ export function createProjectBoard(office, THREE) {
     new THREE.PlaneGeometry(5.6, 3.06),
     new THREE.MeshBasicMaterial({ map: tex, fog: false })
   )
-  mesh.position.set(-8.6, 2.55, 9.2)
+  mesh.position.set(-8.6, 2.55, 9.31)
   mesh.rotation.y = Math.PI
   office.add(mesh)
   // bingkai (menggantikan bingkai kanban lama yang dipasang di OfficeScene)
@@ -78,7 +78,7 @@ export function createProjectBoard(office, THREE) {
 
     // progress bar
     g.fillStyle = 'rgba(255,255,255,.08)'; roundRect(36, 132, W - 72, 28, 10); g.fill()
-    const grd = g.createLinearGradient(28, 0, W - 28, 0)
+    const grd = g.createLinearGradient(36, 0, W - 36, 0)
     grd.addColorStop(0, '#10E5A0'); grd.addColorStop(1, '#448AFF')
     g.fillStyle = grd; roundRect(36, 132, Math.max(12, (W - 72) * pct / 100), 28, 10); g.fill()
     g.fillStyle = '#fff'; g.font = 'bold 26px sans-serif'; g.textAlign = 'right'
@@ -115,12 +115,13 @@ export function createProjectBoard(office, THREE) {
         g.fillText(i === 2 ? 'semua beres 🎉' : 'kosong', x + 235, 320)
       }
     })
-    // strip bawah: live SaaS bantuin + agent docker
+    // strip bawah: live SaaS bantuin + agent docker (band latar + divider)
+    g.fillStyle = '#0b1424'; roundRect(20, 794, W - 40, 32, 8); g.fill()
+    g.strokeStyle = '#2c3e5c'; g.lineWidth = 2; roundRect(20, 794, W - 40, 32, 8); g.stroke()
     const s = snap.saas || {}
-    g.fillStyle = '#0b1424'; roundRect(34, 820, W - 68, 0, 0); g.fill()
     g.font = '22px sans-serif'; g.textAlign = 'left'
     let sx = 44
-    const seg = (txt, col) => { g.fillStyle = col; g.fillText(txt, sx, 826); sx += g.measureText(txt).width + 26 }
+    const seg = (txt, col) => { g.fillStyle = col; g.fillText(txt, sx, 817); sx += g.measureText(txt).width + 26 }
     seg('SaaS', '#448AFF')
     if (s.online) {
       const st = s.stats || {}
@@ -146,6 +147,16 @@ export function createProjectBoard(office, THREE) {
   pull()
   const iv = setInterval(pull, 60000)
 
-  function destroy() { clearInterval(iv) }
+  // Paksa papan selalu penuh terlihat: wallFade mengklon material & menurunkan opacity
+  // saat dinding belakang memudar — data proyek harus tidak terpengaruh.
+  const forceVisible = setInterval(() => {
+    if (mesh.material.opacity !== undefined && mesh.material.opacity < 1) {
+      mesh.material.opacity = 1
+      mesh.material.transparent = false
+      mesh.visible = true
+    }
+  }, 500)
+
+  function destroy() { clearInterval(iv); clearInterval(forceVisible) }
   return { destroy, refresh: pull, mesh }
 }
