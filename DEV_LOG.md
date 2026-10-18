@@ -612,6 +612,13 @@
 - Bukti probe CDP (probe_selring.py, chrome headless DISPLAY=:0, jalur input nyata): klik proyeksi agent[0] (893,280) → selRing {vis:true, pos:[-8,-1.9]} = home agent[0] ✓; klik area kosong → vis:false (deselect ✓). Screenshot 699KB (scene hidup), 0 console exception.
 - Build OK (1.6s), vitest 9/9, deploy ~/wfs-hq.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-19 05:40 WIB — fix backlog: tombol dock Neon kini ikut persist neon (sinkron init)
+- Lanjutan backlog run 21:15 (18 Okt): neon tersimpan di localStorage diterapkan ulang di scene saat init, tapi tombol dock Neon (QuickToolbar) tetap tampil "off" setelah refresh — class 'on'/aria-pressed tidak sinkron. Akar: useEffect sinkron lama (`setCyberpunk(!!scene.isCyberpunk())` dgn dep [flash]) hanya jalan sekali saat mount, SEBELUM scene async selesai init — jadi state UI tidak pernah ter-update dari scene. Fix: pindahkan sinkron ke dalam callback init scene (tepat setelah setMuted), pola sama dgn mute. shortcut N (toggleCyberpunk) sudah membaca state scene langsung, tidak terpengaruh.
+- Bukti probe CDP (probe_reload2.py, chrome headless DISPLAY :0): preset ls wfs_neon='1' → reload → tombol Neon {on: true, aria: 'true'} ✓ (sebelumnya false), menu Aksi tetap "Tampilkan nama" + "Putar otomatis: OFF" (persist lain tetap OK), label[0].visible=false (names persist OK).
+- e2e_err.py direkonstruksi (file lama hilang): DOM True, 17 btns, 14 label, canvas 1366x625, frames 2→5, 0 console error.
+- Build OK (3.4s), vitest 9/9, deploy ~/wfs-hq.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+
 ## 2026-10-19 04:55 WIB — cincin emas agent terpilih disembunyikan saat agent offsite
 - Bug visual: setelah fitur cincin emas (03:10), ring tetap menyala di meja kosong ketika agent terpilih TIDAK ada di kantor (shift malam/offsite, meeting figures terpisah) — menyesatkan, seolah orangnya masih di meja.
 - Implementasi OfficeScene.js: helper `selAnchor(a)` — walker terlihat → posisi walker; sittingChar terlihat → home (offset z+.55); keduanya tak terlihat → null. applySelected() dan frame-loop memakai selAnchor: ring visible=false saat null, selectedIdx TETAP tersimpan sehingga ring muncul otomatis lagi saat agent kembali (frame-loop kini juga re-enable visible, bukan hanya update posisi).

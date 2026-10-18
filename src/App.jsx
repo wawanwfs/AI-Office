@@ -112,8 +112,11 @@ export default function App() {
           onStatusUpdate: () => {},
           onMeetingChange: (m) => setInMeeting(m),
         })
-        // sinkron state awal dari scene (mute) saat scene (re)created
+        // sinkron state awal dari scene (mute, neon) saat scene (re)created —
+        // useEffect sinkron lama bergantung [flash] tidak jalan lagi setelah init async,
+        // jadi neon persist di localStorage tidak terpantul di tombol dock Neon.
         if (sceneRef.current.isAudioMuted) setMuted(!!sceneRef.current.isAudioMuted())
+        setCyberpunk(!!sceneRef.current.isCyberpunk())
         // dua arah: pilih agent di panel chat → tampilkan cincin emas di scene
         // peta id gateway → nama agent di scene (desk 3D). ceo tidak ada di scene (diabaikan).
         const SCENE_BY_ID = {
