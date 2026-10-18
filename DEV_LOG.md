@@ -639,3 +639,9 @@
 - Bukti probe CDP (chromium-1248 headless swiftshader DISPLAY :78, port 9378): klik 🚀 Proyek → panel terbuka → Escape → panel tertutup DAN snapshot `__escModalAtDispatch=true`, dbg focus null (TIDAK reset) ✓; sama untuk 📊 Statistik dan 💬 Chat AI ✓. Kontrol: dblclick agent → focus {r:28,reset:false} → Escape → focus null (reset bekerja normal di luar panel) ✓. 0 console error.
 - Build OK (0.98s), vitest 9/9, deploy ~/wfs-hq; e2e_evt (revisi): canvas 1, 17 btns, 14 labels, frames 14→19, hanya warning deprecation THREE. Screenshot /tmp/ck.png 455KB (scene hidup).
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-19 07:40 WIB — Escape kini juga batal pilih agent (cincin emas mati) & bersihkan snapshot kamera usang
+- Lanjutan siklus fix Escape (02:55→06:45): Escape mereset kamera tapi **cincin emas agent terpilih tetap menyala** (tidak konsisten dgn deselect via klik area kosong) dan snapshot kamera `sph.__saved` (dipakai tombol 0/Iso, fitur 02:05) tidak dibersihkan — setelah Esc-reset, tekan '0' mengembalikan sudut pra-Escape yang sudah usang.
+- Implementasi OfficeScene.js handler Escape scene: tambah `selectedIdx=-1;applySelected();delete sph.__saved;` (hanya cabang reset, yaitu `__escModalAtDispatch===false` — panel tetap aman).
+- Bukti probe CDP (chromium-1248 headless swiftshader DISPLAY :78, klik agent via PointerEvent proyeksi home): klik agent[0] → ring true, focus {r:24,reset:false}, saved true → Escape → **ring false, focus {r:40,reset:true}, savedCleared true** ✓; klik ulang → ring true lagi (pilih ulang normal) → Escape → ring false ✓. 0 console error.
+- Build OK (1.5s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 7→12, 0 error.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
