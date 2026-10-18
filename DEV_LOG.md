@@ -1,3 +1,8 @@
+## 2026-10-18 20:05 WIB — loop render berhenti total saat tab hidden (bukan schedule-then-skip)
+- Lanjutan performa run 15:40: sebelumnya animate() tetap requestAnimationFrame tiap frame walau pageHidden (skip render tapi loop tetap terjadwal). Kini (a) animate() early-return SEBELUM rAF saat hidden — loop benar-benar mati; (b) onVis saat kembali visible membatalkan rAF basi lalu menghidupkan ulang animate() (anti double-loop); (c) destroy() cancelAnimationFrame (tanpa leak).
+- Bukti probe CDP (probe_vis2/probe_vis2b, SwiftShader headless): visible fps ~1.0 → hidden fps 0.0 → resumed frames naik lagi (~0.5 fps SwiftShader). e2e_err: DOM OK, 14 btns, 14 label, canvas3d 1366x625, frames naik, 0 console error.
+- Build OK (1.7s), vitest 9/9, deploy ~/wfs-hq.
+- Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.
 # DEV LOG — ai-office (batas kerja worker: 20:00 WIB)
 
 ## 2026-10-15 11:54 WIB — sesi manual

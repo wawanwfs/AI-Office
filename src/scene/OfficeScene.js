@@ -1926,7 +1926,10 @@ const __perfWin={t0:0,fps:0,downgraded:false};
 window.__perf=__perfWin;
 animate();
 const onVis=()=>{ pageHidden=document.visibilityState==='hidden';
-  if(!pageHidden&&!rafId)animate(); // hidupkan lagi loop render saat kembali visible
+  if(!pageHidden){ // hidupkan lagi loop render saat kembali visible (anti double-loop)
+    if(rafId){cancelAnimationFrame(rafId);rafId=null;}
+    animate();
+  }
   try{
     if(pageHidden){ if(audioCtx&&audioCtx.state==='running')audioCtx.suspend(); }
     else {
