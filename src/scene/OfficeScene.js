@@ -147,7 +147,14 @@ renderer.domElement&&renderer.domElement.addEventListener('dblclick',e=>{
 });
 
 // hover pointer di atas agent/papan: isyarat "bisa diklik" (raycast throttled)
-const hoverRay=new THREE.Raycaster();let hoverTmr=null,hoverNdc={x:0,y:0},hoverPend=false;
+const hoverRay=new THREE.Raycaster();let hoverTmr=null,hoverNdc={x:0,y:0},hoverPend=false,hoveredAgent=null;
+// cincin highlight hover di bawah agent (visual feedback mengikuti cursor pointer)
+let hoverRing=null;
+function ensureHoverRing(){if(hoverRing)return;const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
+  const g=x.createRadialGradient(64,64,44,64,64,62);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(.7,'rgba(120,220,255,0.9)');g.addColorStop(1,'rgba(120,220,255,0)');
+  x.fillStyle=g;x.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
+  hoverRing=new THREE.Mesh(new THREE.PlaneGeometry(2.6,2.6),new THREE.MeshBasicMaterial({map:t,transparent:true,opacity:.85,depthWrite:false,color:0x9FE8FF}));
+  hoverRing.rotation.x=-Math.PI/2;hoverRing.position.y=0.02;hoverRing.renderOrder=3;hoverRing.visible=false;office.add(hoverRing);window.__sceneRing=hoverRing;}
 renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
   hoverNdc={x:(e.clientX/innerWidth)*2-1,y:-(e.clientY/innerHeight)*2+1};
   if(!hoverPend){hoverPend=true;hoverTmr=setTimeout(()=>{
@@ -159,6 +166,19 @@ renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
     const bm=window.__projectBoard&&window.__projectBoard.mesh;
     const hh=hoverRay.intersectObjects(bm?[...targets,bm]:targets,true);
     renderer.domElement.style.cursor=hh.length?'pointer':'';
+    // highlight visual agent saat hover
+    let ha=null;
+    if(hh.length){
+      let p=hh[0].object;
+      while(p&&!ha){ha=agentData.find(ad=>ad.sittingChar===p||ad.walker===p);p=p.parent}
+    }
+    if(ha!==hoveredAgent)hoveredAgent=ha;
+    if(hoveredAgent){
+      ensureHoverRing();
+      const src=hoveredAgent.walker.visible?hoveredAgent.walker.position:hoveredAgent.home;
+      hoverRing.position.set(src.x,0.02,src.z+ (hoveredAgent.walker.visible?0:.55));
+      hoverRing.visible=true;
+    }else if(hoverRing)hoverRing.visible=false;
   },80)};
 },{passive:true});
 renderer.domElement&&renderer.domElement.addEventListener('wheel',e=>{if(focusGoal&&!focusGoal.reset)focusGoal=null;sph.radius=Math.max(12,Math.min(130,sph.radius+e.deltaY*.04));updCam()},{passive:true});
