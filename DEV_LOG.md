@@ -509,7 +509,7 @@
 - Bukti probe CDP (probe_boardvis.py, headless SwiftShader): refresh saat hidden → 0 fetch ✓; visibilitychange → visible → 1 fetch otomatis ✓. e2e_err: DOM OK, 14 tombol dock, 14 label, canvas3d 1366x625, frames naik, 0 console error.
 - Build OK (2.95s), vitest 9/9, deploy ~/wfs-hq.
 - Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.
-## 2026-10-18 22:00 WIB — hemat fetch saat tab hidden: semua poll interval diberi visibility guard
+## 2026-10-18 19:42 WIB — hemat fetch saat tab hidden: semua poll interval diberi visibility guard
 - Lanjutan pola run 15:40/17:55: selain render loop & papan proyek, masih ada 4 poll di scene + 6 poll di UI yang tetap fetch walau tab tidak dilihat. Sekarang semua di-guard:
   - OfficeScene.js: pollBadges (badge dada, 20s), wake-agent running (21s), alert failed (25s), pollRunning (bubble task, 15s) → `if(pageHidden) return`; onVis kini juga memicu `window.__pollBadges()` saat kembali visible (refresh instan, tanpa nunggu tick).
   - UI React: Ticker (20s), App.refreshStatus (15s), TaskBoard (8s), TeamStats (15s), ProjectPanel (15s), WfsPanel agent stats (15s) → interval fetch hanya bila `document.visibilityState==='visible'`.
