@@ -31,7 +31,7 @@ export default function WfsPanel() {
     } catch { setCfg({ base_url: '', api_key: '', model: '', instructions: '', key_hint: '' }); setCfgMsg('⚠ Gagal memuat konfigurasi') }
   }, [])
 
-  const choose = useCallback((a) => { setSel(a); loadCfg(a) }, [loadCfg])
+  const choose = useCallback((a) => { setSel(a); loadCfg(a); window.__wfsSceneSelect && window.__wfsSceneSelect(a.name) }, [loadCfg])
 
   const loadAgents = useCallback(() => {
     setLoading(true); setLoadErr('')

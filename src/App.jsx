@@ -114,6 +114,13 @@ export default function App() {
         })
         // sinkron state awal dari scene (mute) saat scene (re)created
         if (sceneRef.current.isAudioMuted) setMuted(!!sceneRef.current.isAudioMuted())
+        // dua arah: pilih agent di panel chat → tampilkan cincin emas di scene
+        window.__wfsSceneSelect = (name) => {
+          const s = sceneRef.current
+          if (!s || !s.setSelected) return
+          const idx = (window.__agentData || []).findIndex(ad => ad.agent && ad.agent.name === name)
+          if (idx >= 0) s.setSelected(idx)
+        }
       } catch (err) {
         console.error('Scene init failed — UI-only mode:', err)
         flash('WebGL tidak tersedia — mode UI saja', true)
@@ -125,6 +132,7 @@ export default function App() {
     return () => {
       cancelled = true
       if (sceneRef.current) { sceneRef.current.destroy(); sceneRef.current = null }
+      delete window.__wfsSceneSelect
     }
   }, [flash])
 
