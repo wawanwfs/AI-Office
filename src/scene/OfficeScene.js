@@ -91,6 +91,7 @@ renderer.domElement&&renderer.domElement.addEventListener('touchmove',e=>{
     e.preventDefault();
     const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
     sph.radius=Math.max(12,Math.min(130,sph.radius-(d-pinchDist)*.05));
+    if(focusGoal&&!focusGoal.reset)focusGoal=null;
     updCam();pinchDist=d;
   }
 },{passive:false});
@@ -159,7 +160,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
     renderer.domElement.style.cursor=hh.length?'pointer':'';
   },80)};
 },{passive:true});
-renderer.domElement&&renderer.domElement.addEventListener('wheel',e=>{sph.radius=Math.max(12,Math.min(130,sph.radius+e.deltaY*.04));updCam()},{passive:true});
+renderer.domElement&&renderer.domElement.addEventListener('wheel',e=>{if(focusGoal&&!focusGoal.reset)focusGoal=null;sph.radius=Math.max(12,Math.min(130,sph.radius+e.deltaY*.04));updCam()},{passive:true});
 
 // ─── LIGHTS ────────────────────────────────────────
 const ambient=new THREE.AmbientLight(0xffffff,0.38);scene.add(ambient);
@@ -2020,8 +2021,8 @@ const onKey=(e)=>{ if(e.key==='Escape'&&focusGoal){focusGoal={t:HOME_TGT.clone()
     setTime: (minutes) => updateTime(minutes),
     toggleCyberpunk: () => toggleCyberpunk(),
     isCyberpunk: () => cyberpunkMode,
-    zoomIn: () => { sph.radius=Math.max(12,sph.radius-4); updCam(); },
-    zoomOut: () => { sph.radius=Math.min(130,sph.radius+4); updCam(); },
+    zoomIn: () => { if(focusGoal&&!focusGoal.reset)focusGoal=null; sph.radius=Math.max(12,sph.radius-4); updCam(); },
+    zoomOut: () => { if(focusGoal&&!focusGoal.reset)focusGoal=null; sph.radius=Math.min(130,sph.radius+4); updCam(); },
     setView: (name) => {
       focusGoal=null; tgt.copy(HOME_TGT);
       if(name==='iso'){sph.theta=Math.PI*0.78;sph.phi=1.0}

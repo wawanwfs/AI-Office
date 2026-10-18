@@ -555,6 +555,12 @@
 - Bukti probe CDP (probe_drag.py, chrome headless DISPLAY=:0, Input.dispatchMouseEvent jalur nyata): init '' → mousePressed+move → 'grabbing' ✓ → mouseReleased → '' ✓; lalu hover koordinat proyeksi agent[0] (815,283 via __camCam) → 'pointer' ✓ (feedback hover tetap bekerja). 0 console error.
 - Build OK, vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, canvas3d 1366x625, frames naik, 0 console error.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-19 00:00 WIB — fix UX: wheel/pinch/zoom tidak lagi "melawan" focusGoal
+- Bug UX: setelah double-click fokus agent (fitur 23:35), setiap frame render me-lerp `sph.radius` balik ke `focusGoal.r` — jadi wheel scroll / pinch / tombol +− terasa macet (radius ditekan terus ke radius fokus). Sekarang interaksi zoom pengguna (wheel, pinch 2 jari, zoomIn/zoomOut tombol & shortcut +/−) membatalkan focusGoal (`reset:true` dari agent offsite/Escape tetap dipertahankan, karena itu memang harus mengembalikan kamera ke home).
+- Bukti probe CDP (probe_zoomfg2.py, chromium headless DISPLAY=:78, jalur input nyata): dblclick proyeksi agent[0] (864,257) → focusGoal {r:18} ✓ → dispatch mouseWheel deltaY=-240 → dist 40→27 dan **focusGoal jadi null** ✓ (zoom berlaku, tidak ditarik balik). 0 console error.
+- Build OK (1.4s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, canvas3d 1366x625, frames naik, 0 console error; screenshot 625KB (scene hidup).
+- Catatan lingkungan: chrome probe = ms-playwright chromium-1248, wajib --no-sandbox (Ubuntu 24.04 menonaktifkan unprivileged userns); kantor live di port 9503 (bukan 8000).
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
 ## 2026-10-18 23:35 WIB — double-click: zoom ke titik / fokus agent
 - Fitur UX OfficeScene.js: dblclick di canvas — kena agent/papan → focusGoal ke titik hit (r≤18, zoom dekat); area kosong → maju 30% (r max(14, r*0.7)). Plus guard: homeRadius awal di-clamp 24–60 saat pertama kali di-set (konsisten dengan setView), mencegah radius ekstrem ikut tersimpan.
 - Bukti probe CDP (probe_dbl9/dblA/dblB, jalur input nyata Input.dispatchMouseEvent): dblclick area kosong dist 37→28 (zoom-in ~30% ✓); dblclick pada koordinat proyeksi agent[0] → dist turun menuju ≤28 (fokus agent ✓, run lain 40→17); dblclick tidak trigger saat drag (moved>6 di click path tetap terjaga). 0 console error.
