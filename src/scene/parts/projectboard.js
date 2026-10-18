@@ -12,7 +12,7 @@ export function createProjectBoard(office, THREE) {
   const tex = new THREE.CanvasTexture(cv)
   const mesh = new THREE.Mesh(
     new THREE.PlaneGeometry(5.6, 3.06),
-    new THREE.MeshBasicMaterial({ map: tex })
+    new THREE.MeshBasicMaterial({ map: tex, fog: false })
   )
   mesh.position.set(-8.6, 2.55, 9.2)
   mesh.rotation.y = Math.PI
