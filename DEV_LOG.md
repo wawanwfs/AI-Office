@@ -600,3 +600,9 @@
 - Bukti probe CDP (probe_krfinal.py, chrome headless DISPLAY=:0, jalur input nyata Input.dispatchKeyEvent): names 14 -> K -> 0 -> K -> 14 (dua arah); R -> wfs_autorot '0' -> R -> '1' (dua arah); guard INPUT terverifikasi ada di bundle minified. e2e ringan: canvas 1366x625, 17 ibtn, 14 agent, 0 console error.
 - Build OK, vitest 9/9, deploy ~/wfs-hq.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-19 03:10 WIB — cincin emas agent terpilih: tetap terlihat siapa yang sedang dibicarakani
+- Fitur OfficeScene.js: klik agent kini menampilkan **cincin emas (3.1 unit, CanvasTexture radial, warna 0xFFD75E)** di lantai bawah agent — berbeda dari cincin biru hover (sementara), cincin emas PERSIST sampai pilihan berubah / klik area kosong (deselect). Posisi mengikuti agent tiap frame juga saat berjalan/meeting (offset z+0.55 saat duduk). API baru: `setSelected(idx)`/`getSelected()`; debug hook `window.__sceneSelRing`.
+- Debug proses: versi awal applySelected hanya `visible=true` tanpa set posisi — ring muncul di origin (0,0) karena mesh baru. Fix: posisi dihitung di applySelected (home/walker), frame-loop hanya meng-update posisi.
+- Bukti probe CDP (probe_selring.py, chrome headless DISPLAY=:0, jalur input nyata): klik proyeksi agent[0] (893,280) → selRing {vis:true, pos:[-8,-1.9]} = home agent[0] ✓; klik area kosong → vis:false (deselect ✓). Screenshot 699KB (scene hidup), 0 console exception.
+- Build OK (1.6s), vitest 9/9, deploy ~/wfs-hq.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).

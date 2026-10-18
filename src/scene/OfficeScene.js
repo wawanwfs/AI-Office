@@ -111,7 +111,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   // papan proyek juga bisa diklik → kamera zoom ke papan
   const boardMesh=window.__projectBoard&&window.__projectBoard.mesh;
   const hits=ray.intersectObjects(boardMesh?[...targets,boardMesh]:targets,true);
-  if(!hits.length){ if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius,reset:true}} return; }
+  if(!hits.length){ if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius,reset:true}} selectedIdx=-1;applySelected(); return; }
   if(boardMesh&&hits[0].object===boardMesh){
     focusGoal={t:new THREE.Vector3(-8.6,2.55,9.2),r:8.5};
     createBubble(-8.6,4.4,7.8,'“Proyek dibantuin.com — klik tombol Proyek untuk detail 👆”','#10E5A0');
@@ -131,6 +131,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
     focusGoal={t:new THREE.Vector3(wp.x,1.5,wp.z),r:Math.min(sph.radius,24),follow:root};
     if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
     createBubble(wp.x,2.6,wp.z,'“Halo! Aku '+root.agent.name+' 👋”',root.agent.hex);
+    selectedIdx=agentData.indexOf(root);applySelected();
   }
 });
 addEventListener('pointerup',()=>{isDrag=false;autoTmr=setTimeout(()=>autoRot=true,6000);if(renderer.domElement&&renderer.domElement.style.cursor==='grabbing')renderer.domElement.style.cursor=''});
@@ -150,6 +151,23 @@ renderer.domElement&&renderer.domElement.addEventListener('dblclick',e=>{
 const hoverRay=new THREE.Raycaster();let hoverTmr=null,hoverNdc={x:0,y:0},hoverPend=false,hoveredAgent=null;
 // cincin highlight hover di bawah agent (visual feedback mengikuti cursor pointer)
 let hoverRing=null;
+// cincin emas agent TERPILIH (persist: tetap tampil sampai pilihan berubah)
+let selectedIdx=-1,selRing=null;
+function ensureSelRing(){if(selRing)return;const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
+  const g=x.createRadialGradient(64,64,46,64,64,62);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(.68,'rgba(255,205,80,0.95)');g.addColorStop(1,'rgba(255,205,80,0)');
+  x.fillStyle=g;x.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
+  selRing=new THREE.Mesh(new THREE.PlaneGeometry(3.1,3.1),new THREE.MeshBasicMaterial({map:t,transparent:true,opacity:.9,depthWrite:false,color:0xFFD75E}));
+  selRing.rotation.x=-Math.PI/2;selRing.position.y=0.03;selRing.renderOrder=4;selRing.visible=false;office.add(selRing);window.__sceneSelRing=selRing;}
+function applySelected(){
+  if(selRing)selRing.visible=false;
+  if(selectedIdx<0||selectedIdx>=agentData.length)return;
+  const a=agentData[selectedIdx];
+  const src=a.walker&&a.walker.visible?a.walker.position:a.home;
+  ensureSelRing();
+  selRing.position.set(src.x,0.03,src.z+(a.walker&&a.walker.visible?0:.55));
+  selRing.visible=true;
+}
+
 function ensureHoverRing(){if(hoverRing)return;const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
   const g=x.createRadialGradient(64,64,44,64,64,62);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(.7,'rgba(120,220,255,0.9)');g.addColorStop(1,'rgba(120,220,255,0)');
   x.fillStyle=g;x.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
@@ -1823,6 +1841,12 @@ function animate(){
   pG.attributes.position.needsUpdate=true;
   // Labels
   agentData.forEach((a,i)=>{if(a.state==='sitting')a.label.position.y=LABEL_Y+Math.sin(elapsed*1.1+i*1.3)*.02});
+  // cincin emas mengikuti agent terpilih (juga saat berjalan/meeting)
+  if(selRing&&selRing.visible&&selectedIdx>=0&&selectedIdx<agentData.length){
+    const a=agentData[selectedIdx];
+    const src=a.walker.visible?a.walker.position:a.home;
+    selRing.position.set(src.x,0.03,src.z+(a.walker.visible?0:.55));
+  }
   // Atap & lampu panel disembunyikan saat kamera di atas (agar isi kantor terlihat), dimunculkan dari sudut rendah
   if(window.__wallFade)window.__wallFade(camera.position);
   { const hide = sph.phi < 1.15; ceil.visible=!hide; __ceilObjs.forEach(o=>{o.visible=!hide}); __ceilObjsSafe.forEach(o=>{o.visible=!hide}); }
@@ -2035,6 +2059,8 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
     teamAction,
     toggleNames: () => { namesVisible=!namesVisible; try{localStorage.setItem('wfs_names',namesVisible?'1':'0')}catch(e){}; agentData.forEach(ad=>{ad.label.visible=namesVisible}) },
     isNamesVisible: () => namesVisible,
+    setSelected: (idx) => { selectedIdx=idx; applySelected(); },
+    getSelected: () => selectedIdx,
     resetFocus: () => { if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius||sph.radius,reset:true}} },
     setAutoRotate: (v) => { autoRot=!!v; try{localStorage.setItem('wfs_autorot',autoRot?'1':'0')}catch(e){} },
     isAutoRotate: () => autoRot,
