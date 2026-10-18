@@ -619,3 +619,9 @@
 - Catatan lingkungan: chrome 1248 + swiftshader ANGLE di DISPLAY :0 gagal buat context WebGL; DISPLAY :78 dengan --use-angle=swiftshader OK (gl-ok). shot.sh direkonstruksi (script lama hilang) + diverifikasi: screenshot 468KB, scene hidup normal.
 - Build OK (5.3s), vitest 9/9, deploy ~/wfs-hq.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-19 05:20 WIB — fix: Escape saat panel Log terbuka tidak lagi me-reset kamera
+- Lanjutan fix Escape (02:55): flag `window.__wfsModalOpen` sebelumnya hanya mencakup showTask/confirm/ask/showHelp — **showLog (panel Log aktivitas, shortcut L) terlewat**, padahal Log juga ditutup dengan Escape (handler App `k==='escape'`). Akibatnya menutup Log dengan Esc diam-diam me-reset kamera ke home (focusGoal reset) — regresi bug yang sama.
+- Implementasi App.jsx: `showLog` ditambahkan ke ekspresi flag modal. Snapshot capture-phase `__escModalAtDispatch` & handler scene tidak berubah.
+- Bukti probe CDP (probe_esclog.py, chromium-1248 headless --use-angle=swiftshader DISPLAY=:78, input keyboard nyata Input.dispatchKeyEvent): klik agent → focus {r:24, reset:false} → tekan L → modalOpen **true** → Escape → Log tertutup (modal **false**) DAN focus tetap **{r:24, reset:false}** ✓ (kamera tidak reset), cincin emas tetap menyala (sel:true). Perbaikan proses probe: filter tab 'page' di /json (extension service worker ikut terlist menyebabkan ws timeout lama).
+- Build OK (6.1s), vitest **9/9**, deploy ~/wfs-hq; screenshot ck.png 470KB (scene hidup, swiftshader :78).
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
