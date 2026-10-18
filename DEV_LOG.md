@@ -492,3 +492,9 @@
 - Fix App.jsx: (a) setelah toggle, state dibaca ulang dari scene `isAudioMuted()` (anti-desync); (b) efek scene-init kini sinkron `muted` dari scene tepat setelah `createOfficeScene` sukses.
 - Bukti probe CDP (probe_mute2.py): initMuted False → klik → muted True → klik → False (toggle dua arah, __audio.muted sinkron). Build OK (2.8s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM OK, 14 btns, 14 label, frames naik, 0 console error.
 - Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.
+## 2026-10-18 17:20 WIB — fix toggle menu Aksi (nama & auto-rotate) baca state scene, bukan tebakan lokal
+- Pola bug sama dengan run 16:15/16:40/17:00: ActionMenu toggle menulis `setNamesOn(v=>!v)`/`setRotOn(v=>!v)` (tebakan) — bila scene remount state bisa desinkron.
+- Fix ActionMenu.jsx: setelah toggle, state dibaca ulang dari scene `isNamesVisible()`/`isAutoRotate()` (fallback tebakan bila API tak ada); guard scene()/method.
+- Bukti probe CDP (probe_menu3.py): label nama "Sembunyikan→Tampilkan→Sembunyikan" (toggle dua arah sinkron), "Putar otomatis: ON→OFF→ON". e2e_err: DOM OK, 14 btns, 14 label, canvas3d 1366x625, 0 console error.
+- Build OK (1.0s), vitest 9/9, deploy ~/wfs-hq.
+- Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.

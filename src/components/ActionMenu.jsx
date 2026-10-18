@@ -37,8 +37,8 @@ export default function ActionMenu({ sceneRef, onFlash }) {
         <div className="pop" role="menu" aria-label="Aksi tim" style={{ left: 0 }}>
           {items.map(([ic, label, key, msg]) => <button key={key} role="menuitem" onClick={() => act(key, msg)}><span>{ic}</span>{label}</button>)}
           <hr />
-          <button role="menuitem" onClick={() => { scene() && scene().toggleNames(); setNamesOn(v => !v) }}><span>🏷️</span>{namesOn ? 'Sembunyikan' : 'Tampilkan'} nama</button>
-          <button role="menuitem" onClick={() => { scene() && scene().setAutoRotate(!rotOn); setRotOn(v => !v) }}><span>🔄</span>Putar otomatis: {rotOn ? 'ON' : 'OFF'}</button>
+          <button role="menuitem" onClick={() => { if (scene() && scene().toggleNames) { scene().toggleNames(); if (scene().isNamesVisible) setNamesOn(scene().isNamesVisible()); else setNamesOn(v => !v) } }}><span>🏷️</span>{namesOn ? 'Sembunyikan' : 'Tampilkan'} nama</button>
+          <button role="menuitem" onClick={() => { if (scene() && scene().setAutoRotate) { scene().setAutoRotate(!rotOn); if (scene().isAutoRotate) setRotOn(scene().isAutoRotate()); else setRotOn(v => !v) } }}><span>🔄</span>Putar otomatis: {rotOn ? 'ON' : 'OFF'}</button>
         </div>
       )}
       <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-haspopup="menu"><span className="ic">⚡</span><span className="lb">Aksi</span></button>
