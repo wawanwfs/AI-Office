@@ -100,12 +100,14 @@ export function createProjectBoard(office, THREE) {
       const items = (T.recent || []).filter(r => r.status === (i === 0 ? 'pending' : i === 1 ? 'running' : 'done')).slice(0, 6)
       items.forEach((r, ri) => {
         const y = 252 + ri * 92
-        g.fillStyle = c; roundRect(x + 22, y, 426, 82, 10); g.fill()
-        g.fillStyle = 'rgba(0,0,0,.55)'
+        // kartu: latar gelap solid + border warna status + teks putih terang (kontras tinggi)
+        g.fillStyle = '#0d1524'; roundRect(x + 22, y, 426, 82, 10); g.fill()
+        g.strokeStyle = c; g.lineWidth = 4; roundRect(x + 22, y, 426, 82, 10); g.stroke()
+        g.fillStyle = '#ffffff'
         g.font = '600 26px sans-serif'; g.textAlign = 'left'
         const title = '#' + r.id + ' ' + (r.title || '').slice(0, 30)
         g.fillText(title, x + 44, y + 36, 392)
-        g.fillStyle = 'rgba(0,0,0,.4)'; g.font = '22px sans-serif'
+        g.fillStyle = c; g.font = '600 22px sans-serif'
         g.fillText((r.status === 'done' ? '✓ selesai' : r.status), x + 44, y + 68)
       })
       if (!items.length) {
@@ -113,6 +115,30 @@ export function createProjectBoard(office, THREE) {
         g.fillText(i === 2 ? 'semua beres 🎉' : 'kosong', x + 235, 320)
       }
     })
+    // strip bawah: live SaaS bantuin + agent docker
+    const s = snap.saas || {}
+    g.fillStyle = '#0b1424'; roundRect(34, 820, W - 68, 0, 0); g.fill()
+    g.font = '22px sans-serif'; g.textAlign = 'left'
+    let sx = 44
+    const seg = (txt, col) => { g.fillStyle = col; g.fillText(txt, sx, 826); sx += g.measureText(txt).width + 26 }
+    seg('SaaS', '#448AFF')
+    if (s.online) {
+      const st = s.stats || {}
+      seg((st.tenants || (s.tenants || []).length) + ' tenant', '#10E5A0')
+      seg((st.conversations || 0) + ' chat', '#8fa3bd')
+      seg((st.messages || 0) + ' pesan', '#8fa3bd')
+      seg('online', '#10E5A0')
+      const act = (s.tenants || []).slice(-1)[0]
+      if (act && act.name) seg('terbaru: ' + act.name, '#F59E0B')
+    } else {
+      seg('offline', '#ef4444')
+    }
+    const ags = snap.agents || []
+    if (ags.length) {
+      seg('·', '#44506a')
+      seg('AGENT', '#448AFF')
+      ags.forEach(a => seg(a.name + ' ' + (a.status === 'Up' ? '●' : '○'), a.status === 'Up' ? '#10E5A0' : '#ef4444'))
+    }
     tex.needsUpdate = true
   }
 
