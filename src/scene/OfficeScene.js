@@ -566,7 +566,7 @@ function makeLabel(agent){
     c.textAlign='center'; c.textBaseline='middle';
     const title=(s,max,font)=>{const t=String(s);c.font=font;if(c.measureText(t).width<=max)return t;
       // auto-shrink font (min 60%) sebelum memotong dengan ellipsis
-      const m=font.match(/^(\d+)(.*)$/); const base=m?+m[1]:36; const rest=m?m[2]:'';
+      const m=font.match(/^(?:\d+\s+)?(\d+)px(.*)$/); const base=m?+m[1]:36; const rest=m?' '+m[2]:'';
       for(let f=Math.floor(base*0.9);f>=Math.floor(base*0.6);f-=Math.floor(base*0.06||1)){const fnt=f+rest;c.font=fnt;if(c.measureText(t).width<=max){c.font=font;return {fit:t,fnt};}}
       c.font=font;let e=t;while(e.length>1&&c.measureText(e+'…').width>max)e=e.slice(0,-1);return e+'…'};
     const drawFit=(val,max,font,weightPx,y)=>{const r=title(val,max,font);

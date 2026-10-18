@@ -394,3 +394,10 @@
 - Bukti: build OK (2.6s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, label 14, frames normal; shot ck5.png 516KB (scene hidup).
 - Vision audit ck5: MEETING×Trainer AI TIDAK bertumpuk (terpisah jauh) ✅; Wahyu Fs masih menempel tepi WELCOME & LOUNGE (parsial, terbaca); pasangan sisa berdempet tapi tak ada penutupan total. gapcheck 19 label, pasangan lapor mayoritas gap negatif = model ukuran zona false-positive (patokan tetap vision).
 - Sisa backlog: Wahyu×W&L adjacency parsial; Support×Integrator dempet horizontal; verifikasi subjektif suara (volume/timbre).
+## 2026-10-18 08:40 WIB — label agent auto-shrink font + bug "small() { nativ" diperbaiki
+- Backlog "pill nama panjang terpotong ellipsis": makeLabel kini auto-shrink font 90%→60% sebelum memotong dengan ellipsis (title/drawFit), juga di nameplate meja.
+- Insiden ditemukan & diperbaiki: implementasi pertama mengekspos properti `small` pada return string → `String.prototype.small()` (deprecated) terpanggil, semua label sprite menampilkan "function small() { [native code] }". Fix: return object {fit,fnt} + cek typeof object. Pelajaran: jangan pakai nama properti yang bentrok API String lama.
+- Bug kedua: regex font menganggap "800" (weight) sebagai ukuran px → auto-shrink tak aktif. Fix regex: /^(?:\d+\s+)?(\d+)px(.*)$/.
+- Bukti: build OK (1.6s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, label 14, frames normal; shot ck7.png 514KB (scene hidup).
+- Verifikasi tekstur CDP: INTEGRATOR BOT & SUPPORT HUMAN (mode short) utuh tanpa ellipsis; BANTUIN AI full mode "Bantuin Ai / AI Customer Service" benar. Vision audit ck7: semua label = nama agent, tidak ada teks kode.
+- Sisa backlog: Wahyu×W&L adjacency parsial; Support×Integrator dempet horizontal; verifikasi subjektif suara.
