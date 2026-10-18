@@ -475,3 +475,9 @@
 - Bukti probe CDP (probe_adaptive3.py, SwiftShader headless): fps terukur 0.51 → downgraded:true (pixelRatio diturunkan otomatis); canvas3d 1366x625; frames naik; window.__perf terisi.
 - Build OK (2.9s), vitest 9/9, deploy ~/wfs-hq; e2e_err: 0 console error, 14 label, 14 tombol dock, frames naik.
 - Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.
+## 2026-10-18 16:15 WIB — fix state menu Aksi tak sinkron dengan scene (auto-rotate & nama)
+- Bug: QuickToolbar "Putar otomatis" selalu mulai berlabel OFF padahal scene auto-rotate ON (state React rotOn=false vs scene autoRot=true); toggle pertama justru mematikan tanpa user sadar; state juga kacau bila scene diubah lalu menu remount.
+- Fix: (a) scene API baru isNamesVisible()/isAutoRotate() (OfficeScene.js); (b) ActionMenu membaca state scene sungguhan tiap kali popover dibuka (useEffect on open), bukan menebak dari state lokal.
+- Bukti probe CDP (probe_menu2.py): buka menu → "Putar otomatis: ON" (sinkron ✓); klik → OFF; buka ulang → masih OFF (persist ✓); klik lagi → ON. Label nama: "Sembunyikan nama" sesuai namesVisible=true. e2e_err: DOM OK, 14 btns, 14 label, canvas3d 1366x625, frames naik, 0 console error.
+- Build OK (846ms), vitest 9/9, deploy ~/wfs-hq.
+- Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.

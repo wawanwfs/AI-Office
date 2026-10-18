@@ -1961,8 +1961,10 @@ const onKey=(e)=>{ if(e.key==='Escape'&&focusGoal){focusGoal={t:HOME_TGT.clone()
   return {
     teamAction,
     toggleNames: () => { namesVisible=!namesVisible; agentData.forEach(ad=>{ad.label.visible=namesVisible}) },
+    isNamesVisible: () => namesVisible,
     resetFocus: () => { if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius||sph.radius,reset:true}} },
     setAutoRotate: (v) => { autoRot=v; },
+    isAutoRotate: () => autoRot,
     setTime: (minutes) => updateTime(minutes),
     toggleCyberpunk: () => toggleCyberpunk(),
     isCyberpunk: () => cyberpunkMode,

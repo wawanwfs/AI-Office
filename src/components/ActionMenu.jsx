@@ -8,6 +8,12 @@ export default function ActionMenu({ sceneRef, onFlash }) {
 
   useEffect(() => {
     if (!open) return
+    // sinkronkan state tampilan dengan scene sungguhan (scene mungkin sudah diubah sejak mount)
+    const s = sceneRef && sceneRef.current
+    if (s) {
+      if (s.isNamesVisible) setNamesOn(s.isNamesVisible())
+      if (s.isAutoRotate) setRotOn(s.isAutoRotate())
+    }
     const k = e => { if (e.key === 'Escape') setOpen(false) }
     const c = e => { if (wrap.current && !wrap.current.contains(e.target)) setOpen(false) }
     document.addEventListener('keydown', k); document.addEventListener('pointerdown', c)
