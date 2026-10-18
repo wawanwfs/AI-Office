@@ -93,7 +93,7 @@ export default function App() {
   }, [flash, pushLog])
   useEffect(() => {
     refreshStatus()
-    const iv = setInterval(refreshStatus, 15000)
+    const iv = setInterval(() => { if (document.visibilityState === 'visible') refreshStatus() }, 15000)
     return () => clearInterval(iv)
   }, [refreshStatus])
 

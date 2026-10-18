@@ -735,6 +735,8 @@ allAgents.forEach((agent,i)=>{
   (function(){
   const idMapFn=()=>{const m={};(window.__wfsAgentIdList||[]).forEach(x=>m[x.name]=x.id);return m};
   async function pollBadges(){
+  if(pageHidden) return; // hemat fetch saat tab tidak dilihat
+  window.__pollBadges=pollBadges; // diekspos utk refresh instan onVis
   try{
     const r=await fetch('/wfs-api/agents/status');
     const d=await r.json();
@@ -753,6 +755,7 @@ allAgents.forEach((agent,i)=>{
   __intervals.push(setInterval(pollBadges,20000));
   // Task running → agent berdiri & jalan ke coffee area (visual "sedang kerja/ngebut")
   __intervals.push(setInterval(()=>{
+    if(pageHidden) return; // hemat fetch saat tab hidden
     fetch('/wfs-api/agents/status').then(r=>r.json()).then(d=>{
       const im=idMapFn();
       Object.entries(d.agents||{}).forEach(([gid,v])=>{
@@ -768,6 +771,7 @@ allAgents.forEach((agent,i)=>{
   // Alert task failed: bubble peringatan di meja agent (deteksi transisi)
   const prevFailed={};
   __intervals.push(setInterval(()=>{
+    if(pageHidden) return; // hemat fetch saat tab hidden
     fetch('/wfs-api/agents/status').then(r=>r.json()).then(d=>{
       const im=idMapFn();
       Object.entries(d.agents||{}).forEach(([gid,v])=>{
@@ -1572,6 +1576,7 @@ function autoTalk(){
 // Sinkron task running dari gateway tiap 15 detik
 (function(){
   async function pollRunning(){
+    if(pageHidden) return; // hemat fetch saat tab hidden
     try{
       const r=await fetch('/wfs-api/agents/status');
       const d=await r.json();
@@ -1923,7 +1928,10 @@ animate();
 const onVis=()=>{ pageHidden=document.visibilityState==='hidden';
   try{
     if(pageHidden){ if(audioCtx&&audioCtx.state==='running')audioCtx.suspend(); }
-    else { if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume(); }
+    else {
+      if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
+      if(window.__pollBadges)window.__pollBadges(); // refresh instan saat kembali visible (tanpa nunggu tick)
+    }
   }catch(e){}
   updateAudioDbg();
 };

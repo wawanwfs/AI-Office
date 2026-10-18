@@ -31,7 +31,7 @@ export default function Ticker() {
       }
     }
     load()
-    const iv = setInterval(load, 20000)
+    const iv = setInterval(() => { if (document.visibilityState === 'visible') load() }, 20000)
     return () => { stop = true; clearInterval(iv) }
   }, [])
 

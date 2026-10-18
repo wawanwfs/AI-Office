@@ -52,7 +52,7 @@ export default function WfsPanel() {
     if (!open) return
     let dead = false
     const ld = () => api('agents/status').then(d => { if (!dead) setStat(d.agents || {}) }).catch(() => {})
-    const t0 = setTimeout(ld, 0); const iv = setInterval(ld, 15000)
+    const t0 = setTimeout(ld, 0); const iv = setInterval(() => { if (document.visibilityState === 'visible') ld() }, 15000)
     return () => { dead = true; clearTimeout(t0); clearInterval(iv) }
   }, [open])
   useEffect(() => { if (sel) loadCfg(sel) }, [sel && sel.id])   // eslint-disable-line
