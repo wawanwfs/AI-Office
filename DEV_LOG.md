@@ -534,3 +534,8 @@
 - Build OK, vitest 9/9, deploy ~/wfs-hq.
 - Catatan lingkungan: headless check harus DISPLAY=:0 (Xvfb) TANPA --use-angle=swiftshader; flag swiftshader membuat WebGL2 selalu null di chrome ini.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-18 21:35 WIB — shortcut keyboard global (M/N/L/H/+/−/Esc) + langkah bantuan baru
+- Fitur App.jsx: listener keydown global — M mute (baca state scene, anti-desync), N mode neon, L toggle log aktivitas, H/? bantuan, +/− zoom, Esc tutup log/help. Dijaga: diabaikan bila fokus di input/textarea/select/contenteditable, saat Ctrl/Meta/Alt ditekan, atau saat modal (task/confirm/ask/help) terbuka. OverlayHelp: langkah baru ke-6 "Shortcut Keyboard".
+- Bukti probe CDP (probe_keys.py, chrome headless DISPLAY=:0 tanpa flag swiftshader): M → __audio.muted True → M lagi → False (dua arah); L → modal log terbuka; Esc → tertutup; H → help "Navigasi 3D (1/6)" (6 langkah kini); N → tombol Neon class 'on'; fokus input + tekan L → input tetap kosong & log tak terbuka (guard ✓); frames 21, scene hidup.
+- e2e_err: DOM True, 14 btns, canvas3d 1366x625, 0 console error. Build OK (4.7s), vitest 9/9, deploy ~/wfs-hq.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).

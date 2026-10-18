@@ -49,6 +49,7 @@ export default function App() {
     // baca state scene sungguhan (anti-desync, pola sama dgn tombol Neon)
     setMuted(!!s.isAudioMuted())
   }
+  const toggleMuteRef = useRef(toggleMute); toggleMuteRef.current = toggleMute
   const [logItems, setLogItems] = useState(() => {
     try { return JSON.parse(localStorage.getItem('wfs_activity') || '[]') } catch { return [] }
   })
@@ -141,6 +142,26 @@ export default function App() {
   useEffect(() => {
     if (sceneRef.current) setCyberpunk(!!sceneRef.current.isCyberpunk())
   }, [flash])
+
+  // ---- shortcut keyboard (abaikan saat fokus di input/textarea/modal) ----
+  useEffect(() => {
+    const onKey = (e) => {
+      const t = e.target
+      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return
+      if (e.ctrlKey || e.metaKey || e.altKey) return
+      if (showTask || confirm || ask || showHelp) return
+      const k = e.key.toLowerCase()
+      if (k === 'm') { e.preventDefault(); toggleMuteRef.current() }
+      else if (k === 'l') { e.preventDefault(); setShowLog(v => !v) }
+      else if (k === 'h' || k === '?') { e.preventDefault(); setShowHelp(v => !v) }
+      else if (k === 'n') { e.preventDefault(); handleCyberpunk() }
+      else if (k === '+' || k === '=') zoom(1)
+      else if (k === '-') zoom(-1)
+      else if (k === 'escape') { setShowLog(false); setShowHelp(false) }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [showTask, confirm, ask, showHelp, handleCyberpunk])
 
   const zoom = (dir) => {
     const s = sceneRef.current
