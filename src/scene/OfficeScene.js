@@ -126,13 +126,24 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
     const idMap={}; window.__wfsAgentIdList&&window.__wfsAgentIdList.forEach(x=>idMap[x.name]=x.id);
     window.__wfsSelectAgent(idMap[root.agent.name]||root.agent.name);
     const wp=root.walker.visible?root.walker.position:{x:root.home.x,y:0,z:root.home.z};
-    if(homeRadius===null)homeRadius=sph.radius;
+    if(homeRadius===null)homeRadius=Math.max(24,Math.min(60,sph.radius));
     focusGoal={t:new THREE.Vector3(wp.x,1.5,wp.z),r:Math.min(sph.radius,24),follow:root};
     createBubble(wp.x,2.6,wp.z,'“Halo! Aku '+root.agent.name+' 👋”',root.agent.hex);
   }
 });
 addEventListener('pointerup',()=>{isDrag=false;autoTmr=setTimeout(()=>autoRot=true,6000);if(renderer.domElement&&renderer.domElement.style.cursor==='grabbing')renderer.domElement.style.cursor=''});
 addEventListener('pointermove',e=>{if(!isDrag)return;sph.theta-=(e.clientX-prev.x)*.005;sph.phi+=(e.clientY-prev.y)*.005;prev={x:e.clientX,y:e.clientY};updCam()});
+// double-click: zoom ke titik (agent/papan = fokus, kosong = maju 30%)
+renderer.domElement&&renderer.domElement.addEventListener('dblclick',e=>{
+  const ndc=new THREE.Vector2((e.clientX/innerWidth)*2-1,-(e.clientY/innerHeight)*2+1);
+  const ray=new THREE.Raycaster();ray.setFromCamera(ndc,camera);
+  const targets=[];agentData.forEach(ad=>{if(ad.sittingChar.visible)targets.push(ad.sittingChar);if(ad.walker.visible)targets.push(ad.walker)});
+  const bm=window.__projectBoard&&window.__projectBoard.mesh;
+  const hits=ray.intersectObjects(bm?[...targets,bm]:targets,true);
+  if(hits.length){focusGoal={t:hits[0].point.clone().setY(1.5),r:Math.min(sph.radius,18)}}
+  else{focusGoal={t:tgt.clone(),r:Math.max(14,sph.radius*0.7)}}
+});
+
 // hover pointer di atas agent/papan: isyarat "bisa diklik" (raycast throttled)
 const hoverRay=new THREE.Raycaster();let hoverTmr=null,hoverNdc={x:0,y:0},hoverPend=false;
 renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
