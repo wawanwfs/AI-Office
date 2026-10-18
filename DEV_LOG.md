@@ -612,3 +612,10 @@
 - Bukti probe CDP (probe_selring.py, chrome headless DISPLAY=:0, jalur input nyata): klik proyeksi agent[0] (893,280) → selRing {vis:true, pos:[-8,-1.9]} = home agent[0] ✓; klik area kosong → vis:false (deselect ✓). Screenshot 699KB (scene hidup), 0 console exception.
 - Build OK (1.6s), vitest 9/9, deploy ~/wfs-hq.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-19 04:55 WIB — cincin emas agent terpilih disembunyikan saat agent offsite
+- Bug visual: setelah fitur cincin emas (03:10), ring tetap menyala di meja kosong ketika agent terpilih TIDAK ada di kantor (shift malam/offsite, meeting figures terpisah) — menyesatkan, seolah orangnya masih di meja.
+- Implementasi OfficeScene.js: helper `selAnchor(a)` — walker terlihat → posisi walker; sittingChar terlihat → home (offset z+.55); keduanya tak terlihat → null. applySelected() dan frame-loop memakai selAnchor: ring visible=false saat null, selectedIdx TETAP tersimpan sehingga ring muncul otomatis lagi saat agent kembali (frame-loop kini juga re-enable visible, bukan hanya update posisi).
+- Bukti probe CDP (probe_ring3.py, chromium-1248 headless --use-angle=swiftshader DISPLAY=:78, klik via PointerEvent di canvas — CDP mouse input tidak sampai handler pointerdown canvas di headless): klik proyeksi agent[0] (874,254; raycast check HIT) → focus {r:24}, selRing {vis:true, pos:[-8,-1.9]} ✓ → paksa offsite (walker+sittingChar invisible) → setelah beberapa frame: selRing {vis:false} ✓ → agent duduk lagi → selRing {vis:true, pos:[-8,-1.9]} ✓ (auto re-appear). 0 console exception.
+- Catatan lingkungan: chrome 1248 + swiftshader ANGLE di DISPLAY :0 gagal buat context WebGL; DISPLAY :78 dengan --use-angle=swiftshader OK (gl-ok). shot.sh direkonstruksi (script lama hilang) + diverifikasi: screenshot 468KB, scene hidup normal.
+- Build OK (5.3s), vitest 9/9, deploy ~/wfs-hq.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
