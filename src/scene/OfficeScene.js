@@ -1652,17 +1652,22 @@ const updateShift=m=>__shift.update(m);
 // SOUND SYSTEM — Web Audio API
 // ═══════════════════════════════════════════════════
 let audioCtx=null;
+let masterGain=null;
 let soundsStarted=false;
+let audioMuted=false;
 const __audioCalls={key:0,step:0,chime:0};
 
 function initAudio(){
   if(soundsStarted)return;
   soundsStarted=true;
   audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  masterGain=audioCtx.createGain();
+  masterGain.gain.value=audioMuted?0:1;
+  masterGain.connect(audioCtx.destination);
   updateAudioDbg();
 }
 // debug/e2e hook: status audio tanpa browser asli
-function updateAudioDbg(){window.__audio={started:soundsStarted,state:audioCtx?audioCtx.state:'none',calls:__audioCalls}}
+function updateAudioDbg(){window.__audio={started:soundsStarted,state:audioCtx?audioCtx.state:'none',calls:__audioCalls,muted:audioMuted}}
 updateAudioDbg();
 
 function playKeyClick(){
@@ -1672,7 +1677,7 @@ function playKeyClick(){
   osc.type='square';osc.frequency.value=800+Math.random()*400;
   const g=audioCtx.createGain();g.gain.value=0.01;
   g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.05);
-  osc.connect(g);g.connect(audioCtx.destination);
+  osc.connect(g);g.connect(masterGain||audioCtx.destination);
   osc.start();osc.stop(audioCtx.currentTime+0.05);
 }
 
@@ -1684,7 +1689,7 @@ function playStep(){
   for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.exp(-i/data.length*5);
   const src=audioCtx.createBufferSource();src.buffer=buf;
   const g=audioCtx.createGain();g.gain.value=0.02;
-  src.connect(g);g.connect(audioCtx.destination);
+  src.connect(g);g.connect(masterGain||audioCtx.destination);
   src.start();
 }
 
@@ -1696,7 +1701,7 @@ function playMeetingChime(){
       const osc=audioCtx.createOscillator();osc.type='sine';osc.frequency.value=freq;
       const g=audioCtx.createGain();g.gain.value=0.04;
       g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.5);
-      osc.connect(g);g.connect(audioCtx.destination);
+      osc.connect(g);g.connect(masterGain||audioCtx.destination);
       osc.start();osc.stop(audioCtx.currentTime+0.5);
     },i*150);
   });
@@ -1934,6 +1939,8 @@ const onKey=(e)=>{ if(e.key==='Escape'&&focusGoal){focusGoal={t:HOME_TGT.clone()
     isCyberpunk: () => cyberpunkMode,
     zoomIn: () => { sph.radius=Math.max(12,sph.radius-4); updCam(); },
     zoomOut: () => { sph.radius=Math.min(130,sph.radius+4); updCam(); },
+    setAudioMuted: (v) => { audioMuted=!!v; if(masterGain)masterGain.gain.value=audioMuted?0:1; updateAudioDbg(); },
+    isAudioMuted: () => audioMuted,
     destroy: () => {
       __intervals.forEach(clearInterval);
       __timeouts.forEach(clearTimeout);

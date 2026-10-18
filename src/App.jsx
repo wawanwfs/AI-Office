@@ -35,6 +35,14 @@ export default function App() {
   const [pendingCount, setPendingCount] = useState(0)
   const [toast, setToast] = useState(null)          // {msg, err}
   const [showLog, setShowLog] = useState(false)
+  const [muted, setMuted] = useState(false)
+  const toggleMute = () => {
+    const s = sceneRef.current
+    if (!s || !s.isAudioMuted) { setMuted(m => !m); return }
+    const v = !s.isAudioMuted()
+    s.setAudioMuted(v)
+    setMuted(v)
+  }
   const [logItems, setLogItems] = useState(() => {
     try { return JSON.parse(localStorage.getItem('wfs_activity') || '[]') } catch { return [] }
   })
@@ -176,6 +184,7 @@ export default function App() {
         <TaskBoard onFlash={flash} onAsk={setAsk} />
         <ProjectPanel onFlash={flash} />
         <TeamStats />
+        <button className="ibtn" onClick={toggleMute} aria-label={muted ? 'Nyalakan suara' : 'Bisukan suara'}><span className="ic">{muted ? '🔇' : '🔊'}</span><span className="lb">{muted ? 'Suara Mati' : 'Suara'}</span></button>
         <button className="ibtn" onClick={() => setShowLog(true)} aria-label="Log aktivitas"><span className="ic">📜</span><span className="lb">Log</span></button>
         <span className="sep" />
         <WfsPanel />

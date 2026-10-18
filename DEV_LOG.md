@@ -444,6 +444,11 @@
 - Perbaikan visual projectboard.js: (a) strip SaaS/AGENT sebelumnya digambar dengan roundRect tinggi 0 (latar tak tampak) — kini band #0b1424 1496x32px dengan border #2c3e5c di y794, teks baseline 817; (b) gradient progress bar createLinearGradient(28..W-28) tidak match posisi bar (36..W-36) — diperbaiki, warna gradient kini sejajar dengan bar.
 - Bukti: build OK (715ms), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, label 14, frames naik. Probe pixel CDP via __projectBoard.mesh texture canvas 1536x840: bandPx=39161 (band tergambar), greenPx=1257 (teks hijau strip), progBlue=39529 (progress bar 100% gradient terisi). Screenshot kamera-dekat-papan diambil untuk arsip (render blur low-fps SwiftShader, verifikasi tetap via pixel probe).
 - Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.
+## 2026-10-18 15:00 WIB — kontrol suara: tombol mute di dock + master GainNode
+- Fitur (keluhan lama "verifikasi subjektif suara" butuh kontrol): (a) OfficeScene audio kini punya masterGain (GainNode) — semua suara (klik keyboard, langkah, chime meeting) dirutekan lewat master sebelum destination; (b) API scene baru setAudioMuted(v)/isAudioMuted() + window.__audio.muted; (c) tombol dock 🔊/🔇 "Suara/Suara Mati" di App.jsx yang memanggil API scene (fallback state UI bila scene tidak aktif); muted bertahan saat audioCtx baru dibuat (gain awal 0).
+- Bukti probe CDP (probe_mute.py): hasAPI=true; klik tombol → __audio.muted true; klik lagi → false (toggle dua arah). e2e_err: 0 console error, 14 label, frames naik, dock tetap sehat (14 tombol).
+- Build OK (1.4s), vitest 9/9, deploy ~/wfs-hq.
+- Catatan: catatan telefonik/kebisingan tetap butuh telinga manusia, tapi kini user bisa mematikan suara sendiri dari UI.
 ## 2026-10-18 14:30 WIB — papan proyek ditarik maju dari dinding (anti z-fighting) + renderOrder
 - Menuntaskan perubahan setengah jadi dari run sebelumnya (uncommitted): mesh papan & bingkai digeser dari z 9.8/9.75 → 9.3/9.28, y 2.55→2.6, dan renderOrder=5 — menghilangkan flicker/z-fighting papan dengan dinding, bingkai sedikit di depan papan.
 - Rapikan indentasi (`office.add(frame)`).
