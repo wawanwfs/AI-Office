@@ -1813,8 +1813,8 @@ function animate(){
             pts[zi].offY+=up*h2b*1.8; const dz2=(pts[zi].x>=pts[other].x)?1:-1; pts[zi].offX+=dz2*w2b*1.0;}
         }
         else if(!pts[i].zone&&!pts[j].zone){ // agent-agent: saling dorong dua arah
-          pts[i].offY+=h2*1.0;pts[j].offY-=h2*1.0;
-          const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*1.0;pts[j].offX-=dir*w2*1.0;
+          pts[i].offY+=h2*1.2;pts[j].offY-=h2*1.2;
+          const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*1.2;pts[j].offX-=dir*w2*1.2;
         }
         else if(!pts[i].zone){ // agent vs penghalang: agent bergeser penuh, bubble ikut mundur sedikit (mutual)
           pts[i].offY+=h2*1.9;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*1.0;
@@ -1833,7 +1833,7 @@ function animate(){
     // dan clamp bisa menimbulkan overlap baru -> ulangi (sweep→clamp) sampai stabil (max 3x).
     // Konvergen: total ruang vertikal aman melebihi kebutuhan, tiap iterasi hanya mengurangi pelanggaran.
     {
-      const H2=container.clientHeight/2, TOP=H2-110, BOT=H2-90; // atas: 110px cadangan lane header+ticker (HUD HTML, di luar canvas); bawah: 90px toolbar
+      const H2=container.clientHeight/2, TOP=H2-140, BOT=H2-90; // atas: 140px cadangan lane header+ticker (HUD HTML, di luar canvas); bawah: 90px toolbar
       for(let round=0;round<3;round++){
       // sweep: dari atas ke bawah, tiap label didorong ke bawah dari posisi terendah yang bebas overlap
       {
@@ -1864,7 +1864,7 @@ function animate(){
     const dist=camera.position.distanceTo(tgt), worldPerPx=2*dist*Math.tan(camera.fov*Math.PI/360)/container.clientHeight;
     pts.forEach(p=>{
       const dy=Math.min(34,p.offY*worldPerPx*1.2), dx=Math.max(-12,Math.min(12,p.offX*worldPerPx));
-      if(p.zone){if(p.zt){const dyz=Math.max(-25,Math.min(25,p.offY*worldPerPx*1.2)), dxz=Math.max(-14,Math.min(14,p.offX*worldPerPx)); p.zt.position.y=p.baseY+dyz; p.zt.position.x=p.baseX+dxz; const zu=p.zt.userData; zu.antiY=(zu.antiY||0)+dyz; zu.antiX=(zu.antiX||0)+dxz;} else if(p.bub){p.bub.position.y=p.baseY+dy*0.4; p.bub.position.x=p.baseX+dx*0.5;} return;} // zona/bubble
+      if(p.zone){if(p.zt){const dyz=Math.max(-6,Math.min(34,p.offY*worldPerPx*1.2)), dxz=Math.max(-24,Math.min(24,p.offX*worldPerPx)); p.zt.position.y=p.baseY+dyz; p.zt.position.x=p.baseX+dxz; const zu=p.zt.userData; zu.antiY=(zu.antiY||0)+dyz; zu.antiX=(zu.antiX||0)+dxz;} else if(p.bub){p.bub.position.y=p.baseY+dy*0.4; p.bub.position.x=p.baseX+dx*0.5;} return;} // zona/bubble (zona naik maks -6px: jangan masuk lane HUD atas)
       p.a.label.position.y=p.baseY+dy; p.a.label.position.x=p.baseX+dx;
       p.a.label.userData.antiY=dy; p.a.label.userData.antiX=dx; // utk base frame berikutnya
     });
