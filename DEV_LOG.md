@@ -550,3 +550,8 @@
 - Catatan: dispatch PointerEvent sintetis via JS tidak selalu memicu listener di headless ini — verifikasi memakai jalur input nyata CDP (jalur yang sama dengan user).
 - Build OK (1.4s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, canvas3d 1366x625, frames naik, 0 console error.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-18 22:58 WIB — feedback drag: cursor 'grabbing' saat menggeser scene
+- Polanjut run hover-pointer: saat drag kamera (pointerdown → move) canvas kini cursor 'grabbing' (isyarat "sedang digeser"), kembali normal saat pointerup; guard: tidak menimpa 'pointer' bila menekan di atas agent/papan, dan hover-raycast di-skip selama cursor 'grabbing' agar tidak menimpa feedback drag.
+- Bukti probe CDP (probe_drag.py, chrome headless DISPLAY=:0, Input.dispatchMouseEvent jalur nyata): init '' → mousePressed+move → 'grabbing' ✓ → mouseReleased → '' ✓; lalu hover koordinat proyeksi agent[0] (815,283 via __camCam) → 'pointer' ✓ (feedback hover tetap bekerja). 0 console error.
+- Build OK, vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, canvas3d 1366x625, frames naik, 0 console error.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
