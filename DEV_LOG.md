@@ -406,3 +406,7 @@
 - Akar masalah: bubble percakapan bergantian melekat ke 2 posisi berbeda (muncul di kepala A lalu kepala B) tanpa transisi -> terasa loncat/loncatan acak.
 - Fix: createBubble menerima anchor {x,z getter} yang mengikuti pembicara; fade-in 0.22s + fade-out 0.5s; float up tetap.
 - Bukti (e2e_bub2.py): opacity naik bertahap 0.23->0.45->0.68->1; bubble mengikuti posisi anchor.
+## 2026-10-18 09:05 WIB — anti-overlap #13: dorongan horizontal agent-agent dinaikkan
+- Backlog "Support×Integrator dempet horizontal": koefisien dorongan horizontal agent-agent 0.6→1.0 (searah penuh, sama seperti zona), sweep spacing horizontal 30→36 — pasangan dempet horizontal kini terdorong lebih lebar sebelum fallback vertikal.
+- Bukti: build OK (2.3s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, label 14, canvas 1366x625, frames naik; shot ck.png 520KB (scene hidup).
+- Sisa backlog: verifikasi vision adjacency (audit infra timeout 2x, lanjut run berikutnya); Wahyu×W&L adjacency parsial; verifikasi subjektif suara.
