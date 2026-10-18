@@ -504,3 +504,8 @@
 - Bukti probe CDP (probe_frame.py, chrome headless): frame {vis:true, op:1}, mesh {vis:true, op:1}; setelah kamera dipindah posisi fade back (wallState back=1 sisi lain 0) frame & mesh TETAP vis:true op:1 (tidak terpengaruh fade). e2e_err: DOM OK, 14 btns, 14 label, canvas3d 1366x625, frames 24, 0 console error.
 - Build OK (1.8s), vitest 9/9, deploy ~/wfs-hq.
 - Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.
+## 2026-10-18 17:55 WIB — papan proyek: skip fetch saat tab hidden + refresh instan saat kembali visible
+- Perbaikan kecil projectboard.js (poli sama dengan run 15:40 di OfficeScene): (a) pull() no-op bila document.visibilityState==='hidden' — interval 60 detik tidak lagi fetch /wfs-project sia-sia saat tab tidak dilihat; (b) visibilitychange hidden→visible memicu pull() segera, data papan langsung segar tanpa menunggu tick; (c) listener dilepas di destroy() (tanpa leak).
+- Bukti probe CDP (probe_boardvis.py, headless SwiftShader): refresh saat hidden → 0 fetch ✓; visibilitychange → visible → 1 fetch otomatis ✓. e2e_err: DOM OK, 14 tombol dock, 14 label, canvas3d 1366x625, frames naik, 0 console error.
+- Build OK (2.95s), vitest 9/9, deploy ~/wfs-hq.
+- Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.

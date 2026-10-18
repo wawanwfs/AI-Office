@@ -29,6 +29,7 @@ export function createProjectBoard(office, THREE) {
   let lastOk = 0
 
   async function pull() {
+    if (document.visibilityState === 'hidden') return
     try {
       const r = await fetch('/wfs-project')
       if (!r.ok) throw new Error('HTTP ' + r.status)
@@ -148,6 +149,15 @@ export function createProjectBoard(office, THREE) {
   // SaaS line: gambar ringkasan SaaS di strip bawah frame? (opsional di scene: cukup papan task)
   pull()
   const iv = setInterval(pull, 60000)
+  // Tab kembali terlihat → segarkan data segera (jangan tunggu tick 60 detik);
+  // tab hidden → interval tick di-skip agar tidak fetch sia-sia.
+  let pageHidden = document.visibilityState === 'hidden'
+  function onVis() {
+    const hidden = document.visibilityState === 'hidden'
+    if (!hidden && pageHidden) pull()
+    pageHidden = hidden
+  }
+  document.addEventListener('visibilitychange', onVis)
 
   // Paksa papan selalu penuh terlihat: wallFade mengklon material & menurunkan opacity
   // saat dinding belakang memudar — data proyek harus tidak terpengaruh.
@@ -159,6 +169,6 @@ export function createProjectBoard(office, THREE) {
     }
   }, 500)
 
-  function destroy() { clearInterval(iv); clearInterval(forceVisible) }
+  function destroy() { clearInterval(iv); clearInterval(forceVisible); document.removeEventListener('visibilitychange', onVis) }
   return { destroy, refresh: pull, mesh }
 }
