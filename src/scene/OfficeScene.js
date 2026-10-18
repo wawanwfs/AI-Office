@@ -1894,6 +1894,7 @@ function animate(){
 }
 animate();
 const onResize=()=>{camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();__vo();renderer.setSize(container.clientWidth,container.clientHeight)};window.addEventListener('resize',onResize);
+const onKey=(e)=>{ if(e.key==='Escape'&&focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius||sph.radius,reset:true}} };window.addEventListener('keydown',onKey);
 
   // Return controls for React UI
   // ── Kontrol aksi tim (dipakai menu React) ──
@@ -1937,6 +1938,7 @@ const onResize=()=>{camera.aspect=container.clientWidth/container.clientHeight;c
       __intervals.forEach(clearInterval);
       __timeouts.forEach(clearTimeout);
       window.removeEventListener('resize', onResize);
+      window.removeEventListener('keydown', onKey);
       if(renderer){renderer.dispose();container.removeChild(renderer.domElement);}
     }
   };
