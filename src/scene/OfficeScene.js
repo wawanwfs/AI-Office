@@ -564,13 +564,19 @@ function makeLabel(agent){
     c.beginPath(); if(c.roundRect)c.roundRect(2,2,W-4,H-4,full?18:14); else c.rect(2,2,W-4,H-4); c.fill();
     c.fillStyle=agent.hex; c.fillRect(2,full?14:10,6,H-(full?28:20));
     c.textAlign='center'; c.textBaseline='middle';
-    const title=(s,max,font)=>{const t=String(s);if(c.measureText(t).width<=max)return t;let e=t;while(e.length>1&&c.measureText(e+'…').width>max)e=e.slice(0,-1);return e+'…'};
+    const title=(s,max,font)=>{const t=String(s);c.font=font;if(c.measureText(t).width<=max)return t;
+      // auto-shrink font (min 60%) sebelum memotong dengan ellipsis
+      const m=font.match(/^(\d+)(.*)$/); const base=m?+m[1]:36; const rest=m?m[2]:'';
+      for(let f=Math.floor(base*0.9);f>=Math.floor(base*0.6);f-=Math.floor(base*0.06||1)){const fnt=f+rest;c.font=fnt;if(c.measureText(t).width<=max){c.font=font;return {fit:t,fnt};}}
+      c.font=font;let e=t;while(e.length>1&&c.measureText(e+'…').width>max)e=e.slice(0,-1);return e+'…'};
+    const drawFit=(val,max,font,weightPx,y)=>{const r=title(val,max,font);
+      if(r&&typeof r==='object'&&r.fit){c.font=r.fnt;c.fillText(r.fit,W/2+4,y);c.font=font;}
+      else c.fillText(typeof r==='string'?r:String(val),W/2+4,y);};
     const nmFull=String(agent.name).toLowerCase().replace(/(^|\s)\w/g,m=>m.toUpperCase());
     c.font=(full?'800 36px':'800 28px')+' "Segoe UI",Arial,sans-serif';
-    const nm=title(nmFull,full?W-60:W-50,c.font);
     c.fillStyle='#fff';
-    c.fillText(nm,W/2+4,full?32:H/2+1);
-    if(full){c.font='600 22px "Segoe UI",Arial,sans-serif'; c.fillStyle='#b8c4d4'; c.fillText(title(agent.role,W-60,c.font),W/2+4,62)}
+    drawFit(nmFull,full?W-60:W-50,c.font,full?36:28,full?32:H/2+1);
+    if(full){c.fillStyle='#b8c4d4';drawFit(agent.role,W-60,'600 22px "Segoe UI",Arial,sans-serif',22,62);}
     const tex=new THREE.CanvasTexture(lc); tex.minFilter=THREE.LinearFilter; return {tex,as:W/H};
   };
   const full=mk(true), short=mk(false);
