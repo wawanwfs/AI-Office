@@ -498,3 +498,9 @@
 - Bukti probe CDP (probe_menu3.py): label nama "Sembunyikan→Tampilkan→Sembunyikan" (toggle dua arah sinkron), "Putar otomatis: ON→OFF→ON". e2e_err: DOM OK, 14 btns, 14 label, canvas3d 1366x625, 0 console error.
 - Build OK (1.0s), vitest 9/9, deploy ~/wfs-hq.
 - Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.
+## 2026-10-18 17:45 WIB — fix: bingkai papan proyek ikut ter-fade dinding belakang
+- Bug visual: wallFade collect() hanya mengecualikan mesh papan (window.__projectBoard.mesh) dari daftar fade dinding belakang; bingkai BoxGeometry papan (z=9.28, dalam radius fade) ikut dipush ke wallDefs.back sehingga bisa menghilang/semi-transparan saat kamera di depan, memisah bingkai dari papan data.
+- Fix: (a) projectboard.js — frame.userData.__keep=1; (b) OfficeScene.js collect() — objek dengan userData.__keep di-skip dari fade.
+- Bukti probe CDP (probe_frame.py, chrome headless): frame {vis:true, op:1}, mesh {vis:true, op:1}; setelah kamera dipindah posisi fade back (wallState back=1 sisi lain 0) frame & mesh TETAP vis:true op:1 (tidak terpengaruh fade). e2e_err: DOM OK, 14 btns, 14 label, canvas3d 1366x625, frames 24, 0 console error.
+- Build OK (1.8s), vitest 9/9, deploy ~/wfs-hq.
+- Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.

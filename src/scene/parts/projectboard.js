@@ -21,6 +21,7 @@ export function createProjectBoard(office, THREE) {
   // bingkai (menggantikan bingkai kanban lama yang dipasang di OfficeScene)
   const frame = new THREE.Mesh(new THREE.BoxGeometry(5.75, 3.21, .05), new THREE.MeshLambertMaterial({ color: 0x23324d }))
   frame.position.set(-8.6, 2.6, 9.28)
+  frame.userData.__keep = 1 // jangan ikut fade dinding belakang (wallFade collect)
   office.add(frame)
 
   // --- data ---
