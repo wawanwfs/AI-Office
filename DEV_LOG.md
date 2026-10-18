@@ -587,3 +587,10 @@
 - Bukti probe CDP (probe_ring6.py, chrome headless DISPLAY=:0, jalur input nyata): hover koordinat proyeksi agent[0] → cursor 'pointer' + ring {vis:true, pos:[-8,-1.9]}; hover 3 titik area kosong → cursor '' + ring vis:false (hilang); pindah agent lain → ring ikut pindah posisi. 0 console error.
 - Build OK (1.9s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, 14 label, canvas3d 1366x625, frames naik (23), 0 console error.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-19 02:55 WIB — fix: Escape saat overlay terbuka tidak lagi ikut reset kamera
+- Bug UX: Escape dipakai dua pihak — App menutup overlay (help/log/modals), scene me-reset kamera ke home (fitur 00:10). Akibatnya menutup panel Bantuan dengan Esc secara diam-diam menarik kamera kembali (focusGoal reset) — tidak diinginkan user.
+- Implementasi: `window.__wfsModalOpen` di-set saat render App; snapshot `window.__escModalAtDispatch` diambil listener window fase CAPTURE (jalan sebelum semua bubble handler); handler Escape scene membaca snapshot (`===false`) bukan flag live.
+- Debug proses: versi useEffect gagal (flag false lagi saat handler scene jalan — React flush sinkron dari handler overlay menutup modal lebih dulu); versi flag-live juga gagal dengan alasan sama. Trap capture-phase probe membuktikan flag true di awal dispatch namun reset tetap terjadi → baru ketemu akar masalah ordering handler.
+- Bukti probe CDP (probe_esc.py/esc2/esc3, chrome headless DISPLAY=:0, jalur input nyata): dblclick agent → focus r:24 → tekan H (modal=true) → Escape → help tertutup DAN focus tetap {r:24, reset:false} ✓; kontrol tanpa modal: dblclick → Escape → focus {r:40, reset:true} ✓ (reset Esc tetap bekerja di luar modal). 0 console error.
+- Build OK, vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, canvas3d 1366x625, frames naik, 0 console error; screenshot 229KB (scene hidup, swiftshader).
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
