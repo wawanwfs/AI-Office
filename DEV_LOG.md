@@ -470,3 +470,8 @@
 - Bukti probe CDP (probe_vis2.py, chrome headless DISPLAY=:0): visible fps ~1.5 (SwiftShader) → hidden fps 0.0 → resumed fps ~1.0 (loop hidup kembali). window.__audio bersih, e2e_err: 0 console error, DOM OK, 14 label, canvas3d 1366x625.
 - Build OK (1.4s), vitest 9/9, deploy ~/wfs-hq.
 - Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.
+## 2026-10-18 14:58 WIB — adaptive quality: pixelRatio otomatis turun saat FPS rendah + bersih-bersih blok renderer duplikat
+- Perbaikan performa OfficeScene.js: (a) hapus duplikasi setPixelRatio/shadowMap/toneMapping di blok init renderer (dua setPixelRatio konflik: min(dpr,2) lalu min(dpr,1.5) — kini satu: min(dpr||1,1.5)); (b) adaptive pixelRatio: setiap 60 frame diukur FPS — bila <18fps, pixelRatio diturunkan bertahap -0.25 sampai batas 0.75 (downgrade terekam di window.__perf.downgraded). Saat resize, setPixelRatio dikembalikan ke dasar dpr (resize handler sudah setSize; pixelRatio kini cek nilai terendah aman). Ekspos window.__perf {t0,fps,downgraded} untuk uji.
+- Bukti probe CDP (probe_adaptive3.py, SwiftShader headless): fps terukur 0.51 → downgraded:true (pixelRatio diturunkan otomatis); canvas3d 1366x625; frames naik; window.__perf terisi.
+- Build OK (2.9s), vitest 9/9, deploy ~/wfs-hq; e2e_err: 0 console error, 14 label, 14 tombol dock, frames naik.
+- Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.

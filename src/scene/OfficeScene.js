@@ -57,11 +57,10 @@ scene.name = 'Office3D';
   }
   if(renderer){
     renderer.setSize(container.clientWidth,container.clientHeight);
-    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
     renderer.shadowMap.enabled=true;
     renderer.shadowMap.type=THREE.PCFSoftShadowMap;
     renderer.toneMapping=THREE.ACESFilmicToneMapping;
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
     renderer.toneMappingExposure=1.1;
     container.appendChild(renderer.domElement);
   }
@@ -1902,7 +1901,23 @@ function animate(){
   lastMeetingState=__meet.active;
 
   renderer.render(scene,camera);
+  // ── Adaptive pixelRatio: bila FPS rendah (GPU lemah/SwiftShader), turunkan
+  // resolusi render bertahap sampai 0.75 — hemat GPU, visual masih cukup halus.
+  if(frame%60===0){
+    if(!__perfWin.t0)__perfWin.t0=performance.now();
+    else{
+      const fps=60/((performance.now()-__perfWin.t0)/1000);
+      __perfWin.t0=performance.now();
+      __perfWin.fps=fps;
+      if(fps<18){
+        const pr=Math.max(.75,renderer.getPixelRatio()-.25);
+        if(pr<renderer.getPixelRatio()){renderer.setPixelRatio(pr);__perfWin.downgraded=true;}
+      }
+    }
+  }
 }
+const __perfWin={t0:0,fps:0,downgraded:false};
+window.__perf=__perfWin;
 animate();
 const onVis=()=>{ pageHidden=document.visibilityState==='hidden';
   try{
