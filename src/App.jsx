@@ -155,6 +155,11 @@ export default function App() {
       else if (k === 'l') { e.preventDefault(); setShowLog(v => !v) }
       else if (k === 'h' || k === '?') { e.preventDefault(); setShowHelp(v => !v) }
       else if (k === 'n') { e.preventDefault(); handleCyberpunk() }
+      else if (k === '1' || k === '2' || k === '3') {
+        e.preventDefault()
+        const s = sceneRef.current
+        if (s && s.setView) s.setView(k === '1' ? 'iso' : k === '2' ? 'front' : 'top')
+      }
       else if (k === '+' || k === '=') zoom(1)
       else if (k === '-') zoom(-1)
       else if (k === 'escape') { setShowLog(false); setShowHelp(false) }

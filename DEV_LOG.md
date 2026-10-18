@@ -566,3 +566,8 @@
 - Bukti probe CDP (probe_dbl9/dblA/dblB, jalur input nyata Input.dispatchMouseEvent): dblclick area kosong dist 37→28 (zoom-in ~30% ✓); dblclick pada koordinat proyeksi agent[0] → dist turun menuju ≤28 (fokus agent ✓, run lain 40→17); dblclick tidak trigger saat drag (moved>6 di click path tetap terjaga). 0 console error.
 - Build OK, vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, canvas3d 1366x625, frames naik, 0 console error.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-19 00:35 WIB — shortcut keyboard 1/2/3 untuk preset kamera
+- Fitur App.jsx: tombol angka 1/2/3 kini memanggil scene.setView('iso'/'front'/'top') — preset kamera (fitur 22:10) kini bisa diaktifkan dari keyboard, konsisten dgn shortcut M/N/L/H/+/− yang sudah ada. Guard sama persis: diabaikan saat fokus di input/textarea/select/contenteditable, saat Ctrl/Meta/Alt, atau saat modal task/confirm/ask/help terbuka. OverlayHelp langkah 6 diperbarui ('1 / 2 / 3 = kamera Iso/Depan/Atas').
+- Bukti probe CDP (probe6.py, chromium headless DISPLAY=:78, jalur input nyata Input.dispatchKeyEvent): init theta 2.453/phi 1.0 → tekan '2' → theta 0.002/phi 1.2 (Depan ✓) → tekan '3' → theta 2.453/phi 0.35 (Atas ✓) → tekan '1' → theta 2.453/phi 1.0 (Iso ✓). 0 exception console.
+- Build OK (1.4s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, 14 label, canvas3d 1366x625, frames naik, 0 console error.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
