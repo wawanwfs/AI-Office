@@ -410,3 +410,10 @@
 - Backlog "Support×Integrator dempet horizontal": koefisien dorongan horizontal agent-agent 0.6→1.0 (searah penuh, sama seperti zona), sweep spacing horizontal 30→36 — pasangan dempet horizontal kini terdorong lebih lebar sebelum fallback vertikal.
 - Bukti: build OK (2.3s), vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, label 14, canvas 1366x625, frames naik; shot ck.png 520KB (scene hidup).
 - Sisa backlog: verifikasi vision adjacency (audit infra timeout 2x, lanjut run berikutnya); Wahyu×W&L adjacency parsial; verifikasi subjektif suara.
+## 2026-10-18 10:00 WIB — anti-overlap #14: zona cap dinaikkan + lane HUD diperluas + zona tak naik ke HUD
+- Verifikasi anti-overlap #13 (shot ck.png 521KB): Support×Integrator, Wahyu×W&L, MEETING×Trainer AI semuanya TERPISAH JELAS ✅ (vision audit). Backlog #13 ditutup.
+- Backlog baru dari audit: Dewi×SERVER ROOM overlap. Perbaikan: (a) cap pergeseran label zona dinaikkan ±25→±34px (dx ±14→±24) — zona bisa menghindar lebih jauh; (b) lane HUD atas diperluas 110→140px (clamp atas); (c) zona dibatasi NAIK maks -6px agar tidak masuk lane header/ticker; (d) dorongan agent-agent 1.0→1.2.
+- Probe numerik 12 sampel @6s (probe_dewi2.py): overlap Dewi×SERVER ROOM (302px²) HILANG; sisa transien <300px² (~10px) berganti pasangan tiap sampel (dinamika agent berjalan, bukan tumpukan statis).
+- Catatan vision: audit infra timeout beruntun (4x); shot ck11 audit menemukan sisa adjacency tipis Rina×Andi & DEV DESK menyentuh tepi ticker (zona naik dibatasi setelahnya) — lanjut run berikutnya.
+- Bukti: build OK, vitest 9/9, deploy ~/wfs-hq; e2e CDP 0 console error, label 14, frames normal; shot ck11.png 522KB (scene hidup).
+- Sisa backlog: adjacency tipis Rina×Andi; DEV DESK×ticker tepi; verifikasi subjektif suara (volume/timbre).
