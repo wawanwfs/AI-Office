@@ -22,7 +22,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
     if (!open) return
     const ac = new AbortController()
     const t0 = setTimeout(() => load(ac.signal), 0)
-    const iv = setInterval(() => load(ac.signal), 8000)
+    const iv = setInterval(() => { if (document.visibilityState === 'visible') load(ac.signal) }, 8000)
     const k = e => { if (e.key === 'Escape') { sel ? setSel(null) : setOpen(false) } }
     document.addEventListener('keydown', k)
     return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k) }
