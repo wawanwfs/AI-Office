@@ -162,10 +162,19 @@ function applySelected(){
   if(selRing)selRing.visible=false;
   if(selectedIdx<0||selectedIdx>=agentData.length)return;
   const a=agentData[selectedIdx];
-  const src=a.walker&&a.walker.visible?a.walker.position:a.home;
+  // agent tidak ada di kantor (offsite/meeting figures terpisah) → ring disembunyikan,
+  // selectedIdx tetap tersimpan sehingga ring muncul lagi saat agent kembali.
+  const p=selAnchor(a);
+  if(!p)return;
   ensureSelRing();
-  selRing.position.set(src.x,0.03,src.z+(a.walker&&a.walker.visible?0:.55));
+  selRing.position.set(p.x,0.03,p.z+p.off);
   selRing.visible=true;
+}
+// posisi ring utk agent: walker (berjalan) / home (duduk) / null (tidak terlihat di kantor)
+function selAnchor(a){
+  if(a.walker&&a.walker.visible)return{x:a.walker.position.x,z:a.walker.position.z,off:0};
+  if(a.sittingChar&&a.sittingChar.visible)return{x:a.home.x,z:a.home.z,off:.55};
+  return null;
 }
 
 function ensureHoverRing(){if(hoverRing)return;const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
@@ -1844,8 +1853,9 @@ function animate(){
   // cincin emas mengikuti agent terpilih (juga saat berjalan/meeting)
   if(selRing&&selRing.visible&&selectedIdx>=0&&selectedIdx<agentData.length){
     const a=agentData[selectedIdx];
-    const src=a.walker.visible?a.walker.position:a.home;
-    selRing.position.set(src.x,0.03,src.z+(a.walker.visible?0:.55));
+    const p=selAnchor(a);
+    if(!p){selRing.visible=false}
+    else{selRing.position.set(p.x,0.03,p.z+p.off);selRing.visible=true}
   }
   // Atap & lampu panel disembunyikan saat kamera di atas (agar isi kantor terlihat), dimunculkan dari sudut rendah
   if(window.__wallFade)window.__wallFade(camera.position);
