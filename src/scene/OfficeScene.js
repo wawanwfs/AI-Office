@@ -2000,7 +2000,7 @@ const onVis=()=>{ pageHidden=document.visibilityState==='hidden';
 };
 document.addEventListener('visibilitychange',onVis);
 const onResize=()=>{camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();__vo();renderer.setSize(container.clientWidth,container.clientHeight)};window.addEventListener('resize',onResize);
-const onKey=(e)=>{ if(e.key==='Escape'&&!window.__wfsModalOpen&&focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius||sph.radius,reset:true}} };window.addEventListener('keydown',onKey);
+const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius||sph.radius,reset:true}} };window.addEventListener('keydown',onKey);
 
   // Return controls for React UI
   // ── Kontrol aksi tim (dipakai menu React) ──

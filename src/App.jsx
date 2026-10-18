@@ -144,9 +144,18 @@ export default function App() {
   }, [flash])
 
   // ---- flag modal utk scene: Escape saat overlay terbuka TIDAK boleh reset kamera ----
+  // Set saat render (bukan useEffect): update discrete-event React di-flush sinkron
+  // sebelum listener window scene jalan, jadi flag pasti sudah benar saat Escape dicek.
+  window.__wfsModalOpen = !!(showTask || confirm || ask || showHelp)
+
+  // Snapshot flag di fase CAPTURE (window capture jalan sebelum semua bubble handler):
+  // handler Escape overlay menutup modal & React flush sinkron, sehingga saat handler
+  // window scene (bubble) jalan flag sudah false lagi — scene wajib baca snapshot ini.
   useEffect(() => {
-    window.__wfsModalOpen = !!(showTask || confirm || ask || showHelp)
-  }, [showTask, confirm, ask, showHelp])
+    const snap = (e) => { if (e.key === 'Escape') window.__escModalAtDispatch = window.__wfsModalOpen }
+    window.addEventListener('keydown', snap, true)
+    return () => window.removeEventListener('keydown', snap, true)
+  }, [])
 
   // ---- shortcut keyboard (abaikan saat fokus di input/textarea/modal) ----
   useEffect(() => {
