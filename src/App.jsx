@@ -213,7 +213,12 @@ export default function App() {
           onToggleTheme={handleCyberpunk}
           theme={!cyberpunk}
           onZoomIn={() => zoom(1)}
-          onZoomOut={() => zoom(-1)} />
+          onZoomOut={() => zoom(-1)}
+          onSetView={(v) => {
+            const s = sceneRef.current
+            if (!s || !s.setView) return flash('Scene 3D tidak aktif (WebGL tidak tersedia)', true)
+            s.setView(v)
+          }} />
         <span className="sep" />
         <ActionMenu sceneRef={sceneRef} onFlash={flash} />
         <TaskBoard onFlash={flash} onAsk={setAsk} />

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 
-// Menu kecil untuk zoom + pencahayaan (popover di atas dock)
-export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onToggleTheme, theme, onZoomIn, onZoomOut, paused }) {
+// Menu kecil untuk zoom + pencahayaan + preset sudut kamera (popover di atas dock)
+export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onToggleTheme, theme, onZoomIn, onZoomOut, onSetView, paused }) {
   const [open, setOpen] = useState(false)
   const ref = useRef(null)
   useEffect(() => {
@@ -20,6 +20,12 @@ export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onTog
       <span className="sep" />
       <button className="ibtn" onClick={onZoomOut} aria-label="Perkecil"><span className="ic">➖</span><span className="lb">Jauh</span></button>
       <button className="ibtn" onClick={onZoomIn} aria-label="Perbesar"><span className="ic">➕</span><span className="lb">Dekat</span></button>
+      {['iso', 'front', 'top'].map(v => (
+        <button key={v} className="ibtn" onClick={() => onSetView(v)} aria-label={'Kamera ' + v}>
+          <span className="ic">{v === 'iso' ? '🧊' : v === 'front' ? '🪟' : '🔝'}</span>
+          <span className="lb">{v === 'iso' ? 'Iso' : v === 'front' ? 'Depan' : 'Atas'}</span>
+        </button>
+      ))}
       <button className={'ibtn' + (!theme ? ' on' : '')} onClick={onToggleTheme} aria-pressed={!theme} aria-label="Lampu neon"><span className="ic">💡</span><span className="lb">Neon</span></button>
     </>
   )

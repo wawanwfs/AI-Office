@@ -1996,6 +1996,14 @@ const onKey=(e)=>{ if(e.key==='Escape'&&focusGoal){focusGoal={t:HOME_TGT.clone()
     isCyberpunk: () => cyberpunkMode,
     zoomIn: () => { sph.radius=Math.max(12,sph.radius-4); updCam(); },
     zoomOut: () => { sph.radius=Math.min(130,sph.radius+4); updCam(); },
+    setView: (name) => {
+      focusGoal=null; tgt.copy(HOME_TGT);
+      if(name==='iso'){sph.theta=Math.PI*0.78;sph.phi=1.0}
+      else if(name==='front'){sph.theta=0;sph.phi=1.2}
+      else if(name==='top'){sph.theta=Math.PI*0.78;sph.phi=0.35}
+      else return false;
+      sph.radius=homeRadius||Math.max(24,Math.min(60,sph.radius)); updCam(); return true;
+    },
     setAudioMuted: (v) => { audioMuted=!!v; if(masterGain)masterGain.gain.value=audioMuted?0:1; saveMuted(); updateAudioDbg(); },
     isAudioMuted: () => audioMuted,
     destroy: () => {
