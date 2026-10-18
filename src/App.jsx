@@ -50,6 +50,7 @@ export default function App() {
     setMuted(!!s.isAudioMuted())
   }
   const toggleMuteRef = useRef(toggleMute); toggleMuteRef.current = toggleMute
+  const actionMenuApi = useRef(null) // diisi ActionMenu: {toggleNames, toggleRotate} utk shortcut K/R
   const [logItems, setLogItems] = useState(() => {
     try { return JSON.parse(localStorage.getItem('wfs_activity') || '[]') } catch { return [] }
   })
@@ -179,6 +180,8 @@ export default function App() {
         const s = sceneRef.current
         if (s && s.setView) { s.setView('iso'); if (s.resetFocus) s.resetFocus() }
       }
+      else if (k === 'k') { e.preventDefault(); amRef.current?.toggleNames() }
+      else if (k === 'r') { e.preventDefault(); amRef.current?.toggleRotate() }
       else if (k === '+' || k === '=') zoom(1)
       else if (k === '-') zoom(-1)
       else if (k === 'escape') { setShowLog(false); setShowHelp(false) }
@@ -244,7 +247,7 @@ export default function App() {
             s.setView(v)
           }} />
         <span className="sep" />
-        <ActionMenu sceneRef={sceneRef} onFlash={flash} />
+        <ActionMenu sceneRef={sceneRef} onFlash={flash} refApi={actionMenuApi} />
         <TaskBoard onFlash={flash} onAsk={setAsk} />
         <ProjectPanel onFlash={flash} />
         <TeamStats />

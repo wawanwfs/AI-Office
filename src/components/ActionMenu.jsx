@@ -1,10 +1,30 @@
 import React, { useState, useEffect, useRef } from 'react'
 
-export default function ActionMenu({ sceneRef, onFlash }) {
+export default function ActionMenu({ sceneRef, onFlash, refApi }) {
   const [open, setOpen] = useState(false)
   const [namesOn, setNamesOn] = useState(true)
   const [rotOn, setRotOn] = useState(false)
   const wrap = useRef(null)
+
+  // expose aksi nama/rotasi agar shortcut keyboard (K/R) bisa memicunya dari App
+  useEffect(() => {
+    if (!refApi) return
+    window.__amApiSet = Date.now() // debug: bukti effect ActionMenu jalan
+    refApi.current = {
+      toggleNames: () => {
+        const s = sceneRef && sceneRef.current
+        if (!s || !s.toggleNames) return onFlash && onFlash('Scene 3D tidak aktif (WebGL tidak tersedia)', true)
+        s.toggleNames(); if (s.isNamesVisible) setNamesOn(s.isNamesVisible()); else setNamesOn(v => !v)
+      },
+      toggleRotate: () => {
+        const s = sceneRef && sceneRef.current
+        if (!s || !s.setAutoRotate) return onFlash && onFlash('Scene 3D tidak aktif (WebGL tidak tersedia)', true)
+        const cur = s.isAutoRotate ? s.isAutoRotate() : rotOn
+        s.setAutoRotate(!cur); if (s.isAutoRotate) setRotOn(s.isAutoRotate()); else setRotOn(!cur)
+      },
+    }
+    return () => { refApi.current = null }
+  }, [refApi, sceneRef, onFlash])
 
   useEffect(() => {
     if (!open) return
