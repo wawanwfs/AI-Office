@@ -594,3 +594,9 @@
 - Bukti probe CDP (probe_esc.py/esc2/esc3, chrome headless DISPLAY=:0, jalur input nyata): dblclick agent → focus r:24 → tekan H (modal=true) → Escape → help tertutup DAN focus tetap {r:24, reset:false} ✓; kontrol tanpa modal: dblclick → Escape → focus {r:40, reset:true} ✓ (reset Esc tetap bekerja di luar modal). 0 console error.
 - Build OK, vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, canvas3d 1366x625, frames naik, 0 console error; screenshot 229KB (scene hidup, swiftshader).
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-19 03:20 WIB — shortcut keyboard K (nama agent) & R (putar otomatis)
+- Fitur App.jsx + ActionMenu.jsx: ActionMenu expose `refApi` ({toggleNames, toggleRotate}) — fungsi sama dengan tombol menu Aksi (sinkron state, baca isNamesVisible/isAutoRotate dari scene, anti-desync). App tambah shortcut **K** = toggle nama agent, **R** = toggle putar otomatis; guard identik shortcut lain (input/textarea/select/contenteditable, Ctrl/Meta/Alt, modal terbuka). OverlayHelp langkah 6 diperbarui.
+- Bug proses penting: versi awal memanggil `amRef.current` yang tidak pernah dideklarasikan — rolldown tidak error saat build (identifier bebas -> ReferenceError runtime), dan `?.` tidak menyelamatkan karena `amRef.current` melempar sebelum optional-chain. Gejala sulit: H/L/N tetap jalan, hanya K/R mati, tanpa console error. Ketemu lewat inspeksi bundle minified (amRef tidak di-rename karena dianggap global). Fix: `const amRef = actionMenuApi`.
+- Bukti probe CDP (probe_krfinal.py, chrome headless DISPLAY=:0, jalur input nyata Input.dispatchKeyEvent): names 14 -> K -> 0 -> K -> 14 (dua arah); R -> wfs_autorot '0' -> R -> '1' (dua arah); guard INPUT terverifikasi ada di bundle minified. e2e ringan: canvas 1366x625, 17 ibtn, 14 agent, 0 console error.
+- Build OK, vitest 9/9, deploy ~/wfs-hq.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
