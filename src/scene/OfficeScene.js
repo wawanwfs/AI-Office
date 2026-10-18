@@ -67,13 +67,13 @@ scene.name = 'Office3D';
 
 // ─── ORBIT ─────────────────────────────────────────
 let isDrag=false,prev={x:0,y:0};
-let namesVisible=true;
+let namesVisible=(function(){try{return localStorage.getItem('wfs_names')!=='0'}catch(e){return true}})();
 const __asp=container.clientWidth/Math.max(1,container.clientHeight);
 const __portrait=__asp<0.8;
 if(__portrait){camera.fov=__asp<0.6?66:54;camera.updateProjectionMatrix();}
 let sph={theta:__portrait?2.35:Math.PI*0.78,phi:__portrait?0.62:1.0,radius:__asp<0.6?46:__asp<0.8?44:__asp<1.2?56:__asp<1.5?47:40};
 const tgt=new THREE.Vector3(0,1.8,0);
-let autoRot=true,autoTmr;
+let autoRot=(function(){try{return localStorage.getItem('wfs_autorot')!=='0'}catch(e){return true}})(),autoTmr;
 let focusGoal=null;const HOME_TGT=new THREE.Vector3(0,1.8,0);let homeRadius=null;
 function updCam(){const p=Math.max(.18,Math.min(Math.PI/2.3,sph.phi));sph.phi=p;camera.position.set(sph.radius*Math.sin(p)*Math.sin(sph.theta)+tgt.x,sph.radius*Math.cos(p)+tgt.y,sph.radius*Math.sin(p)*Math.cos(sph.theta)+tgt.z);camera.lookAt(tgt)}
 const __vo=()=>{const w=container.clientWidth,h=container.clientHeight;if(w/h<0.6)camera.setViewOffset(w,h,-w*0.045,0,w,h);else camera.clearViewOffset()};__vo();
@@ -718,6 +718,7 @@ allAgents.forEach((agent,i)=>{
   office.add(walker);
   // Label
   const label=makeLabel(agent);
+  if(!namesVisible)label.visible=false;
   label.position.set(dp.x,LABEL_Y,dp.z+.55);
   office.add(label);
   agentData.push({
@@ -1416,7 +1417,7 @@ updateTime(660);
 // ═══════════════════════════════════════════════════
 // CYBERPUNK LIGHTS OFF MODE
 // ═══════════════════════════════════════════════════
-let cyberpunkMode=false;
+let cyberpunkMode=(function(){try{return localStorage.getItem('wfs_neon')==='1'}catch(e){return false}})();
 // btn handled by React
 
 // Store ceiling tube light refs
@@ -1447,7 +1448,8 @@ const __neon=createNeonMode({ambient,sun,renderer,floor:fl,carpet:cp,ceiling:cei
     lights:office.children.filter(c=>c.isPointLight&&c.position.y>3.0&&c.position.y<3.15)},
   panelLights:office.children.filter(c=>c.isPointLight&&c.position.y>3.5&&c.position.y<3.95),
   restoreTime:()=>updateTime(timeOfDay)});
-function toggleCyberpunk(){cyberpunkMode=__neon.toggle()}
+function toggleCyberpunk(){cyberpunkMode=__neon.toggle();try{localStorage.setItem('wfs_neon',cyberpunkMode?'1':'0')}catch(e){}}
+if(cyberpunkMode)__neon.toggle(); // terapkan neon tersimpan saat init (toggle false→true)
 
 // ═══════════════════════════════════════════════════
 // PARTICLES
@@ -1965,6 +1967,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&focusGoal){focusGoal={t:HOME_TGT.clone()
           ad.state='sitting';ad.timer=rng.r(8,20);
           ad.label.position.set(ad.home.x,LABEL_Y,ad.home.z);
         }
+        if(!namesVisible)ad.label.visible=false;
       });
       if(__meet.active){__meet.update(-1)}
     } else if(action==='tour'){
@@ -1973,10 +1976,10 @@ const onKey=(e)=>{ if(e.key==='Escape'&&focusGoal){focusGoal={t:HOME_TGT.clone()
   }
   return {
     teamAction,
-    toggleNames: () => { namesVisible=!namesVisible; agentData.forEach(ad=>{ad.label.visible=namesVisible}) },
+    toggleNames: () => { namesVisible=!namesVisible; try{localStorage.setItem('wfs_names',namesVisible?'1':'0')}catch(e){}; agentData.forEach(ad=>{ad.label.visible=namesVisible}) },
     isNamesVisible: () => namesVisible,
     resetFocus: () => { if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius||sph.radius,reset:true}} },
-    setAutoRotate: (v) => { autoRot=v; },
+    setAutoRotate: (v) => { autoRot=!!v; try{localStorage.setItem('wfs_autorot',autoRot?'1':'0')}catch(e){} },
     isAutoRotate: () => autoRot,
     setTime: (minutes) => updateTime(minutes),
     toggleCyberpunk: () => toggleCyberpunk(),
