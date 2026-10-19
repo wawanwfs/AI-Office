@@ -1,6 +1,7 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
+import { useDialogA11y } from '../lib/dialogA11y'
 import { fileCount } from '../lib/files'
 
 /* Statistik Tim — data nyata dari task engine + resource host */
@@ -9,7 +10,9 @@ export default function TeamStats() {
   const [data, setData] = useState(null)
   const [res, setRes] = useState(null)
   const [err, setErr] = useState(false)
+  const box = useRef(null)
   useModalFlag(open)
+  useDialogA11y({ open, onClose: () => setOpen(false), ref: box })
 
   const load = useCallback(async (signal) => {
     try {
@@ -37,7 +40,7 @@ export default function TeamStats() {
   return (
     <>
       {open && (
-        <div className="panel left" role="dialog" aria-label="Statistik tim">
+        <div ref={box} className="panel left" role="dialog" aria-label="Statistik tim" aria-modal="true">
           <div className="ph">
             <div className="t">Statistik Tim<small>task engine · refresh 15 dtk</small></div>
             <button className="x" onClick={() => setOpen(false)} aria-label="Tutup statistik">✕</button>

@@ -1,9 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
+import { useDialogA11y } from '../lib/dialogA11y'
 
 export default function ActionMenu({ sceneRef, onFlash, refApi }) {
   const [open, setOpen] = useState(false)
+  const pop = useRef(null)
   useModalFlag(open)
+  useDialogA11y({ open, onClose: () => {}, ref: pop })
   const [namesOn, setNamesOn] = useState(true)
   const [rotOn, setRotOn] = useState(false)
   const wrap = useRef(null)
@@ -56,7 +59,7 @@ export default function ActionMenu({ sceneRef, onFlash, refApi }) {
   return (
     <span className="anchor" ref={wrap}>
       {open && (
-        <div className="pop" role="menu" aria-label="Aksi tim" style={{ left: 0 }}>
+        <div ref={pop} className="pop" role="menu" aria-label="Aksi tim" aria-modal="true" style={{ left: 0 }}>
           {items.map(([ic, label, key, msg]) => <button key={key} role="menuitem" onClick={() => act(key, msg)}><span>{ic}</span>{label}</button>)}
           <hr />
           <button role="menuitem" onClick={() => { if (scene() && scene().toggleNames) { scene().toggleNames(); if (scene().isNamesVisible) setNamesOn(scene().isNamesVisible()); else setNamesOn(v => !v) } }}><span>🏷️</span>{namesOn ? 'Sembunyikan' : 'Tampilkan'} nama</button>

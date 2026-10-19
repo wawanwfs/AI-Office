@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useDialogA11y } from '../lib/dialogA11y'
 
 const STEPS = [
   { title: 'Navigasi 3D', text: 'Tarik untuk memutar, scroll / cubit untuk zoom, atau pakai tombol 🔍＋ / 🔍－. Geser slider untuk mengubah waktu.' },
@@ -14,13 +15,9 @@ export default function OverlayHelp({ show, onClose }) {
   const ref = useRef(null)
   const close = () => { setStep(0); onClose() }
 
-  useEffect(() => {
-    if (!show) return
-    ref.current && ref.current.focus()
-    const h = e => { if (e.key === 'Escape') close() }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [show])  // close stabil per-open; dependensi lengkap tak perlu
+  const closeRef = useRef(close)
+  closeRef.current = close
+  useDialogA11y({ open: show, onClose: () => closeRef.current(), ref })
 
   if (!show) return null
   return (

@@ -1,10 +1,13 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
+import { useDialogA11y } from '../lib/dialogA11y'
 
 /* Widget AI CS dibantuin — iframe ke widget container */
 export default function CsWidget() {
   const [open, setOpen] = useState(false)
+  const box = useRef(null)
   useModalFlag(open)
+  useDialogA11y({ open, onClose: () => {}, ref: box })
   useEffect(() => {
     if (!open) return
     const h = e => { if (e.key === 'Escape') setOpen(false) }
@@ -14,7 +17,7 @@ export default function CsWidget() {
   return (
     <>
       {open && (
-        <div className="panel wide" role="dialog" aria-label="AI CS dibantuin" style={{ background: '#fff', zIndex: 'var(--z-widget)', height: 'min(500px, calc(100dvh - 170px))', borderColor: 'rgba(16,229,160,.5)' }}>
+        <div ref={box} className="panel wide" role="dialog" aria-label="AI CS dibantuin" aria-modal="true" style={{ background: '#fff', zIndex: 'var(--z-widget)', height: 'min(500px, calc(100dvh - 170px))', borderColor: 'rgba(16,229,160,.5)' }}>
           <div style={{ display: 'flex', alignItems: 'center', background: '#0d1522' }}>
             <div style={{ flex: 1, paddingLeft: 14, fontSize: 12, fontWeight: 700, color: '#10E5A0', letterSpacing: 1.5 }}>🛎 AI CS DIBANTUIN</div>
             <button className="x" onClick={() => setOpen(false)} aria-label="Tutup widget CS">✕</button>

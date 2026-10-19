@@ -1,5 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
+import { useDialogA11y } from '../lib/dialogA11y'
 
 // Panel Proyek Nyata: data live dibantuin.com dari endpoint /wfs-project (server 9503).
 // Semua data diambil server-side — tidak ada kredensial di frontend.
@@ -7,7 +8,9 @@ const ST = { done: ['Selesai', '#10E5A0'], running: ['Jalan', '#F59E0B'], review
 
 export default function ProjectPanel({ onFlash }) {
   const [open, setOpen] = useState(false)
+  const box = useRef(null)
   useModalFlag(open)
+  useDialogA11y({ open, onClose: () => setOpen(false), ref: box })
   const [d, setD] = useState(null)
   const [err, setErr] = useState(false)
 
@@ -39,7 +42,7 @@ export default function ProjectPanel({ onFlash }) {
         <span className="ic">🚀</span><span className="lb">Proyek</span>
       </button>
       {open && (
-        <section id="project-panel" className="panel left" role="dialog" aria-label="Proyek dibantuin.com">
+        <section ref={box} id="project-panel" className="panel left" role="dialog" aria-label="Proyek dibantuin.com" aria-modal="true">
           <div className="ph">
             <div className="t">🚀 Proyek: dibantuin.com<small>{err ? 'gagal memuat' : 'data live · refresh 15 dtk'}</small></div>
             <button className="x" onClick={() => setOpen(false)} aria-label="Tutup panel proyek">✕</button>

@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
+import { useDialogA11y } from '../lib/dialogA11y'
 
 // Panel chat AI + konfigurasi per agent — gateway :8787 via /wfs-api
 export default function WfsPanel() {
   const [open, setOpen] = useState(false)
+  const box = useRef(null)
   useModalFlag(open)
   const [tab, setTab] = useState('chat')
   const [agents, setAgents] = useState([])
@@ -21,6 +23,7 @@ export default function WfsPanel() {
   const logRef = useRef(null)
   const inputRef = useRef(null)
   const agentsRef = useRef([])
+  useDialogA11y({ open, onClose: () => setOpen(false), ref: box, initialFocus: inputRef })
 
   const log = sel ? (logs[sel.id] || []) : []
   const pushLog = (id, m) => setLogs(l => ({ ...l, [id]: [...(l[id] || []), m] }))
@@ -63,7 +66,6 @@ export default function WfsPanel() {
     if (!open) return
     const k = e => { if (e.key === 'Escape') setOpen(false) }
     document.addEventListener('keydown', k)
-    setTimeout(() => inputRef.current && inputRef.current.focus(), 50)
     return () => document.removeEventListener('keydown', k)
   }, [open, tab])
 
@@ -106,7 +108,7 @@ export default function WfsPanel() {
     <>
       <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="wfs-panel"><span className="ic">💬</span><span className="lb">Chat</span></button>
       {open && (
-        <div id="wfs-panel" className="panel" role="dialog" aria-label="Chat dan konfigurasi agent">
+        <div ref={box} id="wfs-panel" className="panel" role="dialog" aria-label="Chat dan konfigurasi agent" aria-modal="true">
           <div className="ph">
             <div className="t">{sel ? sel.name : 'Chat AI Team'}<small>{sel ? sel.role : ''} · {tab === 'chat' ? 'percakapan' : 'konfigurasi model'}</small></div>
             <button className="x" onClick={() => setOpen(false)} aria-label="Tutup panel chat">✕</button>

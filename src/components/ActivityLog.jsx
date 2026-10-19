@@ -1,19 +1,18 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useRef } from 'react'
+import { useDialogA11y } from '../lib/dialogA11y'
 
 const COL = { done: '#10E5A0', running: '#F59E0B', failed: '#FB7185', review: '#60A5FA', pending: '#9aa3b5' }
 
 // Log aktivitas: perubahan status task yang terdeteksi UI (disimpan di localStorage).
 export default function ActivityLog({ show, items, onClose, onClear }) {
-  useEffect(() => {
-    if (!show) return
-    const k = e => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', k)
-    return () => document.removeEventListener('keydown', k)
-  }, [show, onClose])
+  const box = useRef(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
+  useDialogA11y({ open: show, onClose: () => onCloseRef.current(), ref: box })
   if (!show) return null
   return (
     <div className="modal-scrim" onClick={onClose}>
-      <div className="modal" role="dialog" aria-label="Log aktivitas" onClick={e => e.stopPropagation()}>
+      <div ref={box} className="modal" role="dialog" aria-label="Log aktivitas" aria-modal="true" onClick={e => e.stopPropagation()}>
         <h3>Log Aktivitas</h3>
         {items.length === 0
           ? <p>Belum ada perubahan status task sejak log dipantau.</p>

@@ -1,6 +1,7 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
+import { useDialogA11y } from '../lib/dialogA11y'
 import { parseFileList } from '../lib/files'
 
 const ST = { done: ['Selesai', '#10E5A0'], running: ['Jalan', '#F59E0B'], review: ['Review', '#448AFF'], failed: ['Gagal', '#ef4444'], pending: ['Antri', '#9aa7b8'] }
@@ -14,7 +15,9 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const [filter, setFilter] = useState('all')
   const [q, setQ] = useState('')
   const [sel, setSel] = useState(null)
+  const board = useRef(null)
   useModalFlag(open || !!sel)
+  useDialogA11y({ open: open || !!sel, onClose: () => {}, ref: board })
 
   const load = useCallback(async (signal) => {
     try {
@@ -53,7 +56,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
     <>
       <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="task-board"><span className="ic">📋</span><span className="lb">Papan</span></button>
       {open && (
-        <section id="task-board" className="panel left" role="dialog" aria-label="Papan task">
+        <section ref={board} id="task-board" className="panel left" role="dialog" aria-label="Papan task" aria-modal="true">
           <div className="ph">
             <div className="t">Papan Task<small>{tasks ? `${tasks.length} task` : 'memuat…'}</small></div>
             <button className="x" onClick={() => setOpen(false)} aria-label="Tutup papan task">✕</button>

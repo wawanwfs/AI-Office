@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { api } from '../lib/api'
+import { useDialogA11y } from '../lib/dialogA11y'
 
 const ROLES = ['backend', 'frontend', 'mobile', 'design', 'devops', 'qa', 'marketing', 'pm']
 
@@ -11,14 +12,12 @@ export default function TaskModal({ show, onClose, onDone }) {
   const [busy, setBusy] = useState(false)
   const [err, setErr] = useState('')
   const first = useRef(null)
+  const box = useRef(null)
+  const onCloseRef = useRef(onClose)
+  onCloseRef.current = onClose
 
-  useEffect(() => {
-    if (!show) return
-    setErr(''); setTimeout(() => first.current && first.current.focus(), 30) // eslint-disable-line react-hooks/set-state-in-effect -- reset error saat modal dibuka
-    const h = e => { if (e.key === 'Escape') onClose() }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [show])  // onClose dari parent didefinisikan inline; sengaja tidak ikut array
+  useEffect(() => { if (show) setErr('') }, [show]) // eslint-disable-line react-hooks/set-state-in-effect -- reset error saat modal dibuka
+  useDialogA11y({ open: show, onClose: () => onCloseRef.current(), ref: box })
 
   if (!show) return null
   const submit = async (run) => {
@@ -34,7 +33,7 @@ export default function TaskModal({ show, onClose, onDone }) {
   }
   return (
     <div className="modal-scrim" onClick={onClose}>
-      <form className="modal" role="dialog" aria-modal="true" aria-labelledby="tm-t" onClick={e => e.stopPropagation()} onSubmit={e => { e.preventDefault(); submit(false) }}>
+      <form ref={box} className="modal" role="dialog" aria-modal="true" aria-labelledby="tm-t" onClick={e => e.stopPropagation()} onSubmit={e => { e.preventDefault(); submit(false) }}>
         <h3 id="tm-t">＋ Task Baru</h3>
         <label htmlFor="tm-title">Judul</label>
         <input id="tm-title" ref={first} value={title} onChange={e => setTitle(e.target.value)} maxLength={200} placeholder="mis. Buat endpoint /api/invoice" />
