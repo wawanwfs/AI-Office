@@ -204,7 +204,7 @@ export default function App() {
       const t = e.target
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return
       if (e.ctrlKey || e.metaKey || e.altKey) return
-      if (showTask || confirm || ask || showHelp || showLog) return
+      if (showTask || confirm || ask || showHelp || showLog || anyModalOpen()) return
       const k = e.key.toLowerCase()
       if (k === 'm') { e.preventDefault(); toggleMuteRef.current() }
       else if (k === 'l') { e.preventDefault(); setShowLog(v => !v) }

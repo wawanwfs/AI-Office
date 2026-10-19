@@ -771,3 +771,8 @@
 - Implementasi App.jsx: `chromeModal = (modal App) || anyModalOpen()` — flag modal terpusat (useModalFlag) kini juga memicu inert chrome. Cleanup unmount tetap melepas atribut.
 - Bukti: build OK (1.0s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→4, 0 console error.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji.
+## 2026-10-19 18:40 WIB — fix: shortcut keyboard tidak lagi aktif saat panel state-internal terbuka (TaskBoard/WfsPanel/CsWidget/…)
+- Celah lanjutan dgn pola sama seperti fix 13:40: guard shortcut App.jsx (handler window) hanya cek modal yang state-nya di App (showTask/confirm/ask/help/log). Panel dgn state internal via useModalFlag (TaskBoard+detail, WfsPanel, CsWidget, ActionMenu pop, QuickToolbar pop, TeamStats/ProjectPanel) terlewat — saat panel terbuka, M tetap toggle mute, L/H membuka modal menutupi panel, N mengubah tema, 1-3/0 memutar kamera tanpa terlihat, K/R toggle nama/rotasi, ± zoom.
+- Implementasi App.jsx: guard handler kini `... || anyModalOpen()` — flag modal terpusat juga memblokir shortcut. (inert chrome sudah tercakup run 18:05.)
+- Bukti: build OK (0.9s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→6, 0 console error.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji.
