@@ -16,6 +16,8 @@ describe('fileCount', () => {
   })
   it('string tunggal tanpa koma = 1 file', () => expect(fileCount('main.py')).toBe(1))
   it('JSON rusak fallback ke CSV', () => expect(fileCount("['a.py', 'b.py")).toBe(2))
+  it('item berisi koma di dalam kutip tidak salah pecah', () => expect(fileCount("['a, b.py','c.py']")).toBe(2))
+  it('array berisi item berkutip dibersihkan', () => expect(fileCount(["'a.py'", '"b.js"'])).toBe(2))
 })
 
 describe('parseFileList', () => {
@@ -25,5 +27,8 @@ describe('parseFileList', () => {
     expect(parseFileList('null')).toEqual([])
     expect(parseFileList(42)).toEqual([])
   })
-  it('JSON rusak fallback CSV per item', () => expect(parseFileList("['a.py', 'b.py")).toEqual(["['a.py'", "'b.py"]))
+  it('JSON rusak fallback CSV: kutip & bracket sisa dibersihkan', () => expect(parseFileList("['a.py', 'b.py")).toEqual(['a.py', 'b.py']))
+  it('item berkutip di CSV dibersihkan', () => expect(parseFileList("'a.py', 'b.py'")).toEqual(['a.py', 'b.py']))
+  it('koma di dalam kutip tidak memecah item', () => expect(parseFileList("['a, b.py']")).toEqual(['a, b.py']))
+  it('array item berkutip dibersihkan', () => expect(parseFileList(["'a.py'"])).toEqual(['a.py']))
 })

@@ -17,7 +17,13 @@ export default function TaskBoard({ onFlash, onAsk }) {
   useModalFlag(open || !!sel)
 
   const load = useCallback(async (signal) => {
-    try { const d = await api('tasks', { signal }); setTasks(d.tasks || []); setErr(false) }
+    try {
+      const d = await api('tasks', { signal })
+      setTasks(d.tasks || [])
+      // refresh detail yang sedang terbuka agar status/files selalu terbaru
+      setSel(s => (s ? (d.tasks || []).find(t => String(t.id) === String(s.id)) || s : s))
+      setErr(false)
+    }
     catch (e) { if (e.name !== 'AbortError') setErr(true) }
   }, [])
 

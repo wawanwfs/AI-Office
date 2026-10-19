@@ -706,3 +706,10 @@
 - Implementasi: ekstrak `parseFileList(f)` di src/lib/files.js (fileCount kini = parseFileList(f).length); TaskBoard.jsx render daftar file dari parseFileList — bersih tanpa sisa bracket/kutip, fallback aman bila JSON rusak.
 - Bukti: npm run build OK (0.7s), vitest **19/19** (16 lama + 3 baru utk parseFileList: trim whitespace, []/null/non-string => [], fallback CSV), deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 console error.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-19 11:23 WIB — hardening parseFileList (koma dalam kutip, bracket/kutip sisa) + detail task TaskBoard auto-refresh
+- Audit lanjutan parser `files`: (1) split CSV mentah memecah file bernama berkoma ("'a, b.py'" → ["a"," b.py"] salah) — kini split sadar kutip; (2) item dengan kutip/bracket sisa (array python berkutip, JSON rusak "['a.py', 'b.py") dibersihkan via cleanItem (strip kutip/bracket pembungkus & yatim) — TaskBoard kini tak pernah menampilkan "'a.py'" atau "[a.py".
+- Bug UX data: detail task di TaskBoard pakai snapshot `sel` yang basi — setelah polling 8 dtk status/files berubah di server, detail tetap menampilkan status lama. Kini setiap load() me-refresh sel dari data terbaru (per id), fallback ke sel lama bila task tak ditemukan.
+- 5 test baru (total 24): koma-dalam-kutip, array item berkutip, CSV kutip dibersihkan, JSON rusak dibersihkan, array berkutip dibersihkan. 1 ekspektasi test lama diperbarui (parser kini lebih bersih dari ekspektasi lama).
+- Bukti: build OK, vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 console error.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
