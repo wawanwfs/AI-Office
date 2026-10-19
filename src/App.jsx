@@ -97,10 +97,22 @@ export default function App() {
     } catch { setStatus('Gateway offline'); setStatusKind('off') }
   }, [flash, pushLog])
   useEffect(() => {
-    refreshStatus()
-    const iv = setInterval(() => { if (document.visibilityState === 'visible') refreshStatus() }, 15000)
-    return () => clearInterval(iv)
-  }, [refreshStatus])
+    const tick = () => {
+      // offline awareness: jangan buang request saat browser tahu jaringan mati
+      if (typeof navigator !== 'undefined' && navigator.onLine === false) {
+        setStatus('Offline'); setStatusKind('off'); return
+      }
+      refreshStatus()
+    }
+    tick()
+    const iv = setInterval(() => { if (document.visibilityState === 'visible') tick() }, 15000)
+    // toast + status saat koneksi hilang / pulih
+    const off = () => { setStatus('Offline'); setStatusKind('off'); flash('Koneksi terputus — menunggu jaringan', true) }
+    const on = () => { flash('Koneksi kembali'); tick() }
+    window.addEventListener('offline', off)
+    window.addEventListener('online', on)
+    return () => { clearInterval(iv); window.removeEventListener('offline', off); window.removeEventListener('online', on) }
+  }, [refreshStatus, flash])
 
   // ---- judul tab dinamis: status task & jam kantor terlihat dari tab browser ----
   useEffect(() => {

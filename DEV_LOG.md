@@ -873,6 +873,13 @@
 - Bukti: probe playwright produksi 9503 → valuetext "11:00"; build OK (4.4s, precache 31), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, errs 0.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
 
+## 2026-10-21 00:55 WIB — UX: kesadaran offline (navigator.onLine) — polling berhenti saat jaringan mati, toast putus/pulih
+- Masalah: polling gateway (tiap 15 dtk) tetap jalan walau browser tahu jaringan mati (request buang-buang + status salah "Gateway offline"); user tidak diberi tahu koneksi hilang/pulih secara eksplisit.
+- Implementasi: App.jsx tick() memeriksa navigator.onLine sebelum refreshStatus (offline → status "Offline" tanpa fetch); listener window offline/online → toast "Koneksi terputus — menunggu jaringan" (err) / "Koneksi kembali" + refresh langsung.
+- Bukti probe playwright produksi 9503 (context.set_offline): offline → judul tab "⚠ Offline — WFS Project HQ", HUD "Offline", toast err tampil; online lagi → judul "0 jalan · 0 antri", toast "Koneksi kembali", 0 pageerror.
+- Build OK (precache 35), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→3, errs 0.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
 ## 2026-10-21 00:30 WIB — social preview + ikon iOS: og:image 1200x630 & apple-touch-icon PNG
 - Masalah: link kantor dibagikan ke WhatsApp/Telegram/Slack tidak punya preview (og:image tidak ada), dan apple-touch-icon menunjuk favicon.svg yang tidak didukung Safari iOS (bookmark/add-to-home tampak kosong/generik).
 - Implementasi: public/og-image.png (1200x630, 104KB) dirender via ImageMagick — heksagon amber + W (setia ke favicon.svg, dirender via -draw polygon karena SVG gradient tidak didukung IM), teks "WFS PROJECT HQ", tagline, dibantuin.com; public/apple-touch-icon.png 180x180; index.html: og:image + dimension/alt, og:url, twitter:card summary_large_image, twitter:title/description/image, apple-touch-icon → PNG; vite includeAssets +og-image +apple-touch-icon (masuk SW precache → preview tetap tampil offline).
