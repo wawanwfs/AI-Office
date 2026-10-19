@@ -685,3 +685,9 @@
 - Bukti probe CDP (chromium-1248 headless swiftshader DISPLAY :78, port 9442, Input.dispatchKeyEvent/dispatchMouseEvent = gesture trusted): sebelum interaksi window.__audio {started:false,state:'none'} → 1 ketukan tombol real → **started:true, state:'running', calls.key=1** ✓ (klik canvas konsisten). 0 console error.
 - Build OK (2.7s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, 14 label, frames 2→4, 0 error; screenshot ck_audio.png 465KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia) — unlock/mute/persist kini otomatis & terverifikasi.
+## 2026-10-19 11:50 WIB — fix: suara agent & chime meeting kini lazy-init otomatis (tak butuh interaksi dulu)
+- Lanjutan fix audio 11:05: tick keyboard & langkah agent di-loop animate masih di-guard `soundsStarted` — suara agent TIDAK PERNAH bunyi sampai user berinteraksi, walau ctx sudah running; chime meeting juga silent bila terjadi sebelum interaksi pertama.
+- Implementasi OfficeScene.js: playKeyClick/playStep/playMeetingChime kini memanggil `__ensureAudio()` (init + resume bila suspended) di baris pertama — inisialisasi dilerakkan ke titik pemakaian (lazy); guard `soundsStarted` pada chime dihapus; guard tick/step di-loop tetap dipertahankan (hemat: tak ada suara saat tidak ada agent duduk/jalan).
+- Bukti probe CDP (chromium-1248 headless swiftshader DISPLAY :78, port 9483): sebelum interaksi `__audio {started:false,state:'none'}` → 1 keydown real → **started:true, state:'running'** ✓. Guard loop: calls.tick/step hanya naik saat ada agent duduk/jalan (by design). e2e_err: DOM True, 17 btns, 14 label, frames 2→5, 0 error.
+- Build OK, vitest 9/9, deploy ~/wfs-hq.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
