@@ -833,3 +833,9 @@
 - Implementasi: 12 file woff2 (210KB total) diunduh ke public/fonts + fonts.css hasil rewrite URL ke /fonts/ (28 @font-face, font-display: swap dipertahankan); index.html kini hanya <link rel="stylesheet" href="/fonts/fonts.css"> + preload, dua preconnect googleapis/gstatic dihapus.
 - Bukti: build OK, vitest 24/24, deploy ~/wfs-hq OK; produksi 9503: /fonts/fonts.css & /fonts/orbitron-latin.woff2 → HTTP 200; fonts.css berisi 0 URL eksternal; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, errs 0.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); NotoColorEmoji tidak lagi relevan (emoji via system font).
+
+## 2026-10-20 04:02 WIB — PWA: installable (manifest + service worker offline cache via vite-plugin-pwa)
+- Masalah: app belum installable (tidak ada manifest.webmanifest/sw.js), tidak bisa dipasang di HP/desktop, dan load ulang selalu jaringan padahal seluruh asset sudah self-hosted (font woff2, JS, CSS) — cocok di-cache offline.
+- Implementasi: vite-plugin-pwa (generateSW, registerType autoUpdate). Manifest (nama, lang id, standalone, theme/background #000C1E, ikon favicon.svg). index.html: apple-touch-icon + meta mobile-web-app/apple. Workbox precache 27 entries (1.26MB: JS/CSS/HTML/SVG/woff2), navigateFallbackDenylist /api/ agar polling API tidak di-cache.
+- Bukti: build OK (PWA generateSW sukses, dist/sw.js + manifest.webmanifest); vitest 24/24; produksi 9503: manifest.webmanifest & sw.js → HTTP 200; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→4, 0 console error (registrasi SW tidak mengganggu app).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

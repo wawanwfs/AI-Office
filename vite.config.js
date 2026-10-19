@@ -1,7 +1,32 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
+import { VitePWA } from 'vite-plugin-pwa'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [react()],
+  plugins: [
+    react(),
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['favicon.svg', 'wfs-logo.svg', 'fonts/fonts.css'],
+      manifest: {
+        name: 'WFS Project HQ — Kantor AI 3D',
+        short_name: 'WFS HQ',
+        description: 'Kantor virtual 3D WFS Project: 15 agent AI bekerja dan mengerjakan task nyata.',
+        lang: 'id',
+        start_url: '/',
+        scope: '/',
+        display: 'standalone',
+        background_color: '#000C1E',
+        theme_color: '#000C1E',
+        icons: [
+          { src: '/favicon.svg', sizes: 'any', type: 'image/svg+xml', purpose: 'any' },
+        ],
+      },
+      workbox: {
+        globPatterns: ['**/*.{js,css,html,svg,woff2}'],
+        navigateFallbackDenylist: [/^\/api\//],
+      },
+    }),
+  ],
 })
