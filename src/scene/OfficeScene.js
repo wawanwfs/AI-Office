@@ -2141,6 +2141,13 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       // (tanpa ini, tiap remount meninggalkan papan lama yang terus fetch selamanya).
       try { window.__projectBoard && window.__projectBoard.destroy() } catch (e) { /* no-op */ }
       delete window.__projectBoard;
+      // Shift (daycycle): clear semua setTimeout pending (arrive/depart berantai per 800ms)
+      try { __shift && __shift.dispose && __shift.dispose() } catch (e) { /* no-op */ }
+      // Audio: tutup AudioContext scene lama — browser membatasi jumlah AudioContext aktif
+      // (~6 per halaman); tanpa close(), tiap remount menyisakan konteks hidup hingga
+      // audio scene berikutnya gagal dibuat (MaxAudioContextsExceeded).
+      try { if(audioCtx){audioCtx.close();} } catch (e) { /* no-op */ }
+      audioCtx=null; masterGain=null;
       if(renderer){renderer.dispose();container.removeChild(renderer.domElement);}
     }
   };

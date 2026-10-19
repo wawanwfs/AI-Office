@@ -755,3 +755,9 @@
 - Implementasi: hapus semua emoji dari teks canvas — 10 string roleTalk, bubble welcome/proyek/alert-failed/task-running, teks kafé "☕ WFS CAFÉ"→"WFS CAFÉ", projectboard "semua beres 🎉"→"semua beres". Karakter ASCII ✓ dan “” tetap (ter-render aman).
 - Bukti: build OK (0.9s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, frames 2→5, 0 console error; screenshot pasca-deploy: semua gelembung bicara bebas tofu, jam 11:00 normal.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia). Emoji future-proofing (selfhost NotoColorEmoji subset) bila ingin emoji kembali di canvas.
+## 2026-10-19 16:55 WIB — fix lifecycle: AudioContext ditutup di destroy() + timer shift di-dispose
+- Audit sisa leak terakhir: (1) destroy() tidak pernah memanggil audioCtx.close() — tiap remount/Hot-Reload menyisakan AudioContext hidup; browser membatasi ~6 konteks aktif per halaman, remount berulang bisa memicu MaxAudioContextsExceeded hingga audio scene berikutnya gagal total; (2) __shift (daycycle createShift) punya dispose() untuk timers arrive/depart berantai (per 800 ms) tapi tidak pernah dipanggil dari destroy().
+- Implementasi OfficeScene.js destroy(): tambah __shift.dispose() (try/catch) + audioCtx.close(), audioCtx=null, masterGain=null.
+- Bukti probe CDP (chromium swiftshader, import OfficeScene-CIwtTRwK.js dari bundle produksi): remount x3 destroy → 3 ctx dibuat & ditutup; scene ke-4 dgn keydown → audio {started:true, ctx hidup} ✓; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 console error.
+- Build OK, vitest 24/24, deploy ~/wfs-hq OK. Backup /tmp/OS.bak-*.js.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji bila ingin emoji kembali di canvas.
