@@ -783,3 +783,9 @@
 - Bukti probe CDP (Input trusted): panel Chat terbuka → aria-modal=true, fokus di kolom "Pesan" (di dalam dialog), 3x Tab tetap di dalam dialog, Escape menutup & inert chrome dilepas; Papan task → aria-modal=true, fokus di dalam, Escape menutup. e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 3→6, 0 console error.
 - Build OK, vitest 24/24, deploy ~/wfs-hq OK.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji.
+## 2026-10-19 20:00 WIB — a11y: fokus dikembalikan ke pemicu saat dialog ditutup (focus restore) + aria-modal dilepas
+- Celah lanjutan fix 19:20: saat overlay ditutup, fokus tidak dikembalikan ke elemen yang membukanya — keyboard/screen-reader user "jatuh" ke document.body dan harus Tab dari awal; aria-modal juga tertinggal di elemen panel (tidak dilepas saat tutup).
+- Implementasi dialogA11y.js: simpan `document.activeElement` (pemicu) saat efek mulai; cleanup (dialog ditutup) melepas `aria-modal` dan memanggil `trigger.focus()` bila trigger masih ada di dokumen (guard `document.contains`, try/catch).
+- Bukti probe CDP (chromium headless :9492, halaman produksi 9503): buka panel Chat dgn fokus di tombol dock → inDlg:true (fokus masuk dialog), Escape → dlgGone:true & **restored:true** (fokus kembali ke tombol pemicu, bukan BODY).
+- Build OK (0.8s), vitest **24/24**, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→4, 0 console error.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji.

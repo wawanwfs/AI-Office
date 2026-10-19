@@ -8,6 +8,8 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
 export function useDialogA11y({ open, onClose, ref, initialFocus }) {
   useEffect(() => {
     if (!open) return
+    // simpan pemicu (tombol/shortcut yang membuka) utk dikembalikan saat tutup
+    const trigger = document.activeElement
     const el = ref && ref.current
     if (el) {
       if (el.getAttribute('role') === 'dialog' && !el.hasAttribute('aria-modal')) el.setAttribute('aria-modal', 'true')
@@ -24,7 +26,15 @@ export function useDialogA11y({ open, onClose, ref, initialFocus }) {
         }
       }
       document.addEventListener('keydown', k, true)
-      return () => { clearTimeout(t); document.removeEventListener('keydown', k, true) }
+      return () => {
+        clearTimeout(t)
+        document.removeEventListener('keydown', k, true)
+        // aria-modal & fokus restore: kembalikan fokus ke pemicu bila masih valid
+        el.removeAttribute('aria-modal')
+        if (trigger && typeof trigger.focus === 'function' && document.contains(trigger)) {
+          try { trigger.focus() } catch { /* noop */ }
+        }
+      }
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- ref/initialFocus stabil
   }, [open, onClose])
