@@ -696,3 +696,8 @@
 - Bukti: probe CDP (chromium-1248 headless :78, Input.dispatchKeyEvent trusted): audio unlock tetap bekerja {started:true,state:'running'} ✓, 0 console error, DOM True, 17 btns, 14 labels, frames naik. Simulasi lifecycle hidden via Page.setWebLifecycleState TIDAK mengubah document.visibilityState di chromium ini (vis tetap 'visible') — verifikasi penuh jalur hidden dicatat sebagai keterbatasan headless; perubahan bersifat guard/idempotent (lint OK, perilaku visible tidak berubah).
 - Build OK (0.9s), vitest 9/9, deploy ~/wfs-hq.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+## 2026-10-19 12:50 WIB — fix: "Total file dihasilkan" di Statistik Tim melar (string files dihitung per karakter)
+- Bug data: field `files` dari task engine berbentuk STRING (mis. "['a.py','b.py']" — terlihat di TaskBoard yang mem-parse-nya), tapi TeamStats menghitung `(t.files || []).length` → jika string, .length = jumlah KARAKTER, bukan jumlah file. Statistik "Total file dihasilkan" jadi salah besar (mis. 1 task dgn 2 file bisa terhitung 15+).
+- Implementasi: helper baru `src/lib/files.js` (fileCount: array → .length; string JSON gaya Python → parse dgn replace kutip; CSV → split koma; kosong/[]/null → 0) + TeamStats pakai fileCount. 7 unit test baru.
+- Bukti: npm run build OK, vitest **16/16** (9 lama + 7 baru), deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→6, 0 console error.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

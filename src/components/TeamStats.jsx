@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
+import { fileCount } from '../lib/files'
 
 /* Statistik Tim — data nyata dari task engine + resource host */
 export default function TeamStats() {
@@ -30,7 +31,7 @@ export default function TeamStats() {
 
   const byStatus = {}
   let totalFiles = 0
-  ;(data || []).forEach(t => { byStatus[t.status] = (byStatus[t.status] || 0) + 1; totalFiles += (t.files || []).length })
+  ;(data || []).forEach(t => { byStatus[t.status] = (byStatus[t.status] || 0) + 1; totalFiles += fileCount(t.files) })
   const dot = s => s === 'done' ? '#10E5A0' : s === 'failed' ? '#f66' : s === 'running' ? '#f59e0b' : s === 'review' ? '#60A5FA' : '#9aa3b5'
 
   return (
