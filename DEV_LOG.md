@@ -713,3 +713,8 @@
 - 5 test baru (total 24): koma-dalam-kutip, array item berkutip, CSV kutip dibersihkan, JSON rusak dibersihkan, array berkutip dibersihkan. 1 ekspektasi test lama diperbarui (parser kini lebih bersih dari ekspektasi lama).
 - Bukti: build OK, vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 console error.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+## 2026-10-19 13:40 WIB — fix: shortcut keyboard tidak lagi aktif saat Log Aktivitas terbuka
+- Audit konsistensi modal: guard shortcut App.jsx melewatkan `showLog` — saat Log Aktivitas terbuka, tekan M/L/H/N/1-3/0/K/R/F/± tetap menjalankan aksi di balik modal (mis. L menutup+langsung buka lagi, 0 reset kamera tak terlihat, M mengubah mute diam-diam), inkonsisten dgn TaskBoard/Help/Confirm.
+- Implementasi: tambah `showLog` di guard + deps useEffect handler (Escape-nya sendiri tetap berfungsi via handler escape + ActivityLog listener sendiri; flag modal __wfsModalOpen sudah mencakup showLog sejak awal).
+- Bukti: build OK (0.7s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 console error.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

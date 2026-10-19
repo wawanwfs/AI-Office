@@ -192,7 +192,7 @@ export default function App() {
       const t = e.target
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return
       if (e.ctrlKey || e.metaKey || e.altKey) return
-      if (showTask || confirm || ask || showHelp) return
+      if (showTask || confirm || ask || showHelp || showLog) return
       const k = e.key.toLowerCase()
       if (k === 'm') { e.preventDefault(); toggleMuteRef.current() }
       else if (k === 'l') { e.preventDefault(); setShowLog(v => !v) }
@@ -221,7 +221,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [showTask, confirm, ask, showHelp, handleCyberpunk])
+  }, [showTask, confirm, ask, showHelp, showLog, handleCyberpunk])
 
   const zoom = (dir) => {
     const s = sceneRef.current
