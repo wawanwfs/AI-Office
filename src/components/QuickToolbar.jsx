@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useModalFlag } from '../lib/modal'
 
 // Menu kecil untuk zoom + pencahayaan + preset sudut kamera (popover di atas dock)
 export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onToggleTheme, theme, onZoomIn, onZoomOut, onSetView, paused }) {
   const [open, setOpen] = useState(false)
+  useModalFlag(open)
   const ref = useRef(null)
   useEffect(() => {
     if (!open) return

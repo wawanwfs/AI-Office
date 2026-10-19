@@ -1,7 +1,9 @@
 import React, { useState, useEffect, useRef } from 'react'
+import { useModalFlag } from '../lib/modal'
 
 export default function ActionMenu({ sceneRef, onFlash, refApi }) {
   const [open, setOpen] = useState(false)
+  useModalFlag(open)
   const [namesOn, setNamesOn] = useState(true)
   const [rotOn, setRotOn] = useState(false)
   const wrap = useRef(null)
