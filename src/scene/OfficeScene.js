@@ -1991,9 +1991,9 @@ function animate(){
           const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*1.2;pts[j].offX-=dir*w2*1.2;
         }
         else if(!pts[i].zone){ // agent vs penghalang: agent bergeser penuh
-          pts[i].offY+=h2*1.9;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*1.0;
-          // jika penghalang adalah label zona, zona ikut geser sedikit (0.5x) — kluster padat zona+agent bisa over-cap agent
-          if(pts[j].zt){pts[j].offY-=h2*0.5;pts[j].offX-=dir*w2*0.9;}
+          pts[i].offY+=h2*2.4;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*1.2;
+          // jika penghalang adalah label zona, zona ikut geser sedikit (0.8x) — kluster padat zona+agent bisa over-cap agent
+          if(pts[j].zt){pts[j].offY-=h2*0.8;pts[j].offX-=dir*w2*1.1;}
         }
         else if(!pts[j].zone){
           pts[j].offY-=h2*1.6;const dir=(pts[j].x>=pts[i].x)?1:-1;pts[j].offX+=dir*w2*0.9;
@@ -2007,6 +2007,7 @@ function animate(){
     // Konvergen: total ruang vertikal aman melebihi kebutuhan, tiap iterasi hanya mengurangi pelanggaran.
     {
       const H2=container.clientHeight/2, TOP=H2-140, BOT=H2-110; // atas: 140px cadangan lane header+ticker (HUD HTML, di luar canvas); bawah: 110px toolbar (Rina pernah terpotong @90)
+      const ZONE_TOP_EXTRA=48; // label zona paling sering bocor ke lane ticker — margin ekstra lebih besar
       for(let round=0;round<3;round++){
       // sweep: dari atas ke bawah, tiap label didorong ke bawah dari posisi terendah yang bebas overlap
       {
@@ -2027,7 +2028,7 @@ function animate(){
       let violated=false;
       pts.forEach(p=>{
         const fy=p.y+p.offY, half=(p.sh||p.zh||0)/2;
-        const topLim=p.zone?TOP-24:TOP; // zona margin ekstra: label zona paling sering bocor ke lane ticker
+        const topLim=p.zone?TOP+ZONE_TOP_EXTRA:TOP; // zona margin ekstra: label zona paling sering bocor ke lane ticker
         if(fy+half>BOT){p.offY=BOT+half-p.y;violated=true;}       // masuk toolbar -> naik
         else if(fy-half<-(topLim)){p.offY=-(topLim)+half-p.y;violated=true;} // keluar layar atas -> turun (tanpa jitter: jitter acak bikin label loncat tiap frame)
         // clamp HORIZONTAL: label tak boleh bocor keluar tepi kiri/kanan viewport (label zona paling lebar)
@@ -2043,7 +2044,7 @@ function animate(){
     const dist=camera.position.distanceTo(tgt), worldPerPx=2*dist*Math.tan(camera.fov*Math.PI/360)/container.clientHeight;
     pts.forEach(p=>{
       const dy=Math.min(34,p.offY*worldPerPx*1.2), dx=Math.max(-12,Math.min(12,p.offX*worldPerPx));
-      if(p.zone){if(p.zt){const dyz=Math.max(-6,Math.min(34,p.offY*worldPerPx*1.2)), dxz=Math.max(-24,Math.min(24,p.offX*worldPerPx)); p.zt.position.y=p.baseY+dyz; p.zt.position.x=p.baseX+dxz; const zu=p.zt.userData; zu.antiY=(zu.antiY||0)+dyz; zu.antiX=(zu.antiX||0)+dxz;} return;} // BUBBLE tidak disentuh anti-overlap (dianimasikan updateBubbles — menyentuhnya bikin loncat)
+      if(p.zone){if(p.zt){const dyz=Math.max(-10,Math.min(52,p.offY*worldPerPx*1.2)), dxz=Math.max(-36,Math.min(36,p.offX*worldPerPx)); p.zt.position.y=p.baseY+dyz; p.zt.position.x=p.baseX+dxz; const zu=p.zt.userData; zu.antiY=(zu.antiY||0)+dyz; zu.antiX=(zu.antiX||0)+dxz;} return;} // BUBBLE tidak disentuh anti-overlap (dianimasikan updateBubbles — menyentuhnya bikin loncat)
       p.a.label.position.y=p.baseY+dy; p.a.label.position.x=p.baseX+dx;
       p.a.label.userData.antiY=dy; p.a.label.userData.antiX=dx; // utk base frame berikutnya
     });
