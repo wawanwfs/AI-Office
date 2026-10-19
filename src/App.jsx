@@ -331,7 +331,7 @@ export default function App() {
       <ConfirmModal show={!!ask} title={ask?.title} text={ask?.body} confirmLabel={ask?.ok}
         onConfirm={() => { const f = ask.onOk; setAsk(null); f() }} onCancel={() => setAsk(null)} />
 
-      {toast && <div className={'toast' + (toast.err ? ' err' : '')} role="status" aria-live="polite">{toast.msg}</div>}
+      {toast && <div className={'toast' + (toast.err ? ' err' : '')} role={toast.err ? 'alert' : 'status'} aria-live={toast.err ? 'assertive' : 'polite'}>{toast.msg}</div>}
     </>
   )
 }

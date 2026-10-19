@@ -854,3 +854,8 @@
 - Implementasi: useEffect di App.jsx menyinkronkan document.title dgn state status/statusKind: prefix ● (busy: task berjalan/dijeda), ⚠ (gateway offline), contoh "● Dijeda — WFS Project HQ", "2 jalan · 5 antri — WFS Project HQ".
 - Bukti probe playwright produksi 9503: title = "● Dijeda — WFS Project HQ" (status gateway live terpantul), 0 console error non-WebGL. Build OK (4.8s, precache 31), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→4, errs 0.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+## 2026-10-20 06:40 WIB — a11y: slider waktu umumkan jam (aria-valuetext) + toast error jadi assertive
+- Masalah: slider waktu simulasi di HUD (0–1440) diumumkan screen reader sebagai angka mentah ("660") tanpa konteks jam; toast error (mis. "Scene 3D tidak aktif") memakai role=status/polite — error bisa terlewat oleh screen reader user.
+- Implementasi: input range diberi aria-valuetext={time} (format "11:00", sama dgn label jam); toast err → role=alert + aria-live=assertive, toast normal tetap status/polite.
+- Bukti: probe playwright produksi 9503 → valuetext "11:00"; build OK (4.4s, precache 31), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, errs 0.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
