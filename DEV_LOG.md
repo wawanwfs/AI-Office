@@ -804,3 +804,9 @@
 - Implementasi: panel TeamStats diberi id="team-stats", panel CsWidget id="cs-widget" (id statik agar tetap terreferensi walau panel tertutup); kedua trigger diberi aria-controls sesuai id.
 - Bukti: build OK, vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→4, 0 console error.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji.
+## 2026-10-19 22:10 WIB — a11y: skip link keyboard (Tab pertama → panel Chat)
+- Masalah: keyboard/screen-reader user harus menabut melewati seluruh HUD/Ticker/dock (17 tombol) sebelum sampai panel kerja utama; tidak ada mekanisme skip.
+- Implementasi: komponen baru src/components/SkipLink.jsx — link pertama di dokumen, tersembunyi (top:-48px) sampai menerima fokus, lalu tampil (z-index 9999). Aktivasi (Enter) membuka WfsPanel bila tertutup (klik trigger via aria-controls=wfs-panel) dan memindahkan fokus ke kolom input "Pesan". CSS .skip-link di index.css.
+- Bukti probe CDP (Input trusted, chromium headless): Tab pertama → activeElement = skip-link (class 'skip-link vis'); Enter → fokus di INPUT aria-label="Pesan" di DALAM #wfs-panel (inPanel:true). e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 console error.
+- Build OK (0.7s), vitest 24/24, deploy ~/wfs-hq OK.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji.

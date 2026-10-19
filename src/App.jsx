@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react'
 import HUD from './components/HUD'
 import Header from './components/Header'
+import SkipLink from './components/SkipLink'
 import Ticker from './components/Ticker'
 import WfsPanel from './components/WfsPanel'
 import TeamStats from './components/TeamStats'
@@ -269,6 +270,7 @@ export default function App() {
       {sceneErr && <div className="scene-loading err" role="alert">Scene 3D tidak aktif — mode UI saja. Muat ulang halaman untuk mencoba lagi.</div>}
       <div style={{ position: 'fixed', inset: 0, zIndex: 5, pointerEvents: 'none', background: 'radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(0,6,16,0.5) 100%)' }} />
 
+      <SkipLink />
       <Header />
       <Ticker />
 
