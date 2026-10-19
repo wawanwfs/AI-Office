@@ -886,3 +886,10 @@
 - Bukti visual: og-image diverifikasi vision (0 clipping, 0 overlap, hierarki jelas, ~65px margin kanan); apple-touch-icon diverifikasi vision (heksagon penuh dgn padding, W terpusat).
 - Bukti teknis: build OK (12.6s, precache 31→35 entries 1.53MB), vitest 24/24; deploy ~/wfs-hq OK; produksi 9503: /og-image.png & /apple-touch-icon.png HTTP 200, HTML berisi og:image (4 kemunculan meta); e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→3, errs 0.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 01:20 WIB — a11y/bug: fokus panel Proyek terlempar ke ✕ tiap polling (onClose inline, pola bug sama dgn WfsPanel)
+- Masalah: ProjectPanel memanggil useDialogA11y({ onClose: () => setOpen(false) }) — closure inline membuat effect re-run tiap render; panel re-render tiap 15 dtk dari polling /wfs-project, jadi cleanup useDialogA11y memindahkan fokus keyboard/screen reader ke tombol ✕ BERULANG setiap siklus. Pola bug identik dgn WfsPanel (diperbaiki 2026-10-20 23:50).
+- Implementasi: onClose distabilkan — onCloseRef (useRef) + closePanel useCallback([]), pola sama dgn fix WfsPanel; useDialogA11y kini menerima identitas onClose permanen.
+- Bukti probe CDP produksi 9503: tombol sementara di-inject ke dalam panel, difokuskan, lalu diwaktu melewati 1 siklus polling (17 dtk > 15 dtk) → fokus BERTAHAN di elemen dalam ("probe-inject"), tidak lagi lompat ke ✕; Escape tetap menutup panel (panel_after_esc=False); 0 JS error.
+- Build OK (13.0s, precache 35), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→3, errs 0.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

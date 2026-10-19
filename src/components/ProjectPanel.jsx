@@ -10,7 +10,12 @@ export default function ProjectPanel({ onFlash }) {
   const [open, setOpen] = useState(false)
   const box = useRef(null)
   useModalFlag(open)
-  useDialogA11y({ open, onClose: () => setOpen(false), ref: box })
+  // onClose stabil (useCallback + ref): inline closure membuat effect useDialogA11y
+  // re-run tiap render — panel ini re-render tiap 15 dtk dari polling /wfs-project,
+  // cleanup-nya memindahkan fokus ke tombol ✕ berulang (pola bug sama dgn WfsPanel).
+  const onCloseRef = useRef(() => setOpen(false))
+  const closePanel = useCallback(() => onCloseRef.current(), [])
+  useDialogA11y({ open, onClose: closePanel, ref: box })
   const [d, setD] = useState(null)
   const [err, setErr] = useState(false)
 
