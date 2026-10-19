@@ -861,6 +861,12 @@
 - Build OK (4.7s, precache 31), vitest 24/24, deploy ~/wfs-hq OK.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
 
+## 2026-10-20 23:50 WIB — a11y: tablist WfsPanel dgn navigasi panah + roving tabindex; progressbar ProjectPanel dapat semantik ARIA; bug fokus lompat ke ✕
+- Masalah: (1) tab "Chat"/"Model API" di panel chat tak bisa dinavigasi panah (pola WAI-ARIA tabs: Left/Right/Home/End + roving tabindex), screen reader user harus Tab keluar-masuk; (2) progressbar progres task di panel Proyek hanya div visual tanpa role — persentase tak diumumkan; (3) bug tersembunyi ditemukan probe: onClose inline di useDialogA11y WfsPanel membuat effect re-run tiap render → cleanup memindahkan fokus ke tombol ✕ saat ganti tab (navigasi keyboard rusak diam-diam).
+- Implementasi: tabKeys handler (ArrowLeft/Right wrap, Home/End) + tabIndex dinamis di 2 tab; ProjectPanel progressbar diberi role=progressbar + aria-valuenow/max + aria-label; WfsPanel onClose distabilkan via useCallback([]) + ref.
+- Bukti probe playwright produksi 9503 (fokus di tab Chat): ArrowRight → #wfs-tab-config (selected true), Home → #wfs-tab-chat, End → #wfs-tab-config, ArrowLeft → #wfs-tab-chat — fokus & aria-selected sinkron, 0 pageerror; progressbar: valuenow "100", label "Progres task: 100% selesai". Build OK (2.6s, precache 31), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→3, 0 error.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
 ## 2026-10-20 06:40 WIB — a11y: slider waktu umumkan jam (aria-valuetext) + toast error jadi assertive
 - Masalah: slider waktu simulasi di HUD (0–1440) diumumkan screen reader sebagai angka mentah ("660") tanpa konteks jam; toast error (mis. "Scene 3D tidak aktif") memakai role=status/polite — error bisa terlewat oleh screen reader user.
 - Implementasi: input range diberi aria-valuetext={time} (format "11:00", sama dgn label jam); toast err → role=alert + aria-live=assertive, toast normal tetap status/polite.

@@ -3,6 +3,21 @@ import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
 
+// Navigasi panah tablist (pola WAI-ARIA tabs): Left/Right/Home/End memindahkan
+// fokus antar tab; Tab keluar seperti biasa (roving tabindex di render).
+const tabKeys = (e, setTab) => {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return
+  const tabs = ['chat', 'config']
+  const i = tabs.indexOf(document.activeElement?.id === 'wfs-tab-config' ? 'config' : 'chat')
+  let n
+  if (e.key === 'Home') n = 0
+  else if (e.key === 'End') n = tabs.length - 1
+  else n = e.key === 'ArrowRight' ? (i + 1) % tabs.length : (i - 1 + tabs.length) % tabs.length
+  e.preventDefault(); setTab(tabs[n])
+  // fokus ulang tab tujuan setelah re-render (roving tabindex berganti)
+  setTimeout(() => { const el = document.getElementById('wfs-tab-' + tabs[n]); if (el) el.focus() }, 60)
+}
+
 // Panel chat AI + konfigurasi per agent — gateway :8787 via /wfs-api
 export default function WfsPanel() {
   const [open, setOpen] = useState(false)
@@ -23,7 +38,12 @@ export default function WfsPanel() {
   const logRef = useRef(null)
   const inputRef = useRef(null)
   const agentsRef = useRef([])
-  useDialogA11y({ open, onClose: () => setOpen(false), ref: box, initialFocus: inputRef })
+  const onCloseRef = useRef(() => setOpen(false))
+  // setOpen dari useState stabil, jadi useCallback([]) memberi identitas permanen.
+  // Kalau inline closure: effect useDialogA11y re-run tiap render (setTab dsb) —
+  // cleanup-nya memindahkan fokus ke tombol pertama (✕) & merusak navigasi tablist.
+  const closePanel = useCallback(() => onCloseRef.current(), [])
+  useDialogA11y({ open, onClose: closePanel, ref: box, initialFocus: inputRef })
 
   const log = sel ? (logs[sel.id] || []) : []
   const pushLog = (id, m) => setLogs(l => ({ ...l, [id]: [...(l[id] || []), m] }))
@@ -113,9 +133,9 @@ export default function WfsPanel() {
             <div className="t">{sel ? sel.name : 'Chat AI Team'}<small>{sel ? sel.role : ''} · {tab === 'chat' ? 'percakapan' : 'konfigurasi model'}</small></div>
             <button className="x" onClick={() => setOpen(false)} aria-label="Tutup panel chat">✕</button>
           </div>
-          <div className="tabs" role="tablist">
-            <button role="tab" id="wfs-tab-chat" aria-selected={tab === 'chat'} aria-controls="wfs-tabpanel-chat" onClick={() => setTab('chat')}>💬 Chat</button>
-            <button role="tab" id="wfs-tab-config" aria-selected={tab === 'config'} aria-controls="wfs-tabpanel-config" onClick={() => setTab('config')}>⚙️ Model API</button>
+          <div className="tabs" role="tablist" aria-label="Panel chat / konfigurasi" onKeyDown={e => tabKeys(e, setTab)}>
+            <button role="tab" id="wfs-tab-chat" tabIndex={tab === 'chat' ? 0 : -1} aria-selected={tab === 'chat'} aria-controls="wfs-tabpanel-chat" onClick={() => setTab('chat')}>💬 Chat</button>
+            <button role="tab" id="wfs-tab-config" tabIndex={tab === 'config' ? 0 : -1} aria-selected={tab === 'config'} aria-controls="wfs-tabpanel-config" onClick={() => setTab('config')}>⚙️ Model API</button>
           </div>
           <div style={{ padding: '8px 12px 0' }}>
             {loading && <div className="skeleton" role="status">Memuat agent…</div>}
