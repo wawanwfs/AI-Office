@@ -6,7 +6,12 @@ export default function ActionMenu({ sceneRef, onFlash, refApi }) {
   const [open, setOpen] = useState(false)
   const pop = useRef(null)
   useModalFlag(open)
-  useDialogA11y({ open, onClose: () => setOpen(false), ref: pop })
+  // onClose stabil (ref + useCallback): inline closure membuat effect useDialogA11y
+  // re-run tiap render — toggle nama/rotasi di menu memicu setNamesOn/setRotOn,
+  // cleanup-nya melempar fokus kembali ke tombol pemicu ⚡ di tengah interaksi menu.
+  const onCloseRef = useRef(() => setOpen(false))
+  const closeMenu = useCallback(() => onCloseRef.current(), [])
+  useDialogA11y({ open, onClose: closeMenu, ref: pop })
   const [namesOn, setNamesOn] = useState(true)
   const [rotOn, setRotOn] = useState(false)
   const wrap = useRef(null)

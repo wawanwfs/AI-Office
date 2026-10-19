@@ -12,7 +12,12 @@ export default function TeamStats() {
   const [err, setErr] = useState(false)
   const box = useRef(null)
   useModalFlag(open)
-  useDialogA11y({ open, onClose: () => setOpen(false), ref: box })
+  // onClose stabil (ref + useCallback): panel polling tiap 15 dtk — inline closure
+  // membuat effect useDialogA11y re-run tiap render dan cleanup-nya melempar fokus
+  // ke tombol ✕ berulang (pola bug sama dgn WfsPanel/ProjectPanel).
+  const onCloseRef = useRef(() => setOpen(false))
+  const closeStats = useCallback(() => onCloseRef.current(), [])
+  useDialogA11y({ open, onClose: closeStats, ref: box })
 
   const load = useCallback(async (signal) => {
     try {
