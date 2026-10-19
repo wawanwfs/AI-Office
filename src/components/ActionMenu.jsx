@@ -6,7 +6,7 @@ export default function ActionMenu({ sceneRef, onFlash, refApi }) {
   const [open, setOpen] = useState(false)
   const pop = useRef(null)
   useModalFlag(open)
-  useDialogA11y({ open, onClose: () => {}, ref: pop })
+  useDialogA11y({ open, onClose: () => setOpen(false), ref: pop })
   const [namesOn, setNamesOn] = useState(true)
   const [rotOn, setRotOn] = useState(false)
   const wrap = useRef(null)
@@ -45,6 +45,19 @@ export default function ActionMenu({ sceneRef, onFlash, refApi }) {
     return () => { document.removeEventListener('keydown', k); document.removeEventListener('pointerdown', c) }
   }, [open])
 
+  // Navigasi panah menu (Up/Down/Home/End) — pola WAI-ARIA menu
+  const menuKeys = e => {
+    if (!['ArrowDown', 'ArrowUp', 'Home', 'End'].includes(e.key)) return
+    const els = pop.current ? [...pop.current.querySelectorAll('[role="menuitem"],[role="menuitemcheckbox"]')] : []
+    if (!els.length) return
+    e.preventDefault()
+    const i = els.indexOf(document.activeElement)
+    let n
+    if (e.key === 'Home') n = 0
+    else if (e.key === 'End') n = els.length - 1
+    else n = e.key === 'ArrowDown' ? (i + 1) % els.length : (i - 1 + els.length) % els.length
+    els[n].focus()
+  }
   const scene = () => sceneRef.current
   const act = (a, msg) => {
     if (!scene() || !scene().teamAction) return onFlash('Scene 3D tidak aktif (WebGL tidak tersedia)', true)
@@ -59,11 +72,11 @@ export default function ActionMenu({ sceneRef, onFlash, refApi }) {
   return (
     <span className="anchor" ref={wrap}>
       {open && (
-        <div ref={pop} className="pop" role="menu" aria-label="Aksi tim" aria-modal="true" style={{ left: 0 }}>
+        <div ref={pop} className="pop" role="menu" aria-label="Aksi tim" aria-modal="true" style={{ left: 0 }} onKeyDown={menuKeys}>
           {items.map(([ic, label, key, msg]) => <button key={key} role="menuitem" onClick={() => act(key, msg)}><span>{ic}</span>{label}</button>)}
           <hr />
-          <button role="menuitem" onClick={() => { if (scene() && scene().toggleNames) { scene().toggleNames(); if (scene().isNamesVisible) setNamesOn(scene().isNamesVisible()); else setNamesOn(v => !v) } }}><span>🏷️</span>{namesOn ? 'Sembunyikan' : 'Tampilkan'} nama</button>
-          <button role="menuitem" onClick={() => { if (scene() && scene().setAutoRotate) { scene().setAutoRotate(!rotOn); if (scene().isAutoRotate) setRotOn(scene().isAutoRotate()); else setRotOn(v => !v) } }}><span>🔄</span>Putar otomatis: {rotOn ? 'ON' : 'OFF'}</button>
+          <button role="menuitemcheckbox" aria-checked={namesOn} onClick={() => { if (scene() && scene().toggleNames) { scene().toggleNames(); if (scene().isNamesVisible) setNamesOn(scene().isNamesVisible()); else setNamesOn(v => !v) } }}><span>🏷️</span>{namesOn ? 'Sembunyikan' : 'Tampilkan'} nama</button>
+          <button role="menuitemcheckbox" aria-checked={rotOn} onClick={() => { if (scene() && scene().setAutoRotate) { scene().setAutoRotate(!rotOn); if (scene().isAutoRotate) setRotOn(scene().isAutoRotate()); else setRotOn(v => !v) } }}><span>🔄</span>Putar otomatis: {rotOn ? 'ON' : 'OFF'}</button>
         </div>
       )}
       <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-haspopup="menu"><span className="ic">⚡</span><span className="lb">Aksi</span></button>

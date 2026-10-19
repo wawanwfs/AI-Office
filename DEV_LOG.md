@@ -821,3 +821,10 @@
 - Implementasi: komponen src/components/ErrorBoundary.jsx (getDerivedStateFromError + componentDidCatch yang log ke console), dipasang membungkus <App/> di main.jsx. Fallback UI (.error-boundary di index.css): judul, pesan, detail error di <pre>, tombol "Coba lagi" (reset state) & "Muat ulang" (location.reload), role="alert".
 - Bukti: bundle produksi memuat fallback ("Terjadi kesalahan tampilan" ada di dist/assets/index-*.js). Build OK (6.1s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 console error (fallback tidak aktif pada kondisi normal).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji.
+## 2026-10-20 03:45 WIB — a11y: menu Aksi dgn navigasi panah + menuitemcheckbox + fix Escape menu mati (bug ditemukan probe)
+- Masalah: menu Aksi (role=menu) hanya bisa dinavigasi Tab — tidak mendukung pola WAI-ARIA menu (ArrowUp/Down/Home/End); dua item toggle (nama/rotasi) pakai role=menuitem padahal stateful (screen reader tidak mengumumkan status on/off); tombol Mute toggle tanpa aria-pressed.
+- Bug nyata ditemukan saat probe: Escape TIDAK menutup menu Aksi — useDialogA11y dipanggil dengan onClose no-op () => {} dan stopPropagation-nya mematikan handler Escape lama, jadi menu hanya bisa ditutup klik luar. Fix: onClose: () => setOpen(false).
+- Implementasi: ActionMenu — handler menuKeys (ArrowDown/Up wrap-around, Home/End) di popover; 2 toggle jadi role=menuitemcheckbox + aria-checked dinamis; App.jsx tombol Mute + aria-pressed={muted}.
+- Bukti probe CDP (playwright, produksi 9503): 2 menuitemcheckbox aria-checked [true,false] sesuai state scene; ArrowDown×2 → fokus 'Coffee break'→'Kembali bekerja', End→'Putar otomatis', Home→'Meeting sekarang'; Escape → menu hilang (menu_gone:true, sebelumnya false); Mute klik → aria-pressed "true"; 0 console error (non-WebGL).
+- Build OK (1.1s), vitest 24/24, deploy ~/wfs-hq OK.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji.
