@@ -750,3 +750,8 @@
 - Data saat ini 23 done / 0 gagal / 0 review → banner benar-benar tersembunyi (terverifikasi via /wfs-project); jalur render tercakup oleh guard & layout digeser aman.
 - Bukti: build OK (0.8s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, frames 2→5, 0 console error; screenshot scene normal (papan di luar frame kamera default — bukan bug).
 - Sisa backlog: verifikasi subjektif kualitas suara; timer HUD "11:⬜⬜" glyph kotak (font digit hilang) — kandidat perbaikan berikutnya.
+## 2026-10-19 14:20 WIB — fix: emoji tofu di gelembung bicara & teks canvas scene (jam HUD ternyata bukan tofu)
+- Audit visual live (screenshot + vision zoom 4x): gelembung "CPC turun 18% ⬜" = tofu nyata — emoji (📉 🔥 📱 🎉 🤝 ✅ 👋 👆 ⚠️ 🔧 ☕) digambar ke canvas scene dgn font Arial/sans-serif yang di headless/server tanpa fallback emoji warna → kotak kosong. Jam HUD "11:00" ternyata BUKAN tofu: zoom 4x menunjukkan nol Orbitron slashed (garis miring internal, stroke setebal "11") — backlog lama salah duga; font Orbitron terverifikasi loaded (document.fonts.check true, selfhost woff2 hash sama).
+- Implementasi: hapus semua emoji dari teks canvas — 10 string roleTalk, bubble welcome/proyek/alert-failed/task-running, teks kafé "☕ WFS CAFÉ"→"WFS CAFÉ", projectboard "semua beres 🎉"→"semua beres". Karakter ASCII ✓ dan “” tetap (ter-render aman).
+- Bukti: build OK (0.9s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, frames 2→5, 0 console error; screenshot pasca-deploy: semua gelembung bicara bebas tofu, jam 11:00 normal.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia). Emoji future-proofing (selfhost NotoColorEmoji subset) bila ingin emoji kembali di canvas.

@@ -146,7 +146,7 @@ export function createProjectBoard(office, THREE) {
       })
       if (!items.length) {
         g.fillStyle = 'rgba(255,255,255,.25)'; g.font = '26px sans-serif'; g.textAlign = 'center'
-        g.fillText(i === 2 ? 'semua beres 🎉' : 'kosong', x + 235, 320)
+        g.fillText(i === 2 ? 'semua beres' : 'kosong', x + 235, 320)
       }
     })
     // strip bawah: live SaaS bantuin + agent docker (band latar + divider)

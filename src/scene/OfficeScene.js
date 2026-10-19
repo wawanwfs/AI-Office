@@ -122,7 +122,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   if(!hits.length){ if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius,reset:true}} selectedIdx=-1;applySelected(); return; }
   if(boardMesh&&hits[0].object===boardMesh){
     focusGoal={t:new THREE.Vector3(-8.6,2.55,9.2),r:8.5};
-    createBubble(-8.6,4.4,7.8,'“Proyek dibantuin.com — klik tombol Proyek untuk detail 👆”','#10E5A0');
+    createBubble(-8.6,4.4,7.8,'“Proyek dibantuin.com — klik tombol Proyek untuk detail”','#10E5A0');
     return;
   }
   let obj=hits[0].object;let root=null;
@@ -138,7 +138,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
     if(homeRadius===null)homeRadius=Math.max(24,Math.min(60,sph.radius));
     focusGoal={t:new THREE.Vector3(wp.x,1.5,wp.z),r:Math.min(sph.radius,24),follow:root};
     if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
-    createBubble(wp.x,2.6,wp.z,'“Halo! Aku '+root.agent.name+' 👋”',root.agent.hex);
+    createBubble(wp.x,2.6,wp.z,'“Halo! Aku '+root.agent.name+'”',root.agent.hex);
     selectedIdx=agentData.indexOf(root);applySelected();
   }
 });
@@ -867,7 +867,7 @@ allAgents.forEach((agent,i)=>{
           const ad=agentData.find(a=>im[a.agent?.name]===gid);
           if(ad){
             const wp=ad.walker.visible?ad.walker.position:{x:ad.home.x,z:ad.home.z};
-            createBubble(wp.x,2.6,wp.z,'⚠️ Ada task failed! Cek log…','#f66');
+            createBubble(wp.x,2.6,wp.z,'Ada task failed! Cek log…','#f66');
           }
         } else if(v.failed===0){ prevFailed[gid]=0; }
       });
@@ -1035,7 +1035,7 @@ const mbc=document.createElement('canvas');mbc.width=256;mbc.height=140;
 const mx=mbc.getContext('2d');
 mx.fillStyle='#1A1A2E';mx.fillRect(0,0,256,140);
 mx.strokeStyle='#F59E0B';mx.lineWidth=6;mx.strokeRect(3,3,250,134);
-mx.font='bold 26px sans-serif';mx.fillStyle='#F59E0B';mx.fillText('☕ WFS CAFÉ',34,40);
+mx.font='bold 26px sans-serif';mx.fillStyle='#F59E0B';mx.fillText('WFS CAFÉ',34,40);
 mx.font='15px monospace';mx.fillStyle='#EEE';
 mx.fillText('Kopi susu      15k',26,75);
 mx.fillText('Americano     18k',26,100);
@@ -1624,18 +1624,18 @@ function createBubble(x,y,z,text,color,anchor){
 
 // Auto talk: agent cerita sendiri tiap beberapa detik (per role)
 const roleTalk={
-  'BANTUIN AI':['“Siang kak! Mau cek order?”','“Chat 47 hari ini 🔥”'],
+  'BANTUIN AI':['“Siang kak! Mau cek order?”','“Chat 47 hari ini ”'],
   'BUDI':['“API-nya udah jalan”','“Push dulu…”'],
   'RIZKY':['“Webhook Midtrans ✓”','“Query ku-optimize”'],
-  'DEWI':['“Responsive rapi 📱”','“Dark mode siap”'],
-  'ANDI':['“Lighthouse 97! 🎉”','“Hover-nya lucu”'],
+  'DEWI':['“Responsive rapi ”','“Dark mode siap”'],
+  'ANDI':['“Lighthouse 97! ”','“Hover-nya lucu”'],
   'YOGA':['“Build APK selesai”','“Push notif live”'],
-  'MAYA':['“Design v3 ✅”','“Spacing dikoreksi”'],
-  'TONI':['“CPU 12%, aman”','“Docker up ✅”'],
-  'RINA':['“214 test passing ✅”','“1 bug ketemu”'],
-  'LINA':['“CPC turun 18% 📉”','“Leads naik!”'],
-  'SARI':['“Sprint on track ✅”','“Demo ya besok”'],
-  'CEO':['“Deal baru 🤝”','“Kopi dulu ☕”'],
+  'MAYA':['“Design v3 ”','“Spacing dikoreksi”'],
+  'TONI':['“CPU 12%, aman”','“Docker up ”'],
+  'RINA':['“214 test passing ”','“1 bug ketemu”'],
+  'LINA':['“CPC turun 18% ”','“Leads naik!”'],
+  'SARI':['“Sprint on track ”','“Demo ya besok”'],
+  'CEO':['“Deal baru ”','“Kopi dulu ”'],
 };
 let talkTimer=4; // eslint-disable-line no-unused-vars -- reset loop obrolan
 let lastTalkRT=performance.now();
@@ -1654,7 +1654,7 @@ function autoTalk(){
     const rid=window.__wfsAgentIdMap&&window.__wfsAgentIdMap[ad.agent.name];
     const run=rid&&rt.byAgent[rid];
     if(run){
-      createBubble(wp.x,2.6,wp.z,'🔧 Task #'+run.id+': '+run.title.slice(0,26)+'…',ad.agent.hex,anc);
+      createBubble(wp.x,2.6,wp.z,'Task #'+run.id+': '+run.title.slice(0,26)+'…',ad.agent.hex,anc);
       return;
     }
   }
