@@ -1795,13 +1795,17 @@ function playMeetingChime(){
   __ensureAudio();__audioCalls.chime++;updateAudioDbg();
   if(!audioCtx)return;
   [523.25,659.25,783.99].forEach((freq,i)=>{
-    setTimeout(()=>{
-      const osc=audioCtx.createOscillator();osc.type='sine';osc.frequency.value=freq;
+      // daftarkan ke __timeouts agar pending chime di-clear saat destroy()
+      // (tanpa ini, scene yang sudah di-destroy masih menyalakan osilator sisa)
+      const t=setTimeout(()=>{
+    const osc=audioCtx.createOscillator();osc.type='sine';osc.frequency.value=freq;
       const g=audioCtx.createGain();g.gain.value=0.04;
       g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.5);
       osc.connect(g);g.connect(masterGain||audioCtx.destination);
       osc.start();osc.stop(audioCtx.currentTime+0.5);
+      const ix=__timeouts.indexOf(t);if(ix>=0)__timeouts.splice(ix,1);
     },i*150);
+    __timeouts.push(t);
   });
 }
 

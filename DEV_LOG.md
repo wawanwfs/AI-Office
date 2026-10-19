@@ -739,3 +739,8 @@
 - Implementasi OfficeScene.js: daftarkan `__timeouts.push(setTimeout(pollRunning,3000))` dan `__intervals.push(setInterval(pollRunning,15000))` — kini otomatis di-clear di destroy(). Ini timer scene terakhir yang di luar registry (pollBadges, agents/running, failed alert, projectboard sudah ditangani run sebelumnya).
 - Bukti: build OK (1.7s), vitest **24/24**, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→4, 0 console error. Backup /tmp/OS.bak-*.js.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+## 2026-10-19 13:17 WIB — fix leak: pending chime meeting tidak di-clear di destroy()
+- Audit sisa timer terakhir: playMeetingChime() membuat 3 setTimeout (osilator nada per 150ms) TANPA didaftarkan ke __timeouts — destroy() di tengah chime (remount/Hot-Reload saat meeting mulai) melewatkan nada yang belum bunyi; scene mati tetap menyalakan 1-2 osilator sisa. Polling, badge, projectboard, pollRunning, listener window sudah ditangani run-run sebelumnya — chime adalah sisa terakhir.
+- Implementasi: tiap setTimeout chime di-push ke __timeouts lalu di-splice saat callback jalan (biar array tak menumpuk); destroy() kini otomatis menclear nada pending.
+- Bukti: npm run build OK (0.9s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 console error.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
