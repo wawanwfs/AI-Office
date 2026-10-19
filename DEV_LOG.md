@@ -849,3 +849,8 @@
 - Implementasi: onClose: () => setOpen(false) (Escape kini ditangani useDialogA11y langsung); useEffect handler Escape duplikat dihapus.
 - Bukti probe playwright produksi 9503: klik 🛎 AI CS → #cs-widget hadir (1), tekan Escape → hilang (0), esc_works=True, 0 console error. Build OK (4.7s, precache 31), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, errs 0.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+## 2026-10-19 21:05 WIB — UX: judul tab browser dinamis (status task + penanda state)
+- Masalah: document.title statis "WFS Project HQ — Kantor AI 3D" — user dengan banyak tab / pinned tab tidak bisa melihat status kantor (dijeda, task jalan, gateway offline) tanpa membuka tab.
+- Implementasi: useEffect di App.jsx menyinkronkan document.title dgn state status/statusKind: prefix ● (busy: task berjalan/dijeda), ⚠ (gateway offline), contoh "● Dijeda — WFS Project HQ", "2 jalan · 5 antri — WFS Project HQ".
+- Bukti probe playwright produksi 9503: title = "● Dijeda — WFS Project HQ" (status gateway live terpantul), 0 console error non-WebGL. Build OK (4.8s, precache 31), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→4, errs 0.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
