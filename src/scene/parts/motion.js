@@ -8,10 +8,21 @@ export function createMotion(ctx) {
 
   function stride(ad) {
     const t = performance.now() * 0.01;
-    ad.walker.children.forEach((c) => { if (c.userData && c.userData.isLeg) c.position.z = Math.sin(t + c.userData.phase) * 0.08; });
+    ad.walker.children.forEach((c) => {
+      if (!c.userData) return;
+      if (c.userData.isLeg) {
+        c.position.z = Math.sin(t + c.userData.phase) * 0.08;
+        c.rotation.x = Math.cos(t + c.userData.phase) * 0.25; // ayunan kaki ringan (tanpa pivot pinggul, aman dari menembus lantai)
+      } else if (c.userData.isArm) {
+        c.rotation.x = Math.sin(t + c.userData.phase) * 0.5; // lengan berlawanan fase dgn kaki
+      }
+    });
+    // Bob badan: naik-turun kecil 2x per siklus langkah
+    ad.walker.position.y = Math.abs(Math.sin(t)) * 0.035;
   }
   function resetStride(ad) {
-    ad.walker.children.forEach((c) => { if (c.userData && c.userData.isLeg) c.position.z = 0; });
+    ad.walker.children.forEach((c) => { if (c.userData && c.userData.isLeg) { c.position.z = 0; c.rotation.x = 0; } else if (c.userData && c.userData.isArm) { c.rotation.x = 0; } });
+    ad.walker.position.y = 0;
   }
   function follow(ad) { ad.label.position.set(ad.walker.position.x, 2.45, ad.walker.position.z); }
   function stepToward(ad, target, speed, delta) {

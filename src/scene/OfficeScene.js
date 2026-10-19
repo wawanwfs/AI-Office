@@ -512,7 +512,7 @@ function buildChar(agent, standing=false){
     // Lengan: upper + forearm menggantung natural
     [-1,1].forEach(sd=>{
       const ua=new THREE.Mesh(new THREE.BoxGeometry(.09,.18,.09),M(agent.shirt));
-      ua.position.set(sd*.215,.8,0);g.add(ua);
+      ua.position.set(sd*.215,.8,0);ua.userData.isArm=true;ua.userData.phase=sd>0?0:Math.PI;g.add(ua);
       const fa=new THREE.Mesh(new THREE.BoxGeometry(.075,.17,.075),M(skin));
       fa.position.set(sd*.215,.62,0);g.add(fa);
       const hand=new THREE.Mesh(new THREE.BoxGeometry(.08,.07,.08),M(skin));
