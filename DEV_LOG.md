@@ -816,3 +816,8 @@
 - Bukti probe CDP (2 instance chromium headless, Emulation.setEmulatedMedia): reduced-motion → `__cam.sph.theta` 2.4504 → 2.4504 (moved: False, kamera diam); no-preference → 2.4528 → 2.4564 (moved: True, tetap berputar). Keduanya 0 console error.
 - Build OK (0.8s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→6, errs 0.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji.
+## 2026-10-20 03:10 WIB — resilience: React ErrorBoundary global — error render tidak lagi bikin app blank
+- Masalah: main.jsx me-render <App/> tanpa ErrorBoundary — error render React mana pun (contoh nyata: bug TDZ useDialogA11y di WfsPanel, 19:20 WIB, build vite lolos tapi produksi blank total tanpa pesan apa pun) membuat halaman putih; user hanya bisa hard-reload tanpa tahu penyebabnya.
+- Implementasi: komponen src/components/ErrorBoundary.jsx (getDerivedStateFromError + componentDidCatch yang log ke console), dipasang membungkus <App/> di main.jsx. Fallback UI (.error-boundary di index.css): judul, pesan, detail error di <pre>, tombol "Coba lagi" (reset state) & "Muat ulang" (location.reload), role="alert".
+- Bukti: bundle produksi memuat fallback ("Terjadi kesalahan tampilan" ada di dist/assets/index-*.js). Build OK (6.1s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 console error (fallback tidak aktif pada kondisi normal).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji.
