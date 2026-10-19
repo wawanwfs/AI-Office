@@ -1198,8 +1198,9 @@ const serverRack=(x,z)=>{
     unit.position.set(0,.25+u*.23,0);g.add(unit);
     // LED strip: 3 lampu kecil random warna
     [0x00E676,0xFFC107,0x2979FF].forEach((lc,li)=>{
-      const led=new THREE.Mesh(new THREE.BoxGeometry(.05,.04,.02),new THREE.MeshBasicMaterial({color:lc,transparent:true}));
-      led.position.set(-.22+li*.18,.28+u*.23,.32);g.add(led);
+      const led=new THREE.Mesh(new THREE.BoxGeometry(.08,.06,.03),new THREE.MeshBasicMaterial({color:lc,transparent:true}));
+      led.position.set(-.22+li*.18,.28+u*.23,.375); // di depan muka body (z=.35) — sebelumnya .32 tertanam di dalam body, tak terlihat
+      g.add(led);
       __leds.push({m:led,base:1,ph:Math.random()*Math.PI*2,sp:2+Math.random()*6,on:.3+Math.random()*.7});
     });
   }

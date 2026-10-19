@@ -941,7 +941,16 @@
 - Bukti: build OK (precache 35, 1528.6 KiB), vitest 24/24; deploy ~/wfs-hq OK; close-up CDP → rak gelap terbaca jelas dgn strip cyan di tepi, area lit (tidak hitam), 0 z-fighting/artefak; full shot 469 KB (>500KB rule: 469 ≈ OK, scene hidup — frames 2→5); e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, errs 0.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); label zona ticker menutupi tombol MEETING (minor); typo "Djeda" (sengaja? perlu konfirmasi user).
 
-## 2026-10-20 05:40 WIB — visual: label zona tak lagi menutupi MEETING / bocor ke lane ticker; tumpukan CAFÉ↔LOUNGE beres
+## 2026-10-20 06:14 WIB — visual/bug: LED server room kini BENAR-BENAR berkedip (sebelumnya tertanam di dalam body rak, tak pernah terlihat)
+
+- Masalah: DEV_LOG lama & komentar kode mengklaim "3 rak server dengan LED berkedip", tapi LED statis & tak terlihat — audit vision 2 screenshot (full + close-up CDP kamera radius 8 ke tgt server room) mengonfirmasi muka rak polos tanpa LED.
+- Akar masalah (geometri): LED diposisikan z=.32 sementara muka body rak z=.35 → LED tertanam DI DALAM body, ter-occlude permanen. Juga tak ada animasi sama sekali (komentar menyesatkan).
+- Implementasi: (1) LED digeser ke z=.375 (di depan muka body), ukuran .05x.04x.02→.08x.06x.03 agar terbaca; (2) animasi blink baru di loop render: 72 LED dgn fase & laju acak (sp 2–8 rad/s, threshold on .3–1.0), opacity 1↔.12 — pola aktivitas server acak, ikut berhenti saat tab hidden (loop render sudah berhenti).
+- Bukti iterasi close-up CDP (ledshot.sh: __cam sph radius 8, theta .15, tgt (2.8,1.4,-7.2)): v1 (z=.32) → 0 LED terlihat; v2 (z=.375) → vision mengonfirmasi ±12–16 titik LED menyala (hijau dominan, amber, 1 biru) kontras tinggi di 3 rak, sisanya "mati" (opacity .12) — menambah realisme; pixel-scan frame: green 51 / amber 43 / blue 10 sampel.
+- Bukti teknis: build OK (precache 35, 1528.85 KiB), vitest 24/24; deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, errs 0; full shot scene hidup 467 KB; close-up 471 KB.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); kontak tepi Sari↔CAFÉ (kosmetik); label zona menutup sebagian rak pada close-up (label anti-overlap bekerja di default view).
+
+## 2026-10-20 05:40 WIB — visual: label zona tak lagi menutup MEETING / bocor ke lane ticker; tumpukan CAFÉ↔LOUNGE beres
 - Masalah (dari audit backlog): (1) label zona MEETING tertutup penuh label nama agent (hanya "…ETING" terbaca); (2) CAFÉ menumpuk sebagian WELCOME & LOUNGE; (3) DEV DESK hanya gap ~15–25px dari lane ticker.
 - Implementasi (OfficeScene.js anti-overlap label): margin atas zona diperluas TOP+48px (sebelumnya TOP-24); dorongan agent-vs-zona diperkuat (offY 1.9→2.4, offX 1.0→1.2, zona ikut geser 0.5x→0.8x); cap offset zona dinaikkan (dyz −6..34→−10..52, dxz ±24→±36); cap offset agent dy 34→46, dx ±12→±16.
 - Bukti iterasi screenshot (shot.sh 1366x768, 3x iterasi): v1 — ticker aman (gap WELCOME & LOUNGE ±38px), CAFÉ↔LOUNGE terpisah ~120px, tapi MEETING masih tertutup "Lina"; v2 — MEETING utuh, CAFÉ bersih, sisa Sari↔LOUNGE; v3 (final) — kelima zona (WELCOME & LOUNGE, CAFÉ, MEETING, DEV DESK, SERVER ROOM) terbaca utuh tanpa tertutup label agent; sisa kontak hanya Sari menempel tepi CAFÉ (kosmetik) + label-vs-objek 3D latar (banner dinding, TV) yang tidak mengganggu keterbacaan.
