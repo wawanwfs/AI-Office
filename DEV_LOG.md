@@ -907,3 +907,9 @@
 - Bukti probe CDP produksi 9503: Papan Task — probe dalam papan difokuskan, diwaktu melewati siklus polling (18 dtk > 15 dtk) → fokus BERTAHAN di dalam papan (contains=true, sebelum & sesudah); Log Aktivitas — probe bertahan 2 dtk (contains=true); widget AI CS — buka → probe bertahan 8 dtk berturut-turut (contains=true, fokus tidak terlempar), Escape menutup widget; 0 JS error di semua probe.
 - Build OK (precache 35), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→3, errs 0.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 03:00 WIB — a11y: sel statistik tim diumumkan utuh (aria-label per sel) + aria-label eksplisit tombol Papan & Statistik
+- Masalah: (1) sel grid Statistik Tim dibaca screen reader sebagai dua node terpisah ("23" lalu "Selesai") tanpa konteks — jumlah task tak bermakna; (2) tombol dock Papan & Statistik tak punya aria-label eksplisit (mengandalkan teks "Papan"/"Statistik" + emoji, inkonsisten dgn tombol dock lain).
+- Implementasi: sel stat-grid → role="img" + aria-label "23 task selesai" dst, isi angka/label aria-hidden; tombol toggle dapat aria-label eksplisit.
+- Bukti probe playwright produksi 9503: tombol stats aria-label="Statistik tim", papan aria-label="Papan task"; buka Statistik → 5 sel [role=img] dgn label "23 task selesai", "0 task jalan", dst; 0 pageerror. Build OK (4.5s, precache 35), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→4, errs 0.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

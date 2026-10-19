@@ -57,7 +57,7 @@ export default function TeamStats() {
             {data && data.length > 0 && (
               <>
                 <div className="stat-grid">
-                  {[['done','Selesai'],['running','Jalan'],['review','Review'],['failed','Gagal'],['pending','Antri']].map(([s,l]) => (<div key={s}><b style={{color:dot(s)}}>{byStatus[s] || 0}</b><span>{l}</span></div>))}
+                  {[['done','Selesai'],['running','Jalan'],['review','Review'],['failed','Gagal'],['pending','Antri']].map(([s,l]) => (<div key={s} role="img" aria-label={`${byStatus[s] || 0} task ${l.toLowerCase()}`}><b style={{color:dot(s)}} aria-hidden="true">{byStatus[s] || 0}</b><span aria-hidden="true">{l}</span></div>))}
                 </div>
                 <div className="note" style={{ marginBottom: 6 }}>Total file dihasilkan: <b style={{ color: '#fff' }}>{totalFiles}</b></div>
                 <div style={{ maxHeight: 180, overflowY: 'auto' }}>
@@ -85,7 +85,7 @@ export default function TeamStats() {
           </div>
         </div>
       )}
-      <button className="ibtn" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="team-stats"><span className="ic">📊</span><span className="lb">Statistik</span></button>
+      <button className="ibtn" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="team-stats" aria-label="Statistik tim"><span className="ic">📊</span><span className="lb">Statistik</span></button>
     </>
   )
 }

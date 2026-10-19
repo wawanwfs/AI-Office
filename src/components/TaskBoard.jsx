@@ -59,7 +59,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
 
   return (
     <>
-      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="task-board"><span className="ic">📋</span><span className="lb">Papan</span></button>
+      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="task-board" aria-label="Papan task"><span className="ic">📋</span><span className="lb">Papan</span></button>
       {open && (
         <section ref={board} id="task-board" className="panel left" role="dialog" aria-label="Papan task" aria-modal="true">
           <div className="ph">
