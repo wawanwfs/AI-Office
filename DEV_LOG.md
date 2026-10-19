@@ -799,3 +799,8 @@
 - Implementasi: tab chat & config diberi id + aria-controls; konten chat dibungkus div role=tabpanel aria-labelledby=wfs-tab-chat (display:contents agar layout flex lama tak berubah); div konfigurasi jadi tabpanel serupa; tombol Statistik diberi aria-label="Statistik tim".
 - Bukti: build OK (0.9s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→6, 0 console error.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji.
+## 2026-10-19 21:50 WIB — a11y: panel Statistik & AI CS kini punya id + aria-controls dari trigger
+- Celah lanjutan: trigger Statistik (TeamStats) & AI CS (CsWidget) belum punya aria-controls karena panelnya tanpa id — screen reader tidak menautkan tombol ke panel yang dikendalikan.
+- Implementasi: panel TeamStats diberi id="team-stats", panel CsWidget id="cs-widget" (id statik agar tetap terreferensi walau panel tertutup); kedua trigger diberi aria-controls sesuai id.
+- Bukti: build OK, vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→4, 0 console error.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji.

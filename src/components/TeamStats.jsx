@@ -40,7 +40,7 @@ export default function TeamStats() {
   return (
     <>
       {open && (
-        <div ref={box} className="panel left" role="dialog" aria-label="Statistik tim" aria-modal="true">
+        <div ref={box} id="team-stats" className="panel left" role="dialog" aria-label="Statistik tim" aria-modal="true">
           <div className="ph">
             <div className="t">Statistik Tim<small>task engine · refresh 15 dtk</small></div>
             <button className="x" onClick={() => setOpen(false)} aria-label="Tutup statistik">✕</button>
@@ -80,7 +80,7 @@ export default function TeamStats() {
           </div>
         </div>
       )}
-      <button className="ibtn" onClick={() => setOpen(!open)} aria-expanded={open}><span className="ic">📊</span><span className="lb">Statistik</span></button>
+      <button className="ibtn" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="team-stats"><span className="ic">📊</span><span className="lb">Statistik</span></button>
     </>
   )
 }
