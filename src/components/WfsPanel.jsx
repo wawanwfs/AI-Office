@@ -114,8 +114,8 @@ export default function WfsPanel() {
             <button className="x" onClick={() => setOpen(false)} aria-label="Tutup panel chat">✕</button>
           </div>
           <div className="tabs" role="tablist">
-            <button role="tab" aria-selected={tab === 'chat'} onClick={() => setTab('chat')}>💬 Chat</button>
-            <button role="tab" aria-selected={tab === 'config'} onClick={() => setTab('config')}>⚙️ Model API</button>
+            <button role="tab" id="wfs-tab-chat" aria-selected={tab === 'chat'} aria-controls="wfs-tabpanel-chat" onClick={() => setTab('chat')}>💬 Chat</button>
+            <button role="tab" id="wfs-tab-config" aria-selected={tab === 'config'} aria-controls="wfs-tabpanel-config" onClick={() => setTab('config')}>⚙️ Model API</button>
           </div>
           <div style={{ padding: '8px 12px 0' }}>
             {loading && <div className="skeleton" role="status">Memuat agent…</div>}
@@ -132,6 +132,7 @@ export default function WfsPanel() {
             </div>) })()}
           {tab === 'chat' ? (
             <>
+              <div id="wfs-tabpanel-chat" role="tabpanel" aria-labelledby="wfs-tab-chat" style={{ display: 'contents' }}>
               <div ref={logRef} role="log" aria-live="polite" style={{ flex: 1, overflowY: 'auto', padding: '4px 12px', display: 'flex', flexDirection: 'column', gap: 6, minHeight: 160 }}>
                 {log.length === 0 && <div className="note" style={{ textAlign: 'center', margin: 'auto' }}>Tanya apa saja ke {sel ? sel.name : 'agent'}…</div>}
                 {log.map((m, i) => (
@@ -148,9 +149,10 @@ export default function WfsPanel() {
                   onKeyDown={e => { if (e.key === 'Enter' && !e.nativeEvent.isComposing) { e.preventDefault(); send() } }} />
                 <button className="btn primary" onClick={send} disabled={chatBusy || !input.trim() || !sel}>Kirim</button>
               </div>
+              </div>
             </>
           ) : (
-            <div style={{ padding: '4px 12px 12px', overflowY: 'auto' }}>
+            <div id="wfs-tabpanel-config" role="tabpanel" aria-labelledby="wfs-tab-config" style={{ padding: '4px 12px 12px', overflowY: 'auto' }}>
               <div className="note" style={{ marginBottom: 8 }}>Kosongkan semua = pakai AI default WFS. Isi untuk model berbeda per agent.</div>
               <input className="fld" aria-label="Base URL" placeholder="Base URL (https://…/v1)" value={cfg.base_url} onChange={e => setCfg({ ...cfg, base_url: e.target.value })} />
               <input className="fld" aria-label="API Key" type="password" autoComplete="off" value={cfg.api_key} onChange={e => setCfg({ ...cfg, api_key: e.target.value })}

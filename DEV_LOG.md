@@ -789,3 +789,8 @@
 - Bukti probe CDP (chromium headless :9492, halaman produksi 9503): buka panel Chat dgn fokus di tombol dock → inDlg:true (fokus masuk dialog), Escape → dlgGone:true & **restored:true** (fokus kembali ke tombol pemicu, bukan BODY).
 - Build OK (0.8s), vitest **24/24**, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→4, 0 console error.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji.
+## 2026-10-19 20:40 WIB — a11y: WfsPanel tab chat/konfigurasi jadi tabpanel semantik + label trigger Statistik
+- Masalah: WfsPanel punya role=tablist/tab tapi TANPA tabpanel — tab "Chat"/"⚙️ Model API" tidak punya aria-controls & konten tab tidak ber-role tabpanel (screen reader tidak mengumumkan panel terkait); tombol dock "Statistik" satu-satunya trigger panel tanpa aria-label (nama aksesibel hanya "Statistik" dari span — kurang konteks).
+- Implementasi: tab chat & config diberi id + aria-controls; konten chat dibungkus div role=tabpanel aria-labelledby=wfs-tab-chat (display:contents agar layout flex lama tak berubah); div konfigurasi jadi tabpanel serupa; tombol Statistik diberi aria-label="Statistik tim".
+- Bukti: build OK (0.9s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→6, 0 console error.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji.
