@@ -673,3 +673,9 @@
 - Implementasi OfficeScene.js (blok clamp viewport, siklus sweep→clamp): tambah clamp horizontal — wHalf=(sw||zw)/2, jika x+offX+pad melewati W2-padX atau di bawah -(W2-padX), offX di-clamp; padX zona 6px, agent 2px. Ikut menandai violated sehingga siklus sweep+clamp tetap konvergen.
 - Bukti: build OK (1.3s), vitest 9/9, deploy ~/wfs-hq, e2e_err: DOM True, 17 btns, 14 label, frames 8→13, 0 error. Screenshot ck.png 455KB (scene hidup). Probe CDP khusus clamp belum dibuat (butuh kamera ekstrem) — dicatat sebagai verifikasi subjektif.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-19 10:20 WIB — verifikasi CDP clamp horizontal label (backlog run 09:50) ✓ lolos
+- Probe /tmp/probe_clampx.py (chromium-1248 headless swiftshader DISPLAY :78, port 9402): 7 kamera ekstrem (theta 0/π/±π/2, off-center tgt ±20, near top-down, r 22–45) + ekspose window.__cam/__camCam. Ukur proyeksi layar semua label visible (14 agent + 5 zona) vs bounding canvas.
+- Hasil: **0 pelanggaran horizontal** — tidak ada label visible yang x proyeksinya keluar tepi kiri/kanan canvas (pad clamp zona 6px, agent 2px bekerja).
+- Metodologi: proyeksi NDC label DI LUAR frustum menghasilkan koordinat palsu (mirror) — sprite three.js tak dirender di luar viewport; probe wajib filter arah-forward (rel·fwd < 0.6·dist) sebelum project(). Tanpa filter: 14 false-positive py>1000 (bukan bug scene).
+- e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 3→6, 0 error. Screenshot /tmp/ck.png 464KB (scene hidup). npm test 9/9. Tanpa edit kode (verifikasi saja).
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
