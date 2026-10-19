@@ -2043,7 +2043,7 @@ function animate(){
     // konversi offset piksel ke satuan dunia (~ jarak/tinggi layar), cap supaya label tidak melayang jauh
     const dist=camera.position.distanceTo(tgt), worldPerPx=2*dist*Math.tan(camera.fov*Math.PI/360)/container.clientHeight;
     pts.forEach(p=>{
-      const dy=Math.min(34,p.offY*worldPerPx*1.2), dx=Math.max(-12,Math.min(12,p.offX*worldPerPx));
+      const dy=Math.min(46,p.offY*worldPerPx*1.2), dx=Math.max(-16,Math.min(16,p.offX*worldPerPx));
       if(p.zone){if(p.zt){const dyz=Math.max(-10,Math.min(52,p.offY*worldPerPx*1.2)), dxz=Math.max(-36,Math.min(36,p.offX*worldPerPx)); p.zt.position.y=p.baseY+dyz; p.zt.position.x=p.baseX+dxz; const zu=p.zt.userData; zu.antiY=(zu.antiY||0)+dyz; zu.antiX=(zu.antiX||0)+dxz;} return;} // BUBBLE tidak disentuh anti-overlap (dianimasikan updateBubbles — menyentuhnya bikin loncat)
       p.a.label.position.y=p.baseY+dy; p.a.label.position.x=p.baseX+dx;
       p.a.label.userData.antiY=dy; p.a.label.userData.antiX=dx; // utk base frame berikutnya
