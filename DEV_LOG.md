@@ -839,3 +839,8 @@
 - Implementasi: vite-plugin-pwa (generateSW, registerType autoUpdate). Manifest (nama, lang id, standalone, theme/background #000C1E, ikon favicon.svg). index.html: apple-touch-icon + meta mobile-web-app/apple. Workbox precache 27 entries (1.26MB: JS/CSS/HTML/SVG/woff2), navigateFallbackDenylist /api/ agar polling API tidak di-cache.
 - Bukti: build OK (PWA generateSW sukses, dist/sw.js + manifest.webmanifest); vitest 24/24; produksi 9503: manifest.webmanifest & sw.js → HTTP 200; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→4, 0 console error (registrasi SW tidak mengganggu app).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+## 2026-10-20 05:00 WIB — PWA: ikon PNG 192/512 + maskable (splash screen Android siap)
+- Masalah: manifest hanya punya ikon SVG — Chrome Android butuh PNG 192x192 & 512x512 untuk splash screen & ikon home screen yang bagus.
+- Implementasi: render favicon.svg → public/icon-192.png (24KB) & icon-512.png (140KB) via ImageMagick; manifest diberi 4 ikon (192 any, 512 any, 512 maskable, SVG any); workbox globPatterns +png agar ikon ikut precache.
+- Bukti: build OK, precache naik 27→31 entries (1.42MB); vitest 24/24; deploy ~/wfs-hq OK; produksi 9503: /icon-192.png & /icon-512.png HTTP 200, manifest.webmanifest berisi ikon PNG; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 console error.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
