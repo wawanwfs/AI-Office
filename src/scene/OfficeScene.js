@@ -1183,10 +1183,16 @@ office.add(lounge);
 // --- SERVER ROOM (belakang tengah): 3 rak server dengan LED berkedip ---
 const serverRack=(x,z)=>{
   const g=new THREE.Group();
-  const body=new THREE.Mesh(new THREE.BoxGeometry(.9,2.1,.7),M(0x1C1C28));
+  // body cukup terang dgn garis tepi cyan supaya tidak melebur ke latar gelap
+  const body=new THREE.Mesh(new THREE.BoxGeometry(.9,2.1,.7),M(0x2E3244));
   body.position.y=1.05;body.castShadow=true;g.add(body);
+  // strip cahaya tepi: dua bar tipis di sisi kiri/kanan depan (bukan pelat penuh)
+  [-.46,.46].forEach(sx=>{
+    const edge=new THREE.Mesh(new THREE.BoxGeometry(.05,2.06,.03),MB(0x00E5FF));
+    edge.position.set(sx,1.05,.365);g.add(edge);
+  });
   for(let u=0;u<8;u++){
-    const unit=new THREE.Mesh(new THREE.BoxGeometry(.8,.18,.6),M(0x232332));
+    const unit=new THREE.Mesh(new THREE.BoxGeometry(.8,.18,.6),M(0x3A3F55));
     unit.position.set(0,.25+u*.23,0);g.add(unit);
     // LED strip: 3 lampu kecil random warna
     [0x00E676,0xFFC107,0x2979FF].forEach((lc,li)=>{
@@ -1200,6 +1206,11 @@ const serverRack=(x,z)=>{
   return g;
 };
 serverRack(1.7,-7.6);serverRack(2.8,-7.6);serverRack(3.9,-7.6);
+// Lampu ruang server: cyan dingin + hum AC, supaya area gelap terbaca
+const srLight=new THREE.PointLight(0x00BCD4,.55,6,2);
+srLight.position.set(2.8,2.6,-7.4);office.add(srLight);
+const srBulb=new THREE.Mesh(new THREE.BoxGeometry(.5,.06,.14),MB(0xB2EBF2));
+srBulb.position.set(2.8,2.9,-7.4);office.add(srBulb);
 // Kabel bundel di lantai server room
 const cableRun=new THREE.Mesh(new THREE.BoxGeometry(3,.04,.06),M(0x333344));
 cableRun.position.set(2.8,.03,-7.6);office.add(cableRun);
