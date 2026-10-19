@@ -186,6 +186,18 @@ export default function App() {
     return () => window.removeEventListener('keydown', snap, true)
   }, [])
 
+  // ---- fokus trap: saat modal/panel App terbuka, chrome lain (HUD, Header, Ticker,
+  // dock) dibuat inert — Tab tidak bisa "kabur" ke tombol di balik scrim, dan
+  // screen reader tidak membacakan UI yang tertutup. (modal-scrim sudah memblokir
+  // klik; inert menutup celah navigasi keyboard.) Panel dgn state internal
+  // (TaskBoard/WfsPanel/…) memakai mekanisme sama via useModalFlag di masing-masing.
+  const chromeModal = !!(showTask || confirm || ask || showHelp || showLog)
+  useEffect(() => {
+    const els = Array.from(document.querySelectorAll('header, .hud, .ticker, .dock'))
+    els.forEach(el => { if (chromeModal) el.setAttribute('inert', ''); else el.removeAttribute('inert') })
+    return () => els.forEach(el => el.removeAttribute('inert'))
+  }, [chromeModal])
+
   // ---- shortcut keyboard (abaikan saat fokus di input/textarea/modal) ----
   useEffect(() => {
     const onKey = (e) => {

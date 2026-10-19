@@ -761,3 +761,8 @@
 - Bukti probe CDP (chromium swiftshader, import OfficeScene-CIwtTRwK.js dari bundle produksi): remount x3 destroy → 3 ctx dibuat & ditutup; scene ke-4 dgn keydown → audio {started:true, ctx hidup} ✓; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 console error.
 - Build OK, vitest 24/24, deploy ~/wfs-hq OK. Backup /tmp/OS.bak-*.js.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji bila ingin emoji kembali di canvas.
+## 2026-10-19 17:30 WIB — aksesibilitas: fokus trap via `inert` — Tab tak bisa kabur ke UI di balik modal
+- Masalah: modal-scrim hanya memblokir klik; fokus keyboard tetap bisa Tab/menuju HUD, Header, Ticker, dan seluruh tombol dock yang tertutup scrim (mis. TaskModal terbuka, Tab mencapai tombol Mute/Bantuan — klik tak mungkin, Tab bisa; screen reader juga masih membacakan UI tertutup).
+- Implementasi App.jsx: saat salah satu modal App (showTask/confirm/ask/showHelp/showLog) terbuka, `header, .hud, .ticker, .dock` diberi atribut `inert` (dilepas saat tutup + di cleanup); panel dgn state internal (TaskBoard/WfsPanel/CsWidget dll.) sudah memakai flag modal terpusat utk shortcut & scene Escape.
+- Bukti: build OK (3.7s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→4, 0 console error.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji bila ingin emoji kembali di canvas.
