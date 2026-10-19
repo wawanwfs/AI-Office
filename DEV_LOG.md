@@ -729,3 +729,8 @@
 - Bukti probe CDP (chromium-1248 headless :78, port 9491, Input.dispatchKeyEvent trusted, module scene di-import langsung dari bundle produksi untuk simulasi remount): init `{destroyed:false,audio started:false}` → keydown → `{started:true,running}`; destroy→flag true; **createOfficeScene baru → `destroyedAfterNewScene:false`** ✓; keydown berikutnya → **`{started:true, state:'running'}`** ✓ (tanpa fix: flag tetap true, audio tetap none). 0 console error.
 - Build OK, vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 error.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+## 2026-10-19 15:20 WIB — fix leak: 4 listener window (drag kamera, Escape, unlock audio) tidak dilepas di destroy()
+- Audit listener global scene: `addEventListener('pointerup', ...)` dan `addEventListener('pointermove', ...)` (drag kamera, window-level anonim) serta `window.addEventListener('keydown'/'pointerdown', __ensureAudio, {once:true})` tidak pernah di-remove di destroy() — tiap remount/Hot-Reload App menumpuk handler lama: pointermove lama tetap memutar kamera scene mati (akses renderer DOM yang sudah dilepas) dan menumpuk closure tiap remount.
+- Implementasi OfficeScene.js: handler drag kamera dinamed (onDragUp/onDragMove), destroy() kini melepas 4 listener (pointerup, pointermove, keydown __ensureAudio, pointerdown __ensureAudio) + keydown onKey yang sudah ada.
+- Bukti: build OK (0.95s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 console error. Backup /tmp/OS.bak-*.js.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

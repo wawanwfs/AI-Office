@@ -142,8 +142,11 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
     selectedIdx=agentData.indexOf(root);applySelected();
   }
 });
-addEventListener('pointerup',()=>{isDrag=false;autoTmr=setTimeout(()=>autoRot=true,6000);if(renderer.domElement&&renderer.domElement.style.cursor==='grabbing')renderer.domElement.style.cursor=''});
-addEventListener('pointermove',e=>{if(!isDrag)return;sph.theta-=(e.clientX-prev.x)*.005;sph.phi+=(e.clientY-prev.y)*.005;prev={x:e.clientX,y:e.clientY};updCam()});
+let onDragUp=null, onDragMove=null;
+onDragUp=()=>{isDrag=false;autoTmr=setTimeout(()=>autoRot=true,6000);if(renderer.domElement&&renderer.domElement.style.cursor==='grabbing')renderer.domElement.style.cursor=''};
+onDragMove=(e)=>{if(!isDrag)return;sph.theta-=(e.clientX-prev.x)*.005;sph.phi+=(e.clientY-prev.y)*.005;prev={x:e.clientX,y:e.clientY};updCam()};
+addEventListener('pointerup',onDragUp);
+addEventListener('pointermove',onDragMove);
 // double-click: zoom ke titik (agent/papan = fokus, kosong = maju 30%)
 renderer.domElement&&renderer.domElement.addEventListener('dblclick',e=>{
   const ndc=new THREE.Vector2((e.clientX/innerWidth)*2-1,-(e.clientY/innerHeight)*2+1);
@@ -2126,6 +2129,10 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       document.removeEventListener('visibilitychange', onVis);
       if(rafId){cancelAnimationFrame(rafId);rafId=null;}
       window.removeEventListener('keydown', onKey);
+      window.removeEventListener('pointerup', onDragUp);
+      window.removeEventListener('pointermove', onDragMove);
+      window.removeEventListener('keydown', __ensureAudio);
+      window.removeEventListener('pointerdown', __ensureAudio);
       // Papan proyek: hentikan interval fetch /wfs-project + listener visibilitychange
       // (tanpa ini, tiap remount meninggalkan papan lama yang terus fetch selamanya).
       try { window.__projectBoard && window.__projectBoard.destroy() } catch (e) { /* no-op */ }
