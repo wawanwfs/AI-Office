@@ -2123,6 +2123,10 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       document.removeEventListener('visibilitychange', onVis);
       if(rafId){cancelAnimationFrame(rafId);rafId=null;}
       window.removeEventListener('keydown', onKey);
+      // Papan proyek: hentikan interval fetch /wfs-project + listener visibilitychange
+      // (tanpa ini, tiap remount meninggalkan papan lama yang terus fetch selamanya).
+      try { window.__projectBoard && window.__projectBoard.destroy() } catch (e) { /* no-op */ }
+      delete window.__projectBoard;
       if(renderer){renderer.dispose();container.removeChild(renderer.domElement);}
     }
   };
