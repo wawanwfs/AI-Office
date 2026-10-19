@@ -854,6 +854,13 @@
 - Implementasi: useEffect di App.jsx menyinkronkan document.title dgn state status/statusKind: prefix ● (busy: task berjalan/dijeda), ⚠ (gateway offline), contoh "● Dijeda — WFS Project HQ", "2 jalan · 5 antri — WFS Project HQ".
 - Bukti probe playwright produksi 9503: title = "● Dijeda — WFS Project HQ" (status gateway live terpantul), 0 console error non-WebGL. Build OK (4.8s, precache 31), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→4, errs 0.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+## 2026-10-20 07:15 WIB — a11y/bug: prefers-reduced-motion kini dihormati auto-rotate kamera (bug init + resume)
+- Masalah: (1) user dgn preferensi OS "kurangi gerakan" tetap mendapat auto-rotate kamera — ekspresi init lama membaca pref tersimpan '1' sebagai '0' dan sebaliknya (logika terbalik); (2) lebih parah: onDragUp selalu menyalakan autoRot lagi 6 dtk setelah drag, jadi preferensi apapun (reduce/eksplicit) hilang permanen; (3) toggle "Putar otomatis" menulis localStorage tapi state internal tidak disinkron, keputusan resume memakai nilai basi.
+- Implementasi: autoRotDefault() = pref eksplisit localStorage (0/1) > prefers-reduced-motion (maka OFF) > default ON; dipakai untuk init, resume pasca-drag, dan listener change matchMedia (pref OS berubah live bila user belum set eksplisit); setAutoRotate kini juga update __userRot.
+- Bukti probe CDP (produksi 9503): browser normal — drag lalu tunggu 7 dtk → theta bergerak lagi (resume jalan, 2.2028→2.2040); browser --force-prefers-reduced-motion — theta DIAM (2.4504→2.4504, tidak ada rotasi paksa); pref eksplisit wfs_autorot=1 → rotasi jalan lagi (override reduce sesuai kehendak user); e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 error.
+- Build OK (4.7s, precache 31), vitest 24/24, deploy ~/wfs-hq OK.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
 ## 2026-10-20 06:40 WIB — a11y: slider waktu umumkan jam (aria-valuetext) + toast error jadi assertive
 - Masalah: slider waktu simulasi di HUD (0–1440) diumumkan screen reader sebagai angka mentah ("660") tanpa konteks jam; toast error (mis. "Scene 3D tidak aktif") memakai role=status/polite — error bisa terlewat oleh screen reader user.
 - Implementasi: input range diberi aria-valuetext={time} (format "11:00", sama dgn label jam); toast err → role=alert + aria-live=assertive, toast normal tetap status/polite.
