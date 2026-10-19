@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback } from 'react'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
 
@@ -6,11 +6,14 @@ import { useDialogA11y } from '../lib/dialogA11y'
 export default function CsWidget() {
   const [open, setOpen] = useState(false)
   const box = useRef(null)
+  const onCloseRef = useRef(() => {})
+  onCloseRef.current = () => setOpen(false)
+  const closeWidget = useCallback(() => onCloseRef.current(), [])
   useModalFlag(open)
   // Escape ditangani useDialogA11y (capture, stopPropagation) — onClose TIDAK boleh
   // no-op, kalau tidak Escape tidak pernah sampai ke handler bubble sendiri (bug
   // yang sama seperti menu Aksi 03:45: widget CS tak bisa ditutup dengan Esc).
-  useDialogA11y({ open, onClose: () => setOpen(false), ref: box })
+  useDialogA11y({ open, onClose: closeWidget, ref: box })
   return (
     <>
       {open && (
