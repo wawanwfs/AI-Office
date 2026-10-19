@@ -656,3 +656,9 @@
 - Bukti (chrome headless 9381, DISPLAY :78): Runtime.requestFullscreen via documentElement → 'called' tanpa exception, 0 console error setelah dispatchKeyEvent F real-key; fullscreenElement false di headless (keterbatasan headless, normal — requestFullscreen butuh user gesture terverifikasi browser; handler + guard tidak melempar error). Scene 1 canvas tetap hidup.
 - Build OK (0.4s), vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 8→13, 0 error.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-19 09:10 WIB — fix: Escape di menu Aksi (popover) tidak lagi me-reset kamera
+- Lanjutan siklus fix Escape (02:55→06:45): audit ulang semua handler Escape di komponen — dua popover belum mendaftar di flag modal terpusat `useModalFlag`: **ActionMenu** (menu Aksi ⚡ — popover nyata, ditutup dgn Escape) dan **QuickToolbar** (state `open` vestigial, tak pernah true — hook ditambahkan defensif, tanpa efek). Akibat bug: klik agent → buka menu Aksi → Escape → menu tertutup TAPI kamera diam-diam reset ke home.
+- Implementasi: `useModalFlag(open)` di kedua komponen.
+- Bukti probe CDP (chromium-1248 headless swiftshader DISPLAY :78, port 9342, input keyboard nyata): klik agent → focus {r:24,reset:false} → klik tombol Aksi → role=menu tampil → Escape → menu tertutup DAN **focus tetap {r:24,reset:false}** (tidak reset) ✓; diulang dua kali konsisten. 0 console error.
+- Build OK, vitest 9/9, deploy ~/wfs-hq; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 8→13, 0 error.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
