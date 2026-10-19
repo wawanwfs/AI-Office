@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect } from 'vitest'
-import { fileCount } from '../lib/files'
+import { fileCount, parseFileList } from '../lib/files'
 
 describe('fileCount', () => {
   it('array tetap dihitung per elemen', () => expect(fileCount(['a.py', 'b.js'])).toBe(2))
@@ -16,4 +16,14 @@ describe('fileCount', () => {
   })
   it('string tunggal tanpa koma = 1 file', () => expect(fileCount('main.py')).toBe(1))
   it('JSON rusak fallback ke CSV', () => expect(fileCount("['a.py', 'b.py")).toBe(2))
+})
+
+describe('parseFileList', () => {
+  it('mengembalikan array bersih tanpa whitespace', () => expect(parseFileList(' a.py, b.py ')).toEqual(['a.py', 'b.py']))
+  it('string kosong/[]/null => array kosong', () => {
+    expect(parseFileList('[]')).toEqual([])
+    expect(parseFileList('null')).toEqual([])
+    expect(parseFileList(42)).toEqual([])
+  })
+  it('JSON rusak fallback CSV per item', () => expect(parseFileList("['a.py', 'b.py")).toEqual(["['a.py'", "'b.py"]))
 })

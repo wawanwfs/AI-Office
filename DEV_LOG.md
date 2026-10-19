@@ -701,3 +701,8 @@
 - Implementasi: helper baru `src/lib/files.js` (fileCount: array → .length; string JSON gaya Python → parse dgn replace kutip; CSV → split koma; kosong/[]/null → 0) + TeamStats pakai fileCount. 7 unit test baru.
 - Bukti: npm run build OK, vitest **16/16** (9 lama + 7 baru), deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→6, 0 console error.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+## 2026-10-19 13:10 WIB — refactor: render "File dihasilkan" TaskBoard pakai parser bersama (parseFileList) + 3 test
+- Konsistensi: detail task di TaskBoard masih parse `files` manual (`String(files).replace(/[[\]']/g,'').split(',')`) — rapuh (sisa bracket/kutip tidak rapi, CSV dibagi mentah). Helper fileCount run 12:50 sudah tangani bentuk tak konsisten (array / string JSON gaya Python / CSV / kosong), tapi tak dipakai untuk render daftar.
+- Implementasi: ekstrak `parseFileList(f)` di src/lib/files.js (fileCount kini = parseFileList(f).length); TaskBoard.jsx render daftar file dari parseFileList — bersih tanpa sisa bracket/kutip, fallback aman bila JSON rusak.
+- Bukti: npm run build OK (0.7s), vitest **19/19** (16 lama + 3 baru utk parseFileList: trim whitespace, []/null/non-string => [], fallback CSV), deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 console error.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

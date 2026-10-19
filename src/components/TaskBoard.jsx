@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
+import { parseFileList } from '../lib/files'
 
 const ST = { done: ['Selesai', '#10E5A0'], running: ['Jalan', '#F59E0B'], review: ['Review', '#448AFF'], failed: ['Gagal', '#ef4444'], pending: ['Antri', '#9aa7b8'] }
 const FILTERS = [['all', 'Semua'], ['pending', 'Antri'], ['running', 'Jalan'], ['done', 'Selesai'], ['failed', 'Gagal']]
@@ -56,7 +57,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
               <button className="btn" onClick={() => setSel(null)} style={{ marginBottom: 10 }}>← Kembali</button>
               <h3 style={{ fontSize: 15, marginBottom: 6 }}>#{sel.id} {sel.title}</h3>
               <p className="note" style={{ marginBottom: 8 }}>Agent: {sel.agent_id} · Role: {sel.role} · <b style={{ color: ST[sel.status]?.[1] }}>{ST[sel.status]?.[0] || sel.status}</b></p>
-              {sel.files && sel.files !== '[]' && <><label className="note">File dihasilkan</label><pre className="note" style={{ whiteSpace: 'pre-wrap', margin: '4px 0 10px', color: '#cfd8e3' }}>{String(sel.files).replace(/[[\]']/g, '').split(',').join('\n')}</pre></>}
+              {(() => { const fl = parseFileList(sel.files); return fl.length > 0 && <><label className="note">File dihasilkan</label><pre className="note" style={{ whiteSpace: 'pre-wrap', margin: '4px 0 10px', color: '#cfd8e3' }}>{fl.join('\n')}</pre></> })()}
               {sel.review && <><label className="note">Ulasan QA</label><div className="msg" style={{ maxWidth: '100%', marginTop: 4, fontSize: 13 }}>{sel.review}</div></>}
               {sel.status !== 'running' && sel.status !== 'done' && <button className="btn primary" style={{ marginTop: 12 }} onClick={() => ask(sel)}>▶ Jalankan task</button>}
               {sel.status === 'done' && <button className="btn" style={{ marginTop: 12 }} onClick={() => ask(sel)}>↻ Jalankan ulang</button>}
