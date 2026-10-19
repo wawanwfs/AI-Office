@@ -691,3 +691,8 @@
 - Bukti probe CDP (chromium-1248 headless swiftshader DISPLAY :78, port 9483): sebelum interaksi `__audio {started:false,state:'none'}` → 1 keydown real → **started:true, state:'running'** ✓. Guard loop: calls.tick/step hanya naik saat ada agent duduk/jalan (by design). e2e_err: DOM True, 17 btns, 14 label, frames 2→5, 0 error.
 - Build OK, vitest 9/9, deploy ~/wfs-hq.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+## 2026-10-19 12:30 WIB — hardening visibilitychange: guard anti double-audio & destroy flag anti leak
+- Audit handler `onVis` (visibilitychange): (1) tanpa guard, event hidden→hidden / active→active ganda memanggil suspend/resume berulang; kini suspend hanya saat transisi KE hidden, resume+pollBadges hanya saat kembali visible — state AudioContext diperiksa sebelum aksi (suspend bila 'running', resume bila 'suspended'); (2) `__ensureAudio` (listener global keydown/pointerdown once + dipanggil playKeyClick/playStep/playMeetingChime) bisa recreate AudioContext SETELAH scene.destroy() (Hot-Reload / remount App) → leaked ctx; kini guard `window.__officeSceneDestroyed` di-set di destroy().
+- Bukti: probe CDP (chromium-1248 headless :78, Input.dispatchKeyEvent trusted): audio unlock tetap bekerja {started:true,state:'running'} ✓, 0 console error, DOM True, 17 btns, 14 labels, frames naik. Simulasi lifecycle hidden via Page.setWebLifecycleState TIDAK mengubah document.visibilityState di chromium ini (vis tetap 'visible') — verifikasi penuh jalur hidden dicatat sebagai keterbatasan headless; perubahan bersifat guard/idempotent (lint OK, perilaku visible tidak berubah).
+- Build OK (0.9s), vitest 9/9, deploy ~/wfs-hq.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

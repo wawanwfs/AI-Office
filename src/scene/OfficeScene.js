@@ -98,7 +98,7 @@ renderer.domElement&&renderer.domElement.addEventListener('touchmove',e=>{
   }
 },{passive:false});
 renderer.domElement&&renderer.domElement.addEventListener('touchend',()=>{pinchDist=null},{passive:true});
-const __ensureAudio=()=>{initAudio();try{if(audioCtx&&audioCtx.state==='suspended'&&audioCtx.resume)audioCtx.resume().catch(()=>{});}catch(e){}};
+const __ensureAudio=()=>{if(window.__officeSceneDestroyed)return;initAudio();try{if(audioCtx&&audioCtx.state==='suspended'&&audioCtx.resume)audioCtx.resume().catch(()=>{});}catch(e){}};
 window.addEventListener('keydown',__ensureAudio,{once:true});
 window.addEventListener('pointerdown',__ensureAudio,{once:true});
 renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{isDrag=true;prev={x:e.clientX,y:e.clientY};autoRot=false;clearTimeout(autoTmr);__ensureAudio();if(renderer.domElement.style.cursor!=='pointer')renderer.domElement.style.cursor='grabbing'});
@@ -2037,13 +2037,13 @@ const onVis=()=>{ pageHidden=document.visibilityState==='hidden';
     if(rafId){cancelAnimationFrame(rafId);rafId=null;}
     animate();
   }
-  try{
-    if(pageHidden){ if(audioCtx&&audioCtx.state==='running')audioCtx.suspend(); }
-    else {
+  else if(audioCtx&&audioCtx.state==='running'){try{audioCtx.suspend()}catch(e){}} // tab hidden → hemat CPU audio
+  if(!pageHidden){ // kembali visible: resume audio + refresh instan (tanpa nunggu tick)
+    try{
       if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
-      if(window.__pollBadges)window.__pollBadges(); // refresh instan saat kembali visible (tanpa nunggu tick)
-    }
-  }catch(e){}
+      if(window.__pollBadges)window.__pollBadges();
+    }catch(e){}
+  }
   updateAudioDbg();
 };
 document.addEventListener('visibilitychange',onVis);
@@ -2116,6 +2116,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
     setAudioMuted: (v) => { audioMuted=!!v; if(masterGain)masterGain.gain.value=audioMuted?0:1; saveMuted(); updateAudioDbg(); },
     isAudioMuted: () => audioMuted,
     destroy: () => {
+      window.__officeSceneDestroyed=true;
       __intervals.forEach(clearInterval);
       __timeouts.forEach(clearTimeout);
       window.removeEventListener('resize', onResize);
