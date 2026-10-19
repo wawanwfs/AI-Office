@@ -766,3 +766,8 @@
 - Implementasi App.jsx: saat salah satu modal App (showTask/confirm/ask/showHelp/showLog) terbuka, `header, .hud, .ticker, .dock` diberi atribut `inert` (dilepas saat tutup + di cleanup); panel dgn state internal (TaskBoard/WfsPanel/CsWidget dll.) sudah memakai flag modal terpusat utk shortcut & scene Escape.
 - Bukti: build OK (3.7s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→4, 0 console error.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji bila ingin emoji kembali di canvas.
+## 2026-10-19 18:05 WIB — aksesibilitas: inert chrome juga saat panel state-internal terbuka (TaskBoard/WfsPanel/CsWidget/…)
+- Celah lanjutan dari fix 17:30: flag `inert` hanya mengecek modal yang state-nya di App (showTask/confirm/ask/help/log). Panel dgn state internal yang terdaftar via `useModalFlag` (TaskBoard+detail task, WfsPanel, CsWidget, TeamStats, ProjectPanel, QuickToolbar, ActionMenu) terlewat — saat panel itu terbuka, Tab tetap bisa masuk ke HUD/Header/Ticker/dock di balik scrim dan screen reader tetap membacanya.
+- Implementasi App.jsx: `chromeModal = (modal App) || anyModalOpen()` — flag modal terpusat (useModalFlag) kini juga memicu inert chrome. Cleanup unmount tetap melepas atribut.
+- Bukti: build OK (1.0s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→4, 0 console error.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji.

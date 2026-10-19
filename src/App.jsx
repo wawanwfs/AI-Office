@@ -190,8 +190,8 @@ export default function App() {
   // dock) dibuat inert — Tab tidak bisa "kabur" ke tombol di balik scrim, dan
   // screen reader tidak membacakan UI yang tertutup. (modal-scrim sudah memblokir
   // klik; inert menutup celah navigasi keyboard.) Panel dgn state internal
-  // (TaskBoard/WfsPanel/…) memakai mekanisme sama via useModalFlag di masing-masing.
-  const chromeModal = !!(showTask || confirm || ask || showHelp || showLog)
+  // (TaskBoard/WfsPanel/CsWidget/…) juga tercakup via anyModalOpen() (useModalFlag).
+  const chromeModal = !!(showTask || confirm || ask || showHelp || showLog) || anyModalOpen()
   useEffect(() => {
     const els = Array.from(document.querySelectorAll('header, .hud, .ticker, .dock'))
     els.forEach(el => { if (chromeModal) el.setAttribute('inert', ''); else el.removeAttribute('inert') })
