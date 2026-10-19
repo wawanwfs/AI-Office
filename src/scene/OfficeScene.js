@@ -1127,13 +1127,55 @@ const tvFrame=new THREE.Mesh(new THREE.BoxGeometry(.06,.75,1.3),M(0x101418));
 tvFrame.position.set(12.35,2.0,6.4);lounge.add(tvFrame);
 const tvC=document.createElement('canvas');tvC.width=256;tvC.height=144;
 const tvx=tvC.getContext('2d');
-tvx.fillStyle='#0A1628';tvx.fillRect(0,0,256,144);
-tvx.fillStyle='#F59E0B';tvx.font='bold 20px sans-serif';tvx.fillText('WFS HQ',14,30);
-tvx.fillStyle='#10E5A0';tvx.font='14px monospace';
-tvx.fillText('deploy: OK  tests: 9/9',14,66);
-tvx.fillText('agents: 14 online',14,88);
-tvx.fillText('uptime: 99.98%',14,110);
+// TV lounge: dashboard live dari /wfs-project (data nyata, refresh 60 dtk + saat tab visible).
+// Statis lama ("uptime: 99.98%", "agents: 14 online") = angka hardcode menyesatkan → dihapus.
+function drawTv(){
+  tvx.fillStyle='#0A1628';tvx.fillRect(0,0,256,144);
+  tvx.fillStyle='#F59E0B';tvx.font='bold 16px sans-serif';tvx.textAlign='left';tvx.textBaseline='alphabetic';
+  tvx.fillText('WFS HQ · LIVE',12,24);
+  const T=window.__tvData?.tasks, S=window.__tvData?.saas, AG=window.__tvData?.agents||[];
+  if(!T){ // belum ada data / fetch gagal
+    tvx.fillStyle='#8fa3bd';tvx.font='12px monospace';
+    tvx.fillText('menghubungkan...',12,70);
+    return;
+  }
+  const pct=T.total?Math.round(T.done/T.total*100):0;
+  // progress bar
+  tvx.fillStyle='rgba(255,255,255,.1)';tvx.fillRect(12,36,232,12);
+  const grd=tvx.createLinearGradient(12,0,244,0);grd.addColorStop(0,'#10E5A0');grd.addColorStop(1,'#448AFF');
+  tvx.fillStyle=grd;tvx.fillRect(12,36,Math.max(6,232*pct/100),12);
+  tvx.fillStyle='#fff';tvx.font='bold 12px sans-serif';
+  tvx.fillText(pct+'% · '+T.done+'/'+T.total+' task',12,62);
+  tvx.font='11px monospace';
+  if(T.failed){tvx.fillStyle='#ef4444';tvx.fillText('GAGAL: '+T.failed,12,80)}
+  if(T.review){tvx.fillStyle='#448AFF';tvx.fillText('REVIEW: '+T.review,T.failed?90:12,80)}
+  // SaaS
+  tvx.fillStyle='#448AFF';tvx.fillText('SaaS',12,100);
+  tvx.fillStyle=S&&S.online?'#10E5A0':'#ef4444';
+  tvx.fillText(S&&S.online?((S.stats?.tenants||0)+' tenant · '+(S.stats?.messages||0)+' pesan'):'offline',48,100);
+  // agents
+  tvx.fillStyle='#448AFF';tvx.fillText('AGENT',12,120);
+  tvx.fillStyle='#10E5A0';
+  tvx.fillText(AG.map(a=>a.name+(a.status==='Up'?'●':'○')).join(' ')||'-',56,120);
+  tvx.fillStyle='#5b6b82';tvx.font='9px monospace';
+  tvx.fillText('update '+new Date(window.__tvData?.at||Date.now()).toLocaleTimeString('id-ID'),12,138);
+}
+drawTv();
 const tvTex=new THREE.CanvasTexture(tvC);tvTex.minFilter=THREE.LinearFilter;
+async function tvPull(){
+  if(document.visibilityState==='hidden')return;
+  try{
+    const r=await fetch('/wfs-project');
+    if(!r.ok)throw new Error('HTTP '+r.status);
+    const d=await r.json();
+    window.__tvData={...d,at:Date.now()};
+    drawTv();tvTex.needsUpdate=true;
+  }catch(e){/* tampilan terakhir tetap */}
+}
+tvPull();
+const tvIv=setInterval(tvPull,60000);
+const tvOnVis=()=>{if(document.visibilityState==='visible')tvPull()};
+document.addEventListener('visibilitychange',tvOnVis);
 const tvScr=new THREE.Mesh(new THREE.PlaneGeometry(1.2,.68),new THREE.MeshBasicMaterial({map:tvTex}));
 tvScr.position.set(12.31,2.0,6.4);tvScr.rotation.y=-Math.PI/2;lounge.add(tvScr);
 office.add(lounge);
@@ -2146,6 +2188,8 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       // (tanpa ini, tiap remount meninggalkan papan lama yang terus fetch selamanya).
       try { window.__projectBoard && window.__projectBoard.destroy() } catch (e) { /* no-op */ }
       delete window.__projectBoard;
+      // TV lounge: hentikan interval fetch + listener visibility-nya
+      clearInterval(tvIv); document.removeEventListener('visibilitychange', tvOnVis);
       // Shift (daycycle): clear semua setTimeout pending (arrive/depart berantai per 800ms)
       try { __shift && __shift.dispose && __shift.dispose() } catch (e) { /* no-op */ }
       // Audio: tutup AudioContext scene lama — browser membatasi jumlah AudioContext aktif
