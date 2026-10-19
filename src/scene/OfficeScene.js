@@ -98,7 +98,10 @@ renderer.domElement&&renderer.domElement.addEventListener('touchmove',e=>{
   }
 },{passive:false});
 renderer.domElement&&renderer.domElement.addEventListener('touchend',()=>{pinchDist=null},{passive:true});
-renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{isDrag=true;prev={x:e.clientX,y:e.clientY};autoRot=false;clearTimeout(autoTmr);initAudio();if(renderer.domElement.style.cursor!=='pointer')renderer.domElement.style.cursor='grabbing'});
+const __ensureAudio=()=>{initAudio();try{if(audioCtx&&audioCtx.state==='suspended'&&audioCtx.resume)audioCtx.resume().catch(()=>{});}catch(e){}};
+window.addEventListener('keydown',__ensureAudio,{once:true});
+window.addEventListener('pointerdown',__ensureAudio,{once:true});
+renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{isDrag=true;prev={x:e.clientX,y:e.clientY};autoRot=false;clearTimeout(autoTmr);__ensureAudio();if(renderer.domElement.style.cursor!=='pointer')renderer.domElement.style.cursor='grabbing'});
 renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{downXY={x:e.clientX,y:e.clientY}});
 renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   if(!downXY)return;
@@ -1746,6 +1749,10 @@ function initAudio(){
   if(soundsStarted)return;
   soundsStarted=true;
   audioCtx=new(window.AudioContext||window.webkitAudioContext)();
+  // browser memulai AudioContext dalam state 'suspended' (autoplay policy):
+  // resume() butuh user gesture — pemanggil initAudio memang dari gesture (pointerdown/keydown),
+  // tapi tanpa resume() eksplisit ctx bisa tetap suspended & semua suara senyap.
+  if(audioCtx.state==='suspended'&&audioCtx.resume)audioCtx.resume().catch(()=>{});
   masterGain=audioCtx.createGain();
   masterGain.gain.value=audioMuted?0:1;
   masterGain.connect(audioCtx.destination);
