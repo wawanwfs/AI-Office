@@ -10,6 +10,9 @@ import { createMeetingRoom, createWallClock, createCeilingFixtures } from './par
 import { createProjectBoard } from './parts/projectboard.js';
 
 export function createOfficeScene(container, callbacks = {}) {
+  // scene baru dibuat → flag destroy scene LAMA dicabut; tanpa ini remount/hot-reload
+  // membuat scene baru dengan audio mati permanen (__ensureAudio selalu return early).
+  window.__officeSceneDestroyed = false;
   const { onTimeUpdate, onStatusUpdate, onMeetingChange } = callbacks;
 
 // ═══════════════════════════════════════════════════

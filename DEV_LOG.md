@@ -723,3 +723,9 @@
 - Implementasi: destroy() kini memanggil __projectBoard.destroy() (guard try/catch) lalu delete window.__projectBoard.
 - Bukti: build OK (3.8s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 3→6, 0 console error.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+## 2026-10-19 14:45 WIB — fix: scene baru setelah remount kembali bisa bunyi (flag __officeSceneDestroyed tak pernah di-reset)
+- Bug lifecycle (pasangan fix leak 14:10): destroy() set `window.__officeSceneDestroyed=true`, tapi tidak ada jalur yang me-resetnya — `createOfficeScene()` scene BERIKUTNYA mewarisi flag true, sehingga `__ensureAudio` selalu return early: semua scene hasil remount/Hot-Reload audio-nya mati permanen (keydown/klik tak pernah unlock AudioContext), walau visual & kontrol normal.
+- Implementasi: `createOfficeScene()` baris pertama kini `window.__officeSceneDestroyed=false` (scene baru = scene lama sudah bener-bener mati).
+- Bukti probe CDP (chromium-1248 headless :78, port 9491, Input.dispatchKeyEvent trusted, module scene di-import langsung dari bundle produksi untuk simulasi remount): init `{destroyed:false,audio started:false}` → keydown → `{started:true,running}`; destroy→flag true; **createOfficeScene baru → `destroyedAfterNewScene:false`** ✓; keydown berikutnya → **`{started:true, state:'running'}`** ✓ (tanpa fix: flag tetap true, audio tetap none). 0 console error.
+- Build OK, vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 error.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
