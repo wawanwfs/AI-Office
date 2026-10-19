@@ -893,3 +893,10 @@
 - Bukti probe CDP produksi 9503: tombol sementara di-inject ke dalam panel, difokuskan, lalu diwaktu melewati 1 siklus polling (17 dtk > 15 dtk) → fokus BERTAHAN di elemen dalam ("probe-inject"), tidak lagi lompat ke ✕; Escape tetap menutup panel (panel_after_esc=False); 0 JS error.
 - Build OK (13.0s, precache 35), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→3, errs 0.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 01:35 WIB — a11y/bug: fokus menu Aksi & panel Statistik terlempar keluar (onClose inline, 2 komponen terakhir dgn pola sama)
+- Masalah: ActionMenu & TeamStats masih memakai `useDialogA11y({ onClose: () => setOpen(false) })` — closure inline membuat effect re-run tiap render. ActionMenu: klik toggle nama/rotasi (setNamesOn/setRotOn) melempar fokus kembali ke tombol pemicu ⚡ di tengah interaksi menu. TeamStats: polling 15 dtk melempar fokus ke ✕ tiap siklus (identik dgn WfsPanel & ProjectPanel yang sudah diperbaiki).
+- Implementasi: pola stabil yang sama di kedua komponen — onCloseRef (useRef) + close useCallback([]); ActionMenu perlu import useCallback.
+- Bukti probe CDP produksi 9503: tombol probe di-inject dalam menu Aksi → klik toggle "nama" → fokus BERTAHAN di probe (bukan lompat ke ⚡); probe dalam panel Statistik diwaktu melewati 1 siklus polling (17 dtk) → fokus BERTAHAN di probe; Escape menutup keduanya (pop=False, team-stats=False); 0 JS error.
+- Build OK (2.8s, precache 35), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→3, errs 0.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
