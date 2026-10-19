@@ -1763,7 +1763,7 @@ function updateAudioDbg(){window.__audio={started:soundsStarted,state:audioCtx?a
 updateAudioDbg();
 
 function playKeyClick(){
-  __audioCalls.key++;updateAudioDbg();
+  __ensureAudio();__audioCalls.key++;updateAudioDbg();
   if(!audioCtx)return;
   const osc=audioCtx.createOscillator();
   osc.type='square';osc.frequency.value=800+Math.random()*400;
@@ -1774,7 +1774,7 @@ function playKeyClick(){
 }
 
 function playStep(){
-  __audioCalls.step++;updateAudioDbg();
+  __ensureAudio();__audioCalls.step++;updateAudioDbg();
   if(!audioCtx)return;
   const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*0.04,audioCtx.sampleRate);
   const data=buf.getChannelData(0);
@@ -1786,7 +1786,7 @@ function playStep(){
 }
 
 function playMeetingChime(){
-  __audioCalls.chime++;updateAudioDbg();
+  __ensureAudio();__audioCalls.chime++;updateAudioDbg();
   if(!audioCtx)return;
   [523.25,659.25,783.99].forEach((freq,i)=>{
     setTimeout(()=>{
@@ -2000,7 +2000,7 @@ function animate(){
   }
 
   // Sounds — meeting chime only
-  if(__meet.active&&!lastMeetingState&&soundsStarted)playMeetingChime();
+  if(__meet.active&&!lastMeetingState)playMeetingChime();
   lastMeetingState=__meet.active;
 
   renderer.render(scene,camera);
