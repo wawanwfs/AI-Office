@@ -810,3 +810,9 @@
 - Bukti probe CDP (Input trusted, chromium headless): Tab pertama → activeElement = skip-link (class 'skip-link vis'); Enter → fokus di INPUT aria-label="Pesan" di DALAM #wfs-panel (inPanel:true). e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 console error.
 - Build OK (0.7s), vitest 24/24, deploy ~/wfs-hq OK.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji.
+## 2026-10-20 02:40 WIB — a11y/reduced-motion: auto-rotate kamera menghormati prefers-reduced-motion
+- Masalah: kamera 3D berputar otomatis terus (autoRot default ON) tanpa memeriksa preferensi OS `prefers-reduced-motion: reduce` — bagi user dengan vestibular disorder / motion sickness, putaran kamera konstan memicu mual; CSS animation sudah dihormati (index.css:194) tapi animasi JS di render loop tidak.
+- Implementasi: inisialisasi `autoRot` di OfficeScene.js kini hanya ON bila (a) tidak ada stored pref `wfs_autorot=0` DAN (b) `matchMedia('(prefers-reduced-motion: reduce)')` tidak match. Pilihan user via ActionMenu (setAutoRotate) tetap menimpa & tersimpan di localStorage seperti sebelumnya.
+- Bukti probe CDP (2 instance chromium headless, Emulation.setEmulatedMedia): reduced-motion → `__cam.sph.theta` 2.4504 → 2.4504 (moved: False, kamera diam); no-preference → 2.4528 → 2.4564 (moved: True, tetap berputar). Keduanya 0 console error.
+- Build OK (0.8s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→6, errs 0.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji.

@@ -78,7 +78,7 @@ const __portrait=__asp<0.8;
 if(__portrait){camera.fov=__asp<0.6?66:54;camera.updateProjectionMatrix();}
 let sph={theta:__portrait?2.35:Math.PI*0.78,phi:__portrait?0.62:1.0,radius:__asp<0.6?46:__asp<0.8?44:__asp<1.2?56:__asp<1.5?47:40};
 const tgt=new THREE.Vector3(0,1.8,0);
-let autoRot=(function(){try{return localStorage.getItem('wfs_autorot')!=='0'}catch(e){return true}})(),autoTmr;
+let autoRot=(function(){try{if(localStorage.getItem('wfs_autorot')!=='0'){try{return !matchMedia('(prefers-reduced-motion: reduce)').matches}catch(e){return true}}return false}catch(e){return true}})(),autoTmr;
 let focusGoal=null;const HOME_TGT=new THREE.Vector3(0,1.8,0);let homeRadius=null;
 function updCam(){const p=Math.max(.18,Math.min(Math.PI/2.3,sph.phi));sph.phi=p;camera.position.set(sph.radius*Math.sin(p)*Math.sin(sph.theta)+tgt.x,sph.radius*Math.cos(p)+tgt.y,sph.radius*Math.sin(p)*Math.cos(sph.theta)+tgt.z);camera.lookAt(tgt)}
 const __vo=()=>{const w=container.clientWidth,h=container.clientHeight;if(w/h<0.6)camera.setViewOffset(w,h,-w*0.045,0,w,h);else camera.clearViewOffset()};__vo();
