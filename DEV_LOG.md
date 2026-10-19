@@ -828,3 +828,8 @@
 - Bukti probe CDP (playwright, produksi 9503): 2 menuitemcheckbox aria-checked [true,false] sesuai state scene; ArrowDown×2 → fokus 'Coffee break'→'Kembali bekerja', End→'Putar otomatis', Home→'Meeting sekarang'; Escape → menu hilang (menu_gone:true, sebelumnya false); Mute klik → aria-pressed "true"; 0 console error (non-WebGL).
 - Build OK (1.1s), vitest 24/24, deploy ~/wfs-hq OK.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); opsional selfhost subset NotoColorEmoji.
+## 2026-10-20 04:20 WIB — perf/privasi: font Google self-hosted — 0 request ke fonts.googleapis.com
+- Masalah: index.html memuat font (Syne, DM Sans, DM Mono, Orbitron) dari fonts.googleapis.com — request pihak ketiga tiap load (latency, privasi, offline gagal → font fallback).
+- Implementasi: 12 file woff2 (210KB total) diunduh ke public/fonts + fonts.css hasil rewrite URL ke /fonts/ (28 @font-face, font-display: swap dipertahankan); index.html kini hanya <link rel="stylesheet" href="/fonts/fonts.css"> + preload, dua preconnect googleapis/gstatic dihapus.
+- Bukti: build OK, vitest 24/24, deploy ~/wfs-hq OK; produksi 9503: /fonts/fonts.css & /fonts/orbitron-latin.woff2 → HTTP 200; fonts.css berisi 0 URL eksternal; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, errs 0.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); NotoColorEmoji tidak lagi relevan (emoji via system font).

@@ -20,9 +20,8 @@
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <!-- Font: preload via <link> (bukan CSS @import — di headless/import blokir render &
          font web datang terlambat sehingga digit jam HUD tampil tofu). fallback monospace. -->
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,300&family=DM+Mono:wght@300;400&family=Orbitron:wght@400;500;600;700&display=swap" />
+    <link rel="preload" href="/fonts/fonts.css" as="style" />
+    <link rel="stylesheet" href="/fonts/fonts.css" />
   </head>
   <body>
     <div id="root"></div>
