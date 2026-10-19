@@ -844,3 +844,8 @@
 - Implementasi: render favicon.svg → public/icon-192.png (24KB) & icon-512.png (140KB) via ImageMagick; manifest diberi 4 ikon (192 any, 512 any, 512 maskable, SVG any); workbox globPatterns +png agar ikon ikut precache.
 - Bukti: build OK, precache naik 27→31 entries (1.42MB); vitest 24/24; deploy ~/wfs-hq OK; produksi 9503: /icon-192.png & /icon-512.png HTTP 200, manifest.webmanifest berisi ikon PNG; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 console error.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+## 2026-10-20 06:10 WIB — a11y: fix Escape tidak menutup widget AI CS (pola bug sama dgn menu Aksi)
+- Masalah: CsWidget memanggil useDialogA11y({ onClose: () => {} }) — handler capture-nya stopPropagation pada keydown Escape sebelum handler bubble milik widget sendiri bisa jalan, jadi widget AI CS (iframe) TIDAK bisa ditutup dengan tombol Esc (hanya tombol ✕). Pola bug identik dgn menu Aksi yang diperbaiki 03:45.
+- Implementasi: onClose: () => setOpen(false) (Escape kini ditangani useDialogA11y langsung); useEffect handler Escape duplikat dihapus.
+- Bukti probe playwright produksi 9503: klik 🛎 AI CS → #cs-widget hadir (1), tekan Escape → hilang (0), esc_works=True, 0 console error. Build OK (4.7s, precache 31), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, errs 0.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

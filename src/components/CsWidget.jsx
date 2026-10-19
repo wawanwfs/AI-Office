@@ -7,13 +7,10 @@ export default function CsWidget() {
   const [open, setOpen] = useState(false)
   const box = useRef(null)
   useModalFlag(open)
-  useDialogA11y({ open, onClose: () => {}, ref: box })
-  useEffect(() => {
-    if (!open) return
-    const h = e => { if (e.key === 'Escape') setOpen(false) }
-    document.addEventListener('keydown', h)
-    return () => document.removeEventListener('keydown', h)
-  }, [open])
+  // Escape ditangani useDialogA11y (capture, stopPropagation) — onClose TIDAK boleh
+  // no-op, kalau tidak Escape tidak pernah sampai ke handler bubble sendiri (bug
+  // yang sama seperti menu Aksi 03:45: widget CS tak bisa ditutup dengan Esc).
+  useDialogA11y({ open, onClose: () => setOpen(false), ref: box })
   return (
     <>
       {open && (
