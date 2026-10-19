@@ -102,6 +102,13 @@ export default function App() {
     return () => clearInterval(iv)
   }, [refreshStatus])
 
+  // ---- judul tab dinamis: status task & jam kantor terlihat dari tab browser ----
+  useEffect(() => {
+    const base = 'WFS Project HQ'
+    const m = { busy: '● ', off: '⚠ ', '': '' }
+    document.title = `${m[statusKind] || ''}${status} — ${base}`
+  }, [status, statusKind])
+
   const [sceneReady, setSceneReady] = useState(false)
   const [sceneErr, setSceneErr] = useState(false)
   // ---- scene 3D (lazy) ----
