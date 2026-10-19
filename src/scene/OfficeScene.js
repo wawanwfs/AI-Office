@@ -994,7 +994,7 @@ office.add(reception);
 // WFS EXTRAS — kafe, server room, rak buku, water cooler, zona lantai
 // ═══════════════════════════════════════════════════
 // --- ZONA LANTAI (patch warna + label) ---
-createZones({THREE,office});
+createZones({THREE,office,namesVisible});
 
 // --- CAFÉ / COFFEE BAR (depan kiri) ---
 const cafe=new THREE.Group();
@@ -2062,6 +2062,8 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
         }
         if(!namesVisible)ad.label.visible=false;
       });
+      if(window.__zoneLabels)window.__zoneLabels.forEach(zt=>{zt.userData.antiY=0;zt.userData.antiX=0;
+        const zb=window.__zoneBase&&window.__zoneBase.get(zt);if(zb){zt.position.y=zb.y;zt.position.x=zb.x}});
       if(__meet.active){__meet.update(-1)}
     } else if(action==='tour'){
       agentData.forEach(ad=>{ if(ad.state==='sitting'){ad.timer=0.1;} });
@@ -2069,7 +2071,10 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
   }
   return {
     teamAction,
-    toggleNames: () => { namesVisible=!namesVisible; try{localStorage.setItem('wfs_names',namesVisible?'1':'0')}catch(e){}; agentData.forEach(ad=>{ad.label.visible=namesVisible}) },
+    toggleNames: () => { namesVisible=!namesVisible; try{localStorage.setItem('wfs_names',namesVisible?'1':'0')}catch(e){};
+      agentData.forEach(ad=>{ad.label.visible=namesVisible;ad.label.userData.antiY=0;ad.label.userData.antiX=0});
+      if(window.__zoneLabels)window.__zoneLabels.forEach(zt=>{zt.visible=namesVisible;zt.userData.antiY=0;zt.userData.antiX=0;
+        const zb=window.__zoneBase&&window.__zoneBase.get(zt);if(zb){zt.position.y=zb.y;zt.position.x=zb.x}}); },
     isNamesVisible: () => namesVisible,
     setSelected: (idx) => { selectedIdx=idx; applySelected(); },
     getSelected: () => selectedIdx,

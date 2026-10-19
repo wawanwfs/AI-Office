@@ -30,6 +30,7 @@ export function createZones(ctx){
     zl.renderOrder=5;
     const zsc=(z.label.length>9)?1.25:1; // label panjang lebih besar
     zl.scale.set(3.4*zsc,.64*zsc,1);
+    zl.visible=ctx.namesVisible!==false; // ikut preferensi nama (persist wfs_names)
     zl.position.set(z.x,1.15,zly);office.add(zl);
     (window.__zoneLabels=window.__zoneLabels||[]).push(zl); // dipakai anti-tumpuk label
     zl.userData.label=z.label;
