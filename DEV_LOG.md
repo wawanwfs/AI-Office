@@ -861,6 +861,13 @@
 - Build OK (4.7s, precache 31), vitest 24/24, deploy ~/wfs-hq OK.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
 
+## 2026-10-21 05:05 WIB — a11y: filter Papan Task dapat state (aria-pressed) + live region jumlah hasil; error validasi TaskModal tertaut ke input (aria-invalid/describedby)
+- Masalah: (1) tombol filter Papan Task (Semua/Antri/…) hanya dibedakan warna visual — screen reader tak tahu filter mana aktif dan tak diumumkan berapa hasil setelah filter/pencarian; (2) modal ＋ Task: submit kosong menampilkan "Judul task wajib diisi" tapi pesan tak tertaut ke input (aria-describedby tidak ada, aria-invalid tidak pernah diset).
+- Implementasi: 5 tombol filter diberi aria-pressed; live region tersembunyi (role=status, polite) mengumumkan "N task ditampilkan" tiap filter/pencarian berubah; skeleton memuat dapat role=status, error memuat dapat role=alert; input judul: aria-required + aria-invalid saat error + aria-describedby=tm-err.
+- Bukti probe playwright produksi 9503: filter aria-pressed ["Semua 23"=true, lainnya false]; live region "23 task ditampilkan"; klik filter Selesai → live ter-update; submit kosong → aria-invalid=true, describedby=tm-err, #tm-err role=alert "Judul task wajib diisi"; 0 pageerror.
+- Build OK (precache 35), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→4, errs 0.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
 ## 2026-10-20 23:50 WIB — a11y: tablist WfsPanel dgn navigasi panah + roving tabindex; progressbar ProjectPanel dapat semantik ARIA; bug fokus lompat ke ✕
 - Masalah: (1) tab "Chat"/"Model API" di panel chat tak bisa dinavigasi panah (pola WAI-ARIA tabs: Left/Right/Home/End + roving tabindex), screen reader user harus Tab keluar-masuk; (2) progressbar progres task di panel Proyek hanya div visual tanpa role — persentase tak diumumkan; (3) bug tersembunyi ditemukan probe: onClose inline di useDialogA11y WfsPanel membuat effect re-run tiap render → cleanup memindahkan fokus ke tombol ✕ saat ganti tab (navigasi keyboard rusak diam-diam).
 - Implementasi: tabKeys handler (ArrowLeft/Right wrap, Home/End) + tabIndex dinamis di 2 tab; ProjectPanel progressbar diberi role=progressbar + aria-valuenow/max + aria-label; WfsPanel onClose distabilkan via useCallback([]) + ref.

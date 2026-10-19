@@ -81,12 +81,13 @@ export default function TaskBoard({ onFlash, onAsk }) {
               <div style={{ padding: '10px 12px 0' }}>
                 <input className="fld" aria-label="Cari task" placeholder="Cari judul atau agent…" value={q} onChange={e => setQ(e.target.value)} />
                 <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
-                  {FILTERS.map(([k, l]) => <button key={k} className={'btn' + (filter === k ? ' primary' : '')} style={{ minHeight: 34, padding: '0 10px', fontSize: 12 }} onClick={() => setFilter(k)}>{l} {count(k)}</button>)}
+                  {FILTERS.map(([k, l]) => <button key={k} className={'btn' + (filter === k ? ' primary' : '')} style={{ minHeight: 34, padding: '0 10px', fontSize: 12 }} aria-pressed={filter === k} onClick={() => setFilter(k)}>{l} {count(k)}</button>)}
                 </div>
               </div>
               <div style={{ overflowY: 'auto', padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                {err && <div className="msg err">Gagal memuat task. <button className="btn" onClick={() => load()}>Coba lagi</button></div>}
-                {!tasks && !err && <div className="skeleton">Memuat task…</div>}
+                {err && <div className="msg err" role="alert">Gagal memuat task. <button className="btn" onClick={() => load()}>Coba lagi</button></div>}
+                {!tasks && !err && <div className="skeleton" role="status">Memuat task…</div>}
+                {tasks && <div role="status" aria-live="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', clipPath: 'inset(50%)', whiteSpace: 'nowrap' }}>{`${list.length} task ditampilkan`}</div>}
                 {tasks && list.length === 0 && <div className="skeleton">Tidak ada task yang cocok.</div>}
                 {list.map(t => (
                   <button key={t.id} onClick={() => setSel(t)} style={{ textAlign: 'left', minHeight: 52, padding: '8px 12px', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.08)', borderLeft: `4px solid ${ST[t.status]?.[1] || '#888'}`, borderRadius: 10, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>

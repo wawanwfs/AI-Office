@@ -39,12 +39,12 @@ export default function TaskModal({ show, onClose, onDone }) {
       <form ref={box} className="modal" role="dialog" aria-modal="true" aria-labelledby="tm-t" onClick={e => e.stopPropagation()} onSubmit={e => { e.preventDefault(); submit(false) }}>
         <h3 id="tm-t">＋ Task Baru</h3>
         <label htmlFor="tm-title">Judul</label>
-        <input id="tm-title" ref={first} value={title} onChange={e => setTitle(e.target.value)} maxLength={200} placeholder="mis. Buat endpoint /api/invoice" />
+        <input id="tm-title" ref={first} value={title} onChange={e => setTitle(e.target.value)} maxLength={200} placeholder="mis. Buat endpoint /api/invoice" aria-required="true" aria-invalid={!!err && !title.trim()} aria-describedby={err ? 'tm-err' : undefined} />
         <label htmlFor="tm-role">Role / agent</label>
         <select id="tm-role" value={role} onChange={e => setRole(e.target.value)}>{ROLES.map(r => <option key={r}>{r}</option>)}</select>
         <label htmlFor="tm-prompt">Brief (opsional)</label>
         <textarea id="tm-prompt" rows={4} value={prompt} onChange={e => setPrompt(e.target.value)} placeholder="Detail yang harus dikerjakan agent" />
-        {err && <div role="alert" className="msg err" style={{ maxWidth: '100%', marginTop: 10 }}>{err}</div>}
+        {err && <div id="tm-err" role="alert" className="msg err" style={{ maxWidth: '100%', marginTop: 10 }}>{err}</div>}
         <div className="modal-actions">
           <button type="button" className="btn" onClick={onClose}>Batal</button>
           <button type="submit" className="btn" disabled={busy}>Simpan</button>
