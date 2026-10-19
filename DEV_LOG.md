@@ -744,3 +744,9 @@
 - Implementasi: tiap setTimeout chime di-push ke __timeouts lalu di-splice saat callback jalan (biar array tak menumpuk); destroy() kini otomatis menclear nada pending.
 - Bukti: npm run build OK (0.9s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 console error.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+## 2026-10-19 16:25 WIB — papan proyek 3D: banner GAGAL/REVIEW (task bermasalah kini terlihat)
+- Masalah: papan 3D hanya punya 3 kolom Antri/Jalan/Selesai — task status review/gagal tak terlihat sama sekali (jumlahnya pun tak dicantumkan), padahal justru itu yang paling perlu diketahui tim.
+- Implementasi projectboard.js: (1) subjudul kini menyebut jumlah review/gagal bila >0; (2) banner di bawah progress bar (y=166–200) menampilkan "GAGAL n"/"REVIEW n" berwarna + hingga 3 judul task bermasalah dari recent, hanya dirender bila ada item review/gagal di recent (guard, tak ada banner kosong); (3) kolom digeser y 178→210, tinggi 630→578 agar tak tumpang tindih banner.
+- Data saat ini 23 done / 0 gagal / 0 review → banner benar-benar tersembunyi (terverifikasi via /wfs-project); jalur render tercakup oleh guard & layout digeser aman.
+- Bukti: build OK (0.8s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, frames 2→5, 0 console error; screenshot scene normal (papan di luar frame kamera default — bukan bug).
+- Sisa backlog: verifikasi subjektif kualitas suara; timer HUD "11:⬜⬜" glyph kotak (font digit hilang) — kandidat perbaikan berikutnya.

@@ -77,7 +77,10 @@ export function createProjectBoard(office, THREE) {
     g.font = 'bold 52px sans-serif'; g.textAlign = 'left'
     g.fillText('PROYEK: dibantuin.com', 36, 66)
     g.fillStyle = '#8fa3bd'; g.font = '30px sans-serif'
-    g.fillText('Data live · task engine + SaaS · ' + new Date(lastOk).toLocaleTimeString('id-ID'), 36, 112)
+    let sub = 'Data live · task engine + SaaS · ' + new Date(lastOk).toLocaleTimeString('id-ID')
+    if (T.review) sub += ' · review ' + T.review
+    if (T.failed) sub += ' · gagal ' + T.failed
+    g.fillText(sub, 36, 112)
 
     // progress bar
     g.fillStyle = 'rgba(255,255,255,.08)'; roundRect(36, 132, W - 72, 28, 10); g.fill()
@@ -87,6 +90,34 @@ export function createProjectBoard(office, THREE) {
     g.fillStyle = '#fff'; g.font = 'bold 26px sans-serif'; g.textAlign = 'right'
     g.fillText(pct + '% selesai', W - 40, 154)
 
+    // banner review/gagal: task yang butuh perhatian tidak boleh tak terlihat
+    if (T.failed || T.review) {
+      const has = (st) => (T.recent || []).some(r => r.status === st)
+      const parts = []
+      if (T.failed) parts.push(['GAGAL ' + T.failed, '#ef4444'])
+      if (T.review) parts.push(['REVIEW ' + T.review, '#448AFF'])
+      if (has('failed') || has('review')) {
+        const items = (T.recent || []).filter(r => r.status === 'failed' || r.status === 'review').slice(0, 3)
+        const names = items.map(r => '#' + r.id + ' ' + (r.title || '').slice(0, 24)).join('  ·  ')
+        const full = parts.map(p => p[0]).join(' · ') + ' — ' + names
+        g.font = 'bold 24px sans-serif'
+        const bw = g.measureText(full).width + 44
+        g.fillStyle = 'rgba(239,68,68,.12)'; roundRect((W - bw) / 2, 166, bw, 34, 8); g.fill()
+        g.strokeStyle = 'rgba(239,68,68,.5)'; g.lineWidth = 2; roundRect((W - bw) / 2, 166, bw, 34, 8); g.stroke()
+        g.textAlign = 'center'
+        let bx = W / 2
+        // gambar dua warna: bagian GAGAL/REVIEW merah/biru, nama task abu terang
+        g.textAlign = 'left'
+        let tx = (W - bw) / 2 + 22
+        parts.forEach(([txt, col]) => {
+          g.fillStyle = col; g.fillText(txt, tx, 190); tx += g.measureText(txt).width + 14
+        })
+        g.fillStyle = '#cfd8e3'; g.font = '600 24px sans-serif'
+        g.fillText('— ' + names, tx, 190)
+        g.textAlign = 'left'
+      }
+    }
+
     // tiga kolom: Antri / Jalan / Selesai
     const cols = [
       ['ANTRI', '#9aa7b8', T.pending || 0],
@@ -95,7 +126,7 @@ export function createProjectBoard(office, THREE) {
     ]
     cols.forEach(([t, c, n], i) => {
       const x = 34 + i * 496
-      g.fillStyle = '#17233a'; roundRect(x, 178, 470, 630, 12); g.fill()
+      g.fillStyle = '#17233a'; roundRect(x, 210, 470, 578, 12); g.fill()
       g.fillStyle = c; g.font = 'bold 38px sans-serif'; g.textAlign = 'center'
       g.fillText(t + ' (' + n + ')', x + 235, 226)
 
