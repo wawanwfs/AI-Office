@@ -718,3 +718,8 @@
 - Implementasi: tambah `showLog` di guard + deps useEffect handler (Escape-nya sendiri tetap berfungsi via handler escape + ActivityLog listener sendiri; flag modal __wfsModalOpen sudah mencakup showLog sejak awal).
 - Bukti: build OK (0.7s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 console error.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+## 2026-10-19 14:10 WIB — fix leak: papan proyek (projectboard) tidak pernah di-destroy saat scene remount
+- Audit lifecycle scene: createProjectBoard() memasang interval fetch /wfs-project 60 dtk, interval forceVisible 500 ms, dan listener visibilitychange — tapi OfficeScene.destroy() tidak pernah memanggil window.__projectBoard.destroy(). Tiap remount/Hot-Reload App meninggalkan papan lama yang terus fetch + update DOM-nya selamanya (leak interval & fetch ganda tiap menit).
+- Implementasi: destroy() kini memanggil __projectBoard.destroy() (guard try/catch) lalu delete window.__projectBoard.
+- Bukti: build OK (3.8s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 3→6, 0 console error.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
