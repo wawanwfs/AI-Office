@@ -1688,8 +1688,8 @@ function autoTalk(){
       window.__wfsRunningTasks={byAgent};
     }catch{ /* gateway offline */ }
   }
-  setTimeout(pollRunning,3000);
-  setInterval(pollRunning,15000);
+  __timeouts.push(setTimeout(pollRunning,3000));
+  __intervals.push(setInterval(pollRunning,15000));
 })();
 function checkConversations(){
   for(let i=0;i<agentData.length;i++){

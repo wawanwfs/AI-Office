@@ -734,3 +734,8 @@
 - Implementasi OfficeScene.js: handler drag kamera dinamed (onDragUp/onDragMove), destroy() kini melepas 4 listener (pointerup, pointermove, keydown __ensureAudio, pointerdown __ensureAudio) + keydown onKey yang sudah ada.
 - Bukti: build OK (0.95s), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, 0 console error. Backup /tmp/OS.bak-*.js.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+## 2026-10-19 15:50 WIB — fix leak: interval pollRunning (sinkron task running 15 dtk) tidak terdaftar di __intervals
+- Audit sisa timer scene: IIFE `pollRunning` (fetch /wfs-api/agents/status + /wfs-api/tasks tiap 15 dtk, set window.__wfsRunningTasks) memanggil `setInterval`/`setTimeout` TANPA didaftarkan ke __intervals/__timeouts — destroy() melewatkan keduanya. Tiap remount/Hot-Reload meninggalkan poller lama yang terus fetch gateway 2 endpoint tiap 15 dtk selamanya (fetch ganda per remount).
+- Implementasi OfficeScene.js: daftarkan `__timeouts.push(setTimeout(pollRunning,3000))` dan `__intervals.push(setInterval(pollRunning,15000))` — kini otomatis di-clear di destroy(). Ini timer scene terakhir yang di luar registry (pollBadges, agents/running, failed alert, projectboard sudah ditangani run sebelumnya).
+- Bukti: build OK (1.7s), vitest **24/24**, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→4, 0 console error. Backup /tmp/OS.bak-*.js.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
