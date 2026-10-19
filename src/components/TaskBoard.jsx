@@ -19,7 +19,10 @@ export default function TaskBoard({ onFlash, onAsk }) {
   useModalFlag(open || !!sel)
   const onEscRef = useRef(() => {})
   onEscRef.current = () => { sel ? setSel(null) : setOpen(false) }
-  useDialogA11y({ open: open || !!sel, onClose: () => onEscRef.current(), ref: board })
+  const escA11yRef = useRef(() => {})
+  escA11yRef.current = () => onEscRef.current()
+  const closeBoard = useCallback(() => escA11yRef.current(), [])
+  useDialogA11y({ open: open || !!sel, onClose: closeBoard, ref: board })
 
   const load = useCallback(async (signal) => {
     try {

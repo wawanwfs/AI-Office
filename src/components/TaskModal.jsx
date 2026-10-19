@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { api } from '../lib/api'
 import { useDialogA11y } from '../lib/dialogA11y'
 
@@ -17,7 +17,10 @@ export default function TaskModal({ show, onClose, onDone }) {
   onCloseRef.current = onClose
 
   useEffect(() => { if (show) setErr('') }, [show]) // eslint-disable-line react-hooks/set-state-in-effect -- reset error saat modal dibuka
-  useDialogA11y({ open: show, onClose: () => onCloseRef.current(), ref: box })
+  const closeRef = useRef(() => {})
+  closeRef.current = () => onCloseRef.current()
+  const closeViaA11y = useCallback(() => closeRef.current(), [])
+  useDialogA11y({ open: show, onClose: closeViaA11y, ref: box })
 
   if (!show) return null
   const submit = async (run) => {

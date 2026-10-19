@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useDialogA11y } from '../lib/dialogA11y'
 
 const STEPS = [
@@ -17,7 +17,10 @@ export default function OverlayHelp({ show, onClose }) {
 
   const closeRef = useRef(close)
   closeRef.current = close
-  useDialogA11y({ open: show, onClose: () => closeRef.current(), ref })
+  const closeA11yRef = useRef(() => {})
+  closeA11yRef.current = () => closeRef.current()
+  const closeHelp = useCallback(() => closeA11yRef.current(), [])
+  useDialogA11y({ open: show, onClose: closeHelp, ref })
 
   if (!show) return null
   return (

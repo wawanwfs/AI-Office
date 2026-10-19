@@ -900,3 +900,10 @@
 - Bukti probe CDP produksi 9503: tombol probe di-inject dalam menu Aksi → klik toggle "nama" → fokus BERTAHAN di probe (bukan lompat ke ⚡); probe dalam panel Statistik diwaktu melewati 1 siklus polling (17 dtk) → fokus BERTAHAN di probe; Escape menutup keduanya (pop=False, team-stats=False); 0 JS error.
 - Build OK (2.8s, precache 35), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→3, errs 0.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 02:40 WIB — a11y/bug: onClose stabil di 5 komponen dialog tersisa (TaskModal, OverlayHelp, TaskBoard, ActivityLog, ConfirmModal) + widget CS
+- Masalah: pola `onClose: () => ...` inline di useDialogA11y membuat effect re-run tiap render; cleanup melempar fokus ke pemicu/tombol ✕ di tengah interaksi keyboard — pola bug yang sama sudah diperbaiki di WfsPanel/ProjectPanel/ActionMenu/TeamStats, tapi 5 komponen dialog lain + CsWidget masih memakai closure inline.
+- Implementasi: identitas onClose distabilkan via ref+useCallback([]) di TaskModal, OverlayHelp, TaskBoard, ActivityLog, ConfirmModal, CsWidget (pola konsisten seluruh 10 pemakai useDialogA11y kini stabil).
+- Bukti probe CDP produksi 9503: Papan Task — probe dalam papan difokuskan, diwaktu melewati siklus polling (18 dtk > 15 dtk) → fokus BERTAHAN di dalam papan (contains=true, sebelum & sesudah); Log Aktivitas — probe bertahan 2 dtk (contains=true); widget AI CS — buka → probe bertahan 8 dtk berturut-turut (contains=true, fokus tidak terlempar), Escape menutup widget; 0 JS error di semua probe.
+- Build OK (precache 35), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→3, errs 0.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

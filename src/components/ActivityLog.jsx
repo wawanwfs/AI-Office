@@ -1,4 +1,4 @@
-import React, { useEffect, useRef } from 'react'
+import React, { useEffect, useRef, useCallback } from 'react'
 import { useDialogA11y } from '../lib/dialogA11y'
 
 const COL = { done: '#10E5A0', running: '#F59E0B', failed: '#FB7185', review: '#60A5FA', pending: '#9aa3b5' }
@@ -8,7 +8,10 @@ export default function ActivityLog({ show, items, onClose, onClear }) {
   const box = useRef(null)
   const onCloseRef = useRef(onClose)
   onCloseRef.current = onClose
-  useDialogA11y({ open: show, onClose: () => onCloseRef.current(), ref: box })
+  const closeA11yRef = useRef(() => {})
+  closeA11yRef.current = () => onCloseRef.current()
+  const closeLog = useCallback(() => closeA11yRef.current(), [])
+  useDialogA11y({ open: show, onClose: closeLog, ref: box })
   if (!show) return null
   return (
     <div className="modal-scrim" onClick={onClose}>
