@@ -213,7 +213,14 @@ export default function App() {
   // (TaskBoard/WfsPanel/CsWidget/…) juga tercakup via anyModalOpen() (useModalFlag).
   const chromeModal = !!(showTask || confirm || ask || showHelp || showLog) || anyModalOpen()
   useEffect(() => {
-    const els = Array.from(document.querySelectorAll('header, .hud, .ticker, .dock'))
+    // Catatan: panel-panel modal internal (Papan Task/Proyek/Statistik/…) dirender
+    // DI DALAM elemen .dock. Meng-inert-kan dock utuh saat modal itu terbuka ikut
+    // melumpuhkan panel modal itu sendiri (fokus .focus() diabaikan browser, klik
+    // dalam panel mati). Solusi: saat modal terbuka, inert hanya diterapkan pada
+    // HEADER/HUD/TICKER; di dalam dock cukup scrim (pointer-events) + fokus-trap
+    // per-dialog (dialogA11y) yang sudah mengunci Tab — tombol dock tersembunyi
+    // di balik scrim tidak bisa diklik maupun difokus (tak ada di urutan trap).
+    const els = Array.from(document.querySelectorAll('header, .hud, .ticker'))
     els.forEach(el => { if (chromeModal) el.setAttribute('inert', ''); else el.removeAttribute('inert') })
     return () => els.forEach(el => el.removeAttribute('inert'))
   }, [chromeModal])

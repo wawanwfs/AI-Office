@@ -45,6 +45,18 @@ export default function TaskBoard({ onFlash, onAsk }) {
     return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k) }
   }, [open, load, sel])
 
+  // Fokus ke panel detail saat task dibuka: tombol task yang diklik unmount,
+  // tanpa ini fokus jatuh ke <body> — Tab/screen reader mulai lagi dari awal dokumen.
+  useEffect(() => {
+    if (!open || !sel) return
+    const t = setTimeout(() => {
+      const h = board.current && board.current.querySelector('h3')
+      if (h && !h.hasAttribute('tabindex')) h.setAttribute('tabindex', '-1')
+      if (h) h.focus()
+    }, 30)
+    return () => clearTimeout(t)
+  }, [open, sel])
+
   const run = async (t) => {
     try {
       await api(`tasks/${t.id}/run`, { method: 'POST', body: {} })
