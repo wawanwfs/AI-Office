@@ -1181,6 +1181,8 @@ tvScr.position.set(12.31,2.0,6.4);tvScr.rotation.y=-Math.PI/2;lounge.add(tvScr);
 office.add(lounge);
 
 // --- SERVER ROOM (belakang tengah): 3 rak server dengan LED berkedip ---
+// LED dikumpulkan utk animasi blink (fase & laju acak per LED — pola traffic server nyata)
+const __leds=[];
 const serverRack=(x,z)=>{
   const g=new THREE.Group();
   // body cukup terang dgn garis tepi cyan supaya tidak melebur ke latar gelap
@@ -1196,8 +1198,9 @@ const serverRack=(x,z)=>{
     unit.position.set(0,.25+u*.23,0);g.add(unit);
     // LED strip: 3 lampu kecil random warna
     [0x00E676,0xFFC107,0x2979FF].forEach((lc,li)=>{
-      const led=new THREE.Mesh(new THREE.BoxGeometry(.05,.04,.02),MB(lc));
+      const led=new THREE.Mesh(new THREE.BoxGeometry(.05,.04,.02),new THREE.MeshBasicMaterial({color:lc,transparent:true}));
       led.position.set(-.22+li*.18,.28+u*.23,.32);g.add(led);
+      __leds.push({m:led,base:1,ph:Math.random()*Math.PI*2,sp:2+Math.random()*6,on:.3+Math.random()*.7});
     });
   }
   g.position.set(x,0,z);
@@ -2054,6 +2057,12 @@ function animate(){
   nxLabel.position.y=LABEL_Y-.5+Math.sin(elapsed*1.1+9)*.03;
   // Papers
   __pages.update(delta,elapsed);
+  // LED server room berkedip: pola aktivitas acak per LED (hormati tab hidden — loop sudah berhenti)
+  for(let i=0;i<__leds.length;i++){
+    const L=__leds[i];
+    const s=Math.sin(elapsed*L.sp+L.ph);
+    L.m.material.opacity=s>L.on?1:.12;
+  }
   drawClock(timeOfDay);
 
   // Sounds — tick keyboard agent yang duduk + langkah kaki agent yang jalan
