@@ -913,3 +913,10 @@
 - Implementasi: sel stat-grid → role="img" + aria-label "23 task selesai" dst, isi angka/label aria-hidden; tombol toggle dapat aria-label eksplisit.
 - Bukti probe playwright produksi 9503: tombol stats aria-label="Statistik tim", papan aria-label="Papan task"; buka Statistik → 5 sel [role=img] dgn label "23 task selesai", "0 task jalan", dst; 0 pageerror. Build OK (4.5s, precache 35), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→4, errs 0.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 04:10 WIB — a11y: ticker live tak lagi dibacakan sebagai marquee; region aria-live membawa status terbaru
+- Masalah: track ticker animasi (marquee 60s) punya role="marquee" dengan span aria-hidden parsial (salinan kedua saja) — screen reader masih membaca teks yang terus bergeser (mengganggu), sementara pembaruan data tiap 20 dtk tidak pernah diumumkan.
+- Implementasi: track visual kini role="presentation" + aria-hidden="true" penuh (tidak dibacakan sama sekali); konten status terbaru disalin ke region live tersembunyi #ticker-live (role=status, aria-live=polite) sehingga perubahan task/agent/RAM diumumkan sekali per refresh, bukan teks bergerak.
+- Bukti probe CDP produksi 9503: #ticker-live role=status, aria-live=polite, teks utuh (588 char: "23 task · 23 done · …"); .ticker role=presentation + aria-hidden=true; role="marquee" tidak ada lagi; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, errs 0.
+- Build OK (4.3s, precache 35), vitest 24/24, deploy ~/wfs-hq OK.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

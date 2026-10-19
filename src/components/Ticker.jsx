@@ -5,6 +5,9 @@ const FALLBACK = [{ text: 'Gateway belum terhubung — menunggu data…', color:
 const COL = { done: '#10E5A0', running: '#F59E0B', failed: '#FB7185', review: '#60A5FA', pending: '#9aa3b5' }
 
 // Ticker berisi data NYATA dari gateway (task, agent, resource host).
+// Ticker live: lemaribaca screen reader diperbarui via region aria-live polite
+// (TICKER_LIVE), sementara track animasi (marquee visual) aria-hidden penuh —
+// teks bergerak tidak dibacakan, status terbaru tetap diumumkan tiap refresh.
 export default function Ticker() {
   const [msgs, setMsgs] = useState(FALLBACK)
 
@@ -36,11 +39,15 @@ export default function Ticker() {
   }, [])
 
   const list = [...msgs, ...msgs]
+  const liveText = msgs.map(m => m.text).join(' · ')
   return (
-    <div className="ticker" role="marquee" aria-label="Aktivitas tim langsung dari gateway">
-      <div className="track">
-        {list.map((m, i) => <span key={i} style={{ color: m.color }} aria-hidden={i >= msgs.length}>▸ {m.text}</span>)}
+    <>
+      <div id="ticker-live" role="status" aria-live="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', clipPath: 'inset(50%)', whiteSpace: 'nowrap' }}>{liveText}</div>
+      <div className="ticker" role="presentation" aria-hidden="true">
+        <div className="track">
+          {list.map((m, i) => <span key={i} style={{ color: m.color }} aria-hidden="true">▸ {m.text}</span>)}
+        </div>
       </div>
-    </div>
+    </>
   )
 }
