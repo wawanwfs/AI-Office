@@ -8,7 +8,7 @@ export default defineConfig({
     react(),
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['favicon.svg', 'wfs-logo.svg', 'fonts/fonts.css'],
+      includeAssets: ['favicon.svg', 'wfs-logo.svg', 'fonts/fonts.css', 'og-image.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'WFS Project HQ — Kantor AI 3D',
         short_name: 'WFS HQ',

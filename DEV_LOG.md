@@ -872,3 +872,10 @@
 - Implementasi: input range diberi aria-valuetext={time} (format "11:00", sama dgn label jam); toast err → role=alert + aria-live=assertive, toast normal tetap status/polite.
 - Bukti: probe playwright produksi 9503 → valuetext "11:00"; build OK (4.4s, precache 31), vitest 24/24, deploy ~/wfs-hq OK; e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→5, errs 0.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 00:30 WIB — social preview + ikon iOS: og:image 1200x630 & apple-touch-icon PNG
+- Masalah: link kantor dibagikan ke WhatsApp/Telegram/Slack tidak punya preview (og:image tidak ada), dan apple-touch-icon menunjuk favicon.svg yang tidak didukung Safari iOS (bookmark/add-to-home tampak kosong/generik).
+- Implementasi: public/og-image.png (1200x630, 104KB) dirender via ImageMagick — heksagon amber + W (setia ke favicon.svg, dirender via -draw polygon karena SVG gradient tidak didukung IM), teks "WFS PROJECT HQ", tagline, dibantuin.com; public/apple-touch-icon.png 180x180; index.html: og:image + dimension/alt, og:url, twitter:card summary_large_image, twitter:title/description/image, apple-touch-icon → PNG; vite includeAssets +og-image +apple-touch-icon (masuk SW precache → preview tetap tampil offline).
+- Bukti visual: og-image diverifikasi vision (0 clipping, 0 overlap, hierarki jelas, ~65px margin kanan); apple-touch-icon diverifikasi vision (heksagon penuh dgn padding, W terpusat).
+- Bukti teknis: build OK (12.6s, precache 31→35 entries 1.53MB), vitest 24/24; deploy ~/wfs-hq OK; produksi 9503: /og-image.png & /apple-touch-icon.png HTTP 200, HTML berisi og:image (4 kemunculan meta); e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 2→3, errs 0.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
