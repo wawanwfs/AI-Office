@@ -668,3 +668,8 @@
 - Bukti probe CDP (chromium headless swiftshader DISPLAY :78, port 9376): set wfs_names='0' → init → agent label hidden 14/14, zona tetap hidden ✓ (koreksi pada run kedua, bundle terverifikasi berisi guard namesVisible!==false); names='1' → zona visible ✓. e2e_err: DOM True, 17 btns, 14 label, canvas 1366x568, frames 9→14, 0 console error. Screenshot /tmp/ck_names.png 458KB — scene hidup, nama agent + zona (SERVER ROOM, WELCOME & LOUNGE) terlihat, bubble chat aktif. shot.sh diperbaiki (DISPLAY :0 → :78, sebelumnya selalu gagal WebGL context).
 - Build OK (1.4s), vitest 9/9, deploy ~/wfs-hq.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+## 2026-10-19 09:50 WIB — clamp horizontal label: tak ada lagi label terpotong tepi kiri/kanan viewport
+- Backlog kosmetik run 08:30: clamp anti-overlap hanya vertikal (atas/bawah) — label agent/zona yang didorong horizontal (offX) masih bisa bocor keluar tepi kiri/kanan layar, label zona paling lebar paling rawan.
+- Implementasi OfficeScene.js (blok clamp viewport, siklus sweep→clamp): tambah clamp horizontal — wHalf=(sw||zw)/2, jika x+offX+pad melewati W2-padX atau di bawah -(W2-padX), offX di-clamp; padX zona 6px, agent 2px. Ikut menandai violated sehingga siklus sweep+clamp tetap konvergen.
+- Bukti: build OK (1.3s), vitest 9/9, deploy ~/wfs-hq, e2e_err: DOM True, 17 btns, 14 label, frames 8→13, 0 error. Screenshot ck.png 455KB (scene hidup). Probe CDP khusus clamp belum dibuat (butuh kamera ekstrem) — dicatat sebagai verifikasi subjektif.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).

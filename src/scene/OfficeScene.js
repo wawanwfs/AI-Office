@@ -1955,6 +1955,11 @@ function animate(){
         const topLim=p.zone?TOP-24:TOP; // zona margin ekstra: label zona paling sering bocor ke lane ticker
         if(fy+half>BOT){p.offY=BOT+half-p.y;violated=true;}       // masuk toolbar -> naik
         else if(fy-half<-(topLim)){p.offY=-(topLim)+half-p.y;violated=true;} // keluar layar atas -> turun (tanpa jitter: jitter acak bikin label loncat tiap frame)
+        // clamp HORIZONTAL: label tak boleh bocor keluar tepi kiri/kanan viewport (label zona paling lebar)
+        const wHalf=(p.sw||p.zw||0)/2, fx=p.x+p.offX, W2=container.clientWidth/2;
+        const padX=p.zone?6:2;
+        if(fx+wHalf>W2-padX){p.offX=W2-padX-wHalf-p.x;violated=true;}
+        else if(fx-wHalf<-(W2-padX)){p.offX=-(W2-padX)+wHalf-p.x;violated=true;}
       });
       if(!violated)break; // sweep+clamp sudah konsisten, tidak ada pelanggaran batas
       }
