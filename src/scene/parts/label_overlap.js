@@ -13,6 +13,69 @@ export const K_AGENT_PUSHED = 1.6;  // agent didorong keluar dari zona
 export const K_ZONE_TAG_ALONG = 0.8;// zona ikut geser sedikit saat agent vs zona
 export const K_ZONE_TAG_X = 1.1;
 
+// ── Sweep+clamp siklikal (diekstrak dari OfficeScene.js) ──
+// GAP = breathing room vertikal antar label dalam sweep (px)
+export const SWEEP_GAP = 36;
+// Margin viewport: atas 140px cadangan lane header+ticker (HUD HTML, di luar canvas),
+// bawah 110px toolbar (Rina pernah terpotong @90)
+export const VIEW_TOP_MARGIN = 140;
+export const VIEW_BOT_MARGIN = 110;
+// Label zona paling sering bocor ke lane ticker — margin ekstra lebih besar
+export const ZONE_TOP_EXTRA = 48;
+export const PAD_X_ZONE = 6, PAD_X_AGENT = 2;
+export const MAX_ROUNDS = 3;
+
+// Sweep greedy: dari atas ke bawah, tiap label didorong ke bawah dari posisi
+// terendah yang bebas overlap dengan semua label di atasnya. Mutasi offY.
+export function sweepVertical(pts, gap = SWEEP_GAP) {
+  const byY = pts.slice().sort((p, q) => (p.y + p.offY) - (q.y + q.offY));
+  for (let i = 1; i < byY.length; i++) {
+    const pi = byY[i];
+    let minY = -Infinity;
+    for (let j = 0; j < i; j++) {
+      const pj = byY[j];
+      if (Math.abs(pi.x + pi.offX - (pj.x + pj.offX)) >= ((pi.sw || pi.zw || 0) + (pj.sw || pj.zw || 0)) / 2 + gap) continue;
+      const need = (pj.y + pj.offY) + ((pi.sh || pi.zh || 0) + (pj.sh || pj.zh || 0)) / 2 + gap;
+      if (need > minY) minY = need;
+    }
+    if (minY > -Infinity && (pi.y + pi.offY) < minY) pi.offY = minY - (pi.y);
+  }
+}
+
+// Clamp viewport: batas atas tepi layar, bawah toolbar, plus horizontal kiri/kanan.
+// opts: {height, width, topMargin, botMargin}. Mengembalikan true bila ada pelanggaran
+// yang dikoreksi (frame belum stabil), false bila semua label sudah dalam batas.
+export function clampViewport(pts, opts) {
+  const H2 = opts.height / 2, TOP = H2 - (opts.topMargin ?? VIEW_TOP_MARGIN), BOT = H2 - (opts.botMargin ?? VIEW_BOT_MARGIN);
+  const W2 = opts.width / 2;
+  let violated = false;
+  pts.forEach(p => {
+    const fy = p.y + p.offY, half = (p.sh || p.zh || 0) / 2;
+    const topLim = p.zone ? TOP + ZONE_TOP_EXTRA : TOP; // zona margin ekstra
+    // FIX sign bug: dulu BOT+half-p.y yang MENDORONG label makin ke bawah
+    // (masih melanggar tiap round -> 3 round sia-sia; label "terpotong toolbar",
+    // kasus historis Rina @90). Benar: tarik ke atas sampai tepi bawah = BOT.
+    if (fy + half > BOT) { p.offY = BOT - half - p.y; violated = true; }       // masuk toolbar -> naik
+    else if (fy - half < -(topLim)) { p.offY = -(topLim) + half - p.y; violated = true; } // keluar layar atas -> turun
+    // clamp HORIZONTAL: label tak boleh bocor keluar tepi kiri/kanan viewport
+    const wHalf = (p.sw || p.zw || 0) / 2, fx = p.x + p.offX;
+    const padX = p.zone ? PAD_X_ZONE : PAD_X_AGENT;
+    if (fx + wHalf > W2 - padX) { p.offX = W2 - padX - wHalf - p.x; violated = true; }
+    else if (fx - wHalf < -(W2 - padX)) { p.offX = -(W2 - padX) + wHalf - p.x; violated = true; }
+  });
+  return violated;
+}
+
+// Siklus sweep→clamp sampai stabil (maks MAX_ROUNDS). Sweep greedy bisa mendorong
+// label melewati batas viewport, dan clamp bisa menimbulkan overlap baru — konvergen
+// karena total ruang vertikal aman melebihi kebutuhan.
+export function sweepClampRounds(pts, opts, rounds = MAX_ROUNDS) {
+  for (let round = 0; round < rounds; round++) {
+    sweepVertical(pts);
+    if (!clampViewport(pts, opts)) break; // sweep+clamp sudah konsisten
+  }
+}
+
 // Satu pass penuh (5 iterasi kolisi berpasangan) — mutasi offX/offY pts.
 export function overlapPass(pts, iters = 5) {
   for (let iter = 0; iter < iters; iter++) {

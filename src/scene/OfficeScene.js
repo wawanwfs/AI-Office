@@ -6,7 +6,7 @@ import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets } from './parts/effects.js';
-import { overlapPass } from './parts/label_overlap.js';
+import { overlapPass, sweepClampRounds } from './parts/label_overlap.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
 import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent } from './parts/ring_spec.js';
@@ -1888,44 +1888,11 @@ function animate(){
     for(let iter=0;iter<5;iter++){ // multi-pass: satu pass hanya menggeser sedikit, 3 pass menjamin kluster padat benar2 terpisah
     overlapPass(pts);
     } // end multi-pass anti-overlap
-    // SWEEP+CLAMP SIKLIKAL: sweep greedy bisa mendorong label melewati batas viewport,
-    // dan clamp bisa menimbulkan overlap baru -> ulangi (sweep→clamp) sampai stabil (max 3x).
-    // Konvergen: total ruang vertikal aman melebihi kebutuhan, tiap iterasi hanya mengurangi pelanggaran.
-    {
-      const H2=container.clientHeight/2, TOP=H2-140, BOT=H2-110; // atas: 140px cadangan lane header+ticker (HUD HTML, di luar canvas); bawah: 110px toolbar (Rina pernah terpotong @90)
-      const ZONE_TOP_EXTRA=48; // label zona paling sering bocor ke lane ticker — margin ekstra lebih besar
-      for(let round=0;round<3;round++){
-      // sweep: dari atas ke bawah, tiap label didorong ke bawah dari posisi terendah yang bebas overlap
-      {
-        const byY=pts.slice().sort((p,q)=>(p.y+p.offY)-(q.y+q.offY));
-        for(let i=1;i<byY.length;i++){
-          const pi=byY[i];
-          let minY=-Infinity;
-          for(let j=0;j<i;j++){
-            const pj=byY[j];
-            if(Math.abs(pi.x+pi.offX-(pj.x+pj.offX))>=((pi.sw||pi.zw||0)+(pj.sw||pj.zw||0))/2+36)continue;
-            const need=(pj.y+pj.offY)+((pi.sh||pi.zh||0)+(pj.sh||pj.zh||0))/2+36;
-            if(need>minY)minY=need;
-          }
-          if(minY>-Infinity&&(pi.y+pi.offY)<minY)pi.offY=minY-(pi.y);
-        }
-      }
-      // clamp viewport: batas atas tepi layar, bawah toolbar
-      let violated=false;
-      pts.forEach(p=>{
-        const fy=p.y+p.offY, half=(p.sh||p.zh||0)/2;
-        const topLim=p.zone?TOP+ZONE_TOP_EXTRA:TOP; // zona margin ekstra: label zona paling sering bocor ke lane ticker
-        if(fy+half>BOT){p.offY=BOT+half-p.y;violated=true;}       // masuk toolbar -> naik
-        else if(fy-half<-(topLim)){p.offY=-(topLim)+half-p.y;violated=true;} // keluar layar atas -> turun (tanpa jitter: jitter acak bikin label loncat tiap frame)
-        // clamp HORIZONTAL: label tak boleh bocor keluar tepi kiri/kanan viewport (label zona paling lebar)
-        const wHalf=(p.sw||p.zw||0)/2, fx=p.x+p.offX, W2=container.clientWidth/2;
-        const padX=p.zone?6:2;
-        if(fx+wHalf>W2-padX){p.offX=W2-padX-wHalf-p.x;violated=true;}
-        else if(fx-wHalf<-(W2-padX)){p.offX=-(W2-padX)+wHalf-p.x;violated=true;}
-      });
-      if(!violated)break; // sweep+clamp sudah konsisten, tidak ada pelanggaran batas
-      }
-    }
+    // SWEEP+CLAMP SIKLIKAL (diekstrak ke parts/label_overlap.js): sweep greedy bisa
+    // mendorong label melewati batas viewport, dan clamp bisa menimbulkan overlap baru
+    // -> ulangi (sweep→clamp) sampai stabil (max 3x). Konvergen: total ruang vertikal
+    // aman melebihi kebutuhan, tiap iterasi hanya mengurangi pelanggaran.
+    sweepClampRounds(pts, { height: container.clientHeight, width: container.clientWidth });
     // konversi offset piksel ke satuan dunia (~ jarak/tinggi layar), cap supaya label tidak melayang jauh
     const dist=camera.position.distanceTo(tgt), worldPerPx=2*dist*Math.tan(camera.fov*Math.PI/360)/container.clientHeight;
     pts.forEach(p=>{
