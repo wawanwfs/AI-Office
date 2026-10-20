@@ -1249,3 +1249,11 @@
 - Test: src/__tests__/walk_destinations.test.js — 13 test: 8 entri, posisi historis, koordinat finite, dalam batas ruangan, TIDAK di dalam rintangan statis, jarak min 1.2 dari 14 meja, lulus isSafeDestination, tujuan unik; isSafeDestination 5 test (tolak dalam rintangan/out-of-bounds/NaN/Infinity, terima titik bebas, bounds & fungsi injeksi).
 - Bukti: vitest **338/338** (27 file, dulu 325), build OK (precache 35, 1534.68 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase night, frame 10849, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
+## 2026-10-22 06:20 WIB — refactor+test: logika label mengambang diekstrak ke label_spec.js + 15 unit test (vitest 359→374)
+
+- Backlog dipilih: makeLabel/sizeLabels (label sprite agen: kanvas full 360×84 & short 210×50, auto-shrink font min 60%, ellipsis, title-case nama, frac skala layar) masih inline di OfficeScene.js — 0 unit test; regresi tampilan nama/role agen tak terdeteksi.
+- Implementasi: src/scene/parts/label_spec.js — LABEL_Y, LABEL_FULL/LABEL_SHORT (semua konstanta historis: ukuran kanvas, radius, font, posisi teks, max lebar), labelName() (title-case, null-safe), fitLabel() (auto-shrink font 90%→60% lalu ellipsis, mengembalikan string atau {fit,fnt}), labelScale() (frac skala sprite sizeAttenuation=false + deteksi wantFull); OfficeScene.js kini import (−~10 baris), render label identik.
+- Test: src/__tests__/label_spec.test.js — 15 test: konstanta historis full/short, labelName title-case & null/angka aman, fitLabel muat/ellipsis/boundary/null aman & font dikembalikan ke asli & shrink menghasilkan {fit,fnt} format historis, labelScale wantFull (dekat/jauh/layar sempit/override), frac formula + layar sempit < lebar + cap 1.35 layar pendek + fallback viewport 0. (2 iterasi: path import '../parts/'→'../scene/parts/', asersi fnt '32  X' format historis.)
+- Bukti: vitest **374/374** (29 file, dulu 359), build OK (precache 35, 1535.23 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 75044, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
