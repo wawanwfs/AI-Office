@@ -1371,7 +1371,22 @@
 - Bukti: vitest **514/514** (37 file, dulu 498), build OK (precache 35, 1536.96 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 1246738, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
 
-## 2026-10-24 04:20 WIB — test: createProjectBoard runtime (papan proyek 3D) 10 unit test (vitest 514→524)
+## 2026-10-21 04:40 WIB — test: createFurniture runtime (perabot kantor 3D) 10 unit test (vitest 524→534)
+
+- Backlog dipilih: src/scene/parts/furniture.js (createFurniture — dispenser air, 5 tanaman pot, rak buku, printer, sofa lounge, pantry mini, 5 poster dinding, addPlant) — satu-satunya bagian scene 3D yang 0 unit test; regresi posisi/warna perabot tak terdeteksi.
+- Test: src/__tests__/furniture_runtime.test.js — 10 test, jsdom + canvas stub (mencatat fillText/fillStyle) + THREE stub (Group/Mesh dengan position.set & rotation, MeshBasic/Lambert, CanvasTexture, Box/PlaneGeometry):
+  - 4 group (dispenser, printer, sofa, pantry) + mesh loose di office; 5 plane poster 0.46×0.66.
+  - dispenser: 3 box, tub 0.3×0.6 di (-10.5, 0.3, 0), galon 0x7fb8ea, keran 0x4a6a86.
+  - tanaman: 5 pot (2 besar diskala 1.3 → 0.39, castShadow); daun rng deterministik (n()=0.9 → semua 0x5fae63) = 19 (2 besar ×5 + 3 kecil ×3), 10 daun lebar >0.2.
+  - rak buku: 3 rak 1.9×0.05×0.32 di (-11.5, 0.5/1.05/1.6, -5) + 15 pustaka warna tetap.
+  - printer: 6 bagian di (3, *, -8) + LED MB 0x00e676; sofa: 12 bagian + 2 bantal 0xff5252/0x448aff rotasi −0.15/0.2; pantry: 12 bagian + LED 0x0deef3 + 3 kue + microwave 0.36×0.22×0.26.
+  - poster: 5 canvas 120×160, teks slogan per kata (SHIP/IT/KUALITAS/WFS/PROJECT), rotasi π/2 dinding kiri vs −π/2 kanan, offset ±0.03 anti z-fighting.
+  - return refs {addPlant, dispenser, printer, sofa, pantry}; addPlant runtime: pot baru 0.39 + 5 daun.
+- Iterasi asersi (4×): stub Group butuh rotation (leaf.rotation.y); Mesh group & Mesh loose berbeda — position.set Group stub tak menyimpan koordinat → Mesh override position; daun terhitung 19 bukan 15/25 (rng deterministik, asersi awal salah hitung); sofa & pantry masing-masing 12 bagian (bukan 10) dan pantry dibedakan dari sofa via geometry args[0]=1.7 (keduanya group 12 anak).
+- Bukti: vitest **534/534** (39 file, dulu 524), build OK (precache 35, 1536.96 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 1398453, tanpa 'Scene init failed'.
+- Sisa backlog: flooring.js (33 baris) & room.js (89 baris) runtime; verifikasi subjektif kualitas suara; minor nameplate MEETING↔"Rizky" (pantau).
+
+
 
 - Backlog dipilih: src/scene/parts/projectboard.js — papan proyek dibantuin.com di dinding kantor (mount mesh+bingkai, fetch /wfs-project, render canvas, banner review/gagal, strip SaaS/agent, interval 60 dtk, visibilitychange, forceVisible anti wallFade, destroy) — 0 unit test runtime (hanya projectboard_data.js murni yang ter-cover); regresi papan kosong/beku tak terdeteksi.
 - Test: src/__tests__/projectboard_runtime.test.js — 10 test, jsdom + canvas stub (node_modules tanpa paket `canvas`, getContext jsdom = null → context 2D palsu MENCATAT fillText, asersi via teks yang digambar) + THREE stub minimal (Mesh menyimpan position/rotation/userData/geometry):
