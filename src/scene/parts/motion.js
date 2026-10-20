@@ -3,6 +3,7 @@
 import { BOUNDS as B, dist2 as dist2Pure, stepMove } from './motion_math.js';
 import { routePath as routePathPure, FRONT, bandOf } from './routing.js';
 import { OBSTACLES, inObstacle, seatOccupied } from './obstacles.js';
+import { talkStep, isConverseOver, speakerIsVisitor } from './converse_timing.js';
 export function createMotion(ctx) {
   const { rng, agentData, walkDestinations, pickCollab, createBubble } = ctx;
   const WALK = 1.6, EXIT = 2.0, LINE_SEC = 1.8;
@@ -38,14 +39,6 @@ export function createMotion(ctx) {
     ad.walker.position.y = 0;
   }
   function follow(ad) { ad.label.position.set(ad.walker.position.x, 2.45, ad.walker.position.z); }
-  function stepToward(ad, target, speed, delta) {
-    const s = stepMove(ad.walker.position, target, speed, delta);
-    ad.walker.position.x = s.x;
-    ad.walker.position.z = s.z;
-    ad.walker.rotation.y = s.rot;
-    if (!s.arrived) stride(ad);
-    return s.arrived;
-  }
 
   // Jalan lewat rute (waypoint koridor) — return true saat sampai tujuan akhir
   function stepRoute(ad, speed, delta) {
@@ -98,16 +91,16 @@ export function createMotion(ctx) {
     const me = ad.walker.position, pr = ad.partner;
     ad.walker.rotation.y = Math.atan2(pr.home.x - me.x, pr.home.z - me.z);
     pr.sittingChar.rotation.y = Math.atan2(me.x - pr.home.x, me.z - pr.home.z);
-    const lines = ad.collab.lines, step = Math.floor(ad.walkPause / LINE_SEC);
+    const lines = ad.collab.lines, step = talkStep(ad.walkPause, LINE_SEC);
     if (step !== ad._talk && step < lines.length) {
       ad._talk = step;
-      const mine = step % 2 === 0;
+      const mine = speakerIsVisitor(step);
       const anchor = mine
         ? { get x(){return me.x}, get z(){return me.z}, y:2.0 }
         : { get x(){return pr.home.x}, get z(){return pr.home.z}, y:2.0 };
       createBubble(anchor.x, 2.6, anchor.z, lines[step], (mine ? ad : pr).agent.hex, anchor);
     }
-    if (ad.walkPause > LINE_SEC * lines.length + 1.2) {
+    if (isConverseOver(ad.walkPause, lines.length, LINE_SEC)) {
       pr.sittingChar.rotation.y = 0;
       ad.collab = null; ad.partner = null;
       ad.state = 'walking_back';

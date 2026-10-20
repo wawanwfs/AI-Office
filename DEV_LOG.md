@@ -1149,3 +1149,11 @@
 - Implementasi: tanpa ubah kode; src/__tests__/bubbles.test.js baru — 10 test: life berkurang sebesar delta, anchor mengikuti x/z pembicara + offset y (anchor.y 2.6), anchor default y=2.0, float-up tanpa anchor dari startY, opacity 0 di age 0, puncak opacity 1 (age≥.22 & life≥.5), fade-out life/.5, bubble habis dihapus via remove & keluar array, iterasi mundur aman (beberapa bubble habis sekaligus), boundary life=0 dihapus.
 - Bukti: vitest **172/172** (16 file, dulu 162), build OK (precache 35, 1532.12 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase arriving, 44194 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
+## 2026-10-21 18:05 WIB — refactor+test: timing percakapan kolaborasi diekstrak ke converse_timing.js + 9 unit test (vitest 172→179)
+
+- Backlog dipilih: logika timing converse() di motion.js (step = floor(walkPause/LINE_SEC), pembicara bergantian genap=visitor, selesai = baris×1.8+1.2) masih inline — 0 unit test; regresi dialog bergantian/durasi ngobrol tak terdeteksi. Sekalian: hapus duplikasi definisi fungsi stepToward di motion.js (didefinisikan 2x, yang kedua menimpa pertama — dead code).
+- Implementasi: src/scene/parts/converse_timing.js — talkStep (clamp ≥0), isConverseOver (CONVERSE_TAIL=1.2, strict >), speakerIsVisitor; motion.js kini import (−8 baris bersih), perilaku identik.
+- Test: src/__tests__/converse_timing.test.js — 9 test: talkStep floor di beberapa boundary (1.79/1.8/5.4/7.3), walkPause negatif clamp 0, lineSec custom, CONVERSE_TAIL=1.2, belum selesai di 0/7.2/8.39, boundary strict 8.4 vs 8.41, tanpa baris hanya jeda, pola bergantian genap/ganjil.
+- Bukti: vitest **179/179** (17 file, dulu 172), build OK (precache 35, 1532.03 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase night, 47828 frames, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
