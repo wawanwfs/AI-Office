@@ -1111,7 +1111,7 @@
 - Bukti: vitest **110/110** (11 file, dulu 103), build OK, deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase working, 28067 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).
 
-## 2026-10-20 16:26 WIB — refactor+test: matematika gerak walker diekstrak ke motion_math.js + 12 unit test (vitest 110→121)
+## 2026-10-20 15:26 WIB — refactor+test: matematika gerak walker diekstrak ke motion_math.js + 12 unit test (vitest 110→121)
 
 - Backlog dipilih: stepToward/dist2/BOUNDS di motion.js — jantung gerak 14 agent — masih inline; regresi hard clamp (agent menembus dinding kiri, bug historis) tak terdeteksi unit test.
 - Implementasi: src/scene/parts/motion_math.js — BOUNDS, ARRIVE, dist2, stepMove(pos,target,speed,delta) murni (tanpa THREE/performance.now); stepToward di motion.js kini delegasi ke stepMove (posisi, rotasi atan2(dx,dz), arrived, flag clamped — perilaku identik termasuk stride tak dipanggil saat tiba).
