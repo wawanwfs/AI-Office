@@ -1297,3 +1297,10 @@
 - Test: src/__tests__/label_overlap.test.js — 12 test: konstanta PAD, agent↔agent simetris/arah horizontal/nol saat bebas, agent-vs-zona rasio 2.4:0.8 (h2=96 → -153.6), bubble (tanpa zt) tidak bergeser, zona-vs-bubble zona yang digeser, koefisien historis 1.2/2.4/1.8/1.6, kluster padat 4 label terpisah. (3 iterasi asersi: simetri offY a=-b bukan a=b; pasangan (zona,agent) jatuh ke cabang 1.6× bukan 2.4× — semantik arah pasangan diungkap eksplisit dalam test.)
 - Bukti: vitest **432/432** (32 file, dulu 420), build OK (precache 35, 1536.83 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 418533, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).
+
+## 2026-10-24 01:00 WIB — fix: dead-code createBubble & autoTalk benar-benar dihapus dari dialog.js (commit sebelumnya hanya ganti header)
+
+- Ketemu saat audit: commit 25099b3 mengklaim "-84 baris dead code" di parts/dialog.js, tapi diff-nya HANYA mengubah komentar header — createBubble (canvas inline 360×76) & autoTalk (closure agentData/office → ReferenceError jika dipanggil) masih utuh di baris 71–119.
+- Sekarang benar-benar dihapus: −53 baris; dialog.js murni data/util (chatPhrases, roleTalk, COLLAB_PAIRS, pickCollab, clampBubbleText, LINE_SEC, collabDuration) — identik dengan deskripsi commit sebelumnya.
+- Bukti: vitest 432/432 (32 file, tetap), build OK (precache 35, 1536.82 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 576189, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
