@@ -300,16 +300,16 @@ cp.position.set(-3,.01,0);cp.receiveShadow=true;office.add(cp);
 // Wainscot band (panel bawah dinding belakang & depan — dinding kanan/kiri punya panel sendiri di blok dinding)
 [[0,-9.5,26],[0,9.5,26]].forEach(([wx,wz,ww])=>{
   const band=new THREE.Mesh(new THREE.BoxGeometry(ww,1.1,.1),M(0xEFE9DD));
-  band.position.set(wx,.55,wz+(wz<0?.06:-.06));office.add(band);
+  band.position.set(wx,.55,wz+(wz<0?.06:-.06));band.castShadow=true;office.add(band);
   const trim=new THREE.Mesh(new THREE.BoxGeometry(ww,.06,.14),M(0xC9BFA8));
-  trim.position.set(wx,1.12,wz+(wz<0?.06:-.06));office.add(trim);
+  trim.position.set(wx,1.12,wz+(wz<0?.06:-.06));trim.castShadow=true;office.add(trim);
 });
 // Wainscot band vertikal dinding kiri & kanan
 [[-12.5,0,20],[12.5,0,20]].forEach(([wx,wz,wd])=>{
   const band=new THREE.Mesh(new THREE.BoxGeometry(.1,1.1,wd),M(0xEFE9DD));
-  band.position.set(wx+(wx<0?.06:-.06),.55,wz);office.add(band);
+  band.position.set(wx+(wx<0?.06:-.06),.55,wz);band.castShadow=true;office.add(band);
   const trim=new THREE.Mesh(new THREE.BoxGeometry(.14,.06,wd),M(0xC9BFA8));
-  trim.position.set(wx+(wx<0?.06:-.06),1.12,wz);office.add(trim);
+  trim.position.set(wx+(wx<0?.06:-.06),1.12,wz);trim.castShadow=true;office.add(trim);
 });
 // Jendela dengan pemandangan langit (dinding belakang & depan, atas wainscot)
 const skyTex=(()=>{const c=document.createElement('canvas');c.width=256;c.height=128;
