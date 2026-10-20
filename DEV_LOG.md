@@ -1215,3 +1215,11 @@
 - BONUS — 2 bug runtime ditemukan & diperbaiki saat verifikasi produksi: (1) flooring.js memakai zoneLabelScale() tanpa import → 'Scene init failed' (ReferenceError); (2) room.js memakai TICKS/tickAngle/…/HANDS tanpa import clock_spec.js. Keduanya lolos vitest karena hanya error di runtime — kini scene hidup lagi.
 - Bukti: vitest **290/290** (24 file, dulu 273), build OK (precache 35, 1533.45 KiB), deploy ~/wfs-hq OK; e2e produksi 9503 (setelah reload tab): DOM True, 14 agents, frame naik 3→528, phase working→lunch, TANPA 'Scene init failed' & tanpa exception. Catatan: screenshot headless gagal GPU (EGL init error lingkungan, bukan kode).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
+## 2026-10-21 21:00 WIB — refactor+test: layout meja diekstrak ke desk_layout.js + 13 unit test (vitest 290→303)
+
+- Backlog dipilih: array `desks` (posisi 14 meja: kolom x ∈ {-8,-4,0,4,8}, baris z ∈ {-3,1.5,6}) masih inline di OfficeScene.js — 0 unit test; regresi posisi meja (tumpukan/urutan agen/out-of-bounds) tak terdeteksi.
+- Implementasi: src/scene/parts/desk_layout.js — DESKS (14 entri, urutan historis agen), deskColumns(), deskRows(), deskGrid() (grid kolom×baris + slot kosong) murni dengan injeksi layout; OfficeScene.js kini `const desks = DESKS` (−16 baris), render identik.
+- Test: src/__tests__/desk_layout.test.js — 13 test: 14 meja = 14 agen, posisi historis berurutan, kolom/baris unik terurut, tanpa meja menumpuk, grid 5×3=15 slot → tepat 1 sel kosong (0,6), koordinat finite, dalam batas ruangan (|x|≤12.5, |z|≤9.5), lead desk (−8,−3), injeksi layout kustom, grid kosong/penuh. (1 iterasi: asersi slot kosong dikoreksi dari dugaan (−4,−3) → aktual (0,6).)
+- Bukti: vitest **303/303** (25 file, dulu 290), build OK (precache 35, 1533.63 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, frame 3608, tanpa 'Scene init failed' & tanpa exception.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).

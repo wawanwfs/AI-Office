@@ -16,6 +16,7 @@ import { updateBubbles as updateBubblesPure } from './parts/bubbles.js';
 import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canvas.js';
 import { looksOf } from './parts/character_looks.js';
 import { AGENTS, AGENTS_EXTRA, allAgents as allAgentsFn } from './parts/agents_spec.js';
+import { DESKS } from './parts/desk_layout.js';
 
 export function createOfficeScene(container, callbacks = {}) {
   // scene baru dibuat → flag destroy scene LAMA dicabut; tanpa ini remount/hot-reload
@@ -394,22 +395,8 @@ const MRX=__mr.MRX,MRZ=__mr.MRZ,meetSeats=__mr.meetSeats;
 // Chair is behind agent (positive Z from desk)
 // Monitor is at desk front (negative Z from desk center)
 // ═══════════════════════════════════════════════════
-const desks=[
-  {x:-8, z:-3},  // BANTUIN AI
-  {x:-4, z:-3},  // BUDI
-  {x:-8, z:1.5}, // RIZKY
-  {x:-4, z:1.5}, // DEWI
-  {x:0,  z:-3},  // ANDI
-  {x:0,  z:1.5}, // YOGA
-  {x:-8, z:6},   // MAYA
-  {x:-4, z:6},   // TONI
-  {x:4,  z:-3},  // RINA
-  {x:4,  z:1.5}, // LINA
-  {x:4,  z:6},   // SARI
-  {x:8,  z:-3},  // TRAINER AI
-  {x:8,  z:1.5}, // INTEGRATOR BOT
-  {x:8,  z:6},   // SUPPORT HUMAN
-];
+// Layout 14 meja kini di parts/desk_layout.js (kolom x ∈ {-8,-4,0,4,8}, baris z ∈ {-3,1.5,6})
+const desks = DESKS;
 
 // ═══════════════════════════════════════════════════
 // CHARACTER BUILDER
