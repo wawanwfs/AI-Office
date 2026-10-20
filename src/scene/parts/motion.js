@@ -63,6 +63,9 @@ export function createMotion(ctx) {
   // Pilih tujuan: 75% menghampiri rekan satu alur kerja, sisanya jalan-jalan
   function chooseTrip(ad) {
     const col = Math.random() < 0.75 ? pickCollab(ad) : null;
+    // Tujuan harus area bebas: bukan di atas meja/kursi agent lain (±0.9) dan bukan zona kafe/counter
+    // (z>8 dekat bar stools, x<-7.6 dekat counter CAFÉ) — dulu walkDestinations acak bisa mendarat di meja rekan.
+    const freeSpot = (bx, bz) => !seatOccupied({ x: bx, z: bz }, ad) && !(bz > 8 && bx < -7.0) && !(bz > 6.4 && bx < -7.6);
     if (col) {
       ad.collab = col; ad.partner = col.partner; ad._talk = -1;
       window.__collabCount = (window.__collabCount || 0) + 1;
@@ -71,8 +74,15 @@ export function createMotion(ctx) {
       ad.collab.viaRoute = true; // catatan: rute dihitung normal
     } else {
       ad.collab = null; ad.partner = null;
-      const dest = walkDestinations[rng.i(0, walkDestinations.length - 1)];
-      ad.walkTarget = { x: dest.x + rng.r(-0.5, 0.5), z: dest.z + rng.r(-0.5, 0.5) };
+      // cari tujuan jalan-jalan yang bebas (maks 8 percobaan; fallback = koridor depan baris sendiri)
+      let bx, bz;
+      for (let tries = 0; tries < 8; tries++) {
+        const dest = walkDestinations[rng.i(0, walkDestinations.length - 1)];
+        bx = dest.x + rng.r(-0.5, 0.5); bz = dest.z + rng.r(-0.5, 0.5);
+        if (freeSpot(bx, bz)) break;
+      }
+      if (!freeSpot(bx, bz)) { bx = ad.home.x; bz = FRONT[Math.min(2, Math.max(0, bandOf(ad.home.z)))]; }
+      ad.walkTarget = { x: bx, z: bz };
     }
     ad.walkPause = 0;
     ad._route = routePath({ x: ad.walker.position.x, z: ad.walker.position.z }, ad.walkTarget);
@@ -117,6 +127,10 @@ export function createMotion(ctx) {
       ad.collab = null; ad.partner = null;
       ad.state = 'walking_back';
     }
+  }
+  // Meja terisi: cek jarak posisi target ke semua home agent lain (±0.9 = zona meja+kursi)
+  function seatOccupied(t, self) {
+    return agentData.some((o) => o !== self && o.state !== 'offsite' && Math.hypot(o.home.x - t.x, o.home.z - t.z) < 0.9);
   }
 
   const handlers = {
