@@ -1,16 +1,16 @@
+import { ROOM_CX, ROOM_CZ, meetingSeats, glassPanels, framePosts } from './meeting_room_spec.js';
+
 // Ruang meeting, jam dinding, dan pencahayaan gantung — ditulis ulang untuk WFS Project.
 export function createMeetingRoom(ctx, glassMat) {
   const { THREE, office, M } = ctx;
-  const CX = 8, CZ = -3;                       // pusat ruangan
+  const CX = ROOM_CX, CZ = ROOM_CZ;           // pusat ruangan
   const put = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); office.add(m); return m; };
   const B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
 
   // Kaca pembatas: sisi kiri + dua panel depan dengan celah pintu
-  put(B(0.06, 3.5, 5.5), glassMat, CX - 2.8, 1.75, CZ);
-  [-1.9, 1.9].forEach((dx) => put(B(1.8, 3.5, 0.06), glassMat, CX + dx, 1.75, CZ + 2.75));
+  for (const p of glassPanels(CX, CZ)) put(B(p.w, p.h, p.d), glassMat, p.x, p.h / 2, p.z);
   // Tiang rangka
-  [-1, 1].forEach((sx) => [-1, 1].forEach((sz) =>
-    put(B(0.05, 3.5, 0.05), M(0x8fa1b4), CX + sx * 2.8, 1.75, CZ + sz * 2.75)));
+  for (const p of framePosts(CX, CZ)) put(B(0.05, 3.5, 0.05), M(0x8fa1b4), p.x, 1.75, p.z);
 
   // Meja rapat oval-ish: papan + dua kaki panel
   const top = put(B(3.9, 0.07, 1.55), M(0xe7ecf1), CX, 0.72, CZ);
@@ -18,11 +18,7 @@ export function createMeetingRoom(ctx, glassMat) {
   [-1.55, 1.55].forEach((dx) => put(B(0.08, 0.7, 1.1), M(0xa9bccd), CX + dx, 0.35, CZ));
 
   // Kursi (3 per sisi)
-  const seats = [];
-  [-1.4, 0, 1.4].forEach((dx) => {
-    seats.push({ x: CX + dx, z: CZ - 1.1, ry: 0 });
-    seats.push({ x: CX + dx, z: CZ + 1.1, ry: Math.PI });
-  });
+  const seats = meetingSeats(CX, CZ);
   seats.forEach((s) => {
     put(B(0.36, 0.045, 0.36), M(0x3a4a54), s.x, 0.42, s.z);
     put(B(0.36, 0.34, 0.045), M(0x3a4a54), s.x, 0.61, s.z + (s.ry === 0 ? -0.19 : 0.19));
