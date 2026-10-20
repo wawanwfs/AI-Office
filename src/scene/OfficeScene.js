@@ -6,6 +6,7 @@ import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets } from './parts/effects.js';
+import { overlapPass } from './parts/label_overlap.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
 import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent } from './parts/ring_spec.js';
@@ -1885,35 +1886,7 @@ function animate(){
       pts.push({a:null,zone:true,zt:null,bub:bb.sprite,zw:bb.sprite.scale.x*pk,zh:bb.sprite.scale.y*pk,baseY:bb.sprite.position.y,baseX:bb.sprite.position.x,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});
     const __L=agentData[0].label;
     for(let iter=0;iter<5;iter++){ // multi-pass: satu pass hanya menggeser sedikit, 3 pass menjamin kluster padat benar2 terpisah
-    for(let i=0;i<pts.length;i++){for(let j=0;j<i;j++){
-      // PAD = breathing room: box diperluas 10px per sisi supaya label tak "menempel" (<5px gap)
-      const zi=(pts[i].zone||pts[j].zone), PAD=zi?46:30, // zona lebih sensitif: breathing room lebih besar
-            lwi=(pts[i].sw||pts[i].zw||0)+PAD, lhi=(pts[i].sh||pts[i].zh||0)+PAD,
-            lwj=(pts[j].sw||pts[j].zw||0)+PAD, lhj=(pts[j].sh||pts[j].zh||0)+PAD;
-      const dx=Math.abs(pts[i].x-pts[j].x), dy=Math.abs((pts[i].y+pts[i].offY)-(pts[j].y+pts[j].offY));
-      if(dx<(lwi+lwj)/2 && dy<(lhi+lhj)/2){
-        // geser vertikal dulu; bila vertikal mentok, geser horizontal ke arah bebas
-        const h2=((lhi+lhj)/2)-dy, w2=((lwi+lwj)/2)-dx;
-        if(pts[i].zone&&pts[j].zone){ // dua penghalang (zona vs bubble): zona label yang digeser menjauh
-          const zi=pts[i].zt?i:(pts[j].zt?j:-1), other=zi===i?j:i;
-          if(zi>=0){const h2b=((lhi+lhj)/2)-dy, w2b=((lwi+lwj)/2)-dx, up=pts[zi].y<pts[other].y?-1:1;
-            pts[zi].offY+=up*h2b*1.8; const dz2=(pts[zi].x>=pts[other].x)?1:-1; pts[zi].offX+=dz2*w2b*1.0;}
-        }
-        else if(!pts[i].zone&&!pts[j].zone){ // agent-agent: saling dorong dua arah
-          pts[i].offY+=h2*1.2;pts[j].offY-=h2*1.2;
-          const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*1.2;pts[j].offX-=dir*w2*1.2;
-        }
-        else if(!pts[i].zone){ // agent vs penghalang: agent bergeser penuh
-          pts[i].offY+=h2*2.4;const dir=(pts[i].x>=pts[j].x)?1:-1;pts[i].offX+=dir*w2*1.2;
-          // jika penghalang adalah label zona, zona ikut geser sedikit (0.8x) — kluster padat zona+agent bisa over-cap agent
-          if(pts[j].zt){pts[j].offY-=h2*0.8;pts[j].offX-=dir*w2*1.1;}
-        }
-        else if(!pts[j].zone){
-          pts[j].offY-=h2*1.6;const dir=(pts[j].x>=pts[i].x)?1:-1;pts[j].offX+=dir*w2*0.9;
-
-        }
-      }
-    }}
+    overlapPass(pts);
     } // end multi-pass anti-overlap
     // SWEEP+CLAMP SIKLIKAL: sweep greedy bisa mendorong label melewati batas viewport,
     // dan clamp bisa menimbulkan overlap baru -> ulangi (sweep→clamp) sampai stabil (max 3x).

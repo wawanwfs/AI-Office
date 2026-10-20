@@ -1281,3 +1281,11 @@
 - Fix: OfficeScene.js push [RCX-1.3, RCX+1.55, RCZ-0.35, RCZ+0.35] ke OBSTACLES setelah side panel dibuat (menutup desk + side panel) + import OBSTACLES dari parts/obstacles.js.
 - Verifikasi: vitest 420/420 (31 file, tetap), build OK (precache 35, 1536.75 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 327411, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
+## 2026-10-24 00:05 WIB — refactor+test: anti-overlap label diekstrak ke label_overlap.js + 12 unit test (vitest 420→432)
+
+- Backlog dipilih: pass kolisi anti-overlap label (loop berpasangan 5 iterasi di OfficeScene.js ~line 1888: PAD agent 30/zona 46, dorongan agent↔agent 1.2×, agent dari penghalang 2.4×, zona-vs-penghalang 1.8×, agent didorong zona 1.6× + tag-along zona 0.8×/1.1×) masih inline — 0 unit test; regresi tumpukan label tak terdeteksi.
+- Implementasi: src/scene/parts/label_overlap.js — overlapPass(pts, iters=5) murni (mutasi offX/offY saja, tanpa THREE/canvas) + konstanta PAD/koefisien terekspor; OfficeScene.js kini `overlapPass(pts)` (−31 baris), perilaku anti-overlap identik.
+- Test: src/__tests__/label_overlap.test.js — 12 test: konstanta PAD, agent↔agent simetris/arah horizontal/nol saat bebas, agent-vs-zona rasio 2.4:0.8 (h2=96 → -153.6), bubble (tanpa zt) tidak bergeser, zona-vs-bubble zona yang digeser, koefisien historis 1.2/2.4/1.8/1.6, kluster padat 4 label terpisah. (3 iterasi asersi: simetri offY a=-b bukan a=b; pasangan (zona,agent) jatuh ke cabang 1.6× bukan 2.4× — semantik arah pasangan diungkap eksplisit dalam test.)
+- Bukti: vitest **432/432** (32 file, dulu 420), build OK (precache 35, 1536.83 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 418533, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).
