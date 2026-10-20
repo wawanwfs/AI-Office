@@ -11,6 +11,7 @@ import { createProjectBoard } from './parts/projectboard.js';
 import { chatPhrases, roleTalk, COLLAB_PAIRS, pickCollab, clampBubbleText, collabDuration, LINE_SEC } from './parts/dialog.js';
 import { updateBubbles as updateBubblesPure } from './parts/bubbles.js';
 import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canvas.js';
+import { looksOf } from './parts/character_looks.js';
 
 export function createOfficeScene(container, callbacks = {}) {
   // scene baru dibuat → flag destroy scene LAMA dicabut; tanpa ini remount/hot-reload
@@ -434,22 +435,8 @@ const desks=[
 // CHARACTER BUILDER
 // ═══════════════════════════════════════════════════
 
-// -- Profil tampilan per karakter: kulit, tinggi, aksesori --
-const LOOKS={
-  'BANTUIN AI':{skin:0xCFD8DC,h:1.0,acc:['visor','antenna']},
-  'BUDI':{skin:0xD9A273,h:1.05,acc:['glasses','beard']},
-  'RIZKY':{skin:0xE8B88A,h:1.02,acc:['headphones']},
-  'DEWI':{skin:0xF1C9A0,h:.97,acc:['hijab']},
-  'ANDI':{skin:0xC68B5E,h:1.04,acc:['cap']},
-  'YOGA':{skin:0xE0AC7E,h:1.0,acc:['glasses']},
-  'MAYA':{skin:0xF3D2B0,h:.96,acc:['bun','glasses']},
-  'TONI':{skin:0xB97F55,h:1.07,acc:['beanie','beard']},
-  'RINA':{skin:0xEBC39A,h:.97,acc:['hijab','glasses']},
-  'LINA':{skin:0xF0C8A2,h:.98,acc:['ponytail']},
-  'SARI':{skin:0xD9A273,h:.99,acc:['blazer','glasses']},
-  'WAHYU FS':{skin:0xE8B88A,h:1.04,acc:['tie','peci']},
-};
-function looksOf(agent){return LOOKS[String(agent.name||'').toUpperCase()]||{skin:0xE8B88A,h:1,acc:[]}}
+// Profil tampilan (LOOKS) & looksOf kini di parts/character_looks.js
+
 // headY: pusat kepala; fz: arah depan (+1 berdiri/+Z, -1 duduk/-Z); torsoY: pusat torso
 function addAccessories(g,agent,headY,fz,torsoY){
   const L=looksOf(agent), has=a=>L.acc.includes(a);

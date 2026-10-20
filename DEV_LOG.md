@@ -1165,3 +1165,11 @@
 - Test: src/__tests__/bubble_canvas.test.js — 11 test: konstanta sesuai nilai historis, roundRectPath 4 kurva+4 garis+close, tailPath simetris ujung (180,73), drawBubble fill 2×/stroke 1×/teks di (180,32) center, clampText diterapkan (≤33 char), tanpa clamp pass-through, opacity fade-in boundary 0/0.22/0.11, fade-out life/0.5 & 0 saat habis, kombinasi ≤1 & ≥0.
 - Bukti: vitest **190/190** (18 file, dulu 179), build OK (precache 35, 1532.18 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase leaving, 50956 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
+## 2026-10-20 18:45 WIB — refactor+test: profil tampilan karakter diekstrak ke character_looks.js + 24 unit test (vitest 190→214)
+
+- Backlog dipilih: tabel LOOKS (12 karakter: skin/h/acc) + looksOf() masih inline di OfficeScene.js — 0 unit test; regresi identitas visual karakter (aksesori/tinggi/warna kulit) tak terdeteksi.
+- Implementasi: src/scene/parts/character_looks.js — LOOKS (12 entri), looksOf(agent) case-insensitive + fallback {skin:0xE8B88A,h:1,acc:[]}; hasil dikloning ({...L, acc:[...L.acc]}) agar pemanggil tak bisa memutasi data global; OfficeScene.js kini import (−16 baris), perilaku render identik.
+- Test: src/__tests__/character_looks.test.js — 24 test: 12 karakter & nama kunci historis, field lengkap & valid (h 0.9–1.2, skin finite), aksesori unik & dari kosakata addAccessories, BANTUIN AI visor+antenna, WAHYU FS tie+peci, DEWI/RINA hijab, lookup case-insensitive, fallback nama tak dikenal/undefined/null, fallback tidak membagi referensi acc (mutasi aman).
+- Bukti: vitest **214/214** (19 file, dulu 190), build OK (precache 35, 1532.22 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase night, 54443 frames, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
