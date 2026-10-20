@@ -1554,7 +1554,12 @@ const drawScreen=s=>drawScreenFrame(s,frame);
 let timeOfDay=660;
 const lC=mixHex; // eslint-disable-line no-unused-vars -- kompatibilitas nama lama
 const __light=createLighting({THREE,scene,renderer,sun,ambient,agentData,onTimeUpdate,onStatusUpdate,onTick:m=>updateMeeting(m)});
-function updateTime(min){timeOfDay=min;__light.apply(min)}
+function updateTime(min,manual=true){timeOfDay=min;__light.apply(min);if(manual){lastManualSet=performance.now();__userSlider=true}}
+let lastManualSet=0;
+let __userSlider=false;
+const SIM_SEC_PER_MIN=5; // 1 menit simulasi tiap 5 dtk nyata (1 hari kerja 480–1200 ≈ 12 menit nyata)
+let simAcc=0;
+let simLast=0;
 updateTime(660);
 
 // ═══════════════════════════════════════════════════
@@ -1918,6 +1923,24 @@ function animate(){
   checkConversations();updateBubbles(delta);autoTalk(delta);
   // Shift
   updateShift(timeOfDay);
+  // ── Auto-advance waktu simulasi: tanpa ini jam HUD statis selamanya dan seluruh
+  // day-cycle (shift datang/pulang, lunch, jendela meeting, pencahayaan senja)
+  // tidak pernah terpicu otomatis — slider & aksi tim hanya mem-set nilai statis.
+  // Slider manual menempatkan simulasi ke mode MANUAL: berhenti sampai 8 dtk
+  // pengguna tidak menyentuh slider, lalu autoplay lanjut dari posisi baru.
+  // Memakai performance.now() (bukan delta yang di-clamp .05) supaya laju
+  // simulasi konsisten di GPU lambat (SwiftShader ~1.5 FPS) maupun cepat.
+  {
+    const nowSim=performance.now();
+    if(!__userSlider){
+      if(!simLast)simLast=nowSim;
+      else{
+        simAcc+=(nowSim-simLast)/1000;
+        while(simAcc>=SIM_SEC_PER_MIN){simAcc-=SIM_SEC_PER_MIN;updateTime((timeOfDay+1)%1440,false);simLast=performance.now();}
+      }
+    } else if(nowSim-lastManualSet>8000){ __userSlider=false; simLast=0; simAcc=0; }
+    if(__userSlider)simLast=nowSim;
+  }
 
   // cincin denyut agent utama
   const pulseT=(elapsed*.5)%1;

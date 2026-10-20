@@ -979,3 +979,11 @@
 - Build OK (2.0s, precache 35, 1529.6 KiB), vitest 24/24, deploy ~/wfs-hq OK.
 - Ops: proses chrome headless lama (leaked GPU-process 176% CPU, load avg 3.4 → 0.1 setelah dibunuh) dibersihkan — probe FPS berikutnya wajib terminate browser-nya.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); jam "11:00" diduga glyph tofu di screenshot (belum terkonfirmasi di browser asli).
+
+## 2026-10-20 10:00 WIB — fitur: AUTO-PLAY waktu simulasi (jam HUD statis selamanya → day-cycle hidup)
+
+- Masalah (ditemukan saat verifikasi backlog "jam 11:00 tofu"): jam HUD BUKAN tofu — audit vision zoom 3x mengonfirmasi "11:00" render utuh (zero bergaris = desain font Orbitron). Tapi investigasi menyingkap bug lebih besar: `timeOfDay` TIDAK PERNAH maju sendiri — hanya di-set statis oleh slider React & aksi tim. Seluruh day-cycle (shift datang 08:00/pulang 18:00, lunch 12:00–13:00, jendela meeting, pencahayaan senja/malam, status ticker) tidak pernah terpicu otomatis: kantor abadi jam 11:00.
+- Implementasi (OfficeScene.js): auto-advance 1 menit simulasi per 5 dtk nyata (hari kerja 480–1200 ≈ 12 menit nyata) di loop render; slider/aksi tim masuk mode MANUAL (pause) dan autoplay lanjut 8 dtk setelah interaksi terakhir; driver memakai performance.now() BUKAN delta (delta di-clamp .05 s → laju simulasi jadi melambat 10–20x di GPU lambat SwiftShader; terverifikasi: versi delta stuck di 11:00 setelah 24 dtk, versi wall-clock maju 661→673 di 36 dtk).
+- Bukti probe CDP produksi 9503 (GPU SwiftShader): t0 clock 11:00/scene 660 → t+12s 11:07 → t+24s 11:13/scene 673 (±1 menit-sim per 5 dtk persis); e2e final: DOM True, 17 btns, agentData 14, sceneT 663→clock 11:03, frames 10→20 (6 dtk), sceneFail False; audit vision /tmp/final.png (512 KB): scene hidup, agent+label+chat bubble normal, hanya minor label clipping kosmetik.
+- Build OK (precache 35), vitest 24/24, deploy ~/wfs-hq OK.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); label overlap MEETING↔tooltip pada close-up (anti-overlap sudah ada, kalah saat kamera sangat dekat); shift-arrive 08:00 kini akan terjadi otomatis — pantau perilakunya di sesi panjang.
