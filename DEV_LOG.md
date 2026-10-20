@@ -1446,6 +1446,14 @@
 - Bukti: vitest **575/575** (43 file, dulu 568 — +7), build OK (precache 35, 1537.14 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 1722346, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
 
+## 2026-10-24 07:30 WIB — FIX KRITIS: ReferenceError "soundsStarted is not defined" (regresi refactor sound engine)
+
+- Penemuan: eslint `no-undef` pada OfficeScene.js — `soundsStarted` (2× di animate(), baris tick keyclick/step) tidak lagi terdeklarasi sejak refactor 4fbb399 (deklarasi `let soundsStarted=false` lama ikut terhapus, referensi tertinggal). Bundle produksi terakhir memuat bug ini → di runtime, frame pertama yang tick suara (~0.1 s) melempar ReferenceError dan MENGHENTIKAN loop render animate() (kegagalan senyap: DOM & scene init tetap jalan).
+- Fix: guard diganti `__sound.state()!=='none'` (audio sudah di-ensure → state bukan 'none'); play* sendiri sudah lazy-init aman.
+- Verifikasi: eslint no-undef 0; vitest **585/585** (44 file); build OK (precache 35, 1538.01 KiB); bundle baru OfficeScene-BYhblVRC.js bebas 'soundsStarted' (grep 0); deploy ~/wfs-hq OK; reload chrome dbg 9222 dengan purge SW cache → resource OfficeScene-BYhblVRC dimuat, fr berjalan (83→6267), 14 agents, tanpa exception runtime. e2e produksi 9503: DOM True, 14 agents, phase lunch→working, tanpa 'Scene init failed'.
+- Catatan: window.__audio.started tetap false di headless (lazy-init menunggu user gesture isTrusted — perilaku benar, bukan bug; sebelumnya justru crash ReferenceError, kini hanya idle sampai gesture).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
 ## 2026-10-24 07:00 WIB — refactor: sound engine diekstrak dari OfficeScene.js + 10 unit test runtime Web Audio (vitest 575→585)
 
 - Backlog dipilih: blok SOUND SYSTEM OfficeScene.js (playKeyClick/playStep/playMeetingChime/initAudio/mute/dispose, ±70 baris Web Audio) — 0 unit test; regresi "suara senyap" (gain/ramp/envelope/mute salah) tak terdeteksi.
