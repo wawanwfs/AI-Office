@@ -1004,3 +1004,10 @@
 - Bukti probe ulang setelah fix (produksi 9503): agent dari band meja kini menuju koridor dulu sebelum berbelok — BUDI (-4.0,-3.3) tetap z -3.3 (koridor FRONT[0]) sampai x -8.0, baru naik ke kafe via gang z 3.6/5.0; TONI (-4.7,6.9) lewat koridor z 5.0 horizontal dulu ke x -10.4 baru naik ke z 8.5. Tidak ada lagi lintasan diagonal menembus baris meja z 0–3.
 - Build OK, vitest 24/24, deploy ~/wfs-hq OK; e2e (DISPLAY :78): DOM True, 17 btns, 14 label, canvas 1366x625, frames 17, consoleErrors [].
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia); overlap label MEETING↔tooltip kamera sangat dekat (kosmetik); kontak tepi Sari↔CAFÉ (kosmetik).
+
+## 2026-10-20 11:05 WIB — fix: agent tidak lagi menembus dinding/pintu saat shift pulang 18:00 (BOUNDS clamp + rute koridor ke pintu)
+
+- Masalah (audit lanjutan rute): (1) `depart()` 18:00 set walkTarget = DOOR (-12, 8) tapi `leaving` memakai stepRoute tanpa rute terhitung → garis lurus dari meja ke pintu, menembus baris meja; (2) TIDAK ADA batas dunia: stepToward bebas membawa walker keluar lantai (±13/±10) melewati dinding — spawn DOOR.x=-12 + jitter/rounding bisa menaruh agent di luar.
+- Implementasi: (1) motion.js — BOUNDS {x ±12.4, z ±9.4} di-clamp hard di stepToward (semua state jalan lewat titik ini); (2) daycycle.js depart() — walkTarget titik DALAM kantor dekat celah pintu (-12, 8) + _route=null → stepRoute fallback menghitung rute koridor (fix kemarin bekerja untuk depart juga), bukan garis lurus.
+- Bukti: build OK (2.1s, precache 35, 1530.3 KiB), vitest 24/24, deploy ~/wfs-hq OK; e2e (DISPLAY :78): DOM True, 17 btns, canvas 1366x625, frames 19, label 14, consoleErrors [].
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia); overlap label MEETING↔tooltip kamera sangat dekat (kosmetik); kontak tepi Sari↔CAFÉ (kosmetik).

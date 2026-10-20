@@ -133,7 +133,11 @@ export function createShift(ctx) {
         ad.sittingChar.visible = false;
         ad.walker.visible = true;
         ad.walker.position.set(ad.home.x, 0, ad.home.z);
-        ad.walkTarget = { ...DOOR };
+        // Pintu keluar: target titik DI DALAM kantor dekat celah pintu (x=-12, z=8),
+        // lalu rute koridor via stepRoute — dulu langsung DOOR dengan tanpa rute
+        // (leaving pakai stepRoute → garis lurus menembus baris meja).
+        ad.walkTarget = { x: -12, z: 8 };
+        ad._route = null; // recalc otomatis via stepRoute fallback
         ad.state = 'leaving';
       });
     });

@@ -25,12 +25,23 @@ export function createMotion(ctx) {
     ad.walker.position.y = 0;
   }
   function follow(ad) { ad.label.position.set(ad.walker.position.x, 2.45, ad.walker.position.z); }
+  // ── Batas dunia ──
+  // Lantai: BoxGeometry(26, z 20) → ±13 / ±10. Dinding kiri x=-13, belakang z=-10.
+  // Pintu masuk kantor (spawm shift) di x=-12, z=8 → walker spawn 0.6 unit di dalam.
+  const BOUNDS = { xMin: -12.4, xMax: 12.4, zMin: -9.4, zMax: 9.4 };
   function stepToward(ad, target, speed, delta) {
     const { dx, dz, d } = dist2(ad.walker.position, target);
     if (d < ARRIVE) return true;
     const nx = dx / d, nz = dz / d;
     ad.walker.position.x += nx * speed * delta;
     ad.walker.position.z += nz * speed * delta;
+    // hard clamp: tanpa ini agent bisa keluar lantai/dinding (spawn DOOR.x=-12
+    // di luar BOUNDS dulu, atau walkTarget acak dekat tepi) — dilihat dari
+    // luar kantor tampak menembus dinding kiri.
+    if (ad.walker.position.x < BOUNDS.xMin) ad.walker.position.x = BOUNDS.xMin;
+    if (ad.walker.position.x > BOUNDS.xMax) ad.walker.position.x = BOUNDS.xMax;
+    if (ad.walker.position.z < BOUNDS.zMin) ad.walker.position.z = BOUNDS.zMin;
+    if (ad.walker.position.z > BOUNDS.zMax) ad.walker.position.z = BOUNDS.zMax;
     ad.walker.rotation.y = Math.atan2(nx, nz);
     stride(ad);
     return false;
