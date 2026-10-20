@@ -1345,3 +1345,13 @@
 - Fix: `'— ' + names` → `'— ' + full`. One-liner; tanpa perubahan perilaku lain.
 - Bukti: vitest 450/450 (33 file, tetap), build OK (precache 35, 1536.94 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 726714, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
+## 2026-10-24 03:35 WIB — test: createNeonMode & createShift (runtime daycycle) 12 unit test (vitest 486→498)
+
+- Backlog dipilih: daycycle.test.js hanya menguji logika murni (statusAt/daylight/mixHex) — runtime createNeonMode (toggle mode neon: 14 properti scene) & createShift (eksekusi event shiftStep: sendToLunch/endLunch/arrive/depart/nightfall/dawn + setTimeout berantai) sama sekali 0 unit test; regresi mode neon/shift tak terdeteksi.
+- Test: src/__tests__/daycycle_runtime.test.js — 12 test dengan stub scene (light/mat helper + walker stub dengan position.set):
+  - createNeonMode (3): toggle bolak-balik; enable → ambient 0.12/sun 0.08/exposure 0.55, tubeLights 0.35 biru 0x1a3355, dGlow agent 0.9×4.5, reception 0.7, floor 0x060c18; disable → restoreTime() dipanggil, warna & intensitas kembali kondisi siang.
+  - createShift (8): phase awal working; lunch_start → walking_out + walkTarget area bar stools ±jitter + walkPause=LUNCH_PAUSE_MIN (rng stub); lunch_end → walking_back + walkTarget=home + collab dibersihkan, state meeting tidak diganggu; nightfall (m=400) → agent[0] dikecualikan (tetap sitting), duduk lain → offsite; arrive (400→480) → phase arriving, walker spawn terjadwal per 800ms via fake timers, walkTarget=home + resetStride; depart → hanya agen sitting, walkTarget pintu dalam kantor (-12,8); siklus 400..900 → phase working + agen pulang ke meja; dispose → semua timer dibatalkan (tidak ada agen bergerak setelahnya).
+  - Iterasi asersi (4×): stub tubes/pendants salah bentuk (perlu {material}); position.set tidak ada di stub walker; phase 'night' harus di-update() dulu sebelum 480 (shiftStep dari phase awal 'working' + m=480 langsung working_am — window arrive syarat p!=='working'); dawn() menjalankan semua jadi sitting sebelum timer arrive → asersi melonggarkan ke union ['walking_back','sitting'].
+- Bukti: vitest **498/498** (36 file, dulu 486), build OK (precache 35, 1536.96 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 1142277, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
