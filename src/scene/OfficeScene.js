@@ -7,6 +7,7 @@ import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets } from './parts/effects.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
+import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
 import { createProjectBoard } from './parts/projectboard.js';
 import { chatPhrases, roleTalk, COLLAB_PAIRS, pickCollab, clampBubbleText, collabDuration, LINE_SEC } from './parts/dialog.js';
 import { updateBubbles as updateBubblesPure } from './parts/bubbles.js';
@@ -737,22 +738,15 @@ function buildDesk(agent,dp){
   // Glow di bawah meja (dGlow — dipakai updateShift/cyberpunk)
   const dGlow=new THREE.PointLight(agent.color,.15,3,2);
   dGlow.position.set(0,.3,-.1);g.add(dGlow);
-  // Nameplate pribadi: nama + role di sisi depan meja (menghadap keluar dari monitor)
-  (()=>{
-    const c=document.createElement('canvas');c.width=256;c.height=64;const x=c.getContext('2d');
-    x.fillStyle='rgba(8,12,22,0.88)';x.beginPath();if(x.roundRect)x.roundRect(2,2,252,60,12);else x.rect(2,2,252,60);x.fill();
-    x.fillStyle=agent.hex;x.fillRect(2,10,7,44);
-    x.textAlign='center';x.textBaseline='middle';
-    const nm=String(agent.name).toLowerCase().replace(/(^|\s)\w/g,m=>m.toUpperCase());
-    const ell=(t,max,font)=>{x.font=font;if(x.measureText(t).width<=max)return t;let e=t;while(e.length>1&&x.measureText(e+'…').width>max)e=e.slice(0,-1);return e+'…'};
-    const f1='800 22px "Segoe UI",Arial,sans-serif',f2='500 14px "Segoe UI",Arial,sans-serif';
-    x.font=f1;x.fillStyle='#fff';x.fillText(ell(nm,220,f1),132,24);
-    x.fillStyle='#a8b4c6';x.fillText(ell(agent.role,220,f2),132,45);
-    const tex=new THREE.CanvasTexture(c);tex.minFilter=THREE.LinearFilter;
-    const plate=new THREE.Mesh(new THREE.PlaneGeometry(.62,.155),new THREE.MeshBasicMaterial({map:tex,transparent:true}));
-    plate.position.set(0,.68,.42);g.add(plate);
-    const stand=new THREE.Mesh(new THREE.BoxGeometry(.62,.02,.05),M(0x2E3642));
-    stand.position.set(0,.66,.44);g.add(stand);
+  // Nameplate pribadi: nama + role di sisi depan meja (spec di parts/nameplate_spec.js)
+  (() => {
+    const c = document.createElement('canvas');
+    drawNameplate(c.getContext('2d'), agent.name, agent.role, agent.hex);
+    const tex = new THREE.CanvasTexture(c); tex.minFilter = THREE.LinearFilter;
+    const plate = new THREE.Mesh(new THREE.PlaneGeometry(PLATE.w, PLATE.h), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
+    plate.position.set(0, PLATE.y, PLATE.z); g.add(plate);
+    const stand = new THREE.Mesh(new THREE.BoxGeometry(PLATE.w, .02, .05), M(0x2E3642));
+    stand.position.set(0, PLATE.standY, PLATE.standZ); g.add(stand);
   })();
   // Laci kabinet di bawah meja (sisi kiri) dengan handel
   const cab=new THREE.Mesh(new THREE.BoxGeometry(.42,.5,.6),M(0x46525E));

@@ -1181,3 +1181,12 @@
 - Test: src/__tests__/meeting_room_spec.test.js — 14 test: pusat (8,−3), konstanta kaca, dimensi meja, 6 kursi (3 per sisi) posisi & orientasi menghadap meja, kursi dalam lebar meja, 3 panel kaca dengan celah pintu ≥1 unit, panel pada garis kaca z=CZ+2.75, 4 tiang di sudut kaca, custom center. (1 iterasi: asersi x panel depan dikoreksi relatif terhadap ROOM_CX=8, bukan 0.)
 - Bukti: vitest **228/228** (20 file, dulu 214), build OK (precache 35, 1532.47 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase working, 57844 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
+## 2026-10-21 05:15 WIB — refactor+test: nameplate meja diekstrak ke nameplate_spec.js + 16 unit test (vitest 228→244)
+
+- Backlog dipilih: drawing nameplate pribadi (nama+role) di buildDesk() (OfficeScene.js) — rounded-rect panel, garis aksen warna agen, title-case nama, clamp teks, posisi plate/stand — masih inline; regresi tampilan nameplate tak terdeteksi unit test.
+- Implementasi: src/scene/parts/nameplate_spec.js — NAMEPLATE (kanvas 256×64, teks x=132, nama y=24, role y=45, bar aksen 2/10/7/44), PLATE (mesh 0.62×0.155 di y=0.68 z=0.42; stand y=0.66 z=0.44), titleCase(), clampText(), drawNameplate(ctx,name,role,hex) murni (ctx 2D di-inject, tanpa THREE); OfficeScene.js kini import (−12 baris), render identik.
+- Robustness: clampText kini aman utk null/undefined (`String(text ?? '')` — dulu TypeError saat role undefined; 1 iterasi test).
+- Test: src/__tests__/nameplate_spec.test.js — 16 test: konstanta historis NAMEPLATE & PLATE, titleCase (lowercase/UPPERCASE/angka/kosong), clampText muat vs potong+ellipsis & font di-set dulu, drawNameplate ukuran kanvas, posisi teks nama/role, align center + baseline middle, bar aksen, clamp nama panjang, role undefined tanpa error.
+- Bukti: vitest **244/244** (21 file, dulu 228), build OK (precache 35, 1532.89 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase night, 61563 frames, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).
