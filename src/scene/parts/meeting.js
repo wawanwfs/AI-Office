@@ -16,6 +16,7 @@ export function createMeeting(ctx) {
   });
   let active = false;
   let currentIdx = []; // indeks agent yang sedang rapat
+  let lastWin = -1;
 
   // Rotasi peserta deterministik per window: mulai dari hash window, ambil seats.length agent
   function pickAttendees(win) {
@@ -76,8 +77,6 @@ export function createMeeting(ctx) {
       if (want && !active) begin(minutes);
       else if (want && active && win !== lastWin) { end(); begin(minutes); } // ganti window -> peserta baru
       else if (!want && active) end();
-      lastWin = win;
     },
   };
 }
-let lastWin = -1;

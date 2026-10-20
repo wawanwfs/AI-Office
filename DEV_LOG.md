@@ -1063,3 +1063,11 @@
 - Implementasi: src/__tests__/daycycle.test.js — 9 test: label jadwal pada menit kunci & tepat sebelum batas (599/719/779/1439), monotoni SCHEDULE & siklus 24 jam kembali ke shift malam; daylight gelap 0.3 / terang 1, monotoni transisi fajar 06:00-08:00 & senja 17:00-19:00, smoothstep tepat di batas; mixHex t=0/t=1, campur kanal t=0.5, validitas 24-bit.
 - Bukti: vitest **43/43** (5 file, dulu 34), npm run build OK (precache 35, 1530.93 KiB), deploy ~/wfs-hq OK; e2e CDP produksi 9503: DOM True, 14 agents, phase working, 6874 frames, 0 exception.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" sudut kamera default (fade zona fix 12:30 sudah ada, pantau).
+
+## 2026-10-20 14:25 WIB — fix+test: bug lastWin module-level di meeting.js + 6 unit test state machine rapat (vitest 43→49)
+
+- Bug: `lastWin` dideklarasikan module-level (bukan di dalam createMeeting) — state rotasi peserta antar jendela rapat dibagi antar semua instance scene (HMR/remount/scene kedua), sehingga begin() jendela baru bisa ter-skip; juga tak pernah reset.
+- Implementasi: `lastWin` dipindah ke closure createMeeting (perilaku scene tunggal identik, isolasi antar instance kini benar).
+- Test: src/__tests__/meeting.test.js — 6 test: begin saat masuk jendela (600, peserta = seats.length, state 'meeting'), stabil di dalam jendela (600→629 tanpa restart), end saat keluar (631 → sitting, figures hidden), rotasi peserta window 0 ≠ window 1 via update() saja, isolasi antar instance (instance kedua tetap begin di window 1 — gagal pada kode lama), konsistensi util jadwal (599/631 di luar).
+- Bukti: vitest **49/49** (6 file, dulu 43), build OK (precache 35, 1530.92 KiB), deploy ~/wfs-hq OK; e2e CDP produksi 9503: DOM True, 14 agents, phase arriving, 9880 frames, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" sudut kamera default (fade zona fix 12:30 sudah ada, pantau).
