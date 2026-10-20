@@ -63,9 +63,20 @@ export function createMotion(ctx) {
   // Pilih tujuan: 75% menghampiri rekan satu alur kerja, sisanya jalan-jalan
   function chooseTrip(ad) {
     const col = Math.random() < 0.75 ? pickCollab(ad) : null;
-    // Tujuan harus area bebas: bukan di atas meja/kursi agent lain (±0.9) dan bukan zona kafe/counter
-    // (z>8 dekat bar stools, x<-7.6 dekat counter CAFÉ) — dulu walkDestinations acak bisa mendarat di meja rekan.
-    const freeSpot = (bx, bz) => !seatOccupied({ x: bx, z: bz }, ad) && !(bz > 8 && bx < -7.0) && !(bz > 6.4 && bx < -7.6);
+    // Rintangan furnitur nyata (footprint x0,x1,z0,z1) — walker tidak boleh berhenti
+    // DI DALAM/ATAS benda: counter pantry, dispenser, printer, zona café (counter L +
+    // bar stools + fridge), lounge (sofa, coffee table, armchairs, lampu, rak majalah).
+    const OBSTACLES = [
+      [-11.6, -9.5, 2.2, 2.9],    // counter pantry (furniture.js z 2.5, w 1.7)
+      [-10.8, -10.2, -0.3, 0.3],  // dispenser air
+      [2.5, 3.5, -8.4, -7.5],     // printer
+      [-11.4, -6.9, 6.2, 9.4],    // zona café: counter L (CFX -9.5), stools z 8.5, fridge (-7, 7.3)
+      [8.0, 12.4, 4.3, 9.4],      // lounge: sofa (10.5,6), coffee table, armchairs, lamp, magRack
+    ];
+    const inObstacle = (bx, bz) => OBSTACLES.some(([x0, x1, z0, z1]) => bx >= x0 && bx <= x1 && bz >= z0 && bz <= z1);
+    // Tujuan harus bebas: bukan di atas meja/kursi agent lain (±0.9), bukan dalam
+    // footprint furnitur, dan bukan sisa zona kafe lama (belt & suspenders).
+    const freeSpot = (bx, bz) => !inObstacle(bx, bz) && !seatOccupied({ x: bx, z: bz }, ad) && !(bz > 8 && bx < -7.0) && !(bz > 6.4 && bx < -7.6);
     if (col) {
       ad.collab = col; ad.partner = col.partner; ad._talk = -1;
       window.__collabCount = (window.__collabCount || 0) + 1;

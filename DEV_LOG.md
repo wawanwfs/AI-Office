@@ -1012,6 +1012,13 @@
 - Bukti: build OK (2.1s, precache 35, 1530.3 KiB), vitest 24/24, deploy ~/wfs-hq OK; e2e (DISPLAY :78): DOM True, 17 btns, canvas 1366x625, frames 19, label 14, consoleErrors [].
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia); overlap label MEETING↔tooltip kamera sangat dekat (kosmetik); kontak tepi Sari↔CAFÉ (kosmetik).
 
+## 2026-10-20 10:57 WIB — fix: tujuan jalan acak kini juga menghindari furnitur (pantry, dispenser, printer, lounge)
+
+- Masalah (audit lanjutan backlog): fix 11:35 lama hanya menolak meja rekan + zona kafe — walkDestinations "pantry" (-9.4, 3.6) jatuh tepat di counter pantry (furniture.js: box 1.7×0.8 di (-10.5, 2.5)), "printer" (2.2, -7.0) dekat printer (3, -8), dan lounge (9.4, 4.8) di dalam footprint sofa (10.5, 6)/coffee table/armchairs — walker bisa berhenti "di dalam/di atas" furnitur.
+- Implementasi (motion.js chooseTrip): tabel OBSTACLES footprint AABB (pantry, dispenser, printer, zona café penuh, lounge penuh) + `inObstacle()`; freeSpot kini menolak tujuan dalam footprint (di atas cek meja rekan & zona kafe lama).
+- Bukti probe CDP produksi 9503 (14 agent di-force trip 4 ronde): **0 walkTarget melanggar** di semua ronde; scene sehat (phase working, frames bertambah, 0 exception). Build OK (precache 35), vitest 24/24, deploy ~/wfs-hq OK; e2e: DOM True, 17 btns, 14 agents.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia); overlap label MEETING↔tooltip kamera sangat dekat (kosmetik); kontak tepi Sari↔CAFÉ (kosmetik).
+
 ## 2026-10-20 11:35 WIB — fix: tujuan jalan-jalan acak kini bebas — tidak lagi mendarat di atas meja rekan / zona kafe
 
 - Masalah (audit backlog): chooseTrip() non-collab memilih walkDestinations acak + jitter ±0.5 — tak ada cek okupansi, walkTarget bisa jatuh di zona meja+kursi agent lain (±0.9) atau area counter CAFÉ/bar stools; walker berhenti "di atas meja" rekan.
