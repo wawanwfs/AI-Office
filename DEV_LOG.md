@@ -1142,3 +1142,10 @@
 - Test: src/__tests__/poster_spec.test.js — 13 test: 5 poster, field lengkap & valid (hex warna), semua menempel dinding samping ±11.4 & di dalam lantai ±13/±10, ada di kedua sisi, tak ada posisi duplikat, teks unik & slogan kunci ada, warna unik, konstanta render tetap (2.2/0.46/0.66/120/160/24), facing kiri +π/2 kanan −π/2, offset ±0.03 menjauhi dinding, posterLineY 64/88/112, teks ≤3 baris muat di canvas, plane lebih kecil dari frame.
 - Bukti: vitest **162/162** (15 file, dulu 149), build OK (precache 35, 1532.12 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase working, 41335 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).
+
+## 2026-10-21 02:00 WIB — test: unit test lifecycle speech bubble bubbles.js + 10 test (vitest 162→172)
+
+- Backlog dipilih: bubbles.js (updateBubbles — fade-in/out, anchor mengikuti pembicara, float-up, penghapusan) — 0 unit test; regresi lifecycle bubble (opacity/hapus) tak terdeteksi.
+- Implementasi: tanpa ubah kode; src/__tests__/bubbles.test.js baru — 10 test: life berkurang sebesar delta, anchor mengikuti x/z pembicara + offset y (anchor.y 2.6), anchor default y=2.0, float-up tanpa anchor dari startY, opacity 0 di age 0, puncak opacity 1 (age≥.22 & life≥.5), fade-out life/.5, bubble habis dihapus via remove & keluar array, iterasi mundur aman (beberapa bubble habis sekaligus), boundary life=0 dihapus.
+- Bukti: vitest **172/172** (16 file, dulu 162), build OK (precache 35, 1532.12 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase arriving, 44194 frames, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
