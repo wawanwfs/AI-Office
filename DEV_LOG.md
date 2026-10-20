@@ -1,3 +1,11 @@
+## 2026-10-24 02:25 WIB — test: 25 unit test komponen React UI (vitest 452→477)
+
+- Backlog dipilih: komponen UI (Header, HUD, ConfirmModal, ActivityLog, Ticker, TaskModal, OverlayHelp) + lib/modal hanya tercakup TaskBoard.test.jsx (2 test) — regresi UI (format jam, validasi task, flag modal terpusat, fallback ticker) tak terdeteksi.
+- Test baru: src/__tests__/ui_components.test.jsx — 25 test jsdom/@testing-library: Header (judul+sub), HUD (format HH:MM, slider memanggil onTimeChange dgn NUMBER bukan string — parseInt di onChange, rentang 0..1440 step 1), ConfirmModal (hidden saat show=false, onConfirm/onCancel/busy disabled + label 'Memproses…'), ActivityLog (kosong tanpa tombol Bersihkan, item berwarna status, Tutup/Bersihkan callback), Ticker (fallback sebelum data, ringkasan `2 task · 1 done · 1 running` + nama agent dari id + RAM host dari /wfs-api/status, pesan offline saat fetch throw), TaskModal (validasi judul kosong TANPA POST, submit valid POST /wfs-api/tasks tanpa /run, onDone 'Task #42 dibuat (pending)'), OverlayHelp (6 langkah, ← disabled di langkah 1, Berikutnya→Selesai di 6/6 memicu onClose), lib/modal (anyModalOpen counter naik/turun, dua modal bertumpuk: unmount satu masih true, semua unmount → false).
+- 3 iterasi asersi: pesan Ticker muncul 2× (aria-live region + track marquee aria-hidden) → getByText 'Found multiple elements' → diganti getAllByText().length ≥ 1.
+- Bukti: vitest **477/477** (34 file, dulu 452), build OK (precache 35, 1536.96 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 914213, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
 ## 2026-10-24 02:20 WIB — fix kritis: rapat restart end()+begin() SETIAP FRAME (lastWin tak pernah di-set begin())
 
 - Bug ditemukan di parts/meeting.js: `begin()` tidak pernah mengisi `lastWin`, sehingga kondisi `update()` `want && active && win !== lastWin` selalu TRUE selama rapat berlangsung → `end()+begin()` dieksekusi SETIAP FRAME (~1799× dalam satu window 30 menit @60fps). Simulasi numerik tanpa fix: end()=1799, begin()=1800 (harusnya 0/1).
