@@ -19,6 +19,7 @@ import { looksOf } from './parts/character_looks.js';
 import { AGENTS, AGENTS_EXTRA, allAgents as allAgentsFn } from './parts/agents_spec.js';
 import { DESKS } from './parts/desk_layout.js';
 import { isLongHair, STANDING, SITTING, accessoryAnchor } from './parts/character_spec.js';
+import { nearbyPairs as nearbyPairsPure, tickCooldown as tickCooldownPure, CHAT_RADIUS, CHAT_COOLDOWN_SEC } from './parts/chat_check.js';
 
 export function createOfficeScene(container, callbacks = {}) {
   // scene baru dibuat → flag destroy scene LAMA dicabut; tanpa ini remount/hot-reload
@@ -1663,26 +1664,24 @@ function autoTalk(){
   __timeouts.push(setTimeout(pollRunning,3000));
   __intervals.push(setInterval(pollRunning,15000));
 })();
+let deltaFrame=0; // delta dtk frame terakhir (utk cooldown chat berbasis waktu nyata)
 function checkConversations(){
+  // Logika pasangan terdekat di parts/chat_check.js (murni + unit test).
+  // Cooldown dihitung dgn delta detik NYATA (dulu 0.016 per frame — di GPU
+  // lambat ~1.5 FPS agent terkunci dari chat bermenit-menit, bukan 8 detik).
+  const pairs=nearbyPairsPure(agentData.map(a=>({
+    a, visible:a.walker.visible, x:a.walker.position.x, z:a.walker.position.z, cooldown:a._chatCooldown||0
+  })), CHAT_RADIUS);
+  for(const [a,b] of pairs){
+    const phrase=chatPhrases[Math.floor(Math.random()*chatPhrases.length)];
+    const anc={get x(){return a.walker.position.x},get z(){return a.walker.position.z},y:1.4};
+    createBubble(a.walker.position.x,1.4,a.walker.position.z,phrase,a.agent.hex,anc);
+    a._chatCooldown=CHAT_COOLDOWN_SEC;b._chatCooldown=CHAT_COOLDOWN_SEC;
+  }
   for(let i=0;i<agentData.length;i++){
     const a=agentData[i];
-    if(!a.walker.visible)continue;
-    for(let j=i+1;j<agentData.length;j++){
-      const b=agentData[j];
-      if(!b.walker.visible)continue;
-      const dx=a.walker.position.x-b.walker.position.x;
-      const dz=a.walker.position.z-b.walker.position.z;
-      const dist=Math.sqrt(dx*dx+dz*dz);
-      if(dist<1.5&&!a._chatCooldown&&!b._chatCooldown){
-        // Conversation! Bubble ber-anchor ke pembicara (a) supaya tidak melayang di tengah ruangan
-        const phrase=chatPhrases[Math.floor(Math.random()*chatPhrases.length)];
-        const anc={get x(){return a.walker.position.x},get z(){return a.walker.position.z},y:1.4};
-        createBubble(a.walker.position.x,1.4,a.walker.position.z,phrase,a.agent.hex,anc);
-        a._chatCooldown=8;b._chatCooldown=8;
-      }
-    }
-    if(a._chatCooldown)a._chatCooldown-=0.016;
-    if(a._chatCooldown<0)a._chatCooldown=0;
+    if(a._chatCooldown)a._chatCooldown=tickCooldownPure(a._chatCooldown,deltaFrame);
+    else a._chatCooldown=0;
   }
 }
 
@@ -1784,6 +1783,7 @@ function animate(){
   rafId=requestAnimationFrame(animate);
   if(!renderer)return; // UI-only mode (tanpa WebGL)
   const delta=Math.min(clock.getDelta(),.05);
+  deltaFrame=delta;
   const elapsed=clock.getElapsedTime();
   frame++;
   window.__animFrames=frame;
@@ -1800,7 +1800,7 @@ function animate(){
   updateWalkers(delta);
 
   // Water cooler convos
-  checkConversations();updateBubbles(delta);autoTalk(delta);
+  checkConversations();updateBubbles(delta);autoTalk();
   // Shift
   updateShift(timeOfDay);
   // ── Auto-advance waktu simulasi: tanpa ini jam HUD statis selamanya dan seluruh

@@ -1182,6 +1182,15 @@
 - Bukti: vitest **228/228** (20 file, dulu 214), build OK (precache 35, 1532.47 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase working, 57844 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
 
+## 2026-10-20 22:07 WIB — refactor+test: logika percakapan dekat diekstrak ke chat_check.js + 21 unit test (vitest 338→359) + fix 1 bug cooldown frame-rate dependent
+
+- Backlog dipilih: checkConversations() (deteksi 2 walker berdekatan <1.5 → bubble chat + cooldown 8 dtk) masih inline di OfficeScene.js — 0 unit test; regresi deteksi percakapan tak terdeteksi.
+- BUG NYATA ditemukan & diperbaiki: cooldown chat dikurangi KONSTAN 0.016 per frame (asumsi 60 FPS), bukan per detik nyata. Di GPU lambat (~1.5 FPS, e2e memang begitu) 1 frame = 0.67 dtk tapi cooldown hanya turun 0.016 → agent butuh ~500 frame ≈ 5 MENIT nyata sebelum boleh chat lagi; efeknya percakapan water-cooler praktis mati di perangkat lambat. Kini tickCooldown(cd, delta) memakai delta detik nyata dari clock — diuji live: cooldown 2.0 → 1.6 tepat setelah 3 dtk (e2e CDP).
+- Implementasi: src/scene/parts/chat_check.js — CHAT_RADIUS 1.5, CHAT_COOLDOWN_SEC 8, nearbyPairs(ppl, radius) murni (visible filter, cooldown filter, hypot 2D, pasangan i<j stabil), tickCooldown(cd, delta) clamp 0. OfficeScene.js kini import (−~12 baris); autoTalk(delta) → autoTalk() (param tak terpakai).
+- Test: src/__tests__/chat_check.test.js — 21 test: konstanta historis, pasangan dekat/jauh/boundary 1.5, invisible tidak ikut, cooldown memblok kedua arah, undefined/0 lolos, kelompok 3 orang = 3 pasangan, radius & hypot inject, urutan stabil, array kosong; tickCooldown delta detik, clamp 0, undefined→0, simulasi 60×(1/60)=−1 dtk proporsional. (1 iterasi: asersi boundary hypot 3-4-5 koreksi radius 5→5.1.)
+- Bukti: vitest **359/359** (28 file, dulu 338), build OK (precache 35, 1534.87 KiB), deploy ~/wfs-hq OK; e2e produksi 9503 (reload): DOM True, 14 agents, frame berjalan, tanpa exception; verifikasi cooldown live: 2.0→1.6 setelah 3 dtk nyata (berbasis waktu, bukan per-frame).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
 ## 2026-10-21 05:15 WIB — refactor+test: nameplate meja diekstrak ke nameplate_spec.js + 16 unit test (vitest 228→244)
 
 - Backlog dipilih: drawing nameplate pribadi (nama+role) di buildDesk() (OfficeScene.js) — rounded-rect panel, garis aksen warna agen, title-case nama, clamp teks, posisi plate/stand — masih inline; regresi tampilan nameplate tak terdeteksi unit test.
