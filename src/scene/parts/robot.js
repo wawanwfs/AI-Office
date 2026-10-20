@@ -1,8 +1,11 @@
 // Robot asisten "Bantuin AI" — bukan manusia: badan logam, kepala kapsul, mata LED, antena, panel dada menyala.
+import { pose, eyes, smile, chestBars, legsStanding, accents, ROBOT_COLORS } from './robot_spec.js';
+
 export function buildRobot(THREE, agent, standing, M, MB) {
   const g = new THREE.Group();
   const glow = agent.color;                  // hijau neon Bantuin
-  const metal = 0xdfe6ec, dark = 0x2a3340, mid = 0x9aa7b4;
+  const metal = ROBOT_COLORS.metal, dark = ROBOT_COLORS.dark, mid = ROBOT_COLORS.mid;
+  const { hipY, tz, fz, ty, hy } = pose(standing); // koordinat kunci per pose
   const shiny = (c) => new THREE.MeshStandardMaterial({ color: c, metalness: 0.75, roughness: 0.28 });
   const glowMat = (c) => new THREE.MeshBasicMaterial({ color: c }); // eslint-disable-line no-unused-vars -- helper materi glow
   const halo = (r, c, x, y, z) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 12), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.28, depthWrite: false })); m.position.set(x, y, z); g.add(m); };
@@ -10,10 +13,7 @@ export function buildRobot(THREE, agent, standing, M, MB) {
   const cyl = (rt, rb, h, mat, x, y, z, seg = 14) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat); m.position.set(x, y, z); g.add(m); return m; };
   const sph = (r, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 12), mat); m.position.set(x, y, z); g.add(m); return m; };
 
-  // Koordinat dasar (berdiri). Duduk: geser ke bawah & hadap -Z lewat grup dalam.
-  const hipY = standing ? 0.56 : 0.5;
-  const tz = standing ? 0 : 0.02;
-  const fz = standing ? 1 : -1;               // arah wajah (+Z berdiri, -Z duduk)
+  // Koordinat dasar per pose (dari robot_spec.js)
 
   // ── Kaki ──
   if (standing) {
@@ -32,7 +32,6 @@ export function buildRobot(THREE, agent, standing, M, MB) {
   box(0.26, 0.1, 0.16, M(dark), 0, hipY, tz);
 
   // ── Torso: dua pelat logam + panel dada menyala ──
-  const ty = standing ? 0.79 : 0.74;
   { const tr = new THREE.Mesh(new THREE.BoxGeometry(0.34, 0.36, 0.2), shiny(0xd5dde5)); tr.position.set(0, ty, tz); tr.castShadow = true; g.add(tr); }
   box(0.36, 0.03, 0.22, MB(glow), 0, ty - 0.17, tz);          // garis aksen neon pinggang
   box(0.36, 0.05, 0.22, M(mid), 0, ty + 0.19, tz);           // bahu
@@ -58,7 +57,6 @@ export function buildRobot(THREE, agent, standing, M, MB) {
   });
 
   // ── Leher + kepala kapsul ──
-  const hy = standing ? 1.12 : 1.1;
   cyl(0.045, 0.055, 0.07, M(dark), 0, hy - 0.13, tz);
   const hd = new THREE.Mesh(new THREE.CapsuleGeometry(0.15, 0.1, 6, 16), shiny(0xe6edf3)); hd.position.set(0, hy, tz); hd.scale.set(1, 1, 0.9); hd.castShadow = true; g.add(hd);
     [-1, 1].forEach((sd) => cyl(0.05, 0.05, 0.05, M(dark), sd * 0.17, hy, tz).rotation.z = Math.PI / 2); // telinga/speaker

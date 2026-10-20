@@ -1086,3 +1086,11 @@
 - Test: src/__tests__/projectboard_data.test.js — 13 test: pembulatan persen + fallback 0/null, subtitle dengan/tanpa review-gagal, banner parts warna-urut benar & names null bila recent tak relevan, filter kolom + maks 6 kartu, strip online (tenant/chat/pesan/terbaru, simbol ●/○ Up/Down), fallback tenants dari array, offline merah, snapshot null.
 - Bukti: vitest **77/77** (8 file, dulu 64), build OK (precache 35, 1531.38 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase arriving, 16514 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" sudut kamera default (fade zona sudah ada, pantau).
+
+##  WIB — refactor+test: spesifikasi geometri robot Bantuin AI diekstrak ke robot_spec.js + 9 unit test (vitest 77→87)
+
+- Backlog dipilih: buildRobot (robot.js) — bagian visual paling khas markas (robot asisten AI) — 0 unit test; koordinat pose berdiri/duduk, simetri wajah, panel dada tak terjaga dari regresi.
+- Implementasi: src/scene/parts/robot_spec.js — pose() (hipY/tz/fz/ty/hy per pose), eyes(), smile(), chestBars(), legsStanding(), accents(), ROBOT_COLORS diekstrak murni; robot.js kini destructure dari pose() (hapus 3 duplikasi ternary), perilaku geometri identik.
+- Test: src/__tests__/robot_spec.test.js — 9 test: level vertikal hip<torso<kepala di kedua pose, wajah +Z/-Z, 2 mata simetris di depan layar, 3 segmen senyum (ujung naik & simetris), 3 bar dada jarak seragam 0.055, kaki fase 0/pi simetris, lampu status & antena di atas kepala, palet warna.
+- Bukti: vitest **87/87** (9 file, dulu 77), build OK, deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase working, 20292 frames, tanpa Scene init failed.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔Rizky (fade zona sudah ada, pantau).
