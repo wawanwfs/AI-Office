@@ -1,12 +1,17 @@
 // Gerak karakter WFS Project: state machine berbasis tabel handler.
 // State: sitting → walking_out → (talking di tujuan) → walking_back → sitting. Ada juga leaving/offsite.
 import { BOUNDS as B, dist2 as dist2Pure, stepMove } from './motion_math.js';
-import { routePath as routePathPure, FRONT, bandOf } from './routing.js';
+import { routePath as routePathPure } from './routing.js';
+import { collabTarget } from './trip_plan.js';
 import { OBSTACLES, inObstacle, seatOccupied } from './obstacles.js';
 import { talkStep, isConverseOver, speakerIsVisitor } from './converse_timing.js';
+import {
+  WALK_SPEED as WALK, EXIT_SPEED as EXIT, LINE_SEC, COLLAB_OFFSET, DEST_JITTER,
+  COLLAB_CHANCE, TRIP_PAUSE_MIN, TRIP_PAUSE_JITTER, SIT_TIMER_MIN, SIT_TIMER_JITTER,
+  STRIDE, stridePose, pickDest, fallbackSpot,
+} from './trip_plan.js';
 export function createMotion(ctx) {
   const { rng, agentData, walkDestinations, pickCollab, createBubble } = ctx;
-  const WALK = 1.6, EXIT = 2.0, LINE_SEC = 1.8;
   const dist2 = (a, b) => dist2Pure(a, b);
   // Lantai: BoxGeometry(26, z 20) → ±13 / ±10. Dinding kiri x=-13, belakang z=-10.
   // Pintu masuk kantor (spawn shift) di x=-12, z=8 → walker spawn 0.6 unit di dalam.
@@ -21,19 +26,21 @@ export function createMotion(ctx) {
   }
 
   function stride(ad) {
-    const t = performance.now() * 0.01;
+    const t = performance.now() * STRIDE.TIME_SCALE;
     ad.walker.children.forEach((c) => {
       if (!c.userData) return;
+      const pose = stridePose(t, c.userData.phase || 0);
       if (c.userData.isLeg) {
-        c.position.z = Math.sin(t + c.userData.phase) * 0.08;
-        c.rotation.x = Math.cos(t + c.userData.phase) * 0.25; // ayunan kaki ringan (tanpa pivot pinggul, aman dari menembus lantai)
+        c.position.z = pose.legZ; // ayunan kaki ringan (tanpa pivot pinggul, aman dari menembus lantai)
+        c.rotation.x = pose.legRotX;
       } else if (c.userData.isArm) {
-        c.rotation.x = Math.sin(t + c.userData.phase) * 0.5; // lengan berlawanan fase dgn kaki
+        c.rotation.x = pose.armRotX; // lengan berlawanan fase dgn kaki
       }
     });
     // Bob badan: naik-turun kecil 2x per siklus langkah
-    ad.walker.position.y = Math.abs(Math.sin(t)) * 0.035;
+    ad.walker.position.y = poseBob(t);
   }
+  const poseBob = (t) => stridePose(t).bob;
   function resetStride(ad) {
     ad.walker.children.forEach((c) => { if (c.userData && c.userData.isLeg) { c.position.z = 0; c.rotation.x = 0; } else if (c.userData && c.userData.isArm) { c.rotation.x = 0; } });
     ad.walker.position.y = 0;
@@ -55,7 +62,7 @@ export function createMotion(ctx) {
 
   // Pilih tujuan: 75% menghampiri rekan satu alur kerja, sisanya jalan-jalan
   function chooseTrip(ad) {
-    const col = Math.random() < 0.75 ? pickCollab(ad) : null;
+    const col = Math.random() < COLLAB_CHANCE ? pickCollab(ad) : null;
     // Rintangan & aturan bebas dipindah ke obstacles.js (murni, bisa di-unit-test).
     const freeSpot = (bx, bz) =>
       !inObstacle(bx, bz) && !seatOccupied(bx, bz, agentData, ad.agent) && !(bz > 8 && bx < -7.0) && !(bz > 6.4 && bx < -7.6);
@@ -63,19 +70,13 @@ export function createMotion(ctx) {
       ad.collab = col; ad.partner = col.partner; ad._talk = -1;
       window.__collabCount = (window.__collabCount || 0) + 1;
       window.__collabLast = ad.agent.name + '->' + col.partner.agent.name;
-      ad.walkTarget = { x: col.partner.home.x + 0.95, z: col.partner.home.z - 0.15 };
+      ad.walkTarget = collabTarget(col.partner.home, COLLAB_OFFSET);
       ad.collab.viaRoute = true; // catatan: rute dihitung normal
     } else {
       ad.collab = null; ad.partner = null;
       // cari tujuan jalan-jalan yang bebas (maks 8 percobaan; fallback = koridor depan baris sendiri)
-      let bx, bz;
-      for (let tries = 0; tries < 8; tries++) {
-        const dest = walkDestinations[rng.i(0, walkDestinations.length - 1)];
-        bx = dest.x + rng.r(-0.5, 0.5); bz = dest.z + rng.r(-0.5, 0.5);
-        if (freeSpot(bx, bz)) break;
-      }
-      if (!freeSpot(bx, bz)) { bx = ad.home.x; bz = FRONT[Math.min(2, Math.max(0, bandOf(ad.home.z)))]; }
-      ad.walkTarget = { x: bx, z: bz };
+      const spot = pickDest(walkDestinations, rng, freeSpot);
+      ad.walkTarget = spot || fallbackSpot(ad.home);
     }
     ad.walkPause = 0;
     ad._route = routePath({ x: ad.walker.position.x, z: ad.walker.position.z }, ad.walkTarget);
@@ -136,7 +137,7 @@ export function createMotion(ctx) {
       if (stepRoute(ad, WALK, delta)) {
         ad.walkPause += delta;
         if (ad.collab && ad.partner) converse(ad);
-        else if (ad.walkPause > 2 + rng.r(0, 2)) ad.state = 'walking_back';
+        else if (ad.walkPause > TRIP_PAUSE_MIN + rng.r(0, TRIP_PAUSE_JITTER)) ad.state = 'walking_back';
       }
       follow(ad);
     },
@@ -147,7 +148,7 @@ export function createMotion(ctx) {
         ad.walker.visible = false;
         ad.sittingChar.visible = true;
         ad.label.position.set(ad.home.x, 2.45, ad.home.z);
-        ad.timer = 6 + rng.r(0, 14);
+        ad.timer = SIT_TIMER_MIN + rng.r(0, SIT_TIMER_JITTER);
         resetStride(ad);
         return;
       }
