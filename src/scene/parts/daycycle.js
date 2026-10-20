@@ -156,7 +156,7 @@ export function createShift(ctx) {
       ad.walker.position.set(ad.home.x, 0, ad.home.z);
       ad.lunch = true;
       ad.state = 'walking_out';
-      ad.walkTarget = { x: -9.5 + rng.r(-1.4, 1.4), z: 8.3 + rng.r(0, 0.7) }; // depan counter kafe
+      ad.walkTarget = { x: -9.5 + rng.r(-1.2, 1.2), z: 9.0 + rng.r(0, 0.35) }; // depan bar stools (bukan di atasnya — stools di z 8.5)
       ad._route = null;
       ad.walkPause = rng.r(6, 14); // rencana ngopi lama
     });

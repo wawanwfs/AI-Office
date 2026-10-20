@@ -2075,7 +2075,9 @@ function animate(){
   stepTimer-=delta;
   if(stepTimer<=0){
     stepTimer=.32;
-    if(soundsStarted&&agentData.some(a=>a.walker&&a.walker.visible))playStep();
+    // langkah hanya saat walker benar-benar melangkah (bukan berdiri ngobrol/antre di tujuan)
+    const __mv=agentData.some(a=>a.walker&&a.walker.visible&&(a.state==='walking_out'||a.state==='walking_back'||a.state==='leaving'));
+    if(soundsStarted&&__mv)playStep();
   }
 
   // Sounds — meeting chime only
