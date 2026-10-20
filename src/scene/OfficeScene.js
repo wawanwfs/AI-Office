@@ -1859,14 +1859,14 @@ function animate(){
   keyTimer-=delta;
   if(keyTimer<=0){
     keyTimer=.09+Math.random()*.18;
-    if(soundsStarted&&agentData.some(a=>a.state==='sitting'&&a.sittingChar&&a.sittingChar.visible))__sound.playKeyClick();
+    if(__sound.state()!=="none"&&agentData.some(a=>a.state==='sitting'&&a.sittingChar&&a.sittingChar.visible))__sound.playKeyClick();
   }
   stepTimer-=delta;
   if(stepTimer<=0){
     stepTimer=.32;
     // langkah hanya saat walker benar-benar melangkah (bukan berdiri ngobrol/antre di tujuan)
     const __mv=agentData.some(a=>a.walker&&a.walker.visible&&(a.state==='walking_out'||a.state==='walking_back'||a.state==='leaving'));
-    if(soundsStarted&&__mv)__sound.playStep();
+    if(__sound.state()!=="none"&&__mv)__sound.playStep();
   }
 
   // Sounds — meeting chime only
