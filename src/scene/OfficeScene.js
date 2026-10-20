@@ -17,6 +17,7 @@ import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canv
 import { looksOf } from './parts/character_looks.js';
 import { AGENTS, AGENTS_EXTRA, allAgents as allAgentsFn } from './parts/agents_spec.js';
 import { DESKS } from './parts/desk_layout.js';
+import { isLongHair, STANDING, SITTING, accessoryAnchor } from './parts/character_spec.js';
 
 export function createOfficeScene(container, callbacks = {}) {
   // scene baru dibuat → flag destroy scene LAMA dicabut; tanpa ini remount/hot-reload
@@ -445,7 +446,7 @@ function buildChar(agent, standing=false){
   if(agent.name==='BANTUIN AI')return buildRobot(THREE,agent,standing,M,MB);
   const g=new THREE.Group();
   const skin=looksOf(agent).skin;
-  const isHairLong = String(agent.name||'').match(/DEWI|MAYA|RINA|LINA|SARI/i);
+  const isHairLong = isLongHair(agent.name);
 
   if(standing){
     // STANDING CHARACTER — proporsi lebih manusiawi
@@ -518,11 +519,11 @@ function buildChar(agent, standing=false){
     }
     // Badge perusahaan di dada (material unik agar bisa diubah warna via badgeSync)
     const badge=new THREE.Mesh(new THREE.BoxGeometry(.06,.06,.015),MB(agent.color));
-    badge.position.set(.11,.86,.095);g.add(badge);
+    badge.position.set(STANDING.badge.x,STANDING.badge.y,STANDING.badge.z);g.add(badge);
     g.userData.badge = badge;
     // Lanyard/ID card
     const lany=new THREE.Mesh(new THREE.BoxGeometry(.03,.16,.01),MB(0x35507A));
-    lany.position.set(.04,.84,.096);g.add(lany);
+    lany.position.set(STANDING.lanyard.x,STANDING.lanyard.y,STANDING.lanyard.z);g.add(lany);
   } else {
     // SITTING CHARACTER — faces -Z (toward monitor)
     // Paha ke arah meja
@@ -590,12 +591,12 @@ function buildChar(agent, standing=false){
       });
     }
     const badge=new THREE.Mesh(new THREE.BoxGeometry(.06,.06,.015),MB(agent.color));
-    badge.position.set(.11,.8,.115);g.add(badge);
+    badge.position.set(SITTING.badge.x,SITTING.badge.y,SITTING.badge.z);g.add(badge);
     g.userData.badge = badge;
     const lany=new THREE.Mesh(new THREE.BoxGeometry(.03,.16,.01),MB(0x35507A));
-    lany.position.set(.04,.78,.116);g.add(lany);
+    lany.position.set(SITTING.lanyard.x,SITTING.lanyard.y,SITTING.lanyard.z);g.add(lany);
   }
-  if(standing) addAccessories(g,agent,1.14,1,.8); else addAccessories(g,agent,1.1,-1,.74);
+  { const a = accessoryAnchor(standing); addAccessories(g,agent,a.headY,a.fz,a.torsoY); }
   // Rim outline tipis agar figur tidak menyatu dgn lantai (edge glow halus)
   const rim=new THREE.PointLight(agent.color,.12,1.6,2);
   rim.position.set(0,.7,.5);g.add(rim);

@@ -1223,3 +1223,11 @@
 - Test: src/__tests__/desk_layout.test.js — 13 test: 14 meja = 14 agen, posisi historis berurutan, kolom/baris unik terurut, tanpa meja menumpuk, grid 5×3=15 slot → tepat 1 sel kosong (0,6), koordinat finite, dalam batas ruangan (|x|≤12.5, |z|≤9.5), lead desk (−8,−3), injeksi layout kustom, grid kosong/penuh. (1 iterasi: asersi slot kosong dikoreksi dari dugaan (−4,−3) → aktual (0,6).)
 - Bukti: vitest **303/303** (25 file, dulu 290), build OK (precache 35, 1533.63 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, frame 3608, tanpa 'Scene init failed' & tanpa exception.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).
+
+## 2026-10-22 03:40 WIB — refactor+test: proporsi karakter diekstrak ke character_spec.js + 25 unit test (vitest 303→325)
+
+- Backlog dipilih: buildChar() menyimpan proporsi karakter inline (rambut panjang regex DEWI|MAYA|RINA|LINA|SARI, koordinat standing/sitting, posisi badge/lanyard, anchor addAccessories 1.14/1/.8 & 1.1/-1/.74) — 0 unit test; regresi proporsi figur tak terdeteksi.
+- Implementasi: src/scene/parts/character_spec.js — LONG_HAIR_RE, isLongHair() (null/angka aman), STANDING & SITTING (seluruh konstanta koordinat historis: kaki/hips/torso/wajah/rambut/badge/lanyard/anchor), accessoryAnchor(standing), charMetrics(standing) murni tanpa THREE; OfficeScene.js kini pakai isLongHair + STANDING/SITTING badge&lanyard + accessoryAnchor (anchor lama duplikat jadi 1 jalur), render identik.
+- Test: src/__tests__/character_spec.test.js — 25 test: isLongHair (5 nama historis, case-insensitive, false utk WAHYU FS/BANTUIN AI/Toni, null/undefined/angka aman, regex flag i), STANDING 6 test (kaki/hips/torso/leher/kepala, wajah, rambut+lengan, badge/lanyard, anchor, urutan vertikal wajar), SITTING 7 test (kaki menghadap meja z negatif bertingkat, torso/kepala, wajah z negatif, rambut belakang +Z, badge/lanyard, anchor fz=-1, duduk < berdiri), helper 4 test.
+- Bukti: vitest **325/325** (26 file, dulu 303), build OK (precache 35, 1534.68 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 7386, tanpa 'Scene init failed' & tanpa exception.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).
