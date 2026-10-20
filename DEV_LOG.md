@@ -1274,3 +1274,10 @@
 - Test: src/__tests__/trip_plan.test.js — 22 test: konstanta historis, collabTarget offset/kustom, jitterDest rentang (mock r(a,b)=a+n*(b-a) sesuai RNG produksi), pickDest terima/lompat/null/tries+re-cek terakhir, fallbackSpot clamp band aman, stridePose fase 0/puncak/berlawanan π/bob non-negatif, REST_POSE netral. (3 iterasi asersi: semantik rng.r(a,b) mock awal salah → diperbaiki ke formula produksi; antisimetri fase π untuk cos; jumlah panggilan freeSpot 3+1 re-cek.)
 - Bukti: vitest **420/420** (31 file, dulu 398), build OK (precache 35, 1536.72 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 255415, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
+## 2026-10-23 03:10 WIB — fix: footprint meja resepsionis didaftarkan ke OBSTACLES
+
+- Bug: meja resepsionis (RCX 8, RCZ 6.5; desk 2.5×0.6 + side panel sampai x=9.55) TIDAK terdaftar di OBSTACLES — freeSpot/pickDest bisa menempatkan agen berjalan/berhenti DI DALAM meja resepsionis (tujuan "depan resepsionis" (6.8,4.9) aman, tapi spot collab/jitter ±0.5 bisa jatuh di (7.5..9.6, 5.2..7.9) area meja).
+- Fix: OfficeScene.js push [RCX-1.3, RCX+1.55, RCZ-0.35, RCZ+0.35] ke OBSTACLES setelah side panel dibuat (menutup desk + side panel) + import OBSTACLES dari parts/obstacles.js.
+- Verifikasi: vitest 420/420 (31 file, tetap), build OK (precache 35, 1536.75 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 327411, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).

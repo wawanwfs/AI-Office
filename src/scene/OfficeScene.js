@@ -11,6 +11,7 @@ import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
 import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent } from './parts/ring_spec.js';
 import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelName, fitLabel } from './parts/label_spec.js';
 import { WALK_DESTINATIONS } from './parts/walk_destinations.js';
+import { OBSTACLES } from './parts/obstacles.js';
 import { keyclickFreq, stepEnvelope, chimeStart, CHIME_FREQS, KEYCLICK_BASE_FREQ, KEYCLICK_JITTER, KEYCLICK_GAIN, KEYCLICK_END_GAIN, KEYCLICK_SEC, STEP_GAIN, STEP_DECAY, STEP_SEC, CHIME_DELAY_SEC, CHIME_GAIN, CHIME_END_GAIN, CHIME_TONE_SEC, MUTED_KEY, masterGainValue } from './parts/sound_spec.js';
 import { createProjectBoard } from './parts/projectboard.js';
 import { chatPhrases, roleTalk, COLLAB_PAIRS, pickCollab, clampBubbleText, collabDuration, LINE_SEC } from './parts/dialog.js';
@@ -862,6 +863,9 @@ rcTop.position.set(RCX,.92,RCZ);rcTop.castShadow=true;reception.add(rcTop);
 // Side panel
 const rcSide=new THREE.Mesh(new THREE.BoxGeometry(.6,.9,.04),M(0x1A2A3A));
 rcSide.position.set(RCX+1.25,.45,RCZ-.3);rcSide.castShadow=true;reception.add(rcSide);
+// Footprint resepsionis didaftarkan ke OBSTACLES (obstacles.js) supaya
+// freeSpot/destinasi jalan tidak pernah menempatkan agen DI DALAM meja.
+OBSTACLES.push([RCX-1.3,RCX+1.55,RCZ-.35,RCZ+.35]);
 
 // Logo WFS Project di depan meja resepsionis
 const wfsLogoTex=(()=>{
