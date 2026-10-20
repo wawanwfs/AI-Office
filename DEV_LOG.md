@@ -1173,3 +1173,11 @@
 - Test: src/__tests__/character_looks.test.js — 24 test: 12 karakter & nama kunci historis, field lengkap & valid (h 0.9–1.2, skin finite), aksesori unik & dari kosakata addAccessories, BANTUIN AI visor+antenna, WAHYU FS tie+peci, DEWI/RINA hijab, lookup case-insensitive, fallback nama tak dikenal/undefined/null, fallback tidak membagi referensi acc (mutasi aman).
 - Bukti: vitest **214/214** (19 file, dulu 190), build OK (precache 35, 1532.22 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase night, 54443 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
+## 2026-10-21 04:20 WIB — refactor+test: layout ruang meeting diekstrak ke meeting_room_spec.js + 14 unit test (vitest 214→228)
+
+- Backlog dipilih: room.js / createMeetingRoom masih menyimpan layout ruang meeting inline (pusat ruangan, posisi 3 panel kaca + 4 tiang rangka, meja rapat, 6 kursi) — 0 unit test; regresi posisi kaca/pintu/kursi tak terdeteksi.
+- Implementasi: src/scene/parts/meeting_room_spec.js — ROOM_CX/CZ, GLASS_X/Z/H, TABLE, SEAT_DX/SEAT_DZ, meetingSeats(), glassPanels(), framePosts() diekstrak murni (tanpa THREE); room.js kini import (−10 baris bersih), perilaku render identik.
+- Test: src/__tests__/meeting_room_spec.test.js — 14 test: pusat (8,−3), konstanta kaca, dimensi meja, 6 kursi (3 per sisi) posisi & orientasi menghadap meja, kursi dalam lebar meja, 3 panel kaca dengan celah pintu ≥1 unit, panel pada garis kaca z=CZ+2.75, 4 tiang di sudut kaca, custom center. (1 iterasi: asersi x panel depan dikoreksi relatif terhadap ROOM_CX=8, bukan 0.)
+- Bukti: vitest **228/228** (20 file, dulu 214), build OK (precache 35, 1532.47 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase working, 57844 frames, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
