@@ -36,6 +36,10 @@ export function createMeeting(ctx) {
   function begin(minutes) {
     active = true;
     const win = Math.max(0, meetingWindowIndex(minutes));
+    lastWin = win; // BUGFIX: dulu lastWin tidak pernah di-set di begin() → kondisi
+    // `win !== lastWin` di update() selalu true saat rapat aktif → end()+begin()
+    // dieksekusi SETIAP FRAME (~1799× dalam satu window 30 menit @60fps):
+    // label peserta flip posisi tiap frame, onChange(true) spam, timer agent reset terus.
     currentIdx = pickAttendees(win);
     onChange && onChange(true);
     figures.forEach((f) => { f.visible = false; });
@@ -54,6 +58,7 @@ export function createMeeting(ctx) {
   }
   function end() {
     active = false;
+    lastWin = -1; // reset supaya window yang sama bisa begin() lagi setelah end
     onChange && onChange(false);
     figures.forEach((f) => { f.visible = false; });
     currentIdx.forEach((ai) => {

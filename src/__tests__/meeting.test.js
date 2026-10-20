@@ -74,6 +74,25 @@ describe('meeting.update() state machine', () => {
     expect(m2.attendees().length).toBe(b.ctx.seats.length);
   });
 
+  it('stabil per frame: update(610) 1800× tidak restart peserta (regresi lastWin tak di-set begin())', () => {
+    const { ctx } = mkCtx();
+    const m = createMeeting(ctx);
+    m.update(610);
+    const before = m.attendees().slice();
+    for (let f = 0; f < 1800; f++) m.update(610); // ~30 dtk @60fps, menit konstan
+    expect(m.active).toBe(true);
+    expect(m.attendees()).toEqual(before);
+  });
+
+  it('end() me-reset lastWin: window sama bisa begin() lagi setelah end', () => {
+    const { ctx } = mkCtx();
+    const m = createMeeting(ctx);
+    m.update(610); m.update(631);
+    m.update(615); // masuk window 0 lagi → harus aktif, bukan skip karena lastWin masih 0
+    expect(m.active).toBe(true);
+    expect(m.attendees().length).toBe(ctx.seats.length);
+  });
+
   it('konsisten dengan util jadwal: 600/630 di dalam, 599/631 di luar', () => {
     expect(isMeetingTime(600) && isMeetingTime(630)).toBe(true);
     expect(isMeetingTime(599) || isMeetingTime(631)).toBe(false);
