@@ -38,6 +38,9 @@ export function createMotion(ctx) {
 
   // Jalan lewat rute (waypoint koridor) — return true saat sampai tujuan akhir
   function stepRoute(ad, speed, delta) {
+    // _route null (mis. di-set ulang oleh arrive/sendToLunch/endLunch) → hitung rute koridor
+    // dari posisi sekarang; tanpa ini agent jalan GARIS LURUS menembus baris meja.
+    if (!ad._route && ad.walkTarget) ad._route = routePath({ x: ad.walker.position.x, z: ad.walker.position.z }, ad.walkTarget);
     const path = ad._route;
     while (path && path.length) {
       if (!stepToward(ad, path[0], speed, delta)) return false;

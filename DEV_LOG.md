@@ -995,3 +995,12 @@
 - Bukti probe CDP produksi 9503 (GPU SwiftShader): t0 clock 11:00/scene 660 → t+12s 11:07 → t+24s 11:13/scene 673 (±1 menit-sim per 5 dtk persis); e2e final: DOM True, 17 btns, agentData 14, sceneT 663→clock 11:03, frames 10→20 (6 dtk), sceneFail False; audit vision /tmp/final.png (512 KB): scene hidup, agent+label+chat bubble normal, hanya minor label clipping kosmetik.
 - Build OK (precache 35), vitest 24/24, deploy ~/wfs-hq OK.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); label overlap MEETING↔tooltip pada close-up (anti-overlap sudah ada, kalah saat kamera sangat dekat); shift-arrive 08:00 kini akan terjadi otomatis — pantau perilakunya di sesi panjang.
+
+## 2026-10-20 10:46 WIB — bug lunch 12:00: agent kini lewat KORIDOR ke kafe (dulu garis lurus menembus baris meja)
+
+- Verifikasi backlog "pantau lunch 12:00–13:00" (probe CDP produksi 9503, jam diset 11:57 → autoplay melintasi 12:00): window lunch terpicu tepat di menit 720 (phase working→lunch, 14 agent walker keluar berurutan), dan 13:00 (menit 780) semua pulang → duduk kembali. TAPI ditemukan bug: saat menuju kafe, agent bergerak GARIS LURUS diagonal menembus baris meja (BUDI (-4.3,-1.7)→(-8.3,8.5) melintasi z -0.75/3.75 persis di area meja) — bukan lewat koridor/gang seperti trip biasa.
+- Akar masalah: sendToLunch()/arrive()/endLunch() men-set `_route = null` dengan komentar "rute dihitung otomatis via stepRoute fallback" — padahal stepRoute TIDAK punya fallback: path null berarti langsung stepToward(walkTarget) garis lurus. Shift-arrive kemarin hanya diselamatkan oleh fix walkTarget-nya, rutenya tetap lurus.
+- Fix: stepRoute di motion.js kini menghitung routePath dari posisi walker saat ini bila `_route` null dan walkTarget ada — semua pemanggil yang men-set _route=null (arrive, sendToLunch, endLunch, dll) otomatis dapat rute koridor (FRONT/GANGS), tidak menembus meja.
+- Bukti probe ulang setelah fix (produksi 9503): agent dari band meja kini menuju koridor dulu sebelum berbelok — BUDI (-4.0,-3.3) tetap z -3.3 (koridor FRONT[0]) sampai x -8.0, baru naik ke kafe via gang z 3.6/5.0; TONI (-4.7,6.9) lewat koridor z 5.0 horizontal dulu ke x -10.4 baru naik ke z 8.5. Tidak ada lagi lintasan diagonal menembus baris meja z 0–3.
+- Build OK, vitest 24/24, deploy ~/wfs-hq OK; e2e (DISPLAY :78): DOM True, 17 btns, 14 label, canvas 1366x625, frames 17, consoleErrors [].
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia); overlap label MEETING↔tooltip kamera sangat dekat (kosmetik); kontak tepi Sari↔CAFÉ (kosmetik).
