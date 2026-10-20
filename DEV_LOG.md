@@ -1355,3 +1355,18 @@
   - Iterasi asersi (4×): stub tubes/pendants salah bentuk (perlu {material}); position.set tidak ada di stub walker; phase 'night' harus di-update() dulu sebelum 480 (shiftStep dari phase awal 'working' + m=480 langsung working_am — window arrive syarat p!=='working'); dawn() menjalankan semua jadi sitting sebelum timer arrive → asersi melonggarkan ke union ['walking_back','sitting'].
 - Bukti: vitest **498/498** (36 file, dulu 486), build OK (precache 35, 1536.96 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 1142277, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
+## 2026-10-24 04:00 WIB — test: createMotion runtime (state machine gerak karakter) 16 unit test (vitest 498→514)
+
+- Backlog dipilih: motion.js (createMotion) — state machine inti gerak semua karakter (sitting→walking_out→converse→walking_back→leaving/offsite, chooseTrip, follow label, hard clamp, rute koridor) — 0 unit test; regresi gerak agent (menembus meja, tidak duduk kembali, bubble tidak muncul) tak terdeteksi.
+- Test: src/__tests__/motion_runtime.test.js — 16 test, stub walker (limb isLeg/isArm + position.set) & rng deterministik (r=a, i=0), pickCollab/createBubble di-inject:
+  - sitting: timer belum habis no-op; habis → walking_out (duduk disembunyikan, walker di home, walkPause=0, walkTarget = dest + jitter rng (−0.5), _route dihitung segera).
+  - walking_out trip biasa: bergerak & label mengikuti walker; sampai → walkPause bertambah, lewat TRIP_PAUSE_MIN+jitter → walking_back; mode lunch tetap walking_out walau 30 detik.
+  - collab: chooseTrip set collab/partner/_talk=−1 + walkTarget = home partner + COLLAB_OFFSET + window.__collabCount/Last; converse: baris genap bubble pengunjung, ganjil bubble partner, rotasi saling menghadap; selesai (> LINE_SEC×2 + 1.2) → walking_back, partner menghadap depan lagi.
+  - walking_back: sampai home → sitting (walker hilang, duduk tampil, timer SIT_TIMER_MIN+jitter, pose stride & bob direset, label balik ke meja); flag resetStride (spawn shift) dikonsumsi sekali.
+  - leaving: dekat pintu (<0.5) → offsite + walker hilang + label ke home; jauh → tetap bergerak.
+  - hard clamp BOUNDS ±12.4/±9.4 meski target di luar lantai; rute lintas band lewat gang: langkah pertama lurus keluar ke koridor depan baris asal (FRONT[0] −4.15, x tetap).
+  - dispatch: state tanpa handler (offsite/meeting) diabaikan tanpa error.
+- Iterasi asersi (5×): (1) environment node tanpa window → shim globalThis.window utk __collabCount; (2) jitter tujuan rng stub menggeser −0.5; (3) stepMove butuh lebih dari 1 update utk arrive (0.32 unit/langkah > ARRIVE 0.2 → 2 update); (4) stepRoute melompat waypoint lebih cepat dari dugaan — posisi awal walker harus di-set eksplisit; (5) _route[] berisi duplikat gang (perilaku historis, bukan bug) → asersi diarahkan ke koridor asal.
+- Bukti: vitest **514/514** (37 file, dulu 498), build OK (precache 35, 1536.96 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 1246738, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
