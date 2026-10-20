@@ -1071,3 +1071,10 @@
 - Test: src/__tests__/meeting.test.js — 6 test: begin saat masuk jendela (600, peserta = seats.length, state 'meeting'), stabil di dalam jendela (600→629 tanpa restart), end saat keluar (631 → sitting, figures hidden), rotasi peserta window 0 ≠ window 1 via update() saja, isolasi antar instance (instance kedua tetap begin di window 1 — gagal pada kode lama), konsistensi util jadwal (599/631 di luar).
 - Bukti: vitest **49/49** (6 file, dulu 43), build OK (precache 35, 1530.92 KiB), deploy ~/wfs-hq OK; e2e CDP produksi 9503: DOM True, 14 agents, phase arriving, 9880 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" sudut kamera default (fade zona fix 12:30 sudah ada, pantau).
+
+## 2026-10-20 14:42 WIB — test: efek layar monitor & dokumen melayang kini teruji unit (vitest 49→64)
+
+- Backlog dipilih: src/scene/parts/effects.js (9 renderer layar monitor + drawScreenFrame + createDriftingPages) belum punya SATU PUN unit test — regresi visual layar/halusin alpha tak terdeteksi.
+- Test: src/__tests__/effects.test.js — 15 test: stub 2D context mencatat panggilan gambar; 9 renderer benar-benar menggambar & alpha ≤ 1 (it.each); drawScreenFrame menggambar latar + menandai tex.needsUpdate + reset alpha ke 1; fallback tipe tak dikenal → terminal tanpa melempar; createDriftingPages: N halaman dibuat, posisi berubah setelah update(), wrap-around batas x(±10)/z(-7..8) terverifikasi bolak-balik, default 22 halaman.
+- Bukti: vitest **64/64** (7 file, dulu 49), npm run build OK (precache 35, 1530.92 KiB), deploy ~/wfs-hq OK; e2e CDP produksi 9503: DOM True, 14 agents, phase working, 13422 frames, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" sudut kamera default (fade zona fix 12:30 sudah ada, pantau).
