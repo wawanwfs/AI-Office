@@ -2085,19 +2085,33 @@ function animate(){
   lastMeetingState=__meet.active;
 
   renderer.render(scene,camera);
-  // ── Adaptive pixelRatio: bila FPS rendah (GPU lemah/SwiftShader), turunkan
-  // resolusi render bertahap sampai 0.75 — hemat GPU, visual masih cukup halus.
-  if(frame%60===0){
-    if(!__perfWin.t0)__perfWin.t0=performance.now();
-    else{
-      const fps=60/((performance.now()-__perfWin.t0)/1000);
-      __perfWin.t0=performance.now();
-      __perfWin.fps=fps;
-      if(fps<18){
-        const pr=Math.max(.75,renderer.getPixelRatio()-.25);
-        if(pr<renderer.getPixelRatio()){renderer.setPixelRatio(pr);__perfWin.downgraded=true;__perfWin.goodStreak=0;}
-      } else if(__perfWin.downgraded){
-        // recovery: bila FPS sehat stabil 4 cek berturut-turut (4s), naikkan pixelRatio
+  // ── Adaptive quality: bila FPS rendah (GPU lemah/SwiftShader), turunkan beban
+  // bertahap: pixelRatio → resolusi shadow map → matikan shadow. Sampling
+  // berbasis WAKTU (tiap 2 dtk), bukan frame%60 — di GPU ~1.5 FPS, 60 frame
+  // butuh 40 detik sebelum adaptasi pertama terpicu (bug lama: __perf.fps
+  // selalu 0 dan degradasi tak pernah jalan pada perangkat yang paling butuh).
+  {
+    const nowMs=performance.now();
+    if(!__perfWin.t0)__perfWin.t0=nowMs;
+    else if(nowMs-__perfWin.t0>=2000){
+      const fps=(frame-(__perfWin.lastFrame||0))/((nowMs-__perfWin.t0)/1000);
+      __perfWin.t0=nowMs;__perfWin.lastFrame=frame;__perfWin.fps=fps;
+      // Tangga degradasi — tiap level hanya diterapkan sekali (latch), tak bolak-balik
+      if(fps<18&&renderer.getPixelRatio()>.75){
+        renderer.setPixelRatio(Math.max(.75,renderer.getPixelRatio()-.25));
+        __perfWin.downgraded=true;__perfWin.goodStreak=0;
+      }
+      if(fps<10&&__perfWin.shadowLevel<1&&sun.castShadow){
+        __perfWin.shadowLevel=1;                     // 2048→1024: peta bayangan lebih murah
+        sun.shadow.mapSize.set(1024,1024);
+        if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}
+      }
+      if(fps<5&&__perfWin.shadowLevel<2&&sun.castShadow){
+        __perfWin.shadowLevel=2;sun.castShadow=false; // matikan bayangan matahari total
+        renderer.shadowMap.needsUpdate=true;
+      }
+      if(__perfWin.downgraded&&!__perfWin.shadowLevel){
+        // recovery: bila FPS sehat stabil 4 cek berturut-turut (8 dtk), naikkan pixelRatio
         // bertahap kembali ke basePR — visual kembali tajam setelah beban turun.
         if(!__perfWin.basePR)__perfWin.basePR=Math.min(window.devicePixelRatio||1,1.5);
         __perfWin.goodStreak=(__perfWin.goodStreak||0)+1;
@@ -2110,7 +2124,7 @@ function animate(){
     }
   }
 }
-const __perfWin={t0:0,fps:0,downgraded:false};
+const __perfWin={t0:0,lastFrame:0,fps:0,downgraded:false,shadowLevel:0,goodStreak:0};
 window.__perf=__perfWin;
 animate();
 const onVis=()=>{ pageHidden=document.visibilityState==='hidden';
