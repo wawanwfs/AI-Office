@@ -1,5 +1,5 @@
 // Lantai zona & label area — ditulis ulang dari data tabel.
-import { ZONES, zoneLabelY } from './floor_zones.js';
+import { ZONES, zoneLabelY, zoneLabelScale } from './floor_zones.js';
 export function createZones(ctx){
   const { THREE, office } = ctx;
   ZONES.forEach(z=>{
