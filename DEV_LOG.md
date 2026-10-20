@@ -1111,6 +1111,14 @@
 - Bukti: vitest **110/110** (11 file, dulu 103), build OK, deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase working, 28067 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).
 
+## 2026-10-20 16:50 WIB — test: unit test footprint rintangan & kursi terisi obstacles.js + 12 test (vitest 121→133)
+
+- Backlog dipilih: obstacles.js (footprint statis 5 furnitur: counter pantry, dispenser, printer, zona café, lounge; inObstacle; seatOccupied) — menjaga rute & titik berhenti 14 agent — belum ada unit test.
+- Implementasi: tanpa ubah kode; src/__tests__/obstacles.test.js baru — 12 test: 5 footprint format [x0,x1,z0,z1] valid & di dalam lantai ±13/±10, koridor bebas, tepi kotak inklusif (counter pantry & printer & café & lounge + luar), pintu (-12,8) & koridor tengah bebas, seatOccupied meja kosong/offsite diabaikan/selfAgent diabaikan (identity objek agent)/threshold 0.9 boundary tepat (0.8 true, 0.9 false)/state walking_out & meeting dihitung/jarak radial bukan kotak (diagonal 0.7 false).
+- Koreksi test awal: selfAgent dibandingkan sebagai objek agent (bukan wrapper agentData) dan diagonal 0.64 ternyata hypot>0.9 → asersi diperbaiki, kode tidak diubah.
+- Bukti: vitest **133/133** (13 file, dulu 121), build OK (precache 35, 1531.98 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase working, 34786 frames, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).
+
 ## 2026-10-20 15:26 WIB — refactor+test: matematika gerak walker diekstrak ke motion_math.js + 12 unit test (vitest 110→121)
 
 - Backlog dipilih: stepToward/dist2/BOUNDS di motion.js — jantung gerak 14 agent — masih inline; regresi hard clamp (agent menembus dinding kiri, bug historis) tak terdeteksi unit test.
