@@ -1206,3 +1206,12 @@
 - Test: src/__tests__/ring_spec.test.js — 19 test: konstanta historis kedua ring, hover < seleksi & inner < outer, walker/sitting/dual-visible/tak terlihat, fallback tanpa walker, null agent aman, custom seat offset, selectedAgent valid/0/last/negatif/out-of-range/data null.
 - Bukti: vitest **273/273** (23 file, dulu 257), build OK (precache 35, 1533.43 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase night, 67965 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
+## 2026-10-20 20:45 WIB — refactor+test: data 14 agen diekstrak ke agents_spec.js + 17 unit test (vitest 273→290) + perbaikan 2 bug runtime
+
+- Backlog dipilih: tabel AGENTS (8) + AGENTS_EXTRA (6) masih inline di OfficeScene.js — 0 unit test; regresi identitas agen (nama/warna/role/screen/penampilan) tak terdeteksi.
+- Implementasi: src/scene/parts/agents_spec.js — AGENTS, AGENTS_EXTRA (14 entri), SCREENS (7 kosakata layar), allAgents(a,extra) murni; OfficeScene.js kini import (−20 baris), data identik.
+- Test: src/__tests__/agents_spec.test.js — 17 test: urutan & nama historis 8+6, hex historis semua agen, color===parseInt(hex) 14/14, role historis, screen ∈ SCREENS, field hair/shirt/pants valid, BANTUIN AI shirt 0x0B4F3A, allAgents 14 & urutan, nama unik, injection kustom, hex format #RRGGBB.
+- BONUS — 2 bug runtime ditemukan & diperbaiki saat verifikasi produksi: (1) flooring.js memakai zoneLabelScale() tanpa import → 'Scene init failed' (ReferenceError); (2) room.js memakai TICKS/tickAngle/…/HANDS tanpa import clock_spec.js. Keduanya lolos vitest karena hanya error di runtime — kini scene hidup lagi.
+- Bukti: vitest **290/290** (24 file, dulu 273), build OK (precache 35, 1533.45 KiB), deploy ~/wfs-hq OK; e2e produksi 9503 (setelah reload tab): DOM True, 14 agents, frame naik 3→528, phase working→lunch, TANPA 'Scene init failed' & tanpa exception. Catatan: screenshot headless gagal GPU (EGL init error lingkungan, bukan kode).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).

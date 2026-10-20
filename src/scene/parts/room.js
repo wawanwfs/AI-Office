@@ -1,4 +1,5 @@
 import { ROOM_CX, ROOM_CZ, meetingSeats, glassPanels, framePosts } from './meeting_room_spec.js';
+import { TICKS, tickAngle, tickInnerR, hourHandAngle, minuteHandAngle, secondHandAngle, HANDS } from './clock_spec.js';
 
 // Ruang meeting, jam dinding, dan pencahayaan gantung — ditulis ulang untuk WFS Project.
 export function createMeetingRoom(ctx, glassMat) {
