@@ -8,6 +8,7 @@ import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets } from './parts/effects.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
+import { keyclickFreq, stepEnvelope, chimeStart, CHIME_FREQS, KEYCLICK_BASE_FREQ, KEYCLICK_JITTER, KEYCLICK_GAIN, KEYCLICK_END_GAIN, KEYCLICK_SEC, STEP_GAIN, STEP_DECAY, STEP_SEC, CHIME_DELAY_SEC, CHIME_GAIN, CHIME_END_GAIN, CHIME_TONE_SEC, MUTED_KEY, masterGainValue } from './parts/sound_spec.js';
 import { createProjectBoard } from './parts/projectboard.js';
 import { chatPhrases, roleTalk, COLLAB_PAIRS, pickCollab, clampBubbleText, collabDuration, LINE_SEC } from './parts/dialog.js';
 import { updateBubbles as updateBubblesPure } from './parts/bubbles.js';
@@ -1759,21 +1760,21 @@ function playKeyClick(){
   __ensureAudio();__audioCalls.key++;updateAudioDbg();
   if(!audioCtx)return;
   const osc=audioCtx.createOscillator();
-  osc.type='square';osc.frequency.value=800+Math.random()*400;
-  const g=audioCtx.createGain();g.gain.value=0.01;
-  g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.05);
+  osc.type='square';osc.frequency.value=keyclickFreq(Math.random);
+  const g=audioCtx.createGain();g.gain.value=KEYCLICK_GAIN;
+  g.gain.exponentialRampToValueAtTime(KEYCLICK_END_GAIN,audioCtx.currentTime+KEYCLICK_SEC);
   osc.connect(g);g.connect(masterGain||audioCtx.destination);
-  osc.start();osc.stop(audioCtx.currentTime+0.05);
+  osc.start();osc.stop(audioCtx.currentTime+KEYCLICK_SEC);
 }
 
 function playStep(){
   __ensureAudio();__audioCalls.step++;updateAudioDbg();
   if(!audioCtx)return;
-  const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*0.04,audioCtx.sampleRate);
+  const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*STEP_SEC,audioCtx.sampleRate);
   const data=buf.getChannelData(0);
-  for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*Math.exp(-i/data.length*5);
+  for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*stepEnvelope(i,data.length);
   const src=audioCtx.createBufferSource();src.buffer=buf;
-  const g=audioCtx.createGain();g.gain.value=0.02;
+  const g=audioCtx.createGain();g.gain.value=STEP_GAIN;
   src.connect(g);g.connect(masterGain||audioCtx.destination);
   src.start();
 }
@@ -1781,17 +1782,17 @@ function playStep(){
 function playMeetingChime(){
   __ensureAudio();__audioCalls.chime++;updateAudioDbg();
   if(!audioCtx)return;
-  [523.25,659.25,783.99].forEach((freq,i)=>{
+  CHIME_FREQS.forEach((freq,i)=>{
       // daftarkan ke __timeouts agar pending chime di-clear saat destroy()
       // (tanpa ini, scene yang sudah di-destroy masih menyalakan osilator sisa)
       const t=setTimeout(()=>{
     const osc=audioCtx.createOscillator();osc.type='sine';osc.frequency.value=freq;
-      const g=audioCtx.createGain();g.gain.value=0.04;
-      g.gain.exponentialRampToValueAtTime(0.001,audioCtx.currentTime+0.5);
+      const g=audioCtx.createGain();g.gain.value=CHIME_GAIN;
+      g.gain.exponentialRampToValueAtTime(CHIME_END_GAIN,audioCtx.currentTime+CHIME_TONE_SEC);
       osc.connect(g);g.connect(masterGain||audioCtx.destination);
-      osc.start();osc.stop(audioCtx.currentTime+0.5);
+      osc.start();osc.stop(audioCtx.currentTime+CHIME_TONE_SEC);
       const ix=__timeouts.indexOf(t);if(ix>=0)__timeouts.splice(ix,1);
-    },i*150);
+    },chimeStart(i));
     __timeouts.push(t);
   });
 }

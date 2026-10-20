@@ -1190,3 +1190,11 @@
 - Test: src/__tests__/nameplate_spec.test.js — 16 test: konstanta historis NAMEPLATE & PLATE, titleCase (lowercase/UPPERCASE/angka/kosong), clampText muat vs potong+ellipsis & font di-set dulu, drawNameplate ukuran kanvas, posisi teks nama/role, align center + baseline middle, bar aksen, clamp nama panjang, role undefined tanpa error.
 - Bukti: vitest **244/244** (21 file, dulu 228), build OK (precache 35, 1532.89 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase night, 61563 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).
+
+## 2026-10-21 07:45 WIB — refactor+test: parameter sound system diekstrak ke sound_spec.js + 14 unit test (vitest 244→257)
+
+- Backlog dipilih: sound system (keyclick 800+jitter*400 Hz, langkah white-noise exp(-i/N*5), chime C5-E5-G5 delay 150ms, mute localStorage) masih inline dengan magic number di OfficeScene.js — 0 unit test; regresi parameter suara tak terdeteksi.
+- Implementasi: src/scene/parts/sound_spec.js — konstanta KEYCLICK_*/STEP_*/CHIME_*/MUTED_KEY, keyclickFreq(rng), stepEnvelope(i,n), chimeStart(i), masterGainValue(muted) murni (tanpa Web Audio/THREE); OfficeScene.js kini import (magic number hilang dari playKeyClick/playStep/playMeetingChime), perilaku audio identik.
+- Test: src/__tests__/sound_spec.test.js — 14 test: konstanta historis keyclick/langkah/chime/mute, rentang frekuensi 800..1200 & boundary rng 0/1, envelope =1 di sampel 0 & ≈exp(-5) di akhir & monoton turun, 3 nada C5-E5-G5, chimeStart i*0.15 & total durasi 0.8 s, MUTED_KEY 'wfs_audio_muted', masterGain 0/1.
+- Bukti: vitest **257/257** (22 file, dulu 244), build OK (precache 35, 1533.03 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase working, 64685 frames, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
