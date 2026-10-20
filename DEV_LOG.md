@@ -1370,3 +1370,20 @@
 - Iterasi asersi (5×): (1) environment node tanpa window → shim globalThis.window utk __collabCount; (2) jitter tujuan rng stub menggeser −0.5; (3) stepMove butuh lebih dari 1 update utk arrive (0.32 unit/langkah > ARRIVE 0.2 → 2 update); (4) stepRoute melompat waypoint lebih cepat dari dugaan — posisi awal walker harus di-set eksplisit; (5) _route[] berisi duplikat gang (perilaku historis, bukan bug) → asersi diarahkan ke koridor asal.
 - Bukti: vitest **514/514** (37 file, dulu 498), build OK (precache 35, 1536.96 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 1246738, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
+## 2026-10-24 04:20 WIB — test: createProjectBoard runtime (papan proyek 3D) 10 unit test (vitest 514→524)
+
+- Backlog dipilih: src/scene/parts/projectboard.js — papan proyek dibantuin.com di dinding kantor (mount mesh+bingkai, fetch /wfs-project, render canvas, banner review/gagal, strip SaaS/agent, interval 60 dtk, visibilitychange, forceVisible anti wallFade, destroy) — 0 unit test runtime (hanya projectboard_data.js murni yang ter-cover); regresi papan kosong/beku tak terdeteksi.
+- Test: src/__tests__/projectboard_runtime.test.js — 10 test, jsdom + canvas stub (node_modules tanpa paket `canvas`, getContext jsdom = null → context 2D palsu MENCATAT fillText, asersi via teks yang digambar) + THREE stub minimal (Mesh menyimpan position/rotation/userData/geometry):
+  - mount: 2 objek ditambahkan (mesh PlaneGeometry 7.4×4.04 di (-8.6, 2.6, 9.3) rotasi π menghadap dalam; bingkai BoxGeometry 5.75×3.21×.05 dengan userData.__keep=1 → tidak ikut wallFade).
+  - fetch: dipanggil segera saat mount lalu tiap 60 dtk (3× setelah 120 dtk).
+  - render: judul "PROYEK: dibantuin.com", "65% selesai" (23 done 15), kolom ANTRI (4)/JALAN (2)/SELESAI (15), kartu #21/#22/#23 + '✓ selesai'.
+  - banner: GAGAL 1 · REVIEW 2 + '#7 task gagal' & '#9 task review' tampil; snapshot bersih → banner absen & '100% selesai'.
+  - strip: 'SaaS', '3 tenant', 'sbx-be1 ●'.
+  - payload null / fetch gagal → tidak throw, snap tetap null, tidak ada judul digambar.
+  - tab hidden → tick 120 dtk tanpa fetch; kembali visible → langsung fetch (listener visibilitychange).
+  - forceVisible: mesh di-fade (opacity .3/transparent/invisible) dipulihkan ke tampil penuh dalam ≤500 ms.
+  - destroy: interval fetch & forceVisible berhenti (120 dtk tanpa fetch; opacity dimanipulasi tetap 0.2).
+- Iterasi asersi (4×): (1) THREE.Mesh bukan constructor → stub Mesh class; (2) papan tanpa destroy bocor interval antar-test (fetch 9×, teks silang) → mountedBoards di-destroy di afterEach; (3) mount(snap) tak mengganti stub fetch → stub di-set ulang di dalam mount; (4) 'fetch gagal' semula tidak pernah gagal karena ditimpa stub sukses → test diubah ke payload null (jalur catch setara).
+- Bukti: vitest **524/524** (38 file, dulu 514), build OK (precache 35, 1536.96 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 1322810, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
