@@ -1313,3 +1313,10 @@
 - Test: src/__tests__/label_sweep.test.js — 18 test: konstanta historis 7 nilai; sweepVertical (dorong overlap, tak geser terpisah, abaikan pisah horizontal, posisi efektif y+offY, tak menurunkan, gap kustom); clampViewport (aman→false, toolbar→naik tepat BOT, atas→turun tepat -TOP, zona margin ekstra vs agent, horizontal kanan pad zona/agent, kiri, stabil di frame kedua); sweepClampRounds (kluster dekat toolbar tarik ke dalam, kluster padat terpisah ≥ half+half+gap & dalam viewport, label aman tak diubah, rounds kustom). (3 iterasi asersi: y=400/x=600 salah fixture viewport; semantik urutan byY dengan offY pra-ada; agent juga melanggar di y=-282.)
 - Bukti: vitest **450/450** (33 file, dulu 432), build OK (precache 35, 1536.94 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 662495, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
+## 2026-10-24 02:00 WIB — fix: ReferenceError `names` di banner review/gagal papan proyek (papan beku)
+
+- Bug: projectboard.js draw() baris 111 memakai variabel `names` yang TIDAK ADA (seharusnya `full` dari bannerNames). Setiap ada task failed/review → draw() throw ReferenceError sebelum `tex.needsUpdate = true` → CanvasTexture tidak pernah diperbarui → papan proyek dibantuin.com menampilkan frame STALE/beku selamanya (fetch tetap jalan tapi gambar tak berganti). Kondisi paling parah justru saat task butuh perhatian — justru info terpenting yang tidak tampil.
+- Fix: `'— ' + names` → `'— ' + full`. One-liner; tanpa perubahan perilaku lain.
+- Bukti: vitest 450/450 (33 file, tetap), build OK (precache 35, 1536.94 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 726714, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).

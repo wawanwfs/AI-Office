@@ -108,7 +108,7 @@ export function createProjectBoard(office, THREE) {
           g.fillStyle = col; g.fillText(txt, tx, 190); tx += g.measureText(txt).width + 14
         })
         g.fillStyle = '#cfd8e3'; g.font = '600 24px sans-serif'
-        g.fillText('— ' + names, tx, 190)
+        g.fillText('— ' + full, tx, 190)
         g.textAlign = 'left'
       }
     }
