@@ -138,6 +138,7 @@ export function createMotion(ctx) {
       follow(ad);
     },
     walking_back(ad, delta) {
+      if (ad.resetStride) { ad.resetStride = false; resetStride(ad); } // pose bersih saat muncul di pintu (shift datang)
       if (stepRoute(ad, WALK, delta)) {
         ad.state = 'sitting';
         ad.walker.visible = false;

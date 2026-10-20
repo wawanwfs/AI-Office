@@ -980,6 +980,14 @@
 - Ops: proses chrome headless lama (leaked GPU-process 176% CPU, load avg 3.4 → 0.1 setelah dibunuh) dibersihkan — probe FPS berikutnya wajib terminate browser-nya.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); jam "11:00" diduga glyph tofu di screenshot (belum terkonfirmasi di browser asli).
 
+## 2026-10-20 10:17 WIB — bug shift-arrive 08:00: agent kini BENAR2 berjalan dari pintu ke mejanya (dulu target lama / langsung duduk)
+
+- Masalah (ditemukan saat audit backlog "pantau shift-arrive"): `arrive()` di daycycle.js men-set state `walking_back` tanpa pernah set `walkTarget`/`_route` — handler walking_back memakai target sisa trip lama (pintu keluar/kafe) atau null. Akibatnya agent yang datang 08:00 tidak pernah berjalan dari pintu ke meja: bisa langsung duduk (target ≈ posisi pintu → ARRIVE instan) atau berjalan ke tempat yang salah.
+- Implementasi: (1) arrive() kini set `walkTarget = home` tiap agent, `_route = null` (recalc otomatis via stepRoute fallback), dan flag `resetStride` supaya pose kaki/lengan dari trip sebelumnya di-reset saat muncul di pintu; (2) motion.js: handler walking_back mengonsumsi `resetStride` sekali di frame pertama.
+- Bukti probe CDP produksi 9503 (jam diset 07:56, autoplay melintasi 08:00): phase night→arriving tepat di t=480; 8 agent muncul berurutan (interval 800 ms) di pintu (-12, 7.9–8) dgn walkTarget = meja masing2 (mis. RIZKY tx -8 tz 2, BUDI tx -4 tz -2.5) dan posisi maju konsisten tiap sampel 6 dtk (x -12 → -9.9, z 8 → 5.0) — benar2 berjalan menuju meja. sceneFail False, 0 exception.
+- Build OK (precache 35, 1529.91 KiB), vitest 24/24, deploy ~/wfs-hq OK.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia); overlap label MEETING↔tooltip saat kamera sangat dekat (kosmetik); Sari↔CAFÉ kontak tepi (kosmetik).
+
 ## 2026-10-20 10:00 WIB — fitur: AUTO-PLAY waktu simulasi (jam HUD statis selamanya → day-cycle hidup)
 
 - Masalah (ditemukan saat verifikasi backlog "jam 11:00 tofu"): jam HUD BUKAN tofu — audit vision zoom 3x mengonfirmasi "11:00" render utuh (zero bergaris = desain font Orbitron). Tapi investigasi menyingkap bug lebih besar: `timeOfDay` TIDAK PERNAH maju sendiri — hanya di-set statis oleh slider React & aksi tim. Seluruh day-cycle (shift datang 08:00/pulang 18:00, lunch 12:00–13:00, jendela meeting, pencahayaan senja/malam, status ticker) tidak pernah terpicu otomatis: kantor abadi jam 11:00.

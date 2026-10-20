@@ -114,6 +114,12 @@ export function createShift(ctx) {
         ad.walker.visible = true;
         ad.walker.position.set(DOOR.x, 0, DOOR.z);
         ad.sittingChar.visible = false;
+        // Pulang ke mejanya masing-masing — WAJIB set walkTarget: tanpa ini
+        // walking_back memakai target lama (pintu keluar/kafe) → agent tidak
+        // pernah jalan dari pintu, langsung duduk / lari ke tempat salah.
+        ad.walkTarget = { x: ad.home.x, z: ad.home.z };
+        ad._route = null; // recalc otomatis: stepRoute jatuh ke walkTarget
+        ad.resetStride = true; // reset pose stride dari sesi jalan sebelumnya
         ad.state = 'walking_back';
       });
     });
