@@ -1,8 +1,10 @@
 // ═══════════════════════════════════════════════════
-// WATER COOLER CONVERSATIONS — Speech Bubbles
+// WATER COOLER CONVERSATIONS — data dialog & util murni
+// (createBubble & autoTalk pindah ke OfficeScene.js — pakai THREE/DOM)
 // ═══════════════════════════════════════════════════
-const chatBubbles=[];
 
+// Dialog & frasa agent diekstrak murni (tanpa THREE/canvas) agar bisa di-unit-test.
+// ═══════════════════════════════════════════════════
 // Dialog & frasa agent diekstrak murni (tanpa THREE/canvas) agar bisa di-unit-test.
 export const chatPhrases=[
   'pushing to prod...','merge conflict!!','coffee?','ship it!',

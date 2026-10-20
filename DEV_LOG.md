@@ -1282,6 +1282,14 @@
 - Verifikasi: vitest 420/420 (31 file, tetap), build OK (precache 35, 1536.75 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 327411, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
 
+## 2026-10-24 00:30 WIB — pembersihan: createBubble & autoTalk dead-code dibuang dari parts/dialog.js
+
+- Masalah: src/scene/parts/dialog.js masih menyimpan salinan LAMA createBubble (canvas 360×76 inline, hFrac 0.034 hardcode, tanpa bubble_canvas.js) + autoTalk (baca agentData/office/window lewat closure modul — pasti ReferenceError jika pernah dipanggil) + state chatBubbles/talkTimer/lastTalkRT. Kode mati: OfficeScene.js punya versinya sendiri yang aktif (sudah pakai bubble_canvas.js + anchors).
+- Risiko regresi nyata: jika suatu saat autoTalk dead-code diekspor/dipanggil → crash (agentData tidak ada di scope modul dialog.js); import duplikat membingungkan kontributor.
+- Implementasi: dialog.js kini murni data/util (chatPhrases, roleTalk, COLLAB_PAIRS, pickCollab, clampBubbleText, collabDuration, LINE_SEC) — −84 baris dead code; OfficeScene.js tidak berubah.
+- Bukti: vitest **432/432** (32 file, tetap), build OK (precache 35, 1536.83 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 494769, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
 ## 2026-10-24 00:05 WIB — refactor+test: anti-overlap label diekstrak ke label_overlap.js + 12 unit test (vitest 420→432)
 
 - Backlog dipilih: pass kolisi anti-overlap label (loop berpasangan 5 iterasi di OfficeScene.js ~line 1888: PAD agent 30/zona 46, dorongan agent↔agent 1.2×, agent dari penghalang 2.4×, zona-vs-penghalang 1.8×, agent didorong zona 1.6× + tag-along zona 0.8×/1.1×) masih inline — 0 unit test; regresi tumpukan label tak terdeteksi.
