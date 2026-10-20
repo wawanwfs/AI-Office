@@ -9,6 +9,7 @@ import { drawScreenFrame, createDriftingPages, addDeskTrinkets } from './parts/e
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
 import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent } from './parts/ring_spec.js';
+import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelName, fitLabel } from './parts/label_spec.js';
 import { WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { keyclickFreq, stepEnvelope, chimeStart, CHIME_FREQS, KEYCLICK_BASE_FREQ, KEYCLICK_JITTER, KEYCLICK_GAIN, KEYCLICK_END_GAIN, KEYCLICK_SEC, STEP_GAIN, STEP_DECAY, STEP_SEC, CHIME_DELAY_SEC, CHIME_GAIN, CHIME_END_GAIN, CHIME_TONE_SEC, MUTED_KEY, masterGainValue } from './parts/sound_spec.js';
 import { createProjectBoard } from './parts/projectboard.js';
@@ -613,28 +614,25 @@ const agentData=[];
 const screenData=[];
 
 const LABEL_Y=2.45; // tepat di atas kepala (tinggi duduk ≈1.95)
+const _LF=LABEL_FULL, _LS=LABEL_SHORT;
 function makeLabel(agent){
   // Dua kanvas: ringkas (nama saja) dan lengkap (nama + role). Ringkas dipakai saat jauh / layar kecil.
   const mk=(full)=>{
-    const W=full?360:210,H=full?84:50,lc=document.createElement('canvas');lc.width=W;lc.height=H;
+    const W=full?_LF.W:_LS.W,H=full?_LF.H:_LS.H,lc=document.createElement('canvas');lc.width=W;lc.height=H;
     const c=lc.getContext('2d');
     c.fillStyle='rgba(10,14,24,0.84)';
-    c.beginPath(); if(c.roundRect)c.roundRect(2,2,W-4,H-4,full?18:14); else c.rect(2,2,W-4,H-4); c.fill();
+    c.beginPath(); if(c.roundRect)c.roundRect(2,2,W-4,H-4,full?_LF.RADIUS:_LS.RADIUS); else c.rect(2,2,W-4,H-4); c.fill();
     c.fillStyle=agent.hex; c.fillRect(2,full?14:10,6,H-(full?28:20));
     c.textAlign='center'; c.textBaseline='middle';
-    const title=(s,max,font)=>{const t=String(s);c.font=font;if(c.measureText(t).width<=max)return t;
-      // auto-shrink font (min 60%) sebelum memotong dengan ellipsis
-      const m=font.match(/^(?:\d+\s+)?(\d+)px(.*)$/); const base=m?+m[1]:36; const rest=m?' '+m[2]:'';
-      for(let f=Math.floor(base*0.9);f>=Math.floor(base*0.6);f-=Math.floor(base*0.06||1)){const fnt=f+rest;c.font=fnt;if(c.measureText(t).width<=max){c.font=font;return {fit:t,fnt};}}
-      c.font=font;let e=t;while(e.length>1&&c.measureText(e+'…').width>max)e=e.slice(0,-1);return e+'…'};
+    const title=(s,max,font)=>fitLabel(c,s,max,font,full?36:28);
     const drawFit=(val,max,font,weightPx,y)=>{const r=title(val,max,font);
       if(r&&typeof r==='object'&&r.fit){c.font=r.fnt;c.fillText(r.fit,W/2+4,y);c.font=font;}
       else c.fillText(typeof r==='string'?r:String(val),W/2+4,y);};
-    const nmFull=String(agent.name).toLowerCase().replace(/(^|\s)\w/g,m=>m.toUpperCase());
-    c.font=(full?'800 36px':'800 28px')+' "Segoe UI",Arial,sans-serif';
+    const nmFull=labelName(agent.name);
+    c.font=full?_LF.NAME_FONT:_LS.NAME_FONT;
     c.fillStyle='#fff';
-    drawFit(nmFull,full?W-60:W-50,c.font,full?36:28,full?32:H/2+1);
-    if(full){c.fillStyle='#b8c4d4';drawFit(agent.role,W-60,'600 22px "Segoe UI",Arial,sans-serif',22,62);}
+    drawFit(nmFull,full?_LF.NAME_MAX:_LS.NAME_MAX,c.font,full?36:28,full?_LF.NAME_Y:_LS.NAME_Y);
+    if(full){c.fillStyle='#b8c4d4';drawFit(agent.role,_LF.ROLE_MAX,_LF.ROLE_FONT,22,_LF.ROLE_Y);}
     const tex=new THREE.CanvasTexture(lc); tex.minFilter=THREE.LinearFilter; return {tex,as:W/H};
   };
   const full=mk(true), short=mk(false);
@@ -651,8 +649,7 @@ function sizeLabels(){
   const t2=2*Math.tan(camera.fov*Math.PI/360);
   const hPx=(w<600?14:19)*(wantFull?1.0:1.0);
   const hFrac=hPx*Math.min(1.35,h/900*1.2)/h;          // layar pendek: label sedikit lebih besar relatif
-  const frac=hFrac*t2;
-  const apply=L=>{
+  const frac=hFrac*t2;  const apply=L=>{
     const u=L.userData; const mode=wantFull?'full':'short';
     if(u.mode!==mode){u.mode=mode;L.material.map=u[mode].tex;L.material.needsUpdate=true}
     const as=u[mode].as;
