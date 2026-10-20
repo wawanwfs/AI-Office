@@ -1126,3 +1126,11 @@
 - Test: src/__tests__/motion_math.test.js — 12 test: BOUNDS di dalam lantai ±13/±10, ARRIVE 0<r<1, dist2 3-4-5 & nol, arrived tanpa gerak + rot dipertahankan, langkah = speed×delta, diagonal ternormalisasi, hard clamp X dua sisi & Z dua sisi + flag clamped, bebas di dalam batas, fuzz 200 langkah acak tak pernah keluar BOUNDS.
 - Bukti: vitest **121/121** (12 file, dulu 110), build OK (precache 35, 1531.98 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase arriving, 31085 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).
+
+## 2026-10-21 00:05 WIB — refactor+test: data zona lantai diekstrak ke floor_zones.js + 17 unit test (vitest 133→149)
+
+- Backlog dipilih: flooring.js (patch zona + label DEV DESK/MEETING/WELCOME & LOUNGE/CAFÉ/SERVER ROOM) masih menyimpan tabel zona & aturan posisi/skala label inline — 0 unit test; regresi posisi label zona (pernah menimpa name tag agent) tak terdeteksi.
+- Implementasi: src/scene/parts/floor_zones.js — ZONES (5 zona), zoneLabelY (tepi depan + 0.7 + dy), zoneLabelScale (>9 char → 1.25) diekstrak murni; flooring.js kini import (−12 baris), perilaku render identik.
+- Test: src/__tests__/floor_zones.test.js — 17 test: 5 zona label sesuai, field lengkap valid, semua patch di dalam lantai ±13/±10, tak ada dua zona tumpang tindih (AABB), warna unik, opacity ≤1 & MEETING .9, CAFÉ mencakup counter fisik (−9.5,7.5), MEETING tepat (8,−3,5.4), SERVER ROOM satu-satunya dy=−0.9, zoneLabelY tepi depan + boundary 9/10 char skala, label selalu di depan pusat zona.
+- Bukti: vitest **149/149** (14 file, dulu 133), build OK (precache 35, 1532.02 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase arriving, 37773 frames, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).
