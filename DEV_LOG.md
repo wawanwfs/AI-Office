@@ -1468,3 +1468,10 @@
 - Catatan verifikasi visual: screenshot pertama gagal WebGL (chrome 1248 swiftshader BindToCurrentSequence) — bukan regresi kode; reload di chrome dbg 9222 sukses: frame jalan, 14 agents, tanpa 'Scene 3D tidak aktif', render sehat (lantai/meja/karakter/zona normal via inspeksi visual).
 - Bukti: vitest **585/585** (44 file, dulu 575 — +10), build OK (precache 35, 1538.00 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 1801681→reload sehat, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-24 08:10 WIB — lint: OfficeScene.js 0 error eslint (27→0), no-empty & no-unused-vars dibersihkan
+
+- Backlog dipilih: 27 error eslint no-unused-vars/no-empty di OfficeScene.js (sisa setelah fix no-undef kemarin).
+- Pembersihan: empty catch `catch(e){}` → optional catch binding `catch{/* abaikan */}` (12×, ES2019 aman untuk target build); unused import `masterGainValue` & `collabDuration` dihapus dari deklarasi import; `const t=drawBubble(...)` → `drawBubble(...)`; assignment varuntu `hoverTmr` (tak pernah dibaca/clear) dihapus total; `.catch(()=>{})` pada resume ctx diganti try/catch luar; 3 no-op catch destroy dengan komentar → `catch{/* no-op */}`.
+- Bukti: eslint OfficeScene.js **0 error** (dulu 27); vitest **585/585** (44 file); build OK (precache 35, 1538.01 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 78353 berjalan, phase lunch, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

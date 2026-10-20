@@ -13,10 +13,10 @@ import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent } from './parts/ring_s
 import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelName, fitLabel } from './parts/label_spec.js';
 import { WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { OBSTACLES } from './parts/obstacles.js';
-import { MUTED_KEY, masterGainValue } from './parts/sound_spec.js';
+import { MUTED_KEY } from './parts/sound_spec.js';
 import { createSoundEngine } from './parts/sound_engine.js';
 import { createProjectBoard } from './parts/projectboard.js';
-import { chatPhrases, roleTalk, COLLAB_PAIRS, pickCollab, clampBubbleText, collabDuration, LINE_SEC } from './parts/dialog.js';
+import { chatPhrases, roleTalk, COLLAB_PAIRS, pickCollab, clampBubbleText, LINE_SEC } from './parts/dialog.js';
 import { updateBubbles as updateBubblesPure } from './parts/bubbles.js';
 import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canvas.js';
 import { looksOf } from './parts/character_looks.js';
@@ -68,7 +68,7 @@ scene.name = 'Office3D';
 
 // ─── ORBIT ─────────────────────────────────────────
 let isDrag=false,prev={x:0,y:0};
-let namesVisible=(function(){try{return localStorage.getItem('wfs_names')!=='0'}catch(e){return true}})();
+let namesVisible=(function(){try{return localStorage.getItem('wfs_names')!=='0'}catch{return true}})();
 const __asp=container.clientWidth/Math.max(1,container.clientHeight);
 const __portrait=__asp<0.8;
 if(__portrait){camera.fov=__asp<0.6?66:54;camera.updateProjectionMatrix();}
@@ -76,7 +76,7 @@ let sph={theta:__portrait?2.35:Math.PI*0.78,phi:__portrait?0.62:1.0,radius:__asp
 const tgt=new THREE.Vector3(0,1.8,0);
 // Preferensi auto-rotate: hormati prefers-reduced-motion bila user belum set eksplisit (localStorage wfs_autorot 0/1)
 const __prm=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):null;
-let __userRot=null;try{const __v=localStorage.getItem('wfs_autorot');if(__v==='0')__userRot=false;else if(__v==='1')__userRot=true}catch(e){}
+let __userRot=null;try{const __v=localStorage.getItem('wfs_autorot');if(__v==='0')__userRot=false;else if(__v==='1')__userRot=true}catch{/* abaikan */}
 const autoRotDefault=()=>__userRot!==null?__userRot:(__prm?!__prm.matches:true);
 let autoRot=autoRotDefault(),autoTmr;
 __prm&&__prm.addEventListener&&__prm.addEventListener('change',e=>{if(__userRot===null)autoRot=!e.matches});
@@ -102,7 +102,7 @@ renderer.domElement&&renderer.domElement.addEventListener('touchmove',e=>{
   }
 },{passive:false});
 renderer.domElement&&renderer.domElement.addEventListener('touchend',()=>{pinchDist=null},{passive:true});
-const __ensureAudioEarly=()=>{if(window.__officeSceneDestroyed)return;__sound.ensure();try{const c=__sound.rawCtx();if(c&&c.state==='suspended'&&c.resume)c.resume().catch(()=>{});}catch(e){}};
+const __ensureAudioEarly=()=>{if(window.__officeSceneDestroyed)return;__sound.ensure();try{const c=__sound.rawCtx();if(c&&c.state==='suspended'&&c.resume)c.resume();}catch{/* abaikan */}};
 window.addEventListener('keydown',__ensureAudioEarly,{once:true});
 window.addEventListener('pointerdown',__ensureAudioEarly,{once:true});
 renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{isDrag=true;prev={x:e.clientX,y:e.clientY};autoRot=false;clearTimeout(autoTmr);__ensureAudioEarly();if(renderer.domElement.style.cursor!=='pointer')renderer.domElement.style.cursor='grabbing'});
@@ -160,7 +160,7 @@ renderer.domElement&&renderer.domElement.addEventListener('dblclick',e=>{
 });
 
 // hover pointer di atas agent/papan: isyarat "bisa diklik" (raycast throttled)
-const hoverRay=new THREE.Raycaster();let hoverTmr=null,hoverNdc={x:0,y:0},hoverPend=false,hoveredAgent=null;
+const hoverRay=new THREE.Raycaster();let hoverNdc={x:0,y:0},hoverPend=false,hoveredAgent=null;
 // cincin highlight hover di bawah agent (visual feedback mengikuti cursor pointer)
 let hoverRing=null;
 // cincin emas agent TERPILIH (persist: tetap tampil sampai pilihan berubah)
@@ -192,7 +192,7 @@ function ensureHoverRing(){if(hoverRing)return;const c=document.createElement('c
   hoverRing.rotation.x=-Math.PI/2;hoverRing.position.y=HOVER_RING.Y;hoverRing.renderOrder=3;hoverRing.visible=false;office.add(hoverRing);window.__sceneRing=hoverRing;}
 renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
   hoverNdc={x:(e.clientX/innerWidth)*2-1,y:-(e.clientY/innerHeight)*2+1};
-  if(!hoverPend){hoverPend=true;hoverTmr=setTimeout(()=>{
+  if(!hoverPend){hoverPend=true;setTimeout(()=>{
     hoverPend=false;
     if(!agentData.length)return;
     if(renderer.domElement.style.cursor==='grabbing')return; // jangan ganggu feedback drag
@@ -1104,7 +1104,7 @@ async function tvPull(){
     const d=await r.json();
     window.__tvData={...d,at:Date.now()};
     drawTv();tvTex.needsUpdate=true;
-  }catch(e){/* tampilan terakhir tetap */}
+  }catch{/* tampilan terakhir tetap */}
 }
 tvPull();
 const tvIv=setInterval(tvPull,60000);
@@ -1504,7 +1504,7 @@ updateTime(660);
 // ═══════════════════════════════════════════════════
 // CYBERPUNK LIGHTS OFF MODE
 // ═══════════════════════════════════════════════════
-let cyberpunkMode=(function(){try{return localStorage.getItem('wfs_neon')==='1'}catch(e){return false}})();
+let cyberpunkMode=(function(){try{return localStorage.getItem('wfs_neon')==='1'}catch{return false}})();
 // btn handled by React
 
 // Store ceiling tube light refs
@@ -1535,7 +1535,7 @@ const __neon=createNeonMode({ambient,sun,renderer,floor:fl,carpet:cp,ceiling:cei
     lights:office.children.filter(c=>c.isPointLight&&c.position.y>3.0&&c.position.y<3.15)},
   panelLights:office.children.filter(c=>c.isPointLight&&c.position.y>3.5&&c.position.y<3.95),
   restoreTime:()=>updateTime(timeOfDay)});
-function toggleCyberpunk(){cyberpunkMode=__neon.toggle();try{localStorage.setItem('wfs_neon',cyberpunkMode?'1':'0')}catch(e){}}
+function toggleCyberpunk(){cyberpunkMode=__neon.toggle();try{localStorage.setItem('wfs_neon',cyberpunkMode?'1':'0')}catch{/* abaikan */}}
 if(cyberpunkMode)__neon.toggle(); // terapkan neon tersimpan saat init (toggle false→true)
 
 // ═══════════════════════════════════════════════════
@@ -1596,7 +1596,7 @@ function createBubble(x,y,z,text,color,anchor){
   const bc=document.createElement('canvas');
   bc.width=BUBBLE_W;bc.height=BUBBLE_H;
   const bx=bc.getContext('2d');
-  const t=drawBubble(bx,text,color,{clampText:clampBubbleText});
+  drawBubble(bx,text,color,{clampText:clampBubbleText});
   const btex=new THREE.CanvasTexture(bc);btex.minFilter=THREE.LinearFilter;
   const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:btex,transparent:true,depthTest:false,sizeAttenuation:false}));
   sprite.userData.aspect=BUBBLE_W/BUBBLE_H; sprite.renderOrder=30;
@@ -1701,8 +1701,8 @@ const updateShift=m=>__shift.update(m);
 // ═══════════════════════════════════════════════════
 // SOUND SYSTEM — Web Audio API (runtime di parts/sound_engine.js, teruji unit)
 // ═══════════════════════════════════════════════════
-let audioMuted=(function(){try{return localStorage.getItem('wfs_audio_muted')==='1'}catch(e){return false}})();
-function saveMuted(){try{localStorage.setItem('wfs_audio_muted',audioMuted?'1':'0')}catch(e){}}
+let audioMuted=(function(){try{return localStorage.getItem('wfs_audio_muted')==='1'}catch{return false}})();
+function saveMuted(){try{localStorage.setItem('wfs_audio_muted',audioMuted?'1':'0')}catch{/* abaikan */}}
 const __sound=createSoundEngine({ctxFactory:()=>new(window.AudioContext||window.webkitAudioContext)()});
 __sound.setMuted(audioMuted);
 __sound.dbg(s=>{window.__audio=s;});
@@ -1921,12 +1921,12 @@ const onVis=()=>{ pageHidden=document.visibilityState==='hidden';
     if(rafId){cancelAnimationFrame(rafId);rafId=null;}
     animate();
   }
-  else if(__sound.state()==='running'){try{__sound.suspend()}catch(e){}} // tab hidden → hemat CPU audio
+  else if(__sound.state()==='running'){try{__sound.suspend()}catch{/* abaikan */}} // tab hidden → hemat CPU audio
   if(!pageHidden){ // kembali visible: resume audio + refresh instan (tanpa nunggu tick)
     try{
       if(__sound.state()==='suspended')__sound.resume();
       if(window.__pollBadges)window.__pollBadges();
-    }catch(e){}
+    }catch{/* abaikan */}
   }
   __sound.dbg(s=>{window.__audio=s;});
 };
@@ -1967,7 +1967,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
   }
   return {
     teamAction,
-    toggleNames: () => { namesVisible=!namesVisible; try{localStorage.setItem('wfs_names',namesVisible?'1':'0')}catch(e){};
+    toggleNames: () => { namesVisible=!namesVisible; try{localStorage.setItem('wfs_names',namesVisible?'1':'0')}catch{/* abaikan */};
       agentData.forEach(ad=>{ad.label.visible=namesVisible;ad.label.userData.antiY=0;ad.label.userData.antiX=0});
       if(window.__zoneLabels)window.__zoneLabels.forEach(zt=>{zt.visible=namesVisible;zt.userData.antiY=0;zt.userData.antiX=0;
         const zb=window.__zoneBase&&window.__zoneBase.get(zt);if(zb){zt.position.y=zb.y;zt.position.x=zb.x}}); },
@@ -1975,7 +1975,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
     setSelected: (idx) => { selectedIdx=idx; applySelected(); },
     getSelected: () => selectedIdx,
     resetFocus: () => { if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius||sph.radius,reset:true}} },
-    setAutoRotate: (v) => { autoRot=!!v; __userRot=!!v; try{localStorage.setItem('wfs_autorot',autoRot?'1':'0')}catch(e){} },
+    setAutoRotate: (v) => { autoRot=!!v; __userRot=!!v; try{localStorage.setItem('wfs_autorot',autoRot?'1':'0')}catch{/* abaikan */} },
     isAutoRotate: () => autoRot,
     setTime: (minutes) => updateTime(minutes),
     toggleCyberpunk: () => toggleCyberpunk(),
@@ -2013,14 +2013,14 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       window.removeEventListener('pointerdown', __ensureAudio);
       // Papan proyek: hentikan interval fetch /wfs-project + listener visibilitychange
       // (tanpa ini, tiap remount meninggalkan papan lama yang terus fetch selamanya).
-      try { window.__projectBoard && window.__projectBoard.destroy() } catch (e) { /* no-op */ }
+      try { window.__projectBoard && window.__projectBoard.destroy() } catch{/* abaikan */}
       delete window.__projectBoard;
       // TV lounge: hentikan interval fetch + listener visibility-nya
       clearInterval(tvIv); document.removeEventListener('visibilitychange', tvOnVis);
       // Shift (daycycle): clear semua setTimeout pending (arrive/depart berantai per 800ms)
-      try { __shift && __shift.dispose && __shift.dispose() } catch (e) { /* no-op */ }
+      try { __shift && __shift.dispose && __shift.dispose() } catch{/* abaikan */}
       // Audio: engine menutup AudioContext scene lama (mencegah MaxAudioContextsExceeded)
-      try { __sound.dispose() } catch (e) { /* no-op */ }
+      try { __sound.dispose() } catch{/* abaikan */}
       if(renderer){renderer.dispose();container.removeChild(renderer.domElement);}
     }
   };
