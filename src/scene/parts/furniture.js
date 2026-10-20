@@ -1,5 +1,6 @@
 // Perabot kantor WFS Project — ditulis ulang dengan pola "builder" berbasis data.
 // Setiap builder menerima konteks { THREE, office, M, MB, rng } dan mengembalikan referensi yang dibutuhkan scene.
+import { POSTERS, POSTER_Y, POSTER_W, POSTER_H, CANVAS_W, CANVAS_H, posterLineY, posterOffset, posterFacing } from './poster_spec.js';
 export function createFurniture(ctx /* hooks disiapkan utk ekstensi */) {
   const { THREE, office, M, MB, rng } = ctx;
   const box = (w, h, d, mat, x, y, z, parent = office, cast = false) => {
@@ -82,27 +83,20 @@ export function createFurniture(ctx /* hooks disiapkan utk ekstensi */) {
   box(0.3, 0.18, 0.02, M(0x101214), -10.5, 0.95, 2.36, pantry);
   office.add(pantry);
 
-  // ── Poster dinding samping (slogan WFS) ──
-  const posters = [
-    { x: -11.4, z: -2, c: '#0deef3', t: 'SHIP IT' },
-    { x: -11.4, z: 3, c: '#f5a623', t: 'KUALITAS DULU' },
-    { x: -11.4, z: 6, c: '#ff5252', t: 'BUILD DAILY' },
-    { x: 11.4, z: -2, c: '#7c4dff', t: 'TEST EVERYTHING' },
-    { x: 11.4, z: 3, c: '#00e676', t: 'WFS PROJECT' },
-  ];
-  posters.forEach((p) => {
-    box(0.04, 0.72, 0.52, M(0x262a31), p.x, 2.2, p.z, office, true);
+  // ── Poster dinding samping (slogan WFS) — data di parts/poster_spec.js ──
+  POSTERS.forEach((p) => {
+    box(0.04, 0.72, 0.52, M(0x262a31), p.x, POSTER_Y, p.z, office, true);
     const cv = document.createElement('canvas');
-    cv.width = 120; cv.height = 160;
+    cv.width = CANVAS_W; cv.height = CANVAS_H;
     const g = cv.getContext('2d');
-    g.fillStyle = '#14172b'; g.fillRect(0, 0, 120, 160);
+    g.fillStyle = '#14172b'; g.fillRect(0, 0, CANVAS_W, CANVAS_H);
     g.strokeStyle = p.c; g.lineWidth = 3; g.strokeRect(6, 6, 108, 148);
     g.fillStyle = p.c; g.font = 'bold 15px sans-serif'; g.textAlign = 'center';
     g.shadowColor = p.c; g.shadowBlur = 6;
-    p.t.split(' ').forEach((w, i) => g.fillText(w, 60, 64 + i * 24));
-    const plane = new THREE.Mesh(new THREE.PlaneGeometry(0.46, 0.66), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv) }));
-    plane.position.set(p.x + (p.x < 0 ? 0.03 : -0.03), 2.2, p.z);
-    plane.rotation.y = p.x < 0 ? Math.PI / 2 : -Math.PI / 2;
+    p.t.split(' ').forEach((w, i) => g.fillText(w, 60, posterLineY(i)));
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(POSTER_W, POSTER_H), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv) }));
+    plane.position.set(p.x + posterOffset(p.x), POSTER_Y, p.z);
+    plane.rotation.y = posterFacing(p.x);
     office.add(plane);
   });
 

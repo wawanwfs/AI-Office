@@ -1134,3 +1134,11 @@
 - Test: src/__tests__/floor_zones.test.js — 17 test: 5 zona label sesuai, field lengkap valid, semua patch di dalam lantai ±13/±10, tak ada dua zona tumpang tindih (AABB), warna unik, opacity ≤1 & MEETING .9, CAFÉ mencakup counter fisik (−9.5,7.5), MEETING tepat (8,−3,5.4), SERVER ROOM satu-satunya dy=−0.9, zoneLabelY tepi depan + boundary 9/10 char skala, label selalu di depan pusat zona.
 - Bukti: vitest **149/149** (14 file, dulu 133), build OK (precache 35, 1532.02 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase arriving, 37773 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).
+
+## 2026-10-21 01:25 WIB — refactor+test: data poster dinding diekstrak ke poster_spec.js + 13 unit test (vitest 149→162)
+
+- Backlog dipilih: furniture.js masih menyimpan tabel 5 poster dinding (slogan WFS: SHIP IT, KUALITAS DULU, BUILD DAILY, TEST EVERYTHING, WFS PROJECT) + konstanta posisi/ukuran canvas inline — 0 unit test; regresi posisi/orientasi/teks poster tak terdeteksi.
+- Implementasi: src/scene/parts/poster_spec.js — POSTERS (5 item), POSTER_Y/W/H, CANVAS_W/H, LINE_H, posterFacing(x), posterOffset(x), posterLineY(i) diekstrak murni (tanpa THREE/canvas); furniture.js kini import (−7 baris), perilaku render identik.
+- Test: src/__tests__/poster_spec.test.js — 13 test: 5 poster, field lengkap & valid (hex warna), semua menempel dinding samping ±11.4 & di dalam lantai ±13/±10, ada di kedua sisi, tak ada posisi duplikat, teks unik & slogan kunci ada, warna unik, konstanta render tetap (2.2/0.46/0.66/120/160/24), facing kiri +π/2 kanan −π/2, offset ±0.03 menjauhi dinding, posterLineY 64/88/112, teks ≤3 baris muat di canvas, plane lebih kecil dari frame.
+- Bukti: vitest **162/162** (15 file, dulu 149), build OK (precache 35, 1532.12 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase working, 41335 frames, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).
