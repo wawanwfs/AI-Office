@@ -147,28 +147,10 @@ export function createProjectBoard(office, THREE) {
     // strip bawah: live SaaS bantuin + agent docker (band latar + divider)
     g.fillStyle = '#0b1424'; roundRect(20, 794, W - 40, 32, 8); g.fill()
     g.strokeStyle = '#2c3e5c'; g.lineWidth = 2; roundRect(20, 794, W - 40, 32, 8); g.stroke()
-    const s = snap.saas || {}
     g.font = '22px sans-serif'; g.textAlign = 'left'
     let sx = 44
     const seg = (txt, col) => { g.fillStyle = col; g.fillText(txt, sx, 817); sx += g.measureText(txt).width + 26 }
-    seg('SaaS', '#448AFF')
-    if (s.online) {
-      const st = s.stats || {}
-      seg((st.tenants || (s.tenants || []).length) + ' tenant', '#10E5A0')
-      seg((st.conversations || 0) + ' chat', '#8fa3bd')
-      seg((st.messages || 0) + ' pesan', '#8fa3bd')
-      seg('online', '#10E5A0')
-      const act = (s.tenants || []).slice(-1)[0]
-      if (act && act.name) seg('terbaru: ' + act.name, '#F59E0B')
-    } else {
-      seg('offline', '#ef4444')
-    }
-    const ags = snap.agents || []
-    if (ags.length) {
-      seg('·', '#44506a')
-      seg('AGENT', '#448AFF')
-      ags.forEach(a => seg(a.name + ' ' + (a.status === 'Up' ? '●' : '○'), a.status === 'Up' ? '#10E5A0' : '#ef4444'))
-    }
+    stripSegments(snap).forEach(sg => seg(sg.txt, sg.col))
     tex.needsUpdate = true
   }
 

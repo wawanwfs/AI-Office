@@ -1078,3 +1078,11 @@
 - Test: src/__tests__/effects.test.js — 15 test: stub 2D context mencatat panggilan gambar; 9 renderer benar-benar menggambar & alpha ≤ 1 (it.each); drawScreenFrame menggambar latar + menandai tex.needsUpdate + reset alpha ke 1; fallback tipe tak dikenal → terminal tanpa melempar; createDriftingPages: N halaman dibuat, posisi berubah setelah update(), wrap-around batas x(±10)/z(-7..8) terverifikasi bolak-balik, default 22 halaman.
 - Bukti: vitest **64/64** (7 file, dulu 49), npm run build OK (precache 35, 1530.92 KiB), deploy ~/wfs-hq OK; e2e CDP produksi 9503: DOM True, 14 agents, phase working, 13422 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" sudut kamera default (fade zona fix 12:30 sudah ada, pantau).
+
+## 2026-10-20 15:02 WIB — refactor+test: logika data papan proyek diekstrak ke projectboard_data.js + 13 unit test (vitest 64→77)
+
+- Backlog dipilih: lanjutan rangkaian ekstraksi+test — papan proyek dibantuin.com (projectboard.js, fitur inti markas) punya 0 unit test; perhitungan persen, banner GAGAL/REVIEW, filter kolom kanban & strip status SaaS/agent hanya dicek manual.
+- Implementasi: src/scene/parts/projectboard_data.js — computePct, subtitle, bannerParts, bannerNames, columnItems, stripSegments diekstrak murni (tanpa canvas/THREE); projectboard.js kini meng-import & menggambar hasilnya, perilaku identik.
+- Test: src/__tests__/projectboard_data.test.js — 13 test: pembulatan persen + fallback 0/null, subtitle dengan/tanpa review-gagal, banner parts warna-urut benar & names null bila recent tak relevan, filter kolom + maks 6 kartu, strip online (tenant/chat/pesan/terbaru, simbol ●/○ Up/Down), fallback tenants dari array, offline merah, snapshot null.
+- Bukti: vitest **77/77** (8 file, dulu 64), build OK (precache 35, 1531.38 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase arriving, 16514 frames, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" sudut kamera default (fade zona sudah ada, pantau).
