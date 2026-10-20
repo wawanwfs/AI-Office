@@ -1199,7 +1199,7 @@
 - Bukti: vitest **257/257** (22 file, dulu 244), build OK (precache 35, 1533.03 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase working, 64685 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
 
-## 2026-10-21 08:00 WIB — refactor+test: parameter ring seleksi/hover diekstrak ke ring_spec.js + 19 unit test (vitest 257→273)
+## 2026-10-21 19:05 WIB — refactor+test: parameter ring seleksi/hover diekstrak ke ring_spec.js + 19 unit test (vitest 257→273)
 
 - Backlog dipilih: cincin seleksi (emas, plane 3.1, gradient 46→62, stop 0.68, y 0.03) & hover (biru, plane 2.6, 44→62, y 0.02) + selAnchor() di OfficeScene.js masih inline dengan magic number — 0 unit test; regresi tampilan cincin seleksi/hover tak terdeteksi.
 - Implementasi: src/scene/parts/ring_spec.js — konstanta SEL_RING/HOVER_RING (size/plane/inner/outer/mid/color/rgb/opacity/y), selAnchorOf(agent, SEAT_OFF=0.55) murni (walker → posisi off 0; duduk → home + offset; tak terlihat → null; null-safe), selectedAgent(agentData, idx) clamp aman; OfficeScene.js kini import (−~14 baris), render cincin identik.
