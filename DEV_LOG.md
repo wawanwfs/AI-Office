@@ -1411,3 +1411,13 @@
 - Iterasi asersi (3×): THREE stub awal lupa MeshLambertMaterial → semua fail constructor; float −9.500000000000002 → toBeCloseTo; userData.label ternyata dipasang (bukan via __zoneLabels saja) → asersi 5, bukan 0.
 - Bukti: vitest **553/553** (41 file, dulu 534 — +19), build OK (precache 35, 1536.96 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 1469296, tanpa 'Scene init failed'.
 - Sisa backlog: SEMUA item test runtime scene 3D selesai (scene, daycycle, motion, furniture, projectboard, flooring, room). Tersisa hanya verifikasi subjektif kualitas suara (butuh telinga manusia) & minor nameplate MEETING↔"Rizky" (pantau).
+
+## 2026-10-24 05:20 WIB — test: buildRobot runtime (robot "Bantuin AI") 14 unit test (vitest 553→567)
+
+- Backlog dipilih: src/scene/parts/robot.js (buildRobot — visual robot asisten Bantuin AI: kaki/torso/lengan/kepala kapsul/mata LED/senyum/panel dada/antena) — hanya robot_spec.js (murni) yang ter-cover; buildRobot runtime 0 test, regresi visual robot (mata hilang, kaki salah fase, pose duduk rusak) tak terdeteksi.
+- Test: src/__tests__/robot_runtime.test.js — 14 test, stub THREE (Vec3/Group/Mesh + geometry args), buildRobot dipanggil utk pose berdiri & duduk:
+  - berdiri: grup ber-tanda isRobot; 2 kaki isLeg dengan fase 0/π sesuai legsStanding + castShadow; aksen neon pinggang glow di ty−0.17; panel dada gelap + 3 bar chestBars glow (tinggi per spec); 2 mata LED glow pada eyes(p); senyum 3 mesh (tengah 0.1 + 2 ujung 0.03) sesuai smile(p); lampu status putih di accents().status; antena di hy+0.25 + bola putih di hy+0.34; kepala kapsul shiny 0xe6edf3 skala z 0.9 castShadow; torso terang 0xd5dde5 castShadow.
+  - duduk: tanpa kaki isLeg (3 bagian kaki duduk per sisi); wajah berpindah ke sisi fz=−1 (z = tz−0.143 < 0); lengan dirotasi x=0.5 (2) & x=1.45 (2); torso & kepala mengikuti pose(false) ty/hy turun.
+- Iterasi asersi (3×): filter mata hanya via x>0.01 ternyata menangkap halo senyum/uang (4 bukan 2) → tambah filter y = hy+0.025; pose duduk mata z=−0.121 menangkap 5 mesh glow (bar dada di z=−0.09 beda tipis) → filter sama y; kandidat posisi mata perlu ≥1 karena halo memenuhi x/y.
+- Bukti: vitest **567/567** (42 file, dulu 553 — +14), build OK (precache 35, 1536.96 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 1537294, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
