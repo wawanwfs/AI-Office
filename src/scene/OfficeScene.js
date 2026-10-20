@@ -10,6 +10,7 @@ import { createMeetingRoom, createWallClock, createCeilingFixtures } from './par
 import { createProjectBoard } from './parts/projectboard.js';
 import { chatPhrases, roleTalk, COLLAB_PAIRS, pickCollab, clampBubbleText, collabDuration, LINE_SEC } from './parts/dialog.js';
 import { updateBubbles as updateBubblesPure } from './parts/bubbles.js';
+import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canvas.js';
 
 export function createOfficeScene(container, callbacks = {}) {
   // scene baru dibuat → flag destroy scene LAMA dicabut; tanpa ini remount/hot-reload
@@ -1639,22 +1640,15 @@ office.add(pulseRing);
 const chatBubbles=[];
 
 function createBubble(x,y,z,text,color,anchor){
-  const W=360,H=76,bc=document.createElement('canvas');bc.width=W;bc.height=H;
+  const bc=document.createElement('canvas');
+  bc.width=BUBBLE_W;bc.height=BUBBLE_H;
   const bx=bc.getContext('2d');
-  bx.fillStyle='rgba(7,16,32,0.94)';
-  const rr=(cx,cy,cw,ch,cr)=>{bx.beginPath();bx.moveTo(cx+cr,cy);bx.lineTo(cx+cw-cr,cy);bx.quadraticCurveTo(cx+cw,cy,cx+cw,cy+cr);bx.lineTo(cx+cw,cy+ch-cr);bx.quadraticCurveTo(cx+cw,cy+ch,cx+cw-cr,cy+ch);bx.lineTo(cx+cr,cy+ch);bx.quadraticCurveTo(cx,cy+ch,cx,cy+ch-cr);bx.lineTo(cx,cy+cr);bx.quadraticCurveTo(cx,cy,cx+cr,cy);bx.closePath()};
-  rr(3,3,W-6,H-14,10);bx.fill();
-  bx.strokeStyle=color;bx.lineWidth=2.5;rr(3,3,W-6,H-14,10);bx.stroke();
-  bx.beginPath();bx.moveTo(W/2-9,H-11);bx.lineTo(W/2,H-3);bx.lineTo(W/2+9,H-11);bx.closePath();bx.fillStyle='rgba(7,16,32,0.94)';bx.fill();
-  bx.font='700 24px "Segoe UI",Arial,sans-serif';bx.fillStyle='#fff';bx.textAlign='center';
-  let t=clampBubbleText(text);
-
-  bx.fillText(t,W/2,32);
+  const t=drawBubble(bx,text,color,{clampText:clampBubbleText});
   const btex=new THREE.CanvasTexture(bc);btex.minFilter=THREE.LinearFilter;
   const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:btex,transparent:true,depthTest:false,sizeAttenuation:false}));
-  sprite.userData.aspect=W/H; sprite.renderOrder=30;
-  const hFrac=0.034;
-  sprite.scale.set(hFrac*sprite.userData.aspect,hFrac,1);
+  sprite.userData.aspect=BUBBLE_W/BUBBLE_H; sprite.renderOrder=30;
+  const {w:sW,h:hFrac}=bubbleScale();
+  sprite.scale.set(sW,hFrac,1);
   sprite.material.opacity=0;                              // fade-in
   sprite.position.set(x,y+1.35,z);
   office.add(sprite);

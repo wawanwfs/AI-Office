@@ -1157,3 +1157,11 @@
 - Test: src/__tests__/converse_timing.test.js — 9 test: talkStep floor di beberapa boundary (1.79/1.8/5.4/7.3), walkPause negatif clamp 0, lineSec custom, CONVERSE_TAIL=1.2, belum selesai di 0/7.2/8.39, boundary strict 8.4 vs 8.41, tanpa baris hanya jeda, pola bergantian genap/ganjil.
 - Bukti: vitest **179/179** (17 file, dulu 172), build OK (precache 35, 1532.03 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase night, 47828 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
+## 2026-10-21 03:05 WIB — refactor+test: canvas bubble chat diekstrak ke bubble_canvas.js + 11 unit test (vitest 179→190)
+
+- Backlog dipilih: drawing bubble chat di createBubble() (OfficeScene.js) — rounded-rect panel + ekor segitiga + teks clamp + skala sprite + fade lifecycle — masih inline; regresi tampilan bubble (stroke/ekor/posisi teks) tak terdeteksi unit test.
+- Implementasi: src/scene/parts/bubble_canvas.js — BUBBLE_W/H (360×76), BUBBLE_BG, BUBBLE_TEXT_FONT, roundRectPath, tailPath, drawBubble(ctx,text,color,{clampText}) murni (ctx 2D di-inject, tanpa THREE), bubbleScale(hFrac=0.034), bubbleOpacity(age,life) fade-in 0.22 × fade-out life/0.5; OfficeScene.js kini import (−9 baris), perilaku render identik.
+- Test: src/__tests__/bubble_canvas.test.js — 11 test: konstanta sesuai nilai historis, roundRectPath 4 kurva+4 garis+close, tailPath simetris ujung (180,73), drawBubble fill 2×/stroke 1×/teks di (180,32) center, clampText diterapkan (≤33 char), tanpa clamp pass-through, opacity fade-in boundary 0/0.22/0.11, fade-out life/0.5 & 0 saat habis, kombinasi ≤1 & ≥0.
+- Bukti: vitest **190/190** (18 file, dulu 179), build OK (precache 35, 1532.18 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase leaving, 50956 frames, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
