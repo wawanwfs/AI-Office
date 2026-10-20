@@ -176,35 +176,31 @@ const hoverRay=new THREE.Raycaster();let hoverTmr=null,hoverNdc={x:0,y:0},hoverP
 let hoverRing=null;
 // cincin emas agent TERPILIH (persist: tetap tampil sampai pilihan berubah)
 let selectedIdx=-1,selRing=null;
-function ensureSelRing(){if(selRing)return;const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
-  const g=x.createRadialGradient(64,64,46,64,64,62);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(.68,'rgba(255,205,80,0.95)');g.addColorStop(1,'rgba(255,205,80,0)');
-  x.fillStyle=g;x.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
-  selRing=new THREE.Mesh(new THREE.PlaneGeometry(3.1,3.1),new THREE.MeshBasicMaterial({map:t,transparent:true,opacity:.9,depthWrite:false,color:0xFFD75E}));
-  selRing.rotation.x=-Math.PI/2;selRing.position.y=0.03;selRing.renderOrder=4;selRing.visible=false;office.add(selRing);window.__sceneSelRing=selRing;}
+function ensureSelRing(){if(selRing)return;const c=document.createElement('canvas');c.width=c.height=SEL_RING.SIZE;const x=c.getContext('2d');
+  const g=x.createRadialGradient(64,64,SEL_RING.INNER,64,64,SEL_RING.OUTER);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(SEL_RING.MID,`rgba(${SEL_RING.RGB},0.95)`);g.addColorStop(1,`rgba(${SEL_RING.RGB},0)`);
+  x.fillStyle=g;x.fillRect(0,0,SEL_RING.SIZE,SEL_RING.SIZE);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
+  selRing=new THREE.Mesh(new THREE.PlaneGeometry(SEL_RING.PLANE,SEL_RING.PLANE),new THREE.MeshBasicMaterial({map:t,transparent:true,opacity:SEL_RING.OPACITY,depthWrite:false,color:SEL_RING.COLOR}));
+  selRing.rotation.x=-Math.PI/2;selRing.position.y=SEL_RING.Y;selRing.renderOrder=4;selRing.visible=false;office.add(selRing);window.__sceneSelRing=selRing;}
 function applySelected(){
   if(selRing)selRing.visible=false;
-  if(selectedIdx<0||selectedIdx>=agentData.length)return;
-  const a=agentData[selectedIdx];
+  const a=selectedAgent(agentData,selectedIdx);
+  if(!a)return;
   // agent tidak ada di kantor (offsite/meeting figures terpisah) → ring disembunyikan,
   // selectedIdx tetap tersimpan sehingga ring muncul lagi saat agent kembali.
-  const p=selAnchor(a);
+  const p=selAnchorOf(a);
   if(!p)return;
   ensureSelRing();
-  selRing.position.set(p.x,0.03,p.z+p.off);
+  selRing.position.set(p.x,SEL_RING.Y,p.z+p.off);
   selRing.visible=true;
 }
 // posisi ring utk agent: walker (berjalan) / home (duduk) / null (tidak terlihat di kantor)
-function selAnchor(a){
-  if(a.walker&&a.walker.visible)return{x:a.walker.position.x,z:a.walker.position.z,off:0};
-  if(a.sittingChar&&a.sittingChar.visible)return{x:a.home.x,z:a.home.z,off:.55};
-  return null;
-}
+const selAnchor=(a)=>selAnchorOf(a);
 
-function ensureHoverRing(){if(hoverRing)return;const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
-  const g=x.createRadialGradient(64,64,44,64,64,62);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(.7,'rgba(120,220,255,0.9)');g.addColorStop(1,'rgba(120,220,255,0)');
-  x.fillStyle=g;x.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
-  hoverRing=new THREE.Mesh(new THREE.PlaneGeometry(2.6,2.6),new THREE.MeshBasicMaterial({map:t,transparent:true,opacity:.85,depthWrite:false,color:0x9FE8FF}));
-  hoverRing.rotation.x=-Math.PI/2;hoverRing.position.y=0.02;hoverRing.renderOrder=3;hoverRing.visible=false;office.add(hoverRing);window.__sceneRing=hoverRing;}
+function ensureHoverRing(){if(hoverRing)return;const c=document.createElement('canvas');c.width=c.height=HOVER_RING.SIZE;const x=c.getContext('2d');
+  const g=x.createRadialGradient(64,64,HOVER_RING.INNER,64,64,HOVER_RING.OUTER);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(HOVER_RING.MID,`rgba(${HOVER_RING.RGB},0.9)`);g.addColorStop(1,`rgba(${HOVER_RING.RGB},0)`);
+  x.fillStyle=g;x.fillRect(0,0,HOVER_RING.SIZE,HOVER_RING.SIZE);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
+  hoverRing=new THREE.Mesh(new THREE.PlaneGeometry(HOVER_RING.PLANE,HOVER_RING.PLANE),new THREE.MeshBasicMaterial({map:t,transparent:true,opacity:HOVER_RING.OPACITY,depthWrite:false,color:HOVER_RING.COLOR}));
+  hoverRing.rotation.x=-Math.PI/2;hoverRing.position.y=HOVER_RING.Y;hoverRing.renderOrder=3;hoverRing.visible=false;office.add(hoverRing);window.__sceneRing=hoverRing;}
 renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
   hoverNdc={x:(e.clientX/innerWidth)*2-1,y:-(e.clientY/innerHeight)*2+1};
   if(!hoverPend){hoverPend=true;hoverTmr=setTimeout(()=>{

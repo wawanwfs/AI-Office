@@ -1198,3 +1198,11 @@
 - Test: src/__tests__/sound_spec.test.js — 14 test: konstanta historis keyclick/langkah/chime/mute, rentang frekuensi 800..1200 & boundary rng 0/1, envelope =1 di sampel 0 & ≈exp(-5) di akhir & monoton turun, 3 nada C5-E5-G5, chimeStart i*0.15 & total durasi 0.8 s, MUTED_KEY 'wfs_audio_muted', masterGain 0/1.
 - Bukti: vitest **257/257** (22 file, dulu 244), build OK (precache 35, 1533.03 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase working, 64685 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
+## 2026-10-21 08:00 WIB — refactor+test: parameter ring seleksi/hover diekstrak ke ring_spec.js + 19 unit test (vitest 257→273)
+
+- Backlog dipilih: cincin seleksi (emas, plane 3.1, gradient 46→62, stop 0.68, y 0.03) & hover (biru, plane 2.6, 44→62, y 0.02) + selAnchor() di OfficeScene.js masih inline dengan magic number — 0 unit test; regresi tampilan cincin seleksi/hover tak terdeteksi.
+- Implementasi: src/scene/parts/ring_spec.js — konstanta SEL_RING/HOVER_RING (size/plane/inner/outer/mid/color/rgb/opacity/y), selAnchorOf(agent, SEAT_OFF=0.55) murni (walker → posisi off 0; duduk → home + offset; tak terlihat → null; null-safe), selectedAgent(agentData, idx) clamp aman; OfficeScene.js kini import (−~14 baris), render cincin identik.
+- Test: src/__tests__/ring_spec.test.js — 19 test: konstanta historis kedua ring, hover < seleksi & inner < outer, walker/sitting/dual-visible/tak terlihat, fallback tanpa walker, null agent aman, custom seat offset, selectedAgent valid/0/last/negatif/out-of-range/data null.
+- Bukti: vitest **273/273** (23 file, dulu 257), build OK (precache 35, 1533.43 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase night, 67965 frames, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
