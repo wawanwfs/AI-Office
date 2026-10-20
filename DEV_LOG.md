@@ -1331,6 +1331,14 @@
 - Bukti: vitest **450/450** (33 file, dulu 432), build OK (precache 35, 1536.94 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 662495, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
 
+## 2026-10-24 10:45 WIB — test: useDialogA11y (fokus trap) + TeamStats (vitest 477→486)
+
+- Backlog dipilih: src/lib/dialogA11y.js (hook a11y dipakai SEMUA panel: fokus awal, trap Tab, Escape, aria-modal, restore fokus pemicu) & komponen TeamStats.jsx — keduanya 0 unit test; regresi fokus-trap/a11y & panel statistik tak terdeteksi.
+- Test: src/__tests__/team_stats_a11y.test.jsx — 9 test. useDialogA11y (5): buka → aria-modal=true & fokus masuk elemen pertama; Escape → onClose (capture); Tab terjebak (terakhir→pertama, shift→balik terakhir, tak keluar dialog — jsdom tanpa layout: offsetParent didefinisikan manual via Object.defineProperty); tutup via Escape → dialog unmount & fokus kembali ke pemicu #t (hook simpan document.activeElement saat buka — klik in-dialog JS .click() TIDAK memindahkan fokus di jsdom, makanya skenario pakai fokus pemicu + Escape); open=false pasif. TeamStats (4): buka → fetch /wfs-api/tasks + system/resources, total file dihitung dari field `files` bentuk campuran (JSON-array string, CSV, null, array) = 5; kontainer diringkas (saas-dibantuin-backend→backend, wfs-agent-be1→sbx-be1); fetch gagal → role=alert "Gateway offline" + tombol Coba lagi memulihkan; data kosong → "Belum ada task"; stat-grid aria-label "1 task selesai/jalan/gagal/review/antri".
+- Iterasi asersi (5×): (1) render leak antar-test → afterEach cleanup; (2) total file 4 salah hitung → fixture nyata = 5 (A 2 + D 2 + E 1); (3) jsdom offsetParent null → filter focusable hook meloloskan semua → defineProperty manual; (4) restore fokus gagal saat click in-dialog (jsdom .click() tak set fokus) → skenario diubah ke fokus pemicu + Escape yang mencerminkan alur nyata; (5) fokus restore async → waitFor.
+- Bukti: vitest **486/486** (35 file, dulu 477), build OK (precache 35, 1536.96 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 1049776, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
 ## 2026-10-24 02:00 WIB — fix: ReferenceError `names` di banner review/gagal papan proyek (papan beku)
 
 - Bug: projectboard.js draw() baris 111 memakai variabel `names` yang TIDAK ADA (seharusnya `full` dari bannerNames). Setiap ada task failed/review → draw() throw ReferenceError sebelum `tex.needsUpdate = true` → CanvasTexture tidak pernah diperbarui → papan proyek dibantuin.com menampilkan frame STALE/beku selamanya (fetch tetap jalan tapi gambar tak berganti). Kondisi paling parah justru saat task butuh perhatian — justru info terpenting yang tidak tampil.
