@@ -13,7 +13,8 @@ import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent } from './parts/ring_s
 import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelName, fitLabel } from './parts/label_spec.js';
 import { WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { OBSTACLES } from './parts/obstacles.js';
-import { keyclickFreq, stepEnvelope, chimeStart, CHIME_FREQS, KEYCLICK_BASE_FREQ, KEYCLICK_JITTER, KEYCLICK_GAIN, KEYCLICK_END_GAIN, KEYCLICK_SEC, STEP_GAIN, STEP_DECAY, STEP_SEC, CHIME_DELAY_SEC, CHIME_GAIN, CHIME_END_GAIN, CHIME_TONE_SEC, MUTED_KEY, masterGainValue } from './parts/sound_spec.js';
+import { MUTED_KEY, masterGainValue } from './parts/sound_spec.js';
+import { createSoundEngine } from './parts/sound_engine.js';
 import { createProjectBoard } from './parts/projectboard.js';
 import { chatPhrases, roleTalk, COLLAB_PAIRS, pickCollab, clampBubbleText, collabDuration, LINE_SEC } from './parts/dialog.js';
 import { updateBubbles as updateBubblesPure } from './parts/bubbles.js';
@@ -101,10 +102,10 @@ renderer.domElement&&renderer.domElement.addEventListener('touchmove',e=>{
   }
 },{passive:false});
 renderer.domElement&&renderer.domElement.addEventListener('touchend',()=>{pinchDist=null},{passive:true});
-const __ensureAudio=()=>{if(window.__officeSceneDestroyed)return;initAudio();try{if(audioCtx&&audioCtx.state==='suspended'&&audioCtx.resume)audioCtx.resume().catch(()=>{});}catch(e){}};
-window.addEventListener('keydown',__ensureAudio,{once:true});
-window.addEventListener('pointerdown',__ensureAudio,{once:true});
-renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{isDrag=true;prev={x:e.clientX,y:e.clientY};autoRot=false;clearTimeout(autoTmr);__ensureAudio();if(renderer.domElement.style.cursor!=='pointer')renderer.domElement.style.cursor='grabbing'});
+const __ensureAudioEarly=()=>{if(window.__officeSceneDestroyed)return;__sound.ensure();try{const c=__sound.rawCtx();if(c&&c.state==='suspended'&&c.resume)c.resume().catch(()=>{});}catch(e){}};
+window.addEventListener('keydown',__ensureAudioEarly,{once:true});
+window.addEventListener('pointerdown',__ensureAudioEarly,{once:true});
+renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{isDrag=true;prev={x:e.clientX,y:e.clientY};autoRot=false;clearTimeout(autoTmr);__ensureAudioEarly();if(renderer.domElement.style.cursor!=='pointer')renderer.domElement.style.cursor='grabbing'});
 renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{downXY={x:e.clientX,y:e.clientY}});
 renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   if(!downXY)return;
@@ -1698,75 +1699,14 @@ const __shift=createShift({THREE,agentData,rng});
 const updateShift=m=>__shift.update(m);
 
 // ═══════════════════════════════════════════════════
-// SOUND SYSTEM — Web Audio API
+// SOUND SYSTEM — Web Audio API (runtime di parts/sound_engine.js, teruji unit)
 // ═══════════════════════════════════════════════════
-let audioCtx=null;
-let masterGain=null;
-let soundsStarted=false;
 let audioMuted=(function(){try{return localStorage.getItem('wfs_audio_muted')==='1'}catch(e){return false}})();
 function saveMuted(){try{localStorage.setItem('wfs_audio_muted',audioMuted?'1':'0')}catch(e){}}
-const __audioCalls={key:0,step:0,chime:0};
-
-function initAudio(){
-  if(soundsStarted)return;
-  soundsStarted=true;
-  audioCtx=new(window.AudioContext||window.webkitAudioContext)();
-  // browser memulai AudioContext dalam state 'suspended' (autoplay policy):
-  // resume() butuh user gesture — pemanggil initAudio memang dari gesture (pointerdown/keydown),
-  // tapi tanpa resume() eksplisit ctx bisa tetap suspended & semua suara senyap.
-  if(audioCtx.state==='suspended'&&audioCtx.resume)audioCtx.resume().catch(()=>{});
-  masterGain=audioCtx.createGain();
-  masterGain.gain.value=audioMuted?0:1;
-  masterGain.connect(audioCtx.destination);
-  updateAudioDbg();
-}
-// debug/e2e hook: status audio tanpa browser asli
-function updateAudioDbg(){window.__audio={started:soundsStarted,state:audioCtx?audioCtx.state:'none',calls:__audioCalls,muted:audioMuted}}
-updateAudioDbg();
-
-function playKeyClick(){
-  __ensureAudio();__audioCalls.key++;updateAudioDbg();
-  if(!audioCtx)return;
-  const osc=audioCtx.createOscillator();
-  osc.type='square';osc.frequency.value=keyclickFreq(Math.random);
-  const g=audioCtx.createGain();g.gain.value=KEYCLICK_GAIN;
-  g.gain.exponentialRampToValueAtTime(KEYCLICK_END_GAIN,audioCtx.currentTime+KEYCLICK_SEC);
-  osc.connect(g);g.connect(masterGain||audioCtx.destination);
-  osc.start();osc.stop(audioCtx.currentTime+KEYCLICK_SEC);
-}
-
-function playStep(){
-  __ensureAudio();__audioCalls.step++;updateAudioDbg();
-  if(!audioCtx)return;
-  const buf=audioCtx.createBuffer(1,audioCtx.sampleRate*STEP_SEC,audioCtx.sampleRate);
-  const data=buf.getChannelData(0);
-  for(let i=0;i<data.length;i++)data[i]=(Math.random()*2-1)*stepEnvelope(i,data.length);
-  const src=audioCtx.createBufferSource();src.buffer=buf;
-  const g=audioCtx.createGain();g.gain.value=STEP_GAIN;
-  src.connect(g);g.connect(masterGain||audioCtx.destination);
-  src.start();
-}
-
-function playMeetingChime(){
-  __ensureAudio();__audioCalls.chime++;updateAudioDbg();
-  if(!audioCtx)return;
-  CHIME_FREQS.forEach((freq,i)=>{
-      // daftarkan ke __timeouts agar pending chime di-clear saat destroy()
-      // (tanpa ini, scene yang sudah di-destroy masih menyalakan osilator sisa)
-      const t=setTimeout(()=>{
-    const osc=audioCtx.createOscillator();osc.type='sine';osc.frequency.value=freq;
-      const g=audioCtx.createGain();g.gain.value=CHIME_GAIN;
-      g.gain.exponentialRampToValueAtTime(CHIME_END_GAIN,audioCtx.currentTime+CHIME_TONE_SEC);
-      osc.connect(g);g.connect(masterGain||audioCtx.destination);
-      osc.start();osc.stop(audioCtx.currentTime+CHIME_TONE_SEC);
-      const ix=__timeouts.indexOf(t);if(ix>=0)__timeouts.splice(ix,1);
-    },chimeStart(i));
-    __timeouts.push(t);
-  });
-}
-
-// Start audio on first interaction
-
+const __sound=createSoundEngine({ctxFactory:()=>new(window.AudioContext||window.webkitAudioContext)()});
+__sound.setMuted(audioMuted);
+__sound.dbg(s=>{window.__audio=s;});
+const __ensureAudio=()=>{if(window.__officeSceneDestroyed)return;__sound.ensure();};
 
 // Track keyboard sounds — kini benar-benar dipakai: tick keyboard & langkah saat agent jalan
 let keyTimer=0, stepTimer=0;
@@ -1919,18 +1859,18 @@ function animate(){
   keyTimer-=delta;
   if(keyTimer<=0){
     keyTimer=.09+Math.random()*.18;
-    if(soundsStarted&&agentData.some(a=>a.state==='sitting'&&a.sittingChar&&a.sittingChar.visible))playKeyClick();
+    if(soundsStarted&&agentData.some(a=>a.state==='sitting'&&a.sittingChar&&a.sittingChar.visible))__sound.playKeyClick();
   }
   stepTimer-=delta;
   if(stepTimer<=0){
     stepTimer=.32;
     // langkah hanya saat walker benar-benar melangkah (bukan berdiri ngobrol/antre di tujuan)
     const __mv=agentData.some(a=>a.walker&&a.walker.visible&&(a.state==='walking_out'||a.state==='walking_back'||a.state==='leaving'));
-    if(soundsStarted&&__mv)playStep();
+    if(soundsStarted&&__mv)__sound.playStep();
   }
 
   // Sounds — meeting chime only
-  if(__meet.active&&!lastMeetingState)playMeetingChime();
+  if(__meet.active&&!lastMeetingState)__sound.playMeetingChime();
   lastMeetingState=__meet.active;
 
   renderer.render(scene,camera);
@@ -1981,14 +1921,14 @@ const onVis=()=>{ pageHidden=document.visibilityState==='hidden';
     if(rafId){cancelAnimationFrame(rafId);rafId=null;}
     animate();
   }
-  else if(audioCtx&&audioCtx.state==='running'){try{audioCtx.suspend()}catch(e){}} // tab hidden → hemat CPU audio
+  else if(__sound.state()==='running'){try{__sound.suspend()}catch(e){}} // tab hidden → hemat CPU audio
   if(!pageHidden){ // kembali visible: resume audio + refresh instan (tanpa nunggu tick)
     try{
-      if(audioCtx&&audioCtx.state==='suspended')audioCtx.resume();
+      if(__sound.state()==='suspended')__sound.resume();
       if(window.__pollBadges)window.__pollBadges();
     }catch(e){}
   }
-  updateAudioDbg();
+  __sound.dbg(s=>{window.__audio=s;});
 };
 document.addEventListener('visibilitychange',onVis);
 const onResize=()=>{camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();__vo();renderer.setSize(container.clientWidth,container.clientHeight)};window.addEventListener('resize',onResize);
@@ -2057,7 +1997,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       else{sph.radius=homeRadius||Math.max(24,Math.min(60,sph.radius));}
       updCam(); return true;
     },
-    setAudioMuted: (v) => { audioMuted=!!v; if(masterGain)masterGain.gain.value=audioMuted?0:1; saveMuted(); updateAudioDbg(); },
+    setAudioMuted: (v) => { audioMuted=!!v; __sound.setMuted(audioMuted); saveMuted(); __sound.dbg(s=>{window.__audio=s;}); },
     isAudioMuted: () => audioMuted,
     destroy: () => {
       window.__officeSceneDestroyed=true;
@@ -2079,11 +2019,8 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       clearInterval(tvIv); document.removeEventListener('visibilitychange', tvOnVis);
       // Shift (daycycle): clear semua setTimeout pending (arrive/depart berantai per 800ms)
       try { __shift && __shift.dispose && __shift.dispose() } catch (e) { /* no-op */ }
-      // Audio: tutup AudioContext scene lama — browser membatasi jumlah AudioContext aktif
-      // (~6 per halaman); tanpa close(), tiap remount menyisakan konteks hidup hingga
-      // audio scene berikutnya gagal dibuat (MaxAudioContextsExceeded).
-      try { if(audioCtx){audioCtx.close();} } catch (e) { /* no-op */ }
-      audioCtx=null; masterGain=null;
+      // Audio: engine menutup AudioContext scene lama (mencegah MaxAudioContextsExceeded)
+      try { __sound.dispose() } catch (e) { /* no-op */ }
       if(renderer){renderer.dispose();container.removeChild(renderer.domElement);}
     }
   };
