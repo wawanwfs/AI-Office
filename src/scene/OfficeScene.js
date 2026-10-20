@@ -8,6 +8,8 @@ import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets } from './parts/effects.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { createProjectBoard } from './parts/projectboard.js';
+import { chatPhrases, roleTalk, COLLAB_PAIRS, pickCollab, clampBubbleText, collabDuration, LINE_SEC } from './parts/dialog.js';
+import { updateBubbles as updateBubblesPure } from './parts/bubbles.js';
 
 export function createOfficeScene(container, callbacks = {}) {
   // scene baru dibuat → flag destroy scene LAMA dicabut; tanpa ini remount/hot-reload
@@ -881,32 +883,10 @@ allAgents.forEach((agent,i)=>{
   })();
 
 
-// -- Kolaborasi antar role: dialog antar rekan kerja --
-const COLLAB_PAIRS=[
-  ['FRONTEND','BACKEND',['API /tasks sudah siap, tinggal dipanggil ya','Siap, kutarik datanya sekarang','Responsnya cukup cepat?','p95 sekitar 120 ms']],
-  ['UI/UX','FRONTEND',['Spacing tombolnya kurang 4px','Oke, kurapikan sesuai desain','Kontras warnanya sudah lolos AA','Mantap, lanjut ke review']],
-  ['QA','BACKEND',['Ada bug 500 di endpoint chat','Reproduce langkahnya dong','Kirim body kosong lalu submit','Dapat, kuperbaiki sekarang']],
-  ['QA','FRONTEND',['Tombol Kirim bisa diklik dua kali','Kutambah disable saat loading','Terima kasih, kutest ulang','Lolos, aman!']],
-  ['DEVOPS','BACKEND',['Build staging jalan, cek log ya','Migrasi database sudah jalan?','Sudah, aman semua','Deploy produksi jam 5']],
-  ['PROJECT MANAGER','ENGINEER',['Progress sprint hari ini gimana?','Hampir selesai, tinggal review','Demo besok jam 10 ya','Siap, kami kejar']],
-  ['PROJECT MANAGER','UI/UX',['Desain halaman harga sudah ada?','Draft kukirim siang ini','Bagus, kirim ke tim FE','Oke!']],
-  ['GROWTH','PROJECT MANAGER',['Leads minggu ini naik 18%','Bagus, lanjutkan kampanye','Kita perlu fitur referral','Masuk backlog sprint depan']],
-  ['AI CUSTOMER','BACKEND',['Banyak tanya soal harga paket','Kubuatkan endpoint FAQ','Jawaban otomatis makin akurat','Siap, kutambah data latihnya']],
-  ['MOBILE','BACKEND',['Endpoint push notif sudah ada?','Sudah, dokumennya di wiki','Aplikasi lolos uji Android','Mantap, kirim build-nya']],
-];
-function pickCollab(ad){
-  const r=String(ad.agent.role||'').toUpperCase();
-  const options=[];
-  agentData.forEach(o=>{
-    if(o===ad||o.state!=='sitting')return;
-    const orole=String(o.agent.role||'').toUpperCase();
-    COLLAB_PAIRS.forEach(([a,b,lines])=>{
-      const m1=r.includes(a)&&orole.includes(b), m2=r.includes(b)&&orole.includes(a);
-      if(m1||m2)options.push({partner:o,lines,first:m1});
-    });
-  });
-  return options.length?options[Math.floor(Math.random()*options.length)]:null;
-}
+// Kolaborasi antar role & pickCollab diekstrak murni ke parts/dialog.js —
+// pickCollab di sini dibungkus agar tetap pakai agentData lokal.
+const pickCollabLocal=(ad)=>pickCollab(ad,agentData);
+
 
 
 // ═══════════════════════════════════════════════════
@@ -1657,12 +1637,6 @@ office.add(pulseRing);
 // WATER COOLER CONVERSATIONS — Speech Bubbles
 // ═══════════════════════════════════════════════════
 const chatBubbles=[];
-const chatPhrases=[
-  'pushing to prod...','merge conflict!!','coffee?','ship it!',
-  'lgtm +1','who broke CI?','standup in 5','nice refactor',
-  'read the ADR','need a review','lunch?','one more bug...',
-  'deploying...','v10.8 is live','taste > speed','type safe pls',
-];
 
 function createBubble(x,y,z,text,color,anchor){
   const W=360,H=76,bc=document.createElement('canvas');bc.width=W;bc.height=H;
@@ -1673,7 +1647,8 @@ function createBubble(x,y,z,text,color,anchor){
   bx.strokeStyle=color;bx.lineWidth=2.5;rr(3,3,W-6,H-14,10);bx.stroke();
   bx.beginPath();bx.moveTo(W/2-9,H-11);bx.lineTo(W/2,H-3);bx.lineTo(W/2+9,H-11);bx.closePath();bx.fillStyle='rgba(7,16,32,0.94)';bx.fill();
   bx.font='700 24px "Segoe UI",Arial,sans-serif';bx.fillStyle='#fff';bx.textAlign='center';
-  let t=String(text); if(t.length>32)t=t.slice(0,31)+'…';
+  let t=clampBubbleText(text);
+
   bx.fillText(t,W/2,32);
   const btex=new THREE.CanvasTexture(bc);btex.minFilter=THREE.LinearFilter;
   const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:btex,transparent:true,depthTest:false,sizeAttenuation:false}));
@@ -1690,20 +1665,7 @@ function createBubble(x,y,z,text,color,anchor){
 
 
 // Auto talk: agent cerita sendiri tiap beberapa detik (per role)
-const roleTalk={
-  'BANTUIN AI':['“Siang kak! Mau cek order?”','“Chat 47 hari ini ”'],
-  'BUDI':['“API-nya udah jalan”','“Push dulu…”'],
-  'RIZKY':['“Webhook Midtrans ✓”','“Query ku-optimize”'],
-  'DEWI':['“Responsive rapi ”','“Dark mode siap”'],
-  'ANDI':['“Lighthouse 97! ”','“Hover-nya lucu”'],
-  'YOGA':['“Build APK selesai”','“Push notif live”'],
-  'MAYA':['“Design v3 ”','“Spacing dikoreksi”'],
-  'TONI':['“CPU 12%, aman”','“Docker up ”'],
-  'RINA':['“214 test passing ”','“1 bug ketemu”'],
-  'LINA':['“CPC turun 18% ”','“Leads naik!”'],
-  'SARI':['“Sprint on track ”','“Demo ya besok”'],
-  'CEO':['“Deal baru ”','“Kopi dulu ”'],
-};
+
 let talkTimer=4; // eslint-disable-line no-unused-vars -- reset loop obrolan
 let lastTalkRT=performance.now();
 function autoTalk(){
@@ -1782,24 +1744,7 @@ function checkConversations(){
 }
 
 function updateBubbles(delta){
-  for(let i=chatBubbles.length-1;i>=0;i--){
-    const b=chatBubbles[i];
-    b.life-=delta;
-    if(b.anchor){ // ikuti pembicara: tidak melompat antar posisi
-      b.sprite.position.x=b.anchor.x;
-      b.sprite.position.z=b.anchor.z;
-      b.sprite.position.y=(b.anchor.y||2.0)+1.35+(3-b.life)*.10; // anchor.y=2.6 (berdiri) / 1.4 (ngobrol)
-    } else {
-      b.sprite.position.y=b.startY+(3-b.life)*.12; // float up
-    }
-    const age=3.5-b.life;
-    b.sprite.material.opacity=Math.min(1,age/.22)*Math.max(0,Math.min(1,b.life/.5));
-    if(b.life<=0){
-      office.remove(b.sprite);
-      b.sprite.material.dispose();
-      chatBubbles.splice(i,1);
-    }
-  }
+  updateBubblesPure(chatBubbles, delta, { remove: (b)=>{ office.remove(b.sprite); b.sprite.material.dispose(); } });
 }
 
 // ═══════════════════════════════════════════════════
@@ -1892,7 +1837,7 @@ const walkDestinations=[
   {x:-0.5,z:4.2},   // jalur tengah
   {x:-3.2,z:-6.2},  // dekat tanaman belakang
 ];
-const updateWalkers=createMotion({rng,agentData,walkDestinations,pickCollab,createBubble});
+const updateWalkers=createMotion({rng,agentData,walkDestinations,pickCollab:pickCollabLocal,createBubble});
 let lastMeetingState=false;
 const clock=new THREE.Clock();
 // Hemat CPU/GPU: saat tab tersembunyi, hentikan loop render (visibilitas

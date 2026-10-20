@@ -1094,3 +1094,11 @@
 - Test: src/__tests__/robot_spec.test.js — 9 test: level vertikal hip<torso<kepala di kedua pose, wajah +Z/-Z, 2 mata simetris di depan layar, 3 segmen senyum (ujung naik & simetris), 3 bar dada jarak seragam 0.055, kaki fase 0/pi simetris, lampu status & antena di atas kepala, palet warna.
 - Bukti: vitest **87/87** (9 file, dulu 77), build OK, deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase working, 20292 frames, tanpa Scene init failed.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔Rizky (fade zona sudah ada, pantau).
+
+## 2026-10-20 15:45 WIB — refactor+test: data dialog & speech bubble diekstrak ke dialog.js + bubbles.js + 16 unit test (vitest 87→103)
+
+- Backlog dipilih: konten dialog markas (16 chatPhrases, roleTalk 12 role, COLLAB_PAIRS 10 pasangan role, pickCollab, pemangkasan teks bubble, updateBubbles) semuanya inline di OfficeScene.js — 0 unit test; typo/regresi dialog & fade bubble tak terdeteksi.
+- Implementasi: src/scene/parts/dialog.js (chatPhrases, roleTalk, COLLAB_PAIRS, pickCollab(ad,agentData) murni, clampBubbleText, LINE_SEC, collabDuration) + src/scene/parts/bubbles.js (updateBubbles murni, remove via callback); OfficeScene.js −66 baris duplikat, pickCollab dibungkus pickCollabLocal agar tetap pakai agentData lokal — perilaku identik.
+- Test: src/__tests__/dialog.test.js — 16 test: chatPhrases unik non-empty, roleTalk 12 role ≥2 baris, COLLAB_PAIRS 10 pasangan tak duplikat ≥4 baris, pickCollab hanya partner sitting/case-insensitive substring/self dikecualikan/state≠sitting disaring, clampBubbleText 32-char boundary + ellipsis + konversi non-string, collabDuration = baris×1.8+1.2, updateBubbles: life berkurang, fade-in/fade-out, ikut anchor x/z/y, float up tanpa anchor, remove saat life≤0.
+- Bukti: vitest **103/103** (10 file, dulu 87), build OK (precache 35, 1531.63 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase arriving, 24174 frames, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).
