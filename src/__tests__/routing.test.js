@@ -1,6 +1,7 @@
 // Unit test logika murni scene: routing koridor & jadwal meeting.
 import { describe, it, expect } from 'vitest';
 import { routePath, FRONT, GANGS, bandOf } from '../scene/parts/routing.js';
+import { OBSTACLES, inObstacle, seatOccupied } from '../scene/parts/obstacles.js';
 import { MEETING_WINDOWS, isMeetingTime, meetingWindowIndex } from '../scene/parts/meeting.js';
 
 // Meja agent per band (dipakai untuk cek lintasan tidak menembus zona meja).
@@ -91,5 +92,32 @@ describe('meeting windows', () => {
     expect(meetingWindowIndex(610)).toBe(0);
     expect(meetingWindowIndex(850)).toBe(1);
     expect(meetingWindowIndex(700)).toBe(-1);
+  });
+});
+
+describe('obstacles', () => {
+  it('footprint furnitur terdefinisi & titik pusatnya terdeteksi', () => {
+    expect(OBSTACLES.length).toBe(5);
+    // pusat counter pantry, printer, sofa lounge
+    expect(inObstacle(-10.5, 2.55)).toBe(true);   // pantry counter
+    expect(inObstacle(3.0, -7.9)).toBe(true);     // printer
+    expect(inObstacle(10.5, 6.0)).toBe(true);     // sofa lounge
+    expect(inObstacle(-9.5, 7.5)).toBe(true);     // counter café
+  });
+
+  it('titik bebas (koridor, meja kosong) tidak dianggap rintangan', () => {
+    expect(inObstacle(0, 4.85)).toBe(false);      // koridor depan band 2
+    expect(inObstacle(-4, -0.75)).toBe(false);    // gang
+    expect(inObstacle(0, 6)).toBe(false);         // baris meja (bukan furnitur)
+  });
+
+  it('seatOccupied: zona ±0.9 sekitar home rekan terisi, offsite tidak', () => {
+    const agents = [
+      { agent: { name: 'A' }, home: { x: 4, z: 6 }, state: 'sitting' },
+      { agent: { name: 'B' }, home: { x: -4, z: -3 }, state: 'offsite' },
+    ];
+    expect(seatOccupied(4.5, 6.2, agents, { name: 'X' })).toBe(true);   // dekat A
+    expect(seatOccupied(-4.3, -2.8, agents, { name: 'X' })).toBe(false); // B offsite
+    expect(seatOccupied(4, 6, agents, agents[0].agent)).toBe(false);     // self dikecualikan
   });
 });

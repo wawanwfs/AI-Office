@@ -1049,3 +1049,10 @@
 - Bukti: build OK (precache 35, 1530.93 KiB), vitest **31/31** (4 file), deploy ~/wfs-hq OK; e2e CDP produksi 9503: DOM True, 17 btns, 14 agents, frames 10→26→113→184, phase working, 0 exception; probe trip terpaksa (timer 0 semua agent, 4 ronde): semua rute waypoint hanya z koridor/gang (-4.2, -0.8, 0.3/0.35, 3.8, 4.8) — tak ada yang menembus baris meja.
 - Catatan ops: chrome debug 9222 & script launch_dbg.sh hilang lagi — direkonstruksi; WebGL headless kini butuh flag --use-gl=angle --use-angle=swiftshader --enable-unsafe-swiftshader (tanpa itu "Scene init failed — UI-only mode").
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" sudut kamera default (fade zona fix 12:30 sudah ada, pantau).
+
+## 2026-10-20 13:45 WIB — refactor+test: aturan rintangan/tujuan jalan diekstrak ke obstacles.js + 3 unit test (vitest 31→34)
+
+- Backlog dipilih: lanjutan serupa 13:23 — tabel OBSTACLES + inObstacle + seatOccupied masih tertanam di chooseTrip() (motion.js), tak teruji; regesi footprint furnitur tak terdeteksi unit test.
+- Implementasi: (1) src/scene/parts/obstacles.js — OBSTACLES (5 footprint: pantry, dispenser, printer, café, lounge), inObstacle(x,z), seatOccupied(x,z,agents,selfAgent) diekstrak murni; motion.js kini meng-import, chooseTrip jauh lebih ramping, perilaku identik (self tetap dikecualikan, offsite tak dianggap menempati); (2) 3 test baru: pusat furnitur terdeteksi (pantry/printer/sofa/café), titik koridor & baris meja bebas, seatOccupied zona ±0.9 / offsite / self.
+- Bukti: vitest **34/34** (4 file), build OK (precache 35, 1530.93 KiB), deploy ~/wfs-hq OK; e2e CDP produksi 9503: DOM True, 14 agents, phase arriving, frames bertambah, 0 exception; probe trip terpaksa (timer 0.01, 6 sampel): 9 walkTarget unik — **0 dalam footprint OBSTACLES** (cek ulang via skrip luar).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" sudut kamera default (fade zona fix 12:30 sudah ada, pantau).
