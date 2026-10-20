@@ -1,4 +1,5 @@
 // Waktu, pencahayaan, mode neon, dan pergantian shift WFS Project.
+import * as shiftSpec from './shift_spec.js';
 
 // ── Kurva waktu: menit → status teks & faktor siang (0 malam … 1 siang) ──
 export const SCHEDULE = [
@@ -99,10 +100,12 @@ export function createNeonMode(ctx) {
 // ── Shift: datang 08:00–08:30, pulang 18:00–18:30, malam hanya agent utama ──
 export function createShift(ctx) {
   const { THREE, agentData, rng } = ctx;
-  const ARRIVE = [0, 2, 4, 1, 5, 3, 6, 7];
-  const DEPART = [7, 6, 3, 5, 1, 4, 2, 0];
-  const DOOR = { x: -12, z: 8 };
+  const { SHIFT, lunchWindowOpen, lunchSpot, lunchPause, shiftStep } = shiftSpec;
+  const ARRIVE = SHIFT.ARRIVE;
+  const DEPART = SHIFT.DEPART;
+  const DOOR = SHIFT.DOOR;
   let phase = 'working';
+  let state = { phase, lunch: false };
   const timers = new Set();
   const later = (ms, fn) => { const id = setTimeout(() => { timers.delete(id); fn(); }, ms); timers.add(id); };
 
@@ -166,9 +169,10 @@ export function createShift(ctx) {
       ad.walker.position.set(ad.home.x, 0, ad.home.z);
       ad.lunch = true;
       ad.state = 'walking_out';
-      ad.walkTarget = { x: -9.5 + rng.r(-1.2, 1.2), z: 9.0 + rng.r(0, 0.35) }; // depan bar stools (bukan di atasnya — stools di z 8.5)
+      const spot = lunchSpot(rng);
+      ad.walkTarget = spot; // depan bar stools (bukan di atasnya — stools di z 8.5)
       ad._route = null;
-      ad.walkPause = rng.r(6, 14); // rencana ngopi lama
+      ad.walkPause = lunchPause(rng); // rencana ngopi lama
     });
   }
   function endLunch() {
@@ -186,19 +190,24 @@ export function createShift(ctx) {
   }
   let inLunch = false;
   function updateLunch(m) {
-    if (m >= 720 && m < 780 && !inLunch) { inLunch = true; sendToLunch(); }
-    else if ((m < 720 || m >= 780) && inLunch) { inLunch = false; endLunch(); }
+    if (lunchWindowOpen(m) && !inLunch) { inLunch = true; sendToLunch(); }
+    else if (!lunchWindowOpen(m) && inLunch) { inLunch = false; endLunch(); }
   }
 
   return {
     update(m) {
-      updateLunch(m);
-      if (m >= 480 && m <= 510 && phase !== 'arriving' && phase !== 'working') { phase = 'arriving'; arrive(); }
-      if (m > 510 && m < 720) phase = 'working';
-      if (m >= 780 && m < 1080) phase = 'working';
-      if (m >= 1080 && m <= 1110 && phase !== 'leaving') { phase = 'leaving'; depart(); }
-      if (m > 1110 || m < 480) { nightfall(); phase = 'night'; }
-      if (m >= 480 && phase === 'night') { phase = 'arriving'; dawn(); }
+      // Mesin fase murni (shiftStep) memutuskan transisi & event; createShift
+      // hanya mengeksekusi efeknya terhadap scene.
+      const r = shiftStep({ phase, lunch: inLunch }, m);
+      phase = r.phase; inLunch = r.lunch;
+      for (const ev of r.events) {
+        if (ev === 'lunch_start') sendToLunch();
+        else if (ev === 'lunch_end') endLunch();
+        else if (ev === 'arrive') arrive();
+        else if (ev === 'depart') depart();
+        else if (ev === 'nightfall') nightfall();
+        else if (ev === 'dawn') dawn();
+      }
     },
     dispose() { timers.forEach(clearTimeout); timers.clear(); },
     get phase() { return phase; },
