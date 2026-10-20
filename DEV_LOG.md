@@ -1102,3 +1102,11 @@
 - Test: src/__tests__/dialog.test.js — 16 test: chatPhrases unik non-empty, roleTalk 12 role ≥2 baris, COLLAB_PAIRS 10 pasangan tak duplikat ≥4 baris, pickCollab hanya partner sitting/case-insensitive substring/self dikecualikan/state≠sitting disaring, clampBubbleText 32-char boundary + ellipsis + konversi non-string, collabDuration = baris×1.8+1.2, updateBubbles: life berkurang, fade-in/fade-out, ikut anchor x/z/y, float up tanpa anchor, remove saat life≤0.
 - Bukti: vitest **103/103** (10 file, dulu 87), build OK (precache 35, 1531.63 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase arriving, 24174 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).
+
+## 2026-10-20 16:10 WIB — refactor+test: spesifikasi jam dinding diekstrak ke clock_spec.js + 7 unit test (vitest 103→110)
+
+- Backlog dipilih: createWallClock (room.js) — sudut jarum & tick hardcoded inline, tak teruji; regresi sudut jam/menit tak terdeteksi unit test.
+- Implementasi: src/scene/parts/clock_spec.js — HANDS (panjang/lebar/warna 3 jarum), TICKS, tickAngle, tickInnerR, hourHandAngle, minuteHandAngle, secondHandAngle diekstrak murni; room.js kini import (draw(nowSeconds, dateMs) — detik pakai dateMs terinjeksi, bukan Date.now() langsung, agar bisa diuji/direproduksi; createWallClock sendiri tak dipanggil OfficeScene — jam ditangani React).
+- Test: src/__tests__/clock_spec.test.js — 7 test: 12 tick & inner radius pendek di 12/3/6/9, tickAngle 30° per tick, hourHandAngle (12:00=0, 06:00=π, 15:00=π/2), minuteHandAngle wrap 60 menit, secondHandAngle modul 60, monotoni jam, hierarki panjang jarum detik>menit>jam. 2 asersi awal salah tulis (3π/4 vs π/2) dikoreksi di test, bukan kode.
+- Bukti: vitest **110/110** (11 file, dulu 103), build OK, deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase working, 28067 frames, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).

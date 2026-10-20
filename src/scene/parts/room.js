@@ -54,13 +54,14 @@ export function createWallClock(ctx, x, y, z, faceRotY = Math.PI) {
   const face = new THREE.Mesh(new THREE.CircleGeometry(0.27, 28), new THREE.MeshBasicMaterial({ map: tex }));
   face.position.set(x, y, z); face.rotation.y = faceRotY; office.add(face);
 
-  function draw(minutes) {
+  const draw = (nowSeconds, dateMs = Date.now()) => {
+    const minutes = nowSeconds / 60;
     const cx = 48, cy = 48;
     c.fillStyle = '#fafafa'; c.fillRect(0, 0, 96, 96);
     c.strokeStyle = '#2a2f36'; c.lineWidth = 3; c.beginPath(); c.arc(cx, cy, 45, 0, Math.PI * 2); c.stroke();
-    for (let i = 0; i < 12; i++) {
-      const a = (i * Math.PI) / 6;
-      const r1 = i % 3 === 0 ? 35 : 39;
+    for (let i = 0; i < TICKS; i++) {
+      const a = tickAngle(i);
+      const r1 = tickInnerR(i);
       c.beginPath(); c.moveTo(cx + Math.sin(a) * r1, cy - Math.cos(a) * r1);
       c.lineTo(cx + Math.sin(a) * 43, cy - Math.cos(a) * 43); c.stroke();
     }
@@ -68,12 +69,12 @@ export function createWallClock(ctx, x, y, z, faceRotY = Math.PI) {
       c.strokeStyle = col; c.lineWidth = w; c.beginPath(); c.moveTo(cx, cy);
       c.lineTo(cx + Math.sin(angle) * len, cy - Math.cos(angle) * len); c.stroke();
     };
-    hand(((minutes / 60) % 12) * (Math.PI / 6), 22, 4, '#222');
-    hand((minutes % 60) * (Math.PI / 30), 32, 2.6, '#444');
-    hand(((Date.now() / 1000) % 60) * (Math.PI / 30), 36, 1.2, '#f97316');
+    hand(hourHandAngle(minutes), HANDS.hour.len, HANDS.hour.w, HANDS.hour.color);
+    hand(minuteHandAngle(minutes), HANDS.minute.len, HANDS.minute.w, HANDS.minute.color);
+    hand(secondHandAngle(((dateMs / 1000) % 60)), HANDS.second.len, HANDS.second.w, HANDS.second.color);
     c.fillStyle = '#f97316'; c.beginPath(); c.arc(cx, cy, 3, 0, Math.PI * 2); c.fill();
     tex.needsUpdate = true;
-  }
+  };
   return { draw, tex };
 }
 
