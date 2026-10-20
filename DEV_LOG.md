@@ -1011,3 +1011,11 @@
 - Implementasi: (1) motion.js — BOUNDS {x ±12.4, z ±9.4} di-clamp hard di stepToward (semua state jalan lewat titik ini); (2) daycycle.js depart() — walkTarget titik DALAM kantor dekat celah pintu (-12, 8) + _route=null → stepRoute fallback menghitung rute koridor (fix kemarin bekerja untuk depart juga), bukan garis lurus.
 - Bukti: build OK (2.1s, precache 35, 1530.3 KiB), vitest 24/24, deploy ~/wfs-hq OK; e2e (DISPLAY :78): DOM True, 17 btns, canvas 1366x625, frames 19, label 14, consoleErrors [].
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia); overlap label MEETING↔tooltip kamera sangat dekat (kosmetik); kontak tepi Sari↔CAFÉ (kosmetik).
+
+## 2026-10-20 11:35 WIB — fix: tujuan jalan-jalan acak kini bebas — tidak lagi mendarat di atas meja rekan / zona kafe
+
+- Masalah (audit backlog): chooseTrip() non-collab memilih walkDestinations acak + jitter ±0.5 — tak ada cek okupansi, walkTarget bisa jatuh di zona meja+kursi agent lain (±0.9) atau area counter CAFÉ/bar stools; walker berhenti "di atas meja" rekan.
+- Implementasi (motion.js): (1) helper seatOccupied(target, self) — target <0.9 dari home agent lain yang tidak offsite dianggap terisi; (2) freeSpot() menolak juga zona kafe (z>8 & x<-7.0 stools; z 6.4–8 & x<-7.6 counter); (3) chooseTrip mencoba maks 8 kandidat acak, fallback = koridor depan (FRONT[band]) di x meja sendiri.
+- Bukti probe CDP produksi 9503 (jam diset 10:00, sampling 30×2 dtk semua walker non-lunch): **0 pelanggaran** (dulu walkTarget bisa di meja rekan); scene sehat (14 agents, phase working, sceneFail False). Screenshot /tmp/tripfix.jpg (89 KB) + audit vision: tidak ada agent di atas meja; render normal; sisa kosmetik agent dekat counter CAFÉ.
+- Build OK (precache 35), vitest 24/24, deploy ~/wfs-hq OK.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia); overlap label MEETING↔tooltip kamera sangat dekat (kosmetik); kontak tepi Sari↔CAFÉ (kosmetik).
