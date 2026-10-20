@@ -3,6 +3,8 @@
 // diperbarui otomatis setiap 60 detik. Jika fetch gagal → fallback ke data terakhir.
 // Modul murni-canvas; dipasang di OfficeScene dengan satu pemanggilan.
 
+import { computePct, subtitle as subLine, bannerParts, bannerNames, columnItems, stripSegments } from './projectboard_data.js'
+
 export function createProjectBoard(office, THREE) {
   // --- kanvas papan ---
   const W = 1536, H = 840
@@ -66,7 +68,7 @@ export function createProjectBoard(office, THREE) {
   function draw() {
     if (!snap) return
     const T = snap.tasks || {}
-    const pct = T.total ? Math.round((T.done / T.total) * 100) : 0
+    const pct = computePct(T)
 
     // latar
     g.fillStyle = '#10192b'; g.fillRect(0, 0, W, H)
@@ -77,9 +79,7 @@ export function createProjectBoard(office, THREE) {
     g.font = 'bold 52px sans-serif'; g.textAlign = 'left'
     g.fillText('PROYEK: dibantuin.com', 36, 66)
     g.fillStyle = '#8fa3bd'; g.font = '30px sans-serif'
-    let sub = 'Data live · task engine + SaaS · ' + new Date(lastOk).toLocaleTimeString('id-ID')
-    if (T.review) sub += ' · review ' + T.review
-    if (T.failed) sub += ' · gagal ' + T.failed
+    let sub = subLine(T, new Date(lastOk).toLocaleTimeString('id-ID'))
     g.fillText(sub, 36, 112)
 
     // progress bar
@@ -92,14 +92,9 @@ export function createProjectBoard(office, THREE) {
 
     // banner review/gagal: task yang butuh perhatian tidak boleh tak terlihat
     if (T.failed || T.review) {
-      const has = (st) => (T.recent || []).some(r => r.status === st)
-      const parts = []
-      if (T.failed) parts.push(['GAGAL ' + T.failed, '#ef4444'])
-      if (T.review) parts.push(['REVIEW ' + T.review, '#448AFF'])
-      if (has('failed') || has('review')) {
-        const items = (T.recent || []).filter(r => r.status === 'failed' || r.status === 'review').slice(0, 3)
-        const names = items.map(r => '#' + r.id + ' ' + (r.title || '').slice(0, 24)).join('  ·  ')
-        const full = parts.map(p => p[0]).join(' · ') + ' — ' + names
+      const parts = bannerParts(T)
+      const full = bannerNames(T)
+      if (full) {
         g.font = 'bold 24px sans-serif'
         const bw = g.measureText(full).width + 44
         g.fillStyle = 'rgba(239,68,68,.12)'; roundRect((W - bw) / 2, 166, bw, 34, 8); g.fill()
@@ -131,7 +126,7 @@ export function createProjectBoard(office, THREE) {
       g.fillText(t + ' (' + n + ')', x + 235, 226)
 
       // kartu task nyata per status (dari recent)
-      const items = (T.recent || []).filter(r => r.status === (i === 0 ? 'pending' : i === 1 ? 'running' : 'done')).slice(0, 6)
+      const items = columnItems(T, i)
       items.forEach((r, ri) => {
         const y = 252 + ri * 92
         // kartu: latar gelap solid + border warna status + teks putih terang (kontras tinggi)
