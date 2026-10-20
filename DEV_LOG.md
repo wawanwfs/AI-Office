@@ -1026,3 +1026,10 @@
 - Bukti probe CDP produksi 9503 (jam diset 10:00, sampling 30×2 dtk semua walker non-lunch): **0 pelanggaran** (dulu walkTarget bisa di meja rekan); scene sehat (14 agents, phase working, sceneFail False). Screenshot /tmp/tripfix.jpg (89 KB) + audit vision: tidak ada agent di atas meja; render normal; sisa kosmetik agent dekat counter CAFÉ.
 - Build OK (precache 35), vitest 24/24, deploy ~/wfs-hq OK.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia); overlap label MEETING↔tooltip kamera sangat dekat (kosmetik); kontak tepi Sari↔CAFÉ (kosmetik).
+
+## 2026-10-20 12:30 WIB — fix: label zona fade-out saat kamera sangat dekat (MEETING tidak lagi menutupi label/tooltip agent)
+
+- Masalah (backlog kosmetik lama): sprite zona sizeAttenuation=false tapi ukuran piksel dihitung ∝ 1/jarak kamera — saat zoom dekat (radius 4–8) MEETING membengkak 449–724 px & WELCOME & LOUNGE 581–899 px, menutupi name tag/tooltip agent di area itu; anti-overlap geser label agent tapi tak bisa mengalahkan sprite raksasa.
+- Implementasi (OfficeScene.js, loop anti-tumpuk): fade progresif zona saat lebar layar >340 px — opacity = 1-(pw-340)/260, visible=false di <0.03; penuh kembali saat zoom keluar. Non-destructive: hanya piksel ukuran, tanpa menyentuh posisi/animasi.
+- Bukti probe CDP produksi 9503 (SwiftShader): radius 8 → MEETING op .58/.71, LOUNGE .13; radius 4 → MEETING 0 (hilang, DEV DESK .99); radius 55 (jauh) → semua kembali op 1 vis true (pemulihan terverifikasi bolak-balik). Scene sehat: 14 agents, 17 btns, frames bertambah 5→10, 0 error; build OK (precache 35, 1530.86 KiB), vitest 24/24, deploy ~/wfs-hq OK.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia); kontak tepi Sari↔CAFÉ (kosmetik).

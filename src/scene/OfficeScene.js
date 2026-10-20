@@ -1988,6 +1988,11 @@ function animate(){
       // base dari posisi ASLI (bukan position.y yang sudah digeser frame lalu) -> tidak terakumulasi
       // base zona = posisi ASLI (antiY/antiX diakumulasi di userData, bukan di posisi)
       const zb=(window.__zoneBase&&window.__zoneBase.get(zt))||{y:zt.position.y,x:zt.position.x};
+      // fade zona saat terlalu besar di layar (kamera sangat dekat): sprite zona membengkak
+      // (ukuran piksel ∝ 1/jarak) dan menutupi label/tooltip agent di area itu — redupkan.
+      const __pw=zt.scale.x*__kz/dz;
+      if(__pw>340){const f=Math.max(0,1-(__pw-340)/260);zt.material.opacity=f;zt.visible=f>0.03;}
+      else{zt.material.opacity=1;zt.visible=true;}
       const zay=(zt.userData.antiY||0), zax=(zt.userData.antiX||0);
       let hsh=0;for(const ch of zt.userData.label||'')hsh=(hsh*31+ch.charCodeAt(0))|0;
       const jy=(hsh%7)-3, jx=((hsh>>3)%9)-4;
