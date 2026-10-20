@@ -9,6 +9,7 @@ import { drawScreenFrame, createDriftingPages, addDeskTrinkets } from './parts/e
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
 import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent } from './parts/ring_spec.js';
+import { WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { keyclickFreq, stepEnvelope, chimeStart, CHIME_FREQS, KEYCLICK_BASE_FREQ, KEYCLICK_JITTER, KEYCLICK_GAIN, KEYCLICK_END_GAIN, KEYCLICK_SEC, STEP_GAIN, STEP_DECAY, STEP_SEC, CHIME_DELAY_SEC, CHIME_GAIN, CHIME_END_GAIN, CHIME_TONE_SEC, MUTED_KEY, masterGainValue } from './parts/sound_spec.js';
 import { createProjectBoard } from './parts/projectboard.js';
 import { chatPhrases, roleTalk, COLLAB_PAIRS, pickCollab, clampBubbleText, collabDuration, LINE_SEC } from './parts/dialog.js';
@@ -1769,16 +1770,8 @@ function playMeetingChime(){
 // Track keyboard sounds — kini benar-benar dipakai: tick keyboard & langkah saat agent jalan
 let keyTimer=0, stepTimer=0;
 // Tujuan jalan-jalan agent: pantry, dispenser, printer, lounge, ruang meeting, resepsionis
-const walkDestinations=[
-  {x:-9.4,z:3.6},   // pantry
-  {x:-9.5,z:0.9},   // dispenser air
-  {x:2.2,z:-7.0},   // printer
-  {x:9.4,z:4.8},    // lounge
-  {x:6.0,z:-0.6},   // pintu ruang meeting
-  {x:6.8,z:4.9},    // depan resepsionis
-  {x:-0.5,z:4.2},   // jalur tengah
-  {x:-3.2,z:-6.2},  // dekat tanaman belakang
-];
+// — diekstrak ke walk_destinations.js (murni + unit test; lounge dikoreksi keluar footprint sofa).
+const walkDestinations = WALK_DESTINATIONS;
 const updateWalkers=createMotion({rng,agentData,walkDestinations,pickCollab:pickCollabLocal,createBubble});
 let lastMeetingState=false;
 const clock=new THREE.Clock();

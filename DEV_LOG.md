@@ -1231,3 +1231,12 @@
 - Test: src/__tests__/character_spec.test.js — 25 test: isLongHair (5 nama historis, case-insensitive, false utk WAHYU FS/BANTUIN AI/Toni, null/undefined/angka aman, regex flag i), STANDING 6 test (kaki/hips/torso/leher/kepala, wajah, rambut+lengan, badge/lanyard, anchor, urutan vertikal wajar), SITTING 7 test (kaki menghadap meja z negatif bertingkat, torso/kepala, wajah z negatif, rambut belakang +Z, badge/lanyard, anchor fz=-1, duduk < berdiri), helper 4 test.
 - Bukti: vitest **325/325** (26 file, dulu 303), build OK (precache 35, 1534.68 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 7386, tanpa 'Scene init failed' & tanpa exception.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).
+
+## 2026-10-22 05:40 WIB — refactor+test: tujuan jalan-jalan diekstrak ke walk_destinations.js + 13 unit test (vitest 325→338) + fix 1 bug posisi lounge
+
+- Backlog dipilih: array `walkDestinations` (8 tujuan jalan agent: pantry/dispenser/printer/lounge/meeting/resepsionis/jalur tengah/tanaman) masih inline di OfficeScene.js — 0 unit test; agen bisa ditugaskan spot di dalam rintangan tanpa terdeteksi.
+- BUG DITEMUKAN & DIPERBAIKI: tujuan "lounge" (9.4, 4.8) ternyata DI DALAM footprint rintangan lounge OBSTACLES [8.0,12.4,4.3,9.4] — setiap kali agen memilih lounge, `freeSpot` menolak semua 8 percobaan dan fallback ke koridor; lounge efektif tak pernah jadi tujuan. Dikoreksi ke (9.0, 3.9) tepi bebas (verifikasi `inObstacle` = false).
+- Implementasi: src/scene/parts/walk_destinations.js — WALK_DESTINATIONS (8 entri) + isSafeDestination(d, inObstacleFn, bounds) murni; OfficeScene.js kini `const walkDestinations = WALK_DESTINATIONS` (−9 baris).
+- Test: src/__tests__/walk_destinations.test.js — 13 test: 8 entri, posisi historis, koordinat finite, dalam batas ruangan, TIDAK di dalam rintangan statis, jarak min 1.2 dari 14 meja, lulus isSafeDestination, tujuan unik; isSafeDestination 5 test (tolak dalam rintangan/out-of-bounds/NaN/Infinity, terima titik bebas, bounds & fungsi injeksi).
+- Bukti: vitest **338/338** (27 file, dulu 325), build OK (precache 35, 1534.68 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase night, frame 10849, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
