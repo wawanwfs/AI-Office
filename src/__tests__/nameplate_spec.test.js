@@ -39,8 +39,9 @@ describe('nameplate_spec — konstanta', () => {
 });
 
 describe('titleCase', () => {
-  it('lowercase diawali kapital', () => { expect(titleCase('bantuin ai')).toBe('Bantuin Ai'); });
+  it('lowercase diawali kapital, akronim AI diuppecase-kan', () => { expect(titleCase('bantuin ai')).toBe('Bantuin AI'); });
   it('huruf besar semua dinormalisasi ke Title Case', () => { expect(titleCase('WAHYU FS')).toBe('Wahyu Fs'); });
+  it('akronim lain juga diuppecase-kan (hr/qa/ui/ux)', () => { expect(titleCase('ui ux designer')).toBe('UI UX Designer'); });
   it('non-string dipaksa string', () => { expect(titleCase(42)).toBe('42'); });
   it('kosong tetap kosong', () => { expect(titleCase('')).toBe(''); });
 });

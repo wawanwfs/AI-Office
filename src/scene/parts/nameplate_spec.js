@@ -20,9 +20,14 @@ export const PLATE = {
   standY: 0.66, standZ: 0.44,
 };
 
-// "bantuin ai" -> "Bantuin Ai" (word-initial capitalization, sisanya lowercase)
+// "bantuin ai" -> "Bantuin AI" (word-initial capitalization; kata khas akronim
+// dalam daftar ACRONYMS di-uppecase-kan semua: "ai"→"AI", "hr"→"HR", "qa"→"QA").
+export const ACRONYMS = new Set(['ai', 'hr', 'qa', 'ui', 'ux', 'ml', 'api', 'sql']);
 export function titleCase(s) {
-  return String(s).toLowerCase().replace(/(^|\s)\w/g, (m) => m.toUpperCase());
+  return String(s).toLowerCase().replace(/(^|\s)(\w+)|(\w+)$/g, (m, sp, w) => {
+    if (w === undefined) return m;
+    return sp + (ACRONYMS.has(w) ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1));
+  });
 }
 
 // Ellipsis dari kanan sampai muat dalam max piksel dengan font yang ditentukan

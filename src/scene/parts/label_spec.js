@@ -2,6 +2,7 @@
 // Diekstrak dari OfficeScene.js (makeLabel/sizeLabels) agar regresi tampilan label
 // (ukuran kanvas, auto-shrink font, ellipsis, title-case nama) terdeteksi unit test.
 // Tidak ada THREE / DOM di sini — ctx 2D di-inject oleh pemanggil.
+import { ACRONYMS } from './nameplate_spec.js';
 
 export const LABEL_Y = 2.45; // tepat di atas kepala (tinggi duduk ≈1.95)
 
@@ -9,9 +10,11 @@ export const LABEL_Y = 2.45; // tepat di atas kepala (tinggi duduk ≈1.95)
 export const LABEL_FULL = { W: 360, H: 84, RADIUS: 18, NAME_FONT: '800 36px "Segoe UI",Arial,sans-serif', NAME_Y: 32, ROLE_FONT: '600 22px "Segoe UI",Arial,sans-serif', ROLE_Y: 62, NAME_MAX: 300, ROLE_MAX: 300 };
 export const LABEL_SHORT = { W: 210, H: 50, RADIUS: 14, NAME_FONT: '800 28px "Segoe UI",Arial,sans-serif', NAME_Y: 26, NAME_MAX: 160 };
 
-// "wahyu fs" → "Wahyu Fs"; aman utk null/undefined
+// "wahyu fs" → "Wahyu Fs"; "bantuin ai" → "Bantuin AI" (akronim diuppecase-kan);
+// aman utk null/undefined. Memakai ACRONYMS dari nameplate_spec.
 export function labelName(name) {
-  return String(name ?? '').toLowerCase().replace(/(^|\s)\w/g, m => m.toUpperCase());
+  return String(name ?? '').toLowerCase().replace(/(^|\s)(\w+)/g, (m, sp, w) =>
+    sp + (ACRONYMS.has(w) ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1)));
 }
 
 // Auto-shrink font (min ~60% dari base) sebelum memotong dengan ellipsis.

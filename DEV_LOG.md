@@ -1421,3 +1421,13 @@
 - Iterasi asersi (3×): filter mata hanya via x>0.01 ternyata menangkap halo senyum/uang (4 bukan 2) → tambah filter y = hy+0.025; pose duduk mata z=−0.121 menangkap 5 mesh glow (bar dada di z=−0.09 beda tipis) → filter sama y; kandidat posisi mata perlu ≥1 karena halo memenuhi x/y.
 - Bukti: vitest **567/567** (42 file, dulu 553 — +14), build OK (precache 35, 1536.96 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 1537294, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
+
+## 2026-10-24 05:45 WIB — fix nameplate: akronim "Ai" → "AI" (BANTUIN AI, TRAINER AI)
+
+- Backlog dipilih: minor nameplate — sprite label mengambang (labelName) & nameplate meja (titleCase) merender "Bantuin Ai"/"Trainer Ai"; akronim AI ikut ter-title-case.
+- Perbaikan: label_spec.js labelName() & nameplate_spec.js titleCase() kini uppcase-kan kata dalam whitelist ACRONYMS = {ai, hr, qa, ui, ux, ml, api, sql} ('bantuin ai'→'Bantuin AI', 'ui ux designer'→'UI UX Designer'; 'Wahyu Fs' dll tetap).
+- label_spec.js kini import ACRONYMS dari nameplate_spec (satu sumber).
+- Iterasi asersi (2×): regex pertama uppcase SEMUA kata ≥2 huruf ('bantuin'→'BANTUIN') → diganti whitelist.
+- Bukti: vitest **568/568** (42 file, dulu 567 — +1 test titleCase akronim), build OK (precache 35, 1537.14 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 1615327, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+

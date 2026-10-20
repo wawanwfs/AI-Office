@@ -31,9 +31,10 @@ describe('label_spec', () => {
     expect(LABEL_SHORT.NAME_Y).toBe(26);
   });
 
-  it('labelName: title-case tiap kata', () => {
+  it('labelName: title-case tiap kata, akronim AI diuppecase-kan', () => {
     expect(labelName('wahyu fs')).toBe('Wahyu Fs');
-    expect(labelName('BANTUIN AI')).toBe('Bantuin Ai');
+    expect(labelName('BANTUIN AI')).toBe('Bantuin AI');
+    expect(labelName('trainer ai')).toBe('Trainer AI');
     expect(labelName('dewi')).toBe('Dewi');
     expect(labelName('a')).toBe('A');
     expect(labelName('  multi  space ')).toBe('  Multi  Space ');
