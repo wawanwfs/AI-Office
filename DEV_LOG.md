@@ -1445,3 +1445,18 @@
 - Iterasi asersi (5×): teks agent tanpa spasi ('sbx-be1●'); fetch dieksplicitkan sebagai parameter new Function (shadow global); await tvPull() dalam runTvCode → call count dobel; ekstraksi blok harus dari 'const tvC=' (bukan komentar) agar tvx terdefinisi.
 - Bukti: vitest **575/575** (43 file, dulu 568 — +7), build OK (precache 35, 1537.14 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 1722346, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-24 07:00 WIB — refactor: sound engine diekstrak dari OfficeScene.js + 10 unit test runtime Web Audio (vitest 575→585)
+
+- Backlog dipilih: blok SOUND SYSTEM OfficeScene.js (playKeyClick/playStep/playMeetingChime/initAudio/mute/dispose, ±70 baris Web Audio) — 0 unit test; regresi "suara senyap" (gain/ramp/envelope/mute salah) tak terdeteksi.
+- Refactor: src/scene/parts/sound_engine.js — createSoundEngine({ctxFactory, setTimeoutFn}) mengembalikan ensure/playKeyClick/playStep/playMeetingChime/setMuted/dispose/dbg + rawCtx/state/suspend/resume. OfficeScene.js memakai engine ini: __sound.playKeyClick()/playStep()/playMeetingChime(), setAudioMuted→__sound.setMuted, onVis suspend/resume via state(), destroy→__sound.dispose() (close ctx, clear chime pending). window.__audio tetap di-update via __sound.dbg (hook debug dipertahankan). Param Web Audio (freq/gain/ramp/envelope/chime) tetap dari sound_spec.js — perilaku identik.
+- Test: src/__tests__/sound_engine.test.js — 10 test, AudioContext stub tercatat (osc/gain/buffer + ramp):
+  - lazy (belum started, state none); ensure: resume bila suspended, masterGain 1.
+  - keyclick: square 800+rng*400, gain 0.01→ramp 0.001 @+0.05s, chain osc→gain→masterGain→destination, stop tepat KEYCLICK_SEC.
+  - step: buffer 48000*0.04 sampel, envelope spec (stepEnvelope(0,n)=1), gain 0.02.
+  - chime: 3 timeout delay i*0.15s, tiap nada sine C5/E5/G5 gain 0.04→0.001 @+0.5s.
+  - mute: masterGain 0 ↔ 1, dbg.muted ikut; play pertama memicu ensure otomatis; dispose: clear 3 pending chime + close ctx + reset none; suspend/resume/state passthrough (visibilitychange) + no-op aman tanpa ctx.
+- Iterasi asersi (3×): stub gain lupa exponentialRampToValueAtTime; stub buffer lupa getChannelData; chain osc→gain→masterGain (asersi destination dua hop, bukan langsung).
+- Catatan verifikasi visual: screenshot pertama gagal WebGL (chrome 1248 swiftshader BindToCurrentSequence) — bukan regresi kode; reload di chrome dbg 9222 sukses: frame jalan, 14 agents, tanpa 'Scene 3D tidak aktif', render sehat (lantai/meja/karakter/zona normal via inspeksi visual).
+- Bukti: vitest **585/585** (44 file, dulu 575 — +10), build OK (precache 35, 1538.00 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 1801681→reload sehat, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
