@@ -1150,7 +1150,7 @@
 - Bukti: vitest **172/172** (16 file, dulu 162), build OK (precache 35, 1532.12 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase arriving, 44194 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (pantau).
 
-## 2026-10-21 18:05 WIB — refactor+test: timing percakapan kolaborasi diekstrak ke converse_timing.js + 9 unit test (vitest 172→179)
+## 2026-10-20 18:05 WIB — refactor+test: timing percakapan kolaborasi diekstrak ke converse_timing.js + 9 unit test (vitest 172→179)
 
 - Backlog dipilih: logika timing converse() di motion.js (step = floor(walkPause/LINE_SEC), pembicara bergantian genap=visitor, selesai = baris×1.8+1.2) masih inline — 0 unit test; regresi dialog bergantian/durasi ngobrol tak terdeteksi. Sekalian: hapus duplikasi definisi fungsi stepToward di motion.js (didefinisikan 2x, yang kedua menimpa pertama — dead code).
 - Implementasi: src/scene/parts/converse_timing.js — talkStep (clamp ≥0), isConverseOver (CONVERSE_TAIL=1.2, strict >), speakerIsVisitor; motion.js kini import (−8 baris bersih), perilaku identik.
