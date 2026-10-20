@@ -1110,3 +1110,11 @@
 - Test: src/__tests__/clock_spec.test.js — 7 test: 12 tick & inner radius pendek di 12/3/6/9, tickAngle 30° per tick, hourHandAngle (12:00=0, 06:00=π, 15:00=π/2), minuteHandAngle wrap 60 menit, secondHandAngle modul 60, monotoni jam, hierarki panjang jarum detik>menit>jam. 2 asersi awal salah tulis (3π/4 vs π/2) dikoreksi di test, bukan kode.
 - Bukti: vitest **110/110** (11 file, dulu 103), build OK, deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase working, 28067 frames, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).
+
+## 2026-10-20 16:26 WIB — refactor+test: matematika gerak walker diekstrak ke motion_math.js + 12 unit test (vitest 110→121)
+
+- Backlog dipilih: stepToward/dist2/BOUNDS di motion.js — jantung gerak 14 agent — masih inline; regresi hard clamp (agent menembus dinding kiri, bug historis) tak terdeteksi unit test.
+- Implementasi: src/scene/parts/motion_math.js — BOUNDS, ARRIVE, dist2, stepMove(pos,target,speed,delta) murni (tanpa THREE/performance.now); stepToward di motion.js kini delegasi ke stepMove (posisi, rotasi atan2(dx,dz), arrived, flag clamped — perilaku identik termasuk stride tak dipanggil saat tiba).
+- Test: src/__tests__/motion_math.test.js — 12 test: BOUNDS di dalam lantai ±13/±10, ARRIVE 0<r<1, dist2 3-4-5 & nol, arrived tanpa gerak + rot dipertahankan, langkah = speed×delta, diagonal ternormalisasi, hard clamp X dua sisi & Z dua sisi + flag clamped, bebas di dalam batas, fuzz 200 langkah acak tak pernah keluar BOUNDS.
+- Bukti: vitest **121/121** (12 file, dulu 110), build OK (precache 35, 1531.98 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase arriving, 31085 frames, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" (fade zona sudah ada, pantau).

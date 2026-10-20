@@ -1,12 +1,23 @@
 // Gerak karakter WFS Project: state machine berbasis tabel handler.
 // State: sitting → walking_out → (talking di tujuan) → walking_back → sitting. Ada juga leaving/offsite.
+import { BOUNDS as B, dist2 as dist2Pure, stepMove } from './motion_math.js';
 import { routePath as routePathPure, FRONT, bandOf } from './routing.js';
 import { OBSTACLES, inObstacle, seatOccupied } from './obstacles.js';
 export function createMotion(ctx) {
   const { rng, agentData, walkDestinations, pickCollab, createBubble } = ctx;
-  const WALK = 1.6, EXIT = 2.0, ARRIVE = 0.2, LINE_SEC = 1.8;
-
-  const dist2 = (a, b) => { const dx = b.x - a.x, dz = b.z - a.z; return { dx, dz, d: Math.hypot(dx, dz) }; };
+  const WALK = 1.6, EXIT = 2.0, LINE_SEC = 1.8;
+  const dist2 = (a, b) => dist2Pure(a, b);
+  // Lantai: BoxGeometry(26, z 20) → ±13 / ±10. Dinding kiri x=-13, belakang z=-10.
+  // Pintu masuk kantor (spawn shift) di x=-12, z=8 → walker spawn 0.6 unit di dalam.
+  const BOUNDS = B;
+  function stepToward(ad, target, speed, delta) {
+    const s = stepMove(ad.walker.position, target, speed, delta);
+    ad.walker.position.x = s.x;
+    ad.walker.position.z = s.z;
+    ad.walker.rotation.y = s.rot;
+    if (!s.arrived) stride(ad);
+    return s.arrived;
+  }
 
   function stride(ad) {
     const t = performance.now() * 0.01;
@@ -27,26 +38,13 @@ export function createMotion(ctx) {
     ad.walker.position.y = 0;
   }
   function follow(ad) { ad.label.position.set(ad.walker.position.x, 2.45, ad.walker.position.z); }
-  // ── Batas dunia ──
-  // Lantai: BoxGeometry(26, z 20) → ±13 / ±10. Dinding kiri x=-13, belakang z=-10.
-  // Pintu masuk kantor (spawm shift) di x=-12, z=8 → walker spawn 0.6 unit di dalam.
-  const BOUNDS = { xMin: -12.4, xMax: 12.4, zMin: -9.4, zMax: 9.4 };
   function stepToward(ad, target, speed, delta) {
-    const { dx, dz, d } = dist2(ad.walker.position, target);
-    if (d < ARRIVE) return true;
-    const nx = dx / d, nz = dz / d;
-    ad.walker.position.x += nx * speed * delta;
-    ad.walker.position.z += nz * speed * delta;
-    // hard clamp: tanpa ini agent bisa keluar lantai/dinding (spawn DOOR.x=-12
-    // di luar BOUNDS dulu, atau walkTarget acak dekat tepi) — dilihat dari
-    // luar kantor tampak menembus dinding kiri.
-    if (ad.walker.position.x < BOUNDS.xMin) ad.walker.position.x = BOUNDS.xMin;
-    if (ad.walker.position.x > BOUNDS.xMax) ad.walker.position.x = BOUNDS.xMax;
-    if (ad.walker.position.z < BOUNDS.zMin) ad.walker.position.z = BOUNDS.zMin;
-    if (ad.walker.position.z > BOUNDS.zMax) ad.walker.position.z = BOUNDS.zMax;
-    ad.walker.rotation.y = Math.atan2(nx, nz);
-    stride(ad);
-    return false;
+    const s = stepMove(ad.walker.position, target, speed, delta);
+    ad.walker.position.x = s.x;
+    ad.walker.position.z = s.z;
+    ad.walker.rotation.y = s.rot;
+    if (!s.arrived) stride(ad);
+    return s.arrived;
   }
 
   // Jalan lewat rute (waypoint koridor) — return true saat sampai tujuan akhir
