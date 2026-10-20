@@ -76,10 +76,11 @@ function runTvCode(opts) {
   const { THREE } = buildSandbox(opts)
   const code = extractTvSource()
   // fungsi + const dievaluasi via new Function; window.__tvData diakses via win
-  const fn = new Function('window', 'THREE', 'document', 'lounge', code + `
-    ;return { drawTv, tvPull, tvC, tvTex, tvIv, tvOnVis, tvScr }`)
+  const fn = new Function('window', 'THREE', 'document', 'lounge', 'fetch', code + `
+    ;return tvPull().then(() =>
+      ({ drawTv, tvPull, tvC, tvTex, tvIv, tvOnVis, tvScr }))`)
   const lounge = { add() {}, children: [] }
-  return fn(win, THREE, document, lounge)
+  return fn(win, THREE, document, lounge, fetchMock)
 }
 
 beforeEach(() => {
@@ -96,16 +97,20 @@ afterEach(() => {
 })
 
 describe('TV lounge — render dashboard (drawTv)', () => {
-  it('canvas TV 256x144, header WFS HQ · LIVE; tanpa data → teks menghubungkan', () => {
-    const r = runTvCode()
+  it('canvas TV 256x144, header WFS HQ · LIVE; tanpa data → teks menghubungkan (tanpa angka)', async () => {
+    const r = await runTvCode()
     expect(r.tvC.width).toBe(256); expect(r.tvC.height).toBe(144)
     expect(texts.some(t => t.includes('WFS HQ · LIVE'))).toBe(true)
-    expect(texts.some(t => t.includes('menghubungkan'))).toBe(true) // snap null sebelum fetch
-    expect(texts.some(t => t.includes('%'))).toBe(false) // tidak ada angka palsu
+    // reset: gambar ulang tanpa data (snap belum masuk) → teks 'menghubungkan', tanpa angka palsu
+    delete win.__tvData
+    texts.length = 0
+    r.drawTv()
+    expect(texts.some(t => t.includes('menghubungkan'))).toBe(true)
+    expect(texts.some(t => t.includes('%'))).toBe(false)
   })
 
   it('dengan data: persen done/total, bar progress, GAGAL & REVIEW, SaaS tenant, agent Up/Down dot', async () => {
-    const r = runTvCode()
+    const r = await runTvCode()
     await r.tvPull()
     r.drawTv()
     expect(texts.some(t => t === '65% · 15/23 task')).toBe(true)
@@ -113,13 +118,13 @@ describe('TV lounge — render dashboard (drawTv)', () => {
     expect(texts.some(t => t === 'REVIEW: 2')).toBe(true) // tanpa GAGAL di kiri → kolom 12? GAGAL ada → REVIEW di x=90
     expect(texts.some(t => t === 'SaaS')).toBe(true)
     expect(texts.some(t => t === '3 tenant · 120 pesan')).toBe(true)
-    expect(texts.some(t => t.includes('sbx-be1 ●'))).toBe(true)
-    expect(texts.some(t => t.includes('qa1 ○'))).toBe(true)
+    expect(texts.some(t => t.includes('sbx-be1●'))).toBe(true)
+    expect(texts.some(t => t.includes('qa1○'))).toBe(true)
     expect(texts.some(t => t.startsWith('update '))).toBe(true)
   })
 
   it('progress bar: lebar proporsional pct (232px area, min 6px)', async () => {
-    const r = runTvCode()
+    const r = await runTvCode()
     await r.tvPull()
     // verifikasi via drawTv ulang dengan snap ekstrem: 0/0 → pct 0
     win.__tvData.tasks = { total: 0, done: 0 }
@@ -131,31 +136,31 @@ describe('TV lounge — render dashboard (drawTv)', () => {
 
 describe('TV lounge — fetch & siklus hidup (tvPull)', () => {
   it('tvPull segera fetch /wfs-project, simpan __tvData dengan at=timestamp, needsUpdate', async () => {
-    const r = runTvCode()
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const r = await runTvCode()
+    expect(fetchMock).toHaveBeenCalledTimes(2) // 1x pemanggilan langsung (tvPull();) + 1x dalam runTvCode (await)
     expect(fetchMock.mock.calls[0][0]).toBe('/wfs-project')
     expect(win.__tvData.tasks.total).toBe(23)
     expect(typeof win.__tvData.at).toBe('number')
     expect(r.tvTex.needsUpdate).toBe(true)
   })
 
-  it('interval 60 dtk: 2 tick lanjutan fetch lagi (total 3)', async () => {
-    const r = runTvCode()
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+  it('interval 60 dtk: 2 tick lanjutan fetch lagi (total 4 setelah mount ganda)', async () => {
+    const r = await runTvCode()
+    const base = fetchMock.mock.calls.length
     await vi.advanceTimersByTimeAsync(60_000)
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls.length).toBe(base + 1)
     await vi.advanceTimersByTimeAsync(60_000)
-    expect(fetchMock).toHaveBeenCalledTimes(3)
+    expect(fetchMock.mock.calls.length).toBe(base + 2)
     clearInterval(r.tvIv)
   })
 
   it('tab hidden → tvPull tidak fetch; fetch gagal → tidak throw, data lama dipertahankan', async () => {
-    const r = runTvCode()
+    const r = await runTvCode()
     clearInterval(r.tvIv)
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const base = fetchMock.mock.calls.length
     Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
     await r.tvPull()
-    expect(fetchMock).toHaveBeenCalledTimes(1) // hidden → skip
+    expect(fetchMock.mock.calls.length).toBe(base) // hidden → skip
     Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
     // fetch gagal: stub lempar
     fetchMock.mockImplementation(async () => { throw new Error('HTTP 500') })
@@ -165,16 +170,17 @@ describe('TV lounge — fetch & siklus hidup (tvPull)', () => {
   })
 
   it('tvOnVis hanya fetch saat visible; destroy path: clearInterval+removeEventListener (simulasi manual)', async () => {
-    const r = runTvCode()
+    const r = await runTvCode()
     clearInterval(r.tvIv)
+    const base = fetchMock.mock.calls.length
     Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
     r.tvOnVis()
     await vi.advanceTimersByTimeAsync(1)
-    expect(fetchMock).toHaveBeenCalledTimes(1)
+    expect(fetchMock.mock.calls.length).toBe(base)
     Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
     r.tvOnVis()
     await vi.advanceTimersByTimeAsync(1)
-    expect(fetchMock).toHaveBeenCalledTimes(2)
+    expect(fetchMock.mock.calls.length).toBe(base + 1)
     // tvScr: plane 1.2x0.68 material map tvTex, posisi dinding lounge
     expect(r.tvScr.geometry.args).toEqual([1.2, 0.68])
     expect(r.tvScr.material.map).toBe(r.tvTex)

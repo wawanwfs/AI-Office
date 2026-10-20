@@ -1431,3 +1431,17 @@
 - Bukti: vitest **568/568** (42 file, dulu 567 — +1 test titleCase akronim), build OK (precache 35, 1537.14 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 1615327, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
 
+
+## 2026-10-24 06:15 WIB — test: TV lounge runtime (drawTv + tvPull dashboard /wfs-project) 7 unit test (vitest 568→575)
+
+- Backlog dipilih: blok TV lounge di OfficeScene.js (drawTv dashboard live /wfs-project + tvPull fetch 60 dtk + tvOnVis) — satu-satunya fitur live-data scene 3D tanpa unit test; regresi "menghubungkan..." permanen / angka palsu tak terdeteksi.
+- Test: src/__tests__/tv_lounge_runtime.test.js — 7 test; blok TV diekstrak dari sumber OfficeScene.js (indexOf 'const tvC=' s.d. 'office.add(lounge);') lalu dievaluasi via new Function dengan stub window/THREE/canvas/fetch (drawTv tidak diekspor):
+  - canvas 256×144; header 'WFS HQ · LIVE'; tanpa data → 'menghubungkan...' + TIDAK ada angka '%' (regresi angka hardcode palsu dicegah).
+  - dengan data: '65% · 15/23 task', 'GAGAL: 1', 'REVIEW: 2', 'SaaS', '3 tenant · 120 pesan', 'sbx-be1● qa1○' (dot Up/Down), 'update <jam>'.
+  - 0/0 task → '0% · 0/0 task' (bukan NaN).
+  - tvPull: fetch /wfs-project, window.__tvData.at timestamp, tvTex.needsUpdate=true; interval 60 dtk fetch tiap tick.
+  - tab hidden → tvPull skip; fetch gagal → tidak throw, data lama dipertahankan.
+  - tvOnVis: hidden → tidak fetch; visible → fetch; tvScr plane 1.2×0.68 map tvTex rotasi -π/2 di x≈12.31.
+- Iterasi asersi (5×): teks agent tanpa spasi ('sbx-be1●'); fetch dieksplicitkan sebagai parameter new Function (shadow global); await tvPull() dalam runTvCode → call count dobel; ekstraksi blok harus dari 'const tvC=' (bukan komentar) agar tvx terdefinisi.
+- Bukti: vitest **575/575** (43 file, dulu 568 — +7), build OK (precache 35, 1537.14 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, phase lunch, frame 1722346, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
