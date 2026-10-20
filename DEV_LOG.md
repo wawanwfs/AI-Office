@@ -1056,3 +1056,10 @@
 - Implementasi: (1) src/scene/parts/obstacles.js — OBSTACLES (5 footprint: pantry, dispenser, printer, café, lounge), inObstacle(x,z), seatOccupied(x,z,agents,selfAgent) diekstrak murni; motion.js kini meng-import, chooseTrip jauh lebih ramping, perilaku identik (self tetap dikecualikan, offsite tak dianggap menempati); (2) 3 test baru: pusat furnitur terdeteksi (pantry/printer/sofa/café), titik koridor & baris meja bebas, seatOccupied zona ±0.9 / offsite / self.
 - Bukti: vitest **34/34** (4 file), build OK (precache 35, 1530.93 KiB), deploy ~/wfs-hq OK; e2e CDP produksi 9503: DOM True, 14 agents, phase arriving, frames bertambah, 0 exception; probe trip terpaksa (timer 0.01, 6 sampel): 9 walkTarget unik — **0 dalam footprint OBSTACLES** (cek ulang via skrip luar).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" sudut kamera default (fade zona fix 12:30 sudah ada, pantau).
+
+## 2026-10-20 14:05 WIB — test: logika siklus siang-malam daycycle.js kini teruji unit (vitest 34→43)
+
+- Backlog dipilih: kelanjutan serangkaian ekstraksi+test — fungsi murni waktu/pencahayaan di daycycle.js (statusAt, daylight, mixHex, SCHEDULE) sudah diekspor bersih tapi 0 unit test; regresi kurva fajar/senja tak terdeteksi.
+- Implementasi: src/__tests__/daycycle.test.js — 9 test: label jadwal pada menit kunci & tepat sebelum batas (599/719/779/1439), monotoni SCHEDULE & siklus 24 jam kembali ke shift malam; daylight gelap 0.3 / terang 1, monotoni transisi fajar 06:00-08:00 & senja 17:00-19:00, smoothstep tepat di batas; mixHex t=0/t=1, campur kanal t=0.5, validitas 24-bit.
+- Bukti: vitest **43/43** (5 file, dulu 34), npm run build OK (precache 35, 1530.93 KiB), deploy ~/wfs-hq OK; e2e CDP produksi 9503: DOM True, 14 agents, phase working, 6874 frames, 0 exception.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); minor nameplate MEETING↔"Rizky" sudut kamera default (fade zona fix 12:30 sudah ada, pantau).
