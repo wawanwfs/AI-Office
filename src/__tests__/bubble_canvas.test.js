@@ -42,8 +42,8 @@ describe('bubble_canvas — roundRectPath & tailPath', () => {
   it('roundRectPath menutup path setelah 4 kuadrat kurva + 4 garis', () => {
     const ctx = mockCtx();
     let cur = {};
-    ctx.quadraticCurveTo = (a,b,c,d) => { cur.q = (cur.q||0)+1; };
-    ctx.lineTo = (a,b) => { cur.l = (cur.l||0)+1; };
+    ctx.quadraticCurveTo = () => { cur.q = (cur.q||0)+1; };
+    ctx.lineTo = () => { cur.l = (cur.l||0)+1; };
     ctx.closePath = () => { cur.closed = true; };
     roundRectPath(ctx, 3, 3, 354, 62, 10);
     expect(cur.q).toBe(4);

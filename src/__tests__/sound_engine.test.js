@@ -82,7 +82,7 @@ describe('sound engine runtime', () => {
     const osc = ctx.__log.osc[0];
     expect(osc.type).toBe('square');
     expect(osc.frequency.value).toBe(KEYCLICK_BASE_FREQ + 0.5 * KEYCLICK_JITTER);
-    const { g, master } = gainChain(osc);
+    const { g } = gainChain(osc);
     expect(g.gain.value).toBe(KEYCLICK_GAIN);
     expect(g.gain.ramps[0]).toEqual([KEYCLICK_END_GAIN, ctx.currentTime + KEYCLICK_SEC]);
     expect(g.connectedTo).toBeTruthy(); // tersambung ke masterGain (bukan destination langsung)
@@ -121,7 +121,7 @@ describe('sound engine runtime', () => {
       const osc = ctx.__log.osc[i];
       expect(osc.type).toBe('sine');
       expect(osc.frequency.value).toBe(CHIME_FREQS[i]);
-      const { g, master } = gainChain(osc);
+      const { g } = gainChain(osc);
       expect(g.gain.value).toBe(CHIME_GAIN);
       expect(g.gain.ramps[0]).toEqual([CHIME_END_GAIN, ctx.currentTime + CHIME_TONE_SEC]);
       expect(g.connectedTo.connectedTo).toBe(ctx.destination); // g→masterGain→ctx.destination

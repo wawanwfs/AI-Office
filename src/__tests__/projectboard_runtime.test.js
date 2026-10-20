@@ -80,8 +80,7 @@ async function mount(snap = SNAP) {
   const { createProjectBoard } = await import('../scene/parts/projectboard.js')
   fetchMock = vi.fn(async () => ({ ok: true, json: async () => snap }))
   vi.stubGlobal('fetch', fetchMock)
-  const { office, added } = makeMeshCaptor()
-  const capt = makeMeshCaptor()
+    const capt = makeMeshCaptor()
   const b = createProjectBoard(capt.office, THREE)
   mountedBoards.push(b)
   await vi.advanceTimersByTimeAsync(1) // flush microtask fetch pertama

@@ -100,12 +100,12 @@ export function createNeonMode(ctx) {
 // ── Shift: datang 08:00–08:30, pulang 18:00–18:30, malam hanya agent utama ──
 export function createShift(ctx) {
   const { THREE, agentData, rng } = ctx;
-  const { SHIFT, lunchWindowOpen, lunchSpot, lunchPause, shiftStep } = shiftSpec;
+  const { SHIFT, lunchSpot, lunchPause, shiftStep } = shiftSpec;
   const ARRIVE = SHIFT.ARRIVE;
   const DEPART = SHIFT.DEPART;
   const DOOR = SHIFT.DOOR;
   let phase = 'working';
-  let state = { phase, lunch: false };
+  let inLunch = false;
   const timers = new Set();
   const later = (ms, fn) => { const id = setTimeout(() => { timers.delete(id); fn(); }, ms); timers.add(id); };
 
@@ -187,11 +187,6 @@ export function createShift(ctx) {
       ad.walkTarget = { x: ad.home.x, z: ad.home.z };
       ad._route = null;
     });
-  }
-  let inLunch = false;
-  function updateLunch(m) {
-    if (lunchWindowOpen(m) && !inLunch) { inLunch = true; sendToLunch(); }
-    else if (!lunchWindowOpen(m) && inLunch) { inLunch = false; endLunch(); }
   }
 
   return {

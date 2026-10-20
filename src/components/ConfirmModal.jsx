@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useCallback } from 'react'
+import React, { useRef, useCallback } from 'react'
 import { useDialogA11y } from '../lib/dialogA11y'
 
 export default function ConfirmModal({ show, title, text, confirmLabel = 'Ya, lanjut', danger, busy, onConfirm, onCancel }) {

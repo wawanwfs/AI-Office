@@ -128,18 +128,18 @@ describe('createWallClock — jam dinding', () => {
     const office = new Obj3D()
     const clock = createWallClock({ THREE, office, M }, 4, 2.4, -9.8, Math.PI)
     // hitung stroke: 12 tick + 3 jarum = 15 beginPath; dot fill = arc+fill
-    let strokes = 0
-    const ctx2 = makeCtx()
+    let _strokes = 0
+    const _ctx2 = makeCtx()
     // gunakan clock terpisah dengan penghitung stroke
-    let strokeCount = 0
-    let arcCount = 0
+    let _strokeCount = 0
+    let _arcCount = 0
     const cv = { width: 0, height: 0, getContext: () => new Proxy({
       fillStyle: '', strokeStyle: '', lineWidth: 0, font: '', textAlign: '', textBaseline: '',
-      fillRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() { strokeCount++ }, fill() {},
-      arc() { arcCount++ },
+      fillRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, stroke() { _strokeCount++ }, fill() {},
+      arc() { _arcCount++ },
       fillText(t) { drawCalls.push({ style: this.fillStyle, text: String(t) }) },
     }, { set(t, k, v) { t[k] = v; return true }, get(t, k) { return t[k] } }) }
-    const tex = new THREE.CanvasTexture(cv)
+    const _tex = new THREE.CanvasTexture(cv)
     // panggil draw internal lewat clock asli lalu cek tex.needsUpdate
     clock.draw(60 * 10 + 30) // 10:30
     expect(clock.tex.needsUpdate).toBe(true)

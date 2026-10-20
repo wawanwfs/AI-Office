@@ -12,7 +12,7 @@ const DESKS = [
 ];
 // Zona meja agent ±0.9 di z, x bebas — lintasan aman bila setiap segmen
 // vertikal (x tetap) hanya menyentuh z di koridor (FRONT/GANGS) atau di z tujuan.
-function crossingDesks(path, a, b) {
+function crossingDesks(path, a) {
   const deskZ = [ -3, 1.5, 6 ];
   const pts = [a, ...path];
   let violations = [];

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useCallback } from 'react'
+import React, { useState, useRef, useCallback } from 'react'
 import { useDialogA11y } from '../lib/dialogA11y'
 
 const STEPS = [

@@ -1475,3 +1475,13 @@
 - Pembersihan: empty catch `catch(e){}` → optional catch binding `catch{/* abaikan */}` (12×, ES2019 aman untuk target build); unused import `masterGainValue` & `collabDuration` dihapus dari deklarasi import; `const t=drawBubble(...)` → `drawBubble(...)`; assignment varuntu `hoverTmr` (tak pernah dibaca/clear) dihapus total; `.catch(()=>{})` pada resume ctx diganti try/catch luar; 3 no-op catch destroy dengan komentar → `catch{/* no-op */}`.
 - Bukti: eslint OfficeScene.js **0 error** (dulu 27); vitest **585/585** (44 file); build OK (precache 35, 1538.01 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 78353 berjalan, phase lunch, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-24 07:55 WIB — lint repo-wide: no-unused-vars dibersihkan di 18 file (49→0 error lint jenis ini)
+
+- Backlog dipilih: 49 error eslint no-unused-vars tersebar (tests, components, scene parts) — sisa setelah OfficeScene.js bersih.
+- Pembersihan:
+  - Tests (11 file): callback canvas stub tanpa param tak terpakai (bubble_canvas), countMesh/countGroup helper terhapus (furniture), destructure `office`/`added`/`master`/`pts`/`strokes`/`ctx2`/`strokeCount`/`arcCount`/`tex` dihapus atau di-underscore (room/label_sweep/meeting/projectboard_runtime/sound_engine), param `b` dihapus (daycycle_runtime, routing).
+  - Components: import useEffect tak terpakai dihapus (ActivityLog, ConfirmModal, CsWidget, OverlayHelp); prop `onFlash` dihapus dari ProjectPanel + pemanggilan `<ProjectPanel />` di App.jsx (prop tidak pernah dipakai).
+  - Scene parts: robot.js import 5 helper robot_spec tak terpakai (eyes/smile/chestBars/legsStanding/accents) dihapus; sound_engine.js 2 catch(e) → optional catch binding; daycycle.js hapus `state` varuntu, `lunchWindowOpen` destructure & fungsi mati `updateLunch` (dua-duanya sudah digantikan mesin shiftStep); projectboard.js hapus fungsi `chip()` & var `bx` tak terpakai.
+- Bukti: eslint no-unused-vars **0 error** (dulu 49); sisa 12 error hanya react-hooks/refs & immutability (pola baru linter, butuh refactor khusus — backlog terpisah); vitest **585/585** (44 file); build OK (precache 35, 1537.95 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 153218 berjalan, phase lunch, tanpa 'Scene init failed'.
+- Sisa backlog: 12 error react-hooks (refs-during-render dsb) butuh refactor komponen; verifikasi subjektif kualitas suara.

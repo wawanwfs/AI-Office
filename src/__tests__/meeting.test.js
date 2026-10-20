@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import { createMeeting, isMeetingTime, meetingWindowIndex } from '../scene/parts/meeting.js';
 
 function mkCtx(nAgents = 14, nSeats = 4) {
-  const figures = []; let added = 0;
+  const figures = [];
   const buildChar = () => { const f = { scale: { setScalar() {} }, visible: false, position: { set() {} }, rotation: { y: 0, set() {} } }; figures.push(f); return f; };
   const agents = Array.from({ length: nAgents }, (_, i) => ({ name: 'A' + i }));
   const agentData = agents.map(() => ({ walker: { visible: false }, sittingChar: { visible: false }, state: 'sitting', label: { position: { set() {} } }, home: { x: 0, z: 0 } }));

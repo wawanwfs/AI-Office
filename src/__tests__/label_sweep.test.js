@@ -108,7 +108,7 @@ describe('clampViewport', () => {
   });
 
   it('clamp horizontal kiri', () => {
-    const pts = [AG(30, 100)]; // fx-50=-20 < -(600-2)=-598? tidak -> x=20: 20-50=-30... perlu x-50<-598 -> x kecil banget
+    const _pts = [AG(30, 100)]; // fx-50=-20 < -(600-2)=-598? tidak -> x=20: 20-50=-30... perlu x-50<-598 -> x kecil banget
     // x=20 tidak melanggar; pakai zona lebar zw=150 di x=-500: -500-75=-575 < -594? tidak. x=-520: -595<-594 pelanggar
     const z = ZN(-520, 100);
     expect(clampViewport([z], OPTS)).toBe(true);

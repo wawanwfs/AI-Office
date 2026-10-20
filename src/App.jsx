@@ -324,7 +324,7 @@ export default function App() {
         <span className="sep" />
         <ActionMenu sceneRef={sceneRef} onFlash={flash} refApi={actionMenuApi} />
         <TaskBoard onFlash={flash} onAsk={setAsk} />
-        <ProjectPanel onFlash={flash} />
+        <ProjectPanel />
         <TeamStats />
         <button className="ibtn" onClick={toggleMute} title={muted ? 'Nyalakan suara notifikasi' : 'Bisukan suara notifikasi'} aria-label={muted ? 'Nyalakan suara' : 'Bisukan suara'} aria-pressed={muted}><span className="ic">{muted ? '🔇' : '🔊'}</span><span className="lb">{muted ? 'Suara Mati' : 'Suara'}</span></button>
         <button className="ibtn" onClick={() => setShowLog(true)} title="Log aktivitas kantor" aria-label="Log aktivitas"><span className="ic">📜</span><span className="lb">Log</span></button>

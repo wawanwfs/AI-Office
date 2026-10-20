@@ -6,7 +6,7 @@ import { useDialogA11y } from '../lib/dialogA11y'
 // Semua data diambil server-side — tidak ada kredensial di frontend.
 const ST = { done: ['Selesai', '#10E5A0'], running: ['Jalan', '#F59E0B'], review: ['Review', '#448AFF'], failed: ['Gagal', '#ef4444'], pending: ['Antri', '#9aa7b8'] }
 
-export default function ProjectPanel({ onFlash }) {
+export default function ProjectPanel() {
   const [open, setOpen] = useState(false)
   const box = useRef(null)
   useModalFlag(open)

@@ -41,19 +41,7 @@ export function createProjectBoard(office, THREE) {
     } catch { /* biarkan data terakhir tampil */ }
   }
 
-  function chip(x, y, w, txt, col) {
-    g.fillStyle = col
-    const f = g.font
-    g.font = 'bold 22px sans-serif'
-    const tw = g.measureText(txt).width
-    g.font = f
-    g.fillStyle = 'rgba(255,255,255,.09)'
-    roundRect(x, y - 20, Math.max(w, tw + 18), 28, 6); g.fill()
-    g.fillStyle = col
-    g.font = 'bold 22px sans-serif'
-    g.textAlign = 'left'
-    g.fillText(txt, x + 9, y)
-  }
+
 
   function roundRect(x, y, w, h, r) {
     g.beginPath()
@@ -100,7 +88,6 @@ export function createProjectBoard(office, THREE) {
         g.fillStyle = 'rgba(239,68,68,.12)'; roundRect((W - bw) / 2, 166, bw, 34, 8); g.fill()
         g.strokeStyle = 'rgba(239,68,68,.5)'; g.lineWidth = 2; roundRect((W - bw) / 2, 166, bw, 34, 8); g.stroke()
         g.textAlign = 'center'
-        let bx = W / 2
         // gambar dua warna: bagian GAGAL/REVIEW merah/biru, nama task abu terang
         g.textAlign = 'left'
         let tx = (W - bw) / 2 + 22

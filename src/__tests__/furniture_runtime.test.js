@@ -74,8 +74,6 @@ async function build() {
   return { ...ctx, refs }
 }
 
-const countMesh = (arr) => arr.filter((o) => o instanceof Mesh).length
-const countGroup = (arr) => arr.filter((o) => o instanceof Group && !(o instanceof Mesh)).length
 
 describe('createFurniture — perabot kantor 3D', () => {
   it('semua kelompok perabot di-add ke office (5 group + mesh loose: rak & tanaman & poster)', async () => {

@@ -1,5 +1,5 @@
 // Robot asisten "Bantuin AI" — bukan manusia: badan logam, kepala kapsul, mata LED, antena, panel dada menyala.
-import { pose, eyes, smile, chestBars, legsStanding, accents, ROBOT_COLORS } from './robot_spec.js';
+import { pose, ROBOT_COLORS } from './robot_spec.js';
 
 export function buildRobot(THREE, agent, standing, M, MB) {
   const g = new THREE.Group();

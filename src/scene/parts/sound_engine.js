@@ -39,7 +39,7 @@ export function createSoundEngine({ ctxFactory, setTimeoutFn = setTimeout, clear
     if (ctx === noCtx) return false;
     try {
       if (ctx.state === 'suspended' && ctx.resume) ctx.resume().catch(noop);
-    } catch (e) { /* no-op */ }
+    } catch { /* no-op */ }
     return true;
   }
 
@@ -99,7 +99,7 @@ export function createSoundEngine({ ctxFactory, setTimeoutFn = setTimeout, clear
   function dispose() {
     pending.forEach(clearTimeoutFn);
     pending.length = 0;
-    try { if (ctx !== noCtx) ctx.close(); } catch (e) { /* no-op */ }
+    try { if (ctx !== noCtx) ctx.close(); } catch { /* no-op */ }
     ctx = noCtx;
     masterGain = null;
     started = false;
