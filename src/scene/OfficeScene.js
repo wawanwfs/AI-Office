@@ -17,7 +17,7 @@ import { MUTED_KEY, tickSoundTimer } from './parts/sound_spec.js';
 import { advanceSimClock, setSimManual, SIM_SEC_PER_MIN as __SIM_SPM, MANUAL_RESUME_MS as __SIM_RESUME } from './parts/sim_clock.js';
 import { createSoundEngine } from './parts/sound_engine.js';
 import { createProjectBoard } from './parts/projectboard.js';
-import { chatPhrases, roleTalk, COLLAB_PAIRS, pickCollab, clampBubbleText, LINE_SEC } from './parts/dialog.js';
+import { chatPhrases, COLLAB_PAIRS, pickCollab, clampBubbleText, LINE_SEC, autoTalkDelay, autoTalkText } from './parts/dialog.js';
 import { updateBubbles as updateBubblesPure } from './parts/bubbles.js';
 import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canvas.js';
 import { looksOf } from './parts/character_looks.js';
@@ -1614,25 +1614,15 @@ let talkTimer=4; // eslint-disable-line no-unused-vars -- reset loop obrolan
 let lastTalkRT=performance.now();
 function autoTalk(){
   const now=performance.now();
-  if(now-lastTalkRT<4000+Math.random()*6000)return;
+  if(now-lastTalkRT<autoTalkDelay())return;
   lastTalkRT=now;
   const ad=agentData[Math.floor(Math.random()*agentData.length)];
-  if(!ad)return;
+  const text=autoTalkText(ad,window.__wfsRunningTasks,window.__wfsAgentIdMap);
+  if(!ad||text==null)return;
   const wp=ad.walker.visible?ad.walker.position:{x:ad.home.x,z:ad.home.z};
   // anchor mengikuti agent agar bubble tidak tertinggal di posisi lama saat agent berjalan
   const anc={get x(){return ad.walker.visible?ad.walker.position.x:ad.home.x},get z(){return ad.walker.visible?ad.walker.position.z:ad.home.z},y:2.6};
-  // Prioritas: kalau ada task running untuk agent ini, tampilkan status kerja nyata
-  const rt=window.__wfsRunningTasks;
-  if(rt&&rt.byAgent){
-    const rid=window.__wfsAgentIdMap&&window.__wfsAgentIdMap[ad.agent.name];
-    const run=rid&&rt.byAgent[rid];
-    if(run){
-      createBubble(wp.x,2.6,wp.z,'Task #'+run.id+': '+clampBubbleText(run.title),ad.agent.hex,anc);
-      return;
-    }
-  }
-  const lines=roleTalk[ad.agent.name]||['“Fokus dulu…”'];
-  createBubble(wp.x,2.6,wp.z,lines[Math.floor(Math.random()*lines.length)],ad.agent.hex,anc);
+  createBubble(wp.x,2.6,wp.z,text,ad.agent.hex,anc);
 }
 // Sinkron task running dari gateway tiap 15 detik
 (function(){

@@ -2,7 +2,7 @@
 // pickCollab, clampBubbleText, collabDuration) — diekstrak murni dari
 // OfficeScene.js agar bisa diuji tanpa scene/THREE.
 import { describe, it, expect } from 'vitest';
-import { chatPhrases, roleTalk, COLLAB_PAIRS, pickCollab, clampBubbleText, collabDuration, LINE_SEC } from '../scene/parts/dialog.js';
+import { chatPhrases, roleTalk, COLLAB_PAIRS, pickCollab, clampBubbleText, collabDuration, LINE_SEC, autoTalkDelay, autoTalkText } from '../scene/parts/dialog.js';
 import { updateBubbles } from '../scene/parts/bubbles.js';
 
 describe('dialog: data', () => {
@@ -168,5 +168,44 @@ describe('bubbles: updateBubbles', () => {
     b.life = 0.2; // sudah lewat fade-in
     updateBubbles([b], 0.01, { remove: () => {} });
     expect(b.sprite.material.opacity).toBeCloseTo(1 * (0.19 / 0.5));
+  });
+});
+
+describe('dialog: autoTalk (murni)', () => {
+  const adToni = { agent: { name: 'TONI' } };
+  const adUnknown = { agent: { name: 'XYZ' } };
+
+  it('autoTalkDelay: rentang 4000–10000 ms; rng kustom deterministik', () => {
+    for (let i = 0; i < 200; i++) {
+      const d = autoTalkDelay();
+      expect(d).toBeGreaterThanOrEqual(4000);
+      expect(d).toBeLessThanOrEqual(10000);
+    }
+    expect(autoTalkDelay({ random: () => 0 })).toBe(4000);
+    expect(autoTalkDelay({ random: () => 1 })).toBe(10000);
+  });
+
+  it('autoTalkText: task running diprioritaskan, teks dipangkas clampBubbleText', () => {
+    const rt = { byAgent: { t9: { id: 42, title: 'Judul task yang sangat panjang sekali melebihi tiga puluh dua karakter penuh' } } };
+    const t = autoTalkText(adToni, rt, { TONI: 't9' });
+    expect(t).toBe('Task #42: ' + clampBubbleText('Judul task yang sangat panjang sekali melebihi tiga puluh dua karakter penuh'));
+    expect(t.length).toBeLessThanOrEqual('Task #42: '.length + 32);
+  });
+
+  it('autoTalkText: tanpa task → frasa per-role; agent tak dikenal → fallback', () => {
+    expect(roleTalk.TONI).toContain(autoTalkText(adToni, null, {}));
+    expect(autoTalkText(adUnknown, null, {})).toBe('“Fokus dulu…”');
+    expect(roleTalk.TONI).toContain(autoTalkText(adToni, { byAgent: {} }, {}));
+  });
+
+  it('autoTalkText: agent null → null (pemanggil tidak membuat bubble)', () => {
+    expect(autoTalkText(null, null, {})).toBeNull();
+  });
+
+  it('autoTalkText: pilihan frasa deterministik dengan rng kustom', () => {
+    const t0 = autoTalkText(adToni, null, {}, { random: () => 0 });
+    const t1 = autoTalkText(adToni, null, {}, { random: () => 0.9999 });
+    expect(t0).toBe(roleTalk.TONI[0]);
+    expect(roleTalk.TONI).toContain(t1);
   });
 });

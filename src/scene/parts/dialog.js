@@ -28,6 +28,26 @@ export const roleTalk={
   'CEO':['“Deal baru ”','“Kopi dulu ”'],
 };
 
+// autoTalk: keputusan murni (diuji unit) — delay acak & pilihan teks.
+// Delay 4–10 dtk antar bubble obrolan otomatis.
+export const autoTalkDelay = (rng = Math) => 4000 + rng.random() * 6000;
+
+// Pilih teks bubble otomatis utk agent ad:
+// 1) task running utk agent ini → 'Task #id: judul' (status kerja nyata)
+// 2) else frasa per-role (roleTalk), fallback '“Fokus dulu…”'
+// runningTasks: {byAgent:{[id]:{id,title}}} atau null/undefined.
+export function autoTalkText(ad, runningTasks, agentIdMap, rng = Math) {
+  if (!ad) return null;
+  const rt = runningTasks;
+  if (rt && rt.byAgent) {
+    const rid = agentIdMap && agentIdMap[ad.agent.name];
+    const run = rid && rt.byAgent[rid];
+    if (run) return 'Task #' + run.id + ': ' + clampBubbleText(run.title);
+  }
+  const lines = roleTalk[ad.agent.name] || ['“Fokus dulu…”'];
+  return lines[Math.floor(rng.random() * lines.length)];
+}
+
 // Pasangan role yang bisa saling ngobrol + lini dialog bergantian.
 export const COLLAB_PAIRS=[
   ['FRONTEND','BACKEND',['API /tasks sudah siap, tinggal dipanggil ya','Siap, kutarik datanya sekarang','Responsnya cukup cepat?','p95 sekitar 120 ms']],
