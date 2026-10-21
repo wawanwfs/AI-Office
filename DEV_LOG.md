@@ -1659,3 +1659,11 @@
 - +6 unit test baru (belum habis, trigger+reset, interval fungsi, tepat nol, guard, simulasi 600 frame ≈ 10 dtk → 29–33 trigger).
 - Bukti: vitest **644/644** (52 file, dulu 638); eslint src **0 problem**; build OK (precache 35, 1540.76 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: reload OK, 14 agents, frames berjalan (fr 3→26→30), audio state none (lazy, benar), tanpa 'Scene init failed'; screenshot 719 KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 15:55 WIB — auto-advance jam simulasi diekstrak ke advanceSimClock murni (parts/sim_clock.js)
+
+- Backlog dipilih: logika auto-advance waktu simulasi (simAcc/simLast/__userSlider/lastManualSet) masih inline di animate() — tak bisa diuji unit, state tersebar 4 variabel global.
+- Fix: parts/sim_clock.js murni — `advanceSimClock(prev, nowMs)` (akumulasi dt nyata, langkah per SIM_SEC_PER_MIN=5 dtk, wrap %1440, cap 288 langkah anti-hang bila tab lama disembunyikan lalu resume; tick pertama pakai last=null, bukan 0 falsy), `setSimManual(time, nowMs)` (mode MANUAL + resume otomatis setelah 8 dtk diam slider, akumulasi direset — tak loncat). OfficeScene kini state tunggal `__sim`; updateTime/setSimManual terintegrasi.
+- +10 unit test baru (tick pertama, langkah tepat 5 dtk, akumulasi parsial tersimpan, wrap 1439→0, cap loncatan 24 jam, mode manual + resume + sentuhan baru memperpanjang manual).
+- Bukti: vitest **654/654** (53 file, dulu 644); eslint src **0 problem**; build OK (precache 35, 1541.11 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: reload OK, 14 agents, frames berjalan (fr 2→11), tanpa exception; jam HUD berjalan (11:07 → 11:17 dalam 25 dtk ≈ 5 menit simulasi — sesuai SIM_SEC_PER_MIN); screenshot 714 KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

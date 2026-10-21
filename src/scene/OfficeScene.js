@@ -14,6 +14,7 @@ import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelName, fitLabel } from './parts/l
 import { WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { OBSTACLES } from './parts/obstacles.js';
 import { MUTED_KEY, tickSoundTimer } from './parts/sound_spec.js';
+import { advanceSimClock, setSimManual, SIM_SEC_PER_MIN as __SIM_SPM, MANUAL_RESUME_MS as __SIM_RESUME } from './parts/sim_clock.js';
 import { createSoundEngine } from './parts/sound_engine.js';
 import { createProjectBoard } from './parts/projectboard.js';
 import { chatPhrases, roleTalk, COLLAB_PAIRS, pickCollab, clampBubbleText, LINE_SEC } from './parts/dialog.js';
@@ -1488,12 +1489,8 @@ const drawScreen=(s,i)=>{ if(shouldRedrawScreenAt(frame,i)) drawScreenFrame(s,fr
 let timeOfDay=660;
 const lC=mixHex; // eslint-disable-line no-unused-vars -- kompatibilitas nama lama
 const __light=createLighting({THREE,scene,renderer,sun,ambient,agentData,onTimeUpdate,onStatusUpdate,onTick:m=>updateMeeting(m)});
-function updateTime(min,manual=true){timeOfDay=min;__light.apply(min);if(manual){lastManualSet=performance.now();__userSlider=true}}
-let lastManualSet=0;
-let __userSlider=false;
-const SIM_SEC_PER_MIN=5; // 1 menit simulasi tiap 5 dtk nyata (1 hari kerja 480–1200 ≈ 12 menit nyata)
-let simAcc=0;
-let simLast=0;
+let __sim={acc:0,last:null,manual:false,lastManualSet:0,time:480};
+function updateTime(min,manual=true){timeOfDay=min;__light.apply(min);__sim.time=min;if(manual){__sim=setSimManual(min,performance.now())}}
 updateTime(660);
 
 // ═══════════════════════════════════════════════════
@@ -1753,15 +1750,10 @@ function animate(){
   // Memakai performance.now() (bukan delta yang di-clamp .05) supaya laju
   // simulasi konsisten di GPU lambat (SwiftShader ~1.5 FPS) maupun cepat.
   {
+    // Auto-advance via advanceSimClock (murni, parts/sim_clock.js, diuji unit).
     const nowSim=performance.now();
-    if(!__userSlider){
-      if(!simLast)simLast=nowSim;
-      else{
-        simAcc+=(nowSim-simLast)/1000;
-        while(simAcc>=SIM_SEC_PER_MIN){simAcc-=SIM_SEC_PER_MIN;updateTime((timeOfDay+1)%1440,false);simLast=performance.now();}
-      }
-    } else if(nowSim-lastManualSet>8000){ __userSlider=false; simLast=0; simAcc=0; }
-    if(__userSlider)simLast=nowSim;
+    __sim=advanceSimClock(__sim,nowSim);
+    if(__sim.stepped){timeOfDay=__sim.time;__light.apply(timeOfDay);}
   }
 
   // cincin denyut agent utama
