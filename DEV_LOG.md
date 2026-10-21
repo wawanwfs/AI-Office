@@ -1730,3 +1730,12 @@
 - Bukti: vitest **716/716** (59 file, dulu 705); eslint src **0 problem**; build OK (precache 35, 1542.47 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP reload: 14 agents, 5 zoneLabels, frames berjalan (3→11), tanpa exception; screenshot 722 KB (scene hidup).
 - Catatan: e2e_err.py tetap return None (eval Runtime.evaluate mengembalikan struktur tak terduga); verifikasi diulang via skrip CDP inline /tmp/e2e_final.py (eval eksplisit returnByValue) — hasil valid.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 19:05 WIB — pembangunan titik label (agent/zona/bubble) diekstrak ke parts/label_overlap.js murni
+
+- Backlog dipilih: blok awal relayout label di animate() masih inline (~35 baris) — konversi NDC→piksel (×clientWidth/2), sw/sh sprite, baseY/baseX = posisi − antiY/antiX lama, entri zona (dist clamp 2, fade, jitter, base asli + anti), dan entri bubble (piksel konstan) — tak bisa diuji unit.
+- Fix: label_overlap.js tambah `PX_PER_TAN(h,fov)`, `buildAgentPts(vis,k,pxW,pxH)`, `buildZonePts(zones,k,pxW,pxH)` (skip invisible & v.z>1; dist clamp ≥2; fade via zoneScreenFade; jitter + anti di base), `buildBubblePts(bubbles,k,pxW,pxH)`. Semantik persis kode lama (pxW/pxH = setengah dimensi); OfficeScene tinggal proyeksi kamera + assign opacity/visible sprite zona via zp.zt/zp.fade.
+- +14 unit test (rumus k eksak & proporsional, ekuivalensi rumus zona lengkap pw·1.06/zh·1.25/jitter/anti, clamp dist 2, fade near/far + ekuivalensi zoneScreenFade, skip invisible & belakang kamera & null, base fallback, bubble piksel konstan + identitas ref, pemetaan searah). Koreksi test 2×: import path salah (./ vs ../scene/parts/) dan identitas ref bubble (mk() dipanggil 2× → objek berbeda).
+- Bukti: vitest **730/730** (60 file, dulu 716); eslint src **0 problem**; build OK (precache 35, 1542.76 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP inline /tmp/e2e_label.py: reload OK, 14 agents, 5 zoneLabels (opacity semua 1), frames berjalan (3→4), 0 label NaN/exception; screenshot 721 KB (scene hidup).
+- Catatan: e2e_err.py masih return None (eval CDP); verifikasi via skrip CDP inline dengan returnByValue eksplisit — valid.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

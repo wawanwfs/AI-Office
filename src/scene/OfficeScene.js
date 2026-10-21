@@ -6,7 +6,7 @@ import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles } from './parts/effects.js';
-import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneJitter, zoneScreenFade, buildAgentPts, buildZonePts, buildBubblePts, PX_PER_TAN } from './parts/label_overlap.js';
+import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, buildAgentPts, buildZonePts, buildBubblePts, PX_PER_TAN } from './parts/label_overlap.js';
 import { perfStep } from './parts/perf_quality.js';
 import { updateFollowGoal, focusStep, autoRotateStep } from './parts/kamera_focus.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
@@ -1795,39 +1795,31 @@ function animate(){
   if(namesVisible&&shouldRelayoutLabels(frame)){
     sizeLabels();
     const vis=agentData.filter(a=>a.label.visible);
-    const __k=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360));
-    // jarak kamera per-agent (ukuran layar sprite berbanding terbalik dgn jarak)
-    // baseY/baseX dicatat SEBELUM offset diterapkan, sehingga offset tidak terakumulasi antar frame
-    // (dulu label meeting/walker naik terus karena position.y di-adjust tanpa reset).
-    const pts=vis.map(a=>{const u=a.label.userData, v=a.label.position.clone().project(camera);
-      // baseY/baseX = posisi state (sitting/meeting/walker) minus offset anti-tumpuk frame sebelumnya,
-      // sehingga offset TIDAK terakumulasi antar frame.
-      // ukuran piksel sprite = scale dunia × (px per unit @ dist 1) / jarak kamera (sprite menyusut dgn jarak)
-      // agent label: sizeAttenuation=false -> ukuran piksel KONSTAN, TIDAK dibagi jarak kamera
-      return {a,zone:false,sw:a.label.scale.x*__k,sh:a.label.scale.y*__k,baseY:a.label.position.y-(u.antiY||0),baseX:a.label.position.x-(u.antiX||0),x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0}});
-    // label ZONA statis ikut dihitung (sebagai penghalang): agent yang menumpuk zona digeser, zona tidak bergerak
+    // k = px per unit tan(fov/2); proyeksi kamera per label dihitung di sini,
+    // pembangunan pts (agent/zona/bubble) via parts/label_overlap.js (murni, diuji unit).
+    const k=PX_PER_TAN(container.clientHeight,camera.fov);
+    const pxW=container.clientWidth/2, pxH=container.clientHeight/2; // NDC → piksel layar dari pusat
+    const pts=buildAgentPts(vis.map(a=>({...a,proj:a.label.position.clone().project(camera)})),k,pxW,pxH);
     pts.sort((p,q)=>p.y-q.y);
-    if(window.__zoneLabels){const __kz=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360));
-      window.__zoneLabels.forEach(zt=>{if(!zt.visible)return;
-        const v=zt.position.clone().project(camera);if(v.z>1)return;
-        const dz=Math.max(2,camera.position.distanceTo(zt.position));
-        // jitter deterministik per zona (hash label) supaya kluster label zona+agent tidak membentuk tumpukan simetris
-      // base dari posisi ASLI (bukan position.y yang sudah digeser frame lalu) -> tidak terakumulasi
-      // base zona = posisi ASLI (antiY/antiX diakumulasi di userData, bukan di posisi)
-      const zb=(window.__zoneBase&&window.__zoneBase.get(zt))||{y:zt.position.y,x:zt.position.x};
-      // fade zona saat terlalu besar di layar (kamera sangat dekat): sprite zona membengkak
-      // (ukuran piksel ∝ 1/jarak) dan menutupi label/tooltip agent di area itu — redupkan.
-      const __pw=zt.scale.x*__kz/dz;
-      const __zf=zoneScreenFade(__pw);
-      zt.material.opacity=__zf.opacity;zt.visible=__zf.visible;
-      const zay=(zt.userData.antiY||0), zax=(zt.userData.antiX||0);
-      const {jy,jx}=zoneJitter(zt.userData.label);
-      pts.push({a:null,zone:true,zt,zw:zt.scale.x*__kz/dz*1.06,zh:zt.scale.y*__kz/dz*1.25,baseY:zb.y+jy*0.06+zay,baseX:zb.x+jx*0.08+zax,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});}
+    // label ZONA statis ikut dihitung (sebagai penghalang): agent yang menumpuk zona digeser, zona tidak bergerak.
+    // fade & jitter via buildZonePts; penerapan opacity/visible di sini (butuh sprite nyata).
+    if(window.__zoneLabels){
+      const kz=k;
+      const zents=window.__zoneLabels.map(zt=>{
+        const zb=(window.__zoneBase&&window.__zoneBase.get(zt))||{y:zt.position.y,x:zt.position.x};
+        return {ref:zt,visible:zt.visible,proj:zt.position.clone().project(camera),
+          dist:camera.position.distanceTo(zt.position),label:zt.userData.label,
+          base:zb,antiY:zt.userData.antiY,antiX:zt.userData.antiX,scale:zt.scale};
+      });
+      buildZonePts(zents,kz,pxW,pxH).forEach(zp=>{
+        // fade diterapkan ke sprite nyata via referensi zp.zt (urutan aman)
+        if(zp.zt){zp.zt.material.opacity=zp.fade.opacity;zp.zt.visible=zp.fade.visible;}
+        pts.push(zp);
+      });
+    }
     // bubble dialog ikut sebagai penghalang statis: label zona digeser menjauh dari bubble (bubble tidak bergerak)
-    chatBubbles.forEach(bb=>{const v=bb.sprite.position.clone().project(camera);if(v.z>1)return;
-      const pk=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360));
-      // bubble: sizeAttenuation=false -> piksel konstan (scale sudah fraksi tinggi layar × __k)
-      pts.push({a:null,zone:true,zt:null,bub:bb.sprite,zw:bb.sprite.scale.x*pk,zh:bb.sprite.scale.y*pk,baseY:bb.sprite.position.y,baseX:bb.sprite.position.x,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});
+    const bents=chatBubbles.map(bb=>({ref:bb.sprite,proj:bb.sprite.position.clone().project(camera)}));
+    buildBubblePts(bents,k,pxW,pxH).forEach(zp=>pts.push(zp));
     const __L=agentData[0].label;
     for(let iter=0;iter<5;iter++){ // multi-pass: satu pass hanya menggeser sedikit, 3 pass menjamin kluster padat benar2 terpisah
     overlapPass(pts);
