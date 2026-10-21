@@ -1839,3 +1839,12 @@
 - +5 unit test (recorder ctx): posisi/radius gradient sesuai spec, tepat 3 colorStop (0 transparan putih → MID RGB 0.95/0.9 → 1 transparan), urutan ops grad→fillStyle→fillRect SIZE×SIZE, hover pakai konstanta HOVER_RING, opacity tengah beda per pemanggil. Dua koreksi test (ctx recorder salah pairing; helper sisa dihapus), kode produksi tak disentuh.
 - Bukti: vitest **856/856** (69 file, dulu 851); eslint src 0 problem; build OK (precache 35, 1543.15 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222 (e2e_sign.py): reload OK, 14 agents, tvData terisi, 5 zoneLabels (opacity 1), frames 4→13, bubbles 1→2, tanpa exception; screenshot 714 KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-22 00:35 WIB — ActionMenu diuji unit — 13 test baru
+
+- Backlog dipilih: audit cakupan test ulang — ActionMenu (popover ⚡ Aksi: 4 menuitem aksi tim meeting/break/work/tour, 2 menuitemcheckbox toggle nama & auto-rotate, navigasi panah WAI-ARIA Up/Down/Home/End) adalah komponen UI terakhir tanpa unit test langsung (CsWidget/SkipLink/WfsPanel lolos audit → tercakup via store & test lain; diverifikasi grep).
+- Fix: suite baru src/__tests__/action_menu.test.jsx (13 test), kode komponen TIDAK diubah, scene di-stub penuh via sceneRef.
+- Cakupan: aria-expanded/haspopup & buka-tutup popover; urutan & ikon 4 menuitem; aria-checked kedua checkbox + label Sembunyikan/OFF; tiap klik memicu teamAction dgn key benar + onFlash pesan + menu tertutup; scene null → flash error WebGL; toggleNames & setAutoRotate(!cur) dari isAutoRotate; fallback balik state lokal bila getter scene tak ada; Escape & klik-luar menutup; navigasi panah 6 elemen menu (Home/End/wrap ArrowDown); Escape per-item tak melempar.
+- 2 koreksi di test saja: kurang docblock @vitest-environment jsdom; selector navigasi memakai menuitem+menuitemcheckbox (6 elemen, bukan 4).
+- Bukti: vitest **869/869** (70 file, dulu 856); eslint 0 problem; build OK (precache 35, 1543.15 KiB); deploy ~/wfs-hq OK; commit 0281fd9 (auto-commit hook menangkap file dgn pesan auto, ter-push origin/main — PUSH_OK diverifikasi ulang); e2e produksi 9503 via CDP chrome 9222: reload OK, 14 agents, tvData terisi, 5 zoneLabels (opacity 1), frames 4→14, bubbles 1→2, Runtime.enable listener 10 dtk → jsErrors None.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
