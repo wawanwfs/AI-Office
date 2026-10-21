@@ -123,6 +123,18 @@ export function shouldRedrawClock(frame, every = CLOCK_REDRAW_EVERY) {
   return Number.isFinite(frame) && frame % every === 0;
 }
 
+// Throttle kedip LED server room: 70+ LED di-update tiap frame padahal blink
+// lambat (sin dengan sp 2–6 rad/s) → cukup ~20×/dtk, tak terlihat bedanya.
+export const LED_UPDATE_EVERY = 3;
+export function shouldUpdateLeds(frame, every = LED_UPDATE_EVERY) {
+  return Number.isFinite(frame) && frame % every === 0;
+}
+// Murni: opacity satu LED pada waktu elapsed (dipakai loop LED + unit test).
+export function ledOpacity(L, elapsed) {
+  if (!L || !Number.isFinite(elapsed) || !Number.isFinite(L.sp) || !Number.isFinite(L.ph) || !Number.isFinite(L.on)) return 0;
+  return Math.sin(elapsed * L.sp + L.ph) > L.on ? 1 : 0.12;
+}
+
 export function drawScreenFrame(s, frame) {
   const { ctx: c, canvas: cv, type, hex } = s;
   const w = cv.width, h = cv.height, t = frame * 0.02;

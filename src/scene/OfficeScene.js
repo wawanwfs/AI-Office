@@ -5,7 +5,7 @@ import { createLighting, createNeonMode, createShift, mixHex } from './parts/day
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreen, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreen, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity } from './parts/effects.js';
 import { overlapPass, sweepClampRounds } from './parts/label_overlap.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
@@ -1851,11 +1851,10 @@ function animate(){
   nxLabel.position.y=LABEL_Y-.5+Math.sin(elapsed*1.1+9)*.03;
   // Papers
   __pages.update(delta,elapsed);
-  // LED server room berkedip: pola aktivitas acak per LED (hormati tab hidden — loop sudah berhenti)
-  for(let i=0;i<__leds.length;i++){
-    const L=__leds[i];
-    const s=Math.sin(elapsed*L.sp+L.ph);
-    L.m.material.opacity=s>L.on?1:.12;
+  // LED server room: kedip lambat → cukup ~20×/dtk (throttle), opacity dari ledOpacity
+  // (dulu 70+ LED di-update tiap frame).
+  if(shouldUpdateLeds(frame)){
+    for(let i=0;i<__leds.length;i++)__leds[i].m.material.opacity=ledOpacity(__leds[i],elapsed);
   }
   // jam dinding di-throttle: canvas 96×96 + upload tekstur cukup ~3×/dtk
   // (jarum detik diskrit per detik) — dulu digambar ulang tiap frame.

@@ -1611,3 +1611,13 @@
 - +4 unit test baru (utuh, batas kata, kata panjang, identitas re-export).
 - Bukti: vitest **624/624** (49 file, dulu 620); eslint src **0 problem**; build OK; deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 374341 berjalan, phase lunch, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 13:55 WIB — performa: kedip LED server room di-throttle 60fps → 20×/dtk (+ ekstrak ledOpacity murni)
+
+- Backlog dipilih: loop LED server room menjalankan Math.sin + set material.opacity untuk 72 LED (3 rak × 8 unit × 3 lampu) SETIAP frame, padahal blink lambat (sp 2–6 rad/s).
+- Fix:
+  - `shouldUpdateLeds(frame)` + `LED_UPDATE_EVERY=3` (~20×/dtk) di parts/effects.js; OfficeScene hanya update opacity di kelipatan 3 frame.
+  - Logika opacity diekstrak ke fungsi murni `ledOpacity(L, elapsed)` (biner 1 / 0.12, guard input non-numerik → 0) — loop di OfficeScene tinggal satu baris.
+- +3 unit test baru (kelipatan throttle, biner/guard opacity, periodisitas 2π).
+- Bukti: vitest **627/627** (49 file, dulu 624); eslint src **0 problem**; build OK (precache 35, 1540.21 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 450020 berjalan, phase lunch, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
