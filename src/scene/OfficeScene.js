@@ -8,6 +8,7 @@ import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles } from './parts/effects.js';
 import { overlapPass, sweepClampRounds } from './parts/label_overlap.js';
 import { perfStep } from './parts/perf_quality.js';
+import { updateFollowGoal, focusStep, autoRotateStep } from './parts/kamera_focus.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
 import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent } from './parts/ring_spec.js';
@@ -1723,14 +1724,14 @@ function animate(){
   frame++;
   window.__animFrames=frame;
   if(focusGoal){
-    if(focusGoal.follow&&!focusGoal.reset){ // follow agent berjalan: target kamera ikut posisi agent saat ini
-      const f=focusGoal.follow, fp=f.walker.visible?f.walker.position:{x:f.home.x,y:0,z:f.home.z};
-      focusGoal.t.set(fp.x,1.5,fp.z);
-      if(f.state==='offsite')focusGoal={t:HOME_TGT.clone(),r:homeRadius||sph.radius,reset:true};
+    if(focusGoal.follow&&!focusGoal.reset){ // follow agent berjalan: target kamera ikut posisi agent saat ini (murni, parts/kamera_focus.js)
+      focusGoal=updateFollowGoal(focusGoal,homeRadius,sph.radius,HOME_TGT);
     }
-    tgt.lerp(focusGoal.t,.06);sph.radius+=(focusGoal.r-sph.radius)*.06;updCam();if(focusGoal.reset&&tgt.distanceTo(HOME_TGT)<.05){focusGoal=null}
+    if(focusGoal.reset&&focusStep(tgt,sph,focusGoal.t,focusGoal.r))focusGoal=null;
+    else{focusStep(tgt,sph,focusGoal.t,focusGoal.r)}
+    updCam();
   }
-  if(autoRot){sph.theta+=.0012;updCam()}
+  if(autoRot){autoRotateStep(sph);updCam()}
   screenData.forEach(drawScreen);
   updateWalkers(delta);
 

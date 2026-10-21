@@ -1702,3 +1702,12 @@
 - +9 unit test (sampel pertama, window <2 dtk, tangga lengkap 2 fps + map.dispose, latch tak re-trigger, 15 fps hanya pixelRatio, 9 fps @pr 0.75 hanya shadow, recovery 4 streak naik bertahap sampai basePR & latch lepas, recovery diblokir bila shadowLevel=2, guard tanpa renderer/sun).
 - Bukti: vitest **685/685** (56 file, dulu 676); eslint src **0 problem**; build OK (precache 35, 1541.96 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP reload: 14 agents, frames berjalan (3→4), __perf state terisi benar, tanpa exception; screenshot 726 KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 17:50 WIB — logika kamera fokus (follow/lerp/reset) diekstrak ke parts/kamera_focus.js murni
+
+- Backlog dipilih: blok kamera follow di animate() masih inline — updateFollowGoal (target ikut walker / posisi home / transisi reset saat offsite), lerp tgt & radius (faktor .06), kondisi selesai reset (jarak ke HOME_TGT <.05), dan auto-rotate (theta += .0012) tak bisa diuji unit.
+- Fix: parts/kamera_focus.js — `updateFollowGoal(goal, homeRadius, radiusFallback, homeT)` (walker visible→posisi walker, else home; offsite→goal reset {t:HOME,r:homeRadius||fallback}), `focusStep(tgt, sph, goalT, goalR)` (lerp .06 + jarak euclidean ke HOME y=1.8 <.05 → selesai), `autoRotateStep(sph)`. OfficeScene tinggal memanggil + updCam().
+- +10 unit test (follow visible/home, offsite→reset dgn homeRadius & fallback, non-offsite tak reset, lerp .06 eksak, konvergen <.05, belum selesai saat jauh, deviasi y memengaruhi jarak, auto-rotate 0.0012/langkah).
+- Bukti: vitest **695/695** (57 file, dulu 685); eslint src **0 problem**; build OK (precache 35, 1542.18 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP reload: 14 agents, frames berjalan (3→8→14), tanpa exception; resetFocus debug OK (focus kembali null); screenshot 719 KB (scene hidup).
+- Catatan: skrip e2e_err.py sempat gagal (returnNone — struktur hasil Runtime.evaluate tak konsisten); verifikasi ulang via CDP inline berhasil.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
