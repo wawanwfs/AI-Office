@@ -1788,9 +1788,11 @@ function animate(){
   { const hide = sph.phi < 1.15; ceil.visible=!hide; __ceilObjs.forEach(o=>{o.visible=!hide}); __ceilObjsSafe.forEach(o=>{o.visible=!hide}); }
   // Anti-tumpuk label: dorong ke atas bila label lain terlalu dekat di layar (iterasi ringan)
   // di-throttle: full pass mahal (5 iter × N label × project) — cukup tiap kelipatan 4 frame;
-  // offset per-agent tersimpan di userData.antiY/antiX sehingga tetap berlaku di antara tick.
-  if(shouldRelayoutLabels(frame))sizeLabels();
-  if(namesVisible){
+  // seluruh blok label (project camera per label + overlapPass + sweep/clamp) ikut dithrottle:
+  // dulu berjalan TIAP frame meski sizeLabels() sudah di-throttle. Label bergerak lambat &
+  // offset per-agent tersimpan di userData.antiY/antiX sehingga tetap benar di antara tick.
+  if(namesVisible&&shouldRelayoutLabels(frame)){
+    sizeLabels();
     const vis=agentData.filter(a=>a.label.visible);
     const __k=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360));
     // jarak kamera per-agent (ukuran layar sprite berbanding terbalik dgn jarak)
