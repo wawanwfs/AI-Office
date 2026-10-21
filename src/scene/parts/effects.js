@@ -192,3 +192,12 @@ export function addDeskTrinkets(ctx, desks) {
     }
   });
 }
+
+// Stagger layar monitor: 14+ layar canvas dulu digambar BERSAMAAN di frame yang
+// sama tiap SCREEN_REDRAW_EVERY (lonjakan CPU/frame). Layar ke-i hanya digambar
+// bila frame ≡ (i mod SCREEN_REDRAW_EVERY) → beban menyebar merata, tiap layar
+// tetap refresh dengan periode yang sama.
+export function shouldRedrawScreenAt(frame, index, every = SCREEN_REDRAW_EVERY) {
+  return Number.isFinite(frame) && Number.isFinite(index) &&
+    ((frame + ((index % every) + every)) % every) === 0;
+}

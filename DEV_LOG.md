@@ -1621,3 +1621,12 @@
 - +3 unit test baru (kelipatan throttle, biner/guard opacity, periodisitas 2π).
 - Bukti: vitest **627/627** (49 file, dulu 624); eslint src **0 problem**; build OK (precache 35, 1540.21 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 450020 berjalan, phase lunch, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 14:15 WIB — performa: redraw layar monitor di-stagger 14 layar serentak → menyebar per frame
+
+- Backlog dipilih: `screenData.forEach(drawScreen)` — 14 layar canvas dulu digambar BERSAMAAN di frame yang sama tiap SCREEN_REDRAW_EVERY=6 (lonjakan CPU berulang), lalu diam 5 frame.
+- Fix: `shouldRedrawScreenAt(frame, index)` baru di parts/effects.js — layar ke-i hanya digambar bila `frame ≡ (i mod 6) → 0`; beban menyebar merata (~2–3 layar per frame), tiap layar tetap refresh dengan periode yang sama. OfficeScene: `drawScreen=(s,i)=>…`.
+- +3 unit test (frekuensi per layar tetap 2×/periode, puncak per frame = ceil(14/6), wrap indeks negatif/besar + guard non-numerik).
+- Verifikasi produksi (chrome dbg 9222, reload): scene hidup, frames berjalan, 14 agents & 14 screens; sampling hash piksel 14 canvas dalam 0,6 dtk → hanya ~6 yang berubah (dulu 14 serentak); screenshot 661 KB (>500 KB = scene hidup); tanpa 'Scene init failed'.
+- Bukti: vitest **630/630** (50 file, dulu 627); eslint src bersih; build OK (precache 35, 1540.24 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 tanpa error.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
