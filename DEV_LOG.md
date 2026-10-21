@@ -1686,3 +1686,11 @@
 - Koreksi test awal: asumsi throttle di dalam bubbles.js salah — throttle memang di pemanggil (OfficeScene); test direvisi sesuai semantik.
 - Bukti: vitest **671/671** (55 file, dulu 661); eslint src **0 problem**; build OK (precache 35, 1541.55 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: reload OK, 14 agents, frames berjalan (3→4→7), 0 exception; screenshot 730 KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 17:05 WIB — autoTalk diekstrak ke murni (autoTalkDelay & autoTalkText di parts/dialog.js)
+
+- Backlog dipilih: `autoTalk()` di OfficeScene masih inline — delay acak 4–10 dtk & pemilihan teks (prioritas task running → frasa per-role → fallback) tak bisa diuji unit.
+- Fix: `autoTalkDelay(rng)` (4000+rng·6000 ms) & `autoTalkText(ad, runningTasks, agentIdMap, rng)` murni di parts/dialog.js; OfficeScene.autoTalk() kini tinggal pilih agent + buat bubble.
+- +5 unit test (rentang delay & rng deterministik, prioritas task + clamp 32 char, frasa role & fallback, agent null → null, rng kustom).
+- Bukti: vitest **676/676** (55 file, dulu 671); eslint src/scene **0 problem**; build OK (precache 35, 1541.58 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP reload: 14 agents, frames berjalan (5→10), tanpa exception; screenshot 726 KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
