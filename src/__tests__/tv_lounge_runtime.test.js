@@ -7,6 +7,7 @@ import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
+import { drawTvDashboard } from '../scene/parts/tv_canvas.js'
 
 const texts = []
 function makeCtx() {
@@ -76,11 +77,11 @@ function runTvCode(opts) {
   const { THREE } = buildSandbox(opts)
   const code = extractTvSource()
   // fungsi + const dievaluasi via new Function; window.__tvData diakses via win
-  const fn = new Function('window', 'THREE', 'document', 'lounge', 'fetch', code + `
+  const fn = new Function('window', 'THREE', 'document', 'lounge', 'fetch', 'drawTvDashboard', code + `
     ;return tvPull().then(() =>
       ({ drawTv, tvPull, tvC, tvTex, tvIv, tvOnVis, tvScr }))`)
   const lounge = { add() {}, children: [] }
-  return fn(win, THREE, document, lounge, fetchMock)
+  return fn(win, THREE, document, lounge, fetchMock, drawTvDashboard)
 }
 
 beforeEach(() => {

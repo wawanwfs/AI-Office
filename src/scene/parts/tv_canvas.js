@@ -1,0 +1,59 @@
+// Canvas TV lounge: render dasbor WFS HQ LIVE diekstrak murni dari drawTv
+// (OfficeScene.js) agar bisa di-unit-test: ctx 2D di-inject (mock recorder),
+// tidak ada THREE.
+
+// Warna palet & koordinat layout (satu sumber kebenaran untuk render & test).
+export const TV_W = 256;
+export const TV_H = 144;
+export const TV_BG = '#0A1628';
+export const TV_ACCENT = '#F59E0B';
+export const TV_MUTED = '#8fa3bd';
+export const TV_GREEN = '#10E5A0';
+export const TV_BLUE = '#448AFF';
+export const TV_RED = '#ef4444';
+export const TV_DIM = '#5b6b82';
+
+// Berapa baris status (GAGAL/REVIEW) yang tampil, dan X untuk kolom kedua.
+export function statusRows(T){
+  const rows=[];
+  if(T.failed)rows.push({color:TV_RED,x:12,text:'GAGAL: '+T.failed});
+  if(T.review)rows.push({color:TV_BLUE,x:T.failed?90:12,text:'REVIEW: '+T.review});
+  return rows;
+}
+
+// Persen progres total task (0 bila total 0 — hindari NaN).
+export function tvPct(T){return T.total?Math.round(T.done/T.total*100):0;}
+
+// Gambar seluruh dasbor TV pada ctx (2D canvas). Semua pengambilan teks
+// di-pure-kan lewat helper di atas; fungsi ini hanya urutan perintah gambar.
+export function drawTvDashboard(ctx,data,opts={}){
+  const now=opts.now||Date.now();
+  ctx.fillStyle=TV_BG;ctx.fillRect(0,0,TV_W,TV_H);
+  ctx.fillStyle=TV_ACCENT;ctx.font='bold 16px sans-serif';ctx.textAlign='left';ctx.textBaseline='alphabetic';
+  ctx.fillText('WFS HQ · LIVE',12,24);
+  const T=data?.tasks,S=data?.saas,AG=data?.agents||[];
+  if(!T){ // belum ada data / fetch gagal
+    ctx.fillStyle=TV_MUTED;ctx.font='12px monospace';
+    ctx.fillText('menghubungkan...',12,70);
+    return;
+  }
+  const pct=tvPct(T);
+  // progress bar
+  ctx.fillStyle='rgba(255,255,255,.1)';ctx.fillRect(12,36,232,12);
+  const grd=ctx.createLinearGradient(12,0,244,0);grd.addColorStop(0,TV_GREEN);grd.addColorStop(1,TV_BLUE);
+  ctx.fillStyle=grd;ctx.fillRect(12,36,Math.max(6,232*pct/100),12);
+  ctx.fillStyle='#fff';ctx.font='bold 12px sans-serif';
+  ctx.fillText(pct+'% · '+T.done+'/'+T.total+' task',12,62);
+  ctx.font='11px monospace';
+  for(const r of statusRows(T)){ctx.fillStyle=r.color;ctx.fillText(r.text,r.x,80);}
+  // SaaS
+  ctx.fillStyle=TV_BLUE;ctx.fillText('SaaS',12,100);
+  ctx.fillStyle=S&&S.online?TV_GREEN:TV_RED;
+  ctx.fillText(S&&S.online?((S.stats?.tenants||0)+' tenant · '+(S.stats?.messages||0)+' pesan'):'offline',48,100);
+  // agents
+  ctx.fillStyle=TV_BLUE;ctx.fillText('AGENT',12,120);
+  ctx.fillStyle=TV_GREEN;
+  ctx.fillText(AG.map(a=>a.name+(a.status==='Up'?'●':'○')).join(' ')||'-',56,120);
+  ctx.fillStyle=TV_DIM;ctx.font='9px monospace';
+  ctx.fillText('update '+new Date(data?.at||now).toLocaleTimeString('id-ID'),12,138);
+}

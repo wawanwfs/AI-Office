@@ -25,6 +25,7 @@ import { BADGE_COLORS, statusPollActions } from './parts/status_poll.js';
 import { wallFadeTick } from './parts/wall_fade.js';
 import { updateBubbles as updateBubblesPure } from './parts/bubbles.js';
 import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canvas.js';
+import { drawTvDashboard } from './parts/tv_canvas.js';
 import { looksOf } from './parts/character_looks.js';
 import { AGENTS, AGENTS_EXTRA, allAgents as allAgentsFn } from './parts/agents_spec.js';
 import { DESKS } from './parts/desk_layout.js';
@@ -1051,37 +1052,8 @@ const tvC=document.createElement('canvas');tvC.width=256;tvC.height=144;
 const tvx=tvC.getContext('2d');
 // TV lounge: dashboard live dari /wfs-project (data nyata, refresh 60 dtk + saat tab visible).
 // Statis lama ("uptime: 99.98%", "agents: 14 online") = angka hardcode menyesatkan → dihapus.
-function drawTv(){
-  tvx.fillStyle='#0A1628';tvx.fillRect(0,0,256,144);
-  tvx.fillStyle='#F59E0B';tvx.font='bold 16px sans-serif';tvx.textAlign='left';tvx.textBaseline='alphabetic';
-  tvx.fillText('WFS HQ · LIVE',12,24);
-  const T=window.__tvData?.tasks, S=window.__tvData?.saas, AG=window.__tvData?.agents||[];
-  if(!T){ // belum ada data / fetch gagal
-    tvx.fillStyle='#8fa3bd';tvx.font='12px monospace';
-    tvx.fillText('menghubungkan...',12,70);
-    return;
-  }
-  const pct=T.total?Math.round(T.done/T.total*100):0;
-  // progress bar
-  tvx.fillStyle='rgba(255,255,255,.1)';tvx.fillRect(12,36,232,12);
-  const grd=tvx.createLinearGradient(12,0,244,0);grd.addColorStop(0,'#10E5A0');grd.addColorStop(1,'#448AFF');
-  tvx.fillStyle=grd;tvx.fillRect(12,36,Math.max(6,232*pct/100),12);
-  tvx.fillStyle='#fff';tvx.font='bold 12px sans-serif';
-  tvx.fillText(pct+'% · '+T.done+'/'+T.total+' task',12,62);
-  tvx.font='11px monospace';
-  if(T.failed){tvx.fillStyle='#ef4444';tvx.fillText('GAGAL: '+T.failed,12,80)}
-  if(T.review){tvx.fillStyle='#448AFF';tvx.fillText('REVIEW: '+T.review,T.failed?90:12,80)}
-  // SaaS
-  tvx.fillStyle='#448AFF';tvx.fillText('SaaS',12,100);
-  tvx.fillStyle=S&&S.online?'#10E5A0':'#ef4444';
-  tvx.fillText(S&&S.online?((S.stats?.tenants||0)+' tenant · '+(S.stats?.messages||0)+' pesan'):'offline',48,100);
-  // agents
-  tvx.fillStyle='#448AFF';tvx.fillText('AGENT',12,120);
-  tvx.fillStyle='#10E5A0';
-  tvx.fillText(AG.map(a=>a.name+(a.status==='Up'?'●':'○')).join(' ')||'-',56,120);
-  tvx.fillStyle='#5b6b82';tvx.font='9px monospace';
-  tvx.fillText('update '+new Date(window.__tvData?.at||Date.now()).toLocaleTimeString('id-ID'),12,138);
-}
+// drawTv diekstrak murni ke parts/tv_canvas.js (diuji unit); di sini cukup injek ctx.
+function drawTv(){drawTvDashboard(tvx,window.__tvData)}
 drawTv();
 const tvTex=new THREE.CanvasTexture(tvC);tvTex.minFilter=THREE.LinearFilter;
 async function tvPull(){

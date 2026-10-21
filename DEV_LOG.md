@@ -1788,3 +1788,12 @@
 - Fix: IIFE pollRunning dihapus. pollStatus kini juga fetch `/wfs-api/tasks` (sekali per poll, try/catch terpisah) lalu set `window.__wfsRunningTasks={byAgent:buildRunningByAgent(agents,tasks)}` + `window.__wfsAgentIdMap` — dipakai autoTalk. Semantik identik (agents kosong → byAgent kosong; tasks gagal → dilewati).
 - Bukti: vitest **791/791** (64 file); eslint src **0 problem**; build OK (precache 35, 1543.24 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: reload OK, 14 agents, 5 zoneLabels (opacity 1), frames berjalan (5→10, 27), 0 label NaN/exception; **fetch /agents/status terukur 2× dalam 30 dtk** (tepat 4s awal + 20s interval — dulu ~4× dari 2 interval terpisah); runningTasks & idMap terisi valid. Fetch `/wfs-api/tasks` ekstra (~15s) berasal dari panel project board UI, bukan scene.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 22:00 WIB — drawTv (dasbor TV lounge) diekstrak ke parts/tv_canvas.js murni
+
+- Backlog dipilih: drawTv() (~32 baris render canvas 256×144: header, progress bar gradient, baris GAGAL/REVIEW, status SaaS, dot agent) masih inline di OfficeScene — render terbesar yang belum bisa diuji unit (hanya via test runtime sandbox yang eval-ulang sumber).
+- Fix: parts/tv_canvas.js — konstanta palet/ukuran (TV_W/H, warna), `tvPct(T)` (0 bila total 0), `statusRows(T)` (kolom kedua x=90 hanya bila failed tampil), `drawTvDashboard(ctx,data,{now})` — urutan perintah gambar identik kode lama. OfficeScene.drawTv kini 1 baris injek ctx + window.__tvData.
+- Test runtime tv_lounge_runtime.test.js menyesuaikan: drawTvDashboard di-import dan di-inject ke sandbox new Function (ekstraksi blok TV tetap dipertahankan untuk cek integrasi tvPull/tvOnVis).
+- +11 unit test baru di tv_canvas.test.js (mock ctx recorder): ukuran/latar, connecting muted tanpa data, bar penuh/30%/ambang 6px, pct 0 tanpa NaN, warna & posisi GAGAL/REVIEW, SaaS online/offline, dot agent Up/Down & strip kosong, stempel waktu pakai data.at.
+- Bukti: vitest **802/802** (65 file, dulu 791); eslint src **0 problem**; build OK (precache 35, 1543.34 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: reload OK, 14 agents, 5 zoneLabels, tvData terisi (tasks+saas), frames berjalan (7→12), 0 jsErrors; screenshot 714 KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
