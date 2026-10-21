@@ -177,6 +177,22 @@ export function ambientFx(elapsed, i = 0) {
   };
 }
 
+// Cincin denyut agent utama: fase (pulseT) & skala/opacity — murni agar bisa diuji.
+export function pulseFx(elapsed) {
+  if (!Number.isFinite(elapsed)) elapsed = 0;
+  const phase = (elapsed * .5) % 1;
+  return { phase, scale: 1 + phase * .3, opacity: .15 * (1 - phase) };
+}
+
+// Bubble obrolan dulu di-update TIAP frame padahal fade lambat (life 0→3.5 dtk).
+// Throttle ~20×/dtk via akumulasi dt (pola sama dgn createDriftingPages): dt
+// diakumulasi dan dipakai utuh sebagai step → laju fade/naik identik per detik.
+export const BUBBLE_EVERY = 3;
+export function shouldUpdateBubbles(frame, every = BUBBLE_EVERY) {
+  return Number.isFinite(frame) && Number.isFinite(every) && every > 0 &&
+    frame % every === 0;
+}
+
 export function drawScreenFrame(s, frame) {
   const { ctx: c, canvas: cv, type, hex } = s;
   const w = cv.width, h = cv.height, t = frame * 0.02;
