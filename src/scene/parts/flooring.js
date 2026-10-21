@@ -1,5 +1,6 @@
 // Lantai zona & label area — ditulis ulang dari data tabel.
 import { ZONES, zoneLabelY, zoneLabelScale } from './floor_zones.js';
+import { drawZoneLabel } from './zone_label_canvas.js';
 
 // Auto-shrink font label zona: mulai 44px, turun 2px per langkah sampai teks
 // muat dalam 460px ATAU batas bawah 20px. Murni (ctx di-inject) agar bisa
@@ -16,6 +17,8 @@ export function fitZoneLabel(ctx, text) {
   return fs;
 }
 
+// drawZoneLabel diekstrak murni ke parts/zone_label_canvas.js (diuji unit); di sini cukup injek ctx.
+
 export function createZones(ctx){
   const { THREE, office } = ctx;
   ZONES.forEach(z=>{
@@ -28,8 +31,7 @@ export function createZones(ctx){
     zx.beginPath();zx.roundRect(4,4,504,88,20);zx.fill();
     zx.strokeStyle='#F59E0B';zx.lineWidth=3;zx.stroke();
     fitZoneLabel(zx,z.label);
-    zx.textAlign='center';zx.textBaseline='middle';
-    zx.fillStyle='#FFFFFF';zx.fillText(z.label,256,50);
+    drawZoneLabel(zx,z.label);
     const zt=new THREE.CanvasTexture(zc);zt.minFilter=THREE.LinearFilter;
     const zl=new THREE.Sprite(new THREE.SpriteMaterial({map:zt,transparent:true,depthTest:false}));
     zl.center.set(.5,1);
