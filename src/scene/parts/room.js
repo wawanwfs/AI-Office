@@ -1,6 +1,6 @@
 import { ROOM_CX, ROOM_CZ, meetingSeats, glassPanels, framePosts } from './meeting_room_spec.js';
-import { TICKS, tickAngle, tickInnerR, hourHandAngle, minuteHandAngle, secondHandAngle, HANDS } from './clock_spec.js';
 import { drawSprintBoard } from './whiteboard_canvas.js';
+import { drawClockFace } from './clock_canvas.js';
 
 // Ruang meeting, jam dinding, dan pencahayaan gantung — ditulis ulang untuk WFS Project.
 export function createMeetingRoom(ctx, glassMat) {
@@ -50,24 +50,7 @@ export function createWallClock(ctx, x, y, z, faceRotY = Math.PI) {
   face.position.set(x, y, z); face.rotation.y = faceRotY; office.add(face);
 
   const draw = (nowSeconds, dateMs = Date.now()) => {
-    const minutes = nowSeconds / 60;
-    const cx = 48, cy = 48;
-    c.fillStyle = '#fafafa'; c.fillRect(0, 0, 96, 96);
-    c.strokeStyle = '#2a2f36'; c.lineWidth = 3; c.beginPath(); c.arc(cx, cy, 45, 0, Math.PI * 2); c.stroke();
-    for (let i = 0; i < TICKS; i++) {
-      const a = tickAngle(i);
-      const r1 = tickInnerR(i);
-      c.beginPath(); c.moveTo(cx + Math.sin(a) * r1, cy - Math.cos(a) * r1);
-      c.lineTo(cx + Math.sin(a) * 43, cy - Math.cos(a) * 43); c.stroke();
-    }
-    const hand = (angle, len, w, col) => {
-      c.strokeStyle = col; c.lineWidth = w; c.beginPath(); c.moveTo(cx, cy);
-      c.lineTo(cx + Math.sin(angle) * len, cy - Math.cos(angle) * len); c.stroke();
-    };
-    hand(hourHandAngle(minutes), HANDS.hour.len, HANDS.hour.w, HANDS.hour.color);
-    hand(minuteHandAngle(minutes), HANDS.minute.len, HANDS.minute.w, HANDS.minute.color);
-    hand(secondHandAngle(((dateMs / 1000) % 60)), HANDS.second.len, HANDS.second.w, HANDS.second.color);
-    c.fillStyle = '#f97316'; c.beginPath(); c.arc(cx, cy, 3, 0, Math.PI * 2); c.fill();
+    drawClockFace(c, nowSeconds, dateMs);
     tex.needsUpdate = true;
   };
   return { draw, tex };
