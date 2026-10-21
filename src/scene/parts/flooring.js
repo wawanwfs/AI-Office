@@ -1,5 +1,21 @@
 // Lantai zona & label area — ditulis ulang dari data tabel.
 import { ZONES, zoneLabelY, zoneLabelScale } from './floor_zones.js';
+
+// Auto-shrink font label zona: mulai 44px, turun 2px per langkah sampai teks
+// muat dalam 460px ATAU batas bawah 20px. Murni (ctx di-inject) agar bisa
+// di-unit-test; dipakai createZones untuk kanvas label zona 512×96.
+export const ZONE_LABEL_BASE_PX = 44, ZONE_LABEL_MIN_PX = 20, ZONE_LABEL_MAX_W = 460, ZONE_LABEL_STEP = 2;
+export function fitZoneLabel(ctx, text) {
+  let fs = ZONE_LABEL_BASE_PX;
+  const font = (px) => '800 ' + px + 'px "Segoe UI",Arial,sans-serif';
+  ctx.font = font(fs);
+  while (ctx.measureText(text).width > ZONE_LABEL_MAX_W && fs > ZONE_LABEL_MIN_PX) {
+    fs -= ZONE_LABEL_STEP;
+    ctx.font = font(fs);
+  }
+  return fs;
+}
+
 export function createZones(ctx){
   const { THREE, office } = ctx;
   ZONES.forEach(z=>{
@@ -11,8 +27,7 @@ export function createZones(ctx){
     zx.fillStyle='rgba(5,10,22,0.75)';
     zx.beginPath();zx.roundRect(4,4,504,88,20);zx.fill();
     zx.strokeStyle='#F59E0B';zx.lineWidth=3;zx.stroke();
-    let zfs=44;zx.font='800 '+zfs+'px "Segoe UI",Arial,sans-serif';
-    while(zx.measureText(z.label).width>460&&zfs>20){zfs-=2;zx.font='800 '+zfs+'px "Segoe UI",Arial,sans-serif';}
+    fitZoneLabel(zx,z.label);
     zx.textAlign='center';zx.textBaseline='middle';
     zx.fillStyle='#FFFFFF';zx.fillText(z.label,256,50);
     const zt=new THREE.CanvasTexture(zc);zt.minFilter=THREE.LinearFilter;

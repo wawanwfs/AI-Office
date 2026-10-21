@@ -1848,3 +1848,12 @@
 - 2 koreksi di test saja: kurang docblock @vitest-environment jsdom; selector navigasi memakai menuitem+menuitemcheckbox (6 elemen, bukan 4).
 - Bukti: vitest **869/869** (70 file, dulu 856); eslint 0 problem; build OK (precache 35, 1543.15 KiB); deploy ~/wfs-hq OK; commit 0281fd9 (auto-commit hook menangkap file dgn pesan auto, ter-push origin/main — PUSH_OK diverifikasi ulang); e2e produksi 9503 via CDP chrome 9222: reload OK, 14 agents, tvData terisi, 5 zoneLabels (opacity 1), frames 4→14, bubbles 1→2, Runtime.enable listener 10 dtk → jsErrors None.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-22 01:00 WIB — auto-shrink font label zona diekstrak ke fitZoneLabel() murni (+9 test)
+
+- Backlog dipilih: logika auto-shrink font label zona lantai di parts/flooring.js masih inline (while-loop measureText 460px, font 800 44px→20px langkah −2) — satu-satunya painter kanvas zona tanpa unit test langsung (flooring_runtime hanya menguji mesh/sprite, bukan logika shrink).
+- Fix: helper murni `fitZoneLabel(ctx, text)` + konstanta ZONE_LABEL_BASE_PX/MIN_PX/MAX_W/STEP diekstrak; createZones kini 1 baris. Urutan & semantik loop identik kode lama (tampilan tak berubah).
+- +9 unit test (ctx recorder): teks pendek tetap 44px & font diset 1×; weight/keluarga font benar; teks mustahil muat berhenti di batas bawah 20px; teks panjang dgn lebar proporsional menyusut sampai muat (22px); langkah menyusut tepat −2 per iterasi; batas tepat 460px dianggap muat; konstanta publik; string kosong.
+- 2 koreksi hanya di test: ekspektasi pertama keliru (60 char × min 20px = 1200 > 460 → memang berhenti di min); mock ctx measureText dibuat proporsional-font utk kasus menyusut-sampai-muat. Kode produksi tak disentuh setelah ekstraksi.
+- Bukti: vitest **878/878** (71 file, dulu 869); eslint src 0 problem; build OK (precache 35, 1543.16 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222 (e2e_zone.py): reload OK, 14 agents, 5 zoneLabels, tvData terisi (dibantuin.com 23 done), frames 6→12; screenshot 727 KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
