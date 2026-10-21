@@ -1890,3 +1890,11 @@
 - +12 unit test (ctx recorder + gradien palsu): tiap logo — latar fillRect + bingkai strokeRect/lineWidth; gradien linear (koordinat & 2 stop); dua heksagon (6 lineTo per path, koordinat sudut Math.PI/6+i·π/3, r luar/dalam) fill gradien lalu navy; posisi/font/align/baseline semua teks (W center/middle gradien; WFS & PROJECT rata kiri; tagline rgba abu); jumlah teks & gradien tepat; tanpa oper liar. Koreksi hanya di test: pembulatan float heksagon (r6 1e6), helper styleBefore default key, variabel tak terpakai.
 - Bukti: vitest **907/907** (75 file, dulu 895); eslint src 0 problem; build OK (precache 35, 1543.22 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222 (e2e_sign.py): reload OK, agents 14, zones 5 (opacity 1), tv terisi, frames 4→14, bubbles 1→3; screenshot 724 KB (scene hidup, logo normal).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-22 03:06 WIB — painter bayangan kontak (blob shadow) diekstrak ke parts/blob_canvas.js murni (+5 test)
+
+- Backlog dipilih: tekstur bayangan kontak (contact blob shadow) 128×128 — radial gradient rgba(10,14,18) 3 stop (0.55/0.30/0) + fillRect — masih IIFE inline di OfficeScene (__blobTex), painter kanvas material terakhir tanpa unit test langsung.
+- Fix: parts/blob_canvas.js — `drawBlobShadow(ctx)` murni (ctx di-inject, tanpa THREE/DOM) + konstanta BLOB_SIZE/BLOB_CENTER; urutan & parameter perintah gambar identik kode lama (tampilan tak berubah). __blobTex kini 1 baris painter.
+- +5 unit test (ctx recorder + gradien palsu): konstanta ekspor (128/64); gradien radial tepat (64,64,4→64,64,62); 3 colorStop rgba sesuai kode lama; urutan oper createRadialGradient→fillStyle(grad sama)→fillRect 128×128 tanpa oper liar; dua pemanggilan tak share state gradien. Kode produksi tak disentuh setelah ekstraksi; 0 koreksi.
+- Bukti: vitest **912/912** (76 file, dulu 907); eslint src 0 problem; build OK (precache 35, 1543.24 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222 (Runtime.evaluate): reload cache-bypass OK, agents 14, initFail undefined (tanpa kegagalan init), frames 175→180 berjalan, jsErrors none; screenshot 700 KB (scene hidup, bayangan kontak normal).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
