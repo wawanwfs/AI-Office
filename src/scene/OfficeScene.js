@@ -5,7 +5,7 @@ import { createLighting, createNeonMode, createShift, mixHex } from './parts/day
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreen, shouldRefreshShadow, shouldRelayoutLabels } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreen, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock } from './parts/effects.js';
 import { overlapPass, sweepClampRounds } from './parts/label_overlap.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
@@ -1855,7 +1855,9 @@ function animate(){
     const s=Math.sin(elapsed*L.sp+L.ph);
     L.m.material.opacity=s>L.on?1:.12;
   }
-  drawClock(timeOfDay);
+  // jam dinding di-throttle: canvas 96×96 + upload tekstur cukup ~3×/dtk
+  // (jarum detik diskrit per detik) — dulu digambar ulang tiap frame.
+  if(shouldRedrawClock(frame))drawClock(timeOfDay);
 
   // Sounds — tick keyboard agent yang duduk + langkah kaki agent yang jalan
   keyTimer-=delta;

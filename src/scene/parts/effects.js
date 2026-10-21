@@ -115,6 +115,14 @@ export function shouldRelayoutLabels(frame, every = LABEL_RELAYOUT_EVERY) {
   return Number.isFinite(frame) && frame % every === 0;
 }
 
+// Throttle redraw jam dinding: drawClock menggambar ulang canvas 96×96 + upload
+// tekstur SETIAP frame (~60×/dtk), padahal hanya jarum detik yang berubah dan
+// itu cukup ~3×/dtk (jarum detik bergerak dalam diskrit per detik pada render).
+export const CLOCK_REDRAW_EVERY = 20;
+export function shouldRedrawClock(frame, every = CLOCK_REDRAW_EVERY) {
+  return Number.isFinite(frame) && frame % every === 0;
+}
+
 export function drawScreenFrame(s, frame) {
   const { ctx: c, canvas: cv, type, hex } = s;
   const w = cv.width, h = cv.height, t = frame * 0.02;

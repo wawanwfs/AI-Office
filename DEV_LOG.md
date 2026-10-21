@@ -1588,3 +1588,11 @@
 - Fix: panggilan createBubble kini memakai `clampBubbleText(run.title)` (pangkas di batas kata + '…'), konsisten dengan sisa bubble.
 - Bukti: vitest **615/615** (47 file); eslint bersih; build OK (precache 35, 1539.97 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 140346 berjalan, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 12:45 WIB — performa: redraw jam dinding di-throttle 60fps → ~3fps
+
+- Backlog dipilih: `drawClock(timeOfDay)` dipanggil SETIAP frame di animate() — canvas 96×96 digambar ulang + tekstur di-upload ke GPU 60×/dtk, padahal hanya jarum detik yang berubah (bergerak diskrit per detik).
+- Fix: `shouldRedrawClock(frame)` + konstanta `CLOCK_REDRAW_EVERY=20` di parts/effects.js; OfficeScene hanya memanggil drawClock tiap kelipatan 20 frame (~3×/dtk @60fps) — hemat 57 redraw canvas + upload tekstur per detik.
+- +5 unit test baru (kelipatan, custom every, guard non-numerik, rasio hemat ≥20×).
+- Bukti: vitest **620/620** (48 file, dulu 615); eslint src bersih; build OK (precache 35, 1540.03 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 230166 berjalan, phase lunch, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
