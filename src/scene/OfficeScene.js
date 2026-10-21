@@ -7,6 +7,7 @@ import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles } from './parts/effects.js';
 import { overlapPass, sweepClampRounds } from './parts/label_overlap.js';
+import { perfStep } from './parts/perf_quality.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
 import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent } from './parts/ring_spec.js';
@@ -1711,6 +1712,7 @@ const clock=new THREE.Clock();
 // tak mengubah logika clock — THREE.Clock.getDelta melompat saat resume,
 // delta sudah di-clamp .05 sehingga aman).
 let rafId=null, pageHidden=document.visibilityState==='hidden';
+let __perfWin={t0:0,lastFrame:0,fps:0,downgraded:false,shadowLevel:0,goodStreak:0,basePR:0};
 function animate(){
   if(pageHidden)return; // loop berhenti total saat tab hidden (hemat CPU/GPU)
   rafId=requestAnimationFrame(animate);
@@ -1891,40 +1893,15 @@ function animate(){
   // butuh 40 detik sebelum adaptasi pertama terpicu (bug lama: __perf.fps
   // selalu 0 dan degradasi tak pernah jalan pada perangkat yang paling butuh).
   {
-    const nowMs=performance.now();
-    if(!__perfWin.t0)__perfWin.t0=nowMs;
-    else if(nowMs-__perfWin.t0>=2000){
-      const fps=(frame-(__perfWin.lastFrame||0))/((nowMs-__perfWin.t0)/1000);
-      __perfWin.t0=nowMs;__perfWin.lastFrame=frame;__perfWin.fps=fps;
-      // Tangga degradasi — tiap level hanya diterapkan sekali (latch), tak bolak-balik
-      if(fps<18&&renderer.getPixelRatio()>.75){
-        renderer.setPixelRatio(Math.max(.75,renderer.getPixelRatio()-.25));
-        __perfWin.downgraded=true;__perfWin.goodStreak=0;
-      }
-      if(fps<10&&__perfWin.shadowLevel<1&&sun.castShadow){
-        __perfWin.shadowLevel=1;                     // 2048→1024: peta bayangan lebih murah
-        sun.shadow.mapSize.set(1024,1024);
-        if(sun.shadow.map){sun.shadow.map.dispose();sun.shadow.map=null;}
-      }
-      if(fps<5&&__perfWin.shadowLevel<2&&sun.castShadow){
-        __perfWin.shadowLevel=2;sun.castShadow=false; // matikan bayangan matahari total
-        renderer.shadowMap.needsUpdate=true;
-      }
-      if(__perfWin.downgraded&&!__perfWin.shadowLevel){
-        // recovery: bila FPS sehat stabil 4 cek berturut-turut (8 dtk), naikkan pixelRatio
-        // bertahap kembali ke basePR — visual kembali tajam setelah beban turun.
-        if(!__perfWin.basePR)__perfWin.basePR=Math.min(window.devicePixelRatio||1,1.5);
-        __perfWin.goodStreak=(__perfWin.goodStreak||0)+1;
-        if(__perfWin.goodStreak>=4&&fps>=28){
-          const pr=Math.min(__perfWin.basePR,renderer.getPixelRatio()+.25);
-          if(pr>renderer.getPixelRatio()){renderer.setPixelRatio(pr);}
-          if(renderer.getPixelRatio()>=__perfWin.basePR){__perfWin.downgraded=false;__perfWin.goodStreak=0;}
-        }
-      }
-    }
+    // Adaptive quality via perfStep (murni, parts/perf_quality.js, diuji unit).
+    __perfWin = perfStep(__perfWin, performance.now(), frame, {
+      renderer: { getPixelRatio: () => renderer.getPixelRatio(), setPixelRatio: (v) => renderer.setPixelRatio(v) },
+      sun,
+      needsShadowUpdate: () => { renderer.shadowMap.needsUpdate = true; },
+      basePixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
+    });
   }
 }
-const __perfWin={t0:0,lastFrame:0,fps:0,downgraded:false,shadowLevel:0,goodStreak:0};
 window.__perf=__perfWin;
 animate();
 const onVis=()=>{ pageHidden=document.visibilityState==='hidden';

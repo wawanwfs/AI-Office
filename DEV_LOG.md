@@ -1694,3 +1694,11 @@
 - +5 unit test (rentang delay & rng deterministik, prioritas task + clamp 32 char, frasa role & fallback, agent null → null, rng kustom).
 - Bukti: vitest **676/676** (55 file, dulu 671); eslint src/scene **0 problem**; build OK (precache 35, 1541.58 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP reload: 14 agents, frames berjalan (5→10), tanpa exception; screenshot 726 KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 17:30 WIB — adaptive quality (tangga FPS degradasi + recovery) diekstrak ke perfStep murni (parts/perf_quality.js)
+
+- Backlog dipilih: blok adaptive quality di animate() masih inline — sampling FPS 2 dtk, tangga pixelRatio→shadow 1024→shadow off (latch), dan recovery pixelRatio; logika latching tak bisa diuji unit.
+- Fix: parts/perf_quality.js — `perfStep(state, nowMs, frame, opts)` murni (renderer & sun dimock via opts, aksi eksplisit). Semantik persis kode lama: sampel pertama hanya set t0 (t0=0 falsy), fps = Δframe/Δt, tangga <18/<10/<5 fps, latch shadowLevel, recovery 4 streak ≥28 fps → pixelRatio naik bertahap sampai basePR. OfficeScene tinggal wrapper renderer asli.
+- +9 unit test (sampel pertama, window <2 dtk, tangga lengkap 2 fps + map.dispose, latch tak re-trigger, 15 fps hanya pixelRatio, 9 fps @pr 0.75 hanya shadow, recovery 4 streak naik bertahap sampai basePR & latch lepas, recovery diblokir bila shadowLevel=2, guard tanpa renderer/sun).
+- Bukti: vitest **685/685** (56 file, dulu 676); eslint src **0 problem**; build OK (precache 35, 1541.96 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP reload: 14 agents, frames berjalan (3→4), __perf state terisi benar, tanpa exception; screenshot 726 KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
