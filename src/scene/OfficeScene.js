@@ -5,7 +5,7 @@ import { createLighting, createNeonMode, createShift, mixHex } from './parts/day
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreen } from './parts/effects.js';
 import { overlapPass, sweepClampRounds } from './parts/label_overlap.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
@@ -1477,7 +1477,7 @@ for(let i=-3;i<=3;i++){
 addDeskTrinkets({THREE,office,M,rng},desks);
 const __pages=createDriftingPages({THREE,office,rng});
 let frame=0;
-const drawScreen=s=>drawScreenFrame(s,frame);
+const drawScreen=s=>{ if(shouldRedrawScreen(frame)) drawScreenFrame(s,frame); };
 
 // ═══════════════════════════════════════════════════
 // TIME SYSTEM

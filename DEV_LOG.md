@@ -1527,3 +1527,11 @@
 - Verifikasi visual: canvas papan diekstrak via toDataURL dan dibaca — semua judul berakhir bersih ('…' di batas kata: "…admin…", "…embeddable…", "…E2E…", "…page…"), kartu #22 utuh dengan border bawah terlihat, gap di atas strip.
 - Bukti: vitest **590/590** (44 file, dulu 585 — +5); eslint src **0 problem**; build OK (precache 35, 1538.12 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr berjalan, tanpa 'Scene init failed'; screenshot produksi 710KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 10:10 WIB — performa: redraw layar monitor di-throttle 60fps → ~10fps (hemat CPU/GPU per frame)
+
+- Backlog dipilih: `screenData.forEach(drawScreen)` menggambar ulang 14 tekstur canvas monitor SETIAP frame (~60fps) padahal kontennya animasi lambat (chat, chart, log) — boros CPU/GPU utk 2 vCPU VM.
+- Fix: helper `shouldRedrawScreen(frame)` + konstanta `SCREEN_REDRAW_EVERY=6` di parts/effects.js (teruji unit); OfficeScene hanya memanggil drawScreenFrame tiap frame kelipatan 6 → ~10 redraw/dtk @60fps, animasi monitor tetap halus.
+- +3 unit test baru (kelipatan redraw, throttle ≥5×, guard frame non-numerik).
+- Bukti: vitest **593/593** (45 file, dulu 590); eslint src **0 error**; build OK (precache 35, 1538.18 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 174104 berjalan, phase lunch, tanpa 'Scene init failed'; screenshot produksi 675KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

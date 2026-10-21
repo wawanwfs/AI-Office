@@ -92,6 +92,13 @@ export const SCREEN_RENDERERS = {
   },
 };
 
+// Throttle redraw layar: konten monitor (chat, chart, log) tidak perlu 60fps.
+// 60fps × 14 tekstur canvas = boros CPU; ~10fps tetap halus untuk animasi lambat.
+export const SCREEN_REDRAW_EVERY = 6;
+export function shouldRedrawScreen(frame, every = SCREEN_REDRAW_EVERY) {
+  return Number.isFinite(frame) && frame % every === 0;
+}
+
 export function drawScreenFrame(s, frame) {
   const { ctx: c, canvas: cv, type, hex } = s;
   const w = cv.width, h = cv.height, t = frame * 0.02;
