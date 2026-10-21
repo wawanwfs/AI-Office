@@ -133,7 +133,7 @@ describe('clampStripTenant', () => {
     const c = clampStripTenant('Kopi Kenangan Sentral Raya Cabang Utama', 24)
     expect(c.length).toBeLessThanOrEqual(25)
     expect(c.endsWith('…')).toBe(true)
-    expect(c.endsWith('Raya…')).toBe(true) // tidak memotong tengah kata
+    expect(c.endsWith('Sentral…')).toBe(true) // tidak memotong tengah kata
   })
   it('kata tunggal sangat panjang → fallback potong', () => {
     const c = clampStripTenant('X'.repeat(40), 24)
@@ -155,7 +155,7 @@ describe('stripLayout', () => {
     expect(dropped).toEqual([])
   })
   it('budget sempit → terbaru dibuang dulu, label SaaS & agen tetap', () => {
-    const { kept, dropped } = stripLayout(snap, m(1200))
+    const { kept, dropped } = stripLayout(snap, m(1073))
     expect(dropped).toContain('latest')
     expect(kept.some(s => s.txt.startsWith('terbaru:'))).toBe(false)
     expect(kept[0].txt).toBe('SaaS')

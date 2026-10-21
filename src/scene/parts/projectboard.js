@@ -3,7 +3,7 @@
 // diperbarui otomatis setiap 60 detik. Jika fetch gagal → fallback ke data terakhir.
 // Modul murni-canvas; dipasang di OfficeScene dengan satu pemanggilan.
 
-import { computePct, clip, cardY, CARD_H, subtitle as subLine, bannerParts, bannerNames, columnItems, clampStripTenant, stripLayout, STRIP_GAP, STRIP_LEFT, STRIP_RIGHT } from './projectboard_data.js'
+import { computePct, clip, cardY, CARD_H, subtitle as subLine, bannerParts, bannerNames, columnItems, stripLayout, STRIP_GAP, STRIP_LEFT, STRIP_RIGHT } from './projectboard_data.js'
 
 export function createProjectBoard(office, THREE) {
   // --- kanvas papan ---

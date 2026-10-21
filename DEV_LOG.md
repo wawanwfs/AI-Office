@@ -1559,3 +1559,15 @@
 - +3 unit test baru (batas kata, kata panjang, spasi dipakai) → clampBubbleText teruji 5 kasus.
 - Bukti: vitest **603/603** (47 file, dulu 600); eslint src **0 problem**; build OK (precache 35, 1538.42 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 398417 berjalan, phase lunch, tanpa 'Scene init failed'; screenshot produksi 675KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 11:45 WIB — papan proyek: strip bawah sadar-lebar, agen tak terdorong keluar
+
+- Backlog dipilih: QA strip status bawah papan. Estimasi lebar konten (nama tenant panjang + 4 agen) bisa 1449px > batas ~1422px → segmen AGENT di ujung kanan berpotensi keluar frame strip.
+- Fix di projectboard_data.js (murni, teruji):
+  - `clampStripTenant(name, 24)`: nama tenant dipangkas di batas kata + '…' (pola clip).
+  - `stripLayout(snap, measure)`: ukur lebar segmen (dengan font canvas sungguhan), buang segmen prioritas-rendah berurutan — terbaru → pesan → chat → online — sampai muat budget; label SaaS + status agen SELALU dipertahankan.
+- projectboard.js: render strip memakai stripLayout dengan measureText real (budget = W − 2×44 − 26).
+- +8 unit test (clampStripTenant 4, stripLayout 4 termasuk invariant lebar ≤ budget).
+- Verifikasi visual produksi: canvas strip diekstrak via __projectBoard → toDataURL — semua segmen tampil lengkap (SaaS, 2 tenant, 16 chat, 32 pesan, online, terbaru: Warung Bu Ani, AGENT, toni/qa1/fe1/be1 ●) tanpa terpotong, ada sisa ruang di kanan.
+- Bukti: vitest **611/611** (47 file, dulu 603); eslint src **0 problem**; build OK (precache 35, 1539.22 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 setelah reload: DOM True, 14 agents, fr 100+ naik, tanpa error.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
