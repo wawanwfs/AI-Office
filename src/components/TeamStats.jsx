@@ -1,3 +1,4 @@
+import { clip } from '../lib/clip.js'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
@@ -64,7 +65,7 @@ export default function TeamStats() {
                   {data.slice(-8).reverse().map(t => (
                     <div key={t.id} style={{ padding: '6px 0', borderTop: '1px solid var(--border)', fontSize: 13 }}>
                       <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', marginRight: 6, background: dot(t.status) }} />
-                      #{t.id} {String(t.title).slice(0, 34)}
+                      #{t.id} {clip(t.title, 34)}
                     </div>
                   ))}
                 </div>

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react'
+import { clip } from './lib/clip.js'
 import HUD from './components/HUD'
 import Header from './components/Header'
 import SkipLink from './components/SkipLink'
@@ -85,8 +86,8 @@ export default function App() {
         if (prev && prev[x.id] !== undefined && prev[x.id] !== x.status) {
           const L = { done: 'selesai', failed: 'gagal', running: 'berjalan', review: 'perlu review', pending: 'antri' }
           const d = new Date()
-          pushLog({ t: d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }), id: x.id, status: x.status, label: L[x.status] || x.status, title: String(x.title || '').slice(0, 50) })
-          flash(`Task #${x.id} ${L[x.status] || x.status}: ${String(x.title || '').slice(0, 40)}`, x.status === 'failed')
+          pushLog({ t: d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }), id: x.id, status: x.status, label: L[x.status] || x.status, title: clip(x.title, 50) })
+          flash(`Task #${x.id} ${L[x.status] || x.status}: ${clip(x.title, 40)}`, x.status === 'failed')
         }
       })
       prevStatus.current = cur

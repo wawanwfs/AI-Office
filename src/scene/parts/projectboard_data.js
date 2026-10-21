@@ -7,12 +7,8 @@ export const CARD_TOP = 248, CARD_STEP = 88, CARD_H = 78, COLUMN_BOTTOM = 788
 export function cardY(i) { return CARD_TOP + i * CARD_STEP }
 
 // judul dipotong di batas kata, diberi '…' bila terpotong (jangan memotong di tengah kata)
-export function clip(s, n) {
-  if (!s || s.length <= n) return s || ''
-  const cut = s.slice(0, n)
-  const sp = cut.lastIndexOf(' ')
-  return (sp > n * 0.6 ? cut.slice(0, sp) : cut).trimEnd() + '…'
-}
+import { clip } from '../../lib/clip.js'
+export { clip }
 
 // persen selesai; 0 bila tak ada task total
 export function computePct(T) {

@@ -1603,3 +1603,11 @@
 - Fix: satu gerbang `if(namesVisible && shouldRelayoutLabels(frame))` kini mencakup sizeLabels() + seluruh blok label; tidak ada perubahan perilaku (offset anti-tumpuk per-agent tersimpan di userData.antiY/antiX sehingga label tidak loncat antar tick).
 - Bukti: vitest **620/620** (48 file); eslint src bersih; build OK (precache 35); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 301622 berjalan, phase lunch, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 13:35 WIB — clip() dipakai ulang lintas UI: log HUD, flash, ticker, TeamStats tak lagi memotong tengah kata
+
+- Backlog dipilih: sisa `slice(0, n)` teks di UI — App.jsx (log HUD `slice(0,50)` + flash `slice(0,40)`), Ticker.jsx (`slice(0,48)`), TeamStats.jsx (`slice(0,34)`) — pola bug sama dengan bubble/banner yang sudah dibereskan.
+- Fix: `clip()` dipindah ke `src/lib/clip.js` (re-export dari projectboard_data.js agar kompatibel); keempat pemanggilan UI kini pakai `clip()` batas-kata + '…'.
+- +4 unit test baru (utuh, batas kata, kata panjang, identitas re-export).
+- Bukti: vitest **624/624** (49 file, dulu 620); eslint src **0 problem**; build OK; deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 374341 berjalan, phase lunch, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
