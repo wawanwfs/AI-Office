@@ -1898,3 +1898,11 @@
 - +5 unit test (ctx recorder + gradien palsu): konstanta ekspor (128/64); gradien radial tepat (64,64,4→64,64,62); 3 colorStop rgba sesuai kode lama; urutan oper createRadialGradient→fillStyle(grad sama)→fillRect 128×128 tanpa oper liar; dua pemanggilan tak share state gradien. Kode produksi tak disentuh setelah ekstraksi; 0 koreksi.
 - Bukti: vitest **912/912** (76 file, dulu 907); eslint src 0 problem; build OK (precache 35, 1543.24 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222 (Runtime.evaluate): reload cache-bypass OK, agents 14, initFail undefined (tanpa kegagalan init), frames 175→180 berjalan, jsErrors none; screenshot 700 KB (scene hidup, bayangan kontak normal).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-22 03:28 WIB — painter tekstur dinding (panel + nat + bevel gradien) diekstrak ke parts/wall_canvas.js murni (+8 test)
+
+- Backlog dipilih: fungsi tex() di blok dinding OfficeScene (fillRect latar + loop garis nat vertikal 0..wpx langkah step lineWidth 3 + gradien bevel 2 stop rgba putih .12 / hitam .08) masih inline — painter kanvas dinding dipakai 8x (upper/wood A-R) tanpa unit test langsung.
+- Fix: parts/wall_canvas.js — drawWallTex(ctx, base, line, wpx=512, hpx=256, step=64) murni + konstanta WALL_TEX_TOP/BOTTOM; urutan & parameter perintah gambar identik kode lama (tampilan tak berubah). OfficeScene tex() kini 3 baris (canvas + painter + texture).
+- +8 unit test (ctx recorder + gradien palsu): konstanta ekspor; parameter default; base fillRect sebagai 2 oper pertama; nat strokeStyle/lineWidth 3 dgn 9 garis x 0..512 langkah 64, moveTo(i,0)-lineTo(i,hpx); step 32 = 17 garis; gradien linear (0,0-0,hpx) 2 stop + fillRect penuh; urutan keseluruhan base-nat-gradien tanpa oper liar; dua pemanggilan tak share state. 0 koreksi — test langsung hijau.
+- Bukti: vitest 920/920 (77 file, dulu 912); eslint src 0 problem; build OK (precache 35, 1543.29 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222 (Runtime.evaluate): reload cache-bypass OK, agents 14, zones 5, tvData terisi (dibantuin.com 23 done), bubbles 2, frames 3-5 berjalan; screenshot 730 KB (scene hidup, dinding panel/kayu normal).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

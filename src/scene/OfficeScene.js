@@ -18,6 +18,7 @@ import { drawWoodFloor, drawAoStrip } from './parts/floor_canvas.js';
 import { drawCeiling } from './parts/ceiling_canvas.js';
 import { drawResepsiLogo, drawWallLogo } from './parts/logo_canvas.js';
 import { drawBlobShadow } from './parts/blob_canvas.js';
+import { drawWallTex } from './parts/wall_canvas.js';
 import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelScale, drawLabelText } from './parts/label_spec.js';
 import { WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { OBSTACLES } from './parts/obstacles.js';
@@ -1132,12 +1133,8 @@ const __wallObjs=[];
   const W=(geo,mat,x,y,z,ry)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);if(ry)m.rotation.y=ry;office.add(m);__wallObjs.push(m);return m};
   const B=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
   const tex=(base,line,wpx=512,hpx=256,step=64)=>{
-    const c=document.createElement('canvas');c.width=wpx;c.height=hpx;const x=c.getContext('2d');
-    x.fillStyle=base;x.fillRect(0,0,wpx,hpx);
-    x.strokeStyle=line;x.lineWidth=3;
-    for(let i=0;i<=wpx;i+=step){x.beginPath();x.moveTo(i,0);x.lineTo(i,hpx);x.stroke();}
-    const g=x.createLinearGradient(0,0,0,hpx);g.addColorStop(0,'rgba(255,255,255,.12)');g.addColorStop(1,'rgba(0,0,0,.08)');
-    x.fillStyle=g;x.fillRect(0,0,wpx,hpx);
+    const c=document.createElement('canvas');c.width=wpx;c.height=hpx;
+    drawWallTex(c.getContext('2d'),base,line,wpx,hpx,step);
     const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
   };
   const lit=(map)=>new THREE.MeshBasicMaterial({map}); // tidak bergantung pencahayaan -> selalu terang & terbaca
