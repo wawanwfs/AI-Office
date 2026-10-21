@@ -1765,3 +1765,11 @@
 - +15 unit test (palet, entri valid/status tanpa warna/tanpa badge/gid tak dikenal/null, wake running>0 & hilang & null, alert transisi/sama/reset 0/cabang !v/agent tak ditemukan/null).
 - Bukti: vitest **766/766** (62 file, dulu 751); eslint src **0 problem**; build OK (precache 35, 1543.27 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via /tmp/e2e_label.py: reload OK, 14 agents, 5 zoneLabels (opacity 1), frames berjalan (4→9), 0 label NaN/exception.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 20:35 WIB — wall fade per-frame diekstrak ke parts/wall_fade.js murni
+
+- Backlog dipilih: blok fade dinding di IIFE dinding OfficeScene masih inline — rumus fadeOf (max(0,min(1,1-(d+1.5)/6))), penerapan opacity/visible per mesh dinding (ambang on = fade>0.04, skip material array), dan visibilitas tiang sudut (max(val[kx],val[kz])>0.5) — semua tak bisa diuji unit.
+- Fix: parts/wall_fade.js — `wallFadeOf(d)`, `applyWallFade(objs,fade)`, `cornerVisibility(corners,val)` (mengembalikan {m,vis}, penelepon yang assign), `wallFadeTick(wallDefs,corners,cam)` (pembulatan val 2 desimal + posisi kamera, semantik persis kode lama). window.__wallFade kini tinggal collect() + wallFadeTick; __wallState & debug window.__wallLast tak berubah.
+- +15 unit test (rumus fade eksak/ekuivalensi 6 nilai d, solid pada d=-1.5, clamp 0, ambang 0.04 tepat, hidden tak menyentuh opacity, skip material array, null aman, ambang tiang 0.5, pemilihan sisi tiang, tick dalam/luar kantor, pembulatan cam & val, opacity diterapkan).
+- Bukti: vitest **781/781** (63 file, dulu 766); eslint src **0 problem**; build OK (precache 35, 1543.45 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via e2e_wall.py (returnByValue): reload OK, 14 agents, 5 zoneLabels (opacity 1), frames berjalan (6→11), 0 label NaN; wallState valid: default kamera {front:0,right:0,back:1,left:1}, __wallFade di luar depan {front:0} vs di dalam {semua 1} — tanpa exception; screenshot 727 KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

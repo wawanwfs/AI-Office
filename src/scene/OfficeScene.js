@@ -22,6 +22,7 @@ import { createProjectBoard } from './parts/projectboard.js';
 import { chatPhrases, COLLAB_PAIRS, pickCollab, clampBubbleText, LINE_SEC, autoTalkDelay, autoTalkText } from './parts/dialog.js';
 import { agentIdMap, buildRunningByAgent } from './parts/running_tasks.js';
 import { BADGE_COLORS, badgeAssignments, wakeAgentIds, failedAlerts } from './parts/status_poll.js';
+import { wallFadeTick } from './parts/wall_fade.js';
 import { updateBubbles as updateBubblesPure } from './parts/bubbles.js';
 import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canvas.js';
 import { looksOf } from './parts/character_looks.js';
@@ -1347,22 +1348,12 @@ const __wallObjs=[];
     // tiang sudut mengikuti dinding yang lebih terlihat
     window.__corners=office.children.filter(m=>m.isMesh&&Math.abs(Math.abs(m.position.x)-12.5)<.01&&Math.abs(Math.abs(m.position.z)-9.5)<.01&&Math.abs(m.position.y-2)<.01);
   };
-  const fadeOf=(d)=>Math.max(0,Math.min(1,1-(d+1.5)/6));   // 1 = solid, 0 = hilang
+  // fadeOf & penerapan fade diekstrak ke parts/wall_fade.js (murni, diuji unit):
+  // wallFadeTick menghitung fade per dinding, menerapkan opacity/visible,
+  // dan visibilitas tiang sudut — semantik persis kode lama.
   window.__wallFade=(cam)=>{
     if(!collected)collect();
-    const val={};
-    for(const k in wallDefs){
-      const a=fadeOf(wallDefs[k].out(cam)); val[k]=+a.toFixed(2);
-      wallDefs[k].objs.forEach(m=>{
-        const on=a>0.04; m.visible=on;
-        if(on&&m.material&&!Array.isArray(m.material)){m.material.transparent=true;m.material.opacity=a;}
-      });
-    }
-    (window.__corners||[]).forEach(m=>{
-      const kx=m.position.x<0?'left':'right', kz=m.position.z<0?'front':'back';
-      m.visible=Math.max(val[kx],val[kz])>0.5;                // tiang hanya bila dinding di sebelahnya terlihat
-    });
-    window.__wallLast={...val,cam:[+cam.x.toFixed(1),+cam.y.toFixed(1),+cam.z.toFixed(1)]};
+    window.__wallLast=wallFadeTick(wallDefs,window.__corners,cam);
     return window.__wallLast;
   };
   window.__wallState=()=>window.__wallLast;
