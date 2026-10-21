@@ -43,3 +43,14 @@ export function chimeStart(i) {
 export function masterGainValue(muted) {
   return muted ? 0 : 1;
 }
+
+// Pengatur waktu suara periodik (diekstrak dari animate() OfficeScene):
+// timer dikurangi delta; saat habis → trigger sekali + interval baru.
+// Murni (tanpa side effect) agar mudah diuji unit. interval bisa angka
+// (step: .32) atau fungsi rng→detik (keyclick: .09 + rng()*.18).
+export function tickSoundTimer(prev, delta, interval, rng = Math.random) {
+  if (!Number.isFinite(prev) || !Number.isFinite(delta)) return { trigger: true, timer: 0 };
+  const nt = prev - delta;
+  if (nt > 0) return { trigger: false, timer: nt };
+  return { trigger: true, timer: typeof interval === 'function' ? interval(rng) : interval };
+}

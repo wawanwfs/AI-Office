@@ -1651,3 +1651,11 @@
 - +3 unit test baru (dt di bawah interval → diam; akumulasi tercapai → bergerak dengan step benar; total perpindahan per 2 dtk ekuivalen update per-frame).
 - Bukti: vitest **638/638** (51 file, dulu 635); eslint src **0 problem**; build OK (precache 35, 1540.53 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: reload OK, 14 agents, frames berjalan (fr 2→4→42), tanpa 'Scene init failed'; screenshot 718 KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 15:30 WIB — logika timer suara (keyclick & langkah) diekstrak ke tickSoundTimer murni
+
+- Backlog dipilih: jadwal suara periodik di animate() masih inline (keyTimer/stepTimer -= delta + trigger) — tidak bisa diuji unit dan bercampur dengan loop render.
+- Fix: `tickSoundTimer(prev,delta,interval,rng)` murni di parts/sound_spec.js — timer dikurangi delta; habis → trigger sekali + reset (interval angka utk step .32, fungsi rng utk keyclick .09+rng*.18); guard non-numerik. animate() tinggal memakai hasilnya.
+- +6 unit test baru (belum habis, trigger+reset, interval fungsi, tepat nol, guard, simulasi 600 frame ≈ 10 dtk → 29–33 trigger).
+- Bukti: vitest **644/644** (52 file, dulu 638); eslint src **0 problem**; build OK (precache 35, 1540.76 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: reload OK, 14 agents, frames berjalan (fr 3→26→30), audio state none (lazy, benar), tanpa 'Scene init failed'; screenshot 719 KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
