@@ -1,6 +1,7 @@
 // Perabot kantor WFS Project — ditulis ulang dengan pola "builder" berbasis data.
 // Setiap builder menerima konteks { THREE, office, M, MB, rng } dan mengembalikan referensi yang dibutuhkan scene.
-import { POSTERS, POSTER_Y, POSTER_W, POSTER_H, CANVAS_W, CANVAS_H, posterLineY, posterOffset, posterFacing } from './poster_spec.js';
+import { POSTERS, POSTER_Y, POSTER_W, POSTER_H, CANVAS_W, CANVAS_H, posterOffset, posterFacing } from './poster_spec.js';
+import { drawPoster } from './poster_canvas.js';
 export function createFurniture(ctx /* hooks disiapkan utk ekstensi */) {
   const { THREE, office, M, MB, rng } = ctx;
   const box = (w, h, d, mat, x, y, z, parent = office, cast = false) => {
@@ -89,11 +90,7 @@ export function createFurniture(ctx /* hooks disiapkan utk ekstensi */) {
     const cv = document.createElement('canvas');
     cv.width = CANVAS_W; cv.height = CANVAS_H;
     const g = cv.getContext('2d');
-    g.fillStyle = '#14172b'; g.fillRect(0, 0, CANVAS_W, CANVAS_H);
-    g.strokeStyle = p.c; g.lineWidth = 3; g.strokeRect(6, 6, 108, 148);
-    g.fillStyle = p.c; g.font = 'bold 15px sans-serif'; g.textAlign = 'center';
-    g.shadowColor = p.c; g.shadowBlur = 6;
-    p.t.split(' ').forEach((w, i) => g.fillText(w, 60, posterLineY(i)));
+    drawPoster(g, p.c, p.t);
     const plane = new THREE.Mesh(new THREE.PlaneGeometry(POSTER_W, POSTER_H), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv) }));
     plane.position.set(p.x + posterOffset(p.x), POSTER_Y, p.z);
     plane.rotation.y = posterFacing(p.x);

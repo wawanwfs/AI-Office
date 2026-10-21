@@ -1922,3 +1922,11 @@
 - Bukti: ~/wfs-hq/assets kini tepat 5 file (index-Cuq1lqdY.js, chunk-DECur_0Z.js, OfficeScene-7-B4vXpJ.js, CsWidget-D-zv4ChE.js, index-Bx0Mn9T-.css); 44,94 MB dibebaskan; HTTP 200 untuk /, OfficeScene chunk, sw.js; e2e produksi 9503 via CDP: reload cache-bypass OK, agents 14, projectBoard ada, zoneLabels 5, bubbles 5, frames 18→25 berjalan, initFail tidak ada; screenshot 724 KB (scene hidup).
 - Test: vitest 924/924 (77 file), eslint bersih, build OK (precache 35, 1543.30 KiB) — kode src tak berubah (murni maintenance deploy).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-22 04:45 WIB — painter poster slogan WFS diekstrak ke parts/poster_canvas.js murni (+6 test)
+
+- Backlog dipilih: blok gambar poster slogan (latar #14172b 120×160 + bingkai strokeRect(6,6,108,148) lineWidth 3 + font bold 15px center + shadowBlur 6 + satu fillText per kata di x=60,y=posterLineY(i)) masih inline di parts/furniture.js — painter kanvas poster (5 poster: SHIP IT/KUALITAS DULU/BUILD DAILY/TEST EVERYTHING/WFS PROJECT) tanpa unit test langsung.
+- Fix: parts/poster_canvas.js — drawPoster(ctx, color, text) murni (ctx di-inject); urutan & parameter perintah gambar identik kode lama (tampilan tak berubah). furniture.js blok poster kini 1 baris painter.
+- +6 unit test (ctx recorder dgn setter terekam sebagai oper): latar fillStyle #14172b + fillRect penuh sebagai 2 oper pertama; bingkai strokeStyle/lineWidth 3/strokeRect(6,6,108,148); blok teks font/center/shadowColor/shadowBlur + fillStyle warna; satu fillText per kata di (60, posterLineY(i)) — TEST EVERYTHING = 2 teks; filter oper liar (semua oper dalam whitelist); dua pemanggilan tak share state. 0 koreksi — test langsung hijau.
+- Bukti: vitest **930/930** (78 file, dulu 924); eslint src 0 problem; build OK (precache 35, 1543.31 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP: reload cache-bypass OK, agents 14, zoneLabels 5, frames 3→4 berjalan; screenshot 731 KB (scene hidup, poster normal).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); parts tanpa test tersisa: flooring (fitZoneLabel tercakup test lain), furniture/motion/projectboard/robot/room/status_poll (builder runtime THREE).
