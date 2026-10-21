@@ -3,7 +3,7 @@
 // diperbarui otomatis setiap 60 detik. Jika fetch gagal → fallback ke data terakhir.
 // Modul murni-canvas; dipasang di OfficeScene dengan satu pemanggilan.
 
-import { computePct, clip, cardY, CARD_H, subtitle as subLine, bannerParts, bannerNames, columnItems, stripSegments } from './projectboard_data.js'
+import { computePct, clip, cardY, CARD_H, subtitle as subLine, bannerParts, bannerNames, columnItems, clampStripTenant, stripLayout, STRIP_GAP, STRIP_LEFT, STRIP_RIGHT } from './projectboard_data.js'
 
 export function createProjectBoard(office, THREE) {
   // --- kanvas papan ---
@@ -135,9 +135,17 @@ export function createProjectBoard(office, THREE) {
     g.fillStyle = '#0b1424'; roundRect(20, 794, W - 40, 32, 8); g.fill()
     g.strokeStyle = '#2c3e5c'; g.lineWidth = 2; roundRect(20, 794, W - 40, 32, 8); g.stroke()
     g.font = '22px sans-serif'; g.textAlign = 'left'
-    let sx = 44
-    const seg = (txt, col) => { g.fillStyle = col; g.fillText(txt, sx, 817); sx += g.measureText(txt).width + 26 }
-    stripSegments(snap).forEach(sg => seg(sg.txt, sg.col))
+    // layout strip sadar-lebar: buang segmen prioritas-rendah bila total melebihi
+    // lebar strip (diukur dengan font sungguhan) — agen tak perlu terdorong keluar
+    g.font = '22px sans-serif'
+    const layout = stripLayout(snap, {
+      budget: W - STRIP_LEFT - STRIP_RIGHT - 26,
+      gap: STRIP_GAP,
+      text: t => g.measureText(t).width,
+    })
+    g.font = '22px sans-serif'; g.textAlign = 'left'
+    let sx = STRIP_LEFT
+    layout.kept.forEach(sg => { g.fillStyle = sg.col; g.fillText(sg.txt, sx, 817); sx += g.measureText(sg.txt).width + STRIP_GAP })
     tex.needsUpdate = true
   }
 

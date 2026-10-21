@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computePct, clip, cardY, CARD_H, COLUMN_BOTTOM, subtitle, bannerParts, bannerNames, columnItems, stripSegments } from '../scene/parts/projectboard_data.js'
+import { computePct, clip, cardY, CARD_H, COLUMN_BOTTOM, subtitle, bannerParts, bannerNames, columnItems, stripSegments, clampStripTenant, stripLayout } from '../scene/parts/projectboard_data.js'
 
 describe('cardY (tata letak kartu tidak menabrak strip bawah)', () => {
   it('6 kartu terakhir masih di dalam kolom', () => {
@@ -122,5 +122,59 @@ describe('stripSegments', () => {
     expect(segs[0]).toEqual({ txt: 'SaaS', col: '#448AFF' })
     expect(segs.map(s => s.txt)).toContain('offline')
     expect(segs.some(s => s.txt === 'AGENT')).toBe(false)
+  })
+})
+
+describe('clampStripTenant', () => {
+  it('nama pendek utuh', () => {
+    expect(clampStripTenant('Toko Berkah')).toBe('Toko Berkah')
+  })
+  it('nama panjang dipangkas di batas kata + …', () => {
+    const c = clampStripTenant('Kopi Kenangan Sentral Raya Cabang Utama', 24)
+    expect(c.length).toBeLessThanOrEqual(25)
+    expect(c.endsWith('…')).toBe(true)
+    expect(c.endsWith('Raya…')).toBe(true) // tidak memotong tengah kata
+  })
+  it('kata tunggal sangat panjang → fallback potong', () => {
+    const c = clampStripTenant('X'.repeat(40), 24)
+    expect(c).toBe('X'.repeat(24) + '…')
+  })
+  it('guard falsy', () => {
+    expect(clampStripTenant('')).toBe('')
+    expect(clampStripTenant(null)).toBe('')
+  })
+})
+
+describe('stripLayout', () => {
+  const snap = { saas: { online: true, stats: { tenants: 3, conversations: 120, messages: 4560 }, tenants: [{ name: 'Toko Berkah Jaya Abadi Sentral' }] }, agents: [{ name: 'be1', status: 'Up' }, { name: 'fe1', status: 'Up' }] }
+  // pengukur deterministik: 10px per karakter
+  const m = (budget) => ({ budget, gap: 26, text: t => t.length * 10 })
+  it('muat → semua segmen tampil, tak ada yang dibuang', () => {
+    const { kept, dropped } = stripLayout(snap, m(5000))
+    expect(kept.some(s => s.txt.startsWith('terbaru:'))).toBe(true)
+    expect(dropped).toEqual([])
+  })
+  it('budget sempit → terbaru dibuang dulu, label SaaS & agen tetap', () => {
+    const { kept, dropped } = stripLayout(snap, m(1200))
+    expect(dropped).toContain('latest')
+    expect(kept.some(s => s.txt.startsWith('terbaru:'))).toBe(false)
+    expect(kept[0].txt).toBe('SaaS')
+    expect(kept.map(s => s.txt)).toContain('AGENT')
+  })
+  it('budget sangat sempit → hanya segmen wajib (SaaS + agen)', () => {
+    const { kept, dropped } = stripLayout(snap, m(400))
+    expect(dropped).toEqual(['latest', 'messages', 'chats', 'online'])
+    expect(kept.every(s => !['latest', 'messages', 'chats', 'online'].includes(s.txt))).toBe(true)
+    expect(kept.map(s => s.txt)).toContain('be1 ●')
+  })
+  it('invariant: lebar hasil selalu ≤ budget bila masih ada yang bisa dibuang', () => {
+    for (const budget of [300, 700, 1000, 1400]) {
+      const { kept } = stripLayout(snap, m(budget))
+      const w = kept.reduce((a, s) => a + s.txt.length * 10 + 26, 0) - 26
+      const mandatory = kept.filter(s => !['latest', 'messages', 'chats', 'online'].includes(s.txt))
+      if (mandatory.reduce((a, s) => a + s.txt.length * 10 + 26, 0) - 26 <= budget) {
+        expect(w).toBeLessThanOrEqual(budget)
+      }
+    }
   })
 })

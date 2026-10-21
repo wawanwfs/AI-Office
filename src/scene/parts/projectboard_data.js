@@ -64,7 +64,7 @@ export function stripSegments(snap) {
     segs.push({ txt: (st.messages || 0) + ' pesan', col: '#8fa3bd' })
     segs.push({ txt: 'online', col: '#10E5A0' })
     const act = (s.tenants || []).slice(-1)[0]
-    if (act && act.name) segs.push({ txt: 'terbaru: ' + act.name, col: '#F59E0B' })
+    if (act && act.name) segs.push({ txt: 'terbaru: ' + clampStripTenant(act.name), col: '#F59E0B' })
   } else {
     segs.push({ txt: 'offline', col: '#ef4444' })
   }
@@ -75,4 +75,40 @@ export function stripSegments(snap) {
     ags.forEach(a => segs.push({ txt: a.name + ' ' + (a.status === 'Up' ? '●' : '○'), col: a.status === 'Up' ? '#10E5A0' : '#ef4444' }))
   }
   return segs
+}
+
+// Nama tenant di strip dipangkas di batas kata (pola clip) — nama panjang
+// tidak boleh memakan seluruh lebar strip dan mendorong segmen agen keluar.
+export function clampStripTenant(name, max = 24) {
+  const n = String(name || '')
+  if (n.length <= max) return n
+  const cut = n.slice(0, max)
+  const sp = cut.lastIndexOf(' ')
+  return (sp >= max * 0.6 ? cut.slice(0, sp) : cut).trimEnd() + '…'
+}
+
+// Wajib-segmen strip (label yang tidak boleh dibuang): label SaaS + status agen.
+// stripLayout() memangkas segmen prioritas-rendah dari kanan sampai muat:
+// urutan buang: 'terbaru: …' → '… pesan' → '… chat' → online.
+export const STRIP_GAP = 26, STRIP_LEFT = 44, STRIP_RIGHT = 44
+const DROP_ORDER = ['latest', 'messages', 'chats', 'online']
+export function stripLayout(snap, measure) {
+  const segs = stripSegments(snap).map(sg => ({ ...sg }))
+  // tandai segmen yang boleh dibuang
+  segs.forEach(sg => {
+    if (sg.txt.startsWith('terbaru: ')) sg.__drop = 'latest'
+    else if (/ \d+ pesan$/.test(sg.txt)) sg.__drop = 'messages'
+    else if (/ \d+ chat$/.test(sg.txt)) sg.__drop = 'chats'
+    else if (sg.txt === 'online') sg.__drop = 'online'
+  })
+  const budget = measure.budget
+  const gap = measure.gap ?? STRIP_GAP
+  const width = (list) => list.reduce((a, s) => a + measure.text(s.txt) + gap, 0) - gap
+  for (let i = 0; i <= DROP_ORDER.length; i++) {
+    const drops = new Set(DROP_ORDER.slice(0, i))
+    const kept = segs.filter(sg => !drops.has(sg.__drop))
+    if (width(kept) <= budget) return { kept, dropped: [...drops] }
+  }
+  // tetap tak muat (layar sempit ekstrem): buang semua opsional + pangkas nama agen tidak mungkin — kembalikan minimal
+  return { kept: segs.filter(sg => !sg.__drop), dropped: [...DROP_ORDER] }
 }
