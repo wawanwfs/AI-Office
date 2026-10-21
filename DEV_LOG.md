@@ -1,3 +1,16 @@
+## 2026-10-21 09:50 WIB — performa serving 9503: gzip + cache policy (JS 822KB→217KB, -74%) + 311 file stale dibersihkan (90MB→1.1MB)
+
+- Backlog dipilih: server 9503 mengirim semua aset statis dengan `Cache-Control: no-store` dan tanpa kompresi — browser mengunduh ulang OfficeScene 822KB + index 240KB di setiap kunjungan, dan tak ada yang bisa di-cache.
+- Modul baru backend/static_serve.py + test_static_serve.py (11 unittest, semua pass):
+  - cache_control_for(): /assets/* & workbox-* → `public, max-age=31536000, immutable`; index.html/sw.js/registerSW.js/`/` → `no-store` (shell & SW harus fresh); statis lain (font/ikon/manifest) → `max-age=86400`.
+  - maybe_gzip(): teks (js/css/svg/json/html/map/webmanifest) ≥1KB, hanya bila client kirim Accept-Encoding gzip, dan hanya bila hasil lebih kecil (fallback aman).
+- backend/hq_proxy.py + deploy server.py: `_serve_static()` di do_GET (index.html tetap lewat jalur injeksi token), Cache-Control via `_wfs_cc` di end_headers; import project_api dibuat opsional agar repo jalan tanpa deploy dir.
+- Produksi 9503 diverifikasi via curl (header per path): OfficeScene 822351→217452 B gzip (immutable), index.js 240K→74.6K, sw.js gzip 1546 B tapi tetap no-store, /favicon.svg 86400, / no-store + token terinject, POST /wfs-api tanpa token tetap 401.
+- Bonus disk: 311 file OfficeScene/index lama (build basi menumpuk) dihapus dari ~/wfs-hq/assets — aset 90MB→1.1MB; hanya 5 file hash yang dirujuk index.html/sw.js.
+- Backup: /tmp/server.py.bak-*, /tmp/vc.bak, /tmp/wfqabak/. Kejadian saat deploy: restart pertama gagal (static_serve belum di-copy ke ~/wfs-hq, ModuleNotFoundError ×6) — diperbaiki dengan copy modul; service kini active.
+- Bukti: unittest static_serve 11/11; vitest 590/590 (44 file); eslint 0 problem; build OK (precache 35, 1538.12 KiB); deploy ~/wfs-hq OK; e2e 9503: DOM True, 14 agents, fr 101574, phase lunch, tanpa 'Scene init failed'; screenshot 678KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
 ## 2026-10-24 02:25 WIB — test: 25 unit test komponen React UI (vitest 452→477)
 
 - Backlog dipilih: komponen UI (Header, HUD, ConfirmModal, ActivityLog, Ticker, TaskModal, OverlayHelp) + lib/modal hanya tercakup TaskBoard.test.jsx (2 test) — regresi UI (format jam, validasi task, flag modal terpusat, fallback ticker) tak terdeteksi.
