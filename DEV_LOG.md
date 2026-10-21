@@ -1814,3 +1814,13 @@
 - Bukti: vitest **828/828** (66 file, dulu 812); eslint **0 problem**; build OK (precache 35, 1543.32 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222 (e2e_a11y.py): reload OK, jsErrors None, 14 agents, frames 5→10, tvData terisi.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
 
+
+## 2026-10-22 00:00 WIB — QuickToolbar & ErrorBoundary diuji unit — 11 test baru
+
+- Celah ditemukan: dua komponen UI tanpa unit test sama sekali — QuickToolbar (7 tombol aksi cepat: add task, jeda/lanjut, zoom, 3 preset kamera, neon; toggle paused ↔ Lanjut dgn dot) dan ErrorBoundary (catch error render → fallback role=alert, tombol Coba lagi/Muat ulang). Semua komponen lain (TaskBoard, TeamStats, Header, HUD, dll.) sudah tercakup; dua ini terlewat.
+- Fix: suite baru src/__tests__/quick_toolbar_error_boundary.test.jsx (11 test). Kode komponen TIDAK diubah.
+- Cakupan QuickToolbar: semua aria-label tampil; tiap tombol memicu callback tepat sekali; paused=false → Jeda⏸ memicu onPauseAll, paused=true → Lanjut▶ dgn .dot memicu onResumeAll; preset iso/front/top dikirim apa adanya ke onSetView; aria-pressed neon; Escape/klik-luar aman tanpa popover.
+- Cakupan ErrorBoundary: anak melempar → fallback role=alert + pesan + detail error (bukan blank); anak aman → passthrough tanpa alert; recover: sumber diperbaiki → fallback MASIH menahan (perilaku React benar) sampai "Coba lagi" diklik → anak dirender ulang; "Muat ulang" memanggil location.reload (stubbed).
+- Koreksi 1× test: dulu rerender aman diharapkan langsung menghilangkan fallback — boundary menahan UI rusak sampai reset (perilaku React yang benar); test dikoreksi, kode tak disentuh.
+- Bukti: vitest **839/839** (67 file, dulu 828); eslint 0 problem; build OK (precache 35, 1543.32 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222 (/tmp/e2e_qt.py): 14 agents, tvData terisi, 5 zoneLabels, frames berjalan (5→12), tanpa exception.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
