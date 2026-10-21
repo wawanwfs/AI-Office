@@ -1675,3 +1675,14 @@
 - +7 unit test baru (throttle 60 frame→20 hit, every kustom, guard, ekivalensi rumus lama persis utk ring/visor, fase per-agent, guard NaN, periodisitas 2π).
 - Bukti: vitest **661/661** (54 file, dulu 654); eslint src bersih; build OK; deploy ~/wfs-hq OK; e2e produksi 9503: reload OK, 14 agents, frames berjalan (4→7→10), 0 exception; screenshot 714 KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 16:58 WIB — performa: pulse ring diekstrak ke pulseFx murni + bubble obrolan di-throttle ~20×/dtk
+
+- Backlog dipilih: (1) cincin denyut agent utama masih inline (pulseT/scale/opacity) di animate(); (2) `updateBubbles(delta)` berjalan TIAP frame padahal fade bubble lambat (life 0→3.5 dtk) — ~40 pass loop per detik tak perlu.
+- Fix di parts/effects.js:
+  - `pulseFx(elapsed)` murni → {phase, scale, opacity}; guard non-numerik → elapsed 0 (tak NaN ke material).
+  - `BUBBLE_EVERY=3` + `shouldUpdateBubbles(frame)`; OfficeScene mengakumulasi dt (`bubbleAcc`) dan memakainya utuh sebagai step → laju fade/naik per detik identik.
+- +8 unit test (rumus pulse lama persis, fase [0,1) + periodisitas 2 dtk, guard, throttle 60→20 hit, every kustom + guard, dt kecil dikurangkan langsung, ekuivalensi laju 90 frame throttled vs per-frame, penghapusan bubble habis).
+- Koreksi test awal: asumsi throttle di dalam bubbles.js salah — throttle memang di pemanggil (OfficeScene); test direvisi sesuai semantik.
+- Bukti: vitest **671/671** (55 file, dulu 661); eslint src **0 problem**; build OK (precache 35, 1541.55 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: reload OK, 14 agents, frames berjalan (3→4→7), 0 exception; screenshot 730 KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

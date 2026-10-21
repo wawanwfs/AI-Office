@@ -5,7 +5,7 @@ import { createLighting, createNeonMode, createShift, mixHex } from './parts/day
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, shouldUpdateAmbient, ambientFx } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles } from './parts/effects.js';
 import { overlapPass, sweepClampRounds } from './parts/label_overlap.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
@@ -1685,8 +1685,12 @@ function checkConversations(){
   }
 }
 
+let bubbleAcc = 0; // akumulasi dt antar tick bubble (throttle ~20×/dtk)
 function updateBubbles(delta){
-  updateBubblesPure(chatBubbles, delta, { remove: (b)=>{ office.remove(b.sprite); b.sprite.material.dispose(); } });
+  bubbleAcc += delta;
+  if (!shouldUpdateBubbles(frame)) return;
+  updateBubblesPure(chatBubbles, bubbleAcc, { remove: (b)=>{ office.remove(b.sprite); b.sprite.material.dispose(); } });
+  bubbleAcc = 0;
 }
 
 // ═══════════════════════════════════════════════════
@@ -1756,10 +1760,10 @@ function animate(){
     if(__sim.stepped){timeOfDay=__sim.time;__light.apply(timeOfDay);}
   }
 
-  // cincin denyut agent utama
-  const pulseT=(elapsed*.5)%1;
-  pulseRing.scale.set(1+pulseT*.3,1,1+pulseT*.3);
-  pulseRing.material.opacity=.15*(1-pulseT);
+  // cincin denyut agent utama — via pulseFx (murni, diuji unit)
+  const pf=pulseFx(elapsed);
+  pulseRing.scale.set(pf.scale,1,pf.scale);
+  pulseRing.material.opacity=pf.opacity;
   // Efek ambient berbasis elapsed di-throttle ~20×/dtk (AMBIENT_EVERY=3):
   // ring, visor, label duduk, label NX — dulu 4 sin() + 2 assign opacity TIAP frame.
   if(shouldUpdateAmbient(frame)){
