@@ -1571,3 +1571,13 @@
 - Verifikasi visual produksi: canvas strip diekstrak via __projectBoard → toDataURL — semua segmen tampil lengkap (SaaS, 2 tenant, 16 chat, 32 pesan, online, terbaru: Warung Bu Ani, AGENT, toni/qa1/fe1/be1 ●) tanpa terpotong, ada sisa ruang di kanan.
 - Bukti: vitest **611/611** (47 file, dulu 603); eslint src **0 problem**; build OK (precache 35, 1539.22 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 setelah reload: DOM True, 14 agents, fr 100+ naik, tanpa error.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 12:00 WIB — papan proyek: banner GAGAL/REVIEW sadar-lebar, nama task tak lagi terpotong slice(0,24)
+
+- Backlog dipilih: QA banner review/gagal di papan. `bannerNames` memangkas judul `slice(0,24)` di tengah kata (pola bug sama dengan judul kartu & bubble yang sudah dibereskan) dan lebar banner dihitung dari teks gabungan — bisa meluber keluar papan bila 3 judul panjang tampil bersamaan.
+- Fix:
+  - `bannerLayout(T, measure)` baru di projectboard_data.js: ukur lebar dengan font sungguhan; bila melebihi budget buang item terlama dari belakang; bila tetap tak muat, pangkas nama terakhir di batas kata (pakai `clip`). `bannerNames` kini tanpa `slice` (judul utuh bila muat).
+  - projectboard.js: render banner memakai `bannerLayout` (budget = W − 88), lebar kotak banner diukur per segmen.
+- +4 unit test (null-guard, judul utuh saat muat, buang dari belakang saat sempit, invariant lebar ≤ budget).
+- Bukti: vitest **615/615** (47 file, dulu 611); eslint src **0 problem**; build OK (precache 35, 1539.99 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 76007 berjalan, phase lunch, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

@@ -43,7 +43,33 @@ export function bannerNames(T) {
   const has = (st) => (T.recent || []).some(r => r.status === st)
   if (!parts.length || !(has('failed') || has('review'))) return null
   const items = (T.recent || []).filter(r => r.status === 'failed' || r.status === 'review').slice(0, 3)
-  return parts.map(p => p[0]).join(' · ') + ' — ' + items.map(r => '#' + r.id + ' ' + (r.title || '').slice(0, 24)).join('  ·  ')
+  return parts.map(p => p[0]).join(' · ') + ' — ' + items.map(r => '#' + r.id + ' ' + (r.title || '')).join('  ·  ')
+}
+
+// layout banner sadar-lebar: ukur lebar dengan font sungguhan; bila melebihi budget,
+// buang item terlama (dari belakang) berurutan lalu pangkas item terakhir di batas kata.
+// Kembalikan { names: [teks per item], truncated: bool } — null bila tak relevan.
+export function bannerLayout(T, measure) {
+  const full = bannerNames(T)
+  if (!full) return null
+  const prefix = parts => parts.map(p => p[0]).join(' · ')
+  const parts = bannerParts(T)
+  const items = (T.recent || []).filter(r => r.status === 'failed' || r.status === 'review').slice(0, 3)
+  const itemText = r => '#' + r.id + ' ' + (r.title || '')
+  const budget = measure.budget
+  const sepW = measure.text('—  ·  ')
+  const fits = (n) => measure.text(prefix(parts) + ' — ') + sepW + n.reduce((a, t) => a + measure.text(t) + sepW, 0) <= budget
+  let names = items.map(itemText)
+  let truncated = false
+  while (names.length > 1 && !fits(names)) { names.pop(); truncated = true }
+  if (!fits(names)) {
+    // buang nama task terakhir juga, lalu pangkas di batas kata
+    truncated = true
+    const head = prefix(parts) + ' — '
+    const avail = Math.max(0, budget - measure.text(head) - sepW)
+    names = [clip(names[0], Math.max(8, Math.round(avail / (measure.text('n') || 1))))]
+  }
+  return { head: prefix(parts) + ' — ', names, truncated }
 }
 
 // item kartu per kolom kanban (0 antri, 1 jalan, 2 selesai) — maks 6

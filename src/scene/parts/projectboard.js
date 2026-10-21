@@ -3,7 +3,7 @@
 // diperbarui otomatis setiap 60 detik. Jika fetch gagal → fallback ke data terakhir.
 // Modul murni-canvas; dipasang di OfficeScene dengan satu pemanggilan.
 
-import { computePct, clip, cardY, CARD_H, subtitle as subLine, bannerParts, bannerNames, columnItems, stripLayout, STRIP_GAP, STRIP_LEFT, STRIP_RIGHT } from './projectboard_data.js'
+import { computePct, clip, cardY, CARD_H, subtitle as subLine, bannerParts, bannerLayout, columnItems, stripLayout, STRIP_GAP, STRIP_LEFT, STRIP_RIGHT } from './projectboard_data.js'
 
 export function createProjectBoard(office, THREE) {
   // --- kanvas papan ---
@@ -81,21 +81,23 @@ export function createProjectBoard(office, THREE) {
     // banner review/gagal: task yang butuh perhatian tidak boleh tak terlihat
     if (T.failed || T.review) {
       const parts = bannerParts(T)
-      const full = bannerNames(T)
+      const full = bannerLayout(T, { budget: W - 88, text: t => g.measureText(t).width })
       if (full) {
         g.font = 'bold 24px sans-serif'
-        const bw = g.measureText(full).width + 44
+        const nameStr = full.names.join('  ·  ')
+        const bw = g.measureText(parts.map(p => p[0]).join(' · ') + ' — ') + g.measureText('  ·  ') * (full.names.length - 1) + g.measureText(nameStr).width + 44
         g.fillStyle = 'rgba(239,68,68,.12)'; roundRect((W - bw) / 2, 166, bw, 34, 8); g.fill()
         g.strokeStyle = 'rgba(239,68,68,.5)'; g.lineWidth = 2; roundRect((W - bw) / 2, 166, bw, 34, 8); g.stroke()
-        g.textAlign = 'center'
-        // gambar dua warna: bagian GAGAL/REVIEW merah/biru, nama task abu terang
         g.textAlign = 'left'
         let tx = (W - bw) / 2 + 22
         parts.forEach(([txt, col]) => {
           g.fillStyle = col; g.fillText(txt, tx, 190); tx += g.measureText(txt).width + 14
         })
         g.fillStyle = '#cfd8e3'; g.font = '600 24px sans-serif'
-        g.fillText('— ' + full, tx, 190)
+        full.names.forEach((nm, i) => {
+          if (i > 0) { tx += g.measureText('  ·  ').width; g.fillText('  ·  ', tx, 190); tx += g.measureText('  ·  ').width }
+          g.fillText(nm, tx, 190); tx += g.measureText(nm).width
+        })
         g.textAlign = 'left'
       }
     }

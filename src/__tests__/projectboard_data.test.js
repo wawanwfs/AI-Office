@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computePct, clip, cardY, CARD_H, COLUMN_BOTTOM, subtitle, bannerParts, bannerNames, columnItems, stripSegments, clampStripTenant, stripLayout } from '../scene/parts/projectboard_data.js'
+import { computePct, clip, cardY, CARD_H, COLUMN_BOTTOM, subtitle, bannerParts, bannerNames, bannerLayout, columnItems, stripSegments, clampStripTenant, stripLayout } from '../scene/parts/projectboard_data.js'
 
 describe('cardY (tata letak kartu tidak menabrak strip bawah)', () => {
   it('6 kartu terakhir masih di dalam kolom', () => {
@@ -91,6 +91,37 @@ describe('columnItems', () => {
   it('T null / tanpa recent → array kosong', () => {
     expect(columnItems(null, 2)).toEqual([])
     expect(columnItems({}, 0)).toEqual([])
+  })
+})
+
+describe('bannerLayout (banner sadar-lebar, tidak meluber)', () => {
+  const T = { failed: 1, review: 1, recent: [
+    { id: 7, title: 'task gagal panjang sekali sekalian', status: 'failed' },
+    { id: 9, title: 'task review lain', status: 'review' },
+  ] }
+  const m = (budget) => ({ budget, text: t => t.length * 10 })
+  it('null bila tidak relevan', () => {
+    expect(bannerLayout(null, m(5000))).toBeNull()
+    expect(bannerLayout({ failed: 1, recent: [{ status: 'done' }] }, m(5000))).toBeNull()
+  })
+  it('muat → semua nama tampil utuh (tanpa slice(0,24))', () => {
+    const L = bannerLayout(T, m(5000))
+    expect(L.names).toHaveLength(2)
+    expect(L.names[0]).toContain('panjang sekali sekalian')
+    expect(L.truncated).toBe(false)
+  })
+  it('budget sempit → buang item dari belakang, head tetap', () => {
+    const L = bannerLayout(T, m(900))
+    expect(L.names).toHaveLength(1)
+    expect(L.head).toContain('GAGAL')
+    expect(L.truncated).toBe(true)
+  })
+  it('invariant: hasil muat dalam budget atau terpangkas di batas kata', () => {
+    for (const b of [700, 900, 1100, 1400, 2000]) {
+      const L = bannerLayout(T, m(b))
+      const w = m(b).text(L.head) + m(b).text('—  ·  ') * L.names.length + L.names.reduce((a, t) => a + m(b).text(t), 0)
+      expect(w).toBeLessThanOrEqual(b)
+    }
   })
 })
 
