@@ -1543,3 +1543,11 @@
 - +2 unit test baru (kelipatan refresh, guard frame non-numerik).
 - Bukti: vitest **595/595** (46 file, dulu 593); eslint src **0 problem**; build OK; deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 246420 berjalan, phase lunch, tanpa 'Scene init failed'; screenshot produksi 675KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 10:50 WIB — performa: pass anti-overlap label di-throttle 60fps → 15×/dtk
+
+- Backlog dipilih: `sizeLabels()` + sweep anti-overlap (5 iterasi overlapPass × 14 label agent + label zona + bubble, masing-masing dengan `position.project(camera)`) berjalan SETIAP frame — pass CPU termahal yang tersisa di animate() setelah throttle layar monitor & shadow map.
+- Fix: `shouldRelayoutLabels(frame)` + `LABEL_RELAYOUT_EVERY=4` di parts/effects.js; OfficeScene hanya memanggil sizeLabels() tiap kelipatan 4 frame (~15×/dtk @60fps). Aman: offset anti-tumpuk per-agent tersimpan di userData.antiY/antiX dan dipakai ulang di antara tick, label tidak loncat.
+- +5 unit test baru (kelipatan, custom every, guard non-numerik, rasio hemat ≥4×).
+- Bukti: vitest **600/600** (47 file, dulu 595); eslint src **0 problem**; build OK (precache 35, 1538.36 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 321706 berjalan, phase lunch, tanpa 'Scene init failed'; screenshot produksi 676KB (scene hidup).
+- Sisa backlog: hanya verifikasi subjektif kualitas suara (butuh telinga manusia).

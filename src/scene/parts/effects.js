@@ -107,6 +107,14 @@ export function shouldRefreshShadow(frame, every = SHADOW_REFRESH_EVERY) {
   return Number.isFinite(frame) && frame % every === 0;
 }
 
+// Throttle pass anti-overlap label: sweep 5-pass × 14 label + label zona + bubble
+// tiap frame → cukup ~15×/dtk (label bergerak lambat; offset anti-tumpuk disimpan
+// di userData sehingga di antara tick posisi tetap benar).
+export const LABEL_RELAYOUT_EVERY = 4;
+export function shouldRelayoutLabels(frame, every = LABEL_RELAYOUT_EVERY) {
+  return Number.isFinite(frame) && frame % every === 0;
+}
+
 export function drawScreenFrame(s, frame) {
   const { ctx: c, canvas: cv, type, hex } = s;
   const w = cv.width, h = cv.height, t = frame * 0.02;

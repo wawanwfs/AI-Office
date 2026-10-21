@@ -5,7 +5,7 @@ import { createLighting, createNeonMode, createShift, mixHex } from './parts/day
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreen, shouldRefreshShadow } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreen, shouldRefreshShadow, shouldRelayoutLabels } from './parts/effects.js';
 import { overlapPass, sweepClampRounds } from './parts/label_overlap.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
@@ -1787,7 +1787,9 @@ function animate(){
   if(window.__wallFade)window.__wallFade(camera.position);
   { const hide = sph.phi < 1.15; ceil.visible=!hide; __ceilObjs.forEach(o=>{o.visible=!hide}); __ceilObjsSafe.forEach(o=>{o.visible=!hide}); }
   // Anti-tumpuk label: dorong ke atas bila label lain terlalu dekat di layar (iterasi ringan)
-  sizeLabels();
+  // di-throttle: full pass mahal (5 iter × N label × project) — cukup tiap kelipatan 4 frame;
+  // offset per-agent tersimpan di userData.antiY/antiX sehingga tetap berlaku di antara tick.
+  if(shouldRelayoutLabels(frame))sizeLabels();
   if(namesVisible){
     const vis=agentData.filter(a=>a.label.visible);
     const __k=container.clientHeight/(2*Math.tan(camera.fov*Math.PI/360));
