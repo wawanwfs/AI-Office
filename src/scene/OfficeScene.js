@@ -1630,7 +1630,7 @@ function autoTalk(){
     const rid=window.__wfsAgentIdMap&&window.__wfsAgentIdMap[ad.agent.name];
     const run=rid&&rt.byAgent[rid];
     if(run){
-      createBubble(wp.x,2.6,wp.z,'Task #'+run.id+': '+run.title.slice(0,26)+'…',ad.agent.hex,anc);
+      createBubble(wp.x,2.6,wp.z,'Task #'+run.id+': '+clampBubbleText(run.title),ad.agent.hex,anc);
       return;
     }
   }

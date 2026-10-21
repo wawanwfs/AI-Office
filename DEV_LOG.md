@@ -1581,3 +1581,10 @@
 - +4 unit test (null-guard, judul utuh saat muat, buang dari belakang saat sempit, invariant lebar ≤ budget).
 - Bukti: vitest **615/615** (47 file, dulu 611); eslint src **0 problem**; build OK (precache 35, 1539.99 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 76007 berjalan, phase lunch, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 12:20 WIB — bubble status task: pakai clampBubbleText, tanpa slice(0,26)
+
+- Backlog dipilih: bubble status kerja di OfficeScene memangkas judul task `run.title.slice(0,26)` di tengah kata — pola bug sama dengan bubble chat & judul kartu yang sudah dibereskan.
+- Fix: panggilan createBubble kini memakai `clampBubbleText(run.title)` (pangkas di batas kata + '…'), konsisten dengan sisa bubble.
+- Bukti: vitest **615/615** (47 file); eslint bersih; build OK (precache 35, 1539.97 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 140346 berjalan, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
