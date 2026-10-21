@@ -1865,3 +1865,11 @@
 - +5 unit test (ctx recorder dgn gradien palsu): gradien langit 3 stop & fillRect penuh; matahari radial (210,22) r4→80 dgn 2 stop; tepat 4 awan ellipse (radii cw/2, ch/2) via beginPath+fill; sheen 2 gradien diagonal (5+3 stop) + 3 fillRect; tint biru rgba(140,200,255,0.10) jadi fillStyle terakhir. 1 koreksi indeks di test saja (fillRect pertama menggeser posisi linGrad kedua), kode produksi tak disentuh.
 - Bukti: vitest **883/883** (72 file, dulu 878); eslint src 0 problem; build OK (precache 35, 1543.19 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222 (e2e_sign.py): reload OK, 14 agents, 5 zoneLabels (opacity 1), tvData terisi, frames 4→13, bubbles 1→3.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-22 01:50 WIB — painter lantai parket prosedural & strip AO dinding diekstrak ke parts/floor_canvas.js murni (+5 test)
+
+- Backlog dipilih: dua painter kanvas struktur paling awal di OfficeScene masih inline — tekstur lantai parket kayu 512×512 (latar #8A7C68 + loop 10 baris papan dgn lebar/shade deterministik + nat rgba) dan strip AO kontak pangkal 4 dinding 16×64 (gradien 3 stop) — tanpa unit test langsung.
+- Fix: parts/floor_canvas.js — `drawWoodFloor(ctx)` & `drawAoStrip(ctx)` murni (ctx di-inject, tanpa THREE/DOM); urutan & parameter perintah gambar identik kode lama (tampilan tak berubah). OfficeScene kini 1 baris painter per kanvas.
+- +5 unit test (recorder ctx + fake gradient): latar penuh & 10 baris papan (y kelipatan 52, offset ganjil −58); lebar/warna papan deterministik (papan pertama rgb(112,94,67) w=117; kedua w=147); nurutan loop (semua x0<512, nat = jumlah fillStyle papan); AO gradien (0,0,0,64) 3 stop 0.52/0.24/0 + fillRect penuh; AO tanpa oper lain. 3 koreksi hanya di test (aritmetika papan kedua w=150 bukan 30; perbandingan objek gradien pakai referensi c._grads), kode produksi tak disentuh.
+- Bukti: vitest **888/888** (73 file, dulu 883); eslint src 0 problem; build OK (precache 35, 1543.18 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222: reload OK, 14 agents, tvData terisi, frames 12→17→29→33, initFail false; screenshot 711 KB — scene hidup, lantai kayu/zona/label/agen normal (verifikasi visual).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

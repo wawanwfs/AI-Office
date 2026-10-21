@@ -14,6 +14,7 @@ import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
 import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent } from './parts/ring_spec.js';
 import { paintRing } from './parts/ring_canvas.js';
 import { drawSky, drawGlassSheen } from './parts/sky_canvas.js';
+import { drawWoodFloor, drawAoStrip } from './parts/floor_canvas.js';
 import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelScale, drawLabelText } from './parts/label_spec.js';
 import { WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { OBSTACLES } from './parts/obstacles.js';
@@ -260,9 +261,7 @@ function addBlobShadow(obj,r=0.55){
 
 // AO kontak: strip gradien gelap di pangkal 4 dinding (palsu ambient occlusion, membumikan dinding ke lantai)
 const aoMat=()=>new THREE.MeshBasicMaterial({map:(()=>{const c=document.createElement('canvas');c.width=16;c.height=64;
-  const x=c.getContext('2d');const g=x.createLinearGradient(0,0,0,64);
-  g.addColorStop(0,'rgba(0,0,0,0.52)');g.addColorStop(.45,'rgba(0,0,0,0.24)');g.addColorStop(1,'rgba(0,0,0,0)');
-  x.fillStyle=g;x.fillRect(0,0,16,64);return new THREE.CanvasTexture(c);})(),transparent:true,depthWrite:false});
+  const x=c.getContext('2d');drawAoStrip(x);return new THREE.CanvasTexture(c);})(),transparent:true,depthWrite:false});
 [[0,-9.5,25.4,0],[0,9.5,25.4,Math.PI],[-12.5,0,19.4,Math.PI/2],[12.5,0,19.4,-Math.PI/2]].forEach(([ax,az,len,rot],i)=>{
   const wide=i===3?1.25:0.95; // dinding kanan lebih lebar & pekat (di backlog tercatat tipis)
   const s=new THREE.Mesh(new THREE.PlaneGeometry(len,wide),aoMat());
@@ -272,21 +271,9 @@ const aoMat=()=>new THREE.MeshBasicMaterial({map:(()=>{const c=document.createEl
                  az + (Math.abs(az)>Math.abs(ax)?0:(az<0?0.42:-0.42)));
   s.renderOrder=1;office.add(s);
 });
+// lantai parket kayu prosedural — painter murni di parts/floor_canvas.js (diuji unit)
 const flc=document.createElement('canvas');flc.width=512;flc.height=512;
-const flx=flc.getContext('2d');
-flx.fillStyle='#8A7C68';flx.fillRect(0,0,512,512);
-for(let r=0;r<10;r++){
-  const y=r*52;let x=(r%2)*-60;
-  while(x<512){
-    const w=120+((r*97+x)%90);
-    const shade=112+((r*53+x*7)%30);
-    flx.fillStyle=`rgb(${shade},${shade-18},${shade-45})`;
-    flx.fillRect(x+2,y+2,w-3,48);
-    flx.fillStyle='rgba(90,70,50,0.25)';
-    flx.fillRect(x+2,y+2,w-3,2);
-    x+=w;
-  }
-}
+drawWoodFloor(flc.getContext('2d'));
 const flTex=new THREE.CanvasTexture(flc);
 flTex.wrapS=flTex.wrapT=THREE.RepeatWrapping;flTex.repeat.set(4,3);
 const fl=new THREE.Mesh(new THREE.BoxGeometry(26,.15,20),
