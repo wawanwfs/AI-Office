@@ -76,6 +76,39 @@ export function sweepClampRounds(pts, opts, rounds = MAX_ROUNDS) {
   }
 }
 
+// ── Rumus konversi & penerapan offset (diekstrak dari animate() OfficeScene) ──
+// Murni: hitung konversi piksel→satuan dunia, clamp offset agent, dan hitung
+// offset zona (clamp berbeda: dy −10..52, dx −36..36). Tanpa THREE/canvas.
+
+// worldPerPx: satuan dunia per piksel layar — ∝ jarak kamera & tan(fov/2), / tinggi layar.
+export function worldPerPx(dist, fovDeg, clientHeight) {
+  return 2 * dist * Math.tan((fovDeg * Math.PI) / 360) / clientHeight;
+}
+
+// Hitung offset dunia utk satu pt (agent ATAU zona) dari offset piksel hasil anti-overlap.
+// Agent: dy = clamp(offY*wpp*1.2, ≤46), dx = clamp(offX*wpp, −16..16).
+// Zona : dyz = clamp(offY*wpp*1.2, −10..52), dxz = clamp(offX*wpp, −36..36).
+// Return {dy, dx} utk agent (baseY+dy/baseX+dx) atau {dyz, dxz} utk zona.
+export function labelWorldOffset(p, wpp) {
+  if (p.zone) {
+    const dyz = Math.max(-10, Math.min(52, p.offY * wpp * 1.2));
+    const dxz = Math.max(-36, Math.min(36, p.offX * wpp));
+    return { dyz, dxz };
+  }
+  const dy = Math.min(46, p.offY * wpp * 1.2);
+  const dx = Math.max(-16, Math.min(16, p.offX * wpp));
+  return { dy, dx };
+}
+
+// Akumulasi offset zona ke userData (antiY/antiX diakumulasi, bukan diganti),
+// persis semantik OfficeScene: zu.antiY += dyz; zu.antiX += dxz.
+export function accumulateZoneAnti(zt, dyz, dxz) {
+  const zu = zt.userData || (zt.userData = {});
+  zu.antiY = (zu.antiY || 0) + dyz;
+  zu.antiX = (zu.antiX || 0) + dxz;
+  return zu;
+}
+
 // Satu pass penuh (5 iterasi kolisi berpasangan) — mutasi offX/offY pts.
 export function overlapPass(pts, iters = 5) {
   for (let iter = 0; iter < iters; iter++) {

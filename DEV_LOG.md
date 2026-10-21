@@ -1711,3 +1711,12 @@
 - Bukti: vitest **695/695** (57 file, dulu 685); eslint src **0 problem**; build OK (precache 35, 1542.18 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP reload: 14 agents, frames berjalan (3→8→14), tanpa exception; resetFocus debug OK (focus kembali null); screenshot 719 KB (scene hidup).
 - Catatan: skrip e2e_err.py sempat gagal (returnNone — struktur hasil Runtime.evaluate tak konsisten); verifikasi ulang via CDP inline berhasil.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 18:15 WIB — konversi offset anti-overlap label diekstrak ke labelWorldOffset murni (parts/label_overlap.js)
+
+- Backlog dipilih: blok akhir relayout label di animate() masih inline — rumus worldPerPx (2·dist·tan(fov/2)/tinggi), clamp offset agent (dy min 46 / dx ±16), clamp zona (dyz −10..52 / dxz ±36), dan akumulasi zu.antiY/antiX — semua tak bisa diuji unit.
+- Fix: parts/label_overlap.js tambah `worldPerPx(dist,fov,h)`, `labelWorldOffset(p,wpp)` (return {dy,dx} utk agent / {dyz,dxz} utk zona), `accumulateZoneAnti(zt,dyz,dxz)`. Semantik persis kode lama; OfficeScene tinggal assign posisi.
+- +12 unit test (rumus wpp eksak & proporsional dist/tinggi, clamp agent dy 46/dx ±16, offY negatif tak di-cap, clamp zona lengkap 4 sisi, akumulasi antiY/antiX, fallback userData kosong).
+- Koreksi test: offX 500 @wpp .05 = 25 belum kena clamp 36 — nilai uji diganti 5000.
+- Bukti: vitest **705/705** (58 file, dulu 695); eslint src **0 problem**; build OK (precache 35, 1542.34 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP reload: 14 agents, frames berjalan (5→11), tanpa exception; screenshot 727 KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

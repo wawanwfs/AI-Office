@@ -6,7 +6,7 @@ import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles } from './parts/effects.js';
-import { overlapPass, sweepClampRounds } from './parts/label_overlap.js';
+import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti } from './parts/label_overlap.js';
 import { perfStep } from './parts/perf_quality.js';
 import { updateFollowGoal, focusStep, autoRotateStep } from './parts/kamera_focus.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
@@ -1838,11 +1838,12 @@ function animate(){
     // -> ulangi (sweep→clamp) sampai stabil (max 3x). Konvergen: total ruang vertikal
     // aman melebihi kebutuhan, tiap iterasi hanya mengurangi pelanggaran.
     sweepClampRounds(pts, { height: container.clientHeight, width: container.clientWidth });
-    // konversi offset piksel ke satuan dunia (~ jarak/tinggi layar), cap supaya label tidak melayang jauh
-    const dist=camera.position.distanceTo(tgt), worldPerPx=2*dist*Math.tan(camera.fov*Math.PI/360)/container.clientHeight;
+    // konversi offset piksel ke satuan dunia (~ jarak/tinggi layar) via worldPerPx
+    // (murni, parts/label_overlap.js); penerapan clamp offset via labelWorldOffset.
+    const wpp = worldPerPx(camera.position.distanceTo(tgt), camera.fov, container.clientHeight);
     pts.forEach(p=>{
-      const dy=Math.min(46,p.offY*worldPerPx*1.2), dx=Math.max(-16,Math.min(16,p.offX*worldPerPx));
-      if(p.zone){if(p.zt){const dyz=Math.max(-10,Math.min(52,p.offY*worldPerPx*1.2)), dxz=Math.max(-36,Math.min(36,p.offX*worldPerPx)); p.zt.position.y=p.baseY+dyz; p.zt.position.x=p.baseX+dxz; const zu=p.zt.userData; zu.antiY=(zu.antiY||0)+dyz; zu.antiX=(zu.antiX||0)+dxz;} return;} // BUBBLE tidak disentuh anti-overlap (dianimasikan updateBubbles — menyentuhnya bikin loncat)
+      if(p.zone){if(p.zt){const {dyz,dxz}=labelWorldOffset(p,wpp); p.zt.position.y=p.baseY+dyz; p.zt.position.x=p.baseX+dxz; accumulateZoneAnti(p.zt,dyz,dxz);} return;} // BUBBLE tidak disentuh anti-overlap (dianimasikan updateBubbles — menyentuhnya bikin loncat)
+      const {dy,dx}=labelWorldOffset(p,wpp);
       p.a.label.position.y=p.baseY+dy; p.a.label.position.x=p.baseX+dx;
       p.a.label.userData.antiY=dy; p.a.label.userData.antiX=dx; // utk base frame berikutnya
     });
