@@ -76,7 +76,8 @@ describe('clock_canvas — konstanta & painter wajah jam', () => {
       if (name === 'moveTo') mv = a;
       else if (name === 'lineTo' && mv) { lines.push([mv, a]); mv = null; }
     }
-    expect(lines.slice(0, TICKS).length + lines.slice(TICKS)).toHaveLength(TICKS + 3);
+    expect(lines).toHaveLength(TICKS + 3);
+    // 12 tick pertama sesuai spec; 3 garis terakhir adalah jarum jam/menit/detik
     for (let i = 0; i < TICKS; i++) {
       const a = tickAngle(i);
       const r1 = tickInnerR(i);
