@@ -37,6 +37,26 @@ export function fitLabel(ctx, text, max, font, basePx) {
   return e + '…';
 }
 
+// Render label ke ctx 2D (murni — ctx di-inject, tanpa THREE/DOM): latar rounded,
+// strip warna agen di kiri, nama (auto-shrink + ellipsis) dan role utk mode lengkap.
+// Semantik persis makeLabel lama di OfficeScene.
+export function drawLabelText(ctx, agent, spec, full) {
+  const W = spec.W, H = spec.H;
+  ctx.fillStyle = 'rgba(10,14,24,0.84)';
+  ctx.beginPath(); if (ctx.roundRect) ctx.roundRect(2, 2, W - 4, H - 4, spec.RADIUS); else ctx.rect(2, 2, W - 4, H - 4); ctx.fill();
+  ctx.fillStyle = agent.hex; ctx.fillRect(2, full ? 14 : 10, 6, H - (full ? 28 : 20));
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  const title = (s, max, font) => fitLabel(ctx, s, max, font, full ? 36 : 28);
+  const drawFit = (val, max, font, weightPx, y) => { const r = title(val, max, font);
+    if (r && typeof r === 'object' && r.fit) { ctx.font = r.fnt; ctx.fillText(r.fit, W / 2 + 4, y); ctx.font = font; }
+    else ctx.fillText(typeof r === 'string' ? r : String(val), W / 2 + 4, y); };
+  const nmFull = labelName(agent.name);
+  ctx.font = spec.NAME_FONT;
+  ctx.fillStyle = '#fff';
+  drawFit(nmFull, spec.NAME_MAX, spec.NAME_FONT, full ? 36 : 28, spec.NAME_Y);
+  if (full) { ctx.fillStyle = '#b8c4d4'; drawFit(agent.role, spec.ROLE_MAX, spec.ROLE_FONT, 22, spec.ROLE_Y); }
+}
+
 // scale sprite label agar tingginya konsisten di layar (sizeAttenuation=false)
 export function labelScale(viewportW, viewportH, fovDeg, camDist, wantFull) {
   const w = viewportW || 800, h = viewportH || 600;

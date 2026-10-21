@@ -12,7 +12,7 @@ import { updateFollowGoal, focusStep, autoRotateStep } from './parts/kamera_focu
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
 import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent } from './parts/ring_spec.js';
-import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelName, fitLabel, labelScale } from './parts/label_spec.js';
+import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelScale, drawLabelText } from './parts/label_spec.js';
 import { WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { OBSTACLES } from './parts/obstacles.js';
 import { MUTED_KEY, tickSoundTimer } from './parts/sound_spec.js';
@@ -628,21 +628,10 @@ const _LF=LABEL_FULL, _LS=LABEL_SHORT;
 function makeLabel(agent){
   // Dua kanvas: ringkas (nama saja) dan lengkap (nama + role). Ringkas dipakai saat jauh / layar kecil.
   const mk=(full)=>{
-    const W=full?_LF.W:_LS.W,H=full?_LF.H:_LS.H,lc=document.createElement('canvas');lc.width=W;lc.height=H;
+    const spec=full?_LF:_LS;
+    const W=spec.W,H=spec.H,lc=document.createElement('canvas');lc.width=W;lc.height=H;
     const c=lc.getContext('2d');
-    c.fillStyle='rgba(10,14,24,0.84)';
-    c.beginPath(); if(c.roundRect)c.roundRect(2,2,W-4,H-4,full?_LF.RADIUS:_LS.RADIUS); else c.rect(2,2,W-4,H-4); c.fill();
-    c.fillStyle=agent.hex; c.fillRect(2,full?14:10,6,H-(full?28:20));
-    c.textAlign='center'; c.textBaseline='middle';
-    const title=(s,max,font)=>fitLabel(c,s,max,font,full?36:28);
-    const drawFit=(val,max,font,weightPx,y)=>{const r=title(val,max,font);
-      if(r&&typeof r==='object'&&r.fit){c.font=r.fnt;c.fillText(r.fit,W/2+4,y);c.font=font;}
-      else c.fillText(typeof r==='string'?r:String(val),W/2+4,y);};
-    const nmFull=labelName(agent.name);
-    c.font=full?_LF.NAME_FONT:_LS.NAME_FONT;
-    c.fillStyle='#fff';
-    drawFit(nmFull,full?_LF.NAME_MAX:_LS.NAME_MAX,c.font,full?36:28,full?_LF.NAME_Y:_LS.NAME_Y);
-    if(full){c.fillStyle='#b8c4d4';drawFit(agent.role,_LF.ROLE_MAX,_LF.ROLE_FONT,22,_LF.ROLE_Y);}
+    drawLabelText(c,agent,spec,full);
     const tex=new THREE.CanvasTexture(lc); tex.minFilter=THREE.LinearFilter; return {tex,as:W/H};
   };
   const full=mk(true), short=mk(false);

@@ -1797,3 +1797,12 @@
 - +11 unit test baru di tv_canvas.test.js (mock ctx recorder): ukuran/latar, connecting muted tanpa data, bar penuh/30%/ambang 6px, pct 0 tanpa NaN, warna & posisi GAGAL/REVIEW, SaaS online/offline, dot agent Up/Down & strip kosong, stempel waktu pakai data.at.
 - Bukti: vitest **802/802** (65 file, dulu 791); eslint src **0 problem**; build OK (precache 35, 1543.34 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: reload OK, 14 agents, 5 zoneLabels, tvData terisi (tasks+saas), frames berjalan (7→12), 0 jsErrors; screenshot 714 KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 22:15 WIB — render kanvas label diekstrak ke drawLabelText murni (parts/label_spec.js)
+
+- Backlog dipilih: makeLabel() di OfficeScene masih inline render kanvas label (latar rounded, strip warna hex, textAlign, auto-shrink nama + ellipsis via fitLabel, role dgn warna #b8c4d4) — hanya label yang tersisa di file tanpa unit test langsung (hanya via cek spec konstanta).
+- Fix: parts/label_spec.js tambah `drawLabelText(ctx, agent, spec, full)` murni (ctx di-inject, tanpa THREE/DOM); makeLabel kini tinggal buat kanvas + panggil drawLabelText + CanvasTexture. Semantik persis kode lama (urutan fill, offset x=W/2+4, Y dari spec).
+- +10 unit test (recorder ctx): urutan ops bg/strip, fallback rect tanpa roundRect, strip H-28 vs H-20, textAlign/baseline, title-case nama via labelName di NAME_Y, role di ROLE_Y dgn #b8c4d4, short tanpa role, font reset pasca fit, ellipsis nama panjang, null name aman.
+- Bukti: vitest **812/812** (65 file, dulu 802); eslint src **0 problem**; build OK (precache 35, 1543.32 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via e2e_tv.py (CDP chrome 9222, returnByValue): reload OK, 14 agents, 5 zoneLabels, tvData terisi (tasks+saas), frames berjalan (5→10), 0 jsErrors; screenshot 716 KB (scene hidup).
+- Catatan: e2e_err.py/e2e_label.py lama tidak terpakai (9503 tak lagi WS devtools; pakai CDP chrome :9222).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

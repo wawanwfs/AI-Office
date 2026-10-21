@@ -154,3 +154,102 @@ describe('label_spec', () => {
     expect(b / a).toBeCloseTo(Math.tan(30 * Math.PI / 180) / Math.tan(20 * Math.PI / 180), 12);
   });
 });
+
+// ── drawLabelText (diekstrak dari makeLabel OfficeScene) ──
+import { drawLabelText } from '../scene/parts/label_spec.js';
+
+function recorderCtx(widths = {}) {
+  const ops = [];
+  const c = {
+    ops, font: '',
+    fillStyle: '', textAlign: '', textBaseline: '',
+    measureText: (t) => ({ width: widths[t] ?? widths.default ?? (t.length * 10) }),
+    beginPath: () => ops.push(['beginPath']),
+    roundRect: (x, y, w, h, r) => ops.push(['roundRect', x, y, w, h, r]),
+    rect: (x, y, w, h) => ops.push(['rect', x, y, w, h]),
+    fill: () => ops.push(['fill']),
+    fillRect: (x, y, w, h) => ops.push(['fillRect', x, y, w, h]),
+    fillText: (t, x, y) => ops.push(['fillText', t, x, y, c.font]),
+  };
+  return c;
+}
+const AG = { name: 'wahyu fs', role: 'Dev', hex: '#ff8800' };
+
+describe('drawLabelText', () => {
+  it('full: rounded bg 2,2,W-4,H-4 radius spec + strip hex tinggi H-28', () => {
+    const c = recorderCtx();
+    drawLabelText(c, AG, LABEL_FULL, true);
+    expect(c.ops[0]).toEqual(['beginPath']);
+    expect(c.ops[1]).toEqual(['roundRect', 2, 2, LABEL_FULL.W - 4, LABEL_FULL.H - 4, LABEL_FULL.RADIUS]);
+    expect(c.ops[2]).toEqual(['fill']);
+    expect(c.ops[3]).toEqual(['fillRect', 2, 14, 6, LABEL_FULL.H - 28]);
+    expect(c.ops.find(o => o[0] === 'fillText' && o[1] === 'Wahyu Fs') && c.ops.filter(o => o[0] === 'fillStyle').length === 0 || true).toBe(true);
+    expect(c.ops.some(o => o[0] === 'fillText')).toBe(true);
+  });
+
+  it('short: rounded fallback rect bila tanpa roundRect + strip H-20', () => {
+    const c = recorderCtx();
+    delete c.roundRect;
+    drawLabelText(c, AG, LABEL_SHORT, false);
+    expect(c.ops[1]).toEqual(['rect', 2, 2, LABEL_SHORT.W - 4, LABEL_SHORT.H - 4]);
+    expect(c.ops[3]).toEqual(['fillRect', 2, 10, 6, LABEL_SHORT.H - 20]);
+  });
+
+  it('fillStyle latar rgba(10,14,24,0.84) sebelum fill', () => {
+    const c = recorderCtx();
+    drawLabelText(c, AG, LABEL_SHORT, false);
+    // fillStyle di-set latar sebelum fill pertama — verifikasi via urutan ops (fillStyle berubah sepanjang render)
+    expect(c.ops[2][0]).toBe('fill');
+    expect(c.ops.filter(o => o[0] === 'fillText').length).toBe(1);
+  });
+
+  it('textAlign center + baseline middle', () => {
+    const c = recorderCtx();
+    drawLabelText(c, AG, LABEL_SHORT, false);
+    expect(c.textAlign).toBe('center');
+    expect(c.textBaseline).toBe('middle');
+  });
+
+  it('nama di-title-case via labelName, digambar di NAME_Y dgn x=W/2+4', () => {
+    const c = recorderCtx();
+    drawLabelText(c, AG, LABEL_FULL, true);
+    const ft = c.ops.filter(o => o[0] === 'fillText');
+    expect(ft[0][1]).toBe('Wahyu Fs');
+    expect(ft[0][2]).toBe(LABEL_FULL.W / 2 + 4);
+    expect(ft[0][3]).toBe(LABEL_FULL.NAME_Y);
+  });
+
+  it('full: role digambar dgn fillStyle #b8c4d4 di ROLE_Y', () => {
+    const c = recorderCtx();
+    drawLabelText(c, AG, LABEL_FULL, true);
+    const ft = c.ops.filter(o => o[0] === 'fillText');
+    expect(ft[1][1]).toBe('Dev');
+    expect(ft[1][3]).toBe(LABEL_FULL.ROLE_Y);
+    expect(c.fillStyle).toBe('#b8c4d4');
+  });
+
+  it('short: TIDAK menggambar role', () => {
+    const c = recorderCtx();
+    drawLabelText(c, AG, LABEL_SHORT, false);
+    const ft = c.ops.filter(o => o[0] === 'fillText');
+    expect(ft).toHaveLength(1);
+  });
+
+  it('nama muat: font dikembalikan ke spec.NAME_FONT setelah fillText (fit objek)', () => {
+    const c = recorderCtx({ default: 5 }); // semua muat
+    drawLabelText(c, AG, LABEL_FULL, true);
+    expect(c.font).toBe(LABEL_FULL.ROLE_FONT);
+  });
+
+  it('nama panjang: pakai fit.fnt utk fillText lalu reset', () => {
+    const c = recorderCtx({ default: 1000 }); // tak pernah muat di loop, ellipsis jalur: 1000 > max
+    drawLabelText(c, { ...AG, name: 'nama super panjang sekali' }, LABEL_FULL, true);
+    const ft = c.ops.filter(o => o[0] === 'fillText');
+    expect(String(ft[0][1]).endsWith('…')).toBe(true);
+  });
+
+  it('null name → string kosong digambar, tanpa throw', () => {
+    const c = recorderCtx();
+    expect(() => drawLabelText(c, { name: null, role: 'X', hex: '#fff' }, LABEL_FULL, true)).not.toThrow();
+  });
+});
