@@ -1596,3 +1596,10 @@
 - +5 unit test baru (kelipatan, custom every, guard non-numerik, rasio hemat ≥20×).
 - Bukti: vitest **620/620** (48 file, dulu 615); eslint src bersih; build OK (precache 35, 1540.03 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 230166 berjalan, phase lunch, tanpa 'Scene init failed'.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 13:10 WIB — performa: seluruh blok anti-overlap label (project kamera + 5-pass + sweep) di-throttle 60fps → 15×/dtk
+
+- Backlog dipilih: setelah sizeLabels() di-throttle (frame%4), blok label di animate() TETAP berjalan tiap frame: `position.project(camera)` untuk 14 label agen + label zona + bubble, 5× overlapPass, sweepClampRounds, dan konversi offset piksel→dunia — pass CPU termahal yang tersisa.
+- Fix: satu gerbang `if(namesVisible && shouldRelayoutLabels(frame))` kini mencakup sizeLabels() + seluruh blok label; tidak ada perubahan perilaku (offset anti-tumpuk per-agent tersimpan di userData.antiY/antiX sehingga label tidak loncat antar tick).
+- Bukti: vitest **620/620** (48 file); eslint src bersih; build OK (precache 35); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 301622 berjalan, phase lunch, tanpa 'Scene init failed'.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
