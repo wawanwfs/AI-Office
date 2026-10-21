@@ -15,6 +15,7 @@ import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent } from './parts/ring_s
 import { paintRing } from './parts/ring_canvas.js';
 import { drawSky, drawGlassSheen } from './parts/sky_canvas.js';
 import { drawWoodFloor, drawAoStrip } from './parts/floor_canvas.js';
+import { drawCeiling } from './parts/ceiling_canvas.js';
 import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelScale, drawLabelText } from './parts/label_spec.js';
 import { WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { OBSTACLES } from './parts/obstacles.js';
@@ -320,28 +321,8 @@ const glassSheen=(()=>{const c=document.createElement('canvas');c.width=256;c.he
 // CEILING — DARK BLUE + tekstur panel prosedural (seam grid + vignette)
 const __ceilObjsSafe=[];
 const ceilCv=document.createElement('canvas');ceilCv.width=ceilCv.height=512;
-{
-  const c=ceilCv.getContext('2d');
-  const g=c.createLinearGradient(0,0,0,512);
-  g.addColorStop(0,'#0C1B33');g.addColorStop(1,'#0A1628');
-  c.fillStyle=g;c.fillRect(0,0,512,512);
-  // vignette lembut ke tepi (AO palsu di langit-langit)
-  const v=c.createRadialGradient(256,256,80,256,256,340);
-  v.addColorStop(0,'rgba(20,36,64,0.35)');v.addColorStop(1,'rgba(4,9,18,0.55)');
-  c.fillStyle=v;c.fillRect(0,0,512,512);
-  // seam grid panel 4x4 sel per tile
-  c.strokeStyle='rgba(70,95,140,0.35)';c.lineWidth=2;
-  for(let i=0;i<=4;i++){
-    c.beginPath();c.moveTo(i*128,0);c.lineTo(i*128,512);c.stroke();
-    c.beginPath();c.moveTo(0,i*128);c.lineTo(512,i*128);c.stroke();
-  }
-  // garis aksen tipis lebih terang di sisi seam (bevel halus)
-  c.strokeStyle='rgba(120,150,200,0.12)';c.lineWidth=1;
-  for(let i=0;i<=4;i++){
-    c.beginPath();c.moveTo(i*128+2,0);c.lineTo(i*128+2,512);c.stroke();
-    c.beginPath();c.moveTo(0,i*128+2);c.lineTo(512,i*128+2);c.stroke();
-  }
-}
+// plafon panel prosedural — painter murni di parts/ceiling_canvas.js (diuji unit)
+drawCeiling(ceilCv.getContext('2d'));
 const ceilTex=new THREE.CanvasTexture(ceilCv);
 ceilTex.wrapS=ceilTex.wrapT=THREE.RepeatWrapping;ceilTex.repeat.set(4,3);
 const ceil=new THREE.Mesh(new THREE.BoxGeometry(26,.1,20),new THREE.MeshLambertMaterial({color:0xffffff,map:ceilTex,transparent:true,opacity:0.85}));
