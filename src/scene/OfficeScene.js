@@ -12,6 +12,7 @@ import { updateFollowGoal, focusStep, autoRotateStep } from './parts/kamera_focu
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
 import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent } from './parts/ring_spec.js';
+import { paintRing } from './parts/ring_canvas.js';
 import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelScale, drawLabelText } from './parts/label_spec.js';
 import { WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { OBSTACLES } from './parts/obstacles.js';
@@ -173,9 +174,8 @@ const hoverRay=new THREE.Raycaster();let hoverNdc={x:0,y:0},hoverPend=false,hove
 let hoverRing=null;
 // cincin emas agent TERPILIH (persist: tetap tampil sampai pilihan berubah)
 let selectedIdx=-1,selRing=null;
-function ensureSelRing(){if(selRing)return;const c=document.createElement('canvas');c.width=c.height=SEL_RING.SIZE;const x=c.getContext('2d');
-  const g=x.createRadialGradient(64,64,SEL_RING.INNER,64,64,SEL_RING.OUTER);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(SEL_RING.MID,`rgba(${SEL_RING.RGB},0.95)`);g.addColorStop(1,`rgba(${SEL_RING.RGB},0)`);
-  x.fillStyle=g;x.fillRect(0,0,SEL_RING.SIZE,SEL_RING.SIZE);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
+function ensureSelRing(){if(selRing)return;const c=document.createElement('canvas');c.width=c.height=SEL_RING.SIZE;paintRing(c.getContext('2d'),SEL_RING,0.95);
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
   selRing=new THREE.Mesh(new THREE.PlaneGeometry(SEL_RING.PLANE,SEL_RING.PLANE),new THREE.MeshBasicMaterial({map:t,transparent:true,opacity:SEL_RING.OPACITY,depthWrite:false,color:SEL_RING.COLOR}));
   selRing.rotation.x=-Math.PI/2;selRing.position.y=SEL_RING.Y;selRing.renderOrder=4;selRing.visible=false;office.add(selRing);window.__sceneSelRing=selRing;}
 function applySelected(){
@@ -193,9 +193,8 @@ function applySelected(){
 // posisi ring utk agent: walker (berjalan) / home (duduk) / null (tidak terlihat di kantor)
 const selAnchor=(a)=>selAnchorOf(a);
 
-function ensureHoverRing(){if(hoverRing)return;const c=document.createElement('canvas');c.width=c.height=HOVER_RING.SIZE;const x=c.getContext('2d');
-  const g=x.createRadialGradient(64,64,HOVER_RING.INNER,64,64,HOVER_RING.OUTER);g.addColorStop(0,'rgba(255,255,255,0)');g.addColorStop(HOVER_RING.MID,`rgba(${HOVER_RING.RGB},0.9)`);g.addColorStop(1,`rgba(${HOVER_RING.RGB},0)`);
-  x.fillStyle=g;x.fillRect(0,0,HOVER_RING.SIZE,HOVER_RING.SIZE);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
+function ensureHoverRing(){if(hoverRing)return;const c=document.createElement('canvas');c.width=c.height=HOVER_RING.SIZE;paintRing(c.getContext('2d'),HOVER_RING,0.9);
+  const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
   hoverRing=new THREE.Mesh(new THREE.PlaneGeometry(HOVER_RING.PLANE,HOVER_RING.PLANE),new THREE.MeshBasicMaterial({map:t,transparent:true,opacity:HOVER_RING.OPACITY,depthWrite:false,color:HOVER_RING.COLOR}));
   hoverRing.rotation.x=-Math.PI/2;hoverRing.position.y=HOVER_RING.Y;hoverRing.renderOrder=3;hoverRing.visible=false;office.add(hoverRing);window.__sceneRing=hoverRing;}
 renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{

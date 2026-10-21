@@ -1832,3 +1832,10 @@
 - +12 unit test (recorder ctx): latar+bingkai & urutan ops tiap tanda; menu: judul WFS CAFÉ (font/fillStyle/warna), 3 baris menu monospace y 75/100/125; poster: 1/2/3 baris (y 150/206/262), textAlign center, font bold 48px, warna tema; sambutan: judul emas 900 130px (512,150), subjudul putih middot (512,250), tepat 2 teks.
 - Bukti: vitest **851/851** (68 file, dulu 839); eslint src **0 problem**; build OK (precache 35, 1543.34 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222 (e2e_sign.py): reload OK, 14 agents, tvData terisi, 5 zoneLabels (opacity 1), frames berjalan (4→13), bubbles naik (1→2), tanpa exception; screenshot 725 KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+## 2026-10-22 00:40 WIB — render kanvas cincin seleksi & hover diekstrak ke parts/ring_canvas.js murni
+
+- Backlog dipilih: ensureSelRing()/ensureHoverRing() di OfficeScene masih menggambar radial gradient kanvas inline (pusat 64,64, INNER/OUTER/MID dari ring_spec, stop 0.95 vs 0.9) — dua painter terakhir tanpa unit test langsung (ring_spec hanya konstanta/anchor).
+- Fix: parts/ring_canvas.js — `paintRing(ctx, spec, midOpacity)` murni (ctx di-inject, tanpa THREE/DOM); urutan & parameter perintah gambar identik kode lama (grad → fillStyle → fillRect SIZE²). ensureSelRing/ensureHoverRing kini 1 baris painter + CanvasTexture. Kode visual tak berubah.
+- +5 unit test (recorder ctx): posisi/radius gradient sesuai spec, tepat 3 colorStop (0 transparan putih → MID RGB 0.95/0.9 → 1 transparan), urutan ops grad→fillStyle→fillRect SIZE×SIZE, hover pakai konstanta HOVER_RING, opacity tengah beda per pemanggil. Dua koreksi test (ctx recorder salah pairing; helper sisa dihapus), kode produksi tak disentuh.
+- Bukti: vitest **856/856** (69 file, dulu 851); eslint src 0 problem; build OK (precache 35, 1543.15 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222 (e2e_sign.py): reload OK, 14 agents, tvData terisi, 5 zoneLabels (opacity 1), frames 4→13, bubbles 1→2, tanpa exception; screenshot 714 KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
