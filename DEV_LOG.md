@@ -1495,3 +1495,11 @@
   - ActionMenu.jsx: prop `refApi` diganti `actionMenuRef` (nama berakhiran Ref agar linter mengenalinya); effect menulis ke ref lokal `amRef.current` lalu mengeksposnya via `actionMenuRef.current`; deps effect ditambah `rotOn`; setState sinkronisasi saat menu dibuka diberi disable terdokumentasi (react-hooks/set-state-in-effect — sinkronisasi sekali per buka menu, bukan cascading).
 - Bukti: eslint src **0 error, 2 warning** (exhaustive-deps di App/ActionMenu, tersisa sebagai catatan); vitest **585/585** (44 file); build OK (precache 35, 1537.93 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 229043 berjalan, phase lunch, tanpa 'Scene init failed'.
 - Sisa backlog: 2 warning exhaustive-deps (butuh analisis deps, bukan kosmetik); verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-24 08:45 WIB — lint tuntas: 2 warning exhaustive-deps terakhir → eslint 0 problem
+
+- Backlog dipilih: 2 warning react-hooks/exhaustive-deps terakhir (App.jsx shortcut effect, ActionMenu.jsx open effect) — eslint jadi 100% bersih (0 error, 0 warning).
+- App.jsx: `zoom` dipindah ke atas shortcut effect & dibungkus useCallback([flash]) (sebelumnya dideklarasikan SETELAH effect — dep tak bisa ditambahkan); deps effect ditambah `zoom`, `flash`, `amRef` (amRef stabil — useRef). Perilaku shortcut +/-/K/R/F/M/N/H identik.
+- ActionMenu.jsx: deps `[open]` → `[open, sceneRef]` (sceneRef adalah ref stabil dari App, effect tetap re-run hanya saat menu dibuka; sinkronisasi namesOn/rotOn saat open tidak berubah).
+- Bukti: eslint src **0 problem** (0 error 0 warning — dulu 2 warning); vitest **585/585** (44 file); build OK (precache 35, 1537.97 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 301368 berjalan, phase lunch, tanpa 'Scene init failed'.
+- Sisa backlog: hanya verifikasi subjektif kualitas suara (butuh telinga manusia). Lint backlog TUNTAS.

@@ -225,6 +225,12 @@ export default function App() {
     return () => els.forEach(el => el.removeAttribute('inert'))
   }, [chromeModal])
 
+  const zoom = useCallback((dir) => {
+    const s = sceneRef.current
+    if (!s) return flash('Scene 3D tidak aktif (WebGL tidak tersedia)', true)
+    dir > 0 ? s.zoomIn() : s.zoomOut()
+  }, [flash])
+
   // ---- shortcut keyboard (abaikan saat fokus di input/textarea/modal) ----
   useEffect(() => {
     const onKey = (e) => {
@@ -260,13 +266,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [showTask, confirm, ask, showHelp, showLog, handleCyberpunk])
-
-  const zoom = (dir) => {
-    const s = sceneRef.current
-    if (!s) return flash('Scene 3D tidak aktif (WebGL tidak tersedia)', true)
-    dir > 0 ? s.zoomIn() : s.zoomOut()
-  }
+  }, [showTask, confirm, ask, showHelp, showLog, handleCyberpunk, zoom, flash, amRef])
 
   // ---- Pause / Resume nyata (konfirmasi dulu) ----
   const doConfirm = async () => {

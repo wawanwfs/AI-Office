@@ -51,7 +51,7 @@ export default function ActionMenu({ sceneRef, onFlash, actionMenuRef }) {
     const c = e => { if (wrap.current && !wrap.current.contains(e.target)) setOpen(false) }
     document.addEventListener('keydown', k); document.addEventListener('pointerdown', c)
     return () => { document.removeEventListener('keydown', k); document.removeEventListener('pointerdown', c) }
-  }, [open])
+  }, [open, sceneRef])
 
   // Navigasi panah menu (Up/Down/Home/End) — pola WAI-ARIA menu
   const menuKeys = e => {
