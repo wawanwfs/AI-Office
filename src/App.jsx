@@ -322,7 +322,7 @@ export default function App() {
             s.setView(v)
           }} />
         <span className="sep" />
-        <ActionMenu sceneRef={sceneRef} onFlash={flash} refApi={actionMenuApi} />
+        <ActionMenu sceneRef={sceneRef} onFlash={flash} actionMenuRef={actionMenuApi} />
         <TaskBoard onFlash={flash} onAsk={setAsk} />
         <ProjectPanel />
         <TeamStats />

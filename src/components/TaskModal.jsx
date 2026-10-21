@@ -14,12 +14,10 @@ export default function TaskModal({ show, onClose, onDone }) {
   const first = useRef(null)
   const box = useRef(null)
   const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
+  useEffect(() => { onCloseRef.current = onClose })
 
   useEffect(() => { if (show) setErr('') }, [show]) // eslint-disable-line react-hooks/set-state-in-effect -- reset error saat modal dibuka
-  const closeRef = useRef(() => {})
-  closeRef.current = () => onCloseRef.current()
-  const closeViaA11y = useCallback(() => closeRef.current(), [])
+  const closeViaA11y = useCallback(() => onCloseRef.current(), [])
   useDialogA11y({ open: show, onClose: closeViaA11y, ref: box })
 
   if (!show) return null

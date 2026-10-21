@@ -1,4 +1,4 @@
-import React, { useRef, useCallback } from 'react'
+import React, { useRef, useCallback, useEffect } from 'react'
 import { useDialogA11y } from '../lib/dialogA11y'
 
 const COL = { done: '#10E5A0', running: '#F59E0B', failed: '#FB7185', review: '#60A5FA', pending: '#9aa3b5' }
@@ -7,10 +7,8 @@ const COL = { done: '#10E5A0', running: '#F59E0B', failed: '#FB7185', review: '#
 export default function ActivityLog({ show, items, onClose, onClear }) {
   const box = useRef(null)
   const onCloseRef = useRef(onClose)
-  onCloseRef.current = onClose
-  const closeA11yRef = useRef(() => {})
-  closeA11yRef.current = () => onCloseRef.current()
-  const closeLog = useCallback(() => closeA11yRef.current(), [])
+  useEffect(() => { onCloseRef.current = onClose })
+  const closeLog = useCallback(() => onCloseRef.current(), [])
   useDialogA11y({ open: show, onClose: closeLog, ref: box })
   if (!show) return null
   return (

@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
 
-export default function ActionMenu({ sceneRef, onFlash, refApi }) {
+export default function ActionMenu({ sceneRef, onFlash, actionMenuRef }) {
   const [open, setOpen] = useState(false)
   const pop = useRef(null)
   useModalFlag(open)
@@ -17,10 +17,9 @@ export default function ActionMenu({ sceneRef, onFlash, refApi }) {
   const wrap = useRef(null)
 
   // expose aksi nama/rotasi agar shortcut keyboard (K/R) bisa memicunya dari App
+  const amRef = useRef(null)
   useEffect(() => {
-    if (!refApi) return
-    window.__amApiSet = Date.now() // debug: bukti effect ActionMenu jalan
-    refApi.current = {
+    amRef.current = {
       toggleNames: () => {
         const s = sceneRef && sceneRef.current
         if (!s || !s.toggleNames) return onFlash && onFlash('Scene 3D tidak aktif (WebGL tidak tersedia)', true)
@@ -33,16 +32,20 @@ export default function ActionMenu({ sceneRef, onFlash, refApi }) {
         s.setAutoRotate(!cur); if (s.isAutoRotate) setRotOn(s.isAutoRotate()); else setRotOn(!cur)
       },
     }
-    return () => { refApi.current = null }
-  }, [refApi, sceneRef, onFlash])
+    if (actionMenuRef) {
+      window.__amApiSet = Date.now() // debug: bukti effect ActionMenu jalan
+      actionMenuRef.current = amRef.current
+    }
+    return () => { if (actionMenuRef) actionMenuRef.current = null }
+  }, [actionMenuRef, sceneRef, onFlash, rotOn])
 
   useEffect(() => {
     if (!open) return
     // sinkronkan state tampilan dengan scene sungguhan (scene mungkin sudah diubah sejak mount)
     const s = sceneRef && sceneRef.current
     if (s) {
-      if (s.isNamesVisible) setNamesOn(s.isNamesVisible())
-      if (s.isAutoRotate) setRotOn(s.isAutoRotate())
+      if (s.isNamesVisible) setNamesOn(v => (v === s.isNamesVisible() ? v : s.isNamesVisible())) // eslint-disable-line react-hooks/set-state-in-effect -- sinkronisasi sekali saat menu dibuka
+      if (s.isAutoRotate) setRotOn(v => (v === s.isAutoRotate() ? v : s.isAutoRotate()))
     }
     const k = e => { if (e.key === 'Escape') setOpen(false) }
     const c = e => { if (wrap.current && !wrap.current.contains(e.target)) setOpen(false) }

@@ -1485,3 +1485,13 @@
   - Scene parts: robot.js import 5 helper robot_spec tak terpakai (eyes/smile/chestBars/legsStanding/accents) dihapus; sound_engine.js 2 catch(e) → optional catch binding; daycycle.js hapus `state` varuntu, `lunchWindowOpen` destructure & fungsi mati `updateLunch` (dua-duanya sudah digantikan mesin shiftStep); projectboard.js hapus fungsi `chip()` & var `bx` tak terpakai.
 - Bukti: eslint no-unused-vars **0 error** (dulu 49); sisa 12 error hanya react-hooks/refs & immutability (pola baru linter, butuh refactor khusus — backlog terpisah); vitest **585/585** (44 file); build OK (precache 35, 1537.95 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 153218 berjalan, phase lunch, tanpa 'Scene init failed'.
 - Sisa backlog: 12 error react-hooks (refs-during-render dsb) butuh refactor komponen; verifikasi subjektif kualitas suara.
+
+## 2026-10-24 08:40 WIB — lint: 12 error react-hooks (refs-during-render & prop mutation) → 0 error eslint repo-wide
+
+- Backlog dipilih: 12 error eslint terakhir (react-hooks/refs "Cannot access/update ref during render" di 6 komponen + react-hooks/immutability di ActionMenu) — pola "latest callback ref" yang ditulis langsung saat render.
+- Refactor (perilaku identik — sinkronisasi ref dipindah ke useEffect tanpa deps, fungsi a11y chain yang redundan dihapus):
+  - ActivityLog.jsx, ConfirmModal.jsx, CsWidget.jsx, OverlayHelp.jsx, TaskBoard.jsx, TaskModal.jsx: `ref.current = ...` saat render → `useEffect(() => { ref.current = ... })`; chain dua ref (closeA11yRef dsb) diringkas jadi satu ref latest-callback.
+  - TaskModal.jsx: hapus closeRef perantara; TaskBoard.jsx: hapus escA11yRef perantara; OverlayHelp.jsx: hapus closeA11yRef.
+  - ActionMenu.jsx: prop `refApi` diganti `actionMenuRef` (nama berakhiran Ref agar linter mengenalinya); effect menulis ke ref lokal `amRef.current` lalu mengeksposnya via `actionMenuRef.current`; deps effect ditambah `rotOn`; setState sinkronisasi saat menu dibuka diberi disable terdokumentasi (react-hooks/set-state-in-effect — sinkronisasi sekali per buka menu, bukan cascading).
+- Bukti: eslint src **0 error, 2 warning** (exhaustive-deps di App/ActionMenu, tersisa sebagai catatan); vitest **585/585** (44 file); build OK (precache 35, 1537.93 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 229043 berjalan, phase lunch, tanpa 'Scene init failed'.
+- Sisa backlog: 2 warning exhaustive-deps (butuh analisis deps, bukan kosmetik); verifikasi subjektif kualitas suara (butuh telinga manusia).

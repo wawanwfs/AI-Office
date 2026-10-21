@@ -1,13 +1,11 @@
-import React, { useRef, useCallback } from 'react'
+import React, { useRef, useCallback, useEffect } from 'react'
 import { useDialogA11y } from '../lib/dialogA11y'
 
 export default function ConfirmModal({ show, title, text, confirmLabel = 'Ya, lanjut', danger, busy, onConfirm, onCancel }) {
   const box = useRef(null)
   const onCancelRef = useRef(onCancel)
-  onCancelRef.current = onCancel
-  const cancelA11yRef = useRef(() => {})
-  cancelA11yRef.current = () => onCancelRef.current()
-  const cancelViaA11y = useCallback(() => cancelA11yRef.current(), [])
+  useEffect(() => { onCancelRef.current = onCancel })
+  const cancelViaA11y = useCallback(() => onCancelRef.current(), [])
   useDialogA11y({ open: show, onClose: cancelViaA11y, ref: box })
   if (!show) return null
   return (

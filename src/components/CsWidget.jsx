@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
 
@@ -7,7 +7,7 @@ export default function CsWidget() {
   const [open, setOpen] = useState(false)
   const box = useRef(null)
   const onCloseRef = useRef(() => {})
-  onCloseRef.current = () => setOpen(false)
+  useEffect(() => { onCloseRef.current = () => setOpen(false) })
   const closeWidget = useCallback(() => onCloseRef.current(), [])
   useModalFlag(open)
   // Escape ditangani useDialogA11y (capture, stopPropagation) — onClose TIDAK boleh
