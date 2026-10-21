@@ -1630,3 +1630,13 @@
 - Verifikasi produksi (chrome dbg 9222, reload): scene hidup, frames berjalan, 14 agents & 14 screens; sampling hash piksel 14 canvas dalam 0,6 dtk → hanya ~6 yang berubah (dulu 14 serentak); screenshot 661 KB (>500 KB = scene hidup); tanpa 'Scene init failed'.
 - Bukti: vitest **630/630** (50 file, dulu 627); eslint src bersih; build OK (precache 35, 1540.24 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 tanpa error.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 14:40 WIB — performa: dust drift di-throttle 60fps → ~20×/dtk (+ dustY murni)
+
+- Backlog dipilih: loop partikel debu menjalankan sin/cos untuk 40 partikel + upload buffer posisi GPU (`pG.attributes.position.needsUpdate`) SETIAP frame, padahal drift sangat lambat (amplitudo ±.0006/.0003 per frame).
+- Fix:
+  - `shouldUpdateDust(frame)` + `DUST_UPDATE_EVERY=3` (~20×/dtk) di parts/effects.js; OfficeScene hanya update dust di kelipatan 3 frame.
+  - Perhitungan Y diekstrak ke fungsi murni `dustY(x,y,elapsed,i)` (respawn >3.6 → 0.5, guard non-numerik); offset X dikompensasi ×3 supaya kecepatan drift tetap sama.
+- +5 unit test (kelipatan throttle, custom every + guard, naik/respawn, periodisitas 2π).
+- Bukti: vitest **635/635** (51 file, dulu 630); eslint src **0 problem**; build OK (precache 35, 1540.44 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, frames berjalan (fr 2→17→22, tanpa 'Scene init failed'); screenshot 710 KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

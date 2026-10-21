@@ -5,7 +5,7 @@ import { createLighting, createNeonMode, createShift, mixHex } from './parts/day
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY } from './parts/effects.js';
 import { overlapPass, sweepClampRounds } from './parts/label_overlap.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
@@ -1771,9 +1771,15 @@ function animate(){
   ringMat.opacity=.12+Math.sin(elapsed*1.5)*.04;
   helmetVisor.material.opacity=.8+Math.sin(elapsed*3)*.2;
 
-  // Dust drift
-  for(let i=0;i<pN;i++){pP[i*3]+=Math.sin(elapsed+i)*.0006;pP[i*3+1]+=Math.cos(elapsed*.4+i*.5)*.0003;if(pP[i*3+1]>3.6)pP[i*3+1]=.5}
-  pG.attributes.position.needsUpdate=true;
+  // Dust drift — di-throttle ~20×/dtk (drift sangat lambat; dulu 40×sin/cos +
+  // upload buffer GPU tiap frame). Y via dustY (murni, respawn > 3.6 → 0.5).
+  if(shouldUpdateDust(frame)){
+    for(let i=0;i<pN;i++){
+      pP[i*3]+=Math.sin(elapsed+i)*.0006*DUST_UPDATE_EVERY; // ×3: kecepatan drift sama di throttle ⅓
+      pP[i*3+1]=dustY(pP[i*3],pP[i*3+1],elapsed,i);
+    }
+    pG.attributes.position.needsUpdate=true;
+  }
   // Labels
   agentData.forEach((a,i)=>{if(a.state==='sitting')a.label.position.y=LABEL_Y+Math.sin(elapsed*1.1+i*1.3)*.02});
   // cincin emas mengikuti agent terpilih (juga saat berjalan/meeting)

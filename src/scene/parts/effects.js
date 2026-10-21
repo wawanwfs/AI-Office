@@ -135,6 +135,20 @@ export function ledOpacity(L, elapsed) {
   return Math.sin(elapsed * L.sp + L.ph) > L.on ? 1 : 0.12;
 }
 
+// Throttle dust drift: 40 partikel (sin/cos per partikel) + upload buffer posisi
+// GPU tiap frame padahal drift sangat lambat → cukup ~20×/dtk (tiap 3 frame).
+export const DUST_UPDATE_EVERY = 3;
+export function shouldUpdateDust(frame, every = DUST_UPDATE_EVERY) {
+  return Number.isFinite(frame) && frame % every === 0;
+}
+// Murni: geser satu partikel debu (dipakai loop dust + unit test).
+// Mengembalikan Y baru (respawn ke 0.5 bila melewati 3.6).
+export function dustY(x, y, elapsed, i) {
+  if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(elapsed) || !Number.isFinite(i)) return 0.5;
+  const ny = y + Math.cos(elapsed * .4 + i * .5) * .0003;
+  return ny > 3.6 ? 0.5 : ny;
+}
+
 export function drawScreenFrame(s, frame) {
   const { ctx: c, canvas: cv, type, hex } = s;
   const w = cv.width, h = cv.height, t = frame * 0.02;
