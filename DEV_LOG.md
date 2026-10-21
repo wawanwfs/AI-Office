@@ -1857,3 +1857,11 @@
 - 2 koreksi hanya di test: ekspektasi pertama keliru (60 char × min 20px = 1200 > 460 → memang berhenti di min); mock ctx measureText dibuat proporsional-font utk kasus menyusut-sampai-muat. Kode produksi tak disentuh setelah ekstraksi.
 - Bukti: vitest **878/878** (71 file, dulu 869); eslint src 0 problem; build OK (precache 35, 1543.16 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222 (e2e_zone.py): reload OK, 14 agents, 5 zoneLabels, tvData terisi (dibantuin.com 23 done), frames 6→12; screenshot 727 KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-22 01:20 WIB — painter kanvas langit jendela & sheen kaca diekstrak ke parts/sky_canvas.js murni (+5 test)
+
+- Backlog dipilih: skyTex (gradien langit 256×128 + pita matahari radial + 4 awan ellipse) dan glassSheen (2 pantulan diagonal + tint biru) masih IIFE inline di OfficeScene — painter kanvas dekorasi lingkungan terakhir tanpa unit test langsung.
+- Fix: parts/sky_canvas.js — `drawSky(ctx)` & `drawGlassSheen(ctx)` murni (ctx di-inject, tanpa THREE/DOM); urutan & parameter perintah gambar identik kode lama (tampilan tak berubah). skyTex/glassSheen kini tinggal buat kanvas + panggil painter + CanvasTexture.
+- +5 unit test (ctx recorder dgn gradien palsu): gradien langit 3 stop & fillRect penuh; matahari radial (210,22) r4→80 dgn 2 stop; tepat 4 awan ellipse (radii cw/2, ch/2) via beginPath+fill; sheen 2 gradien diagonal (5+3 stop) + 3 fillRect; tint biru rgba(140,200,255,0.10) jadi fillStyle terakhir. 1 koreksi indeks di test saja (fillRect pertama menggeser posisi linGrad kedua), kode produksi tak disentuh.
+- Bukti: vitest **883/883** (72 file, dulu 878); eslint src 0 problem; build OK (precache 35, 1543.19 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222 (e2e_sign.py): reload OK, 14 agents, 5 zoneLabels (opacity 1), tvData terisi, frames 4→13, bubbles 1→3.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
