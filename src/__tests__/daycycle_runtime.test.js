@@ -1,7 +1,7 @@
 // Unit test createNeonMode & createShift (daycycle.js) — bagian runtime yang
 // belum tercakup daycycle.test.js (statusAt/daylight/mixHex sudah ada di sana).
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { createNeonMode, createShift } from '../scene/parts/daycycle.js';
+import { createNeonMode, createShift, createLighting, statusAt } from '../scene/parts/daycycle.js';
 import { SHIFT } from '../scene/parts/shift_spec.js';
 
 // ── Stub scene objects: objek dengan properti yang diubah enable/disable ──
@@ -246,5 +246,72 @@ describe('createShift — mesin fase shift (eksekusi efek)', () => {
     vi.advanceTimersByTime(10000);
     expect(ctx.agentData[2].walker.visible).toBe(false);
     expect(ctx.agentData[2].state).toBe('offsite');
+  });
+});
+
+// ── createLighting — apply(min): pencahayaan mengikuti waktu ──
+describe('createLighting — apply(min) mengubah pencahayaan sesuai waktu', () => {
+  const mkCtx = () => {
+    const agents = [{ dGlow: light() }, { dGlow: light() }];
+    const ctx = {
+      ambient: light(),
+      sun: light(),
+      renderer: { toneMappingExposure: 1 },
+      scene: { background: null, fog: { color: null } },
+      agentData: agents,
+      onTimeUpdate: vi.fn(),
+      onStatusUpdate: vi.fn(),
+      onTick: vi.fn(),
+    };
+    return { ctx, agents };
+  };
+  const NAVY = { isColor: true }; // THREE.Color dipanggil dgn new — stub via injection
+
+  it('siang (720): sun 2.0, ambient 0.56, exposure 1.3, callback waktu/status/tick dipanggil', () => {
+    const { ctx } = mkCtx();
+    const L = createLighting({ ...ctx, THREE: { Color: class { constructor() { Object.assign(this, NAVY); } } } });
+    L.apply(720);
+    expect(ctx.sun.intensity).toBeCloseTo(2.0);
+    expect(ctx.ambient.intensity).toBeCloseTo(0.56);
+    expect(ctx.renderer.toneMappingExposure).toBeCloseTo(1.3);
+    expect(ctx.onTimeUpdate).toHaveBeenCalledWith(720);
+    expect(ctx.onStatusUpdate).toHaveBeenCalledWith(statusAt(720));
+    expect(ctx.onTick).toHaveBeenCalledWith(720);
+    // dGlow: 0.15 + (1-1)*0.3 = 0.15
+    ctx.agentData.forEach((a) => expect(a.dGlow.intensity).toBeCloseTo(0.15));
+    expect(L.minutes).toBe(720);
+  });
+
+  it('malam (60): daylight 0.3 → sun 1.23, ambient 0.392, exposure 1.09, dGlow 0.36', () => {
+    const { ctx } = mkCtx();
+    const L = createLighting({ ...ctx, THREE: { Color: class {} } });
+    L.apply(60);
+    expect(ctx.sun.intensity).toBeCloseTo(0.9 + 0.3 * 1.1);
+    expect(ctx.ambient.intensity).toBeCloseTo(0.32 + 0.3 * 0.24);
+    expect(ctx.renderer.toneMappingExposure).toBeCloseTo(1.0 + 0.3 * 0.3);
+    ctx.agentData.forEach((a) => expect(a.dGlow.intensity).toBeCloseTo(0.15 + 0.7 * 0.3));
+  });
+
+  it('tint matahari sore (1020): jingga campuran 0xfff8f0→0xffaa66 t=0.5', () => {
+    const { ctx } = mkCtx();
+    const L = createLighting({ ...ctx, THREE: { Color: class { constructor(hex) { this.hex = hex; } } } });
+    L.apply(1020);
+    // mixHex(0xfff8f0, 0xffaa66, 0.5): kanal → (0xff+0xff)/2=255, (0xf8+0xaa)/2=209, (0xf0+0x66)/2=171
+    expect(ctx.sun.color.hex).toBe((255 << 16) | (209 << 8) | 171);
+  });
+
+  it('tint matahari pagi (360): campuran 0xfff8f0→0xffcc88 t=0.5', () => {
+    const { ctx } = mkCtx();
+    const L = createLighting({ ...ctx, THREE: { Color: class { constructor(hex) { this.hex = hex; } } } });
+    L.apply(360);
+    expect(ctx.sun.color.hex).toBe((255 << 16) | ((0xf8 + 0xcc) / 2) << 8 | ((0xf0 + 0x88) / 2));
+  });
+
+  it('minutes getter: current = menit terakhir apply', () => {
+    const { ctx } = mkCtx();
+    const L = createLighting({ ...ctx, THREE: { Color: class {} } });
+    expect(L.minutes).toBe(660); // default init
+    L.apply(540);
+    expect(L.minutes).toBe(540);
   });
 });
