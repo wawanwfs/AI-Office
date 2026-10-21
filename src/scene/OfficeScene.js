@@ -5,7 +5,7 @@ import { createLighting, createNeonMode, createShift, mixHex } from './parts/day
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreen } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreen, shouldRefreshShadow } from './parts/effects.js';
 import { overlapPass, sweepClampRounds } from './parts/label_overlap.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
@@ -1873,6 +1873,11 @@ function animate(){
   if(__meet.active&&!lastMeetingState)__sound.playMeetingChime();
   lastMeetingState=__meet.active;
 
+  // ── Shadow auto-update di-throttle: tanpa ini Three.js merender peta bayangan
+  // (pass scene kedua, PCF 2048²) SETIAP frame. Matahari statis + agen bergerak
+  // lambat → cukup refresh ~6×/dtk; di antara refresh pakai bayangan cache.
+  renderer.shadowMap.autoUpdate=false;
+  if(shouldRefreshShadow(frame))renderer.shadowMap.needsUpdate=true;
   renderer.render(scene,camera);
   // ── Adaptive quality: bila FPS rendah (GPU lemah/SwiftShader), turunkan beban
   // bertahap: pixelRatio → resolusi shadow map → matikan shadow. Sampling

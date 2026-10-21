@@ -99,6 +99,14 @@ export function shouldRedrawScreen(frame, every = SCREEN_REDRAW_EVERY) {
   return Number.isFinite(frame) && frame % every === 0;
 }
 
+// Throttle update peta bayangan: renderer merender shadow map penuh (2048² PCF)
+// SETIAP frame padahal matahari statis & agen bergerak lambat → refresh ~6×/dtk
+// menghemat satu render pass scene per frame tanpa bayangan tampak "melompat".
+export const SHADOW_REFRESH_EVERY = 10;
+export function shouldRefreshShadow(frame, every = SHADOW_REFRESH_EVERY) {
+  return Number.isFinite(frame) && frame % every === 0;
+}
+
 export function drawScreenFrame(s, frame) {
   const { ctx: c, canvas: cv, type, hex } = s;
   const w = cv.width, h = cv.height, t = frame * 0.02;

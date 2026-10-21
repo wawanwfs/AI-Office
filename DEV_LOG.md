@@ -1535,3 +1535,11 @@
 - +3 unit test baru (kelipatan redraw, throttle ≥5×, guard frame non-numerik).
 - Bukti: vitest **593/593** (45 file, dulu 590); eslint src **0 error**; build OK (precache 35, 1538.18 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 174104 berjalan, phase lunch, tanpa 'Scene init failed'; screenshot produksi 675KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 10:30 WIB — performa: update peta bayangan di-throttle 60fps → 6×/dtk (hemat 1 render pass scene per frame)
+
+- Backlog dipilih: renderer.shadowMap.autoUpdate default → Three.js merender shadow map penuh (pass scene kedua, PCFSoft 2048²) SETIAP frame, padahal matahari statis & agen bergerak lambat.
+- Fix: `shouldRefreshShadow(frame)` + `SHADOW_REFRESH_EVERY=10` di parts/effects.js; OfficeScene: `shadowMap.autoUpdate=false`, `needsUpdate=true` tiap kelipatan 10 frame (~6×/dtk @60fps) — di antara refresh bayangan dipakai dari cache.
+- +2 unit test baru (kelipatan refresh, guard frame non-numerik).
+- Bukti: vitest **595/595** (46 file, dulu 593); eslint src **0 problem**; build OK; deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 246420 berjalan, phase lunch, tanpa 'Scene init failed'; screenshot produksi 675KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
