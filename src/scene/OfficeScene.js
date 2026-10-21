@@ -16,6 +16,7 @@ import { paintRing } from './parts/ring_canvas.js';
 import { drawSky, drawGlassSheen } from './parts/sky_canvas.js';
 import { drawWoodFloor, drawAoStrip } from './parts/floor_canvas.js';
 import { drawCeiling } from './parts/ceiling_canvas.js';
+import { drawResepsiLogo, drawWallLogo } from './parts/logo_canvas.js';
 import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelScale, drawLabelText } from './parts/label_spec.js';
 import { WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { OBSTACLES } from './parts/obstacles.js';
@@ -798,15 +799,7 @@ OBSTACLES.push([RCX-1.3,RCX+1.55,RCZ-.35,RCZ+.35]);
 // Logo WFS Project di depan meja resepsionis
 const wfsLogoTex=(()=>{
   const c=document.createElement('canvas');c.width=1024;c.height=320;const x=c.getContext('2d');
-  x.fillStyle='#0F1B2E';x.fillRect(0,0,1024,320);
-  x.strokeStyle='#D4AF37';x.lineWidth=8;x.strokeRect(6,6,1012,308);
-  const g=x.createLinearGradient(40,40,240,280);g.addColorStop(0,'#FBBF24');g.addColorStop(1,'#F97316');
-  const hx=(cx,cy,r)=>{x.beginPath();for(let i=0;i<6;i++){const a=Math.PI/6+i*Math.PI/3;x.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));}x.closePath();};
-  hx(150,160,115);x.fillStyle=g;x.fill();hx(150,160,98);x.fillStyle='#0F1B2E';x.fill();
-  x.fillStyle=g;x.font='900 130px Arial,sans-serif';x.textAlign='center';x.textBaseline='middle';x.fillText('W',150,168);
-  x.textAlign='left';x.textBaseline='alphabetic';
-  x.fillStyle='#fff';x.font='900 150px Arial,sans-serif';x.fillText('WFS',300,175);
-  x.fillStyle='#FBBF24';x.font='800 78px Arial,sans-serif';x.fillText('PROJECT',306,265);
+  drawResepsiLogo(x);
   const t=new THREE.CanvasTexture(c);t.minFilter=THREE.LinearFilter;return t;
 })();
 const rcLogoMesh=new THREE.Mesh(
@@ -1255,18 +1248,7 @@ const __wallObjs=[];
 
   // ---- LOGO WFS PROJECT besar di dinding belakang ----
   const lc=document.createElement('canvas');lc.width=2048;lc.height=640;const l=lc.getContext('2d');
-  l.fillStyle='#0F1B2E';l.fillRect(0,0,2048,640);
-  l.strokeStyle='#D4AF37';l.lineWidth=14;l.strokeRect(12,12,2024,616);
-  const hex=(cx,cy,r)=>{l.beginPath();for(let i=0;i<6;i++){const a=Math.PI/6+i*Math.PI/3;l.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));}l.closePath();};
-  const grad=l.createLinearGradient(100,60,460,580);grad.addColorStop(0,'#FBBF24');grad.addColorStop(1,'#F97316');
-  hex(300,320,230);l.fillStyle=grad;l.fill();
-  hex(300,320,196);l.fillStyle='#0F1B2E';l.fill();
-  l.fillStyle=grad;l.font='900 250px "Segoe UI",Arial,sans-serif';l.textAlign='center';l.textBaseline='middle';
-  l.fillText('W',300,335);
-  l.textAlign='left';l.textBaseline='alphabetic';
-  l.fillStyle='#FFFFFF';l.font='900 310px "Segoe UI",Arial,sans-serif';l.fillText('WFS',610,290);
-  l.fillStyle='#FBBF24';l.font='800 170px "Segoe UI",Arial,sans-serif';l.fillText('PROJECT',616,470);
-  l.fillStyle='rgba(255,255,255,.75)';l.font='600 62px "Segoe UI",Arial,sans-serif';l.fillText('SOFTWARE HOUSE  \u00b7  AI TEAM',620,570);
+  drawWallLogo(l);
   const lt=new THREE.CanvasTexture(lc);lt.anisotropy=4;
   const logo=new THREE.Mesh(new THREE.PlaneGeometry(8.6,2.69),new THREE.MeshBasicMaterial({map:lt}));
   logo.position.set(1.0,2.55,9.24);logo.rotation.y=Math.PI;logo.renderOrder=5;office.add(logo);__wallObjs.push(logo);

@@ -1882,3 +1882,11 @@
 - 3 koreksi hanya di test: gradien palsu addColorStop tidak menempel ke objek gradien (mk dirombak); asersi grid pakai pasangan moveTo→lineTo (bukan set koordinat); aritmetika bevel terakhir i=4 → 514 (bukan 512). Kode produksi tak disentuh setelah ekstraksi.
 - Bukti: vitest **895/895** (74 file, dulu 888); eslint src 0 problem; build OK (precache 35, 1543.20 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222: reload OK, agents 14, zoneLabels 5, tvData terisi (dibantuin.com 23 done), frames 6→11, initFail false; screenshot 705 KB (scene hidup, plafon normal).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-22 02:45 WIB — painter logo WFS Project (resepsionis + dinding belakang) diekstrak ke parts/logo_canvas.js murni (+12 test)
+
+- Backlog dipilih: dua painter kanvas logo brand terakhir yang masih inline di OfficeScene — logo kecil di depan meja resepsionis (1024×320: latar navy + bingkai emas + hexagon gradien ganda + W/WFS/PROJECT) dan logo besar dinding belakang (2048×640: pola sama + tagline SOFTWARE HOUSE · AI TEAM) — tanpa unit test langsung.
+- Fix: parts/logo_canvas.js — `drawResepsiLogo(ctx)` & `drawWallLogo(ctx)` murni (ctx di-inject, tanpa THREE/DOM); urutan & parameter perintah gambar identik kode inline lama (tampilan tak berubah). OfficeScene kini 1 baris painter per logo.
+- +12 unit test (ctx recorder + gradien palsu): tiap logo — latar fillRect + bingkai strokeRect/lineWidth; gradien linear (koordinat & 2 stop); dua heksagon (6 lineTo per path, koordinat sudut Math.PI/6+i·π/3, r luar/dalam) fill gradien lalu navy; posisi/font/align/baseline semua teks (W center/middle gradien; WFS & PROJECT rata kiri; tagline rgba abu); jumlah teks & gradien tepat; tanpa oper liar. Koreksi hanya di test: pembulatan float heksagon (r6 1e6), helper styleBefore default key, variabel tak terpakai.
+- Bukti: vitest **907/907** (75 file, dulu 895); eslint src 0 problem; build OK (precache 35, 1543.22 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222 (e2e_sign.py): reload OK, agents 14, zones 5 (opacity 1), tv terisi, frames 4→14, bubbles 1→3; screenshot 724 KB (scene hidup, logo normal).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
