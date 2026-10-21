@@ -6,7 +6,7 @@ import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles } from './parts/effects.js';
-import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneJitter, zoneScreenFade } from './parts/label_overlap.js';
+import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneJitter, zoneScreenFade, buildAgentPts, buildZonePts, buildBubblePts, PX_PER_TAN } from './parts/label_overlap.js';
 import { perfStep } from './parts/perf_quality.js';
 import { updateFollowGoal, focusStep, autoRotateStep } from './parts/kamera_focus.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';

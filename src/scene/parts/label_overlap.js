@@ -173,3 +173,68 @@ export function zoneScreenFade(pw) {
   }
   return { opacity: 1, visible: true };
 }
+
+// ── Pembangunan titik label (diekstrak dari animate() OfficeScene) ──
+// Murni: dari daftar entitas + nilai proyeksi kamera, hasilkan array pts untuk
+// overlapPass/sweepClampRounds. Tanpa THREE/canvas — unit-testable.
+
+const PX_PER_TAN = (clientH, fovDeg) => clientH / (2 * Math.tan((fovDeg * Math.PI) / 360));
+
+// pts label agent: sw/sh piksel sprite, baseY/baseX = posisi state dikurangi
+// offset anti-tumpuk frame sebelumnya (offset TIDAK terakumulasi antar frame).
+export function buildAgentPts(vis, k, pxW, pxH) {
+  return vis.map(a => {
+    const u = a.label.userData, v = a.proj;
+    return {
+      a, zone: false,
+      sw: a.label.scale.x * k, sh: a.label.scale.y * k,
+      baseY: a.label.position.y - (u.antiY || 0), baseX: a.label.position.x - (u.antiX || 0),
+      x: v.x * pxW, y: v.y * pxH, offY: 0, offX: 0,
+    };
+  });
+}
+
+// pts label zona (penghalang statis). base dari posisi ASLI (window.__zoneBase)
+// + jitter deterministik + akumulasi userData.antiY/antiX — tidak terakumulasi di posisi.
+// entity: {visible, proj, dist, label, base, antiY, antiX, scale}
+// v.z>1 (di belakang kamera) → dilewati. Return juga fade (zoneScreenFade) untuk penelepon.
+export function buildZonePts(zones, k, pxW, pxH) {
+  const out = [];
+  (zones || []).forEach(z => {
+    if (!z.visible) return;
+    const v = z.proj;
+    if (!v || v.z > 1) return;
+    const dz = Math.max(2, z.dist);
+    const pw = z.scale.x * k / dz;
+    const zf = zoneScreenFade(pw);
+    const zay = z.antiY || 0, zax = z.antiX || 0;
+    const { jy, jx } = zoneJitter(z.label);
+    const b = z.base || { y: 0, x: 0 };
+    out.push({
+      a: null, zone: true, zt: z.ref, fade: zf,
+      zw: pw * 1.06, zh: z.scale.y * k / dz * 1.25,
+      baseY: b.y + jy * 0.06 + zay, baseX: b.x + jx * 0.08 + zax,
+      x: v.x * pxW, y: v.y * pxH, offY: 0, offX: 0,
+    });
+  });
+  return out;
+}
+
+// pts bubble dialog (penghalang statis, sizeAttenuation=false → piksel konstan).
+// bubble: {proj, scale} — v.z>1 dilewati.
+export function buildBubblePts(bubbles, k, pxW, pxH) {
+  const out = [];
+  (bubbles || []).forEach(bb => {
+    const v = bb.proj;
+    if (!v || v.z > 1) return;
+    out.push({
+      a: null, zone: true, zt: null, bub: bb.ref,
+      zw: bb.ref.scale.x * k, zh: bb.ref.scale.y * k,
+      baseY: bb.ref.position.y, baseX: bb.ref.position.x,
+      x: v.x * pxW, y: v.y * pxH, offY: 0, offX: 0,
+    });
+  });
+  return out;
+}
+
+export { PX_PER_TAN };
