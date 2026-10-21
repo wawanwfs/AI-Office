@@ -1773,3 +1773,11 @@
 - +15 unit test (rumus fade eksak/ekuivalensi 6 nilai d, solid pada d=-1.5, clamp 0, ambang 0.04 tepat, hidden tak menyentuh opacity, skip material array, null aman, ambang tiang 0.5, pemilihan sisi tiang, tick dalam/luar kantor, pembulatan cam & val, opacity diterapkan).
 - Bukti: vitest **781/781** (63 file, dulu 766); eslint src **0 problem**; build OK (precache 35, 1543.45 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via e2e_wall.py (returnByValue): reload OK, 14 agents, 5 zoneLabels (opacity 1), frames berjalan (6→11), 0 label NaN; wallState valid: default kamera {front:0,right:0,back:1,left:1}, __wallFade di luar depan {front:0} vs di dalam {semua 1} — tanpa exception; screenshot 727 KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 21:00 WIB — tiga poll status digabung jadi SATU fetch (statusPollActions murni)
+
+- Backlog dipilih: IIFE polling OfficeScene punya 3 interval terpisah (20s/21s/25s) yang masing-masing fetch /wfs-api/agents/status — 3× trafik untuk data yang sama; aksi badge/bangun/alert tersebar inline.
+- Fix: parts/status_poll.js tambah `statusPollActions(agentData,agents,im,prevFailed,findByGid)` murni → daftar aksi [{type:'badge'|'wake'|'alert',...}] (komposisi badgeAssignments+wakeAgentIds+failedAlerts). OfficeScene kini satu `pollStatus()` (timeout 4s + interval 20s) yang fetch SEKALI lalu menjalankan aksi; semantik tiap aksi persis kode lama (warna palet, timer 0.5 bangun, bubble '#f66' pada transisi failed).
+- +10 unit test (aksi badge dgn warna, wake ad valid/tak ditemukan, alert transisi/sama, urutan badge→wake→alert, agents kosong, agentData kosong, reset prevFailed, status tanpa warna di-skip).
+- Bukti: vitest **791/791** (64 file, dulu 781); eslint src **0 problem**; build OK (precache 35, 1543.44 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: reload OK, 14 agents, 5 zoneLabels (opacity 1), frames berjalan (14→19), 0 label NaN/exception; **fetch /agents/status terukur 2× dalam 12 dtk** (dulu ~3×/12s dari 3 interval — trafik polling turun ±2/3 pada interval panjang); screenshot 723 KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

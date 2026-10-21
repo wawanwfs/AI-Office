@@ -51,3 +51,28 @@ export function failedAlerts(agents, prevFailed, findByGid) {
   });
   return out;
 }
+
+// ── Gabungan tiga poll (badge / bangun / alert) — satu fetch per siklus ──
+// Dulu 3 interval terpisah (20s/21s/25s) masing-masing fetch /agents/status —
+// 3× trafik untuk data yang sama. Kini satu interval + satu fetch.
+
+// Terapkan warna badge ke mesh nyata (butuh referensi material — tetap di caller
+// sebelumnya; di sini hanya transformasi murni data → aksi deskriptif).
+
+// Satu langkah gabungan: dari respons gateway, hasilkan daftar aksi:
+//   [{type:'badge',ad,status,color}, {type:'wake',gid,ad}, {type:'alert',gid,ad}]
+// Murni, tanpa fetch/DOM/THREE — unit-testable. findByGid: pencari agent-by-gid.
+export function statusPollActions(agentData, agents, im, prevFailed, findByGid) {
+  const out = [];
+  badgeAssignments(agentData, agents, im).forEach(({ ad, status }) => {
+    out.push({ type: 'badge', ad, status, color: BADGE_COLORS[status] });
+  });
+  wakeAgentIds(agents).forEach((gid) => {
+    const ad = findByGid(gid);
+    if (ad) out.push({ type: 'wake', gid, ad });
+  });
+  failedAlerts(agents, prevFailed, findByGid).forEach(({ gid, ad }) => {
+    out.push({ type: 'alert', gid, ad });
+  });
+  return out;
+}

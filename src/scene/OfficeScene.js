@@ -21,7 +21,7 @@ import { createSoundEngine } from './parts/sound_engine.js';
 import { createProjectBoard } from './parts/projectboard.js';
 import { chatPhrases, COLLAB_PAIRS, pickCollab, clampBubbleText, LINE_SEC, autoTalkDelay, autoTalkText } from './parts/dialog.js';
 import { agentIdMap, buildRunningByAgent } from './parts/running_tasks.js';
-import { BADGE_COLORS, badgeAssignments, wakeAgentIds, failedAlerts } from './parts/status_poll.js';
+import { BADGE_COLORS, statusPollActions } from './parts/status_poll.js';
 import { wallFadeTick } from './parts/wall_fade.js';
 import { updateBubbles as updateBubblesPure } from './parts/bubbles.js';
 import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canvas.js';
@@ -784,47 +784,32 @@ allAgents.forEach((agent,i)=>{
   const __timeouts=[];
   (function(){
   const idMapFn=()=>agentIdMap(window.__wfsAgentIdList||[]);
-  async function pollBadges(){
-  if(pageHidden) return; // hemat fetch saat tab tidak dilihat
-  window.__pollBadges=pollBadges; // diekspos utk refresh instan onVis
-  try{
-    const r=await fetch('/wfs-api/agents/status');
-    const d=await r.json();
-    const agents=d.agents||{};
-    const im=idMapFn();
-    badgeAssignments(agentData,agents,im).forEach(({ad,status})=>{
-      const badge=ad.sittingChar?.userData?.badge;
-      if(badge&&BADGE_COLORS[status])badge.material.color.set(BADGE_COLORS[status]);
-    });
-  }catch{ /* abaikan */ }
-  }
-  __timeouts.push(setTimeout(pollBadges,4000));
-  __intervals.push(setInterval(pollBadges,20000));
-  // Task running → agent berdiri & jalan ke coffee area (visual "sedang kerja/ngebut")
-  __intervals.push(setInterval(()=>{
-    if(pageHidden) return; // hemat fetch saat tab hidden
-    fetch('/wfs-api/agents/status').then(r=>r.json()).then(d=>{
-      const im=idMapFn();
-      wakeAgentIds(d.agents||{}).forEach(gid=>{
-          const ad=agentData.find(a=>im[a.agent?.name]===gid);
-          if(ad&&ad.state==='sitting'){
-            ad.timer=0.5; // paksa bangun segera
-          }
-      });
-    }).catch(()=>{});
-  },21000));
-  // Alert task failed: bubble peringatan di meja agent (deteksi transisi)
+  const findByGid=(gid)=>agentData.find(a=>idMapFn()[a.agent?.name]===gid);
   const prevFailed={};
-  __intervals.push(setInterval(()=>{
-    if(pageHidden) return; // hemat fetch saat tab hidden
-    fetch('/wfs-api/agents/status').then(r=>r.json()).then(d=>{
+  async function pollStatus(){
+    if(pageHidden) return; // hemat fetch saat tab tidak dilihat
+    window.__pollBadges=pollStatus; // diekspos utk refresh instan onVis
+    try{
+      const r=await fetch('/wfs-api/agents/status');
+      const d=await r.json();
+      const agents=d.agents||{};
       const im=idMapFn();
-      failedAlerts(d.agents||{},prevFailed,(gid)=>agentData.find(a=>im[a.agent?.name]===gid)).forEach(({ad})=>{
-          const wp=ad.walker.visible?ad.walker.position:{x:ad.home.x,z:ad.home.z};
+      // SATU fetch utk badge + bangun + alert (dulu 3 interval/3 fetch terpisah)
+      statusPollActions(agentData,agents,im,prevFailed,findByGid).forEach(act=>{
+        if(act.type==='badge'){
+          const badge=act.ad.sittingChar?.userData?.badge;
+          if(badge&&act.color)badge.material.color.set(act.color);
+        }else if(act.type==='wake'){
+          if(act.ad.state==='sitting')act.ad.timer=0.5; // paksa bangun segera
+        }else if(act.type==='alert'){
+          const wp=act.ad.walker.visible?act.ad.walker.position:{x:act.ad.home.x,z:act.ad.home.z};
           createBubble(wp.x,2.6,wp.z,'Ada task failed! Cek log…','#f66');
+        }
       });
-    }).catch(()=>{});
-  },25000));
+    }catch{ /* abaikan */ }
+  }
+  __timeouts.push(setTimeout(pollStatus,4000));
+  __intervals.push(setInterval(pollStatus,20000));
   })();
 
 
