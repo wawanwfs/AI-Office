@@ -17,6 +17,7 @@ import { drawSky, drawGlassSheen } from './parts/sky_canvas.js';
 import { drawWoodFloor, drawAoStrip } from './parts/floor_canvas.js';
 import { drawCeiling } from './parts/ceiling_canvas.js';
 import { drawResepsiLogo, drawWallLogo } from './parts/logo_canvas.js';
+import { drawBlobShadow } from './parts/blob_canvas.js';
 import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelScale, drawLabelText } from './parts/label_spec.js';
 import { WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { OBSTACLES } from './parts/obstacles.js';
@@ -246,8 +247,7 @@ const MB=c=>new THREE.MeshBasicMaterial({color:c});
 const Glass=()=>new THREE.MeshPhysicalMaterial({color:0xBBCCDD,transparent:true,opacity:0.08,roughness:0});
 // contact blob shadow — bidang radial gradient semi-transparan di lantai, anchor bayangan objek
 const __blobTex=(()=>{const c=document.createElement('canvas');c.width=c.height=128;const x=c.getContext('2d');
-  const g=x.createRadialGradient(64,64,4,64,64,62);g.addColorStop(0,'rgba(10,14,18,0.55)');g.addColorStop(0.55,'rgba(10,14,18,0.30)');g.addColorStop(1,'rgba(10,14,18,0)');
-  x.fillStyle=g;x.fillRect(0,0,128,128);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
+  drawBlobShadow(x);const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;return t;})();
 const __blobMat=new THREE.MeshBasicMaterial({map:__blobTex,transparent:true,depthWrite:false,opacity:1});
 function addBlobShadow(obj,r=0.55){
   const b=new THREE.Mesh(new THREE.PlaneGeometry(r*2,r*2),__blobMat);
