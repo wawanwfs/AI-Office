@@ -1806,3 +1806,11 @@
 - Bukti: vitest **812/812** (65 file, dulu 802); eslint src **0 problem**; build OK (precache 35, 1543.32 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via e2e_tv.py (CDP chrome 9222, returnByValue): reload OK, 14 agents, 5 zoneLabels, tvData terisi (tasks+saas), frames berjalan (5→10), 0 jsErrors; screenshot 716 KB (scene hidup).
 - Catatan: e2e_err.py/e2e_label.py lama tidak terpakai (9503 tak lagi WS devtools; pakai CDP chrome :9222).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+## 2026-10-21 23:00 WIB — useDialogA11y (a11y overlay dipakai 6 modal) diuji unit — 16 test baru
+
+- Celah ditemukan: src/lib/dialogA11y.js (aria-modal otomatis, fokus awal, focus-trap Tab/Shift+Tab, Escape→onClose, restore fokus ke pemicu) dipakai 6 komponen modal (TaskModal/TaskBoard/ProjectPanel/ActivityLog/OverlayHelp/ConfirmModal) tapi nol test langsung; jsdom pun offsetParent selalu null & focus() memindahkan activeElement ke body → perilaku trap tak teruji.
+- Fix: test suite baru src/__tests__/dialog_a11y.test.jsx (16 test) — dgn patch uji jsdom: offsetParent getter (null hanya bila display:none) agar filter "elemen tersembunyi" hook bisa diverifikasi. Kode hook TIDAK diubah (perilaku produksi utuh).
+- Cakupan: aria-modal dipasang & tak ditimpa; fokus awal elemen pertama / initialFocus; Tab wrap depan↔belakang, lanjut normal; elemen display:none dilompati; tanpa focusable → Tab tidak dicegat; Escape→onClose dgn stopPropagation; tombol lain diabaikan; restore fokus pemicu saat unmount; listener dibesihkan pasca unmount; open=false → tanpa efek samping.
+- Bukti: vitest **828/828** (66 file, dulu 812); eslint **0 problem**; build OK (precache 35, 1543.32 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222 (e2e_a11y.py): reload OK, jsErrors None, 14 agents, frames 5→10, tvData terisi.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
