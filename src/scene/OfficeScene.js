@@ -12,7 +12,7 @@ import { updateFollowGoal, focusStep, autoRotateStep } from './parts/kamera_focu
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
 import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent } from './parts/ring_spec.js';
-import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelName, fitLabel } from './parts/label_spec.js';
+import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelName, fitLabel, labelScale } from './parts/label_spec.js';
 import { WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { OBSTACLES } from './parts/obstacles.js';
 import { MUTED_KEY, tickSoundTimer } from './parts/sound_spec.js';
@@ -647,15 +647,14 @@ function makeLabel(agent){
   label.renderOrder=20;
   return label;
 }
-// Ukuran label tetap di layar (sizeAttenuation=false): tinggi ≈ fraksi tinggi viewport
+// Ukuran label tetap di layar (sizeAttenuation=false): tinggi ≈ fraksi tinggi viewport.
+// Logika murni (frac & wantFull) di parts/label_spec.js::labelScale (diuji unit);
+// di sini tinggal baca viewport/kamera + terapkan mode & scale ke sprite.
 function sizeLabels(){
   const w=container.clientWidth||800, h=container.clientHeight||600;
   const near=camera.position.distanceTo(tgt);
-  const wantFull=(w>=700&&near<30)||near<17;
-  const t2=2*Math.tan(camera.fov*Math.PI/360);
-  const hPx=(w<600?14:19)*(wantFull?1.0:1.0);
-  const hFrac=hPx*Math.min(1.35,h/900*1.2)/h;          // layar pendek: label sedikit lebih besar relatif
-  const frac=hFrac*t2;  const apply=L=>{
+  const {frac,wantFull}=labelScale(w,h,camera.fov,near);
+  const apply=L=>{
     const u=L.userData; const mode=wantFull?'full':'short';
     if(u.mode!==mode){u.mode=mode;L.material.map=u[mode].tex;L.material.needsUpdate=true}
     const as=u[mode].as;

@@ -127,4 +127,30 @@ describe('label_spec', () => {
     const t2 = 2 * Math.tan(50 * Math.PI / 360);
     expect(r.frac).toBeCloseTo(19 * Math.min(1.35, 600 / 900 * 1.2) / 600 * t2, 10);
   });
+
+  // Ekuivalensi dengan rumus inline lama di OfficeScene.sizeLabels (sebelum refactor):
+  // wantFull=(w>=700&&near<30)||near<17; frac=(w<600?14:19)*min(1.35,h/900*1.2)/h*2tan(fov/2)
+  const oldInline = (w, h, fov, near) => {
+    const wantFull = (w >= 700 && near < 30) || near < 17;
+    const t2 = 2 * Math.tan(fov * Math.PI / 360);
+    const hPx = (w < 600 ? 14 : 19) * (wantFull ? 1.0 : 1.0);
+    return { frac: hPx * Math.min(1.35, h / 900 * 1.2) / h * t2, wantFull };
+  };
+
+  it.each([
+    [1400, 900, 50, 20], [1400, 768, 50, 25], [900, 700, 55, 35],
+    [500, 900, 50, 40], [699, 500, 45, 31], [700, 500, 45, 29.9],
+    [1366, 768, 50, 16], [400, 640, 60, 50], [1000, 400, 50, 20], [1200, 1100, 40, 45],
+  ])('labelScale ekuivalensi rumus lama: %ix%i fov=%i dist=%i', (w, h, fov, near) => {
+    const got = labelScale(w, h, fov, near);
+    const exp = oldInline(w, h, fov, near);
+    expect(got.frac).toBeCloseTo(exp.frac, 12);
+    expect(got.wantFull).toBe(exp.wantFull);
+  });
+
+  it('labelScale: fov berbeda mengubah frac proporsional (tan setengah-fov)', () => {
+    const a = labelScale(1400, 900, 40, 20).frac;
+    const b = labelScale(1400, 900, 60, 20).frac;
+    expect(b / a).toBeCloseTo(Math.tan(30 * Math.PI / 180) / Math.tan(20 * Math.PI / 180), 12);
+  });
 });

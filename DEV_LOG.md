@@ -1739,3 +1739,12 @@
 - Bukti: vitest **730/730** (60 file, dulu 716); eslint src **0 problem**; build OK (precache 35, 1542.76 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP inline /tmp/e2e_label.py: reload OK, 14 agents, 5 zoneLabels (opacity semua 1), frames berjalan (3→4), 0 label NaN/exception; screenshot 721 KB (scene hidup).
 - Catatan: e2e_err.py masih return None (eval CDP); verifikasi via skrip CDP inline dengan returnByValue eksplisit — valid.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 19:30 WIB — sizeLabels pakai labelScale murni (hapus rumus duplikat di OfficeScene)
+
+- Backlog dipilih: `sizeLabels()` di OfficeScene masih punya rumus inline sendiri (wantFull, t2=2tan(fov/2), hPx 14/19, cap 1.35) padahal `labelScale()` murni dengan semantik persis sama sudah ada di parts/label_spec.js & diuji — duplikasi logika ukuran label berisiko divergensi.
+- Fix: OfficeScene.sizeLabels kini `const {frac,wantFull}=labelScale(w,h,camera.fov,near)`; rumus inline dihapus. Perilaku render tidak berubah (labelScale diekstrak sebelumnya dari kode ini).
+- +11 unit test di label_spec.test.js: ekuivalensi labelScale vs rumus inline lama pada 10 kombinasi viewport/fov/jarak (termasuk batas w=699/700, near=29.9/31), proporsionalitas tan(setengah-fov), selain yang sudah ada.
+- Koreksi test 1×: konversi derajat→radian salah (π/360 = setengah-derajat, bukan π/180) — hanya test yang dikoreksi, kode tak diubah.
+- Bukti: vitest **741/741** (60 file, dulu 730); eslint src **0 problem**; build OK; deploy ~/wfs-hq OK; e2e produksi 9503 via /tmp/e2e_label.py: reload OK, 14 agents, 5 zoneLabels (opacity 1), frames berjalan (5→10), 0 label NaN/exception; screenshot 719 KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
