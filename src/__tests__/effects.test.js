@@ -100,21 +100,49 @@ describe('createDriftingPages', () => {
   });
 
   it('wrap-around: halaman keluar batas x/z kembali ke sisi lain, tak pernah keluar rentang', () => {
-    const ctx = stubCtxForPages();
+    const ctx = stubCtxForPages();           // vx/vz NEGATIF
     const p = createDriftingPages(ctx, 1);
     const m = p.pages[0].mesh;
-    m.position.x = 10.01; p.update(0.01, 0);
-    expect(m.position.x).toBe(-10);
-    m.position.x = -10.01; p.update(0.01, 0);
+    m.position.x = -10.0005; p.update(0.1, 0); // jatuh di bawah -10 setelah step → wrap
     expect(m.position.x).toBe(10);
-    m.position.z = 8.01; p.update(0.01, 0);
-    expect(m.position.z).toBe(-7);
-    m.position.z = -7.01; p.update(0.01, 0);
+    m.position.z = -7.0005; p.update(0.1, 0);
     expect(m.position.z).toBe(8);
+    const pPos = createDriftingPages({ THREE: stubTHREE(), office: { add: () => {} }, rng: { r: (a, b) => (a + b) / 2, n: () => 0.6, pick: (arr) => arr[0] } }, 1); // vx/vz POSITIF
+    const mp = pPos.pages[0].mesh;
+    mp.position.x = 10.0005; pPos.update(0.1, 0);
+    expect(mp.position.x).toBe(-10);
+    mp.position.z = 8.0005; pPos.update(0.1, 0);
+    expect(mp.position.z).toBe(-7);
   });
 
   it('jumlah default 22 halaman bila count tak diberikan', () => {
     const p = createDriftingPages(stubCtxForPages());
     expect(p.pages).toHaveLength(22);
+  });
+});
+
+describe('throttle halaman melayang (akumulasi dt)', () => {
+  it('dt di bawah interval → mesh tidak bergerak', () => {
+    const p = createDriftingPages(stubCtxForPages(), 1);
+    const m = p.pages[0].mesh;
+    const x0 = m.position.x, rx0 = m.rotation.x;
+    p.update(0.01, 1); p.update(0.01, 2);
+    expect(m.position.x).toBe(x0);
+    expect(m.rotation.x).toBe(rx0);
+  });
+  it('akumulasi dt mencapai interval → bergerak sekali dengan perpindahan total yang benar', () => {
+    const p = createDriftingPages(stubCtxForPages(), 1);
+    const pg = p.pages[0], m = pg.mesh;
+    const x0 = m.position.x;
+    for (let i = 0; i < 50; i++) p.update(1 / 60, i / 60); // 50×16.7ms ≈ 0.83dtk
+    expect(p.pages.__acc).toBeCloseTo(50 / 60 - 1 / 20, 6);
+    expect(m.position.x - x0).toBeCloseTo(pg.vx * (50 / 60), 5);
+  });
+  it('perpindahan total per detik sama dengan update per-frame (ekuivalen)', () => {
+    const a = createDriftingPages(stubCtxForPages(), 1);
+    const b = createDriftingPages(stubCtxForPages(), 1);
+    for (let i = 0; i < 120; i++) a.update(1 / 60, i / 60);
+    b.update(2.0, 0); // satu kali, total dt sama
+    expect(Math.abs(a.pages[0].mesh.position.x)).toBeCloseTo(Math.abs(b.pages[0].mesh.position.x), 4);
   });
 });

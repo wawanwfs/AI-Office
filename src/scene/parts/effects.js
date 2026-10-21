@@ -95,6 +95,12 @@ export const SCREEN_RENDERERS = {
 // Throttle redraw layar: konten monitor (chat, chart, log) tidak perlu 60fps.
 // 60fps × 14 tekstur canvas = boros CPU; ~10fps tetap halus untuk animasi lambat.
 export const SCREEN_REDRAW_EVERY = 6;
+
+// Throttle halaman melayang: 22 mesh (posisi + 3 rotasi + sin) di-update tiap
+// frame padahal drift lambat → cukup ~20×/dtk; dt diakumulasi agar perpindahan
+// per detik tetap identik dengan update per-frame.
+export const PAGES_UPDATE_INTERVAL = 1 / 20;
+
 export function shouldRedrawScreen(frame, every = SCREEN_REDRAW_EVERY) {
   return Number.isFinite(frame) && frame % every === 0;
 }
@@ -178,12 +184,17 @@ export function createDriftingPages(ctx, count = 22) {
   return {
     pages,
     update(dt, elapsed) {
+      if (pages.__acc === undefined) pages.__acc = 0;
+      pages.__acc += dt;
+      if (pages.__acc < PAGES_UPDATE_INTERVAL) return; // throttle ~20×/dtk
+      const step = pages.__acc; // pakai akumulasi dt → perpindahan sama dengan update per frame
+      pages.__acc = 0;
       pages.forEach((p) => {
         const m = p.mesh;
-        m.position.x += p.vx * dt; m.position.z += p.vz * dt;
+        m.position.x += p.vx * step; m.position.z += p.vz * step;
         m.position.y = p.y0 + Math.sin(elapsed * 0.9 + p.ph) * 0.35;
-        m.rotation.x += p.spin[0] * dt; m.rotation.y += p.spin[1] * dt;
-        m.rotation.z += Math.sin(elapsed * 3 + p.ph) * 0.1 * dt;
+        m.rotation.x += p.spin[0] * step; m.rotation.y += p.spin[1] * step;
+        m.rotation.z += Math.sin(elapsed * 3 + p.ph) * 0.1 * step;
         if (m.position.x > 10) m.position.x = -10; else if (m.position.x < -10) m.position.x = 10;
         if (m.position.z > 8) m.position.z = -7; else if (m.position.z < -7) m.position.z = 8;
       });
