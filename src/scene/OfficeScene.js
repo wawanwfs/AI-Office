@@ -21,6 +21,7 @@ import { createSoundEngine } from './parts/sound_engine.js';
 import { createProjectBoard } from './parts/projectboard.js';
 import { chatPhrases, COLLAB_PAIRS, pickCollab, clampBubbleText, LINE_SEC, autoTalkDelay, autoTalkText } from './parts/dialog.js';
 import { agentIdMap, buildRunningByAgent } from './parts/running_tasks.js';
+import { BADGE_COLORS, badgeAssignments, wakeAgentIds, failedAlerts } from './parts/status_poll.js';
 import { updateBubbles as updateBubblesPure } from './parts/bubbles.js';
 import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canvas.js';
 import { looksOf } from './parts/character_looks.js';
@@ -781,7 +782,7 @@ allAgents.forEach((agent,i)=>{
   const __intervals=[];
   const __timeouts=[];
   (function(){
-  const idMapFn=()=>{const m={};(window.__wfsAgentIdList||[]).forEach(x=>m[x.name]=x.id);return m};
+  const idMapFn=()=>agentIdMap(window.__wfsAgentIdList||[]);
   async function pollBadges(){
   if(pageHidden) return; // hemat fetch saat tab tidak dilihat
   window.__pollBadges=pollBadges; // diekspos utk refresh instan onVis
@@ -789,13 +790,10 @@ allAgents.forEach((agent,i)=>{
     const r=await fetch('/wfs-api/agents/status');
     const d=await r.json();
     const agents=d.agents||{};
-    const cols={done:'#10E5A0',running:'#f59e0b',failed:'#f66',review:'#59a5ff',pending:'#8b93a3'};
     const im=idMapFn();
-    agentData.forEach(ad=>{
-      const gid=im[ad.agent?.name];
-      const st=gid&&agents[gid]?.last;
+    badgeAssignments(agentData,agents,im).forEach(({ad,status})=>{
       const badge=ad.sittingChar?.userData?.badge;
-      if(st&&badge&&cols[st])badge.material.color.set(cols[st]);
+      if(badge&&BADGE_COLORS[status])badge.material.color.set(BADGE_COLORS[status]);
     });
   }catch{ /* abaikan */ }
   }
@@ -806,13 +804,11 @@ allAgents.forEach((agent,i)=>{
     if(pageHidden) return; // hemat fetch saat tab hidden
     fetch('/wfs-api/agents/status').then(r=>r.json()).then(d=>{
       const im=idMapFn();
-      Object.entries(d.agents||{}).forEach(([gid,v])=>{
-        if(v.running>0){
+      wakeAgentIds(d.agents||{}).forEach(gid=>{
           const ad=agentData.find(a=>im[a.agent?.name]===gid);
           if(ad&&ad.state==='sitting'){
             ad.timer=0.5; // paksa bangun segera
           }
-        }
       });
     }).catch(()=>{});
   },21000));
@@ -822,15 +818,9 @@ allAgents.forEach((agent,i)=>{
     if(pageHidden) return; // hemat fetch saat tab hidden
     fetch('/wfs-api/agents/status').then(r=>r.json()).then(d=>{
       const im=idMapFn();
-      Object.entries(d.agents||{}).forEach(([gid,v])=>{
-        if(v.failed>0 && prevFailed[gid]!==v.failed){
-          prevFailed[gid]=v.failed;
-          const ad=agentData.find(a=>im[a.agent?.name]===gid);
-          if(ad){
-            const wp=ad.walker.visible?ad.walker.position:{x:ad.home.x,z:ad.home.z};
-            createBubble(wp.x,2.6,wp.z,'Ada task failed! Cek log…','#f66');
-          }
-        } else if(v.failed===0){ prevFailed[gid]=0; }
+      failedAlerts(d.agents||{},prevFailed,(gid)=>agentData.find(a=>im[a.agent?.name]===gid)).forEach(({ad})=>{
+          const wp=ad.walker.visible?ad.walker.position:{x:ad.home.x,z:ad.home.z};
+          createBubble(wp.x,2.6,wp.z,'Ada task failed! Cek log…','#f66');
       });
     }).catch(()=>{});
   },25000));

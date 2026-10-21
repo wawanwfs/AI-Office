@@ -1757,3 +1757,11 @@
 - Koreksi test 1×: konversi derajat→radian salah (π/360 = setengah-derajat, bukan π/180) — hanya test yang dikoreksi, kode tak diubah.
 - Bukti: vitest **741/741** (60 file, dulu 730); eslint src **0 problem**; build OK; deploy ~/wfs-hq OK; e2e produksi 9503 via /tmp/e2e_label.py: reload OK, 14 agents, 5 zoneLabels (opacity 1), frames berjalan (5→10), 0 label NaN/exception; screenshot 719 KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 20:10 WIB — polling status (badge/bangun/alert failed) diekstrak ke parts/status_poll.js murni
+
+- Backlog dipilih: blok polling IIFE di OfficeScene masih inline — palet warna badge, penyaringan `agents[gid].last` → warna, daftar agent `running>0` utk dipaksa bangun, dan deteksi transisi `failed` (prevFailed dimutasi) — semua tak bisa diuji unit.
+- Fix: parts/status_poll.js — `BADGE_COLORS`, `badgeAssignments(agentData,agents,im)` (entri {ad,gid,status} valid), `wakeAgentIds(agents)` (running>0), `failedAlerts(agents,prevFailed,findByGid)` (transisi naik + reset 0/null). idMapFn kini memakai agentIdMap dari running_tasks.js (hapus duplikat). Semantik persis kode lama.
+- +15 unit test (palet, entri valid/status tanpa warna/tanpa badge/gid tak dikenal/null, wake running>0 & hilang & null, alert transisi/sama/reset 0/cabang !v/agent tak ditemukan/null).
+- Bukti: vitest **766/766** (62 file, dulu 751); eslint src **0 problem**; build OK (precache 35, 1543.27 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via /tmp/e2e_label.py: reload OK, 14 agents, 5 zoneLabels (opacity 1), frames berjalan (4→9), 0 label NaN/exception.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
