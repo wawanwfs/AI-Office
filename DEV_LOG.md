@@ -1720,3 +1720,13 @@
 - Koreksi test: offX 500 @wpp .05 = 25 belum kena clamp 36 — nilai uji diganti 5000.
 - Bukti: vitest **705/705** (58 file, dulu 695); eslint src **0 problem**; build OK (precache 35, 1542.34 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP reload: 14 agents, frames berjalan (5→11), tanpa exception; screenshot 727 KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 18:45 WIB — jitter & fade label zona diekstrak ke zoneJitter/zoneScreenFade murni (parts/label_overlap.js)
+
+- Backlog dipilih: di blok relayout label masih inline — hash deterministik zona (h*31+charCode |0), jitter jy=(h%7)-3 / jx=((h>>3)%9)-4, dan fade zona saat membengkak di layar (pw>340 → opacity 1-(pw-340)/260, invisible saat ≤0.03) — tak bisa diuji unit.
+- Fix: parts/label_overlap.js tambah `zoneHash(label)` (null → 0), `zoneJitter(label)` → {jy,jx}, `zoneScreenFade(pw)` → {opacity,visible}. Semantik persis kode lama; OfficeScene tinggal assign.
+- +11 unit test (hash deterministik/ordinal/empty, jitter deterministik + ekuivalensi rumus lama + fallback, fade linear/clamp/ambang visible/ekuivalensi/NaN→opaque).
+- Koreksi test: asumsi rentang jitter salah 2× — % JS bisa negatif utk hash negatif (jy∈[-9,3], jx∈[-12,4]), dan ambang float 0.03 persis tidak deterministik; test disesuaikan dgn semantik rumus lama (kode tak diubah).
+- Bukti: vitest **716/716** (59 file, dulu 705); eslint src **0 problem**; build OK (precache 35, 1542.47 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP reload: 14 agents, 5 zoneLabels, frames berjalan (3→11), tanpa exception; screenshot 722 KB (scene hidup).
+- Catatan: e2e_err.py tetap return None (eval Runtime.evaluate mengembalikan struktur tak terduga); verifikasi diulang via skrip CDP inline /tmp/e2e_final.py (eval eksplisit returnByValue) — hasil valid.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

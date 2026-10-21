@@ -145,3 +145,31 @@ export function overlapPass(pts, iters = 5) {
     }
   }
 }
+
+// ── Zona: jitter deterministik + fade saat membengkak (diekstrak dari OfficeScene.js) ──
+
+// Hash string label → int 32-bit (deterministik per zona).
+export function zoneHash(label) {
+  let h = 0;
+  for (const ch of (label || '')) h = (h * 31 + ch.charCodeAt(0)) | 0;
+  return h;
+}
+
+// Jitter deterministik per zona (hash label) supaya kluster label zona+agent
+// tidak membentuk tumpukan simetris. return {jy, jx} dalam satuan dunia.
+export function zoneJitter(label) {
+  const h = zoneHash(label);
+  return { jy: (h % 7) - 3, jx: ((h >> 3) % 9) - 4 };
+}
+
+// Fade zona saat terlalu besar di layar (kamera sangat dekat): sprite zona
+// membengkak (ukuran piksel ∝ 1/jarak) dan menutupi label/tooltip agent.
+// pw = piksel lebar zona; >340 mulai memudar hingga 0.03 (lalu invisible).
+// return {opacity, visible} — null bila zona tidak perlu diubah (pw ≤ 340).
+export function zoneScreenFade(pw) {
+  if (pw > 340) {
+    const f = Math.max(0, 1 - (pw - 340) / 260);
+    return { opacity: f, visible: f > 0.03 };
+  }
+  return { opacity: 1, visible: true };
+}

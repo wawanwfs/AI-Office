@@ -6,7 +6,7 @@ import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles } from './parts/effects.js';
-import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti } from './parts/label_overlap.js';
+import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneJitter, zoneScreenFade } from './parts/label_overlap.js';
 import { perfStep } from './parts/perf_quality.js';
 import { updateFollowGoal, focusStep, autoRotateStep } from './parts/kamera_focus.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
@@ -1818,11 +1818,10 @@ function animate(){
       // fade zona saat terlalu besar di layar (kamera sangat dekat): sprite zona membengkak
       // (ukuran piksel ∝ 1/jarak) dan menutupi label/tooltip agent di area itu — redupkan.
       const __pw=zt.scale.x*__kz/dz;
-      if(__pw>340){const f=Math.max(0,1-(__pw-340)/260);zt.material.opacity=f;zt.visible=f>0.03;}
-      else{zt.material.opacity=1;zt.visible=true;}
+      const __zf=zoneScreenFade(__pw);
+      zt.material.opacity=__zf.opacity;zt.visible=__zf.visible;
       const zay=(zt.userData.antiY||0), zax=(zt.userData.antiX||0);
-      let hsh=0;for(const ch of zt.userData.label||'')hsh=(hsh*31+ch.charCodeAt(0))|0;
-      const jy=(hsh%7)-3, jx=((hsh>>3)%9)-4;
+      const {jy,jx}=zoneJitter(zt.userData.label);
       pts.push({a:null,zone:true,zt,zw:zt.scale.x*__kz/dz*1.06,zh:zt.scale.y*__kz/dz*1.25,baseY:zb.y+jy*0.06+zay,baseX:zb.x+jx*0.08+zax,x:v.x*container.clientWidth/2,y:v.y*container.clientHeight/2,offY:0,offX:0});});}
     // bubble dialog ikut sebagai penghalang statis: label zona digeser menjauh dari bubble (bubble tidak bergerak)
     chatBubbles.forEach(bb=>{const v=bb.sprite.position.clone().project(camera);if(v.z>1)return;
