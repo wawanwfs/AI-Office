@@ -794,7 +794,16 @@ allAgents.forEach((agent,i)=>{
       const d=await r.json();
       const agents=d.agents||{};
       const im=idMapFn();
-      // SATU fetch utk badge + bangun + alert (dulu 3 interval/3 fetch terpisah)
+      window.__wfsAgentIdMap=im;
+      // SATU fetch utk badge + bangun + alert + task running (dulu 2 interval fetch terpisah)
+      try{
+        const r2=await fetch('/wfs-api/tasks');
+        const t2=await r2.json();
+        const tasks=Array.isArray(t2)?t2:(t2.tasks||[]);
+        // gabung data via parts/running_tasks.js (murni, diuji unit) — dipakai autoTalk
+        window.__wfsRunningTasks={byAgent:buildRunningByAgent(agents,tasks)};
+      }catch{ /* respons non-JSON */ }
+      // SATU fetch utk badge + bangun + alert + task running (dulu 2 interval fetch terpisah)
       statusPollActions(agentData,agents,im,prevFailed,findByGid).forEach(act=>{
         if(act.type==='badge'){
           const badge=act.ad.sittingChar?.userData?.badge;
@@ -1592,29 +1601,7 @@ function autoTalk(){
   const anc={get x(){return ad.walker.visible?ad.walker.position.x:ad.home.x},get z(){return ad.walker.visible?ad.walker.position.z:ad.home.z},y:2.6};
   createBubble(wp.x,2.6,wp.z,text,ad.agent.hex,anc);
 }
-// Sinkron task running dari gateway tiap 15 detik
-(function(){
-  async function pollRunning(){
-    if(pageHidden) return; // hemat fetch saat tab hidden
-    try{
-      const r=await fetch('/wfs-api/agents/status');
-      const d=await r.json();
-      // gabung data via parts/running_tasks.js (murni, diuji unit)
-      const im=agentIdMap(window.__wfsAgentIdList);
-      window.__wfsAgentIdMap=im;
-      // ambil detail task running utk judul
-      let tasks=[];
-      try{
-        const r2=await fetch('/wfs-api/tasks');
-        const t2=await r2.json();
-        tasks=Array.isArray(t2)?t2:(t2.tasks||[]);
-      }catch{ /* respons non-JSON */ }
-      window.__wfsRunningTasks={byAgent:buildRunningByAgent(d.agents||{},tasks)};
-    }catch{ /* gateway offline */ }
-  }
-  __timeouts.push(setTimeout(pollRunning,3000));
-  __intervals.push(setInterval(pollRunning,15000));
-})();
+// Sinkron task running: tidak ada interval sendiri — data status + tasks diambil di pollStatus (SATU fetch /agents/status)
 let deltaFrame=0; // delta dtk frame terakhir (utk cooldown chat berbasis waktu nyata)
 function checkConversations(){
   // Logika pasangan terdekat di parts/chat_check.js (murni + unit test).

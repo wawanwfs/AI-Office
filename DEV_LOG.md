@@ -1781,3 +1781,10 @@
 - +10 unit test (aksi badge dgn warna, wake ad valid/tak ditemukan, alert transisi/sama, urutan badge→wake→alert, agents kosong, agentData kosong, reset prevFailed, status tanpa warna di-skip).
 - Bukti: vitest **791/791** (64 file, dulu 781); eslint src **0 problem**; build OK (precache 35, 1543.44 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: reload OK, 14 agents, 5 zoneLabels (opacity 1), frames berjalan (14→19), 0 label NaN/exception; **fetch /agents/status terukur 2× dalam 12 dtk** (dulu ~3×/12s dari 3 interval — trafik polling turun ±2/3 pada interval panjang); screenshot 723 KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 21:25 WIB — pollRunning (15s) dilebur ke pollStatus (20s): /agents/status kini 1 fetch/poll
+
+- Backlog dipilih: `pollRunning()` masih punya interval sendiri (3s awal + 15s) yang fetch `/wfs-api/agents/status` LAGI padahal `pollStatus()` (4s awal + 20s) sudah fetch endpoint yang sama — dua fetch status paralel terus-menerus.
+- Fix: IIFE pollRunning dihapus. pollStatus kini juga fetch `/wfs-api/tasks` (sekali per poll, try/catch terpisah) lalu set `window.__wfsRunningTasks={byAgent:buildRunningByAgent(agents,tasks)}` + `window.__wfsAgentIdMap` — dipakai autoTalk. Semantik identik (agents kosong → byAgent kosong; tasks gagal → dilewati).
+- Bukti: vitest **791/791** (64 file); eslint src **0 problem**; build OK (precache 35, 1543.24 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: reload OK, 14 agents, 5 zoneLabels (opacity 1), frames berjalan (5→10, 27), 0 label NaN/exception; **fetch /agents/status terukur 2× dalam 30 dtk** (tepat 4s awal + 20s interval — dulu ~4× dari 2 interval terpisah); runningTasks & idMap terisi valid. Fetch `/wfs-api/tasks` ekstra (~15s) berasal dari panel project board UI, bukan scene.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
