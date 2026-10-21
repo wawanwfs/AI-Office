@@ -2,6 +2,18 @@
 // projectboard.js agar bisa di-unit-test: persen progres, banner review/gagal,
 // item per kolom kanban, dan segmen strip status bawah.
 
+// tata letak kartu kolom: y kartu ke-i (0..5) + tinggi, dijamin tidak menabrak strip bawah (y=794)
+export const CARD_TOP = 248, CARD_STEP = 88, CARD_H = 78, COLUMN_BOTTOM = 788
+export function cardY(i) { return CARD_TOP + i * CARD_STEP }
+
+// judul dipotong di batas kata, diberi '…' bila terpotong (jangan memotong di tengah kata)
+export function clip(s, n) {
+  if (!s || s.length <= n) return s || ''
+  const cut = s.slice(0, n)
+  const sp = cut.lastIndexOf(' ')
+  return (sp > n * 0.6 ? cut.slice(0, sp) : cut).trimEnd() + '…'
+}
+
 // persen selesai; 0 bila tak ada task total
 export function computePct(T) {
   return T && T.total ? Math.round((T.done / T.total) * 100) : 0

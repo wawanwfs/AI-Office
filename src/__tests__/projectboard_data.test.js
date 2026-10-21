@@ -1,5 +1,37 @@
 import { describe, it, expect } from 'vitest'
-import { computePct, subtitle, bannerParts, bannerNames, columnItems, stripSegments } from '../scene/parts/projectboard_data.js'
+import { computePct, clip, cardY, CARD_H, COLUMN_BOTTOM, subtitle, bannerParts, bannerNames, columnItems, stripSegments } from '../scene/parts/projectboard_data.js'
+
+describe('cardY (tata letak kartu tidak menabrak strip bawah)', () => {
+  it('6 kartu terakhir masih di dalam kolom', () => {
+    const maxItems = columnItems({ recent: new Array(10).fill(0).map((_, i) => ({ id: i, status: 'done', title: 't' })) }, 2).length
+    expect(maxItems).toBe(6)
+    expect(cardY(maxItems - 1) + CARD_H).toBeLessThanOrEqual(COLUMN_BOTTOM)
+  })
+  it('kartu berurutan tanpa tumpang tindih', () => {
+    expect(cardY(1) - cardY(0)).toBeGreaterThanOrEqual(CARD_H)
+    expect(cardY(0)).toBe(248)
+  })
+})
+
+describe('clip (judul kartu tanpa potong tengah kata)', () => {
+  it('teks pendek tak diubah', () => {
+    expect(clip('Admin dashboard', 30)).toBe('Admin dashboard')
+    expect(clip('', 30)).toBe('')
+    expect(clip(null, 30)).toBe('')
+  })
+  it('teks panjang dipotong di spasi + ellipsis', () => {
+    const out = clip('Chat widget embeddable (Next.js)', 30)
+    expect(out.endsWith('…')).toBe(true)
+    expect(out.length).toBeLessThanOrEqual(31)
+    expect(out).not.toMatch(/\w\.\.\.$/) // tak ada potongan kata seperti "(Next.j…"
+    expect(out.endsWith('(Next.js…')).toBe(false)
+  })
+  it('tanpa spasi dekat batas: potong apa adanya + ellipsis', () => {
+    const out = clip('Supercalifragilisticexpialidocious', 30)
+    expect(out.endsWith('…')).toBe(true)
+    expect(out.length).toBe(31)
+  })
+})
 
 describe('computePct', () => {
   it('membulatkan done/total', () => {

@@ -3,7 +3,7 @@
 // diperbarui otomatis setiap 60 detik. Jika fetch gagal → fallback ke data terakhir.
 // Modul murni-canvas; dipasang di OfficeScene dengan satu pemanggilan.
 
-import { computePct, subtitle as subLine, bannerParts, bannerNames, columnItems, stripSegments } from './projectboard_data.js'
+import { computePct, clip, cardY, CARD_H, subtitle as subLine, bannerParts, bannerNames, columnItems, stripSegments } from './projectboard_data.js'
 
 export function createProjectBoard(office, THREE) {
   // --- kanvas papan ---
@@ -112,19 +112,19 @@ export function createProjectBoard(office, THREE) {
       g.fillStyle = c; g.font = 'bold 38px sans-serif'; g.textAlign = 'center'
       g.fillText(t + ' (' + n + ')', x + 235, 226)
 
-      // kartu task nyata per status (dari recent)
+      // kartu task nyata per status (dari recent) — 6 kartu pas di dalam kolom (tanpa ketiban strip bawah)
       const items = columnItems(T, i)
       items.forEach((r, ri) => {
-        const y = 252 + ri * 92
+        const y = cardY(ri)
         // kartu: latar gelap solid + border warna status + teks putih terang (kontras tinggi)
-        g.fillStyle = '#0d1524'; roundRect(x + 22, y, 426, 82, 10); g.fill()
-        g.strokeStyle = c; g.lineWidth = 4; roundRect(x + 22, y, 426, 82, 10); g.stroke()
+        g.fillStyle = '#0d1524'; roundRect(x + 22, y, 426, CARD_H, 10); g.fill()
+        g.strokeStyle = c; g.lineWidth = 4; roundRect(x + 22, y, 426, CARD_H, 10); g.stroke()
         g.fillStyle = '#ffffff'
         g.font = '600 26px sans-serif'; g.textAlign = 'left'
-        const title = '#' + r.id + ' ' + (r.title || '').slice(0, 30)
-        g.fillText(title, x + 44, y + 36, 392)
+        const title = '#' + r.id + ' ' + clip((r.title || ''), 30)
+        g.fillText(title, x + 44, y + 33, 392)
         g.fillStyle = c; g.font = '600 22px sans-serif'
-        g.fillText((r.status === 'done' ? '✓ selesai' : r.status), x + 44, y + 68)
+        g.fillText((r.status === 'done' ? '✓ selesai' : r.status), x + 44, y + 63)
       })
       if (!items.length) {
         g.fillStyle = 'rgba(255,255,255,.25)'; g.font = '26px sans-serif'; g.textAlign = 'center'

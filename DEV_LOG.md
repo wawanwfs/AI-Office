@@ -1503,3 +1503,14 @@
 - ActionMenu.jsx: deps `[open]` → `[open, sceneRef]` (sceneRef adalah ref stabil dari App, effect tetap re-run hanya saat menu dibuka; sinkronisasi namesOn/rotOn saat open tidak berubah).
 - Bukti: eslint src **0 problem** (0 error 0 warning — dulu 2 warning); vitest **585/585** (44 file); build OK (precache 35, 1537.97 KiB), deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 301368 berjalan, phase lunch, tanpa 'Scene init failed'.
 - Sisa backlog: hanya verifikasi subjektif kualitas suara (butuh telinga manusia). Lint backlog TUNTAS.
+
+## 2026-10-21 09:20 WIB — papan proyek: judul kartu tak lagi terpotong tengah kata + kartu ke-6 tidak ketiban strip bawah
+
+- Backlog dipilih: QA visual papan proyek (data → canvas). Ditemukan via ekstraksi canvas papan (bukan menebak dari screenshot): (1) judul kartu dipotong `slice(0,30)` di tengah kata, mis. "(Next.j", "landing page t"; (2) kartu ke-6 kolom SELESAI terpotong tepi bawah oleh strip status.
+- Fix:
+  - `clip(s,n)` baru di projectboard_data.js: potong di spasi terakhir (bila >60% batas) + '…'; fallback potong apa adanya bila kata tunggal sangat panjang.
+  - Layout kartu dipindah ke konstanta terekspos `cardY(i)/CARD_TOP/CARD_STEP/CARD_H/COLUMN_BOTTOM` (248/88/78/788) — kartu 78px @88px step, kartu terakhir 684+78=762 ≤ 788, tak menyentuh strip (y=794). projectboard.js memakai cardY/CARD_H (single source).
+  - +5 unit test: clip (3) & cardY layout invariants (2), termasuk asersi kartu ke-6 ≤ COLUMN_BOTTOM.
+- Verifikasi visual: canvas papan diekstrak via toDataURL dan dibaca — semua judul berakhir bersih ('…' di batas kata: "…admin…", "…embeddable…", "…E2E…", "…page…"), kartu #22 utuh dengan border bawah terlihat, gap di atas strip.
+- Bukti: vitest **590/590** (44 file, dulu 585 — +5); eslint src **0 problem**; build OK (precache 35, 1538.12 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr berjalan, tanpa 'Scene init failed'; screenshot produksi 710KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
