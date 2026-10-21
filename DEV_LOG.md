@@ -1740,6 +1740,15 @@
 - Catatan: e2e_err.py masih return None (eval CDP); verifikasi via skrip CDP inline dengan returnByValue eksplisit — valid.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
 
+## 2026-10-21 19:50 WIB — penggabungan task running diekstrak ke buildRunningByAgent murni (parts/running_tasks.js)
+
+- Backlog dipilih: `pollRunning()` di OfficeScene masih inline — map id agent, penyaringan `running>0` → `{id:'?',title:'mengerjakan',n}`, dan penimpaan id/title dari detail task — semua tak bisa diuji unit.
+- Fix: parts/running_tasks.js — `agentIdMap(list)` & `buildRunningByAgent(agents,tasks)` murni (kompatibilitas respons array & {tasks:[...]}). OfficeScene.pollRunning kini tinggal fetch + assign. Semantik persis kode lama.
+- +10 unit test (map id lengkap/null/kosong, entri awal running>0, running=0 diabaikan, penimpaan id/title dgn n dipertahankan, task non-running diabaikan, bentuk {tasks:[]}, respons non-array aman, agents null).
+- Bukti: vitest **751/751** (61 file, dulu 741); eslint src **0 problem**; build OK (precache 35, 1542.99 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via /tmp/e2e_label.py: reload OK, 14 agents, 5 zoneLabels (opacity 1), frames berjalan (5→10), 0 label NaN/exception; screenshot 730 KB (scene hidup).
+- Catatan: e2e_err.py masih return None (masalah eval CDP lama); verifikasi via e2e_label.py (returnByValue eksplisit) — valid.
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
 ## 2026-10-21 19:30 WIB — sizeLabels pakai labelScale murni (hapus rumus duplikat di OfficeScene)
 
 - Backlog dipilih: `sizeLabels()` di OfficeScene masih punya rumus inline sendiri (wantFull, t2=2tan(fov/2), hPx 14/19, cap 1.35) padahal `labelScale()` murni dengan semantik persis sama sudah ada di parts/label_spec.js & diuji — duplikasi logika ukuran label berisiko divergensi.

@@ -20,6 +20,7 @@ import { advanceSimClock, setSimManual, SIM_SEC_PER_MIN as __SIM_SPM, MANUAL_RES
 import { createSoundEngine } from './parts/sound_engine.js';
 import { createProjectBoard } from './parts/projectboard.js';
 import { chatPhrases, COLLAB_PAIRS, pickCollab, clampBubbleText, LINE_SEC, autoTalkDelay, autoTalkText } from './parts/dialog.js';
+import { agentIdMap, buildRunningByAgent } from './parts/running_tasks.js';
 import { updateBubbles as updateBubblesPure } from './parts/bubbles.js';
 import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canvas.js';
 import { looksOf } from './parts/character_looks.js';
@@ -1632,24 +1633,17 @@ function autoTalk(){
     try{
       const r=await fetch('/wfs-api/agents/status');
       const d=await r.json();
-      const agents=d.agents||{};
-      const im={};(window.__wfsAgentIdList||[]).forEach(x=>im[x.name]=x.id);
+      // gabung data via parts/running_tasks.js (murni, diuji unit)
+      const im=agentIdMap(window.__wfsAgentIdList);
       window.__wfsAgentIdMap=im;
-      const byAgent={};
-      Object.entries(agents).forEach(([gid,v])=>{
-        if(v.running>0)byAgent[gid]={id:'?',title:'mengerjakan',n:v.running};
-      });
       // ambil detail task running utk judul
+      let tasks=[];
       try{
         const r2=await fetch('/wfs-api/tasks');
         const t2=await r2.json();
-        const tasks=Array.isArray(t2)?t2:(t2.tasks||[]);
-        tasks.forEach(t=>{
-          const gid=t.agent_id;
-          if(t.status==='running'&&byAgent[gid])byAgent[gid]={id:t.id,title:t.title,n:byAgent[gid].n};
-        });
+        tasks=Array.isArray(t2)?t2:(t2.tasks||[]);
       }catch{ /* respons non-JSON */ }
-      window.__wfsRunningTasks={byAgent};
+      window.__wfsRunningTasks={byAgent:buildRunningByAgent(d.agents||{},tasks)};
     }catch{ /* gateway offline */ }
   }
   __timeouts.push(setTimeout(pollRunning,3000));
