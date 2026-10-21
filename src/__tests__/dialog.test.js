@@ -94,6 +94,27 @@ describe('dialog: clampBubbleText', () => {
     const t = 'b'.repeat(32);
     expect(clampBubbleText(t)).toBe(t);
   });
+
+  it('pemangkasan di batas kata: tidak memotong tengah kata', () => {
+    const out = clampBubbleText('mengerjakan refactor widget dashboard sekarang');
+    expect(out.endsWith('…')).toBe(true);
+    // tanpa fragment kata yang terpotong: bagian sebelum '…' tidak berakhir di tengah kata asli
+    const cut = out.slice(0, -1);
+    expect('mengerjakan refactor widget dashboard sekarang'.startsWith(cut + ' ')).toBe(true);
+  });
+
+  it('kata tunggal sangat panjang (tanpa spasi) tetap dipangkas apa adanya', () => {
+    const out = clampBubbleText('x'.repeat(40));
+    expect(out.length).toBe(32);
+    expect(out.endsWith('…')).toBe(true);
+  });
+
+  it('spasi dekat batas dipakai: hasil lebih pendek dari 31 huruf', () => {
+    // spasi terakhir di posisi 25 (≥60% dari 32) → potong di situ
+    const t = 'a'.repeat(25) + ' ' + 'b'.repeat(20);
+    const out = clampBubbleText(t);
+    expect(out).toBe('a'.repeat(25) + '…');
+  });
 });
 
 describe('dialog: collabDuration', () => {

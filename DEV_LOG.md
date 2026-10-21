@@ -1551,3 +1551,11 @@
 - +5 unit test baru (kelipatan, custom every, guard non-numerik, rasio hemat ≥4×).
 - Bukti: vitest **600/600** (47 file, dulu 595); eslint src **0 problem**; build OK (precache 35, 1538.36 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 321706 berjalan, phase lunch, tanpa 'Scene init failed'; screenshot produksi 676KB (scene hidup).
 - Sisa backlog: hanya verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 11:15 WIB — bubble chat: teks tak lagi terpotong tengah kata
+
+- Backlog dipilih: QA teks bubble chat. `clampBubbleText` (dialog.js) memangkas `slice(0,31)` — bubble panjang (mis. judul task 'mengerjakan…') terpotong di tengah kata, pola bug sama dengan judul kartu papan proyek yang sudah diperbaiki.
+- Fix: pemangkasan di batas KATA terakhir (spasi terakhir ≥60% batas 32 char) + '…'; fallback potong apa adanya untuk kata tunggal sangat panjang / tanpa spasi.
+- +3 unit test baru (batas kata, kata panjang, spasi dipakai) → clampBubbleText teruji 5 kasus.
+- Bukti: vitest **603/603** (47 file, dulu 600); eslint src **0 problem**; build OK (precache 35, 1538.42 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, fr 398417 berjalan, phase lunch, tanpa 'Scene init failed'; screenshot produksi 675KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

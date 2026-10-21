@@ -59,9 +59,16 @@ export function pickCollab(ad, agentData){
 }
 
 // Teks bubble dipangkas agar muat di kanvas (maks 32 karakter + ellipsis).
+// Memotong di batas KATA terakhir (bila hasil >60% batas) sehingga kata tak
+// terpotong tengah — pola sama dengan clip() papan proyek. Fallback: potong
+// apa adanya bila kata tunggal sangat panjang / tidak ada spasi yang membantu.
 export const clampBubbleText=(text)=>{
   let t=String(text);
-  return t.length>32?t.slice(0,31)+'…':t;
+  if(t.length<=32)return t;
+  const head=t.slice(0,31);
+  const sp=head.lastIndexOf(' ');
+  if(sp>=Math.floor(32*.6))return head.slice(0,sp)+'…';
+  return head+'…';
 };
 
 // Durasi total percakapan kolaborasi (detik): LINE_SEC per baris + jeda akhir.
