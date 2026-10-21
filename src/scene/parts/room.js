@@ -1,5 +1,6 @@
 import { ROOM_CX, ROOM_CZ, meetingSeats, glassPanels, framePosts } from './meeting_room_spec.js';
 import { TICKS, tickAngle, tickInnerR, hourHandAngle, minuteHandAngle, secondHandAngle, HANDS } from './clock_spec.js';
+import { drawSprintBoard } from './whiteboard_canvas.js';
 
 // Ruang meeting, jam dinding, dan pencahayaan gantung — ditulis ulang untuk WFS Project.
 export function createMeetingRoom(ctx, glassMat) {
@@ -30,10 +31,7 @@ export function createMeetingRoom(ctx, glassMat) {
   put(B(2.7, 1.15, 0.035), M(0xbfc5ca), CX, 2.2, CZ - 2.55);
   const cv = document.createElement('canvas'); cv.width = 320; cv.height = 128;
   const g = cv.getContext('2d');
-  g.fillStyle = '#fbfbfa'; g.fillRect(0, 0, 320, 128);
-  g.fillStyle = '#f59e0b'; g.font = 'bold 22px sans-serif'; g.fillText('WFS SPRINT', 14, 30);
-  g.fillStyle = '#334155'; g.font = '15px sans-serif';
-  ['• Review task QA', '• Deploy tenant baru', '• Demo widget AI CS'].forEach((t, i) => g.fillText(t, 14, 58 + i * 24));
+  drawSprintBoard(g);
   const board = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.0), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv) }));
   board.position.set(CX, 2.2, CZ - 2.52);
   office.add(board);
