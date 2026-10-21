@@ -29,3 +29,13 @@ export function drawWallLogo(ctx) {
   ctx.fillStyle='#FBBF24';ctx.font='800 170px "Segoe UI",Arial,sans-serif';ctx.fillText('PROJECT',616,470);
   ctx.fillStyle='rgba(255,255,255,.75)';ctx.font='600 62px "Segoe UI",Arial,sans-serif';ctx.fillText('SOFTWARE HOUSE  \u00b7  AI TEAM',620,570);
 }
+
+// Judul dinding belakang 1024x200 (teks WFS putih + PROJECT amber, latar transparan)
+export function drawWallTitle(ctx) {
+  ctx.clearRect(0,0,1024,200);
+  ctx.font='900 130px "Segoe UI",Arial,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillStyle='#FFFFFF';
+  ctx.fillText('WFS',300,100);
+  ctx.fillStyle='#F59E0B';
+  ctx.fillText('PROJECT',730,100);
+}

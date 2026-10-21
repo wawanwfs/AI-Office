@@ -1906,3 +1906,11 @@
 - +8 unit test (ctx recorder + gradien palsu): konstanta ekspor; parameter default; base fillRect sebagai 2 oper pertama; nat strokeStyle/lineWidth 3 dgn 9 garis x 0..512 langkah 64, moveTo(i,0)-lineTo(i,hpx); step 32 = 17 garis; gradien linear (0,0-0,hpx) 2 stop + fillRect penuh; urutan keseluruhan base-nat-gradien tanpa oper liar; dua pemanggilan tak share state. 0 koreksi — test langsung hijau.
 - Bukti: vitest 920/920 (77 file, dulu 912); eslint src 0 problem; build OK (precache 35, 1543.29 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222 (Runtime.evaluate): reload cache-bypass OK, agents 14, zones 5, tvData terisi (dibantuin.com 23 done), bubbles 2, frames 3-5 berjalan; screenshot 730 KB (scene hidup, dinding panel/kayu normal).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-22 03:55 WIB — painter judul dinding (WFS PROJECT) diekstrak ke parts/logo_canvas.js murni (+4 test)
+
+- Backlog dipilih: kanvas judul dinding belakang 1024×200 (clearRect + font 900 130px Segoe UI center/middle + teks WFS putih (300,100) & PROJECT #F59E0B (730,100)) masih inline di OfficeScene — painter kanvas brand terakhir tanpa unit test langsung.
+- Fix: parts/logo_canvas.js — drawWallTitle(ctx) murni (ctx di-inject) ditambahkan ke modul logo yang sudah ada; urutan & parameter perintah gambar identik kode lama (tampilan tak berubah). OfficeScene blok judul kini 1 baris painter.
+- +4 unit test (ctx recorder): clearRect penuh sebagai oper pertama + font/align/baseline; posisi & warna kedua teks (styleBefore); tepat 2 fillText, 0 gradien, tanpa oper liar; dua pemanggilan tak share state. 1 koreksi hanya di test (lupa import drawWallTitle di file test), kode produksi tak disentuh.
+- Bukti: vitest 924/924 (77 file, dulu 920); eslint src 0 problem; build OK (precache 35, 1543.30 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222: reload cache-bypass OK, agents 14, projectBoard ada, frames 67→73 berjalan; screenshot 716 KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

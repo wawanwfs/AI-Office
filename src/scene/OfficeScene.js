@@ -16,7 +16,7 @@ import { paintRing } from './parts/ring_canvas.js';
 import { drawSky, drawGlassSheen } from './parts/sky_canvas.js';
 import { drawWoodFloor, drawAoStrip } from './parts/floor_canvas.js';
 import { drawCeiling } from './parts/ceiling_canvas.js';
-import { drawResepsiLogo, drawWallLogo } from './parts/logo_canvas.js';
+import { drawResepsiLogo, drawWallLogo, drawWallTitle } from './parts/logo_canvas.js';
 import { drawBlobShadow } from './parts/blob_canvas.js';
 import { drawWallTex } from './parts/wall_canvas.js';
 import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelScale, drawLabelText } from './parts/label_spec.js';
@@ -1114,12 +1114,7 @@ addPlant(-11.6,8.8,true);
 // --- JUDUL di dinding belakang (big wall text WFS PROJECT) ---
 const wtc=document.createElement('canvas');wtc.width=1024;wtc.height=200;
 const wtx=wtc.getContext('2d');
-wtx.clearRect(0,0,1024,200);
-wtx.font='900 130px "Segoe UI",Arial,sans-serif';wtx.textAlign='center';wtx.textBaseline='middle';
-wtx.fillStyle='#FFFFFF';
-wtx.fillText('WFS',300,100);
-wtx.fillStyle='#F59E0B';
-wtx.fillText('PROJECT',730,100);
+drawWallTitle(wtx);
 const wtt=new THREE.CanvasTexture(wtc);
 const wallTitle=new THREE.Mesh(new THREE.PlaneGeometry(7,1.37),new THREE.MeshBasicMaterial({map:wtt,transparent:true})); // eslint-disable-line no-unused-vars -- kandidat pajangan dinding
 

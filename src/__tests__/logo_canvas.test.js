@@ -2,7 +2,7 @@
 // Unit test painter logo WFS Project (parts/logo_canvas.js) — resepsionis & dinding belakang.
 // ctx recorder + gradien palsu; memverifikasi urutan & parameter identik kode inline lama.
 import { describe, it, expect } from 'vitest';
-import { drawResepsiLogo, drawWallLogo } from '../scene/parts/logo_canvas.js';
+import { drawResepsiLogo, drawWallLogo, drawWallTitle } from '../scene/parts/logo_canvas.js';
 
 function makeCtx(){
   const ops=[]; let gid=0;
@@ -206,5 +206,48 @@ describe('drawWallLogo (logo dinding belakang 2048×640)', ()=>{
     expect(c._ops.filter(o=>o[0]==='fillText').length).toBe(4);
     expect(c._grads.length).toBe(1);
     expect(c._ops.filter(o=>o[0]==='createRadialGradient').length).toBe(0);
+  });
+});
+
+describe('drawWallTitle (judul dinding 1024×200)', ()=>{
+  it('clearRect penuh lalu font 900 130px Segoe UI center/middle', ()=>{
+    const c=makeCtx(); c.clearRect=(...a)=>c._ops.push(['clearRect',a]);
+    drawWallTitle(c);
+    const ops=c._ops;
+    expect(ops[0]).toEqual(['clearRect',[0,0,1024,200]]);
+    expect(ops[1]).toEqual(['font','900 130px "Segoe UI",Arial,sans-serif']);
+    expect(ops[2]).toEqual(['textAlign','center']);
+    expect(ops[3]).toEqual(['textBaseline','middle']);
+  });
+
+  it('WFS putih di (300,100) lalu PROJECT amber di (730,100)', ()=>{
+    const c=makeCtx(); c.clearRect=(...a)=>c._ops.push(['clearRect',a]);
+    drawWallTitle(c);
+    const ops=c._ops;
+    const styleBefore=(idx,key)=>{ for(let j=idx-1;j>=0;j--) if(ops[j][0]===key) return ops[j][1]; };
+    const iW=ops.findIndex(o=>o[0]==='fillText'&&o[1]==='WFS');
+    expect(ops[iW][2]).toEqual([300,100]);
+    expect(styleBefore(iW,'fillStyle')).toBe('#FFFFFF');
+    const iP=ops.findIndex(o=>o[0]==='fillText'&&o[1]==='PROJECT');
+    expect(ops[iP][2]).toEqual([730,100]);
+    expect(styleBefore(iP,'fillStyle')).toBe('#F59E0B');
+  });
+
+  it('tepat 2 teks, tanpa gradien/fillRect/stroke, tanpa oper liar', ()=>{
+    const c=makeCtx(); c.clearRect=(...a)=>c._ops.push(['clearRect',a]);
+    drawWallTitle(c);
+    const allowed=new Set(['clearRect','fillStyle','font','textAlign','textBaseline','fillText']);
+    for(const o of c._ops) expect(allowed.has(o[0])).toBe(true);
+    expect(c._ops.filter(o=>o[0]==='fillText').length).toBe(2);
+    expect(c._grads.length).toBe(0);
+  });
+
+  it('dua pemanggilan tak share state (masing-masing clearRect pertama)', ()=>{
+    const a=makeCtx(); a.clearRect=(...x)=>a._ops.push(['clearRect',x]);
+    const b=makeCtx(); b.clearRect=(...x)=>b._ops.push(['clearRect',x]);
+    drawWallTitle(a); drawWallTitle(b);
+    expect(a._ops[0][0]).toBe('clearRect');
+    expect(b._ops[0][0]).toBe('clearRect');
+    expect(a._ops.filter(o=>o[0]==='fillText').length).toBe(2);
   });
 });
