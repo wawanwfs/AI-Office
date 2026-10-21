@@ -26,6 +26,7 @@ import { wallFadeTick } from './parts/wall_fade.js';
 import { updateBubbles as updateBubblesPure } from './parts/bubbles.js';
 import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canvas.js';
 import { drawTvDashboard } from './parts/tv_canvas.js';
+import { drawMenuBoard, drawPoster, drawWelcomeSign } from './parts/sign_canvas.js';
 import { looksOf } from './parts/character_looks.js';
 import { AGENTS, AGENTS_EXTRA, allAgents as allAgentsFn } from './parts/agents_spec.js';
 import { DESKS } from './parts/desk_layout.js';
@@ -950,13 +951,7 @@ for(let i=0;i<3;i++){
 // Menu board above counter
 const mbc=document.createElement('canvas');mbc.width=256;mbc.height=140;
 const mx=mbc.getContext('2d');
-mx.fillStyle='#1A1A2E';mx.fillRect(0,0,256,140);
-mx.strokeStyle='#F59E0B';mx.lineWidth=6;mx.strokeRect(3,3,250,134);
-mx.font='bold 26px sans-serif';mx.fillStyle='#F59E0B';mx.fillText('WFS CAFÉ',34,40);
-mx.font='15px monospace';mx.fillStyle='#EEE';
-mx.fillText('Kopi susu      15k',26,75);
-mx.fillText('Americano     18k',26,100);
-mx.fillText('Matcha latte  22k',26,125);
+drawMenuBoard(mx);
 const mbt=new THREE.CanvasTexture(mbc);
 const mb=new THREE.Mesh(new THREE.PlaneGeometry(1.7,.95),new THREE.MeshBasicMaterial({map:mbt}));
 mb.position.set(CFX,2.3,CFZ+.35);cafe.add(mb);
@@ -1141,9 +1136,7 @@ office.add(shelf);
   [['SHIP IT','#F59E0B',3.0],['CODE\nCOFFEE','#F472B6',5.2]].forEach(([txt,col,x])=>{
     const pc=document.createElement('canvas');pc.width=256;pc.height=340;
     const p=pc.getContext('2d');
-    p.fillStyle='#0f1a2e';p.fillRect(0,0,256,340);p.strokeStyle=col;p.lineWidth=8;p.strokeRect(10,10,236,320);
-    p.fillStyle=col;p.font='bold 48px sans-serif';p.textAlign='center';
-    txt.split('\n').forEach((l,i)=>p.fillText(l,128,150+i*56));
+    drawPoster(p,txt,col);
     const pm=new THREE.Mesh(new THREE.PlaneGeometry(1.1,1.45),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(pc)}));
     pm.position.set(x+5.0,2.4,9.2);pm.rotation.y=Math.PI;office.add(pm);
   });
@@ -1351,10 +1344,7 @@ const __wallObjs=[];
 
   // ---- Papan sambutan di dinding kiri ----
   const nc=document.createElement('canvas');nc.width=1024;nc.height=320;const n=nc.getContext('2d');
-  n.fillStyle='#0F1B2E';n.fillRect(0,0,1024,320);
-  n.strokeStyle='#D4AF37';n.lineWidth=10;n.strokeRect(10,10,1004,300);
-  n.fillStyle='#FBBF24';n.font='900 130px "Segoe UI",Arial,sans-serif';n.textAlign='center';n.fillText('WFS PROJECT',512,150);
-  n.fillStyle='#FFFFFF';n.font='600 60px "Segoe UI",Arial,sans-serif';n.fillText('Selamat Datang \u00b7 Welcome',512,250);
+  drawWelcomeSign(n);
   const sign=new THREE.Mesh(new THREE.PlaneGeometry(3.6,1.125),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(nc)}));
   sign.position.set(-12.3,2.6,5.4);sign.renderOrder=5;sign.rotation.y=Math.PI/2;office.add(sign);__wallObjs.push(sign);
 

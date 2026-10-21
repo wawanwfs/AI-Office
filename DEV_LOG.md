@@ -1824,3 +1824,11 @@
 - Koreksi 1× test: dulu rerender aman diharapkan langsung menghilangkan fallback — boundary menahan UI rusak sampai reset (perilaku React yang benar); test dikoreksi, kode tak disentuh.
 - Bukti: vitest **839/839** (67 file, dulu 828); eslint 0 problem; build OK (precache 35, 1543.32 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222 (/tmp/e2e_qt.py): 14 agents, tvData terisi, 5 zoneLabels, frames berjalan (5→12), tanpa exception.
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-22 00:15 WIB — tiga kanvas tanda (menu kafé, poster, papan sambutan) diekstrak ke parts/sign_canvas.js murni
+
+- Backlog dipilih: render kanvas dekorasi masih inline di IIFE dinding/dekorasi OfficeScene — papan menu WFS CAFÉ (256×140), poster motivasi SHIP IT / CODE COFFEE (256×340, multi-baris), dan papan sambutan dinding kiri (1024×320) — tiga render terakhir tanpa unit test langsung.
+- Fix: parts/sign_canvas.js — `drawMenuBoard(ctx)`, `drawPoster(ctx,txt,col)` (split '\n' → y=150+56i), `drawWelcomeSign(ctx)` — murni (ctx di-inject, tanpa THREE/DOM), urutan & parameter perintah gambar identik kode inline lama. OfficeScene kini 1 baris per kanvas.
+- +12 unit test (recorder ctx): latar+bingkai & urutan ops tiap tanda; menu: judul WFS CAFÉ (font/fillStyle/warna), 3 baris menu monospace y 75/100/125; poster: 1/2/3 baris (y 150/206/262), textAlign center, font bold 48px, warna tema; sambutan: judul emas 900 130px (512,150), subjudul putih middot (512,250), tepat 2 teks.
+- Bukti: vitest **851/851** (68 file, dulu 839); eslint src **0 problem**; build OK (precache 35, 1543.34 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222 (e2e_sign.py): reload OK, 14 agents, tvData terisi, 5 zoneLabels (opacity 1), frames berjalan (4→13), bubbles naik (1→2), tanpa exception; screenshot 725 KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
