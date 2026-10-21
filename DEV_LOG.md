@@ -1914,3 +1914,11 @@
 - +4 unit test (ctx recorder): clearRect penuh sebagai oper pertama + font/align/baseline; posisi & warna kedua teks (styleBefore); tepat 2 fillText, 0 gradien, tanpa oper liar; dua pemanggilan tak share state. 1 koreksi hanya di test (lupa import drawWallTitle di file test), kode produksi tak disentuh.
 - Bukti: vitest 924/924 (77 file, dulu 920); eslint src 0 problem; build OK (precache 35, 1543.30 KiB); deploy ~/wfs-hq OK; e2e produksi 9503 via CDP chrome 9222: reload cache-bypass OK, agents 14, projectBoard ada, frames 67→73 berjalan; screenshot 716 KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-22 04:20 WIB — pembersihan 126 chunk stale di ~/wfs-hq/assets (44,94 MB dibebaskan)
+
+- Backlog dipilih: item lama "bersihkan 70+ asset OfficeScene-*.js lama di ~/wfs-hq/assets". Audit: 131 file JS di assets/, hanya 5 direferensikan SW precache (sw.js) + index.html — 126 chunk build lama (OfficeScene-*/CsWidget-*/index-*) tak pernah dipakai lagi (setiap deploy menulis file baru tanpa menghapus lama).
+- Fix: skrip Python mencocokkan isi dist terkini (precache sw.js == dist/assets, terverifikasi identik 5/5) lalu menghapus file di ~/wfs-hq/assets yang TIDAK ada di sw.js/index.html — aman dari salah hapus karena service worker precache adalah sumber kebenaran runtime. Diulang setelah deploy dist baru: 0 stale tersisa.
+- Bukti: ~/wfs-hq/assets kini tepat 5 file (index-Cuq1lqdY.js, chunk-DECur_0Z.js, OfficeScene-7-B4vXpJ.js, CsWidget-D-zv4ChE.js, index-Bx0Mn9T-.css); 44,94 MB dibebaskan; HTTP 200 untuk /, OfficeScene chunk, sw.js; e2e produksi 9503 via CDP: reload cache-bypass OK, agents 14, projectBoard ada, zoneLabels 5, bubbles 5, frames 18→25 berjalan, initFail tidak ada; screenshot 724 KB (scene hidup).
+- Test: vitest 924/924 (77 file), eslint bersih, build OK (precache 35, 1543.30 KiB) — kode src tak berubah (murni maintenance deploy).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
