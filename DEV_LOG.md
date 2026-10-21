@@ -1667,3 +1667,11 @@
 - +10 unit test baru (tick pertama, langkah tepat 5 dtk, akumulasi parsial tersimpan, wrap 1439→0, cap loncatan 24 jam, mode manual + resume + sentuhan baru memperpanjang manual).
 - Bukti: vitest **654/654** (53 file, dulu 644); eslint src **0 problem**; build OK (precache 35, 1541.11 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: reload OK, 14 agents, frames berjalan (fr 2→11), tanpa exception; jam HUD berjalan (11:07 → 11:17 dalam 25 dtk ≈ 5 menit simulasi — sesuai SIM_SEC_PER_MIN); screenshot 714 KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 16:35 WIB — performa: efek ambient (ring/visor/label bobbing) di-throttle 60fps → ~20×/dtk via ambientFx murni
+
+- Backlog dipilih: di animate() masih ada 4× Math.sin TIAP frame + 2 assign opacity (ringMat, helmetVisor) + bobbing label 14 agent duduk + label NX — semua osilasi pelan, tak perlu 60×/dtk.
+- Fix di parts/effects.js: `AMBIENT_EVERY=3`, `shouldUpdateAmbient(frame)` (~20×/dtk, guard non-numerik/every≤0), `ambientFx(elapsed,i)` murni (ring .12+sin·.04, visor .8+sin·.2, label fase per-agent i*1.3, nx fase +9) — satu objek, animate() tinggal assign. Label duduk & nx kini hanya update di kelipatan 3 frame; animasi tetap mulus (osilasi sangat lambat).
+- +7 unit test baru (throttle 60 frame→20 hit, every kustom, guard, ekivalensi rumus lama persis utk ring/visor, fase per-agent, guard NaN, periodisitas 2π).
+- Bukti: vitest **661/661** (54 file, dulu 654); eslint src bersih; build OK; deploy ~/wfs-hq OK; e2e produksi 9503: reload OK, 14 agents, frames berjalan (4→7→10), 0 exception; screenshot 714 KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).

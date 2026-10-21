@@ -155,6 +155,28 @@ export function dustY(x, y, elapsed, i) {
   return ny > 3.6 ? 0.5 : ny;
 }
 
+// ── Efek ambient berbasis elapsed (dipakai animate(), diuji unit) ─────────
+// Ambil nilai ambient sekaligus setiap kelipatan AMBIENT_EVERY frame: helm
+// visor, ring denyut, label duduk, label NX — semuanya berosilasi pelan, tak
+// perlu sin() 60×/dtk. Kembalikan objek agar animate() tinggal assign.
+export const AMBIENT_EVERY = 3;
+
+export function shouldUpdateAmbient(frame, every = AMBIENT_EVERY) {
+  if (!Number.isFinite(frame) || !Number.isFinite(every) || every <= 0) return false;
+  return frame % every === 0;
+}
+
+export function ambientFx(elapsed, i = 0) {
+  if (!Number.isFinite(elapsed)) elapsed = 0;
+  if (!Number.isFinite(i)) i = 0;
+  return {
+    ring: .12 + Math.sin(elapsed * 1.5) * .04,
+    visor: .8 + Math.sin(elapsed * 3) * .2,
+    label: Math.sin(elapsed * 1.1 + i * 1.3) * .02,
+    nx: Math.sin(elapsed * 1.1 + 9) * .03,
+  };
+}
+
 export function drawScreenFrame(s, frame) {
   const { ctx: c, canvas: cv, type, hex } = s;
   const w = cv.width, h = cv.height, t = frame * 0.02;

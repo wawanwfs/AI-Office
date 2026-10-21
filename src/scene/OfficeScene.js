@@ -5,7 +5,7 @@ import { createLighting, createNeonMode, createShift, mixHex } from './parts/day
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, shouldUpdateAmbient, ambientFx } from './parts/effects.js';
 import { overlapPass, sweepClampRounds } from './parts/label_overlap.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
@@ -1760,8 +1760,15 @@ function animate(){
   const pulseT=(elapsed*.5)%1;
   pulseRing.scale.set(1+pulseT*.3,1,1+pulseT*.3);
   pulseRing.material.opacity=.15*(1-pulseT);
-  ringMat.opacity=.12+Math.sin(elapsed*1.5)*.04;
-  helmetVisor.material.opacity=.8+Math.sin(elapsed*3)*.2;
+  // Efek ambient berbasis elapsed di-throttle ~20×/dtk (AMBIENT_EVERY=3):
+  // ring, visor, label duduk, label NX — dulu 4 sin() + 2 assign opacity TIAP frame.
+  if(shouldUpdateAmbient(frame)){
+    const fx=ambientFx(elapsed);
+    ringMat.opacity=fx.ring;
+    helmetVisor.material.opacity=fx.visor;
+    agentData.forEach((a,i)=>{if(a.state==='sitting')a.label.position.y=LABEL_Y+ambientFx(elapsed,i).label});
+    nxLabel.position.y=LABEL_Y-.5+fx.nx;
+  }
 
   // Dust drift — di-throttle ~20×/dtk (drift sangat lambat; dulu 40×sin/cos +
   // upload buffer GPU tiap frame). Y via dustY (murni, respawn > 3.6 → 0.5).
@@ -1772,8 +1779,7 @@ function animate(){
     }
     pG.attributes.position.needsUpdate=true;
   }
-  // Labels
-  agentData.forEach((a,i)=>{if(a.state==='sitting')a.label.position.y=LABEL_Y+Math.sin(elapsed*1.1+i*1.3)*.02});
+  // Labels (bobbing duduk di-throttle di blok ambient di atas)
   // cincin emas mengikuti agent terpilih (juga saat berjalan/meeting)
   if(selRing&&selectedIdx>=0&&selectedIdx<agentData.length){
     const a=agentData[selectedIdx];
@@ -1846,7 +1852,6 @@ function animate(){
   } else {
     // bila nama disembunyikan lalu dimunculkan lagi, posisi direset oleh state (sitting/meeting/walker) — tak ada sisa offset
   }
-  nxLabel.position.y=LABEL_Y-.5+Math.sin(elapsed*1.1+9)*.03;
   // Papers
   __pages.update(delta,elapsed);
   // LED server room: kedip lambat → cukup ~20×/dtk (throttle), opacity dari ledOpacity
