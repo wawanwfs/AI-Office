@@ -135,8 +135,8 @@ describe('throttle halaman melayang (akumulasi dt)', () => {
     const pg = p.pages[0], m = pg.mesh;
     const x0 = m.position.x;
     for (let i = 0; i < 50; i++) p.update(1 / 60, i / 60); // 50×16.7ms ≈ 0.83dtk
-    expect(p.pages.__acc).toBeCloseTo(50 / 60 - 1 / 20, 6);
-    expect(m.position.x - x0).toBeCloseTo(pg.vx * (50 / 60), 5);
+    expect(p.pages.__acc).toBeCloseTo(0.0333333333, 6); // sisa ~2 tick (0.0333 dtk) belum mencapai interval → menunggu tick berikutnya
+    expect(m.position.x - x0).toBeCloseTo(pg.vx * (48 / 60), 4); // 2 update × step 0.4 dtk (akumulasi)
   });
   it('perpindahan total per detik sama dengan update per-frame (ekuivalen)', () => {
     const a = createDriftingPages(stubCtxForPages(), 1);

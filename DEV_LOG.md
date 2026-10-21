@@ -1640,3 +1640,14 @@
 - +5 unit test (kelipatan throttle, custom every + guard, naik/respawn, periodisitas 2π).
 - Bukti: vitest **635/635** (51 file, dulu 630); eslint src **0 problem**; build OK (precache 35, 1540.44 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: DOM True, 14 agents, frames berjalan (fr 2→17→22, tanpa 'Scene init failed'); screenshot 710 KB (scene hidup).
 - Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
+
+## 2026-10-21 15:05 WIB — performa: 22 halaman melayang di-throttle 60fps → ~20×/dtk (akumulasi dt)
+
+- Backlog dipilih: `__pages.update(delta,elapsed)` masih berjalan TIAP frame — 22 mesh × (2 posisi + 3 rotasi + Math.sin) ≈ 150 operasi animasi/dtk yang tak perlu; halaman drift sangat lambat.
+- Fix di parts/effects.js:
+  - `PAGES_UPDATE_INTERVAL = 1/20`; `update()` mengakumulasi dt dan hanya menjalankan loop saat tercapai (~20×/dtk) — hemat ~40 pass loop per detik.
+  - dt DIAKUMULASI lalu dipakai sebagai `step` → perpindahan/rotasi per detik identik dengan update per-frame (tidak ada slowdown).
+- Test wrap-around di-revisi: asumsi arah vx/vz lama salah (stub rng.n()=0.4 → arah NEGATIF, bukan positif); kini menguji wrap dua arah dengan posisi tepat di ambang -10.0005 / +10.0005.
+- +3 unit test baru (dt di bawah interval → diam; akumulasi tercapai → bergerak dengan step benar; total perpindahan per 2 dtk ekuivalen update per-frame).
+- Bukti: vitest **638/638** (51 file, dulu 635); eslint src **0 problem**; build OK (precache 35, 1540.53 KiB); deploy ~/wfs-hq OK; e2e produksi 9503: reload OK, 14 agents, frames berjalan (fr 2→4→42), tanpa 'Scene init failed'; screenshot 718 KB (scene hidup).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia).
