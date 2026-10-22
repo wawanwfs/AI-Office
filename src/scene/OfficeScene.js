@@ -26,6 +26,7 @@ import { MUTED_KEY, tickSoundTimer } from './parts/sound_spec.js';
 import { advanceSimClock, setSimManual, SIM_SEC_PER_MIN as __SIM_SPM, MANUAL_RESUME_MS as __SIM_RESUME } from './parts/sim_clock.js';
 import { createSoundEngine } from './parts/sound_engine.js';
 import { createProjectBoard } from './parts/projectboard.js';
+import { createDecor } from './parts/decor.js';
 import { chatPhrases, COLLAB_PAIRS, pickCollab, clampBubbleText, LINE_SEC, autoTalkDelay, autoTalkText } from './parts/dialog.js';
 import { agentIdMap, buildRunningByAgent } from './parts/running_tasks.js';
 import { BADGE_COLORS, statusPollActions } from './parts/status_poll.js';
@@ -33,7 +34,7 @@ import { wallFadeTick } from './parts/wall_fade.js';
 import { updateBubbles as updateBubblesPure } from './parts/bubbles.js';
 import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canvas.js';
 import { drawTvDashboard } from './parts/tv_canvas.js';
-import { drawMenuBoard, drawPoster, drawWelcomeSign } from './parts/sign_canvas.js';
+import { drawMenuBoard, drawWelcomeSign } from './parts/sign_canvas.js';
 import { looksOf } from './parts/character_looks.js';
 import { AGENTS, AGENTS_EXTRA, allAgents as allAgentsFn } from './parts/agents_spec.js';
 import { DESKS } from './parts/desk_layout.js';
@@ -1069,43 +1070,11 @@ for(let lvl=0;lvl<4;lvl++){
 office.add(shelf);
 
 
-// --- DEKORASI TAMBAHAN: kanban board, poster, tanaman besar, partisi kaca per tim ---
-(function(){
-  // Papan PROYEK NYATA dibantuin.com — kartu dari task engine sungguhan (parts/projectboard.js)
-  window.__projectBoard = createProjectBoard(office, THREE);
-  // Poster motivasi
-  [['SHIP IT','#F59E0B',3.0],['CODE\nCOFFEE','#F472B6',5.2]].forEach(([txt,col,x])=>{
-    const pc=document.createElement('canvas');pc.width=256;pc.height=340;
-    const p=pc.getContext('2d');
-    drawPoster(p,txt,col);
-    const pm=new THREE.Mesh(new THREE.PlaneGeometry(1.1,1.45),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(pc)}));
-    pm.position.set(x+5.0,2.4,9.2);pm.rotation.y=Math.PI;office.add(pm);
-  });
-  // Tanaman besar di sudut
-  [[11.4,-8.6],[-11.4,8.6],[11.4,8.6]].forEach(([x,z])=>{
-    const pot=new THREE.Mesh(new THREE.CylinderGeometry(.35,.28,.55,10),M(0x8B5E3C));
-    pot.position.set(x,.28,z);office.add(pot);
-    for(let i=0;i<5;i++){
-      const lf=new THREE.Mesh(new THREE.SphereGeometry(.38-i*.03,8,6),M(i%2?0x2E7D32:0x43A047));
-      lf.position.set(x+Math.sin(i*1.9)*.15,.85+i*.32,z+Math.cos(i*1.9)*.15);office.add(lf);
-    }
-  });
-  // Partisi kaca rendah antar kelompok tim (tampilan zona)
-  [[-6,-0.8],[-2,-0.8],[2,-0.8]].forEach(([x,z])=>{
-    const gl=new THREE.Mesh(new THREE.BoxGeometry(.04,.9,2.2),new THREE.MeshLambertMaterial({color:0x9ad8ff,transparent:true,opacity:.18}));
-    gl.position.set(x,.5,z+0.3);gl.rotation.y=0;gl.renderOrder=2;office.add(gl);
-  });
-  // Lampu lantai hangat di area lounge
-  const wl=new THREE.PointLight(0xFFC97A,.9,9,1.6);wl.position.set(-9.5,2.4,-1);office.add(wl);
-})();
-
-// --- RUG dekoratif area tengah ---
-const rug=new THREE.Mesh(new THREE.BoxGeometry(3.6,.015,2.4),
-  new THREE.MeshLambertMaterial({color:0x1565C0,transparent:true,opacity:.85}));
-rug.position.set(0,.02,4.5);rug.receiveShadow=true;office.add(rug);
-const rugInner=new THREE.Mesh(new THREE.BoxGeometry(2.6,.017,1.6),
-  new THREE.MeshLambertMaterial({color:0xEF6C00,transparent:true,opacity:.85}));
-rugInner.position.set(0,.022,4.5);office.add(rugInner);
+// Papan PROYEK NYATA dibantuin.com — kartu dari task engine sungguhan (parts/projectboard.js)
+window.__projectBoard = createProjectBoard(office, THREE);
+// --- DEKORASI TAMBAHAN: poster, tanaman besar, partisi kaca, rug, lampu lounge ---
+// Builder murni di parts/decor.js (diuji unit); di sini tinggal injek konteks.
+createDecor({ THREE, office, M });
 
 // --- TANAMAN BESI tambahan di sudut ---
 addPlant(11.6,-8.5,true);
