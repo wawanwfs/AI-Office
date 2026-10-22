@@ -15,8 +15,8 @@ beforeEach(() => {
 class Obj {
   constructor(...args) {
     this.args = args; this.children = [];
-    const pos = { px: 0, py: 0, pz: 0 };
-    pos.set = (x, y, z) => { pos.px = x; pos.py = y; pos.pz = z; };
+    const pos = { px: 0, py: 0, pz: 0, x: 0, y: 0, z: 0 };
+    pos.set = (x, y, z) => { pos.px = x; pos.py = y; pos.pz = z; pos.x = x; pos.y = y; pos.z = z; };
     this.position = pos;
     this.rotation = { x: 0, y: 0, z: 0 };
   }
@@ -33,7 +33,7 @@ function makeTHREE() {
     Group: Group,
     MeshBasicMaterial: class { constructor(o) { this.o = o; this.isMeshBasicMaterial = true; } },
     MeshLambertMaterial: class { constructor(o) { this.o = o; } },
-    CanvasTexture: class { constructor(c) { this.canvas = c; this.repeat = { set: vi.fn() }; } },
+    CanvasTexture: class { constructor(c) { const r = { x: 1, y: 1, set(x, y) { this.x = x; this.y = y; } }; this.canvas = c; this.repeat = r; } },
     BoxGeometry: class { constructor(w, h, d) { this.dims = [w, h, d]; } },
     PlaneGeometry: class { constructor(w, h) { this.dims = [w, h]; } },
     RepeatWrapping: 1000,
@@ -78,7 +78,7 @@ describe('parts/structure.js — createStructure', () => {
 
   it('4 strip AO di lantai: plane 25.4×0.95 / 19.4 (kanan 1.25), rot x=-π/2, y=0.006, renderOrder 1', () => {
     const { office } = build();
-    const ao = office.children.filter(m => m.isMesh && m.position.py === 0.006);
+    const ao = office.children.filter(m => m.isMesh && m.position.y === 0.006);
     expect(ao.length).toBe(4);
     expect(ao[0].args[0].dims).toEqual([25.4, 0.95]);
     expect(ao[0].rotation.x).toBeCloseTo(-Math.PI / 2);
@@ -90,7 +90,7 @@ describe('parts/structure.js — createStructure', () => {
   it('lantai parket Box 26×0.15×20 di y=-0.075 receiveShadow, tekstur repeat (4,3)', () => {
     const { refs } = build();
     expect(refs.fl.args[0].dims).toEqual([26, 0.15, 20]);
-    expect(refs.fl.position.py).toBe(-0.075);
+    expect(refs.fl.position.y).toBe(-0.075);
     expect(refs.fl.receiveShadow).toBe(true);
     expect(refs.fl.args[1].o.map.repeat.x).toBe(4);
     expect(refs.fl.args[1].o.map.repeat.y).toBe(3);
@@ -102,7 +102,7 @@ describe('parts/structure.js — createStructure', () => {
     expect(refs.cp.args[0].dims).toEqual([10, 0.02, 8]);
     expect(refs.cp.args[1].color).toBe(0xD0D8E0);
     expect(M(refs.cp.args[1].color).lambert).toBe(true);
-    expect(refs.cp.position.px).toBe(-3); expect(refs.cp.position.py).toBe(0.01);
+    expect(refs.cp.position.px).toBe(-3); expect(refs.cp.position.y).toBe(0.01);
     expect(refs.cp.receiveShadow).toBe(true);
   });
 
@@ -113,15 +113,15 @@ describe('parts/structure.js — createStructure', () => {
     expect(bands.length).toBe(4);
     expect(trims.length).toBe(4);
     // band horizontal belakang
-    const back = bands.find(m => m.args[0].dims[0] === 26 && Math.abs(m.position.pz - (-9.56)) < 0.001);
+    const back = bands.find(m => m.args[0].dims[0] === 26 && Math.abs(m.position.pz + 9.44) < 0.001);
     expect(back).toBeTruthy();
     expect(back.args[0].dims).toEqual([26, 1.1, 0.1]);
-    expect(back.py).toBe(0.55);
+    expect(back.position.y).toBe(0.55);
     expect(back.castShadow).toBe(true);
     // trim horizontal
     const trimBack = trims.find(m => m.args[0].dims[0] === 26);
     expect(trimBack.args[0].dims).toEqual([26, 0.06, 0.14]);
-    expect(trimBack.py).toBe(1.12);
+    expect(trimBack.position.y).toBe(1.12);
     // band vertikal kiri
     const left = bands.find(m => m.args[0].dims[0] === 0.1);
     expect(left.position.px).toBe(-12.44);
@@ -141,7 +141,7 @@ describe('parts/structure.js — createStructure', () => {
     expect(frames.length).toBe(4);
     frames.forEach(f => {
       expect(f.args[0].dims).toEqual([0.08, 4, 0.08]);
-      expect(f.position.py).toBe(2);
+      expect(f.position.y).toBe(2);
     });
     expect(frames.map(f => `${f.position.px},${f.position.pz}`).sort()).toEqual(
       ['-12.5,-9.5', '-12.5,9.5', '12.5,-9.5', '12.5,9.5'].sort());
