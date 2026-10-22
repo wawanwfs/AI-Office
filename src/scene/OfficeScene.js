@@ -28,6 +28,7 @@ import { createSoundEngine } from './parts/sound_engine.js';
 import { createProjectBoard } from './parts/projectboard.js';
 import { createCafe } from './parts/cafe.js';
 import { createDecor } from './parts/decor.js';
+import { createServerRoom } from './parts/serverroom.js';
 import { chatPhrases, COLLAB_PAIRS, pickCollab, clampBubbleText, LINE_SEC, autoTalkDelay, autoTalkText } from './parts/dialog.js';
 import { agentIdMap, buildRunningByAgent } from './parts/running_tasks.js';
 import { BADGE_COLORS, statusPollActions } from './parts/status_poll.js';
@@ -952,55 +953,11 @@ const tvScr=new THREE.Mesh(new THREE.PlaneGeometry(1.2,.68),new THREE.MeshBasicM
 tvScr.position.set(12.31,2.0,6.4);tvScr.rotation.y=-Math.PI/2;lounge.add(tvScr);
 office.add(lounge);
 
-// --- SERVER ROOM (belakang tengah): 3 rak server dengan LED berkedip ---
-// LED dikumpulkan utk animasi blink (fase & laju acak per LED — pola traffic server nyata)
-const __leds=[];
-const serverRack=(x,z)=>{
-  const g=new THREE.Group();
-  // body cukup terang dgn garis tepi cyan supaya tidak melebur ke latar gelap
-  const body=new THREE.Mesh(new THREE.BoxGeometry(.9,2.1,.7),M(0x2E3244));
-  body.position.y=1.05;body.castShadow=true;g.add(body);
-  // strip cahaya tepi: dua bar tipis di sisi kiri/kanan depan (bukan pelat penuh)
-  [-.46,.46].forEach(sx=>{
-    const edge=new THREE.Mesh(new THREE.BoxGeometry(.05,2.06,.03),MB(0x00E5FF));
-    edge.position.set(sx,1.05,.365);g.add(edge);
-  });
-  for(let u=0;u<8;u++){
-    const unit=new THREE.Mesh(new THREE.BoxGeometry(.8,.18,.6),M(0x3A3F55));
-    unit.position.set(0,.25+u*.23,0);g.add(unit);
-    // LED strip: 3 lampu kecil random warna
-    [0x00E676,0xFFC107,0x2979FF].forEach((lc,li)=>{
-      const led=new THREE.Mesh(new THREE.BoxGeometry(.08,.06,.03),new THREE.MeshBasicMaterial({color:lc,transparent:true}));
-      led.position.set(-.22+li*.18,.28+u*.23,.375); // di depan muka body (z=.35) — sebelumnya .32 tertanam di dalam body, tak terlihat
-      g.add(led);
-      __leds.push({m:led,base:1,ph:Math.random()*Math.PI*2,sp:2+Math.random()*6,on:.3+Math.random()*.7});
-    });
-  }
-  g.position.set(x,0,z);
-  g.traverse(o=>{if(o.isMesh&&!o.material.isMeshBasicMaterial)o.castShadow=true;});
-  office.add(g);
-  return g;
-};
-serverRack(1.7,-7.6);serverRack(2.8,-7.6);serverRack(3.9,-7.6);
-// Lampu ruang server: cyan dingin + hum AC, supaya area gelap terbaca
-const srLight=new THREE.PointLight(0x00BCD4,.55,6,2);
-srLight.position.set(2.8,2.6,-7.4);office.add(srLight);
-const srBulb=new THREE.Mesh(new THREE.BoxGeometry(.5,.06,.14),MB(0xB2EBF2));
-srBulb.position.set(2.8,2.9,-7.4);office.add(srBulb);
-// Kabel bundel di lantai server room
-const cableRun=new THREE.Mesh(new THREE.BoxGeometry(3,.04,.06),M(0x333344));
-cableRun.position.set(2.8,.03,-7.6);office.add(cableRun);
-
-// --- WATER COOLER (kiri) ---
-const wcGrp=new THREE.Group();
-const wcBody=new THREE.Mesh(new THREE.BoxGeometry(.4,1.1,.4),M(0xE0E0E0));
-wcBody.position.y=.55;wcGrp.castShadow=true;wcGrp.add(wcBody);
-const jug=new THREE.Mesh(new THREE.CylinderGeometry(.16,.18,.35,10),
-  new THREE.MeshLambertMaterial({color:0x4FC3F7,transparent:true,opacity:.7}));
-jug.position.y=1.28;wcGrp.add(jug);
-const wcTap=new THREE.Mesh(new THREE.BoxGeometry(.08,.08,.1),M(0x607D8B));
-wcTap.position.set(0,.85,.22);wcGrp.add(wcTap);
-wcGrp.position.set(-11.6,0,0);office.add(wcGrp);
+// --- SERVER ROOM + WATER COOLER ---
+// Builder murni di parts/serverroom.js (diuji unit); di sini tinggal injek konteks.
+// LEDs server room (fase & laju acak per LED) dikumpulkan utk animasi blink.
+const __server=createServerRoom({ THREE, office, M, MB });
+const __leds=__server.leds;
 
 // --- RAK BUKU (dinding kiri belakang) ---
 const shelf=new THREE.Group();
