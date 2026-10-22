@@ -26,6 +26,7 @@ import { MUTED_KEY, tickSoundTimer } from './parts/sound_spec.js';
 import { advanceSimClock, setSimManual, SIM_SEC_PER_MIN as __SIM_SPM, MANUAL_RESUME_MS as __SIM_RESUME } from './parts/sim_clock.js';
 import { createSoundEngine } from './parts/sound_engine.js';
 import { createProjectBoard } from './parts/projectboard.js';
+import { createBookshelf } from './parts/bookshelf.js';
 import { createCafe } from './parts/cafe.js';
 import { createDecor } from './parts/decor.js';
 import { createServerRoom } from './parts/serverroom.js';
@@ -884,23 +885,8 @@ const __server=createServerRoom({ THREE, office, M, MB });
 const __leds=__server.leds;
 
 // --- RAK BUKU (dinding kiri belakang) ---
-const shelf=new THREE.Group();
-const SBX=-11.9, SBZ=-6;
-const frameB=new THREE.Mesh(new THREE.BoxGeometry(.5,2.2,2.4),M(0x5D4037));
-frameB.position.set(SBX,1.1,SBZ);shelf.add(frameB);
-const bookCols=[0xEF5350,0xFFCA28,0x42A5F5,0x66BB6A,0xAB47BC,0xFF7043,0x26C6DA,0xEC407A];
-for(let lvl=0;lvl<4;lvl++){
-  const board=new THREE.Mesh(new THREE.BoxGeometry(.48,.03,2.3),M(0x8D6E63));
-  board.position.set(SBX,.35+lvl*.55,SBZ);shelf.add(board);
-  let bz=SBZ-1.05;
-  while(bz<SBZ+1.0){
-    const bw=.09+rng.r(0,.07);
-    const bk=new THREE.Mesh(new THREE.BoxGeometry(.34,rng.r(.28,.4),bw),M(rng.pick(bookCols)));
-    bk.position.set(SBX+.02,.35+lvl*.55+.17,bz+bw/2);shelf.add(bk);
-    bz+=bw+.015;
-  }
-}
-office.add(shelf);
+// Builder murni di parts/bookshelf.js (diuji unit); di sini tinggal injek konteks.
+const __shelfObj=createBookshelf({ THREE, office, M, rng });
 
 
 // Papan PROYEK NYATA dibantuin.com — kartu dari task engine sungguhan (parts/projectboard.js)
