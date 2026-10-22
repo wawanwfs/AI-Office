@@ -26,6 +26,7 @@ import { MUTED_KEY, tickSoundTimer } from './parts/sound_spec.js';
 import { advanceSimClock, setSimManual, SIM_SEC_PER_MIN as __SIM_SPM, MANUAL_RESUME_MS as __SIM_RESUME } from './parts/sim_clock.js';
 import { createSoundEngine } from './parts/sound_engine.js';
 import { createProjectBoard } from './parts/projectboard.js';
+import { createCafe } from './parts/cafe.js';
 import { createDecor } from './parts/decor.js';
 import { chatPhrases, COLLAB_PAIRS, pickCollab, clampBubbleText, LINE_SEC, autoTalkDelay, autoTalkText } from './parts/dialog.js';
 import { agentIdMap, buildRunningByAgent } from './parts/running_tasks.js';
@@ -34,7 +35,7 @@ import { wallFadeTick } from './parts/wall_fade.js';
 import { updateBubbles as updateBubblesPure } from './parts/bubbles.js';
 import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canvas.js';
 import { drawTvDashboard } from './parts/tv_canvas.js';
-import { drawMenuBoard, drawWelcomeSign } from './parts/sign_canvas.js';
+import { drawWelcomeSign } from './parts/sign_canvas.js';
 import { looksOf } from './parts/character_looks.js';
 import { AGENTS, AGENTS_EXTRA, allAgents as allAgentsFn } from './parts/agents_spec.js';
 import { DESKS } from './parts/desk_layout.js';
@@ -866,57 +867,8 @@ office.add(reception);
 createZones({THREE,office,namesVisible});
 
 // --- CAFÉ / COFFEE BAR (depan kiri) ---
-const cafe=new THREE.Group();
-const CFX=-9.5, CFZ=7.5;
-// Counter L-shape
-const c1=new THREE.Mesh(new THREE.BoxGeometry(3.2,.95,.6),M(0x6D4C41));
-c1.position.set(CFX,.475,CFZ);c1.castShadow=true;cafe.add(c1);
-const c2=new THREE.Mesh(new THREE.BoxGeometry(.6,.95,1.6),M(0x6D4C41));
-c2.position.set(CFX+1.6,.475,CFZ-1);c2.castShadow=true;cafe.add(c2);
-// Countertop
-const ct1=new THREE.Mesh(new THREE.BoxGeometry(3.4,.05,.75),M(0xFFECB3));
-ct1.position.set(CFX,.975,CFZ);cafe.add(ct1);
-const ct2=new THREE.Mesh(new THREE.BoxGeometry(.75,.05,1.75),M(0xFFECB3));
-ct2.position.set(CFX+1.6,.975,CFZ-1);cafe.add(ct2);
-// Espresso machine
-const em=new THREE.Mesh(new THREE.BoxGeometry(.5,.35,.35),M(0x263238));
-em.position.set(CFX-.8,1.17,CFZ-.05);cafe.add(em);
-const emG=new THREE.Mesh(new THREE.BoxGeometry(.1,.08,.02),MB(0x10E5A0));
-emG.position.set(CFX-.8,1.1,CFZ+.13);cafe.add(emG);
-// Kettle + cups
-const kt=new THREE.Mesh(new THREE.CylinderGeometry(.09,.12,.18,10),M(0x90A4AE));
-kt.position.set(CFX-.1,1.09,CFZ);cafe.add(kt);
-for(let i=0;i<3;i++){
-  const cup=new THREE.Mesh(new THREE.CylinderGeometry(.04,.035,.06,8),M(i===0?0xEF5350:0xFAFAFA));
-  cup.position.set(CFX+.5+i*.22,1.03,CFZ+.15);cafe.add(cup);
-}
-// Menu board above counter
-const mbc=document.createElement('canvas');mbc.width=256;mbc.height=140;
-const mx=mbc.getContext('2d');
-drawMenuBoard(mx);
-const mbt=new THREE.CanvasTexture(mbc);
-const mb=new THREE.Mesh(new THREE.PlaneGeometry(1.7,.95),new THREE.MeshBasicMaterial({map:mbt}));
-mb.position.set(CFX,2.3,CFZ+.35);cafe.add(mb);
-const mbB=new THREE.Mesh(new THREE.BoxGeometry(1.8,1.05,.04),M(0x2A2A2A));
-mbB.position.set(CFX,2.3,CFZ+.32);cafe.add(mbB);
-// Bar stools (oranye, 4 buah di depan counter)
-[[-1.1],[-.35],[.4],[1.15]].forEach(([ox])=>{
-  const st=new THREE.Group();
-  const seat=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.06,12),M(0xFB8C00));
-  seat.position.y=.62;st.add(seat);
-  const pole=new THREE.Mesh(new THREE.CylinderGeometry(.03,.03,.6,8),M(0x555555));
-  pole.position.y=.3;st.add(pole);
-  const base=new THREE.Mesh(new THREE.CylinderGeometry(.16,.16,.03,12),M(0x555555));
-  base.position.y=.015;st.add(base);
-  st.position.set(CFX+ox,0,CFZ+1);st.castShadow=true;
-  cafe.add(st);
-});
-// Coolbox / snack fridge
-const fr=new THREE.Mesh(new THREE.BoxGeometry(.55,1.1,.5),M(0xECEFF1));
-fr.position.set(CFX+2.5,.55,CFZ-.2);fr.castShadow=true;cafe.add(fr);
-const frG=new THREE.Mesh(new THREE.BoxGeometry(.4,.5,.02),MB(0x4FC3F7));
-frG.position.set(CFX+2.5,.72,CFZ+.06);cafe.add(frG);
-office.add(cafe);
+// Builder murni di parts/cafe.js (diuji unit); di sini tinggal injek konteks.
+createCafe({ THREE, office, M, MB });
 
 // --- WELCOME & LOUNGE (kanan depan): set sofa lengkap, bukan lantai kosong ---
 // Sofa besar sudah ada di (10.5, 6) menghadap -X. Dilengkapi: karpet lounge,
