@@ -34,13 +34,13 @@ function stubCreateElement() {
   return orig
 }
 
-// Ekstrak blok TV dari OfficeScene.js: dari komentar "TV lounge" sampai "office.add(lounge);"
+// Ekstrak blok TV dari parts/lounge.js: dari "const tvC" sampai "office.add(lounge);"
 function extractTvSource() {
   const here = path.dirname(fileURLToPath(import.meta.url))
-  const src = readFileSync(path.join(here, '..', 'scene', 'OfficeScene.js'), 'utf8')
-  const start = src.indexOf("const tvC=document.createElement('canvas')")
+  const src = readFileSync(path.join(here, '..', 'scene', 'parts', 'lounge.js'), 'utf8')
+  const start = src.indexOf('const tvC = document')
   const end = src.indexOf('office.add(lounge);', start)
-  if (start < 0 || end < 0) throw new Error('blok TV lounge tidak ditemukan di OfficeScene.js')
+  if (start < 0 || end < 0) throw new Error('blok TV lounge tidak ditemukan di parts/lounge.js')
   return src.slice(start, end)
 }
 
