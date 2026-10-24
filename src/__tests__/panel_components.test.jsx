@@ -50,10 +50,9 @@ describe('WfsPanel — buka/tutup & tab', () => {
     expect(chatTab.tabIndex).toBe(0)
     expect(cfgTab.tabIndex).toBe(-1)
     fireEvent.click(cfgTab)
+    await waitFor(() => expect(screen.getByLabelText('API Key').placeholder).toContain('sk-…ab'))  // config termuat asinkron
     expect(screen.getByLabelText('Base URL')).toBeTruthy()
     expect(screen.getByRole('tab', { name: /Model API/ }).tabIndex).toBe(0)
-    // key hint terlihat di placeholder (config dimuat)
-    expect(screen.getByLabelText('API Key').placeholder).toContain('sk-…ab')
   })
 
   it('kirim chat: input kosong → tombol disabled; pesan terkirim muncul di log', async () => {
@@ -109,7 +108,7 @@ describe('WfsPanel — buka/tutup & tab', () => {
     fireEvent.change(screen.getByLabelText('Model'), { target: { value: 'm1' } })
     fireEvent.click(screen.getByRole('button', { name: /Simpan/ }))
     expect(await screen.findByText('✅ Tersimpan')).toBeTruthy()
-    expect(apiMock.mock.calls.some(c => c[0] === 'config/be1' && c[1].method === 'POST' && c[1].body.model === 'm1')).toBe(true)
+    expect(apiMock.mock.calls.some(c => c[0] === 'config/be1' && c[1]?.method === 'POST' && c[1]?.body?.model === 'm1')).toBe(true)
   })
 })
 

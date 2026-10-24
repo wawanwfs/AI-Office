@@ -2251,3 +2251,9 @@
 - Bukti: build OK (exit 0, 35 precache 1547.96 KiB); vitest **1072/1072 (94 file)** (+16); cp dist→~/wfs-hq OK; e2e index & index-Bcm_aD3H.js HTTP 200, 0 "Scene init failed"; systemd wfs-hq & wfs-office active.
 - Git: commit & push siklus ini.
 - Sisa backlog: TIDAK ada lagi file src tanpa unit test ✅; verifikasi subjektif suara (timbre/volume) tetap butuh telinga manusia.
+
+## 2026-10-25 03:15 WIB — Siklus 38: BUGFIX pesan simpan konfigurasi + unit test WfsPanel/CsWidget/SkipLink
+- Pilihan: melengkapi cakupan komponen (WfsPanel, CsWidget, SkipLink belum punya test langsung) → menulis test menemukan BUG PRODUKSI nyata di WfsPanel.saveCfg: pesan hasil simpan ("✅ Tersimpan" / "⚠ gagal") diset SEBELUM `await loadCfg(sel)`, padahal loadCfg selalu `setCfgMsg('')` di awal → pesan langsung terhapus, user TIDAK PERNAH melihat konfirmasi simpan konfigurasi.
+- Perubahan: WfsPanel.jsx — pindahkan `await loadCfg(sel)` sebelum setCfgMsg (1 perubahan urutan, komentar penjelasan). Tambah src/__tests__/panel_components.test.jsx (8 test: buka/tutup panel + aria-modal, roving tabindex tabs, kirim chat sukses, error chat + kirim ulang, simpan konfigurasi tampilkan pesan sukses + POST body benar, CsWidget iframe src VITE_CS_WIDGET_URL + tutup ✕/Escape, SkipLink fokus vis + buka panel + fallback klik pemicu).
+- Bukti: build OK (exit 0); vitest **1080/1080 (95 file)** (+8); cp dist→~/wfs-hq OK; e2e index & index-OpDEaGNz.js HTTP 200, 0 "Scene init failed" (404 API normal); systemd wfs-hq & wfs-office active.
+- Sisa backlog: verifikasi subjektif suara (timbre/volume) tetap butuh telinga manusia.

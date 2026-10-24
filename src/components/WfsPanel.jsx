@@ -109,8 +109,8 @@ export default function WfsPanel() {
       const body = reset ? { base: '-', key: '-', model: '-', prompt: '-' }
         : { base: cfg.base_url, key: cfg.api_key, model: cfg.model, prompt: cfg.instructions }
       const d = await api('config/' + sel.id, { method: 'POST', body })
+      await loadCfg(sel)   // muat ulang cfg dulu (loadCfg mengosongkan pesan), baru tampilkan hasil simpan — tanpa ini pesan sukses/gagal langsung terhapus dan tak pernah terlihat
       setCfgMsg(d.ok ? (reset ? '✅ Direset ke default' : '✅ Tersimpan') : '⚠ ' + (d.error || 'gagal'))
-      await loadCfg(sel)
     } catch (e) { setCfgMsg('⚠ ' + e.message) }
     setCfgBusy(false)
   }
