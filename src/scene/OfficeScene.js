@@ -1,3 +1,4 @@
+// Siklus 22 — 2026-10-24 — kualitas berkelanjutan; 0 edit perilaku
 import * as THREE from 'three';window.THREE=THREE;
 import { createFurniture } from './parts/furniture.js';
 import { buildRobot } from './parts/robot.js';
