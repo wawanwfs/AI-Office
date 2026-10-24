@@ -2239,3 +2239,8 @@
 - Perubahan: walls.js 2 baris (destructuring m.position; toleransi corner 0.01→0.1); tambah src/__tests__/walls_runtime.test.js (10 test: wallDefs 4 sisi, tiang+jendela, skyWinMats 11, pengecualian __keep/papan proyek/lantai, koleksi dekor+clone material transparan, __wallFade/__wallState, fade depan, PointLight sorot, __corners 4 tiang, collect idempoten).
 - Bukti: build OK (exit 0, 35 precache); vitest **1046/1046 (91 file)** (+10); cp dist→~/wfs-hq OK; e2e index & index-Bcm_aD3H.js HTTP 200 tanpa "Scene init failed"; systemd wfs-hq & wfs-office active.
 - Sisa backlog: structure.js satu-satunya part modul tanpa test; verifikasi subjektif suara tetap manual.
+## 2026-10-25 02:20 WIB — Siklus 36: unit test structure.js (cakupan parts 100%)
+- Pilihan backlog: structure.js satu-satunya part modul tanpa test → kini teruji; semua part modul src/scene/parts punya test.
+- Perubahan: tambah src/__tests__/structure_runtime.test.js (10 test: refs {fl,cp,skyTex,glassSheen}, 4 strip AO kontak rotasi flat/renderOrder/transparan, lebar AO dinding kanan 1.25 vs 0.95 + offset 0.42, lantai parket repeat (4,3) wrap Repeat + receiveShadow, karpet 10×.02×8 di (-3,0.01,0), wainscot 4 band+4 trim posisi interior ±0.06, 4 glass edge frame sudut tepat, total 18 mesh, painters dipanggil 4/1/1/1, idempotensi build). 0 edit src produksi.
+- Bukti: build OK (exit 0, 35 precache 1547.96 KiB); vitest **1056/1056 (92 file)** (+10); cp dist→~/wfs-hq OK; e2e index & index-Bcm_aD3H.js HTTP 200, 0 "Scene init failed"; systemd wfs-hq & wfs-office active.
+- Sisa backlog: cakupan part modul 100% ✅; verifikasi subjektif suara (timbre/volume) tetap butuh telinga manusia.
