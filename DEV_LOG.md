@@ -2221,3 +2221,9 @@
 - Bukti: build OK (exit 0, 35 precache 1547.95 KiB); vitest 1026/1026 (89 file); cp dist→~/wfs-hq OK; e2e 0 "Scene init failed"; systemd wfs-hq & wfs-office active.
 - Git: commit & push siklus ini.
 - Sisa backlog: verifikasi suara subjektif (timbre/volume) oleh telinga manusia tetap terbuka.
+## 2026-10-25 01:15 WIB — Siklus 33: perbaiki e2e_err.py (aset hardcoded → resolusi dinamis)
+- Pilihan backlog: e2e_err.py masih mengecek nama aset lama hardcoded (assets/index-0f9EY0Dc.js) → selalu WARNING 404 palsu padahal situs sehat. Kini aset index di-resolve dari HTML (regex assets/index-*.js), jadi tahan pergantian hash build.
+- Perubahan: skrip e2e scratch (bukan kode produksi repo); 0 edit src.
+- Bukti: build OK (exit 0); vitest 1026/1026 (89 file); cp dist→~/wfs-hq OK; e2e kini: index 200 + assets/index-LCdzmmkG.js 200 (tanpa WARNING aset); 404 API :8787 normal; systemd wfs-hq & wfs-office active.
+- Git: hanya DEV_LOG → commit ringan.
+- Sisa backlog: verifikasi suara subjektif (timbre/volume) oleh telinga manusia tetap terbuka.
