@@ -138,13 +138,20 @@ describe('bubbles: updateBubbles', () => {
     expect(b.sprite.material.opacity).toBeGreaterThan(0);
   });
 
-  it('anchor mengikuti posisi pembicara (x/z dari anchor)', () => {
+  it('anchor mengikuti posisi pembicara secara mulus (mendekati, bukan snap)', () => {
     const b = mk({ x: 5, z: 7, y: 2.6 });
+    // spawn di posisi anchor → tidak ada lompatan frame pertama
+    b.sprite.position.x = 5; b.sprite.position.z = 7; b.sprite.position.y = 2.6 + 1.35;
     updateBubbles([b], 0.1, { remove: () => {} });
     expect(b.sprite.position.x).toBe(5);
     expect(b.sprite.position.z).toBe(7);
-    // y = anchor.y + 1.35 + (3 - life) * .10
+    // y = base ter-damping + (3 - life) * .10 (drift float-up tetap eksak)
     expect(b.sprite.position.y).toBeCloseTo(2.6 + 1.35 + (3 - 3.4) * 0.10);
+    // anchor berpindah jauh → bubble mendekat bertahap, bukan teleport
+    b.anchor = { x: 50, z: 70, y: 2.6 };
+    updateBubbles([b], 0.1, { remove: () => {} });
+    expect(b.sprite.position.x).toBeGreaterThan(5);
+    expect(b.sprite.position.x).toBeLessThan(50);
   });
 
   it('tanpa anchor: float up dari startY', () => {

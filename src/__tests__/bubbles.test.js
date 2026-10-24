@@ -12,17 +12,31 @@ describe('updateBubbles', () => {
     expect(b.life).toBeCloseTo(3.0);
   });
 
-  it('bubble dengan anchor mengikuti posisi x/z pembicara', () => {
+  it('bubble dengan anchor MENDEKATI posisi pembicara secara mulus (bukan snap)', () => {
     const b = mkBubble({ anchor: { x: 5, z: -3, y: 2.6 } });
+    // spawn tepat di anchor: frame pertama TETAP di posisi itu (tanpa lompatan)
+    b.sprite.position.x = 5; b.sprite.position.z = -3; b.sprite.position.y = 2.6 + 1.35;
     updateBubbles([b], 0, { remove: vi.fn() });
     expect(b.sprite.position.x).toBe(5);
     expect(b.sprite.position.z).toBe(-3);
     expect(b.sprite.position.y).toBeCloseTo(2.6 + 1.35 + (3 - 3.5) * .10);
+    // anchor pindah → bubble mendekat bertahap, tidak teleport
+    const far = mkBubble({ anchor: { x: 50, z: 50, y: 2.6 } });
+    far.sprite.position.x = 0; far.sprite.position.z = 0; far.sprite.position.y = 3.95;
+    updateBubbles([far], 0.05, { remove: vi.fn() });
+    expect(far.sprite.position.x).toBeGreaterThan(0);
+    expect(far.sprite.position.x).toBeLessThan(50); // belum sampai — gerak mulus
+    // konvergen: setelah banyak frame kecil, sampai di anchor
+    for (let f = 0; f < 200; f++) updateBubbles([far], 0.05, { remove: vi.fn() });
+    expect(Math.abs(far.sprite.position.x - 50)).toBeLessThan(0.1);
   });
 
-  it('anchor default y=2.0 bila tidak ada anchor.y', () => {
+  it('anchor default y=2.0 bila tidak ada anchor.y (mendekati bertahap)', () => {
     const b = mkBubble({ anchor: { x: 1, z: 1 } });
+    b.sprite.position.x = 1; b.sprite.position.z = 1; b.sprite.position.y = 2.0 + 1.35;
     updateBubbles([b], 0, { remove: vi.fn() });
+    expect(b.sprite.position.x).toBe(1);
+    expect(b.sprite.position.z).toBe(1);
     expect(b.sprite.position.y).toBeCloseTo(2.0 + 1.35 + (3 - 3.5) * .10);
   });
 

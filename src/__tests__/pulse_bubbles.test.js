@@ -82,13 +82,20 @@ describe('updateBubbles (throttle via akumulasi dt)', () => {
     expect(bs.length).toBe(0);
     expect(c.removed.length).toBe(1);
   });
-  it('posisi mengikuti anchor & opacity fade sesuai rumus lama saat tick', () => {
+  it('posisi mendekati anchor secara mulus; fade tetap rumus lama saat tick', () => {
     const bs = [mk()];
     bs[0].anchor = { x: 5, z: 7, y: 2.6 };
+    // spawn tepat di anchor → frame pertama tetap di tempat (tanpa lompatan)
+    bs[0].sprite.position.x = 5; bs[0].sprite.position.z = 7; bs[0].sprite.position.y = 2.6 + 1.35;
     updateBubbles(bs, 0.1, {});
     const b = bs[0];
     expect(b.sprite.position.x).toBe(5);
     expect(b.sprite.position.z).toBe(7);
     expect(b.sprite.position.y).toBeCloseTo(2.6 + 1.35 + (3 - b.life) * .10);
+    // anchor lari → mendekat bertahap (bukan teleport)
+    b.anchor = { x: 100, z: 100, y: 2.6 };
+    updateBubbles(bs, 0.05, {});
+    expect(b.sprite.position.x).toBeGreaterThan(5);
+    expect(b.sprite.position.x).toBeLessThan(100);
   });
 });

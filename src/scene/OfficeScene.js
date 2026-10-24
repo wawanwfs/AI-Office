@@ -1155,12 +1155,20 @@ function animate(){
     sweepClampRounds(pts, { height: container.clientHeight, width: container.clientWidth });
     // konversi offset piksel ke satuan dunia (~ jarak/tinggi layar) via worldPerPx
     // (murni, parts/label_overlap.js); penerapan clamp offset via labelWorldOffset.
+    // OFFSET DI-DAMPING (bukan snap): relayout hanya tiap kelipatan frame; offset
+    // baru yang jauh berbeda dari sebelumnya membuat label terlihat melompat.
+    // Approach eksponensial (rate 12/s: konvergen <0.3 dtk, gerak halus) —
+    // saat relayout pertama (antiY/antiX belum ada) langsung pakai nilai penuh.
     const wpp = worldPerPx(camera.position.distanceTo(tgt), camera.fov, container.clientHeight);
+    const LBL_SMOOTH=1-Math.exp(-12*(deltaFrame||0.016));
     pts.forEach(p=>{
       if(p.zone){if(p.zt){const {dyz,dxz}=labelWorldOffset(p,wpp); p.zt.position.y=p.baseY+dyz; p.zt.position.x=p.baseX+dxz; accumulateZoneAnti(p.zt,dyz,dxz);} return;} // BUBBLE tidak disentuh anti-overlap (dianimasikan updateBubbles — menyentuhnya bikin loncat)
       const {dy,dx}=labelWorldOffset(p,wpp);
-      p.a.label.position.y=p.baseY+dy; p.a.label.position.x=p.baseX+dx;
-      p.a.label.userData.antiY=dy; p.a.label.userData.antiX=dx; // utk base frame berikutnya
+      const u=p.a.label.userData;
+      const prevY=(u.antiY===undefined)?dy:u.antiY+(dy-u.antiY)*LBL_SMOOTH;
+      const prevX=(u.antiX===undefined)?dx:u.antiX+(dx-u.antiX)*LBL_SMOOTH;
+      p.a.label.position.y=p.baseY+prevY; p.a.label.position.x=p.baseX+prevX;
+      u.antiY=prevY; u.antiX=prevX; // utk base frame berikutnya (nilai ter-damping)
     });
   } else {
     // bila nama disembunyikan lalu dimunculkan lagi, posisi direset oleh state (sitting/meeting/walker) — tak ada sisa offset

@@ -2201,3 +2201,9 @@
 - Bukti: vitest 1025/1025 (89 file, 25.1s); e2e_err.py 0 'Scene init failed' (404 API normal); HTTP 200 :9503, 307 redirect gateway :8787; systemd wfs-hq & wfs-office active; endpoint gateway di server.py benar (127.0.0.1:8787/api/).
 - Git: hanya DEV_LOG → commit ringan.
 - Sisa backlog: verifikasi suara subjektif (timbre/volume) oleh telinga manusia tetap terbuka.
+## 2026-10-25 00:35 WIB — Siklus 30: selesaikan smoothing bubble (commit perubahan tertunda)
+- Pilihan: diff tertunda dari siklus terputus — bubble obrolan kini mengikuti pembicara secara mulus (eksponensial k=1-exp(-10·dt)) pada x/z & baseline y; drift float-up tetap langsung (tidak lag). Menghilangkan "lompatan" bubble saat agen duduk↔jalan.
+- Perubahan: bubbles.js + OfficeScene.js + 3 test file (59 ins/12 del); hook debug utuh.
+- Bukti: build OK (26s, exit 0); vitest 1026/1026 (89 file); cp dist→~/wfs-hq OK; asset served index-DZxarWeZ.js HTTP 200; e2e 0 'Scene init failed' (404 = hash lama di skrip e2e, HTML menunjuk asset baru yang 200); systemd wfs-hq & wfs-office active.
+- Git: commit & push siklus ini.
+- Sisa backlog: verifikasi suara subjektif (timbre/volume) oleh telinga manusia tetap terbuka.
