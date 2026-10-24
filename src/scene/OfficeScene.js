@@ -783,7 +783,12 @@ const wtc=document.createElement('canvas');wtc.width=1024;wtc.height=200;
 const wtx=wtc.getContext('2d');
 drawWallTitle(wtx);
 const wtt=new THREE.CanvasTexture(wtc);
-const wallTitle=new THREE.Mesh(new THREE.PlaneGeometry(7,1.37),new THREE.MeshBasicMaterial({map:wtt,transparent:true})); // eslint-disable-line no-unused-vars -- kandidat pajangan dinding
+const wallTitle=new THREE.Mesh(new THREE.PlaneGeometry(4.6,0.9),new THREE.MeshBasicMaterial({map:wtt,transparent:true}));
+// Dipasang di dinding KIRI (x=-12.3, menghadap +X) — spot kosong antara pilar z=-9.5
+// dan jendela z=-3.4 (lebar 4.6 → z -8.8..-4.2, aman dari keduanya). Sebelumnya mesh
+// ini dibuat tapi TIDAK PERNAH di-add ke scene (kode mati).
+wallTitle.position.set(-12.29,2.9,-6.5);wallTitle.rotation.y=Math.PI/2;wallTitle.renderOrder=5;
+office.add(wallTitle);
 
 
 

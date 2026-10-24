@@ -2308,6 +2308,12 @@
 - Verifikasi lanjutan e2e_zonepos (3 run kamera default): kamera default meng-orbit auto-rotate (theta berubah tiap load), sehingga hasil per run bervariasi — RUN1 menangkap WELCOME & LOUNGE behind=True di belakang kamera (sudut orbit ekstrem sesaat; guard memang melewati v.z>1 sesuai desain), run lain semua zona on-screen kecuali fluktuasi ABOVE_TOP_MARGIN saat label di dekat margin atas (koreksi guard berjalan per frame). Tidak ada OFFSCREEN permanen.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
 
+## 2026-10-25 07:55 WIB — Siklus 48: PASANG judul dinding WFS PROJECT (mesh yatim)
+- Temuan: di OfficeScene.js, mesh `wallTitle` (canvas 1024×200 "WFS" putih + "PROJECT" amber via drawWallTitle) dibuat + texture-nya digambar, tapi TIDAK PERNAH di-add ke scene — kode mati sejak diekstrak (penanda eslint "kandidat pajangan dinding"). drawWallTitle sendiri teruji 5 test di logo_canvas.test.js tapi hasilnya tak pernah terlihat di scene.
+- Perubahan: pasang di dinding KIRI (x=-12.29, menghadap +X, y=2.9, z=-6.5, lebar 4.6 unit → z -8.8..-4.2, spot kosong antara pilar z=-9.5 dan jendela z=-3.4); renderOrder 5, transparan. Ukuran plane 7×1.37 → 4.6×0.9 sesuai proporsi spot. 0 file lain berubah.
+- Bukti: build OK (exit 0); vitest **1118/1118 (98 file)** tetap hijau; eslint 0 error; cp dist→~/wfs-hq OK; e2e_err 200 (index & index-83ZejgxP.js, 0 "Scene init failed", 404 API :8787 normal); e2e_shot: agents=14, __wallState true, __dbg {t:472, ph:night}, screenshot 702.554 bytes → E2E_VISUAL OK (shot.sh scratch memang sudah tidak ada; harness permanen scripts/e2e_shot.py yang dipakai).
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia); opsi kosmetik: bawa NAMES toggle mengembalikan zoneBase.
+
 ## 2026-10-25 07:45 WIB — Siklus 47: FIX bug tanda atas/bawah zoneViewportGuard (NDC y-up) + harness deterministik e2e_zone_multi.py
 - Temuan (harness baru, BUKAN tebakan): e2e_zonepos.py kamera-nya acak tiap run (auto-rotate) → dibuat scripts/e2e_zone_multi.py: kunci localStorage wfs_autorot=0 via addScriptToEvaluateOnNewDocument + set sudut kamera eksplisit via window.__cam.sph; ukur proyeksi zona di 3 preset (iso/front/top). HASIL: FAIL — CAFÉ ABOVE_TOP_MARGIN (iso & top), DEV DESK idem (front).
 - Akar masalah: zoneViewportGuard memakai fy = v.y*H/2 (NDC y-UP, positif=atas) tapi kondisi bocor atas/bawah ditulis dgn semantik y-DOWN → TERtukar; zona dekat tepi atas TAK PERNAH terkoreksi (menjelaskan ABOVE_TOP_MARGIN yang selama ini dianggap fluktuasi kamera).
