@@ -39,8 +39,8 @@ describe('zoneViewportGuard', () => {
     expect(zoneViewportGuard([zt], DEPS(cam))).toBe(0);
   });
 
-  it('zona bocor atas → didorong turun + accumulate terpanggil', () => {
-    // NDC y=1 → fy=H/2=384 > topLim 768/2−140−48=196 → koreksi turun
+  it('zona bocor atas (NDC y=+1, y-up) → didorong TURUN + accumulate negatif', () => {
+    // NDC y=1 → fy=+H/2=384 > topLim=768/2−140−48=196 → koreksi turun
     const cam = mkCamera(() => ({ x: 0, y: 1, z: 0.5 }));
     const zt = mkZone(0, 1);
     zt.position.clone = () => ({ project: () => ({ x: 0, y: 1, z: 0.5 }) });
@@ -48,18 +48,29 @@ describe('zoneViewportGuard', () => {
     const n = zoneViewportGuard([zt], DEPS(cam));
     expect(n).toBe(1);
     expect(zt.position.y).toBeLessThan(before);
-    expect(zt.userData.antiY).toBeLessThan(0); // koreksi turun = negatif? (sign konsisten dgn blok lama: corr negatif → y turun)
+    expect(zt.userData.antiY).toBeLessThan(0); // turun di dunia = koreksi negatif
   });
 
-  it('zona bocor bawah → didorong naik', () => {
-    // NDC y=−1 → fy=−384, botLim=384−110=274; fy+zh/2 (zh=100*1/40*1.25≈3.1) < 274 → TIDAK melanggar.
-    // Gunakan y=−0.28: fy=−107.5; masih > −196-… tidak melanggar. Uji kanan saja untuk horizontal:
+  it('zona bocor bawah (NDC y=−1, y-up) → didorong NAIK + accumulate positif', () => {
+    // fy=−384; fy−zh/2 < −botLim (botLim=384−110=274) → melanggar tepi bawah
+    const cam = mkCamera(() => ({ x: 0, y: -1, z: 0.5 }));
+    const zt = mkZone(0, -1);
+    zt.position.clone = () => ({ project: () => ({ x: 0, y: -1, z: 0.5 }) });
+    const before = zt.position.y;
+    const n = zoneViewportGuard([zt], DEPS(cam));
+    expect(n).toBe(1);
+    expect(zt.position.y).toBeGreaterThan(before);
+    expect(zt.userData.antiY).toBeGreaterThan(0);
+  });
+
+  it('zona bocor kanan → ditarik ke kiri', () => {
+    // NDC x=+0.999 → fx=682 > W/2−6=677 − zw/2 → tarik kiri
     const cam = mkCamera(() => ({ x: 0.999, y: 0, z: 0.5 }));
     const zt = mkZone(0.999, 0);
     zt.position.clone = () => ({ project: () => ({ x: 0.999, y: 0, z: 0.5 }) });
     const bx = zt.position.x;
     zoneViewportGuard([zt], DEPS(cam));
-    expect(zt.position.x).toBeLessThan(bx); // tarik ke kiri
+    expect(zt.position.x).toBeLessThan(bx);
   });
 
   it('zona di belakang kamera (v.z>1) → dilewati', () => {

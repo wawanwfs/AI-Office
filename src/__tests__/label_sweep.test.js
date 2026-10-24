@@ -16,7 +16,7 @@ describe('konstanta historis sweep+clamp', () => {
     expect(SWEEP_GAP).toBe(36);
     expect(VIEW_TOP_MARGIN).toBe(140);
     expect(VIEW_BOT_MARGIN).toBe(110);
-    expect(ZONE_TOP_EXTRA).toBe(48);
+    expect(ZONE_TOP_EXTRA).toBe(130); // 48→130 siklus 47: ruang tarik-balik anti-overlap (terukur e2e_zone_multi)
     expect(PAD_X_ZONE).toBe(6);
     expect(PAD_X_AGENT).toBe(2);
     expect(MAX_ROUNDS).toBe(3);
@@ -91,11 +91,11 @@ describe('clampViewport', () => {
   });
 
   it('zona punya margin atas ekstra ZONE_TOP_EXTRA (agent lebih longgar)', () => {
-    // y=-282: zona fy-30 = -312 < -308 melanggar -> tepi bawah zona di -308;
-    // agent fy-25 = -307 < -260 juga melanggar (threshold agent kurang ketat) -> tepi di -260
+    // ZONE_TOP_EXTRA=130 → batas zona = -(H2-140+130) = -390; y-282 (tepi -312) TIDAK melanggar.
+    // Agent (tanpa extra): batas -(H2-140) = -260 → fy-25=-307 melanggar → tepi di -260.
     const z = ZN(300, -282); const a = AG(300, -282);
     expect(clampViewport([z, a], OPTS)).toBe(true);
-    expect(z.y + z.offY - 30).toBeCloseTo(-308);
+    expect(z.y + z.offY - 30).toBeCloseTo(-312); // zona tak digeser (masih dalam margin ekstra)
     expect(a.y + a.offY - 25).toBeCloseTo(-260);
   });
 

@@ -21,7 +21,7 @@ export const SWEEP_GAP = 36;
 export const VIEW_TOP_MARGIN = 140;
 export const VIEW_BOT_MARGIN = 110;
 // Label zona paling sering bocor ke lane ticker — margin ekstra lebih besar
-export const ZONE_TOP_EXTRA = 48;
+export const ZONE_TOP_EXTRA = 130; // 48→130: anti-overlap menarik balik ±60px setelah guard (terukur e2e_zone_multi), sisakan margin HUD 140px
 export const PAD_X_ZONE = 6, PAD_X_AGENT = 2;
 export const MAX_ROUNDS = 3;
 
@@ -101,10 +101,13 @@ export function zoneViewportGuard(zoneLabels, deps) {
     const v = zt.position.clone().project(camera);
     if (v.z > 1) return;
     const fy = v.y * H / 2, fx = v.x * W / 2;
+    // NDC y-UP: atas layar = fy positif (maks H/2), bawah = negatif.
+    // BUG lama: kondisi atas/bawah memakai semantik y-down sehingga TERtukar —
+    // label dekat atas layar (CAFÉ @ iso/top, DEV DESK @ front) tak pernah terkoreksi.
     const topLim = H / 2 - VIEW_TOP_MARGIN - ZONE_TOP_EXTRA, botLim = H / 2 - VIEW_BOT_MARGIN;
     let corr = 0;
-    if (fy + zh / 2 > botLim) corr = botLim - zh / 2 - fy;        // bocor bawah → naik
-    else if (fy - zh / 2 < -topLim) corr = -topLim + zh / 2 - fy; // bocor atas → turun
+    if (fy + zh / 2 > topLim) corr = topLim - zh / 2 - fy;          // bocor atas → turun (corr negatif)
+    else if (fy - zh / 2 < -botLim) corr = -botLim + zh / 2 - fy;   // bocor bawah → naik (corr positif)
     let cx = 0;
     if (fx + zw / 2 > W / 2 - PAD_X_ZONE) cx = W / 2 - PAD_X_ZONE - zw / 2 - fx;
     else if (fx - zw / 2 < -(W / 2 - PAD_X_ZONE)) cx = -(W / 2 - PAD_X_ZONE) + zw / 2 - fx;
