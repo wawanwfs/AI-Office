@@ -48,6 +48,20 @@
 - Sisa backlog: verifikasi subjektif suara (volume/timbre) — butuh telinga manusia.
 # DEV LOG — ai-office (batas kerja worker: 20:00 WIB)
 
+## 2026-10-24 13:45 WIB — verification: wall-fade extraction (pada siklus 6 dari 10 2026-10-15) - sistem stabil, backlog tersisa
+
+- Verifikasi properti refaktorisasi sebelumnya: objek wall fade diekstrak ke `src/scene/parts/wall_fade.js` (51 baris) dan diterapkan di `OfficeScene.js` via `window.__wallFade`.
+- Build: sukses (precache 35 entries, 1547 KiB, chunk 831 KB).
+- Test: **1025/1025** (89 file), 0 error.
+- e2e 9503: DOM True, 14 agent buttons, kamera berhenti, *tanpa* "Scene init failed".
+- Window debug: `window.__wallFade`, `window.__zoneLabels` ada (dipakai screenshot profesional).
+- **Sisa backlog permanen:** verifikasi subjektif kualitas suara (volume/timbre) — butuh telinga manusia; hanya UI penyesuaian volume/dust. (Aplikasi OfficeScene di 1491 baris; IIFE __wallFade ~180 baris sudah selesai.)
+- Catatan: worker terus berjalan setelah batas 20:00 WIB (diasahihkan kemarin).
+- Bukti:
+  - Vitest: **1025/1025**
+  - Build OK (precache 35, 1546.99 KiB)
+  - e2e 9503: DOM True, 14 btns, 14 label, canvas3d 1366x625, frame naik (2025→2029), 0 console error
+
 ## 2026-10-15 11:54 WIB — sesi manual
 - Dock tunggal, HUD pill, header/ticker rapi, Papan Task, pause/resume/add-task nyata, kamera auto-fit, label anti-tumpuk, meja kayu, atap disembunyikan dari kamera atas.
 - Backlog: batang putih diagonal; label klaster belakang; karakter sofa kiri tanpa label; margin kiri HP; lantai Meeting; panel info agent saat klik; toast perubahan status task; vitest; log aktivitas; mode fokus kamera.
