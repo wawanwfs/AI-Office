@@ -89,12 +89,12 @@ describe('createZones — patch lantai & label zona', () => {
     expect(drawCalls.map((d) => d.text)).toEqual(['DEV DESK', 'MEETING', 'WELCOME & LOUNGE', 'CAFÉ', 'SERVER ROOM'])
     expect(drawCalls.every((d) => d.style === '#FFFFFF')).toBe(true)
   })
-  it('sprite: center (.5,1), renderOrder 5, depthTest false, visible ikut namesVisible', async () => {
+  it('sprite: center (.5,1), renderOrder 25, depthTest false, visible ikut namesVisible', async () => {
     const { added } = await build()
     const s = added.filter((o) => o instanceof Sprite)[0]
     expect(s.material.depthTest).toBe(false)
     expect(s.material.transparent).toBe(true)
-    expect(s.renderOrder).toBe(5)
+    expect(s.renderOrder).toBe(25)
     expect(s.visible).toBe(true)
   })
   it('posisi label di tepi depan zona: y=1.15, y_zona = zoneLabelY(z)', async () => {

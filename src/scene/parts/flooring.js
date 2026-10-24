@@ -38,7 +38,7 @@ export function createZones(ctx){
     // label zona ditempatkan di tepi DEPAN zona (bukan tengah) supaya tidak menumpuk
     // name tag agent yang duduk/berdiri di dalam area zona
     const zly=zoneLabelY(z);
-    zl.renderOrder=5;
+    zl.renderOrder=25; // di atas label agent (20) & layar presentasi board (5): label zona tak tertutup
     const zsc=zoneLabelScale(z.label); // label panjang lebih besar
     zl.scale.set(3.4*zsc,.64*zsc,1);
     zl.visible=ctx.namesVisible!==false; // ikut preferensi nama (persist wfs_names)
