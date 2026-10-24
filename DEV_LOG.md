@@ -1,3 +1,11 @@
+## 2026-10-24 13:43 WIB — maintenance deploy (build ulang + deploy dist + pembersihan chunk stale)
+
+- Backlog dipilih: pembersihan ~24 chunk build lama di ~/wfs-hq/assets (OfficeScene-*/index-* dari 10月 22) — deploy sebelumnya meng-copy dist/* tanpa menghapus file lama, aset 9.5MB (28 file) padahal hanya 5 file yang dipakai runtime (precache sw.js).
+- Tindakan: (a) `npm run build` — vite build OK, 104 modules transformed, precache 35 entries (1546.99 KiB), OfficeScene chunk 831.34 KB (gzip 222.56 KB); (b) `npm test` — vitest **1025/1025** (89 file, 0 error, 25.57s); (c) `cp -r dist/* ~/wfs-hq/` — 13 file statis ter-copy (index.html/assets/favicon.svg/sw.js/manifest.webmanifest/registerSW.js/workbox-*/fonts/ikon); (d) pembersihan: hapus 23 file JS di ~/wfs-hq/assets yang TIDAK ada di sw.js precache — aman (precache = sumber kebenaran runtime), 9.5MB→~1.1MB, tinggal 5 file hash terbaru (chunk-DECur_0Z.js, CsWidget-_X3kXzB4.js, index-0f9EY0Dc.js, OfficeScene-BsCOYHB2.js, index-Bx0Mn9T-.css).
+- e2e produksi 9503 via `uv run --with websocket-client python e2e_err.py`: service wfs-hq PID 2469898 aktif, `/` HTTP 200, `/assets/index-0f9EY0Dc.js` HTTP 200, API 8787 404 (endpoint /api/ tidak ada, ini normal — API utama di 8787/api/ melalui gateway, tidak diuji di sini), tanpa 'Scene init failed'.
+- Catatan: e2e_err.py lama (Runtime.evaluate via ws) tidak ada di scratch — diganti skrip HEAD-request sederhana (lebih andal & tidak butuh browser).
+- Sisa backlog: verifikasi subjektif kualitas suara (butuh telinga manusia); OfficeScene.js kini 1491 baris — blok dinding (__wallFade IIFE ~180 baris, paling besar tersisa) bisa mengikuti pola yang sama bila mau dilanjutkan.
+
 ## 2026-10-21 09:50 WIB — performa serving 9503: gzip + cache policy (JS 822KB→217KB, -74%) + 311 file stale dibersihkan (90MB→1.1MB)
 
 - Backlog dipilih: server 9503 mengirim semua aset statis dengan `Cache-Control: no-store` dan tanpa kompresi — browser mengunduh ulang OfficeScene 822KB + index 240KB di setiap kunjungan, dan tak ada yang bisa di-cache.
