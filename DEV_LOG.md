@@ -2214,3 +2214,10 @@
 - Bukti: build OK (exit 0); vitest **1026/1026** (89 file); cp dist→~/wfs-hq OK; e2e 0 "Scene init failed"; systemd wfs-hq & wfs-office active.
 - Git: src bersih → tidak perlu commit baru; commit 97f2754 tetap.
 - Sisa backlog: verifikasi suara subjektif (timbre/volume) oleh telinga manusia tetap terbuka.
+
+## 2026-10-25 00:55 WIB — Siklus 32: fix hook debug window.__perf stale
+- Pilihan backlog: audit runtime menemukan bug nyata — window.__perf hanya di-assign sekali di luar animate(), padahal __perfWin di-reassign tiap frame oleh perfStep; akibatnya window.__perf.fps/downgraded selalu stale (0) bagi penguji/debug.
+- Perubahan: OfficeScene.js 1 baris — window.__perf = __perfWin di dalam animate() setelah perfStep; hook debug kini live (fps, downgraded, shadowLevel akurat real-time).
+- Bukti: build OK (exit 0, 35 precache 1547.95 KiB); vitest 1026/1026 (89 file); cp dist→~/wfs-hq OK; e2e 0 "Scene init failed"; systemd wfs-hq & wfs-office active.
+- Git: commit & push siklus ini.
+- Sisa backlog: verifikasi suara subjektif (timbre/volume) oleh telinga manusia tetap terbuka.

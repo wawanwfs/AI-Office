@@ -1233,6 +1233,7 @@ function animate(){
       needsShadowUpdate: () => { renderer.shadowMap.needsUpdate = true; },
       basePixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
     });
+    window.__perf = __perfWin; // hook debug: ikut reassign tiap frame (fps/downgraded live, tidak stale)
   }
 }
 window.__perf=__perfWin;
