@@ -2227,3 +2227,9 @@
 - Bukti: build OK (exit 0); vitest 1026/1026 (89 file); cp dist→~/wfs-hq OK; e2e kini: index 200 + assets/index-LCdzmmkG.js 200 (tanpa WARNING aset); 404 API :8787 normal; systemd wfs-hq & wfs-office active.
 - Git: hanya DEV_LOG → commit ringan.
 - Sisa backlog: verifikasi suara subjektif (timbre/volume) oleh telinga manusia tetap terbuka.
+
+## 2026-10-25 01:28 WIB — Siklus 34: unit test status_poll.js (bagian poll gateway kini teruji)
+- Pilihan backlog: audit cakupan menemukan 15 part modul tanpa test; status_poll.js (polling badge/wake/alert gabungan — satu fetch per siklus, jalur data gateway penting) dipilih.
+- Perubahan: tambah src/__tests__/status_poll.test.js (10 test: BADGE_COLORS, badgeAssignments + edge null/im tanpa badge, wakeAgentIds, failedAlerts transisi naik/reset, statusPollActions gabungan); 0 edit src produksi.
+- Bukti: build OK (exit 0); vitest **1036/1036 (90 file)** (+10 test); cp dist→~/wfs-hq OK; e2e 0 "Scene init failed" (index & index-LCdzmmkG.js HTTP 200; 404 API :8787 normal); systemd wfs-hq & wfs-office active.
+- Sisa backlog: 14 part modul lain tanpa test (bookshelf, cafe, decor, flooring, furniture, lounge, motion, projectboard, reception, robot, room, serverroom, structure, walls); verifikasi suara subjektif tetap manual.
