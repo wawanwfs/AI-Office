@@ -155,7 +155,7 @@ describe('TeamStats', () => {
     })
     render(<TeamStats />)
     fireEvent.click(screen.getByRole('button', { name: 'Statistik tim' }))
-    const dlg = await screen.findByRole('dialog', { name: 'Statistik tim' })
+    await screen.findByRole('dialog', { name: 'Statistik tim' })
     await waitFor(() => expect(screen.getByText(/Total file dihasilkan/)).toBeTruthy())
     expect(screen.getByText('2')).toBeTruthy() // 2 task selesai
     expect(screen.getByText('#1 Fix UI')).toBeTruthy()
@@ -186,7 +186,7 @@ describe('ProjectPanel', () => {
     }) })))
     render(<ProjectPanel />)
     fireEvent.click(screen.getByRole('button', { name: /Proyek/ }))
-    const dlg = await screen.findByRole('dialog', { name: 'Proyek dibantuin.com' })
+    await screen.findByRole('dialog', { name: 'Proyek dibantuin.com' })
     await waitFor(() => expect(screen.getByText(/20\/23 task selesai \(87%\)/)).toBeTruthy())
     expect(screen.getByRole('progressbar').getAttribute('aria-valuenow')).toBe('87')
     expect(screen.getByText(/Backend online/)).toBeTruthy()

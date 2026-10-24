@@ -33,7 +33,7 @@ describe('zoneViewportGuard', () => {
 
   it('zona dalam margin → tidak dikoreksi (0)', () => {
     // NDC (0,0) → layar pusat, jelas dalam margin
-    const cam = mkCamera(p => ({ x: 0, y: 0, z: 0.5 }));
+    const cam = mkCamera(() => ({ x: 0, y: 0, z: 0.5 }));
     const zt = mkZone(0, 0);
     zt.position.clone = () => ({ project: () => ({ x: 0, y: 0, z: 0.5 }) });
     expect(zoneViewportGuard([zt], DEPS(cam))).toBe(0);

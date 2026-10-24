@@ -21,7 +21,7 @@ const agents = [
 ]
 
 beforeEach(() => {
-  apiMock = vi.fn(async (path, opt = {}) => {
+  apiMock = vi.fn(async (path) => {
     if (path === 'agents') return { agents }
     if (path === 'agents/status') return { agents: { be1: { done: 2, running: 1, pending: 0, review: 0, failed: 0 } } }
     if (String(path).startsWith('config/')) return { base: '', model: 'gpt-4o-mini', prompt: '', key_hint: 'sk-…ab' }
@@ -56,7 +56,7 @@ describe('WfsPanel — buka/tutup & tab', () => {
   })
 
   it('kirim chat: input kosong → tombol disabled; pesan terkirim muncul di log', async () => {
-    apiMock = vi.fn(async (path, opt = {}) => {
+    apiMock = vi.fn(async (path) => {
       if (path === 'agents') return { agents }
       if (path === 'agents/status') return { agents: {} }
       if (path === 'chat') return { reply: 'Halo dari AI' }
@@ -76,7 +76,7 @@ describe('WfsPanel — buka/tutup & tab', () => {
   })
 
   it('error chat → pesan alert dengan tombol kirim ulang', async () => {
-    apiMock = vi.fn(async (path, opt = {}) => {
+    apiMock = vi.fn(async (path) => {
       if (path === 'agents') return { agents }
       if (path === 'agents/status') return { agents: {} }
       if (path === 'chat') throw new Error('gateway mati')

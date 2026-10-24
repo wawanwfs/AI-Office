@@ -23,7 +23,7 @@ class Obj {
 class Mesh extends Obj {
   constructor(g, m) { super(); this.geometry = g; this.material = m; this.isMesh = true }
 }
-class PointLight extends Obj { constructor(c, i, d, dec) { super(); this.isPointLight = true } }
+class PointLight extends Obj { constructor() { super(); this.isPointLight = true } }
 const THREE = {
   Mesh, Group: Obj, BoxGeometry: Geom, PlaneGeometry: Geom,
   MeshBasicMaterial: Mat, MeshLambertMaterial: Mat, PointLight,
@@ -117,7 +117,7 @@ describe('createWalls — struktur dinding kantor 3D', () => {
   })
   it('objek menempel dinding belakang/kiri ikut dikoleksi; material di-clone jadi transparan', () => {
     const ctx = makeCtx()
-    const { refs } = build(ctx)
+    build(ctx)
     const poster = new Mesh(new Geom(1, 1, 1), new Mat())
     poster.position.set(2, 1.5, 9.5)
     ctx.office.add(poster)
