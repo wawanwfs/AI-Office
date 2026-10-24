@@ -2244,3 +2244,10 @@
 - Perubahan: tambah src/__tests__/structure_runtime.test.js (10 test: refs {fl,cp,skyTex,glassSheen}, 4 strip AO kontak rotasi flat/renderOrder/transparan, lebar AO dinding kanan 1.25 vs 0.95 + offset 0.42, lantai parket repeat (4,3) wrap Repeat + receiveShadow, karpet 10×.02×8 di (-3,0.01,0), wainscot 4 band+4 trim posisi interior ±0.06, 4 glass edge frame sudut tepat, total 18 mesh, painters dipanggil 4/1/1/1, idempotensi build). 0 edit src produksi.
 - Bukti: build OK (exit 0, 35 precache 1547.96 KiB); vitest **1056/1056 (92 file)** (+10); cp dist→~/wfs-hq OK; e2e index & index-Bcm_aD3H.js HTTP 200, 0 "Scene init failed"; systemd wfs-hq & wfs-office active.
 - Sisa backlog: cakupan part modul 100% ✅; verifikasi subjektif suara (timbre/volume) tetap butuh telinga manusia.
+
+## 2026-10-25 02:45 WIB — Siklus 37: unit test lib/modal.js + lib/dialogA11y.js (cakupan src 100%)
+- Pilihan backlog: audit cakupan penuh menemukan 2 file src tanpa test tersisa (lib/modal.js, lib/dialogA11y.js) → keduanya kini teruji; SELURUH file src/*.js, src/scene/**, src/lib/** kini punya test.
+- Perubahan: tambah src/__tests__/modal.test.js (6 test: anyModalOpen awal, open=true naik, open=false netral, unmount turunkan, rerender true→false via cleanup, dua modal bersamaan) + src/__tests__/dialogA11y.test.js (10 test: open=false tidak pasang listener, aria-modal auto di role=dialog, bukan dialog tidak diset, fokus awal ke focusable pertama, initialFocus menang, Escape→onClose+stopPropagation, Tab shift wrap ke terakhir, Tab wrap ke pertama, Tab maju+preventDefault, cleanup restore aria-modal & fokus ke pemicu). 0 edit kode produksi.
+- Bukti: build OK (exit 0, 35 precache 1547.96 KiB); vitest **1072/1072 (94 file)** (+16); cp dist→~/wfs-hq OK; e2e index & index-Bcm_aD3H.js HTTP 200, 0 "Scene init failed"; systemd wfs-hq & wfs-office active.
+- Git: commit & push siklus ini.
+- Sisa backlog: TIDAK ada lagi file src tanpa unit test ✅; verifikasi subjektif suara (timbre/volume) tetap butuh telinga manusia.
