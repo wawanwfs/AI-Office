@@ -2263,3 +2263,8 @@
 - Perubahan: tambah 3 test di src/__tests__/ui_components.test.jsx (Simpan & Jalankan → 2 POST urut + onDone "dijalankan"; error API 500 → role=alert tampil, modal tetap terbuka, tombol tidak stuck disabled; busy → kedua tombol submit disabled selama fetch). 0 edit kode produksi.
 - Bukti: build OK (exit 0); vitest **1083/1083 (95 file)** (+3); cp dist→~/wfs-hq OK; e2e index & index-OpDEaGNz.js HTTP 200, 0 "Scene init failed" (404 API :8787 normal); systemd wfs-hq & wfs-office active.
 - Sisa backlog: verifikasi subjektif suara (timbre/volume) tetap butuh telinga manusia.
+## 2026-10-25 02:55 WIB — Siklus 40: test integrasi App.jsx (file utama kini teruji)
+- Pilihan: audit cakupan menemukan src/App.jsx (358 baris, orkestrator seluruh UI: status gateway, toast, shortcut keyboard, log aktivitas) satu-satunya file utama tanpa test → kini teruji.
+- Perubahan: tambah src/__tests__/app_integration.test.jsx (8 test, scene 3D di-mock): status gateway "1 jalan · 1 antri" di HUD; gateway offline → "Gateway offline"; perubahan status task antar poll → toast "Task #2 selesai: Fix UI" (via event online yang memicu tick); shortcut 'l' buka/tutup Log Aktivitas; 'h' buka OverlayHelp; 'm' toggle mute tombol dock; judul tab dinamis "0 jalan · 0 antri — WFS Project HQ"; clear log menghapus localStorage wfs_activity. 0 edit kode produksi.
+- Bukti: build OK (exit 0); vitest **1091/1091 (96 file)** (+8); cp dist→~/wfs-hq OK; e2e index & index-OpDEaGNz.js HTTP 200, 0 "Scene init failed" (404 API :8787 normal); systemd wfs-hq & wfs-office active.
+- Sisa backlog: verifikasi subjektif suara (timbre/volume) tetap butuh telinga manusia.
