@@ -7,7 +7,7 @@ import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles } from './parts/effects.js';
-import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, buildAgentPts, buildZonePts, buildBubblePts, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
+import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { perfStep } from './parts/perf_quality.js';
 import { updateFollowGoal, focusStep, autoRotateStep } from './parts/kamera_focus.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
@@ -1126,36 +1126,16 @@ function animate(){
   // seluruh blok label (project camera per label + overlapPass + sweep/clamp) ikut dithrottle:
   // dulu berjalan TIAP frame meski sizeLabels() sudah di-throttle. Label bergerak lambat &
   // offset per-agent tersimpan di userData.antiY/antiX sehingga tetap benar di antara tick.
+  // Pemeriksaan viewport zona TIAP FRAME (murah: 5 zona × project) — dulu masih
+  // di dalam blok throttle relayout (komentar siklus 44 salah klaim), kini diekstrak
+  // zoneViewportGuard dan dipanggil di luar throttle sehingga koreksi tidak tertunda
+  // ±4 frame & jalan juga pada frame % 4 ≠ 0 (mis. frame pertama animate()).
+  zoneViewportGuard(window.__zoneLabels, {
+    camera, clientWidth: container.clientWidth, clientHeight: container.clientHeight,
+    PX_PER_TAN, worldPerPx, accumulate: accumulateZoneAnti,
+  });
   if(namesVisible&&shouldRelayoutLabels(frame)){
     sizeLabels();
-    // Pemeriksaan viewport zona TIAP frame (murah: 5 zona × project) — bila hanya di
-    // dalam blok throttle relayout, perbaikan tertunda ±4 frame dan di fr it=0.25
-    // pengukuran e2e masih menangkap posisi belum dikoreksi.
-    if(window.__zoneLabels){
-      const H=container.clientHeight,W=container.clientWidth;
-      window.__zoneLabels.forEach(zt=>{
-        if(!zt.visible)return;
-        const k=PX_PER_TAN(container.clientHeight,camera.fov);
-        const dz=Math.max(2,camera.position.distanceTo(zt.position));
-        const zh=zt.scale.y*k/dz*1.25, zw=zt.scale.x*k/dz*1.06;
-        const v=zt.position.clone().project(camera);
-        if(v.z>1)return;
-        const fy=v.y*H/2, fx=v.x*W/2;
-        const topLim=H/2-VIEW_TOP_MARGIN-ZONE_TOP_EXTRA, botLim=H/2-VIEW_BOT_MARGIN;
-        let corr=0;
-        if(fy+zh/2>botLim)corr=botLim-zh/2-fy;        // bocor bawah → naik
-        else if(fy-zh/2<-topLim)corr=-topLim+zh/2-fy; // bocor atas → turun
-        let cx=0;
-        const padX=PAD_X_ZONE;
-        if(fx+zw/2>W/2-padX)cx=W/2-padX-zw/2-fx;
-        else if(fx-zw/2<-(W/2-padX))cx=-(W/2-padX)+zw/2-fx;
-        if(corr||cx){
-          const wpp2=worldPerPx(dz,camera.fov,container.clientHeight);
-          zt.position.y+=corr*wpp2; zt.position.x+=cx*wpp2;
-          accumulateZoneAnti(zt,corr*wpp2,cx*wpp2);
-        }
-      });
-    }
     const vis=agentData.filter(a=>a.label.visible);
     // k = px per unit tan(fov/2); proyeksi kamera per label dihitung di sini,
     // pembangunan pts (agent/zona/bubble) via parts/label_overlap.js (murni, diuji unit).

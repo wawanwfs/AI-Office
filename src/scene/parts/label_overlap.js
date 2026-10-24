@@ -81,6 +81,43 @@ export function sweepClampRounds(pts, opts, rounds = MAX_ROUNDS) {
 // offset zona (clamp berbeda: dy −10..52, dx −36..36). Tanpa THREE/canvas.
 
 // worldPerPx: satuan dunia per piksel layar — ∝ jarak kamera & tan(fov/2), / tinggi layar.
+// Guard viewport zona: koreksi posisi label zona yang proyeksinya bocor keluar
+// margin layar. DIPANGGIL TIAP FRAME dari animate() (murah: 5 zona × project) —
+// BUKAN di dalam blok relayout yang di-throttle tiap 4 frame (bug siklus 44:
+// komentar mengaku "tiap frame" tapi bloknya masih di dalam throttle, sehingga
+// koreksi tertunda ±4 frame & frame%4≠0 di awal animate tidak pernah jalan).
+// deps: {camera, clientWidth, clientHeight, PX_PER_TAN, worldPerPx, accumulate} —
+// murni terhadap THREE: proyeksi via camera.project, mutasi via callback accumulate.
+// Return jumlah zona yang dikoreksi (untuk pengukuran/test).
+export function zoneViewportGuard(zoneLabels, deps) {
+  const { camera, clientWidth: W, clientHeight: H } = deps;
+  if (!zoneLabels) return 0;
+  let fixed = 0;
+  zoneLabels.forEach(zt => {
+    if (!zt.visible) return;
+    const k = deps.PX_PER_TAN(H, camera.fov);
+    const dz = Math.max(2, camera.position.distanceTo(zt.position));
+    const zh = zt.scale.y * k / dz * 1.25, zw = zt.scale.x * k / dz * 1.06;
+    const v = zt.position.clone().project(camera);
+    if (v.z > 1) return;
+    const fy = v.y * H / 2, fx = v.x * W / 2;
+    const topLim = H / 2 - VIEW_TOP_MARGIN - ZONE_TOP_EXTRA, botLim = H / 2 - VIEW_BOT_MARGIN;
+    let corr = 0;
+    if (fy + zh / 2 > botLim) corr = botLim - zh / 2 - fy;        // bocor bawah → naik
+    else if (fy - zh / 2 < -topLim) corr = -topLim + zh / 2 - fy; // bocor atas → turun
+    let cx = 0;
+    if (fx + zw / 2 > W / 2 - PAD_X_ZONE) cx = W / 2 - PAD_X_ZONE - zw / 2 - fx;
+    else if (fx - zw / 2 < -(W / 2 - PAD_X_ZONE)) cx = -(W / 2 - PAD_X_ZONE) + zw / 2 - fx;
+    if (corr || cx) {
+      const wpp2 = deps.worldPerPx(dz, camera.fov, H);
+      zt.position.y += corr * wpp2; zt.position.x += cx * wpp2;
+      deps.accumulate(zt, corr * wpp2, cx * wpp2);
+      fixed++;
+    }
+  });
+  return fixed;
+}
+
 export function worldPerPx(dist, fovDeg, clientHeight) {
   return 2 * dist * Math.tan((fovDeg * Math.PI) / 360) / clientHeight;
 }

@@ -2295,3 +2295,8 @@
 - Harness: + scripts/e2e_zonepos.py (ukur posisi layar label zona & bubble via CDP — pengganti tebakan dari screenshot; temuan: klaim visual "CAFÉ terpotong" ternyata salah posisi antar-run kamera, bukan z-order).
 - Commit & push siklus ini.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia); opsi: bawa NAMES toggle mengembalikan zoneBase (perilaku lama, aman).
+## 2026-10-25 06:20 WIB — Siklus 45: FIX viewport guard zona benar-benar TIAP frame (bug siklus 44) + ekstraksi zoneViewportGuard
+- Temuan: komentar siklus 44 mengaku guard viewport zona berjalan "TIAP frame", tapi bloknya masih DI DALAM `if(namesVisible&&shouldRelayoutLabels(frame))` (throttle tiap 4 frame) → koreksi tetap tertunda ±4 frame & tidak jalan saat frame%4≠0 (mis. frame pertama animate).
+- Perubahan: ekstrak logika guard ke fungsi murni `zoneViewportGuard(zoneLabels, deps)` di parts/label_overlap.js (deps: camera, clientWidth/Height, PX_PER_TAN, worldPerPx, accumulate — tanpa THREE langsung, unit-testable); OfficeScene memanggilnya DI LUAR blok throttle, tiap frame; hapus blok inline duplikat. + src/__tests__/zone_viewport_guard.test.js (7 test: null aman, dalam margin 0 koreksi, bocor atas→turun+accumulate, bocor kanan→tarik kiri, v.z>1 dilewati, invisible dilewati, return = jumlah terkoreksi).
+- Bukti: build OK (exit 0); vitest **1117/1117 (98 file)** (+7); cp dist→~/wfs-hq OK; e2e_err 200 (index & index-BTbcoR9G.js, 0 "Scene init failed", 404 API :8787 normal); e2e_shot: agents=14, __wallState true, screenshot 702.669 bytes → E2E_VISUAL OK; e2e_zonepos kamera default: kelima zona dalam viewport (y 178..492), tanpa OFFSCREEN.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
