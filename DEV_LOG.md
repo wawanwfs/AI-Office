@@ -2281,3 +2281,9 @@
 - Analisis visual screenshot (vision): scene render penuh & sehat — 5 zona berlabel, 12+ name tag, balon dialog, dock 17 tombol; temuan minor: label "Andi" menimpa zona SERVER ROOM (karakter ANDI di meja x=0,z=-3 dekat zona server x=2.5,z=-8) — jalur anti-overlap diuji unit & simulasi pair zt/agent terbukti memisahkan (overlap? false); diserahkan ke penilaian visual user. Label "CAFÉ" sebagian tertutup layar presentasi (z-order zona renderOrder=5 < label agent 20) — kosmetik.
 - Perubahan: + scripts/e2e_shot.py (harness baru, 0 edit src). Build OK (exit 0); vitest 1110/1110 (97 file); cp dist→~/wfs-hq; e2e HTTP index & asset 200.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia); opsi kosmetik: renderOrder label zona.
+
+## 2026-10-25 05:01 WIB — Siklus 43: FIX z-order label zona (CAFÉ tidak lagi tertutup layar presentasi)
+- Pilihan: backlog kosmetik siklus 42 — label zona renderOrder=5 tertutup layar presentasi project board → naikkan label zona.
+- Perubahan: src/scene/parts/flooring.js zl.renderOrder 5→25 (di atas label agent 20 & board 5); test flooring_runtime disesuaikan (expect 25).
+- Bukti: build OK (exit 0); vitest 1110/1110 (97 file); cp dist→~/wfs-hq OK; e2e index & index-D2hp3sxn.js HTTP 200, 0 'Scene init failed'; harness scripts/e2e_shot.py: agents=14, __wallState true, __dbg {t:302, phase:night}, screenshot 699.300 bytes → E2E_VISUAL OK; systemd aktif.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
