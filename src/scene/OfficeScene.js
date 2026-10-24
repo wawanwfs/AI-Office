@@ -942,6 +942,14 @@ office.add(pulseRing);
 const chatBubbles=[];
 
 function createBubble(x,y,z,text,color,anchor){
+  // ROTASI BUBBLE (UX fix): batasi bubble aktif agar scene tidak tertutup.
+  // Di layar sempit (viewport < 760px) lebih sedikit lagi yang boleh tampil.
+  const MAX_BUBBLES = (()=>{ try{ return (window.innerWidth||1280) < 760 ? 3 : 6; }catch{ return 6; } })();
+  while(chatBubbles.length >= MAX_BUBBLES){
+    const old=chatBubbles.shift();
+    office.remove(old.sprite);
+    old.sprite.material.dispose();
+  }
   const bc=document.createElement('canvas');
   bc.width=BUBBLE_W;bc.height=BUBBLE_H;
   const bx=bc.getContext('2d');
