@@ -2257,3 +2257,9 @@
 - Perubahan: WfsPanel.jsx — pindahkan `await loadCfg(sel)` sebelum setCfgMsg (1 perubahan urutan, komentar penjelasan). Tambah src/__tests__/panel_components.test.jsx (8 test: buka/tutup panel + aria-modal, roving tabindex tabs, kirim chat sukses, error chat + kirim ulang, simpan konfigurasi tampilkan pesan sukses + POST body benar, CsWidget iframe src VITE_CS_WIDGET_URL + tutup ✕/Escape, SkipLink fokus vis + buka panel + fallback klik pemicu).
 - Bukti: build OK (exit 0); vitest **1080/1080 (95 file)** (+8); cp dist→~/wfs-hq OK; e2e index & index-OpDEaGNz.js HTTP 200, 0 "Scene init failed" (404 API normal); systemd wfs-hq & wfs-office active.
 - Sisa backlog: verifikasi subjektif suara (timbre/volume) tetap butuh telinga manusia.
+
+## 2026-10-25 03:30 WIB — Siklus 39: lengkapi test TaskModal (Simpan & Jalankan, error API, busy)
+- Pilihan: audit cakupan komponen menemukan jalur TaskModal "Simpan & Jalankan" (POST tasks lalu POST tasks/{id}/run) belum teruji — jalur yang membuat task benar-benar jalan; juga state busy & jalur error API.
+- Perubahan: tambah 3 test di src/__tests__/ui_components.test.jsx (Simpan & Jalankan → 2 POST urut + onDone "dijalankan"; error API 500 → role=alert tampil, modal tetap terbuka, tombol tidak stuck disabled; busy → kedua tombol submit disabled selama fetch). 0 edit kode produksi.
+- Bukti: build OK (exit 0); vitest **1083/1083 (95 file)** (+3); cp dist→~/wfs-hq OK; e2e index & index-OpDEaGNz.js HTTP 200, 0 "Scene init failed" (404 API :8787 normal); systemd wfs-hq & wfs-office active.
+- Sisa backlog: verifikasi subjektif suara (timbre/volume) tetap butuh telinga manusia.

@@ -162,6 +162,45 @@ describe('TaskModal', () => {
     expect(f.mock.calls.every(c => !String(c[0]).includes('/run'))).toBe(true)
     expect(onClose).toHaveBeenCalled()
   })
+  it('Simpan & Jalankan → POST tasks lalu POST tasks/{id}/run, onDone "dijalankan"', async () => {
+    const f = vi.fn(async (url) => {
+      if (String(url) === '/wfs-api/tasks') return { ok: true, status: 200, json: async () => ({ task_id: 88 }) }
+      if (String(url) === '/wfs-api/tasks/88/run') return { ok: true, status: 200, json: async () => ({}) }
+      throw new Error('unexpected ' + url)
+    })
+    vi.stubGlobal('fetch', f)
+    const onDone = vi.fn()
+    render(<TaskModal show onClose={() => {}} onDone={onDone} />)
+    fireEvent.change(screen.getByLabelText('Judul'), { target: { value: 'Deploy bot' } })
+    fireEvent.click(screen.getByText('Simpan & Jalankan'))
+    await waitFor(() => expect(onDone).toHaveBeenCalledWith('Task #88 dibuat & dijalankan'))
+    expect(f.mock.calls.length).toBe(2)
+    expect(f.mock.calls[1][0]).toBe('/wfs-api/tasks/88/run')
+    expect(f.mock.calls[1][1].method).toBe('POST')
+  })
+  it('error API saat submit → pesan tampil di elemen alert, modal tetap terbuka', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: false, status: 500, json: async () => ({ detail: 'Server error' }) })))
+    const onClose = vi.fn()
+    render(<TaskModal show onClose={onClose} onDone={() => {}} />)
+    fireEvent.change(screen.getByLabelText('Judul'), { target: { value: 'X' } })
+    fireEvent.click(screen.getByText('Simpan'))
+    await waitFor(() => expect(screen.getByText('Server error')).toBeTruthy())
+    expect(screen.getByRole('alert').textContent).toBe('Server error')
+    expect(onClose).not.toHaveBeenCalled()
+    // form kembali siap: tombol tidak stuck disabled
+    await waitFor(() => expect(screen.getByText('Simpan').disabled).toBe(false))
+  })
+  it('busy: kedua tombol submit disabled selama fetch berjalan', async () => {
+    let resolveApi
+    vi.stubGlobal('fetch', vi.fn(() => new Promise(r => { resolveApi = r })))
+    render(<TaskModal show onClose={() => {}} onDone={() => {}} />)
+    fireEvent.change(screen.getByLabelText('Judul'), { target: { value: 'X' } })
+    fireEvent.click(screen.getByText('Simpan'))
+    expect(screen.getByText('Simpan').disabled).toBe(true)
+    expect(screen.getByText('Simpan & Jalankan').disabled).toBe(true)
+    resolveApi({ ok: true, status: 200, json: async () => ({ task_id: 1 }) })
+    await waitFor(() => expect(screen.getByText('Simpan').disabled).toBe(false))
+  })
 })
 
 describe('OverlayHelp', () => {
