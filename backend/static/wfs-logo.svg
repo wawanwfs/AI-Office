@@ -1,9 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 200" width="640" height="200">
-<defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#FBBF24"/><stop offset="1" stop-color="#F97316"/></linearGradient></defs>
-<rect width="640" height="200" rx="24" fill="#0F1B2E"/>
-<polygon points="100,22 170,62 170,138 100,178 30,138 30,62" fill="url(#g)"/>
-<polygon points="100,38 156,70 156,130 100,162 44,130 44,70" fill="#0F1B2E"/>
-<text x="100" y="128" font-family="Segoe UI,Arial,sans-serif" font-weight="900" font-size="88" text-anchor="middle" fill="url(#g)">W</text>
-<text x="200" y="110" font-family="Segoe UI,Arial,sans-serif" font-weight="900" font-size="96" fill="#fff">WFS</text>
-<text x="204" y="158" font-family="Segoe UI,Arial,sans-serif" font-weight="800" font-size="46" letter-spacing="6" fill="#FBBF24">PROJECT</text>
-</svg>
