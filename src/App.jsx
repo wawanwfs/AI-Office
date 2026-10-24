@@ -24,7 +24,8 @@ export default function App() {
   const sceneRef = useRef(null)
   const toastTimer = useRef(null)
   const prevStatus = useRef(null)
-  const [time, setTime] = useState(660)
+  const [time, setTime] = useState(() => { // mulai dari jam nyata (sinkron dgn scene)
+    const d = new Date(); return d.getHours() * 60 + d.getMinutes(); })
   const [status, setStatus] = useState('Memuat…')
   const [statusKind, setStatusKind] = useState('')
   const [cyberpunk, setCyberpunk] = useState(false)
@@ -148,7 +149,7 @@ export default function App() {
           'be1': 'BUDI', 'be2': 'RIZKY', 'fe1': 'DEWI', 'fe2': 'ANDI',
           'mob1': 'YOGA', 'ux1': 'MAYA', 'devops1': 'TONI', 'qa1': 'RINA',
           'ai-cs': 'BANTUIN AI', 'ai-train': 'TRAINER AI', 'integ': 'INTEGRATOR BOT',
-          'mkt1': 'LINA', 'cs-h': 'SUPPORT HUMAN', 'pm1': 'SARI',
+          'mkt1': 'LINA', 'cs-h': 'SUPPORT', 'pm1': 'SARI',
         }
         window.__wfsSceneSelect = (name) => {
           const s = sceneRef.current

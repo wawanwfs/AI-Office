@@ -19,7 +19,7 @@ export const AGENTS_EXTRA = [
   {name:'SARI',   color:0xF59E0B,hex:'#F59E0B',role:'Project Manager',    screen:'deploy',  hair:0x2D1B0E,shirt:0xB45309,pants:0x1C1917},
   {name:'TRAINER AI', color:0x8B5CF6,hex:'#8B5CF6',role:'AI Knowledge Engineer', screen:'terminal',hair:0x111827,shirt:0x4C1D95,pants:0x1E1B4B},
   {name:'INTEGRATOR BOT', color:0x06B6D4,hex:'#06B6D4',role:'Integration Engineer', screen:'terminal',hair:0x0F172A,shirt:0x155E75,pants:0x083344},
-  {name:'SUPPORT HUMAN', color:0x84CC16,hex:'#84CC16',role:'Customer Success', screen:'docs',   hair:0x3B2412,shirt:0x3F6212,pants:0x1A2E05},
+  {name:'SUPPORT', color:0x84CC16,hex:'#84CC16',role:'Customer Success', screen:'docs',   hair:0x3B2412,shirt:0x3F6212,pants:0x1A2E05},
 ];
 
 export const SCREENS = ['terminal','charts','palette','deploy','map','docs','bugs'];

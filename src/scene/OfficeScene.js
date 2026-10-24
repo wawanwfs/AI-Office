@@ -93,7 +93,7 @@ let namesVisible=(function(){try{return localStorage.getItem('wfs_names')!=='0'}
 const __asp=container.clientWidth/Math.max(1,container.clientHeight);
 const __portrait=__asp<0.8;
 if(__portrait){camera.fov=__asp<0.6?66:54;camera.updateProjectionMatrix();}
-let sph={theta:__portrait?2.35:Math.PI*0.78,phi:__portrait?0.62:1.0,radius:__asp<0.6?46:__asp<0.8?44:__asp<1.2?56:__asp<1.5?47:40};
+let sph={theta:__portrait?2.35:Math.PI*0.78,phi:__portrait?0.62:1.0,radius:__asp<0.6?34:__asp<0.8?36:__asp<1.2?56:__asp<1.5?47:40};
 const tgt=new THREE.Vector3(0,1.8,0);
 // Preferensi auto-rotate: hormati prefers-reduced-motion bila user belum set eksplisit (localStorage wfs_autorot 0/1)
 const __prm=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):null;
@@ -836,12 +836,14 @@ const drawScreen=(s,i)=>{ if(shouldRedrawScreenAt(frame,i)) drawScreenFrame(s,fr
 // slider handled by React
 // clock handled by React
 // status handled by React
-let timeOfDay=660;
+let timeOfDay=(()=>{ // mulai dari jam NYATA saat load (biar jam dinding & HUD terasa hidup),
+  // dibulatkan ke menit; disinkronkan dgn sim clock (1 hari kerja ≈ 12 mnt nyata)
+  const d=new Date();return d.getHours()*60+d.getMinutes();})();
 const lC=mixHex; // eslint-disable-line no-unused-vars -- kompatibilitas nama lama
 const __light=createLighting({THREE,scene,renderer,sun,ambient,agentData,onTimeUpdate,onStatusUpdate,onTick:m=>updateMeeting(m)});
-let __sim={acc:0,last:null,manual:false,lastManualSet:0,time:480};
+let __sim={acc:0,last:null,manual:false,lastManualSet:0,time:timeOfDay};
 function updateTime(min,manual=true){timeOfDay=min;__light.apply(min);__sim.time=min;if(manual){__sim=setSimManual(min,performance.now())}}
-updateTime(660);
+updateTime(timeOfDay);
 
 // ═══════════════════════════════════════════════════
 // DEPLOY TICKER — flip-flop agent deployment status
@@ -1253,7 +1255,11 @@ const onVis=()=>{ pageHidden=document.visibilityState==='hidden';
   __sound.dbg(s=>{window.__audio=s;});
 };
 document.addEventListener('visibilitychange',onVis);
-const onResize=()=>{camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();__vo();renderer.setSize(container.clientWidth,container.clientHeight)};window.addEventListener('resize',onResize);
+const onResize=()=>{camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();__vo();renderer.setSize(container.clientWidth,container.clientHeight);
+  // Responsive radius: portrait butuh kamera lebih dekat agar kantor fit di layar.
+  const asp2=container.clientWidth/Math.max(1,container.clientHeight);
+  if(!focusGoal&&!sph.__saved){sph.radius=asp2<0.6?34:asp2<0.8?36:Math.min(sph.radius,56);updCam();}
+};window.addEventListener('resize',onResize);
 const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius||sph.radius,reset:true};selectedIdx=-1;applySelected();delete sph.__saved;} };window.addEventListener('keydown',onKey);
 
   // Return controls for React UI
@@ -1316,7 +1322,11 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       else if(name==='top'){sph.theta=Math.PI*0.78;sph.phi=0.35}
       else return false;
       if(sph.__saved){sph.theta=sph.__saved.theta;sph.phi=sph.__saved.phi;sph.radius=Math.max(24,Math.min(60,sph.__saved.radius));}
-      else{sph.radius=homeRadius||Math.max(24,Math.min(60,sph.radius));}
+      else{
+        const asp=container.clientWidth/Math.max(1,container.clientHeight);
+        const homeMobile=asp<0.6?34:asp<0.8?36:null;
+        sph.radius=homeRadius||homeMobile||Math.max(24,Math.min(60,sph.radius));
+      }
       updCam(); return true;
     },
     setAudioMuted: (v) => { audioMuted=!!v; __sound.setMuted(audioMuted); saveMuted(); __sound.dbg(s=>{window.__audio=s;}); },

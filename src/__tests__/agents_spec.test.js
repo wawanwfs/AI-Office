@@ -60,7 +60,7 @@ describe('agents_spec — AGENTS utama (8)', () => {
 describe('agents_spec — AGENTS_EXTRA (6)', () => {
   it('tepat 6 agen extra dengan urutan historis', () => {
     expect(AGENTS_EXTRA.map(a => a.name)).toEqual([
-      'RINA','LINA','SARI','TRAINER AI','INTEGRATOR BOT','SUPPORT HUMAN'
+      'RINA','LINA','SARI','TRAINER AI','INTEGRATOR BOT','SUPPORT'
     ]);
   });
 
@@ -71,7 +71,7 @@ describe('agents_spec — AGENTS_EXTRA (6)', () => {
     expect(hexes['SARI']).toBe('#F59E0B');
     expect(hexes['TRAINER AI']).toBe('#8B5CF6');
     expect(hexes['INTEGRATOR BOT']).toBe('#06B6D4');
-    expect(hexes['SUPPORT HUMAN']).toBe('#84CC16');
+    expect(hexes['SUPPORT']).toBe('#84CC16');
   });
 
   it('role historis tiap agen extra', () => {
@@ -81,7 +81,7 @@ describe('agents_spec — AGENTS_EXTRA (6)', () => {
     expect(roles['SARI']).toBe('Project Manager');
     expect(roles['TRAINER AI']).toBe('AI Knowledge Engineer');
     expect(roles['INTEGRATOR BOT']).toBe('Integration Engineer');
-    expect(roles['SUPPORT HUMAN']).toBe('Customer Success');
+    expect(roles['SUPPORT']).toBe('Customer Success');
   });
 
   it('screen tiap agen extra adalah salah satu kosakata SCREENS', () => {
