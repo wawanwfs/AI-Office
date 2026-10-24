@@ -20,15 +20,15 @@ describe('labelWorldOffset: worldPerPx', () => {
 });
 
 describe('labelWorldOffset: agent', () => {
-  it('dy = min(46, offY·wpp·1.2), dx clamp ±16 — rumus lama persis', () => {
+  it('dy tanpa clamp 46, dx clamp ±16 — dx rumus lama persis', () => {
     const p = { offY: 20, offX: -30 };
     const wpp = 0.05;
-    expect(labelWorldOffset(p, wpp).dy).toBeCloseTo(Math.min(46, 20 * 0.05 * 1.2), 12);
+    expect(labelWorldOffset(p, wpp).dy).toBeCloseTo(20 * 0.05 * 1.2, 12);
     expect(labelWorldOffset(p, wpp).dx).toBeCloseTo(Math.max(-16, Math.min(16, -30 * 0.05)), 12);
   });
-  it('cap atas dy 46 dipicu saat offY besar', () => {
+  it('dy tanpa cap atas: konversi proporsional (viewport dijaga clampViewport)', () => {
     const r = labelWorldOffset({ offY: 4000, offX: 0 }, 0.05);
-    expect(r.dy).toBe(46);
+    expect(r.dy).toBe(4000 * 0.05 * 1.2);
   });
   it('clamp dx −16..16', () => {
     expect(labelWorldOffset({ offY: 0, offX: -500 }, 0.05).dx).toBe(-16);
@@ -41,13 +41,10 @@ describe('labelWorldOffset: agent', () => {
 });
 
 describe('labelWorldOffset: zona', () => {
-  it('dyz clamp −10..52, dxz clamp −36..36 — rumus lama persis', () => {
+  it('dyz clamp dihapus: offY konversi proporsional (viewport dijaga clampViewport)', () => {
     const wpp = 0.05;
-    const mid = labelWorldOffset({ zone: true, offY: 20, offX: -30 }, wpp);
-    expect(mid.dyz).toBeCloseTo(20 * wpp * 1.2, 12);
-    expect(mid.dxz).toBeCloseTo(-30 * wpp, 12);
-    expect(labelWorldOffset({ zone: true, offY: 5000, offX: 0 }, wpp).dyz).toBe(52);
-    expect(labelWorldOffset({ zone: true, offY: -5000, offX: 0 }, wpp).dyz).toBe(-10);
+    expect(labelWorldOffset({ zone: true, offY: 5000, offX: 0 }, wpp).dyz).toBeCloseTo(5000 * wpp * 1.2, 12);
+    expect(labelWorldOffset({ zone: true, offY: -5000, offX: 0 }, wpp).dyz).toBeCloseTo(-5000 * wpp * 1.2, 12);
     expect(labelWorldOffset({ zone: true, offY: 0, offX: 5000 }, wpp).dxz).toBe(36);
     expect(labelWorldOffset({ zone: true, offY: 0, offX: -5000 }, wpp).dxz).toBe(-36);
   });

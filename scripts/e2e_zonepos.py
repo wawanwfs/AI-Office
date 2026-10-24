@@ -19,13 +19,14 @@ EXPR = """
  cam.updateMatrixWorld();
  const mwi=cam.matrixWorldInverse.elements, pm=cam.projectionMatrix.elements;
  const out=[];
+ (function(){var bs=(window.__bubbles||window.__chatBubbles||[]);if(bs.forEach){bs.forEach(function(bb){var sp=bb.sprite||bb;var p=sp.position;var c=proj({elements:mwi},p.x,p.y,p.z);var pr=proj({elements:pm},c.x,c.y,c.z);var k=H/(2*Math.tan(cam.fov*Math.PI/360));var dz=cam.position.distanceTo(sp.position);out.push({label:"BUBBLE",x:Math.round((pr.x*0.5+0.5)*W),y:Math.round((-pr.y*0.5+0.5)*H),behind:pr.z>1,sy:sp.scale.y?Math.round(sp.scale.y*k):0,sx:sp.scale.x?Math.round(sp.scale.x*k):0});});}})();
  (window.__zoneLabels||[]).forEach(zt=>{
   const p=zt.position;
   const c=proj({elements:mwi}, p.x, p.y, p.z);
   const pr=proj({elements:pm}, c.x, c.y, c.z);
   const dz=cam.position.distanceTo(zt.position);
   const k=H/(2*Math.tan(cam.fov*Math.PI/360));
-  out.push({label:zt.userData.label, x:Math.round((pr.x*0.5+0.5)*W), y:Math.round((-pr.y*0.5+0.5)*H), behind:pr.z>1, sy:Math.round(zt.scale.y*k/dz), sx:Math.round(zt.scale.x*k/dz)});});
+  out.push({label:zt.userData.label, x:Math.round((pr.x*0.5+0.5)*W), y:Math.round((-pr.y*0.5+0.5)*H), behind:pr.z>1, sy:Math.round(zt.scale.y*k/dz), sx:Math.round(zt.scale.x*k/dz), vis:zt.visible, op:zt.material?zt.material.opacity:null, mat:zt.material?zt.material.type:null});});
  return {H, W, zones:out};})()
 """
 

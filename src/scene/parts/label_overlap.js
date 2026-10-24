@@ -91,11 +91,13 @@ export function worldPerPx(dist, fovDeg, clientHeight) {
 // Return {dy, dx} utk agent (baseY+dy/baseX+dx) atau {dyz, dxz} utk zona.
 export function labelWorldOffset(p, wpp) {
   if (p.zone) {
-    const dyz = Math.max(-10, Math.min(52, p.offY * wpp * 1.2));
+    const dyz = p.offY * wpp * 1.2;
     const dxz = Math.max(-36, Math.min(36, p.offX * wpp));
     return { dyz, dxz };
   }
-  const dy = Math.min(46, p.offY * wpp * 1.2);
+  // dy TANPA clamp ke atas: clamp menyebabkan label tetap terpotong bila posisi dasar
+  // keluar viewport (dy tak lagi proporsional thd offY). Viewport dijaga clampViewport.
+  const dy = p.offY * wpp * 1.2;
   const dx = Math.max(-16, Math.min(16, p.offX * wpp));
   return { dy, dx };
 }
