@@ -38,16 +38,16 @@ describe('createNeonMode — toggle mode cyberpunk', () => {
     expect(neon.on).toBe(false);
   });
 
-  it('enable: gelapkan ambient/sun/exposure, tubelight & screen menyala biru, glow agent maksimal', () => {
+  it('enable: gelapkan ambient/sun/exposure, tubelight & screen menyala cyan, glow agent maksimal', () => {
     const ctx = neonCtx();
     const neon = createNeonMode(ctx);
     neon.toggle(); // on
-    expect(ctx.ambient.intensity).toBe(0.12);
-    expect(ctx.sun.intensity).toBe(0.08);
-    expect(ctx.renderer.toneMappingExposure).toBe(0.55);
+    expect(ctx.ambient.intensity).toBe(0.14);
+    expect(ctx.sun.intensity).toBe(0.06);
+    expect(ctx.renderer.toneMappingExposure).toBe(0.62);
     ctx.tubeLights.forEach((l) => {
-      expect(l.intensity).toBe(0.35);
-      expect(l.color.set).toHaveBeenCalledWith(0x1a3355);
+      expect(l.intensity).toBe(0.55);
+      expect(l.color.set).toHaveBeenCalledWith(0x0E7490);
     });
     ctx.agentData.forEach((a) => {
       expect(a.dGlow.intensity).toBe(0.9);
@@ -57,13 +57,26 @@ describe('createNeonMode — toggle mode cyberpunk', () => {
     expect(ctx.floor.material.color.set).toHaveBeenCalledWith(0x060c18);
   });
 
+  it('enable: panel plafon & jendela sky ikut digelapkan (tidak ada bolong terang)', () => {
+    const ctx = neonCtx();
+    ctx.ceilPanels = [{ material: mat() }];
+    ctx.skyWins = [mat()];
+    const neon = createNeonMode(ctx);
+    neon.toggle();
+    expect(ctx.ceilPanels[0].material.color.set).toHaveBeenCalledWith(0x0A1526);
+    expect(ctx.skyWins[0].color.set).toHaveBeenCalledWith(0x14213F);
+    neon.toggle(); // off
+    expect(ctx.ceilPanels[0].material.color.set).toHaveBeenCalledWith(0xF0F4FF);
+    expect(ctx.skyWins[0].color.set).toHaveBeenCalledWith(0xffffff);
+  });
+
   it('disable: restoreTime dipanggil & nilai kembali ke kondisi siang', () => {
     const ctx = neonCtx();
     const neon = createNeonMode(ctx);
     neon.toggle(); // on
     neon.toggle(); // off
     expect(ctx.restoreTime).toHaveBeenCalledTimes(1);
-    expect(ctx.floor.material.color.set).toHaveBeenCalledWith(0xe8e8e8);
+    expect(ctx.floor.material.color.set).toHaveBeenCalledWith(0xffffff);
     expect(ctx.carpet.material.color.set).toHaveBeenCalledWith(0xd0d8e0);
     ctx.tubeLights.forEach((l) => expect(l.intensity).toBe(0));
     expect(ctx.reception.intensity).toBe(0.4);

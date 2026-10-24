@@ -7,7 +7,7 @@ import { drawWelcomeSign } from './sign_canvas.js';
 // 4 dinding solid + tiang, jendela sky-view + frame, sheen kaca, logo WFS, papan sambutan,
 // lampu sorot logo, dan mekanisme fade dinding depan/kanan (wallDefs + collect + __wallFade).
 // Konteks di-inject; urutan, posisi, warna & parameter mesh identik kode lama (tampilan tak berubah).
-export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil }){
+export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWinMats }){
   const __wallObjs=[];
   const W=(geo,mat,x,y,z,ry)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);if(ry)m.rotation.y=ry;office.add(m);__wallObjs.push(m);return m};
   const B=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
@@ -60,6 +60,7 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil }){
   // jendela di dinding depan
   [-8,-2,4,10].forEach(x=>{
     const wm=new THREE.MeshBasicMaterial({map:skyTex,transparent:true});fadeMats.push(wm);
+    if(skyWinMats)skyWinMats.push(wm); // daftar utk mode neon (tint malam)
     const win=new THREE.Mesh(new THREE.PlaneGeometry(3.0,1.9),wm);win.position.set(x,2.5,-9.38);office.add(win);wallFront.push(win);
     const FR=0x2B3446;
     F(wallFront,B(3.2,.1,.1),FM(null,FR),x,3.5,-9.36);F(wallFront,B(3.2,.1,.1),FM(null,FR),x,1.5,-9.36);
@@ -75,6 +76,7 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil }){
   [-9.5,-3.2,3.2,9.5].forEach(z=>F(wallRight,B(.32,4,.3),FM(null,0xC7D0DE),12.45,2,z));
   [-5.5,0.5,6].forEach(z=>{
     const wm=new THREE.MeshBasicMaterial({map:skyTex,transparent:true});fadeMats.push(wm);
+    if(skyWinMats)skyWinMats.push(wm);
     const win=new THREE.Mesh(new THREE.PlaneGeometry(3.0,1.9),wm);win.position.set(12.38,2.5,z);win.rotation.y=-Math.PI/2;office.add(win);wallRight.push(win);
     const FR=0x2B3446;
     F(wallRight,B(.1,.1,3.2),FM(null,FR),12.36,3.5,z);F(wallRight,B(.1,.1,3.2),FM(null,FR),12.36,1.5,z);
@@ -138,6 +140,7 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil }){
   // ---- Jendela sky-view di dinding belakang (sisi kanan logo, area kosong) ----
   [6.6,10.8].forEach(x=>{
     const wm=new THREE.MeshBasicMaterial({map:skyTex,transparent:true});fadeMats.push(wm);
+    if(skyWinMats)skyWinMats.push(wm);
     const win=new THREE.Mesh(new THREE.PlaneGeometry(3.4,1.9),wm);
     win.position.set(x,2.6,9.26);win.rotation.y=Math.PI;office.add(win);wallBack.push(win);
     const FR=0x2B3446;
@@ -155,6 +158,7 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil }){
   // ---- Jendela di dinding kiri ----
   [-3.4,1.4].forEach(z=>{
     const win=new THREE.Mesh(new THREE.PlaneGeometry(3.0,1.9),new THREE.MeshBasicMaterial({map:skyTex}));
+    if(skyWinMats)skyWinMats.push(win.material);
     win.position.set(-12.3,2.5,z);win.rotation.y=Math.PI/2;office.add(win);__wallObjs.push(win);
     const FR=0x2B3446;
     W(B(.1,.1,3.2),new THREE.MeshBasicMaterial({color:FR}),-12.28,3.5,z);W(B(.1,.1,3.2),new THREE.MeshBasicMaterial({color:FR}),-12.28,1.5,z);

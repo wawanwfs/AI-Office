@@ -295,9 +295,12 @@ ceil.position.y=4.05;office.add(ceil);
 
 // Ceiling light panels (recessed) — brighter for dark bg contrast
 const __ceilObjs=[];
+// Panel plafon recessed & material jendela sky-view — diregistrasi agar mode neon
+// bisa menggelapkan/mengembalikannya (dulu dibiarkan terang saat neon → jelek).
+const __ceilPanels=[];const __skyWinMats=[];
 for(let i=-2;i<=2;i++){for(let j=-1;j<=1;j++){
   const p=new THREE.Mesh(new THREE.BoxGeometry(3,.03,1),MB(0xF0F4FF));
-  p.position.set(i*4.5,3.98,j*5);office.add(p);__ceilObjs.push(p);
+  p.position.set(i*4.5,3.98,j*5);office.add(p);__ceilObjs.push(p);__ceilPanels.push(p);
   if(j===0){ // hanya 5 point light di jalur tengah — sisanya emissive saja
     const pl=new THREE.PointLight(0xFFFFFF,0.35,12,1.6);
     pl.position.set(i*4.5,3.8,j*5);office.add(pl);
@@ -788,7 +791,7 @@ const wallTitle=new THREE.Mesh(new THREE.PlaneGeometry(7,1.37),new THREE.MeshBas
 // Kamera default ada di sisi z negatif & x positif => dinding LATAR = z=+9.5 (belakang) dan x=-12.5 (kiri).
 // Dinding dekat kamera (z=-9.5, x=+12.5) tetap kaca transparan agar interior terlihat.
 // --- DINDING KANTOR SOLID + LOGO WFS PROJECT (builder murni di parts/walls.js, diuji unit) ---
-createWalls({ THREE, office, skyTex, glassSheen, fl, ceil });
+createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWinMats:__skyWinMats });
 
 // ═══ JAM DINDING (modul parts/room.js) ═══
 const __clk=createWallClock({THREE,office,M},-4.6,2.9,9.27,Math.PI);
@@ -875,6 +878,7 @@ agentData.forEach(ad=>{
 
 const __neon=createNeonMode({ambient,sun,renderer,floor:fl,carpet:cp,ceiling:ceil,tubes:tubeMeshes,tubeLights,agentData,screenLights,
   reception:rcLight,
+  ceilPanels:__ceilPanels,skyWins:__skyWinMats,
   pendants:{
     bulbs:office.children.filter(c=>c.isMesh&&c.material&&c.material.isMeshBasicMaterial&&c.position.y>3.1&&c.position.y<3.15),
     lights:office.children.filter(c=>c.isPointLight&&c.position.y>3.0&&c.position.y<3.15)},
@@ -1067,7 +1071,10 @@ function animate(){
     // Auto-advance via advanceSimClock (murni, parts/sim_clock.js, diuji unit).
     const nowSim=performance.now();
     __sim=advanceSimClock(__sim,nowSim);
-    if(__sim.stepped){timeOfDay=__sim.time;__light.apply(timeOfDay);}
+    // Mode neon mengambil alih pencahayaan: waktu simulasi tetap berjalan (shift,
+    // lunch, meeting tetap hidup) tapi __light.apply TIDAK boleh menimpa palet
+    // gelap — dulu ini menimpa neon tiap tick (mode gelap "perang" dgn siang).
+    if(__sim.stepped){timeOfDay=__sim.time;if(!cyberpunkMode)__light.apply(timeOfDay);}
   }
 
   // cincin denyut agent utama — via pulseFx (murni, diuji unit)

@@ -68,24 +68,30 @@ export function createLighting(ctx) {
 // ── Mode neon: kumpulan "saklar" yang didaftarkan, bukan pemindaian seluruh scene ──
 export function createNeonMode(ctx) {
   const { ambient, sun, renderer, floor, carpet, ceiling, tubes, tubeLights, agentData, screenLights, reception, pendants, panelLights, restoreTime } = ctx;
+  const ceilPanels = ctx.ceilPanels || [];   // panel plafon recessed (MB putih) — ikut digelapkan
+  const skyWins = ctx.skyWins || [];         // material jendela sky-view — ditint malam
   let on = false;
   const set = (list, fn) => list.forEach(fn);
 
   function enable() {
-    ambient.intensity = 0.12; sun.intensity = 0.08; renderer.toneMappingExposure = 0.55;
-    set(tubeLights, (l) => { l.intensity = 0.35; l.color.set(0x1a3355); });
-    set(tubes, (m) => { m.material.color.set(0x2244aa); m.material.opacity = 0.7; });
+    ambient.intensity = 0.14; sun.intensity = 0.06; renderer.toneMappingExposure = 0.62;
+    set(tubeLights, (l) => { l.intensity = 0.55; l.color.set(0x0E7490); });
+    set(tubes, (m) => { m.material.color.set(0x18E0FF); m.material.opacity = 0.85; });
+    set(ceilPanels, (m) => { m.material.color.set(0x0A1526); });
+    set(skyWins, (m) => { m.color.set(0x14213F); });
     set(agentData, (a) => { a.dGlow.intensity = 0.9; a.dGlow.distance = 4.5; });
     set(screenLights, (l) => { l.intensity = 0.5; });
-    floor.material.color.set(0x060c18); carpet.material.color.set(0x080e1a); ceiling.material.opacity = 0.65;
+    floor.material.color.set(0x060c18); carpet.material.color.set(0x0a1220); ceiling.material.opacity = 0.65;
     set(panelLights, (l) => { l.intensity = 0.03; });
-    set(pendants.bulbs, (m) => m.material.color.set(0x222233));
-    set(pendants.lights, (l) => { l.intensity = 0.08; l.color.set(0x334455); });
+    set(pendants.bulbs, (m) => m.material.color.set(0x16243D));
+    set(pendants.lights, (l) => { l.intensity = 0.06; l.color.set(0x1E3A5F); });
     reception.intensity = 0.7;
   }
   function disable() {
     restoreTime();
-    floor.material.color.set(0xe8e8e8); carpet.material.color.set(0xd0d8e0); ceiling.material.opacity = 0.45;
+    floor.material.color.set(0xffffff); carpet.material.color.set(0xd0d8e0); ceiling.material.opacity = 0.45;
+    set(ceilPanels, (m) => { m.material.color.set(0xF0F4FF); });
+    set(skyWins, (m) => { m.color.set(0xffffff); });
     set(tubeLights, (l) => { l.intensity = 0; });
     set(tubes, (m) => { m.material.color.set(0x334466); m.material.opacity = 0.3; });
     set(screenLights, (l) => { l.intensity = 0; });
