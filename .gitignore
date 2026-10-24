@@ -15,3 +15,14 @@ backend/config
 backend/.wfs_ui_token
 __pycache__
 ck.png
+backend/static/
+backend/assets
+backend/index.html
+backend/favicon.svg
+backend/fonts
+backend/icon-192.png
+backend/icon-512.png
+backend/og-image.png
+backend/manifest.webmanifest
+backend/apple-touch-icon.png
+backend/registerSW.js
