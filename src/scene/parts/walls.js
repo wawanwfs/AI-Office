@@ -97,7 +97,7 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
     office.children.forEach(m=>{
       if(known.has(m)||!m.position||m===fl||m===ceil)return;
       if(!(m.isMesh||m.isSprite||m.isLight===false&&m.isGroup))return;
-      const {x,y,z}=m, thin=0.55;
+      const {x,y,z}=m.position, thin=0.55;
       if(y>4.3||y<0.0)return;
       // papan proyek nyata tidak ikut fade — data harus selalu terlihat
       if(m===window.__projectBoard||m===window.__projectBoard?.mesh)return;
@@ -112,7 +112,7 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
     ['back','left'].forEach(k=>wallDefs[k].objs.forEach(m=>{
       if(m.material&&!Array.isArray(m.material)&&!m.userData.__fm){m.material=m.material.clone();m.material.transparent=true;m.userData.__fm=1}}));
     // tiang sudut mengikuti dinding yang lebih terlihat
-    window.__corners=office.children.filter(m=>m.isMesh&&Math.abs(Math.abs(m.position.x)-12.5)<.01&&Math.abs(Math.abs(m.position.z)-9.5)<.01&&Math.abs(m.position.y-2)<.01);
+    window.__corners=office.children.filter(m=>m.isMesh&&Math.abs(Math.abs(m.position.x)-12.5)<.1&&Math.abs(Math.abs(m.position.z)-9.5)<.1&&Math.abs(m.position.y-2)<.01);
   };
   // fadeOf & penerapan fade diekstrak ke parts/wall_fade.js (murni, diuji unit):
   // wallFadeTick menghitung fade per dinding, menerapkan opacity/visible,

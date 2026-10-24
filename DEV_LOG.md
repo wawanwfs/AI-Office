@@ -2233,3 +2233,9 @@
 - Perubahan: tambah src/__tests__/status_poll.test.js (10 test: BADGE_COLORS, badgeAssignments + edge null/im tanpa badge, wakeAgentIds, failedAlerts transisi naik/reset, statusPollActions gabungan); 0 edit src produksi.
 - Bukti: build OK (exit 0); vitest **1036/1036 (90 file)** (+10 test); cp dist→~/wfs-hq OK; e2e 0 "Scene init failed" (index & index-LCdzmmkG.js HTTP 200; 404 API :8787 normal); systemd wfs-hq & wfs-office active.
 - Sisa backlog: 14 part modul lain tanpa test (bookshelf, cafe, decor, flooring, furniture, lounge, motion, projectboard, reception, robot, room, serverroom, structure, walls); verifikasi suara subjektif tetap manual.
+
+## 2026-10-25 02:00 WIB — Siklus 35: BUGFIX fade dinding + unit test walls.js
+- Pilihan backlog: 2 part modul tersisa tanpa test (walls.js, structure.js). Menulis test walls_runtime menemukan 2 bug produksi nyata di collect() walls.js: (1) `const {x,y,z}=m` mengambil properti mesh, bukan m.position → NaN → dekor/apapun yang menempel dinding belakang & kiri TIDAK PERNAH ikut fade saat kamera keluar sisi itu; (2) filter tiang sudut pakai toleransi 0.01 padahal posisi tiang 12.45/9.45 → window.__corners selalu kosong, tiang sudut tak pernah ikut logika visibilitas.
+- Perubahan: walls.js 2 baris (destructuring m.position; toleransi corner 0.01→0.1); tambah src/__tests__/walls_runtime.test.js (10 test: wallDefs 4 sisi, tiang+jendela, skyWinMats 11, pengecualian __keep/papan proyek/lantai, koleksi dekor+clone material transparan, __wallFade/__wallState, fade depan, PointLight sorot, __corners 4 tiang, collect idempoten).
+- Bukti: build OK (exit 0, 35 precache); vitest **1046/1046 (91 file)** (+10); cp dist→~/wfs-hq OK; e2e index & index-Bcm_aD3H.js HTTP 200 tanpa "Scene init failed"; systemd wfs-hq & wfs-office active.
+- Sisa backlog: structure.js satu-satunya part modul tanpa test; verifikasi subjektif suara tetap manual.
