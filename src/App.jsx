@@ -18,7 +18,8 @@ import ActivityLog from './components/ActivityLog'
 import AgentInspector from './components/AgentInspector'
 import ShConsole from './components/ShConsole'
 import FloorNavigator from './components/FloorNavigator'
-import { IconVolume, IconVolumeMute, IconScroll, IconHelp } from './components/Icons'
+import SettingsModal from './components/SettingsModal'
+import { IconVolume, IconVolumeMute, IconScroll, IconHelp, IconGear } from './components/Icons'
 import { api } from './lib/api'
 import { anyModalOpen } from './lib/modal'
 import { createWakeLockManager } from './lib/wakelock.js'
@@ -39,6 +40,7 @@ export default function App() {
   })
   const [inMeeting, setInMeeting] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [showSettings, setShowSettings] = useState(false)
   const [showConsole, setShowConsole] = useState(false)
   const [showTask, setShowTask] = useState(false)
   const [confirm, setConfirm] = useState(null)      // 'pause' | 'resume' | null
@@ -238,8 +240,9 @@ export default function App() {
   // ---- flag modal utk scene: Escape saat overlay terbuka TIDAK boleh reset kamera ----
   // Set saat render (bukan useEffect): update discrete-event React di-flush sinkron
   // sebelum listener window scene jalan, jadi flag pasti sudah benar saat Escape dicek.
-  const modalActive = !!(showTask || confirm || ask || showHelp || showLog || selectedAgent) || anyModalOpen()
+  const modalActive = !!(showTask || confirm || ask || showHelp || showSettings || showLog || selectedAgent) || anyModalOpen()
   window.__wfsModalOpen = modalActive
+  window.__openSettings = () => setShowSettings(true)
 
   // Snapshot flag di fase CAPTURE (window capture jalan sebelum semua bubble handler):
   // handler Escape overlay menutup modal & React flush sinkron, sehingga saat handler
@@ -293,9 +296,10 @@ export default function App() {
       const t = e.target
       if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return
       if (e.ctrlKey || e.metaKey || e.altKey) return
-      if (showTask || confirm || ask || showHelp || showLog || selectedAgent || anyModalOpen()) return
+      if (showTask || confirm || ask || showHelp || showSettings || showLog || selectedAgent || anyModalOpen()) return
       const k = e.key.toLowerCase()
       if (k === 'm') { e.preventDefault(); toggleMuteRef.current() }
+      else if (k === 'o') { e.preventDefault(); setShowSettings(v => !v) }
       else if (k === 'l') { e.preventDefault(); setShowLog(v => !v) }
       else if (k === 'h' || k === '?') { e.preventDefault(); setShowHelp(v => !v) }
       else if (k === 'n') { e.preventDefault(); handleCyberpunk() }
@@ -353,11 +357,11 @@ export default function App() {
       }
       else if (k === '+' || k === '=') zoom(1)
       else if (k === '-') zoom(-1)
-      else if (k === 'escape') { setShowLog(false); setShowHelp(false) }
+      else if (k === 'escape') { setShowLog(false); setShowHelp(false); setShowSettings(false) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [showTask, confirm, ask, showHelp, showLog, selectedAgent, handleCyberpunk, handleFloorSelect, zoom, flash, amRef])
+  }, [showTask, confirm, ask, showHelp, showSettings, showLog, selectedAgent, handleCyberpunk, handleFloorSelect, zoom, flash, amRef])
 
   // ---- Pause / Resume nyata (konfirmasi dulu) ----
   const doConfirm = async () => {
@@ -415,11 +419,11 @@ export default function App() {
             s.setView(v)
           }} />
         <span className="sep" />
-        <ActionMenu sceneRef={sceneRef} onFlash={flash} actionMenuRef={actionMenuApi} />
+        <ActionMenu sceneRef={sceneRef} onFlash={flash} actionMenuRef={actionMenuApi} onOpenSettings={() => setShowSettings(true)} />
         <TaskBoard onFlash={flash} onAsk={setAsk} />
         <ProjectPanel />
         <TeamStats />
-        <button className="ibtn" onClick={toggleMute} title={muted ? 'Nyalakan suara notifikasi' : 'Bisukan suara notifikasi'} aria-label={muted ? 'Nyalakan suara' : 'Bisukan suara'} aria-pressed={muted}>
+        <button className="ibtn" onClick={toggleMute} onContextMenu={(e) => { e.preventDefault(); setShowSettings(true) }} title={muted ? 'Nyalakan suara notifikasi (Klik kanan untuk opsi volume)' : 'Bisukan suara notifikasi (Klik kanan untuk opsi volume)'} aria-label={muted ? 'Nyalakan suara' : 'Bisukan suara'} aria-pressed={muted}>
           <span className="ic">
             {muted ? <><IconVolumeMute size={19} /><span className="sr-only">🔇</span></> : <><IconVolume size={19} /><span className="sr-only">🔊</span></>}
           </span>
@@ -435,6 +439,10 @@ export default function App() {
         <button className="ibtn" onClick={() => setShowConsole(true)} title="Konsol Software House (Overview · Projects · Buat project)" aria-label="Konsol Software House">
           <span className="ic"><span aria-hidden="true">🖥️</span><span className="sr-only">🖥️</span></span>
           <span className="lb">Konsol</span>
+        </button>
+        <button className="ibtn" onClick={() => setShowSettings(true)} title="Pengaturan audio & tampilan kantor (O)" aria-label="Pengaturan">
+          <span className="ic"><IconGear size={19} /><span className="sr-only">⚙️</span></span>
+          <span className="lb">Atur</span>
         </button>
         <button className="ibtn" onClick={() => setShowHelp(true)} title="Panduan penggunaan kantor" aria-label="Bantuan">
           <span className="ic"><IconHelp size={19} /><span className="sr-only">❔</span></span>
@@ -459,6 +467,16 @@ export default function App() {
 
       <ActivityLog show={showLog} items={logItems} onClose={() => setShowLog(false)} onClear={clearLog} />
       <ShConsole show={showConsole} onClose={() => setShowConsole(false)} />
+      <SettingsModal
+        show={showSettings}
+        onClose={() => setShowSettings(false)}
+        sceneRef={sceneRef}
+        muted={muted}
+        onToggleMute={toggleMute}
+        cyberpunk={cyberpunk}
+        onToggleTheme={handleCyberpunk}
+        onFlash={flash}
+      />
       <OverlayHelp show={showHelp} onClose={() => setShowHelp(false)} />
       <TaskModal show={showTask} onClose={() => setShowTask(false)} onDone={(m) => { flash(m); refreshStatus() }} />
       <ConfirmModal

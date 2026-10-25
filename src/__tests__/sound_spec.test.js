@@ -7,7 +7,8 @@ import {
   TASK_DONE_FREQS, TASK_DONE_DELAY_SEC, TASK_DONE_GAIN, TASK_DONE_END_GAIN, TASK_DONE_TONE_SEC,
   TASK_FAIL_FREQS, TASK_FAIL_DELAY_SEC, TASK_FAIL_GAIN, TASK_FAIL_END_GAIN, TASK_FAIL_TONE_SEC,
   SELECT_FREQ, SELECT_GAIN, SELECT_END_GAIN, SELECT_SEC,
-  VOLUME_KEY, DEFAULT_VOLUME,
+  VOLUME_KEY, DEFAULT_VOLUME, VOLUME_PRESETS, VOLUME_PRESET_LABELS,
+  clampVolume, loadAudioVolume, saveAudioVolume, formatVolumePercent,
 } from '../scene/parts/sound_spec.js';
 
 describe('sound_spec — keyclick', () => {
@@ -95,6 +96,39 @@ describe('sound_spec — mute & volume', () => {
     expect(masterGainValue(false, 1.5)).toBe(1);
     expect(masterGainValue(false, -0.2)).toBe(0);
     expect(masterGainValue(false, NaN)).toBe(DEFAULT_VOLUME);
+  });
+  it('preset volume & label lengkap [0.25, 0.50, 0.80, 1.00]', () => {
+    expect(VOLUME_PRESETS).toEqual([0.25, 0.50, 0.80, 1.00]);
+    VOLUME_PRESETS.forEach(p => {
+      expect(VOLUME_PRESET_LABELS[p]).toBeDefined();
+    });
+  });
+  it('clampVolume: membatasi nilai antara 0 dan 1, fallback DEFAULT_VOLUME jika bukan angka', () => {
+    expect(clampVolume(0.5)).toBe(0.5);
+    expect(clampVolume(-0.1)).toBe(0);
+    expect(clampVolume(1.2)).toBe(1);
+    expect(clampVolume('abc')).toBe(DEFAULT_VOLUME);
+    expect(clampVolume(null)).toBe(DEFAULT_VOLUME);
+  });
+  it('loadAudioVolume & saveAudioVolume membaca/menulis ke storage dengan aman', () => {
+    const mockStorage = {
+      _store: {},
+      getItem(k) { return this._store[k] ?? null; },
+      setItem(k, v) { this._store[k] = String(v); },
+    };
+    expect(loadAudioVolume(mockStorage)).toBe(DEFAULT_VOLUME);
+    saveAudioVolume(mockStorage, 0.8);
+    expect(mockStorage.getItem(VOLUME_KEY)).toBe('0.8');
+    expect(loadAudioVolume(mockStorage)).toBe(0.8);
+    // null storage fallback
+    expect(loadAudioVolume(null)).toBe(DEFAULT_VOLUME);
+    expect(saveAudioVolume(null, 0.5)).toBe(false);
+  });
+  it('formatVolumePercent memformat persentase bulat', () => {
+    expect(formatVolumePercent(0)).toBe('0%');
+    expect(formatVolumePercent(0.25)).toBe('25%');
+    expect(formatVolumePercent(0.8)).toBe('80%');
+    expect(formatVolumePercent(1)).toBe('100%');
   });
 });
 

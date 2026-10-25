@@ -23,7 +23,7 @@ import { drawBlobShadow } from './parts/blob_canvas.js';
 import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelScale, drawLabelText } from './parts/label_spec.js';
 import { WALK_DESTINATIONS, CAMPUS_WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { OBSTACLES } from './parts/obstacles.js';
-import { MUTED_KEY, tickSoundTimer } from './parts/sound_spec.js';
+import { MUTED_KEY, VOLUME_KEY, DEFAULT_VOLUME, tickSoundTimer, loadAudioVolume, saveAudioVolume, clampVolume } from './parts/sound_spec.js';
 import { advanceSimClock, setSimManual, SIM_SEC_PER_MIN as __SIM_SPM, MANUAL_RESUME_MS as __SIM_RESUME } from './parts/sim_clock.js';
 import { simMinutesToClockSeconds } from './parts/clock_units.js';
 import { createSoundEngine } from './parts/sound_engine.js';
@@ -130,9 +130,10 @@ renderer.domElement&&renderer.domElement.addEventListener('touchend',()=>{pinchD
 // ═══════════════════════════════════════════════════
 // SOUND SYSTEM — Web Audio API (runtime di parts/sound_engine.js, teruji unit)
 // ═══════════════════════════════════════════════════
-let audioMuted=(function(){try{return localStorage.getItem('wfs_audio_muted')==='1'}catch{return false}})();
-function saveMuted(){try{localStorage.setItem('wfs_audio_muted',audioMuted?'1':'0')}catch{/* abaikan */}}
-const __sound=createSoundEngine({ctxFactory:()=>new(window.AudioContext||window.webkitAudioContext)()});
+let audioMuted=(function(){try{return localStorage.getItem(MUTED_KEY)==='1'}catch{return false}})();
+function saveMuted(){try{localStorage.setItem(MUTED_KEY,audioMuted?'1':'0')}catch{/* abaikan */}}
+let audioVolume=(function(){try{return loadAudioVolume(typeof localStorage!=='undefined'?localStorage:null)}catch{return DEFAULT_VOLUME}})();
+const __sound=createSoundEngine({ctxFactory:()=>new(window.AudioContext||window.webkitAudioContext)(),initialVolume:audioVolume});
 __sound.setMuted(audioMuted);
 __sound.dbg(s=>{window.__audio=s;});
 window.__officeSound=__sound;
@@ -1676,9 +1677,21 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
     playTaskDone: () => __sound.playTaskDone(),
     playTaskFail: () => __sound.playTaskFail(),
     playSelect: () => __sound.playSelect(),
-    testAudio: () => { if(audioMuted) return false; __sound.playTaskDone(); return true; },
-    setAudioVolume: (v) => { __sound.setVolume(v); },
-    getAudioVolume: () => __sound.getVolume(),
+    testAudio: (sample = 'done') => {
+      if (audioMuted) return false;
+      if (sample === 'fail') __sound.playTaskFail();
+      else if (sample === 'select') __sound.playSelect();
+      else if (sample === 'chime') __sound.playMeetingChime();
+      else __sound.playTaskDone();
+      return true;
+    },
+    setAudioVolume: (v) => {
+      audioVolume = clampVolume(v);
+      __sound.setVolume(audioVolume);
+      try { saveAudioVolume(typeof localStorage !== 'undefined' ? localStorage : null, audioVolume); } catch { /* abaikan */ }
+      __sound.dbg(s=>{window.__audio=s;});
+    },
+    getAudioVolume: () => audioVolume,
     getAudioEngine: () => __sound,
     destroy: () => {
       window.__officeSceneDestroyed=true;

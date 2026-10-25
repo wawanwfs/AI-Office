@@ -125,6 +125,31 @@ describe('App — integrasi UI', () => {
     expect(screen.getByRole('dialog')).toBeTruthy()
   })
 
+  it('shortcut "o" membuka modal pengaturan (SettingsModal) & tombol Atur membuka pengaturan', () => {
+    stubFetch([])
+    render(<App />)
+    expect(screen.queryByText('Pengaturan Kantor 3D')).toBeNull()
+    fireEvent.keyDown(window, { key: 'o' })
+    expect(screen.getByText('Pengaturan Kantor 3D')).toBeTruthy()
+
+    // Tutup modal
+    fireEvent.click(screen.getByRole('button', { name: 'Tutup pengaturan' }))
+    expect(screen.queryByText('Pengaturan Kantor 3D')).toBeNull()
+
+    // Buka via tombol dock 'Atur'
+    fireEvent.click(screen.getByRole('button', { name: 'Pengaturan' }))
+    expect(screen.getByText('Pengaturan Kantor 3D')).toBeTruthy()
+  })
+
+  it('klik kanan (contextmenu) pada tombol Suara membuka modal pengaturan', () => {
+    stubFetch([])
+    render(<App />)
+    expect(screen.queryByText('Pengaturan Kantor 3D')).toBeNull()
+    const muteBtn = screen.getByRole('button', { name: 'Bisukan suara' })
+    fireEvent.contextMenu(muteBtn)
+    expect(screen.getByText('Pengaturan Kantor 3D')).toBeTruthy()
+  })
+
   it('shortcut "m" toggle mute → tombol dock berubah jadi "Suara Mati"', () => {
     stubFetch([])
     render(<App />)

@@ -353,6 +353,14 @@ button { font-family: inherit; }
 .btn.primary:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(245, 158, 11, 0.45); }
 .btn.danger { background: #ef4444; border-color: transparent; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
+.btn-preset:hover:not(:disabled) {
+  background: rgba(13, 238, 243, 0.1) !important;
+  border-color: rgba(13, 238, 243, 0.4) !important;
+  transform: translateY(-1px);
+}
+.btn-preset:active:not(:disabled) {
+  transform: scale(0.96);
+}
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
 /* ===== Header ringkas (Luxury Branding) ===== */

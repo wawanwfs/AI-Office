@@ -1,9 +1,9 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
-import { IconBolt, IconMeeting, IconCoffee, IconBriefcase, IconWalk, IconTag, IconRotate } from './Icons'
+import { IconBolt, IconMeeting, IconCoffee, IconBriefcase, IconWalk, IconTag, IconRotate, IconGear } from './Icons'
 
-export default function ActionMenu({ sceneRef, onFlash, actionMenuRef }) {
+export default function ActionMenu({ sceneRef, onFlash, actionMenuRef, onOpenSettings }) {
   const [open, setOpen] = useState(false)
   const pop = useRef(null)
   useModalFlag(open)
@@ -103,6 +103,15 @@ export default function ActionMenu({ sceneRef, onFlash, actionMenuRef }) {
             <span className="pop-ic"><IconRotate size={16} /><span className="sr-only">🔄</span></span>
             Putar otomatis: {rotOn ? 'ON' : 'OFF'}
           </button>
+          {onOpenSettings && (
+            <>
+              <hr />
+              <button role="menuitem" onClick={() => { onOpenSettings(); setOpen(false) }} title="Buka pengaturan audio & tampilan kantor (O)">
+                <span className="pop-ic"><IconGear size={16} /><span className="sr-only">⚙️</span></span>
+                Pengaturan...
+              </button>
+            </>
+          )}
         </div>
       )}
       <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-haspopup="menu" aria-label="Aksi" title="Aksi cepat tim (Meeting, Break, Tour)">

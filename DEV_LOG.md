@@ -1,3 +1,37 @@
+## 2026-10-26 06:33 WIB — Siklus 78: Modal Pengaturan Kantor 3D (SettingsModal), Preset Cepat Slider Volume (25%, 50%, 80%, 100%), Uji Sampel Audio Interaktif & Persistensi Volume Master
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Spesifikasi Volume & Helper Persistensi (`src/scene/parts/sound_spec.js`, `src/__tests__/sound_spec.test.js`):**
+     - Mendefinisikan preset volume baku `VOLUME_PRESETS = [0.25, 0.50, 0.80, 1.00]` dan label semantik `VOLUME_PRESET_LABELS` (25% Lembut, 50% Sedang, 80% Optimal, 100% Penuh).
+     - Menambahkan fungsi murni `clampVolume(v)`, `loadAudioVolume(storage)`, `saveAudioVolume(storage, v)`, dan `formatVolumePercent(v)` yang menjamin nilai volume ter-clamp `[0, 1]` dan persisten di `localStorage['wfs_audio_volume']`.
+  2. **Sinkronisasi Volume Master & Sample Preview di OfficeScene (`src/scene/OfficeScene.js`):**
+     - Menginisialisasi `audioVolume` pada startup scene dari `loadAudioVolume(localStorage)`.
+     - Mengirimkan `initialVolume: audioVolume` ke `createSoundEngine`.
+     - Memperbarui `setAudioVolume(v)` agar otomatis menyimpan perubahan volume ke `localStorage` melalui `saveAudioVolume`.
+     - Mengembangkan `testAudio(sample)` yang mendukung pratinjau instan untuk sampel `done` (arpeggio), `select` (blip klik), `chime` (meeting), dan `fail` (tritone alert).
+  3. **Komponen Pengaturan Baru `SettingsModal.jsx` (`src/components/SettingsModal.jsx`, `src/__tests__/settings_modal.test.jsx`, `src/index.css`):**
+     - Membangun modal pengaturan komprehensif berstandar aksesibilitas WAI-ARIA (`role="dialog"`, `aria-modal="true"`, focus-trap via `useDialogA11y`, `useModalFlag`, tombol Esc/tutup).
+     - Menyediakan slider volume kontinu (`0` – `1`, step `0.05`) dengan pembacaan persentase live dan atribut `aria-valuetext`.
+     - Tombol preset cepat (`25%`, `50%`, `80%`, `100%`) dengan status aktif visual glow teal (`aria-pressed`).
+     - Tombol uji sampel audio terpisah (`Task Done`, `Blip Klik`, `Task Fail`) dengan feedback status real-time.
+     - Kontrol visual terpadu: label nama agen (tampak/sembunyi), auto-rotate kamera (aktif/nonaktif), dan pencahayaan tema ruang (terang/gelap).
+  4. **Integrasi UI Aplikasi & Akses Multi-Titik (`src/App.jsx`, `src/components/ActionMenu.jsx`, `src/components/OverlayHelp.jsx`, `src/__tests__/app_integration.test.jsx`):**
+     - Menambahkan tombol dock `Atur` (ikon `IconGear`), shortcut keyboard global `O` untuk membuka/menutup pengaturan secara cepat, serta event klik-kanan (context menu) pada tombol `Suara` dock yang langsung meluncurkan modal pengaturan.
+     - Menambahkan item menu `Pengaturan...` pada popover `ActionMenu`.
+     - Mengekspos hook pengujian `window.__openSettings()` dan memperbarui dokumentasi panduan bantuan `OverlayHelp`.
+
+- **Bukti terukur:**
+  - **Vitest:** **1478/1478 passed (126 test file)** (+16 tests baru terintegrasi, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint .`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1656.83 KiB; chunk `OfficeScene-CnEgWXg5.js` 867.86 KB / gzip 235.16 KB, `index-uaaTbxBb.js` 311.53 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, chunk usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-uaaTbxBb.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **554.032 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `shot.sh`: Screenshot ck.png **587.471 bytes** (>500 KB).
+- **Sisa backlog:** evaluasi responsivitas tata letak kanvas 3D pada mode multi-window / layar split sempit.
+
 ## 2026-10-26 05:43 WIB — Siklus 77: Nada Notifikasi Sound Engine (Done/Fail/Select), Interaksi Klik Audio 3D & Sinkronisasi Audio Toast Task
 
 - **Yang diperbaiki & ditingkatkan:**

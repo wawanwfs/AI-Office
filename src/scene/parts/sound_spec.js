@@ -48,6 +48,45 @@ export const SELECT_SEC = 0.04;
 // volume master: persist di localStorage 'wfs_audio_volume' (default 1.0)
 export const VOLUME_KEY = 'wfs_audio_volume';
 export const DEFAULT_VOLUME = 1.0;
+export const VOLUME_PRESETS = [0.25, 0.50, 0.80, 1.00];
+export const VOLUME_PRESET_LABELS = {
+  0.25: '25% Lembut',
+  0.50: '50% Sedang',
+  0.80: '80% Optimal',
+  1.00: '100% Penuh',
+};
+
+export function clampVolume(v) {
+  if (!Number.isFinite(v)) return DEFAULT_VOLUME;
+  return Math.max(0, Math.min(1, Math.round(v * 100) / 100));
+}
+
+export function loadAudioVolume(storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
+  if (!storage) return DEFAULT_VOLUME;
+  try {
+    const raw = storage.getItem(VOLUME_KEY);
+    if (raw === null || raw === undefined) return DEFAULT_VOLUME;
+    const v = parseFloat(raw);
+    return Number.isFinite(v) ? clampVolume(v) : DEFAULT_VOLUME;
+  } catch {
+    return DEFAULT_VOLUME;
+  }
+}
+
+export function saveAudioVolume(storage = (typeof localStorage !== 'undefined' ? localStorage : null), v = DEFAULT_VOLUME) {
+  if (!storage) return false;
+  try {
+    const clamped = clampVolume(v);
+    storage.setItem(VOLUME_KEY, String(clamped));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function formatVolumePercent(v) {
+  return `${Math.round(clampVolume(v) * 100)}%`;
+}
 
 export function keyclickFreq(rng) {
   return KEYCLICK_BASE_FREQ + rng() * KEYCLICK_JITTER;
@@ -76,8 +115,7 @@ export function taskFailStart(i) {
 // nilai gain master: 0 bila muted, sebanding volume bila tidak (clamp 0..1)
 export function masterGainValue(muted, volume = DEFAULT_VOLUME) {
   if (muted) return 0;
-  const v = Number.isFinite(volume) ? Math.max(0, Math.min(1, volume)) : DEFAULT_VOLUME;
-  return v;
+  return clampVolume(volume);
 }
 
 // Pengatur waktu suara periodik (diekstrak dari animate() OfficeScene):
