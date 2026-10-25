@@ -15,9 +15,12 @@ export const LOOKS = {
   'LINA':{skin:0xF0C8A2,h:.98,acc:['ponytail']},
   'SARI':{skin:0xD9A273,h:.99,acc:['blazer','glasses']},
   'WAHYU FS':{skin:0xE8B88A,h:1.04,acc:['tie','peci']},
+  'TRAINER AI':{skin:0xB39DDB,h:.98,acc:['visor','headphones']},
+  'INTEGRATOR BOT':{skin:0x90CAF9,h:1.06,acc:['antenna']},
+  'SUPPORT':{skin:0xCFA27F,h:1,acc:['blazer']},
 };
 
-const FALLBACK = {skin:0xE8B88A,h:1,acc:[]};
+export const FALLBACK = {skin:0xE8B88A,h:1,acc:[]};
 
 // Pencarian case-insensitive berdasarkan nama agent; nama tak dikenal → fallback.
-export function looksOf(agent){const L=LOOKS[String(agent?.name||'').toUpperCase()];return L?{...L,acc:[...L.acc]}:{skin:0xE8B88A,h:1,acc:[]}}
+export function looksOf(agent){const L=LOOKS[String(agent?.name||'').toUpperCase()];return L?{...L,acc:[...L.acc]}:{skin:FALLBACK.skin,h:FALLBACK.h,acc:[]}}

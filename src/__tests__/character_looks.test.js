@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { LOOKS, looksOf } from '../scene/parts/character_looks.js';
+import { LOOKS, looksOf, FALLBACK } from '../scene/parts/character_looks.js';
 
 describe('LOOKS data', () => {
-  it('memuat 12 karakter', () => {
-    expect(Object.keys(LOOKS).length).toBe(12);
+  it('memuat 15 karakter', () => {
+    expect(Object.keys(LOOKS).length).toBe(15);
   });
-  const names = ['BANTUIN AI','BUDI','RIZKY','DEWI','ANDI','YOGA','MAYA','TONI','RINA','LINA','SARI','WAHYU FS'];
+  const names = ['BANTUIN AI','BUDI','RIZKY','DEWI','ANDI','YOGA','MAYA','TONI','RINA','LINA','SARI','WAHYU FS','TRAINER AI','INTEGRATOR BOT','SUPPORT'];
   it('nama kunci sesuai daftar historis', () => {
     expect(Object.keys(LOOKS).sort()).toEqual([...names].sort());
   });
@@ -35,6 +35,13 @@ describe('LOOKS data', () => {
   it('WAHYU FS pakai tie+peci', () => {
     expect(LOOKS['WAHYU FS'].acc).toEqual(['tie','peci']);
   });
+  it('TRAINER AI / INTEGRATOR BOT / SUPPORT punya identitas visual sendiri', () => {
+    expect(LOOKS['TRAINER AI'].acc).toEqual(['visor','headphones']);
+    expect(LOOKS['INTEGRATOR BOT'].acc).toEqual(['antenna']);
+    expect(LOOKS['SUPPORT'].acc).toEqual(['blazer']);
+    const ids = new Set(['TRAINER AI','INTEGRATOR BOT','SUPPORT'].map(n => JSON.stringify(LOOKS[n])));
+    expect(ids.size).toBe(3);
+  });
   it('DEWI & RINA memakai hijab', () => {
     expect(LOOKS['DEWI'].acc).toContain('hijab');
     expect(LOOKS['RINA'].acc).toContain('hijab');
@@ -54,6 +61,7 @@ describe('looksOf', () => {
   });
   it('fallback untuk nama tak dikenal', () => {
     const L = looksOf({name:'ORANG ASING'});
+    expect(L).toEqual({skin:FALLBACK.skin,h:FALLBACK.h,acc:[...FALLBACK.acc]});
     expect(L).toEqual({skin:0xE8B88A,h:1,acc:[]});
   });
   it('fallback jika name hilang / undefined', () => {
