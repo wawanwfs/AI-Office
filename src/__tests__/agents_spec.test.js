@@ -91,7 +91,7 @@ describe('agents_spec — AGENTS_EXTRA (6)', () => {
 
 describe('agents_spec — SCREENS & allAgents', () => {
   it('SCREENS berisi 6 jenis layar historis', () => {
-    expect(SCREENS).toEqual(['terminal','charts','palette','deploy','map','docs','bugs']);
+    expect(SCREENS).toEqual(['terminal','charts','palette','deploy','map','docs','bugs','board']);
   });
 
   it('allAgents = 14 agen (8 utama + 6 extra) dengan urutan utama dulu', () => {

@@ -80,6 +80,27 @@ export const SCREEN_RENDERERS = {
     c.font = '6px monospace'; c.fillStyle = col; c.globalAlpha = 0.65;
     ['# Catatan Desain', '', '> Sistem warna WFS', '  amber + navy', '', '## Komponen', '- Dock bawah', '- Papan task'].forEach((l, i) => c.fillText(l, 13, 19 + i * 7));
   },
+  // Papan task Project Manager: progres live dari window.__tvData (data nyata
+  // /wfs-project, di-refresh tvPull tiap 60 dtk). Tanpa data → indikator loading.
+  board(c, w, h, t, col) {
+    const T = (typeof window !== 'undefined' && window.__tvData?.tasks) || null;
+    if (!T) {
+      c.globalAlpha = 0.5; c.fillStyle = '#8fa3bd'; c.font = '6px monospace';
+      c.fillText('papan task: memuat...', 6, h / 2);
+      c.globalAlpha = 0.35; c.fillRect(6, h / 2 + 4, (w - 12) * (0.3 + 0.2 * Math.sin(t)), 4);
+      return;
+    }
+    const pct = T.total ? Math.round(T.done / T.total * 100) : 0;
+    c.globalAlpha = 0.85; c.fillStyle = col; c.font = '7px sans-serif';
+    c.fillText('PAPAN TASK', 6, 11);
+    c.globalAlpha = 0.2; c.fillRect(6, 14, w - 12, 6);
+    c.globalAlpha = 0.9; c.fillRect(6, 14, Math.max(4, (w - 12) * pct / 100), 6);
+    c.globalAlpha = 0.85; c.fillStyle = '#fff'; c.font = '6px monospace';
+    c.fillText(pct + '% · ' + T.done + '/' + T.total + ' task', 6, 30);
+    c.globalAlpha = 0.5; c.fillStyle = col;
+    c.fillText((T.review ? 'REVIEW: ' + T.review + '  ' : '') + (T.failed ? 'GAGAL: ' + T.failed : T.failed ? '' : 'on track'), 6, 42);
+    if (Math.sin(t * 2.5) > 0) { c.globalAlpha = 0.9; c.fillStyle = '#4ade80'; c.fillRect(w - 11, 6, 5, 5); } // dot live
+  },
   // QA: daftar hasil tes
   bugs(c, w, h, t, col) {
     c.font = '6px monospace';

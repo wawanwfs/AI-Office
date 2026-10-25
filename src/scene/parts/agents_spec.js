@@ -16,7 +16,7 @@ export const AGENTS = [
 export const AGENTS_EXTRA = [
   {name:'RINA',   color:0xFB7185,hex:'#FB7185',role:'QA Engineer',        screen:'bugs',    hair:0x5D1A1A,shirt:0x9F1239,pants:0x1F2937},
   {name:'LINA',   color:0xFB923C,hex:'#FB923C',role:'Growth Marketing',   screen:'charts',  hair:0x3E2723,shirt:0xC2410C,pants:0x292524},
-  {name:'SARI',   color:0xF59E0B,hex:'#F59E0B',role:'Project Manager',    screen:'deploy',  hair:0x2D1B0E,shirt:0xB45309,pants:0x1C1917},
+  {name:'SARI',   color:0xF59E0B,hex:'#F59E0B',role:'Project Manager',    screen:'board',   hair:0x2D1B0E,shirt:0xB45309,pants:0x1C1917},
   {name:'TRAINER AI', color:0x8B5CF6,hex:'#8B5CF6',role:'AI Knowledge Engineer', screen:'terminal',hair:0x111827,shirt:0x4C1D95,pants:0x1E1B4B},
   {name:'INTEGRATOR BOT', color:0x06B6D4,hex:'#06B6D4',role:'Integration Engineer', screen:'terminal',hair:0x0F172A,shirt:0x155E75,pants:0x083344},
   {name:'SUPPORT', color:0x84CC16,hex:'#84CC16',role:'Customer Success', screen:'docs',   hair:0x3B2412,shirt:0x3F6212,pants:0x1A2E05},
