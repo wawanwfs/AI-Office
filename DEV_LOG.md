@@ -1,3 +1,30 @@
+## 2026-10-26 01:00 WIB — Siklus 70: Interaktivitas Profil Founder Wahyu FS (Inspector Card & Golden Selection Ring), Perbaikan Presisi Frame Papan Proyek 3D & Sinkronisasi Software House
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Interaktivitas Profil & Cincin Seleksi Emas Founder Wahyu FS (`src/scene/OfficeScene.js`, `src/scene/parts/reception.js`):**
+     - Mengembalikan objek `nexusAgent` dari `createReception` sehingga data Founder (`Wahyu FS`, `Founder / CEO`, `#F59E0B`) tersambung penuh ke interaksi runtime kantor.
+     - Saat karakter Founder Wahyu FS diklik, cincin seleksi emas (`selRing`) aktif dan bertengger tepat di bawah kursi Founder di Lantai 3 (`x: 7.6, y: 1.20 + SEL_RING.Y, z: 6.1`) dengan animasi rotasi kontinu (`selRing.rotation.z += 0.012`), serta memunculkan panel profil interaktif `AgentInspector` (Nama: 'Wahyu FS', Role: 'Founder / CEO', tombol 'Buka Chat dengan Wahyu').
+     - Hover kursor di atas Founder memunculkan `hoverRing` cyan bercahaya di lantai resepsionis (`x: 7.6, y: 1.22, z: 6.1`).
+     - Menyimpan state kamera (`sph.__saved` dan `homeRadius`) saat membidik Founder atau Papan Proyek, sehingga penutupan inspector (via tombol X, tombol Escape, atau klik di area kosong) mengembalikan kamera secara halus ke posisi semula dan membersihkan cincin seleksi.
+  2. **Koreksi Presisi Bingkai Papan Proyek 3D (`src/scene/parts/projectboard.js`, `src/scene/OfficeScene.js`):**
+     - Mengembalikan referensi `frame` dari builder `createProjectBoard` (`return { destroy, refresh: pull, mesh, frame }`), memperbaiki bug di mana bingkai papan sebelumnya tertinggal di `Y = 2.60` sementara kanvas proyek diangkat ke `Y = 3.80` di Lantai 3.
+     - Bingkai dan kanvas kini sejajar presisi di elevasi `Y = 3.80` dan `boardFrame` terdeteksi penuh pada raycaster hover & click.
+  3. **Sinkronisasi Kompatibilitas Transisi WFS PROJECT & Docker Sandbox:**
+     - Menyelaraskan pembersihan label nama kontainer di `TeamStats.jsx` agar mendukung prefix kontainer sandbox baru (`wfs-sandbox-`) maupun legacy (`saas-dibantuin-`).
+     - Memutakhirkan pengujian di `src/__tests__/projectboard_runtime.test.js`, `src/__tests__/reception_runtime.test.js`, `src/__tests__/remaining_components.test.jsx`, dan `src/__tests__/ui_components.test.jsx`.
+
+- **Bukti terukur:**
+  - **Vitest:** **1334/1334 passed (115 test file)** (+6 tests, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint .`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1602.35 KiB; chunk `OfficeScene-BylBykG9.js` 857.11 KB / gzip 231.05 KB, `index-B-stHHPb.js` 267.96 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, chunk usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-B-stHHPb.js`, 0 \"Scene init failed\").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 2/3 selesai, 67%, 14 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **949.717 bytes** (>500 KB, WebGL hidup, agents: 14, E2E_VISUAL: OK).
+    - `shot.sh`: Screenshot ck.png **587.471 bytes** (>500 KB).
+- **Sisa backlog:** verifikasi subjektif audio web-audio.
+
 ## 2026-10-25 23:55 WIB — Siklus 69: Interaktivitas Lengkap Meja Resepsionis Founder Wahyu FS, Presisi Framing & Fokus Papan Proyek 3D Lantai 3, Standardisasi Tipografi Akronim (Wahyu FS) & Deploy Otomatis
 
 - **Yang diperbaiki & ditingkatkan:**
