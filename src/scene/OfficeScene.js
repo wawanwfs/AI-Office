@@ -256,14 +256,14 @@ renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
 renderer.domElement&&renderer.domElement.addEventListener('wheel',e=>{if(focusGoal&&!focusGoal.reset)focusGoal=null;sph.radius=Math.max(12,Math.min(130,sph.radius+e.deltaY*.04));updCam()},{passive:true});
 
 // ─── LIGHTS ────────────────────────────────────────
-const ambient=new THREE.AmbientLight(0xffffff,0.38);scene.add(ambient);
-const sun=new THREE.DirectionalLight(0xFFF8F0,1.35);
-sun.position.set(12,20,10);sun.castShadow=true;
+const ambient=new THREE.AmbientLight(0xFFF5EB,0.65);scene.add(ambient);
+const sun=new THREE.DirectionalLight(0xFFFAF0,1.45);
+sun.position.set(14,24,12);sun.castShadow=true;
 sun.shadow.mapSize.set(2048,2048);
-sun.shadow.camera.left=-20;sun.shadow.camera.right=20;sun.shadow.camera.top=20;sun.shadow.camera.bottom=-20;sun.shadow.bias=-.0006;sun.shadow.normalBias=.02;
+sun.shadow.camera.left=-22;sun.shadow.camera.right=22;sun.shadow.camera.top=22;sun.shadow.camera.bottom=-22;sun.shadow.bias=-.0004;sun.shadow.normalBias=.02;
 scene.add(sun);
-scene.add(new THREE.DirectionalLight(0xCCDDFF,0.3).translateX(-10).translateY(12));
-scene.add(new THREE.HemisphereLight(0xDDE8F0,0x607080,0.28));
+const skyFill=new THREE.DirectionalLight(0x38BDF8,0.45);skyFill.position.set(-16,18,-12);scene.add(skyFill);
+scene.add(new THREE.HemisphereLight(0xF8FAFC,0x1E293B,0.55));
 
 // ─── HELPERS ───────────────────────────────────────
 const office=new THREE.Group();scene.add(office);
@@ -390,12 +390,15 @@ function buildChar(agent, standing=false){
   const g=new THREE.Group();
   const skin=looksOf(agent).skin;
   const isHairLong = isLongHair(agent.name);
+  // Warna cerah hidup & berkarakter: gunakan warna ikonik agent untuk pakaian agar kontras tinggi & terbaca
+  const shirtCol = agent.color || agent.shirt;
+  const pantsCol = (agent.pants === 0x08281F || agent.pants === 0x111827 || agent.pants === 0x212121) ? 0x1E293B : (agent.pants || 0x334155);
 
   if(standing){
     // ── STANDING CHARACTER (Human Stylized 3D Avatar) ──
     // Kaki silinder mulus manusiawi (tapered)
     [-1,1].forEach(sd=>{
-      const leg=new THREE.Mesh(new THREE.CylinderGeometry(.052,.044,.52,12),M(agent.pants));
+      const leg=new THREE.Mesh(new THREE.CylinderGeometry(.052,.044,.52,12),M(pantsCol));
       leg.position.set(sd*.075,.26,0);leg.userData.isLeg=true;leg.userData.phase=sd>0?0:Math.PI;leg.castShadow=true;g.add(leg);
       // Sepatu Sneakers: sol putih + bodi berwarna + toe cap
       const sole=new THREE.Mesh(new THREE.BoxGeometry(.11,.03,.20),M(0xFFFFFF));
@@ -406,18 +409,18 @@ function buildChar(agent, standing=false){
       toe.position.set(sd*.075,.045,.09);g.add(toe);
     });
     // Pinggul & Torso ramping alami
-    const hips=new THREE.Mesh(new THREE.CylinderGeometry(.13,.12,.12,12),M(agent.pants));
+    const hips=new THREE.Mesh(new THREE.CylinderGeometry(.13,.12,.12,12),M(pantsCol));
     hips.position.set(0,.56,0);g.add(hips);
-    const torso=new THREE.Mesh(new THREE.CylinderGeometry(.15,.13,.34,14),M(agent.shirt));
+    const torso=new THREE.Mesh(new THREE.CylinderGeometry(.15,.13,.34,14),M(shirtCol));
     torso.position.set(0,.79,0);torso.castShadow=true;g.add(torso);
     // Kerah baju melingkar halus
     const col=new THREE.Mesh(new THREE.CylinderGeometry(.09,.08,.04,12),M(0xFFFFFF));
     col.position.set(0,.965,0);g.add(col);
-    const btn=new THREE.Mesh(new THREE.BoxGeometry(.025,.09,.01),MB(new THREE.Color(agent.shirt).multiplyScalar(.6)));
+    const btn=new THREE.Mesh(new THREE.BoxGeometry(.025,.09,.01),MB(new THREE.Color(shirtCol).multiplyScalar(.75)));
     btn.position.set(0,.8,.095);g.add(btn);
     // Lengan silinder halus & tangan bulat manusiawi
     [-1,1].forEach(sd=>{
-      const ua=new THREE.Mesh(new THREE.CylinderGeometry(.045,.04,.18,10),M(agent.shirt));
+      const ua=new THREE.Mesh(new THREE.CylinderGeometry(.045,.04,.18,10),M(shirtCol));
       ua.position.set(sd*.215,.8,0);ua.userData.isArm=true;ua.userData.phase=sd>0?0:Math.PI;g.add(ua);
       const fa=new THREE.Mesh(new THREE.CylinderGeometry(.038,.035,.17,10),M(skin));
       fa.position.set(sd*.215,.62,0);g.add(fa);
@@ -486,10 +489,10 @@ function buildChar(agent, standing=false){
     // ── SITTING CHARACTER (Menghadap -Z ke monitor) ──
     // Paha silinder halus mengarah ke meja (-Z)
     [-1,1].forEach(sd=>{
-      const thigh=new THREE.Mesh(new THREE.CylinderGeometry(.055,.05,.26,12),M(agent.pants));
+      const thigh=new THREE.Mesh(new THREE.CylinderGeometry(.055,.05,.26,12),M(pantsCol));
       thigh.rotation.x=Math.PI/2;
       thigh.position.set(sd*.085,.44,-.08);thigh.castShadow=true;g.add(thigh);
-      const shin=new THREE.Mesh(new THREE.CylinderGeometry(.048,.044,.30,12),M(agent.pants));
+      const shin=new THREE.Mesh(new THREE.CylinderGeometry(.048,.044,.30,12),M(pantsCol));
       shin.position.set(sd*.085,.24,-.2);g.add(shin);
       // Sepatu di bawah meja
       const sole=new THREE.Mesh(new THREE.BoxGeometry(.11,.03,.18),M(0xFFFFFF));
@@ -497,19 +500,19 @@ function buildChar(agent, standing=false){
       const shoe=new THREE.Mesh(new THREE.BoxGeometry(.10,.05,.16),M(agent.color));
       shoe.position.set(sd*.085,.055,-.24);g.add(shoe);
     });
-    const hips=new THREE.Mesh(new THREE.CylinderGeometry(.14,.13,.12,12),M(agent.pants));
+    const hips=new THREE.Mesh(new THREE.CylinderGeometry(.14,.13,.12,12),M(pantsCol));
     hips.position.set(0,.5,.02);g.add(hips);
     // Torso manusiawi tegak
-    const torso=new THREE.Mesh(new THREE.CylinderGeometry(.15,.13,.36,14),M(agent.shirt));
+    const torso=new THREE.Mesh(new THREE.CylinderGeometry(.15,.13,.36,14),M(shirtCol));
     torso.position.set(0,.74,.02);torso.castShadow=true;g.add(torso);
     torso.userData.isTorso=true; torso.userData.baseY=.74;
     const col=new THREE.Mesh(new THREE.CylinderGeometry(.09,.08,.04,12),M(0xFFFFFF));
     col.position.set(0,.93,.02);g.add(col);
-    const btn=new THREE.Mesh(new THREE.BoxGeometry(.025,.1,.01),MB(new THREE.Color(agent.shirt).multiplyScalar(.6)));
+    const btn=new THREE.Mesh(new THREE.BoxGeometry(.025,.1,.01),MB(new THREE.Color(shirtCol).multiplyScalar(.75)));
     btn.position.set(0,.76,.115);g.add(btn);
     // Lengan santai menjangkau keyboard
     [-1,1].forEach(sd=>{
-      const ua=new THREE.Mesh(new THREE.CylinderGeometry(.045,.04,.20,10),M(agent.shirt));
+      const ua=new THREE.Mesh(new THREE.CylinderGeometry(.045,.04,.20,10),M(shirtCol));
       ua.position.set(sd*.215,.68,-.03);ua.rotation.x=.35;g.add(ua);
       const fa=new THREE.Mesh(new THREE.CylinderGeometry(.038,.035,.18,10),M(skin));
       fa.position.set(sd*.215,.56,-.2);fa.rotation.x=Math.PI/2.4;g.add(fa);
@@ -626,13 +629,13 @@ function sizeLabels(){
 
 function buildDesk(agent,dp){
   const g=new THREE.Group();
-  // Meja
-  const top=new THREE.Mesh(new THREE.BoxGeometry(1.5,.07,.8),M(0xC9A27A));
+  // Meja kayu oak skandinavia cerah modern
+  const top=new THREE.Mesh(new THREE.BoxGeometry(1.5,.07,.8),M(0xF5EBE1));
   top.position.set(0,.74,0);top.castShadow=true;top.receiveShadow=true;g.add(top);
   const edge=new THREE.Mesh(new THREE.BoxGeometry(1.52,.02,.82),new THREE.MeshBasicMaterial({color:agent.color}));
   edge.position.set(0,.705,0);g.add(edge);
   [[-.68,-.33],[.68,-.33],[-.68,.33],[.68,.33]].forEach(([lx,lz])=>{
-    const leg=new THREE.Mesh(new THREE.BoxGeometry(.05,.72,.05),M(0x3A4350));
+    const leg=new THREE.Mesh(new THREE.BoxGeometry(.05,.72,.05),M(0x1E293B));
     leg.position.set(lx,.36,lz);g.add(leg);
   });
   // Monitor — digeser ke samping kanan (+X=0.32) agar wajah & badan agent di X=0 terlihat jelas tanpa terhalang
@@ -1152,7 +1155,7 @@ function updateBubbles(delta){
 // ═══════════════════════════════════════════════════
 // SHIFT CHANGE — Agents arrive/leave
 // ═══════════════════════════════════════════════════
-const __shift=createShift({THREE,agentData,rng,isNamesVisible:()=>namesVisible});
+const __shift=createShift({THREE,agentData,rng,isNamesVisible:()=>namesVisible,alwaysActive:true});
 const updateShift=m=>__shift.update(m);
 
 // Track keyboard sounds — kini benar-benar dipakai: tick keyboard & langkah saat agent jalan

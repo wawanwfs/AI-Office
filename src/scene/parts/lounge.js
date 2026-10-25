@@ -5,6 +5,7 @@
 export function createLounge(ctx) {
   const { THREE, office, M, MB, drawTvDashboard } = ctx;
   const lounge = new THREE.Group();
+  lounge.position.y = 1.20; // Elevasi Lantai 3 (Welcome Lounge)
   // Karpet lounge (bulat-ish: dua kotak bertumpuk warna hangat)
   const lgRug = new THREE.Mesh(new THREE.BoxGeometry(3.2, .015, 3.0), M(0x8D5524, { transparent: true, opacity: .75 }));
   lgRug.position.set(9.7, .02, 7.4); lgRug.receiveShadow = true; lounge.add(lgRug);

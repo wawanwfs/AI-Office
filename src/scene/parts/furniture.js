@@ -17,18 +17,21 @@ export function createFurniture(ctx /* hooks disiapkan utk ekstensi */) {
   box(0.3, 0.6, 0.3, M(0xdfe6ee), -10.5, 0.3, 0, dispenser);
   box(0.24, 0.28, 0.24, M(0x7fb8ea), -10.5, 0.74, 0, dispenser);
   box(0.08, 0.06, 0.08, M(0x4a6a86), -10.5, 0.5, 0.17, dispenser);
+  dispenser.position.y = 0.60; // Lantai 2
   office.add(dispenser);
 
-  // ── Tanaman pot ──
+  // ── Tanaman pot (mengikuti elevasi lantai berundak) ──
+  const floorElevationAt = (z) => (z < -0.8 ? 0 : (z <= 4.5 ? 0.60 : 1.20));
   const addPlant = (px, pz, big = false) => {
     const k = big ? 1.3 : 1;
-    box(0.3 * k, 0.24 * k, 0.3 * k, M(0xcfd8dc), px, 0.12 * k, pz, office, true);
+    const baseElevation = floorElevationAt(pz);
+    box(0.3 * k, 0.24 * k, 0.3 * k, M(0xcfd8dc), px, baseElevation + 0.12 * k, pz, office, true);
     const count = big ? 5 : 3;
     for (let i = 0; i < count; i++) {
       const w = (0.1 + rng.r(0, 0.12)) * k;
       const h = (0.22 + rng.r(0, 0.26)) * k;
       const leaf = box(w, h, 0.1 * k, M(rng.n() > 0.5 ? 0x5fae63 : 0x2f7d3a),
-        px + rng.r(-0.07, 0.07) * k, 0.3 * k + i * 0.17 * k, pz + rng.r(-0.07, 0.07) * k);
+        px + rng.r(-0.07, 0.07) * k, baseElevation + 0.3 * k + i * 0.17 * k, pz + rng.r(-0.07, 0.07) * k);
       leaf.rotation.y = rng.r(0, Math.PI);
       leaf.castShadow = true;
     }
@@ -67,6 +70,7 @@ export function createFurniture(ctx /* hooks disiapkan utk ekstensi */) {
     const mag = box(0.3, 0.016, 0.22, M(c), SX - 0.72, 0.4, SZ + dz, sofa);
     mag.rotation.y = ry;
   });
+  sofa.position.y = 1.20; // Lantai 3
   office.add(sofa);
 
   // ── Pantry mini (counter + kopi + microwave) ──
@@ -82,6 +86,7 @@ export function createFurniture(ctx /* hooks disiapkan utk ekstensi */) {
     box(0.045, 0.045, 0.045, M(c), -10.2 + rng.r(-0.06, 0.06), 0.93, 2.5 + rng.r(-0.06, 0.06), pantry));
   box(0.36, 0.22, 0.26, M(0xe3e6e9), -10.5, 0.95, 2.5, pantry);
   box(0.3, 0.18, 0.02, M(0x101214), -10.5, 0.95, 2.36, pantry);
+  pantry.position.y = 0.60; // Lantai 2
   office.add(pantry);
 
   // ── Poster dinding samping (slogan WFS) — data di parts/poster_spec.js ──

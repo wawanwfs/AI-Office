@@ -6,6 +6,7 @@ import { drawMenuBoard } from './sign_canvas.js';
 export function createCafe(ctx) {
   const { THREE, office, M, MB } = ctx;
   const cafe = new THREE.Group();
+  cafe.position.y = 1.20; // Elevasi Lantai 3 (Executive Penthouse / Cafe Deck)
   const CFX = -9.5, CFZ = 7.5;
   // Counter L-shape
   const c1 = new THREE.Mesh(new THREE.BoxGeometry(3.2, .95, .6), M(0x6D4C41));

@@ -57,7 +57,7 @@ export function createTerraces({ THREE, office, M, MB }) {
   // ══════════════════════════════════════════════════════════
   const l1Deck = new THREE.Mesh(
     new THREE.BoxGeometry(34.0, 0.20, 13.0),
-    M(0xF1F5F9) // Default: Marmer Italia Carrara
+    M(0xFFFFFF) // Marmer Putih Carrara Mewah
   );
   l1Deck.position.set(0, -0.10, -7.4);
   l1Deck.receiveShadow = true;
@@ -81,21 +81,37 @@ export function createTerraces({ THREE, office, M, MB }) {
   l1Downlight.position.set(0, 3.8, -7.4);
   terraces.add(l1Downlight);
 
-  // ── AREA INDOOR ZEN GARDEN LANTAI 1 ──
+  // ── AREA INDOOR ZEN GARDEN LANTAI 1 (Bonsai & River Pebbles Halus) ──
   const zenGroup = new THREE.Group();
-  const zenBase = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.08, 4.2), M(0xD8D0C5));
+  const zenBase = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.08, 4.2), M(0xD4AF37));
   zenBase.position.set(-11.5, 0.04, -10.5);
   zenGroup.add(zenBase);
-  const sand = new THREE.Mesh(new THREE.BoxGeometry(6.1, 0.02, 3.9), M(0xFAF7F2));
+  const sand = new THREE.Mesh(new THREE.BoxGeometry(6.1, 0.02, 3.9), M(0xFAF8F5));
   sand.position.set(-11.5, 0.09, -10.5);
   sand.receiveShadow = true;
   zenGroup.add(sand);
+  // Batu kali lonjong halus (bukan balok kardus)
+  const PebbleGeom = THREE.SphereGeometry || THREE.BoxGeometry;
   [[-13, -11.5], [-11.5, -10], [-10.2, -11]].forEach(([bx, bz], bi) => {
-    const rock = new THREE.Mesh(new THREE.BoxGeometry(0.5 + bi * 0.1, 0.35, 0.45), M(0x475569));
-    rock.position.set(bx, 0.25, bz);
-    rock.rotation.y = bi * 0.6;
-    zenGroup.add(rock);
+    const pebble = new THREE.Mesh(new PebbleGeom(0.32 + bi * 0.06, 12, 10), M(0x334155));
+    if (pebble.scale && pebble.scale.set) pebble.scale.set(1.4, 0.55, 1.0);
+    pebble.position.set(bx, 0.16, bz);
+    pebble.rotation.y = bi * 0.8;
+    pebble.castShadow = true;
+    zenGroup.add(pebble);
   });
+  // Bonsai eksotis di tengah taman zen
+  const TrunkGeom = THREE.CylinderGeometry || THREE.BoxGeometry;
+  const trunk = new THREE.Mesh(new TrunkGeom(0.08, 0.12, 0.75, 8), M(0x4A2E18));
+  trunk.position.set(-11.5, 0.45, -10.5);
+  trunk.rotation.z = -0.15;
+  zenGroup.add(trunk);
+  const FoliageGeom = THREE.SphereGeometry || THREE.BoxGeometry;
+  const foliage = new THREE.Mesh(new FoliageGeom(0.48, 12, 10), M(0x10B981));
+  if (foliage.scale && foliage.scale.set) foliage.scale.set(1.4, 0.65, 1.2);
+  foliage.position.set(-11.6, 0.82, -10.5);
+  foliage.castShadow = true;
+  zenGroup.add(foliage);
   terraces.add(zenGroup);
 
   // ══════════════════════════════════════════════════════════
@@ -159,7 +175,7 @@ export function createTerraces({ THREE, office, M, MB }) {
   // ══════════════════════════════════════════════════════════
   const l2Deck = new THREE.Mesh(
     new THREE.BoxGeometry(34.0, 0.20, 5.1),
-    M(0xE2E8F0) // Default: Scandinavian blonde oak
+    M(0xEAD8C2) // Scandinavian warm blonde oak parquet
   );
   l2Deck.position.set(0, L2_Y - 0.10, 1.95);
   l2Deck.receiveShadow = true;
@@ -216,7 +232,7 @@ export function createTerraces({ THREE, office, M, MB }) {
   // ══════════════════════════════════════════════════════════
   const l3Deck = new THREE.Mesh(
     new THREE.BoxGeometry(34.0, 0.20, 11.0),
-    M(0xCBD5E1) // Default: Light executive slate
+    M(0x1E293B) // Executive Midnight Smoked Slate Parquet
   );
   l3Deck.position.set(0, L3_Y - 0.10, 10.5);
   l3Deck.receiveShadow = true;
@@ -295,7 +311,7 @@ export function createTerraces({ THREE, office, M, MB }) {
       l2Deck.material.color.set(0x182842); // Parquet navy eksekutif gelap
       l3Deck.material.color.set(0x121E30); // Walnut slate gelap
       l1Inlay.material.color.set(0x00E5FF);
-      zenBase.material.color.set(0x1E293B);
+      zenBase.material.color.set(0x00E5FF);
       l2Led.material.color.set(0x00F0FF);
       l3Led.material.color.set(0x10E5A0);
       stepStrips.forEach(s => s.material.color.set(0x00E5FF));
@@ -306,17 +322,17 @@ export function createTerraces({ THREE, office, M, MB }) {
     } else {
       // MODE TERANG (Daylight Architectural Studio)
       l1Deck.material.color.set(0xF1F5F9); // Marmer putih bersih berkelas
-      l2Deck.material.color.set(0xE2E8F0); // Parquet terang elegan
-      l3Deck.material.color.set(0xCBD5E1); // Slate terang eksekutif
+      l2Deck.material.color.set(0xE2E8F0); // Parquet kayu hangat elegan
+      l3Deck.material.color.set(0xCBD5E1); // Slate eksekutif berkelas
       l1Inlay.material.color.set(0xD4AF37); // Garis emas murni
-      zenBase.material.color.set(0xD8D0C5);
-      l2Led.material.color.set(0x3B82F6);
-      l3Led.material.color.set(0x10B981);
-      stepStrips.forEach(s => s.material.color.set(0x60A5FA));
-      ledLines.forEach(l => l.material.color.set(0x60A5FA));
-      if (l1Downlight && l1Downlight.intensity !== undefined) l1Downlight.intensity = 0.35;
-      if (l2Downlight && l2Downlight.intensity !== undefined) l2Downlight.intensity = 0.35;
-      if (l3Downlight && l3Downlight.intensity !== undefined) l3Downlight.intensity = 0.35;
+      zenBase.material.color.set(0xD4AF37);
+      l2Led.material.color.set(0x00F0FF);
+      l3Led.material.color.set(0x10E5A0);
+      stepStrips.forEach(s => s.material.color.set(0x00E5FF));
+      ledLines.forEach(l => l.material.color.set(0x00F0FF));
+      if (l1Downlight && l1Downlight.intensity !== undefined) l1Downlight.intensity = 0.45;
+      if (l2Downlight && l2Downlight.intensity !== undefined) l2Downlight.intensity = 0.45;
+      if (l3Downlight && l3Downlight.intensity !== undefined) l3Downlight.intensity = 0.45;
     }
   }
 

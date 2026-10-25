@@ -155,6 +155,7 @@ export function createShift(ctx) {
     });
   }
   function depart() {
+    if (ctx.alwaysActive) return; // Mode 24/7 AI Office: seluruh agen selalu aktif di kantor
     const handled = new Set();
     DEPART.forEach((idx, i) => {
       handled.add(idx);
@@ -188,6 +189,7 @@ export function createShift(ctx) {
     });
   }
   function nightfall() {
+    if (ctx.alwaysActive) return; // Mode 24/7 AI Office: seluruh agen selalu aktif di kantor
     agentData.forEach((ad, i) => {
       if (i === 0) return;
       ad.sittingChar.visible = false; ad.walker.visible = false; ad.state = 'offsite';
