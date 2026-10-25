@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   PAD_AGENT, PAD_ZONE, overlapPass,
   K_AGENT_AGENT, K_AGENT_BARRIER, K_ZONE_FROM_ZONE, K_AGENT_PUSHED,
+  K_ZONE_TAG_ALONG, K_ZONE_TAG_X,
 } from '../scene/parts/label_overlap.js';
 
 const agent = (x, y, sw, sh, extra = {}) => ({ x, y, offX: 0, offY: 0, sw, sh, ...extra });
@@ -49,6 +50,20 @@ describe('overlapPass — agent vs zona', () => {
     expect(a.offY).toBeCloseTo(-96 * K_AGENT_PUSHED, 5);
     expect(z.offY).toBe(0); // zona (i) di cabang ini hanya ikut bergeser via tag-along cabang lain — di urutan ini tidak
   });
+  it('zona dahulu (i=agent, j=zona): agent bergeser penuh DAN zona ikut geser sedikit (tag-along)', () => {
+    const z = zone(0, 0, 200, 60); // zt ada
+    const a = agent(0, 0, 100, 40);
+    overlapPass([z, a]);
+    // pasangan (i=agent, j=zona) → cabang "agent bergeser penuh": PAD zona 46,
+    // lwi=146, lwj=246 → w2=196; lhi=86, lhj=106 → h2=96.
+    expect(a.offY).toBeCloseTo(96 * K_AGENT_BARRIER, 5); // 96×2.4 = 230.4
+    expect(a.offX).toBeCloseTo(196 * K_AGENT_AGENT, 5);  // dir=+1 (sama x)
+    // zona (penghalang dengan zt) ikut digeser via tag-along: K_ZONE_TAG_ALONG / K_ZONE_TAG_X
+    expect(z.offY).toBeCloseTo(-96 * K_ZONE_TAG_ALONG, 5); // 96×0.8 = 76.8
+    expect(z.offX).toBeCloseTo(-196 * K_ZONE_TAG_X, 5);    // 196×1.1 = 215.6
+    // invarian: pusat tak lagi overlap (terpisah jauh setelah dorongan)
+    expect(Math.abs((a.x + a.offX) - (z.x + z.offX))).toBeGreaterThan(196);
+  });
   it('arah geser menjauh: agent (di atas zona) terdorong lebih jauh dari zona', () => {
     const a = agent(0, -10, 100, 40), z = zone(0, 0, 200, 60);
     overlapPass([a, z]);
@@ -85,6 +100,8 @@ describe('overlapPass — konstanta koefisien historis', () => {
     expect(K_AGENT_BARRIER).toBe(2.4);
     expect(K_ZONE_FROM_ZONE).toBe(1.8);
     expect(K_AGENT_PUSHED).toBe(1.6);
+    expect(K_ZONE_TAG_ALONG).toBe(0.8);
+    expect(K_ZONE_TAG_X).toBe(1.1);
   });
 });
 
