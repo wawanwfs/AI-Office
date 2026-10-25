@@ -306,35 +306,6 @@ async def api_new_project(body: dict):
     asyncio.create_task(_plan())
     return {"ok": True, "project_id": pid, "planning": True, "sandbox": sandbox}
 
-async def _unused_plan():
-    plan = await taskengine.call_llm(
-        "pm1",
-        taskengine.ROLE_SYS["pm"],
-        f"Project: {name}\nBrief: {brief}\nBuat 6-10 task teknis untuk membangun project ini.")
-    try:
-        m = re.search(r"\[.*\]", plan, re.S)
-        tasks = json.loads(m.group(0)) if m else []
-    except Exception:
-        tasks = []
-    import tasks as _te
-    if not tasks:
-        # fallback: minta PM ulang dgn output lebih disiplin
-        plan2 = await taskengine.call_llm("pm1", taskengine.ROLE_SYS["pm"],
-            f"Project: {name}\nBrief: {brief}\nOutput HANYA JSON array, mulai [ akhir ]")
-        try:
-            m2 = re.search(r"\[.*\]", plan2, re.S)
-            tasks = json.loads(m2.group(0)) if m2 else []
-        except Exception:
-            tasks = []
-    for t in tasks[:10]:
-        if isinstance(t, dict) and t.get("title"):
-            taskengine.add_task(pid, t.get("title","task"), t.get("role","backend"),
-                                t.get("prompt",""))
-    c = taskengine.db()
-    c.execute("UPDATE projects SET status='backlog' WHERE id=?", (pid,))
-    c.commit(); c.close()
-    return {"ok": True, "project_id": pid, "tasks_created": len(tasks)}
-
 @app.get("/api/tasks")
 async def api_tasks(project: int = None):
     return {"tasks": taskengine.list_tasks(project)}
