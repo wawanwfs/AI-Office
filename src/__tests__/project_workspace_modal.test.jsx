@@ -62,6 +62,16 @@ describe('ProjectWorkspaceModal', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 
+  it('Escape menutup dialog (a11y, paritas dgn modal lain)', async () => {
+    const onClose = vi.fn()
+    mockFetch({ '/api/projects/p1/files': okJson({ files: [] }) })
+    render(<ProjectWorkspaceModal project={PROJECT} open onClose={onClose} />)
+    const dlg = screen.getByRole('dialog')
+    expect(dlg.getAttribute('aria-modal')).toBe('true')
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
+
   it('Restart → POST container/restart & onRefreshProject dipanggil', async () => {
     const onRefreshProject = vi.fn()
     const f = mockFetch({

@@ -1,4 +1,5 @@
-import React, { useState, useEffect, useCallback } from 'react'
+import React, { useState, useEffect, useCallback, useRef } from 'react'
+import { useDialogA11y } from '../lib/dialogA11y'
 import { IconClose, IconRocket } from './Icons'
 
 export default function ProjectWorkspaceModal({ project, open, onClose, onRefreshProject }) {
@@ -14,6 +15,14 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
   const [previewKey, setPreviewKey] = useState(1)
 
   const pid = project?.id
+
+  // a11y: Escape menutup, fokus masuk ke dialog & terkunci di dalamnya
+  // (paritas dgn modal lain yang pakai useDialogA11y).
+  const box = useRef(null)
+  const onCloseRef = useRef(onClose)
+  useEffect(() => { onCloseRef.current = onClose })
+  const closeViaA11y = useCallback(() => onCloseRef.current(), [])
+  useDialogA11y({ open, onClose: closeViaA11y, ref: box })
 
   // Load file list
   const loadFiles = useCallback(async () => {
@@ -106,6 +115,7 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">
       <div
+        ref={box}
         role="dialog"
         aria-modal="true"
         aria-labelledby="workspace-title"
