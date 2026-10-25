@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
 import {
   IconPlus, IconPlay, IconPause, IconZoomOut, IconZoomIn,
-  IconIso, IconFront, IconTop, IconNeon
+  IconIso, IconFront, IconTop, IconNeon, IconMoon, IconSun
 } from './Icons'
 
 // Menu kecil untuk zoom + pencahayaan + preset sudut kamera (popover di atas dock)
@@ -50,9 +50,18 @@ export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onTog
           <span className="lb">{v === 'iso' ? 'Iso' : v === 'front' ? 'Depan' : 'Atas'}</span>
         </button>
       ))}
-      <button className={'ibtn' + (!theme ? ' on' : '')} onClick={onToggleTheme} aria-pressed={!theme} title="Mode lampu neon" aria-label="Lampu neon">
-        <span className="ic"><IconNeon size={19} /><span className="sr-only">💡</span></span>
-        <span className="lb">Neon</span>
+      <button
+        className={'ibtn' + (!theme ? ' on' : '')}
+        onClick={onToggleTheme}
+        aria-pressed={!theme}
+        title={!theme ? 'Mode Gelap aktif — Klik untuk ganti ke Mode Terang' : 'Mode Terang aktif — Klik untuk ganti ke Mode Gelap'}
+        aria-label="Lampu neon"
+      >
+        <span className="ic">
+          {!theme ? <IconSun size={19} style={{ color: '#F59E0B' }} /> : <IconMoon size={19} style={{ color: '#00F0FF' }} />}
+          <span className="sr-only">💡</span>
+        </span>
+        <span className="lb">{!theme ? 'Terang' : 'Gelap'}</span>
       </button>
     </>
   )

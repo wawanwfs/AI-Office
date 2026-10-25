@@ -912,11 +912,44 @@ const __neon=createNeonMode({ambient,sun,renderer,floor:fl,carpet:cp,ceiling:cei
     lights:office.children.filter(c=>c.isPointLight&&c.position.y>3.0&&c.position.y<3.15)},
   panelLights:office.children.filter(c=>c.isPointLight&&c.position.y>3.5&&c.position.y<3.95),
   restoreTime:()=>updateTime(timeOfDay)});
-function toggleCyberpunk(){
-  cyberpunkMode=__neon.toggle();
-  try{localStorage.setItem('wfs_neon',cyberpunkMode?'1':'0')}catch{/* abaikan */}
+function toggleCyberpunk() {
+  cyberpunkMode = !cyberpunkMode;
+  if (cyberpunkMode) {
+    // ── MODE GELAP MEWAH (Night Studio) ──
+    // 1. Lampu tabung plafon dan aksen LED gedung menyala cyan tajam
+    tubeLights.forEach(l => { l.intensity = 0.85; l.color.set(0x00F0FF); });
+    tubeMeshes.forEach(m => { m.material.color.set(0x18E0FF); m.material.opacity = 0.95; });
+    // 2. Pencahayaan interior tetap TERANG dan MEWAH (tidak pernah gelap gulita)
+    ambient.intensity = 0.58;
+    sun.intensity = 1.25;
+    renderer.toneMappingExposure = 1.15;
+    // 3. Warna lantai dan karpet beralih ke navy arsitektural mewah dengan kontras tajam
+    fl.material.color.set(0x203048);
+    cp.material.color.set(0x18263A);
+    ceiling.material.opacity = 0.75;
+    // 4. Glow meja dan layar monitor menyala
+    agentData.forEach(a => { if (a.dGlow) { a.dGlow.intensity = 0.9; a.dGlow.distance = 4.5; } });
+    screenLights.forEach(l => { l.intensity = 0.6; });
+    if (rcLight) rcLight.intensity = 0.9;
+  } else {
+    // ── MODE TERANG (Daylight Studio) ──
+    tubeLights.forEach(l => { l.intensity = 0; });
+    tubeMeshes.forEach(m => { m.material.color.set(0x334466); m.material.opacity = 0.3; });
+    ambient.intensity = 0.52;
+    sun.intensity = 1.35;
+    renderer.toneMappingExposure = 1.15;
+    fl.material.color.set(0xffffff);
+    cp.material.color.set(0xd0d8e0);
+    ceiling.material.opacity = 0.45;
+    agentData.forEach(a => { if (a.dGlow) { a.dGlow.intensity = 0.25; a.dGlow.distance = 3.0; } });
+    screenLights.forEach(l => { l.intensity = 0; });
+    if (rcLight) rcLight.intensity = 0.4;
+  }
+  try { localStorage.setItem('wfs_neon', cyberpunkMode ? '1' : '0'); } catch { /* abaikan */ }
+  return cyberpunkMode;
 }
-if(cyberpunkMode)__neon.toggle(); // terapkan neon tersimpan saat init (toggle false→true)
+try { localStorage.removeItem('wfs_neon'); } catch { /* abaikan */ }
+cyberpunkMode = false;
 
 // ═══════════════════════════════════════════════════
 // PARTICLES
