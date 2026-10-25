@@ -6,6 +6,26 @@ import { useDialogA11y } from '../lib/dialogA11y'
 import { fileCount } from '../lib/files'
 import { IconStats, IconClose } from './Icons'
 
+// Animasi angka: lerp dengan easing untuk feedback visual yang hidup (tanpa lib tambahan).
+function useTween(target, ms = 550) {
+  const [v, setV] = useState(0)
+  useEffect(() => {
+    let raf
+    if (target === v) { setV(target); return }
+    const start = performance.now(), from = v
+    const step = t => {
+      const p = Math.min(1, (t - start) / ms)
+      const e = 1 - Math.pow(1 - p, 3)
+      setV(Math.round(from + (target - from) * e))
+      if (p < 1) raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [target])
+  return v
+}
+
 /* Statistik Tim — data nyata dari task engine + resource host */
 export default function TeamStats() {
   const [open, setOpen] = useState(false)
@@ -43,6 +63,13 @@ export default function TeamStats() {
   let totalFiles = 0
   ;(data || []).forEach(t => { byStatus[t.status] = (byStatus[t.status] || 0) + 1; totalFiles += fileCount(t.files) })
   const dot = s => s === 'done' ? '#10E5A0' : s === 'failed' ? '#f66' : s === 'running' ? '#f59e0b' : s === 'review' ? '#60A5FA' : '#9aa3b5'
+  // Hook tween DIPANGGIL tanpa syarat (5 baris tetap) agar urutan hook stabil antar render.
+  const nDone = useTween(byStatus.done || 0)
+  const nRunning = useTween(byStatus.running || 0)
+  const nReview = useTween(byStatus.review || 0)
+  const nFailed = useTween(byStatus.failed || 0)
+  const nPending = useTween(byStatus.pending || 0)
+  const TW = { done: nDone, running: nRunning, review: nReview, failed: nFailed, pending: nPending }
 
   return (
     <>
@@ -62,7 +89,12 @@ export default function TeamStats() {
             {data && data.length > 0 && (
               <>
                 <div className="stat-grid">
-                  {[['done','Selesai'],['running','Jalan'],['review','Review'],['failed','Gagal'],['pending','Antri']].map(([s,l]) => (<div key={s} role="img" aria-label={`${byStatus[s] || 0} task ${l.toLowerCase()}`}><b style={{color:dot(s)}} aria-hidden="true">{byStatus[s] || 0}</b><span aria-hidden="true">{l}</span></div>))}
+                  {[['done','Selesai'],['running','Jalan'],['review','Review'],['failed','Gagal'],['pending','Antri']].map(([s,l]) => (
+                    <div key={s} role="img" aria-label={`${byStatus[s] || 0} task ${l.toLowerCase()}`}>
+                      <b style={{color:dot(s)}} aria-hidden="true">{TW[s]}</b>
+                      <span aria-hidden="true">{l}</span>
+                    </div>
+                  ))}
                 </div>
                 <div className="note" style={{ marginBottom: 6 }}>Total file dihasilkan: <b style={{ color: '#fff' }}>{totalFiles}</b></div>
                 <div style={{ maxHeight: 180, overflowY: 'auto' }}>

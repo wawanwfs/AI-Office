@@ -4,6 +4,7 @@ import HUD from './components/HUD'
 import Header from './components/Header'
 import SkipLink from './components/SkipLink'
 import Ticker from './components/Ticker'
+import SysMeter from './components/SysMeter'
 import WfsPanel from './components/WfsPanel'
 import TeamStats from './components/TeamStats'
 import ActionMenu from './components/ActionMenu'
@@ -321,6 +322,7 @@ export default function App() {
 
       <SkipLink />
       <Header />
+      <SysMeter />
       <Ticker />
 
       {inMeeting && <div className="meeting-badge" role="status"><div><i />Rapat berlangsung</div></div>}

@@ -117,7 +117,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
                 {tasks && <div role="status" aria-live="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', clipPath: 'inset(50%)', whiteSpace: 'nowrap' }}>{`${list.length} task ditampilkan`}</div>}
                 {tasks && list.length === 0 && <div className="skeleton">Tidak ada task yang cocok.</div>}
                 {list.map(t => (
-                  <button key={t.id} onClick={() => setSel(t)} style={{ textAlign: 'left', minHeight: 52, padding: '8px 12px', background: 'rgba(255,255,255,.06)', border: '1px solid rgba(255,255,255,.08)', borderLeft: `4px solid ${ST[t.status]?.[1] || '#888'}`, borderRadius: 10, color: '#fff', cursor: 'pointer', fontFamily: 'inherit' }}>
+                  <button key={t.id} className="taskrow" onClick={() => setSel(t)} style={{ borderLeft: `4px solid ${ST[t.status]?.[1] || '#888'}` }}>
                     <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.35 }}>#{t.id} {t.title}</div>
                     <div className="note">{t.agent_id} · {ST[t.status]?.[0] || t.status}</div>
                   </button>

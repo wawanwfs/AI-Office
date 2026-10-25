@@ -58,7 +58,7 @@ describe('App — integrasi UI', () => {
   it('gateway offline → status "Gateway offline" kind=off', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('down') }))
     render(<App />)
-    await waitFor(() => expect(screen.getByText('Gateway offline')).toBeTruthy())
+    await waitFor(() => expect(screen.getAllByText('Gateway offline').length).toBeGreaterThan(0))
   })
 
   it('perubahan status task antar poll → toast "Task #2 selesai"', async () => {

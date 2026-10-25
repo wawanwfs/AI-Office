@@ -68,6 +68,30 @@ button { font-family: inherit; }
   background: radial-gradient(ellipse at 50% 48%, transparent 56%, rgba(0, 8, 20, 0.48) 100%);
 }
 
+/* ===== SysMeter — status host live (kanan-atas) ===== */
+.sysmeter {
+  position: fixed; top: 14px; right: 14px; z-index: var(--z-hud);
+  display: flex; align-items: center; gap: 4px; padding: 6px 12px;
+  background: linear-gradient(180deg, rgba(14, 24, 46, 0.85) 0%, rgba(6, 12, 26, 0.92) 100%);
+  backdrop-filter: blur(24px) saturate(1.5);
+  border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 20px;
+  box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
+  animation: fadeUp .9s cubic-bezier(0.16, 1, 0.3, 1) .55s both;
+  font-family: 'DM Mono', 'Space Mono', monospace;
+}
+.sm-item {
+  font-size: 11px; color: var(--text-secondary); padding: 2px 7px;
+  border-radius: 999px; background: rgba(255, 255, 255, 0.04);
+  white-space: nowrap; font-variant-numeric: tabular-nums;
+}
+.sm-item.sm-hl { display: inline-flex; align-items: center; gap: 6px; color: var(--teal); font-weight: 600; }
+.sm-item.sm-hl i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
+@media (max-width: 760px) {
+  .sysmeter { top: 70px; right: 10px; gap: 2px; padding: 4px 8px; border-radius: 16px; }
+  .sm-item { font-size: 10px; padding: 2px 5px; }
+  .sm-item:nth-last-child(-n+2) { display: none; } /* sembunyikan disk & uptime di layar kecil */
+}
+
 /* ===== Dock bawah: SATU bilah (Floating Glass Capsule) ===== */
 .dock {
   position: fixed; left: 0; right: 0; margin: 0 auto; width: max-content; bottom: calc(14px + var(--safe-b));
@@ -411,3 +435,16 @@ button { font-family: inherit; }
 }
 .skip-link.vis { top: 10px; }
 .skip-link:focus { outline: 2px solid #fff; outline-offset: 2px; }
+
+/* Baris task di TaskBoard — hover/active interaktif */
+.taskrow {
+  text-align: left; min-height: 52px; padding: 8px 12px; cursor: pointer;
+  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px; color: #fff; font-family: inherit; width: 100%;
+  transition: background .16s, border-color .16s, transform .12s;
+}
+.taskrow:hover {
+  background: rgba(255, 255, 255, 0.09); border-color: rgba(255, 255, 255, 0.16);
+  transform: translateY(-1px);
+}
+.taskrow:active { transform: translateY(0) scale(0.99); }
