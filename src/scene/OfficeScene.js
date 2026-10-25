@@ -1584,7 +1584,25 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
     isCyberpunk: () => cyberpunkMode,
     zoomIn: () => { if(focusGoal&&!focusGoal.reset)focusGoal=null; sph.radius=Math.max(12,sph.radius-4); updCam(); },
     zoomOut: () => { if(focusGoal&&!focusGoal.reset)focusGoal=null; sph.radius=Math.min(130,sph.radius+4); updCam(); },
+    focusFloor: (floorNum) => {
+      if (selectedIdx !== -1) { selectedIdx = -1; applySelected(); if (onSelectAgent) onSelectAgent(null); }
+      delete sph.__saved;
+      if (floorNum === 1 || floorNum === '1') {
+        focusGoal = { t: new THREE.Vector3(0, 0.4, -6.0), r: 20 };
+        return true;
+      } else if (floorNum === 2 || floorNum === '2') {
+        focusGoal = { t: new THREE.Vector3(0, 1.0, 0.0), r: 22 };
+        return true;
+      } else if (floorNum === 3 || floorNum === '3') {
+        focusGoal = { t: new THREE.Vector3(0, 1.6, 6.5), r: 22 };
+        return true;
+      }
+      return false;
+    },
     setView: (name) => {
+      if(name==='l1'||name==='floor1'){ focusGoal={t:new THREE.Vector3(0,0.4,-6.0),r:20}; return true; }
+      if(name==='l2'||name==='floor2'){ focusGoal={t:new THREE.Vector3(0,1.0,0.0),r:22}; return true; }
+      if(name==='l3'||name==='floor3'){ focusGoal={t:new THREE.Vector3(0,1.6,6.5),r:22}; return true; }
       if(name==='iso'||name==='front'||name==='top'){
         // ganti sudut kamera = batalkan fokus/pilihan agent (konsisten dgn Escape & klik kosong)
         if(selectedIdx!==-1){selectedIdx=-1;applySelected();if(onSelectAgent)onSelectAgent(null);}

@@ -17,6 +17,7 @@ import ProjectPanel from './components/ProjectPanel'
 import ActivityLog from './components/ActivityLog'
 import AgentInspector from './components/AgentInspector'
 import ShConsole from './components/ShConsole'
+import FloorNavigator from './components/FloorNavigator'
 import { IconVolume, IconVolumeMute, IconScroll, IconHelp } from './components/Icons'
 import { api } from './lib/api'
 import { anyModalOpen } from './lib/modal'
@@ -257,6 +258,17 @@ export default function App() {
     dir > 0 ? s.zoomIn() : s.zoomOut()
   }, [flash])
 
+  const handleFloorSelect = (floorNum, floorId) => {
+    const s = sceneRef.current
+    if (s && s.focusFloor) {
+      s.focusFloor(floorNum)
+      flash(`Fokus ke Lantai ${floorNum}`)
+    } else if (s && s.setView) {
+      s.setView(floorId)
+      flash(`Fokus ke Lantai ${floorNum}`)
+    }
+  }
+
   // ---- shortcut keyboard (abaikan saat fokus di input/textarea/modal) ----
   useEffect(() => {
     const onKey = (e) => {
@@ -326,6 +338,7 @@ export default function App() {
       <Header />
       <SysMeter />
       <Ticker />
+      <FloorNavigator onSelectFloor={handleFloorSelect} />
 
       {inMeeting && <div className="meeting-badge" role="status"><div><i />Rapat berlangsung</div></div>}
 
