@@ -163,4 +163,16 @@ describe('ShConsole — konsol software house', () => {
     fireEvent.click(screen.getByText('Setujui'))
     await waitFor(() => expect(calls).toContain('decide'))
   })
+
+  it('a11y: fokus pindah ke dalam drawer dan Esc menutup', async () => {
+    stubFetch({ '/wfs-api/sh/overview': OV })
+    const onClose = vi.fn()
+    render(<ShConsole show onClose={onClose} />)
+    const closeBtn = screen.getByRole('button', { name: 'Tutup konsol' })
+    // fokus dipindahkan ke tombol tutup (elemen focusable pertama drawer)
+    await waitFor(() => expect(document.activeElement).toBe(closeBtn))
+    // Esc menutup drawer (pola useDialogA11y)
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
 })

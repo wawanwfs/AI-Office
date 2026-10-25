@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react'
 import GlobalTaskComposer from '../components/GlobalTaskComposer'
 import ProjectWorkspaceModal from '../components/ProjectWorkspaceModal'
 
@@ -30,6 +30,17 @@ describe('WFS PROJECT Software House — GlobalTaskComposer', () => {
     render(<GlobalTaskComposer open={true} onClose={vi.fn()} />)
     fireEvent.click(screen.getByText('Deploy ke Sandbox'))
     expect(screen.getByText('Harap masukkan instruksi tugas.')).toBeTruthy()
+  })
+
+  it('a11y: fokus pindah ke dalam dialog saat terbuka, Tab terkunci, Esc menutup', async () => {
+    const onClose = vi.fn()
+    render(<GlobalTaskComposer open={true} onClose={onClose} />)
+    const closeBtn = screen.getByRole('button', { name: 'Tutup dialog' })
+    // fokus dipindahkan ke elemen focusable pertama (tombol tutup) setelah dialog terbuka
+    await waitFor(() => expect(document.activeElement).toBe(closeBtn))
+    // Esc menutup dialog (pola useDialogA11y)
+    fireEvent.keyDown(document, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
   })
 })
 

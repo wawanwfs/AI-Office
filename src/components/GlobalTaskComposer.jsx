@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { IconClose, IconRocket } from './Icons'
+import { useDialogA11y } from '../lib/dialogA11y'
 
 const PROJECT_TYPES = [
   { id: 'website', label: 'Website / Landing Page', desc: 'Modern responsive website dengan Tailwind & HTML5' },
@@ -38,6 +39,10 @@ export default function GlobalTaskComposer({ open, onClose, onProjectCreated }) 
       setBusy(false)
     }
   }, [open])
+
+  // a11y: Esc menutup, fokus pindah ke elemen pertama dalam dialog, Tab terkunci
+  // di dalam dialog (pola sama dengan ConfirmModal/TaskModal/OverlayHelp).
+  useDialogA11y({ open, onClose, ref: boxRef })
 
   if (!open) return null
 

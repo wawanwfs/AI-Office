@@ -1,8 +1,9 @@
 // ShConsole — Console "WFS PROJECT AI Software House" (drawer kanan).
 // Mengonsumsi API nyata backend: /wfs-api/sh/overview, projects, tasks, agents.
 // Tab: Overview | Projects | Tasks | Agents | Project Baru.
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
+import { useDialogA11y } from '../lib/dialogA11y'
 
 const STYLE = {
   overlay: { position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,.45)' },
@@ -57,6 +58,7 @@ export default function ShConsole({ show, onClose }) {
   const [termOut, setTermOut] = useState('')
   const [approvals, setApprovals] = useState([])
   const [gitMsg, setGitMsg] = useState('')
+  const drawerRef = useRef(null)
 
   const loadOverview = useCallback(async () => {
     try { setOv(await api('sh/overview')); setErr('') } catch (e) { setErr(e.message) }
@@ -158,11 +160,15 @@ export default function ShConsole({ show, onClose }) {
     if (pid) { loadWsFiles(pid, ''); loadWsLogs(pid); loadWsGit(pid) }
   }
 
+  // a11y: Esc menutup, fokus pindah ke dalam drawer, Tab terkunci di dalamnya
+  // (pola sama dengan dialog lain memakai useDialogA11y).
+  useDialogA11y({ open: show, onClose, ref: drawerRef })
+
   if (!show) return null
 
   return (
     <div style={STYLE.overlay} onClick={onClose}>
-      <div style={STYLE.drawer} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Konsol Software House">
+      <div ref={drawerRef} style={STYLE.drawer} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Konsol Software House">
         <div style={STYLE.head}>
           <h2 style={STYLE.title}>WFS PROJECT · Konsol</h2>
           <button className="ibtn" onClick={onClose} aria-label="Tutup konsol" title="Tutup">✕</button>
