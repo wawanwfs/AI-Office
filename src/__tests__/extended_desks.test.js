@@ -6,8 +6,8 @@ import { EXTENDED_SPECIALISTS } from '../scene/parts/extended_desks.js';
 const floorFromZ = (z) => (z < -0.8 ? 1 : (z <= 4.5 ? 2 : 3));
 
 describe('extended_desks — EXTENDED_SPECIALISTS', () => {
-  it('berisi 6 spesialis dengan nama unik', () => {
-    expect(EXTENDED_SPECIALISTS).toHaveLength(6);
+  it('berisi 12 spesialis kampus dengan nama unik', () => {
+    expect(EXTENDED_SPECIALISTS).toHaveLength(12);
     const names = EXTENDED_SPECIALISTS.map((a) => a.name);
     expect(new Set(names).size).toBe(names.length);
   });
