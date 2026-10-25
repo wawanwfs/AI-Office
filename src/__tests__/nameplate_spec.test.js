@@ -49,6 +49,15 @@ describe('titleCase', () => {
   });
   it('non-string dipaksa string', () => { expect(titleCase(42)).toBe('42'); });
   it('kosong tetap kosong', () => { expect(titleCase('')).toBe(''); });
+  it('kata setelah pemisah non-spasi ikut dikapitalisasi (hyphen/slash)', () => {
+    expect(titleCase('data-science')).toBe('Data-Science');
+    expect(titleCase('front-end dev')).toBe('Front-End Dev');
+    expect(titleCase('intg/backend')).toBe('Intg/Backend');
+  });
+  it('akronim tetap uppercase walau setelah hyphen', () => {
+    expect(titleCase('ai-bot')).toBe('AI-Bot');
+    expect(titleCase('CTO-bot')).toBe('CTO-Bot');
+  });
 });
 
 describe('clampText', () => {

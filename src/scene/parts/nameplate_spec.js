@@ -24,8 +24,10 @@ export const PLATE = {
 // dalam daftar ACRONYMS di-uppecase-kan semua: "ai"→"AI", "hr"→"HR", "qa"→"QA").
 export const ACRONYMS = new Set(['ai', 'hr', 'qa', 'ui', 'ux', 'ml', 'api', 'sql', 'fs', 'wfs', 'cs', 'pm', 'it', 'cto', 'ceo']);
 export function titleCase(s) {
-  return String(s).toLowerCase().replace(/(^|\s)(\w+)|(\w+)$/g, (m, sp, w) => {
-    if (w === undefined) return m;
+  return String(s).toLowerCase().replace(/(^|[^\w])(\w+)/g, (m, sp, w) => {
+    // sp = pemisah sebelum kata ('' di awal, atau spasi/'-'/'/' dll).
+    // Semua kata dikapitalisasi / akronim di-uppecase-kan, termasuk kata setelah
+    // pemisah non-spasi (data-science → Data-Science).
     return sp + (ACRONYMS.has(w) ? w.toUpperCase() : w[0].toUpperCase() + w.slice(1));
   });
 }
