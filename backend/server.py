@@ -220,6 +220,32 @@ async def api_new_project(body: dict):
     if not name or not brief:
         raise HTTPException(400, "name & brief wajib")
     pid = taskengine.add_project(name, brief)
+
+    # --- WFS Software House sandbox: scaffold workspace + start container (nyata) ---
+    sandbox = None
+    try:
+        from docker_sandbox import DockerSandboxManager as SB
+        slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:40] or f"project-{pid}"
+        SB.scaffold_project(slug, name)
+        sandbox = SB.start_container(slug)
+        try:
+            sh_db.save_project({
+                "id": str(pid), "name": name, "slug": slug,
+                "description": brief, "project_type": "website",
+                "tech_stack": "HTML5/Tailwind/JS",
+                "workspace_path": SB.get_workspace_path(slug),
+                "container_id": sandbox.get("container_id"),
+                "container_name": sandbox.get("container_name"),
+                "preview_port": sandbox.get("port"),
+                "preview_url": sandbox.get("preview_url"),
+                "status": "running", "created_at": time.time(),
+            })
+        except Exception as e:
+            print("save_project db:", e)
+    except Exception as e:
+        print("sandbox provisioning failed:", e)
+        sandbox = {"status": "failed", "error": str(e)[:200]}
+
     # PM memecah jadi task via LLM (background — API balik cepat)
     async def _plan():
         try:
@@ -237,7 +263,7 @@ async def api_new_project(body: dict):
         except Exception as e:
             print("plan err:", e)
     asyncio.create_task(_plan())
-    return {"ok": True, "project_id": pid, "planning": True}
+    return {"ok": True, "project_id": pid, "planning": True, "sandbox": sandbox}
 
 async def _unused_plan():
     plan = await taskengine.call_llm(
