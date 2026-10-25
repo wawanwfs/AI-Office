@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
-import { IconChat } from './Icons'
+import { IconChat, IconClose, IconGear, IconSave, IconPlay, IconRotate } from './Icons'
 
 // Navigasi panah tablist (pola WAI-ARIA tabs): Left/Right/Home/End memindahkan
 // fokus antar tab; Tab keluar seperti biasa (roving tabindex di render).
@@ -139,11 +139,20 @@ export default function WfsPanel() {
         <div ref={box} id="wfs-panel" className="panel" role="dialog" aria-label="Chat dan konfigurasi agent" aria-modal="true">
           <div className="ph">
             <div className="t">{sel ? sel.name : 'Chat AI Team'}<small>{sel ? sel.role : ''} · {tab === 'chat' ? 'percakapan' : 'konfigurasi model'}</small></div>
-            <button className="x" onClick={() => setOpen(false)} aria-label="Tutup panel chat">✕</button>
+            <button className="x" onClick={() => setOpen(false)} aria-label="Tutup panel chat" title="Tutup panel chat (Esc)">
+              <IconClose size={18} />
+              <span className="sr-only">✕</span>
+            </button>
           </div>
           <div className="tabs" role="tablist" aria-label="Panel chat / konfigurasi" onKeyDown={e => tabKeys(e, setTab)}>
-            <button role="tab" id="wfs-tab-chat" tabIndex={tab === 'chat' ? 0 : -1} aria-selected={tab === 'chat'} aria-controls="wfs-tabpanel-chat" onClick={() => setTab('chat')}>💬 Chat</button>
-            <button role="tab" id="wfs-tab-config" tabIndex={tab === 'config' ? 0 : -1} aria-selected={tab === 'config'} aria-controls="wfs-tabpanel-config" onClick={() => setTab('config')}>⚙️ Model API</button>
+            <button role="tab" id="wfs-tab-chat" tabIndex={tab === 'chat' ? 0 : -1} aria-selected={tab === 'chat'} aria-controls="wfs-tabpanel-chat" onClick={() => setTab('chat')} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <IconChat size={15} />
+              <span>Chat</span>
+            </button>
+            <button role="tab" id="wfs-tab-config" tabIndex={tab === 'config' ? 0 : -1} aria-selected={tab === 'config'} aria-controls="wfs-tabpanel-config" onClick={() => setTab('config')} style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6 }}>
+              <IconGear size={15} />
+              <span>Model API</span>
+            </button>
           </div>
           <div style={{ padding: '8px 12px 0' }}>
             {loading && <div className="skeleton" role="status">Memuat agent…</div>}
@@ -188,9 +197,18 @@ export default function WfsPanel() {
               <input className="fld" aria-label="Model" placeholder="Model (mis. gpt-4o-mini)" value={cfg.model} onChange={e => setCfg({ ...cfg, model: e.target.value })} />
               <textarea className="fld" aria-label="Instruksi khusus agent" style={{ height: 70, resize: 'vertical' }} placeholder="Instruksi khusus agent" value={cfg.instructions} onChange={e => setCfg({ ...cfg, instructions: e.target.value })} />
               <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
-                <button className="btn primary" onClick={() => saveCfg(false)} disabled={cfgBusy || !sel}>💾 Simpan</button>
-                <button className="btn" onClick={testCfg} disabled={cfgBusy || !sel}>▶ Test</button>
-                <button className="btn" onClick={() => saveCfg(true)} disabled={cfgBusy || !sel}>↺ Reset default</button>
+                <button className="btn primary" onClick={() => saveCfg(false)} disabled={cfgBusy || !sel} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <IconSave size={15} />
+                  <span>Simpan</span>
+                </button>
+                <button className="btn" onClick={testCfg} disabled={cfgBusy || !sel} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <IconPlay size={14} />
+                  <span>Test</span>
+                </button>
+                <button className="btn" onClick={() => saveCfg(true)} disabled={cfgBusy || !sel} style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                  <IconRotate size={14} />
+                  <span>Reset default</span>
+                </button>
               </div>
               {cfgMsg && <div role="status" className="note" style={{ color: 'var(--amber)', marginTop: 8 }}>{cfgMsg}</div>}
             </div>

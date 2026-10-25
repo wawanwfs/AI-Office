@@ -4,7 +4,7 @@ import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
 import { fileCount } from '../lib/files'
-import { IconStats } from './Icons'
+import { IconStats, IconClose } from './Icons'
 
 /* Statistik Tim — data nyata dari task engine + resource host */
 export default function TeamStats() {
@@ -50,7 +50,10 @@ export default function TeamStats() {
         <div ref={box} id="team-stats" className="panel left" role="dialog" aria-label="Statistik tim" aria-modal="true">
           <div className="ph">
             <div className="t">Statistik Tim<small>task engine · refresh 15 dtk</small></div>
-            <button className="x" onClick={() => setOpen(false)} aria-label="Tutup statistik">✕</button>
+            <button className="x" onClick={() => setOpen(false)} aria-label="Tutup statistik" title="Tutup statistik (Esc)">
+              <IconClose size={18} />
+              <span className="sr-only">✕</span>
+            </button>
           </div>
           <div style={{ padding: '4px 14px 14px', overflowY: 'auto' }} aria-live="polite">
             {!data && !err && <div className="skeleton" role="status">Memuat statistik…</div>}

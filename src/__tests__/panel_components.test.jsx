@@ -110,6 +110,29 @@ describe('WfsPanel — buka/tutup & tab', () => {
     expect(await screen.findByText('✅ Tersimpan')).toBeTruthy()
     expect(apiMock.mock.calls.some(c => c[0] === 'config/be1' && c[1]?.method === 'POST' && c[1]?.body?.model === 'm1')).toBe(true)
   })
+
+  it('modernisasi SVG: tombol tutup memiliki IconClose & title, tab & tombol config memuat SVG vektor', async () => {
+    render(<WfsPanel />)
+    fireEvent.click(screen.getByRole('button', { name: /Chat/ }))
+    const closeBtn = await screen.findByRole('button', { name: 'Tutup panel chat' })
+    expect(closeBtn.getAttribute('title')).toBe('Tutup panel chat (Esc)')
+    expect(closeBtn.querySelector('svg')).toBeTruthy()
+
+    // Tab Chat & Model API memuat SVG
+    const chatTab = screen.getByRole('tab', { name: /Chat/ })
+    const cfgTab = screen.getByRole('tab', { name: /Model API/ })
+    expect(chatTab.querySelector('svg')).toBeTruthy()
+    expect(cfgTab.querySelector('svg')).toBeTruthy()
+
+    // Buka tab Model API → tombol Simpan, Test, Reset default semuanya memuat SVG
+    fireEvent.click(cfgTab)
+    const saveBtn = screen.getByRole('button', { name: /Simpan/ })
+    const testBtn = screen.getByRole('button', { name: /Test/ })
+    const resetBtn = screen.getByRole('button', { name: /Reset default/ })
+    expect(saveBtn.querySelector('svg')).toBeTruthy()
+    expect(testBtn.querySelector('svg')).toBeTruthy()
+    expect(resetBtn.querySelector('svg')).toBeTruthy()
+  })
 })
 
 describe('CsWidget', () => {
@@ -122,7 +145,10 @@ describe('CsWidget', () => {
     expect(dlg.getAttribute('aria-modal')).toBe('true')
     const frame = dlg.querySelector('iframe')
     expect(frame.getAttribute('src')).toBe('https://cs.example.com/w')
-    fireEvent.click(screen.getByRole('button', { name: 'Tutup widget CS' }))
+    const closeBtn = screen.getByRole('button', { name: 'Tutup widget CS' })
+    expect(closeBtn.getAttribute('title')).toBe('Tutup widget CS (Esc)')
+    expect(closeBtn.querySelector('svg')).toBeTruthy()
+    fireEvent.click(closeBtn)
     expect(screen.queryByRole('dialog')).toBeNull()
     // Escape membuka lalu menutup (useDialogA11y)
     fireEvent.click(screen.getByRole('button', { name: 'Buka widget AI CS' }))

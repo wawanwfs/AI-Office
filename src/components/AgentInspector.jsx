@@ -64,6 +64,7 @@ export default function AgentInspector({ agent, onClose, onChatWith }) {
           className="x"
           onClick={onClose}
           aria-label="Tutup kartu agen"
+          title="Tutup profil agen (Esc)"
           style={{ minWidth: 36, minHeight: 36, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
         >
           <IconClose size={16} />

@@ -32,4 +32,25 @@ describe('TaskBoard', () => {
     expect(onAsk).toHaveBeenCalled()
     expect(f.mock.calls.every(c => !String(c[0]).includes('/run'))).toBe(true)
   })
+
+  it('modernisasi SVG: tombol tutup memiliki IconClose & title, tombol aksi detail memiliki IconPlay / IconRotate', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks }) })))
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />)
+    fireEvent.click(screen.getByText('Papan'))
+    const closeBtn = await screen.findByRole('button', { name: 'Tutup papan task' })
+    expect(closeBtn.getAttribute('title')).toBe('Tutup papan task (Esc)')
+    expect(closeBtn.querySelector('svg')).toBeTruthy()
+
+    // Buka task pending (#2) → tombol Jalankan task memiliki IconPlay
+    await waitFor(() => screen.getByText(/Halaman admin/))
+    fireEvent.click(screen.getByText(/Halaman admin/))
+    const runBtn = screen.getByText(/Jalankan task/).closest('button')
+    expect(runBtn.querySelector('svg')).toBeTruthy()
+
+    // Kembali lalu buka task done (#1) → tombol Jalankan ulang memiliki IconRotate
+    fireEvent.click(screen.getByRole('button', { name: /Kembali/ }))
+    fireEvent.click(screen.getByText(/Buat login/))
+    const rerunBtn = screen.getByText(/Jalankan ulang/).closest('button')
+    expect(rerunBtn.querySelector('svg')).toBeTruthy()
+  })
 })

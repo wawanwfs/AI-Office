@@ -232,6 +232,7 @@ button { font-family: inherit; }
 .panel .x {
   min-width: 48px; min-height: 52px; background: none; border: none;
   color: var(--text-secondary); cursor: pointer; font-size: 18px; transition: color .15s;
+  display: inline-flex; align-items: center; justify-content: center;
 }
 .panel .x:hover { color: #fff; }
 .tabs { display: flex; gap: 4px; padding: 10px 14px 0; border-bottom: 1px solid rgba(255, 255, 255, 0.06); }

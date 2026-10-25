@@ -203,4 +203,57 @@ describe('App — integrasi UI', () => {
     expect(mockSetSelected).toHaveBeenCalledWith(-1)
     expect(mockResetFocus).toHaveBeenCalled()
   })
+
+  it('saat profil agen terbuka: chrome inert aktif, shortcut keyboard dicegah, dan Escape menutup profil & reset fokus', async () => {
+    let capturedCallbacks = null
+    const mockSetSelected = vi.fn()
+    const mockResetFocus = vi.fn()
+    const mockSetView = vi.fn()
+    const sceneMod = await import('../scene/OfficeScene')
+    sceneMod.createOfficeScene.mockImplementationOnce((_canvas, cbs) => {
+      capturedCallbacks = cbs
+      return {
+        isAudioMuted: () => false,
+        setAudioMuted: vi.fn(),
+        isCyberpunk: () => false,
+        toggleCyberpunk: vi.fn(),
+        setSelected: mockSetSelected,
+        resetFocus: mockResetFocus,
+        setView: mockSetView,
+        setTime: vi.fn(),
+        destroy: vi.fn(),
+      }
+    })
+    stubFetch([])
+    render(<App />)
+    await waitFor(() => expect(capturedCallbacks).toBeTruthy())
+
+    // Sebelum inspeksi: HUD/Header/Ticker tidak inert
+    const header = document.querySelector('header')
+    expect(header?.hasAttribute('inert')).toBe(false)
+
+    // Buka kartu profil via onSelectAgent
+    act(() => {
+      capturedCallbacks.onSelectAgent({ name: 'BUDI', role: 'Backend Engineer', hex: '#3B82F6' })
+    })
+    expect(screen.getByText('BUDI')).toBeTruthy()
+
+    // Saat profil terbuka: Header, HUD, Ticker menjadi inert
+    expect(header?.hasAttribute('inert')).toBe(true)
+
+    // Shortcut keyboard ('m' mute & '1' view) dicegah oleh guard anyModalOpen
+    fireEvent.keyDown(window, { key: 'm' })
+    expect(screen.queryByText('Suara Mati')).toBeNull()
+    fireEvent.keyDown(window, { key: '1' })
+    expect(mockSetView).not.toHaveBeenCalled()
+
+    // Tekan Escape: kartu tertutup, scene di-reset
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(screen.queryByText('BUDI')).toBeNull()
+    expect(mockSetSelected).toHaveBeenCalledWith(-1)
+    expect(mockResetFocus).toHaveBeenCalled()
+
+    // Setelah ditutup: header kembali tidak inert
+    await waitFor(() => expect(header?.hasAttribute('inert')).toBe(false))
+  })
 })

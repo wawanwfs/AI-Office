@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
-import { IconRocket } from './Icons'
+import { IconRocket, IconClose } from './Icons'
 
 // Panel Proyek Nyata: data live dibantuin.com dari endpoint /wfs-project (server 9503).
 // Semua data diambil server-side — tidak ada kredensial di frontend.
@@ -50,8 +50,17 @@ export default function ProjectPanel() {
       {open && (
         <section ref={box} id="project-panel" className="panel left" role="dialog" aria-label="Proyek dibantuin.com" aria-modal="true">
           <div className="ph">
-            <div className="t">🚀 Proyek: dibantuin.com<small>{err ? 'gagal memuat' : 'data live · refresh 15 dtk'}</small></div>
-            <button className="x" onClick={() => setOpen(false)} aria-label="Tutup panel proyek">✕</button>
+            <div className="t">
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
+                <IconRocket size={16} style={{ color: 'var(--cyan)' }} />
+                <span>Proyek: dibantuin.com</span>
+              </span>
+              <small>{err ? 'gagal memuat' : 'data live · refresh 15 dtk'}</small>
+            </div>
+            <button className="x" onClick={() => setOpen(false)} aria-label="Tutup panel proyek" title="Tutup panel proyek (Esc)">
+              <IconClose size={18} />
+              <span className="sr-only">✕</span>
+            </button>
           </div>
           <div style={{ padding: '12px 14px', overflowY: 'auto' }}>
             {err && <div className="msg err">Gagal memuat data proyek. <button className="btn" onClick={() => load()}>Coba lagi</button></div>}

@@ -29,7 +29,9 @@ describe('AgentInspector — kartu profil agen 3D', () => {
   it('klik tombol tutup memanggil onClose', () => {
     const onClose = vi.fn()
     render(<AgentInspector agent={mockAgent} onClose={onClose} onChatWith={vi.fn()} />)
-    fireEvent.click(screen.getByLabelText('Tutup kartu agen'))
+    const btn = screen.getByLabelText('Tutup kartu agen')
+    expect(btn.getAttribute('title')).toBe('Tutup profil agen (Esc)')
+    fireEvent.click(btn)
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 

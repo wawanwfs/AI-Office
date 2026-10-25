@@ -160,7 +160,10 @@ describe('TeamStats', () => {
     expect(screen.getByText('2')).toBeTruthy() // 2 task selesai
     expect(screen.getByText('#1 Fix UI')).toBeTruthy()
     expect(screen.getByText(/load 0.5 · RAM 1234 MB/)).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Tutup statistik' }))
+    const closeBtn = screen.getByRole('button', { name: 'Tutup statistik' })
+    expect(closeBtn.getAttribute('title')).toBe('Tutup statistik (Esc)')
+    expect(closeBtn.querySelector('svg')).toBeTruthy()
+    fireEvent.click(closeBtn)
     expect(screen.queryByRole('dialog', { name: 'Statistik tim' })).toBeNull()
   })
   it('gateway offline → role=alert + tombol Coba lagi memicu fetch ulang', async () => {
@@ -194,7 +197,10 @@ describe('ProjectPanel', () => {
     expect(screen.getByText(/TokoA/)).toBeTruthy()
     expect(screen.getByText(/be1/)).toBeTruthy()
     expect(screen.getByText(/qa1/)).toBeTruthy()
-    fireEvent.click(screen.getByRole('button', { name: 'Tutup panel proyek' }))
+    const closeBtn = screen.getByRole('button', { name: 'Tutup panel proyek' })
+    expect(closeBtn.getAttribute('title')).toBe('Tutup panel proyek (Esc)')
+    expect(closeBtn.querySelector('svg')).toBeTruthy()
+    fireEvent.click(closeBtn)
     expect(screen.queryByRole('dialog', { name: 'Proyek dibantuin.com' })).toBeNull()
   })
   it('fetch gagal → pesan error', async () => {
