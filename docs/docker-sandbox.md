@@ -4,10 +4,16 @@ Requirement inti. Dokumen hidup.
 
 ## Status saat ini (Audit)
 
-- `sandbox_exec.py` menargetkan container `wfs-agent-<agent_id>` dan perlu rewrite
-  menjadi model per-proyek.
-- **Docker belum aktif di VM wfs-agent-1** (tidak ada docker CLI/socket).
-  → Blocker untuk Fase 5; perlu install/konfigurasi Docker.
+- `docker_sandbox.py` (baru) sudah menyediakan: workspace per-proyek, Dockerfile
+  scaffolding, dynamic port allocation, start/stop/restart/logs, health check,
+  dan batasan resource (--memory=512m, --cpus=1.0, --pids-limit=100).
+- **Docker SEKARANG AKTIF di VM wfs-agent-1** (engine 29.1.3, storage overlayfs).
+  User `agentuser` ditambahkan ke grup `docker`.
+- **Terverifikasi nyata**: container sandbox `wfs-sandbox-demo-project` berhasil
+  dibuat & berjalan, health check HTTP 200, port 127.0.0.1:3100->8080/tcp
+  (isolasi loopback). Test demo dibersihkan setelah verifikasi.
+- Catatan: proses backend perlu dijalankan dengan grup docker (mis. `sg docker -c 'python3 server.py'`)
+  agar bisa memanggil `docker` sampai sesi user re-login.
 
 ## Desain target
 

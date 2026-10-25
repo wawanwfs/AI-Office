@@ -41,12 +41,13 @@ Status: Fase 1 (Audit) → Fase 2 (Fondasi). Dokumen hidup.
 
 ## Fase 5 — Docker Sandbox (REQUIREMENT INTI)
 
-- [ ] Install/konfigurasi Docker di VM (blocker — perlu aksi).
-- [ ] Workspace manager (/workspaces/{project-id}, persistent).
-- [ ] Container lifecycle service (provision → build → start → health → stop → logs → cleanup).
-- [ ] Dynamic port allocation & preview routing (hindari bentrok).
-- [ ] Isolasi & least-privilege (non-root, resource limits, no docker socket mount).
-- [ ] Health checks + status jujur (ready/unhealthy/failed).
+- [x] Install/konfigurasi Docker di VM (engine aktif, user masuk grup docker; verifikasi container nyata sukses).
+- [ ] Workspace manager (/workspaces/{project-id}, persistent) — dasar scaffold sudah ada di `docker_sandbox.py`.
+- [x] Container lifecycle service (provision → build → start → health → stop → logs → cleanup) — `docker_sandbox.py`, teruji dengan demo-project.
+- [x] Dynamic port allocation & preview routing (hindari bentrok) — `allocate_port()` 3100-3900 + loopback mapping.
+- [x] Isolasi & least-privilege (non-root, resource limits, no docker socket mount) — `--memory=512m --cpus=1.0 --pids-limit=100`, port loopback, tanpa mount docker.sock.
+- [x] Health checks + status jujur (ready/unhealthy/failed) — HTTP health check 200 pada start_container.
+- [ ] Integrasi dengan GUI + endpoint API (create project → scaffold → start → preview URL).
 
 ## Fase 6 — Engineering Workspace
 
