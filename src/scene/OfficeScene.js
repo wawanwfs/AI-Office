@@ -45,6 +45,7 @@ import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canv
 import { drawTvDashboard } from './parts/tv_canvas.js';
 import { looksOf } from './parts/character_looks.js';
 import { AGENTS, AGENTS_EXTRA, allAgents as allAgentsFn } from './parts/agents_spec.js';
+import { EXTENDED_SPECIALISTS } from './parts/extended_desks.js';
 import { DESKS } from './parts/desk_layout.js';
 import { isLongHair, STANDING, SITTING, accessoryAnchor } from './parts/character_spec.js';
 import { nearbyPairs as nearbyPairsPure, tickCooldown as tickCooldownPure, CHAT_RADIUS, CHAT_COOLDOWN_SEC } from './parts/chat_check.js';
@@ -96,8 +97,8 @@ let namesVisible=(function(){try{return localStorage.getItem('wfs_names')!=='0'}
 const __asp=container.clientWidth/Math.max(1,container.clientHeight);
 const __portrait=__asp<0.8;
 if(__portrait){camera.fov=__asp<0.6?66:54;camera.updateProjectionMatrix();}
-let sph={theta:__portrait?2.35:Math.PI*0.78,phi:__portrait?0.62:0.95,radius:__asp<0.6?24:__asp<0.8?26:__asp<1.2?30:28};
-const tgt=new THREE.Vector3(0,1.2,0);
+let sph={theta:__portrait?2.35:Math.PI*0.78,phi:__portrait?0.62:0.95,radius:__asp<0.6?28:__asp<0.8?30:__asp<1.2?33:32.5};
+const tgt=new THREE.Vector3(0,1.0,0.5);
 // Preferensi auto-rotate: hormati prefers-reduced-motion bila user belum set eksplisit (localStorage wfs_autorot 0/1)
 const __prm=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):null;
 let __userRot=null;try{const __v=localStorage.getItem('wfs_autorot');if(__v==='0')__userRot=false;else if(__v==='1')__userRot=true}catch{/* abaikan */}
@@ -709,8 +710,8 @@ function sizeLabels(){
   const w=container.clientWidth||800, h=container.clientHeight||600;
   const near=camera.position.distanceTo(tgt);
   const {frac,wantFull}=labelScale(w,h,camera.fov,near);
-  // Bubble frac proporsional (±32-36px tinggi) agar teks nama terbaca sangat jelas
-  const bubbleFrac = Math.max(0.025, Math.min(0.048, frac * 1.55));
+  // Bubble frac proporsional (±26-30px tinggi) agar teks rapi & elegan tanpa bertumpukan
+  const bubbleFrac = Math.max(0.018, Math.min(0.035, frac * 1.15));
   const apply=L=>{
     if(!L)return;
     const u=L.userData; const mode=wantFull?'full':'short';
@@ -841,7 +842,42 @@ allAgents.forEach((agent,i)=>{
     sittingChar,walker,label,dGlow,screenLight,
     walkTarget:null,walkPause:0
   });
-});
+  });
+
+  // Workstations & Agents Spesialis Tambahan untuk perluasan multi-baris di tiap lantai
+  EXTENDED_SPECIALISTS.forEach((agent) => {
+  const dp = agent.desk;
+  const deskY = dp.z < -0.8 ? 0 : (dp.z <= 4.5 ? 0.60 : 1.20);
+  agent.floor = dp.z < -0.8 ? 1 : (dp.z <= 4.5 ? 2 : 3);
+  const { dGlow, screenLight } = buildDesk(agent, { ...dp, y: deskY });
+
+  const sittingChar = buildChar(agent, false);
+  sittingChar.scale.set(2.2, 2.2 * looksOf(agent).h, 2.2);
+  sittingChar.position.set(dp.x, deskY + 0.04, dp.z + 0.46);
+  addBlobShadow(sittingChar, 0.72);
+  sittingChar.traverse(o => { if (o.isMesh && o.material && !o.material.isMeshBasicMaterial) o.castShadow = true; });
+  office.add(sittingChar);
+
+  const walker = buildChar(agent, true);
+  walker.scale.set(2.2, 2.2 * looksOf(agent).h, 2.2);
+  walker.visible = false;
+  addBlobShadow(walker, 0.72);
+  walker.traverse(o => { if (o.isMesh && o.material && !o.material.isMeshBasicMaterial) o.castShadow = true; });
+  office.add(walker);
+
+  const label = makeLabel(agent);
+  if (!namesVisible) label.visible = false;
+  label.position.set(dp.x, deskY + LABEL_Y + 0.35, dp.z + 0.46);
+  label.userData.baseY = deskY + LABEL_Y + 0.35; label.userData.baseX = dp.x; label.userData.antiY = 0; label.userData.antiX = 0;
+  office.add(label);
+
+  agentData.push({
+    agent, state: 'sitting', timer: rng.r(8, 25),
+    home: { x: dp.x, y: deskY + 0.04, z: dp.z + 0.46 },
+    sittingChar, walker, label, dGlow, screenLight,
+    walkTarget: null, walkPause: 0
+  });
+  });
 setTimeout(()=>{
   try{
     createBubble(-8,2.8,-2.5,'“Halo! Semua tim AI WFS PROJECT aktif 24/7!”','#10E5A0');

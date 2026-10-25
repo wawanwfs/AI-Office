@@ -121,42 +121,64 @@ export function createTerraces({ THREE, office, M, MB }) {
     const flight = new THREE.Group();
     const dz = (endZ - startZ) / stepsCount;
     const dy = (endY - startY) / stepsCount;
+    const riserHeight = Math.abs(dy);
 
     for (let i = 0; i < stepsCount; i++) {
       const stepZ = startZ + (i + 0.5) * dz;
       const stepY = startY + (i + 1) * dy;
 
+      // Pijakan anak tangga (tread) marmer abu-abu gelap
       const step = new THREE.Mesh(
-        new THREE.BoxGeometry(width, 0.06, Math.abs(dz) * 1.08),
+        new THREE.BoxGeometry(width, 0.08, Math.abs(dz) * 1.15),
         M(0x1F2C42)
       );
-      step.position.set(startX, stepY - 0.03, stepZ);
+      step.position.set(startX, stepY - 0.04, stepZ);
       step.castShadow = true;
       step.receiveShadow = true;
       flight.add(step);
 
+      // Bidang tegak penutup anak tangga (riser) padat
+      const riser = new THREE.Mesh(
+        new THREE.BoxGeometry(width * 0.98, riserHeight * 1.05, 0.04),
+        M(0x162236)
+      );
+      riser.position.set(startX, stepY - riserHeight * 0.5 - 0.04, stepZ - dz * 0.46);
+      riser.castShadow = true;
+      riser.receiveShadow = true;
+      flight.add(riser);
+
+      // Neon LED riser strip cyan menyala di hidung anak tangga
       const strip = new THREE.Mesh(
-        new THREE.BoxGeometry(width * 0.96, 0.018, 0.03),
+        new THREE.BoxGeometry(width * 0.96, 0.02, 0.035),
         MB(0x00E5FF)
       );
-      strip.position.set(startX, stepY - 0.05, stepZ + dz * 0.4);
+      strip.position.set(startX, stepY - 0.045, stepZ + dz * 0.42);
       flight.add(strip);
       stepStrips.push(strip);
     }
 
+    // Pagar kaca tempered & handrail kuningan mewah di kedua sisi tangga
     [-width / 2, width / 2].forEach(side => {
+      // Dinding samping tangga (stringer solid)
+      const stringer = new THREE.Mesh(
+        new THREE.BoxGeometry(0.08, Math.abs(endY - startY) * 0.6 + 0.2, Math.abs(endZ - startZ) * 1.05),
+        M(0x0F172A)
+      );
+      stringer.position.set(startX + side, (startY + endY) / 2 - 0.05, (startZ + endZ) / 2);
+      flight.add(stringer);
+
       const railGlass = new THREE.Mesh(
-        new THREE.BoxGeometry(0.03, 0.55, Math.abs(endZ - startZ) * 1.08),
+        new THREE.BoxGeometry(0.03, 0.65, Math.abs(endZ - startZ) * 1.08),
         GlassRail()
       );
-      railGlass.position.set(startX + side, (startY + endY) / 2 + 0.32, (startZ + endZ) / 2);
+      railGlass.position.set(startX + side, (startY + endY) / 2 + 0.38, (startZ + endZ) / 2);
       flight.add(railGlass);
 
       const railMesh = new THREE.Mesh(
-        new THREE.BoxGeometry(0.04, 0.03, Math.abs(endZ - startZ) * 1.1),
+        new THREE.BoxGeometry(0.06, 0.04, Math.abs(endZ - startZ) * 1.1),
         M(0xD4AF37)
       );
-      railMesh.position.set(startX + side, (startY + endY) / 2 + 0.60, (startZ + endZ) / 2);
+      railMesh.position.set(startX + side, (startY + endY) / 2 + 0.72, (startZ + endZ) / 2);
       railMesh.rotation.x = Math.atan2(endY - startY, endZ - startZ);
       flight.add(railMesh);
     });

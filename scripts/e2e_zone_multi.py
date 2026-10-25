@@ -52,6 +52,7 @@ EXPR = """
 LOCK_JS = "try{localStorage.setItem('wfs_autorot','0')}catch(e){}"
 SET_CAM = """(function(){
   const c=window.__cam; if(!c||!c.sph) return 'no cam';
+  if(c.tgt) c.tgt.set(0, 1.4, 0.3);
   c.sph.theta=%f; c.sph.phi=%f; c.sph.radius=%f; c.upd();
   if(window.__zoneLabels)window.__zoneLabels.forEach(z=>{const b=window.__zoneBase?.get(z);if(b){z.position.y=b.y;z.position.x=b.x;if(b.z!==undefined)z.position.z=b.z;else if(z.userData.baseZ!==undefined)z.position.z=z.userData.baseZ;z.userData.antiY=0;z.userData.antiX=0;}});
   return 'ok';

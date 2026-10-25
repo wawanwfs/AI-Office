@@ -6,30 +6,30 @@ const FLOORS = [
     id: 'l1',
     name: 'L1 · Ops & AI',
     shortName: 'L1',
-    roleLabel: 'Datacenter, AI Lab & Tech Ops',
+    roleLabel: 'Datacenter, AI Lab & Architecture Atrium',
     color: '#F59E0B',
-    desc: 'Bantuin AI, Budi, Andi, Rina, Trainer AI',
-    agents: ['Bantuin AI', 'Budi', 'Andi', 'Rina', 'Trainer AI']
+    desc: 'Aris (Architect), Clara (UX), Andi, Budi, Rina, Trainer AI',
+    agents: ['Aris', 'Clara', 'Bantuin AI', 'Budi', 'Andi', 'Rina', 'Trainer AI']
   },
   {
     num: 2,
     id: 'l2',
     name: 'L2 · Engineering',
     shortName: 'L2',
-    roleLabel: 'Core Engineering & Product Studio',
+    roleLabel: 'Core Engineering & Cloud Database Pod',
     color: '#00F0FF',
-    desc: 'Rizky, Dewi, Yoga, Lina, Integrator Bot',
-    agents: ['Rizky', 'Dewi', 'Yoga', 'Lina', 'Integrator Bot']
+    desc: 'Ferry (DBA), Hendra (Cloud), Rizky, Dewi, Yoga, Lina, Integrator Bot',
+    agents: ['Ferry', 'Hendra', 'Rizky', 'Dewi', 'Yoga', 'Lina', 'Integrator Bot']
   },
   {
     num: 3,
     id: 'l3',
     name: 'L3 · Executive',
     shortName: 'L3',
-    roleLabel: 'Executive Penthouse & Founder Suite',
+    roleLabel: 'Executive Penthouse, Security & Delivery Suite',
     color: '#10E5A0',
-    desc: 'Wahyu FS (Founder), Maya, Toni, Sari, Support Human · Papan Proyek 3D',
-    agents: ['Wahyu FS', 'Maya', 'Toni', 'Sari', 'Support']
+    desc: 'SecBot (Security), Nina (Release), Wahyu FS (Founder), Maya, Toni, Sari, Support',
+    agents: ['SecBot', 'Nina', 'Wahyu FS', 'Maya', 'Toni', 'Sari', 'Support']
   }
 ]
 

@@ -12,7 +12,7 @@ import subprocess, os, time, urllib.request, json, socket, struct, base64, sys
 OUT = sys.argv[1] if len(sys.argv) > 1 else "/tmp/shot9503.png"
 CHROME = os.path.expanduser(
     "~/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell")
-PORT = 9339
+PORT = 9449
 URL = "http://127.0.0.1:9503/"
 
 
@@ -63,9 +63,14 @@ class WS:
 
 def main():
     env = dict(os.environ, DISPLAY=":99")
-    xv = subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x768x24"],
-                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    xv = None
+    # Jika Xvfb :99 belum berjalan, baru kita spawn
+    if not os.path.exists("/tmp/.X11-unix/X99"):
+        xv = subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x768x24"],
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        time.sleep(1)
     p = subprocess.Popen([CHROME, "--no-sandbox", f"--remote-debugging-port={PORT}",
+                          "--enable-unsafe-swiftshader",
                           "--window-size=1366,768", "--disable-dev-shm-usage", URL],
                          env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
@@ -99,7 +104,9 @@ def main():
         print("E2E_VISUAL:", "OK" if ok else "FAIL")
         sys.exit(0 if ok else 1)
     finally:
-        p.kill(); xv.kill()
+        p.kill()
+        if xv:
+            xv.kill()
 
 
 if __name__ == "__main__":
