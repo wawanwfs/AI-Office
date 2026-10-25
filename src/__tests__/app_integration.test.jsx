@@ -6,18 +6,23 @@ import React from 'react'
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react'
 
+const mockSceneInstance = {
+  isAudioMuted: vi.fn(() => false),
+  setAudioMuted: vi.fn(),
+  playTaskDone: vi.fn(),
+  playTaskFail: vi.fn(),
+  playSelect: vi.fn(),
+  isCyberpunk: () => false,
+  toggleCyberpunk: vi.fn(),
+  setTime: vi.fn(),
+  zoomIn: vi.fn(),
+  zoomOut: vi.fn(),
+  setView: vi.fn(),
+  destroy: vi.fn(),
+}
+
 vi.mock('../scene/OfficeScene', () => ({
-  createOfficeScene: vi.fn(() => ({
-    isAudioMuted: () => false,
-    setAudioMuted: vi.fn(),
-    isCyberpunk: () => false,
-    toggleCyberpunk: vi.fn(),
-    setTime: vi.fn(),
-    zoomIn: vi.fn(),
-    zoomOut: vi.fn(),
-    setView: vi.fn(),
-    destroy: vi.fn(),
-  })),
+  createOfficeScene: vi.fn(() => mockSceneInstance),
 }))
 
 import App from '../App'
@@ -80,6 +85,26 @@ describe('App — integrasi UI', () => {
     // poll ulang via event 'online' yang memicu tick() (lebih cepat daripada interval 15 dtk)
     await act(async () => { window.dispatchEvent(new Event('online')) })
     await waitFor(() => expect(screen.getByText(/Task #2 selesai: Fix UI/)).toBeTruthy(), { timeout: 3000 })
+    expect(mockSceneInstance.playTaskDone).toHaveBeenCalled()
+  })
+
+  it('perubahan status task ke failed antar poll → toast gagal & audio playTaskFail dipanggil', async () => {
+    let flip = false
+    window.addEventListener('online', () => { flip = true })
+    vi.stubGlobal('fetch', vi.fn(async (url) => {
+      const u = String(url)
+      const tasks = flip
+        ? [{ id: 1, title: 'API invoice', agent_id: 'be1', status: 'pending' },
+           { id: 2, title: 'Fix UI', agent_id: 'fe1', status: 'failed' }]
+        : TASKS
+      if (u.includes('tasks/paused')) return { ok: true, json: async () => ({ paused: false }) }
+      return { ok: true, json: async () => ({ tasks }) }
+    }))
+    render(<App />)
+    await waitFor(() => expect(screen.getByText('1 jalan · 1 antri')).toBeTruthy(), { timeout: 3000 })
+    await act(async () => { window.dispatchEvent(new Event('online')) })
+    await waitFor(() => expect(screen.getByText(/Task #2 gagal: Fix UI/)).toBeTruthy(), { timeout: 3000 })
+    expect(mockSceneInstance.playTaskFail).toHaveBeenCalled()
   })
 
   it('shortcut "l" membuka Log Aktivitas, Escape menutup', () => {

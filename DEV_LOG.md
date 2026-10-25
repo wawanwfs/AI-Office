@@ -1,3 +1,34 @@
+## 2026-10-26 05:43 WIB — Siklus 77: Nada Notifikasi Sound Engine (Done/Fail/Select), Interaksi Klik Audio 3D & Sinkronisasi Audio Toast Task
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Spesifikasi & Formula Audio Notifikasi Kantor (`src/scene/parts/sound_spec.js`, `src/__tests__/sound_spec.test.js`):**
+     - Mendefinisikan spesifikasi Web Audio murni untuk nada notifikasi task selesai (`TASK_DONE_FREQS = [523.25, 659.25, 783.99, 1046.50]` — C5, E5, G5, C6 arpeggio nada naik ceria & harmonis), nada task gagal/peringatan (`TASK_FAIL_FREQS = [440.0, 311.13]` — A4 ke Eb4 tritone alert tone), serta blip klik interaksi (`SELECT_FREQ = 1046.50`, C6 gain 0.015, durasi 0.04s).
+     - Menambahkan fungsi murni `taskDoneStart`, `taskFailStart`, serta penskalaan master gain proporsional berbasis `masterGainValue(muted, volume = DEFAULT_VOLUME)` dengan clamping `[0, 1]`.
+  2. **Ekspansi Runtime Sound Engine (`src/scene/parts/sound_engine.js`, `src/__tests__/sound_engine.test.js`):**
+     - Mengembangkan method runtime `playTaskDone()`, `playTaskFail()`, `playSelect()`, `setVolume()`, dan `getVolume()`.
+     - Melacak statistik pemanggilan pada snapshot instan `dbg()` (`calls: { key, step, chime, taskDone, taskFail, select }`, `volume`).
+     - Menjamin pembersihan seluruh timeout terjadwal saat dispose engine (`pending.forEach(clearTimeoutFn)`).
+  3. **Umpan Balik Audio Interaktif 3D & Kontrol Scene (`src/scene/OfficeScene.js`):**
+     - Memainkan `__sound.playSelect()` secara taktil saat pengguna mengklik agen karakter, avatar Founder Wahyu FS, maupun Papan Proyek WFS PROJECT di kanvas 3D.
+     - Mengekspos `playTaskDone`, `playTaskFail`, `playSelect`, `testAudio`, `setAudioVolume`, dan `getAudioEngine` pada instance scene dan `window.__officeSound`.
+     - Mendukung aksi tim `teamAction('test_audio')` untuk verifikasi nada audio notifikasi.
+  4. **Sinkronisasi Audio pada App Toast & Tombol Dock (`src/App.jsx`, `src/__tests__/app_integration.test.jsx`):**
+     - Menghubungkan perubahan status task gateway secara real-time: saat transisi status task ke `done` otomatis memicu `s.playTaskDone()`, dan transisi ke `failed` memicu `s.playTaskFail()`.
+     - Memberikan audio konfirmasi instan `s.playSelect()` saat pengguna menyalakan suara melalui tombol dock (`toggleMute`).
+
+- **Bukti terukur:**
+  - **Vitest:** **1462/1462 passed (125 test file)** (+13 tests baru terintegrasi, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint .`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1645.35 KiB; chunk `OfficeScene-vR8zX2Vs.js` 867.90 KB / gzip 235.07 KB, `index-DQeHX46t.js` 299.92 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, chunk usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-DQeHX46t.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **550.723 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `scripts/e2e_zone_multi.py`: **E2E_ZONE_MULTI: OK** (iso, front, top).
+    - `shot.sh`: Screenshot ck.png **587.471 bytes** (>500 KB).
+- **Sisa backlog:** fine-tuning preset volume slider di modal pengaturan.
+
 ## 2026-10-26 04:48 WIB — Siklus 76: Matriks Kompetensi & Stack Teknologi 26 Agen + Founder, Integrasi Live Task pada AgentInspector, Presisi Resolusi Identitas Gateway & Harmonisasi Rehat Siang L3 Cafe Promenade
 
 - **Yang diperbaiki & ditingkatkan:**

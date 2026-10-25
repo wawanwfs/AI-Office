@@ -25,6 +25,30 @@ export const CHIME_TONE_SEC = 0.5;
 // mute: masterGain 0 saat muted, 1 saat tidak; persist di localStorage 'wfs_audio_muted'
 export const MUTED_KEY = 'wfs_audio_muted';
 
+// notifikasi task selesai (done): empat nada naik C5-E5-G5-C6 yang ceria & harmonis
+export const TASK_DONE_FREQS = [523.25, 659.25, 783.99, 1046.50];
+export const TASK_DONE_DELAY_SEC = 0.09;
+export const TASK_DONE_GAIN = 0.04;
+export const TASK_DONE_END_GAIN = 0.001;
+export const TASK_DONE_TONE_SEC = 0.35;
+
+// notifikasi task gagal / alert (failed): dua nada peringatan A4-Eb4 (tritone halus)
+export const TASK_FAIL_FREQS = [440.0, 311.13];
+export const TASK_FAIL_DELAY_SEC = 0.14;
+export const TASK_FAIL_GAIN = 0.035;
+export const TASK_FAIL_END_GAIN = 0.001;
+export const TASK_FAIL_TONE_SEC = 0.30;
+
+// nada blip klik/seleksi agent (interaksi 3D): C6 singkat & lembut
+export const SELECT_FREQ = 1046.50;
+export const SELECT_GAIN = 0.015;
+export const SELECT_END_GAIN = 0.0005;
+export const SELECT_SEC = 0.04;
+
+// volume master: persist di localStorage 'wfs_audio_volume' (default 1.0)
+export const VOLUME_KEY = 'wfs_audio_volume';
+export const DEFAULT_VOLUME = 1.0;
+
 export function keyclickFreq(rng) {
   return KEYCLICK_BASE_FREQ + rng() * KEYCLICK_JITTER;
 }
@@ -39,9 +63,21 @@ export function chimeStart(i) {
   return i * CHIME_DELAY_SEC;
 }
 
-// nilai gain master: 0 bila muted, 1 bila tidak
-export function masterGainValue(muted) {
-  return muted ? 0 : 1;
+// waktu mulai nada task done ke-i (detik sejak trigger)
+export function taskDoneStart(i) {
+  return i * TASK_DONE_DELAY_SEC;
+}
+
+// waktu mulai nada task fail ke-i (detik sejak trigger)
+export function taskFailStart(i) {
+  return i * TASK_FAIL_DELAY_SEC;
+}
+
+// nilai gain master: 0 bila muted, sebanding volume bila tidak (clamp 0..1)
+export function masterGainValue(muted, volume = DEFAULT_VOLUME) {
+  if (muted) return 0;
+  const v = Number.isFinite(volume) ? Math.max(0, Math.min(1, volume)) : DEFAULT_VOLUME;
+  return v;
 }
 
 // Pengatur waktu suara periodik (diekstrak dari animate() OfficeScene):

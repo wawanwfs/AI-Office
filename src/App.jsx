@@ -67,7 +67,9 @@ export default function App() {
     const v = !s.isAudioMuted()
     s.setAudioMuted(v)
     // baca state scene sungguhan (anti-desync, pola sama dgn tombol Neon)
-    setMuted(!!s.isAudioMuted())
+    const newMuted = !!s.isAudioMuted()
+    setMuted(newMuted)
+    if (!newMuted && s.playSelect) s.playSelect()
   }
   const toggleMuteRef = useRef(toggleMute); toggleMuteRef.current = toggleMute
   const actionMenuApi = useRef(null) // diisi ActionMenu: {toggleNames, toggleRotate} utk shortcut K/R
@@ -105,6 +107,11 @@ export default function App() {
           const d = new Date()
           pushLog({ t: d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }), id: x.id, status: x.status, label: L[x.status] || x.status, title: clip(x.title, 50) })
           flash(`Task #${x.id} ${L[x.status] || x.status}: ${clip(x.title, 40)}`, x.status === 'failed')
+          const s = sceneRef.current
+          if (s) {
+            if (x.status === 'done' && s.playTaskDone) s.playTaskDone()
+            else if (x.status === 'failed' && s.playTaskFail) s.playTaskFail()
+          }
         }
       })
       prevStatus.current = cur

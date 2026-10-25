@@ -6,6 +6,9 @@ import { createSoundEngine } from '../scene/parts/sound_engine.js';
 import {
   KEYCLICK_BASE_FREQ, KEYCLICK_JITTER, KEYCLICK_GAIN, KEYCLICK_END_GAIN, KEYCLICK_SEC,
   STEP_GAIN, STEP_SEC, CHIME_FREQS, CHIME_DELAY_SEC, CHIME_GAIN, CHIME_END_GAIN, CHIME_TONE_SEC,
+  TASK_DONE_FREQS, TASK_DONE_DELAY_SEC, TASK_DONE_GAIN, TASK_DONE_END_GAIN, TASK_DONE_TONE_SEC,
+  TASK_FAIL_FREQS, TASK_FAIL_DELAY_SEC, TASK_FAIL_GAIN, TASK_FAIL_END_GAIN, TASK_FAIL_TONE_SEC,
+  SELECT_FREQ, SELECT_GAIN, SELECT_END_GAIN, SELECT_SEC, DEFAULT_VOLUME,
   keyclickFreq, stepEnvelope,
 } from '../scene/parts/sound_spec.js';
 
@@ -62,7 +65,8 @@ describe('sound engine runtime', () => {
     const snap = eng.dbg();
     expect(snap.started).toBe(false);
     expect(snap.state).toBe('none');
-    expect(snap.calls).toEqual({ key: 0, step: 0, chime: 0 });
+    expect(snap.calls).toEqual({ key: 0, step: 0, chime: 0, taskDone: 0, taskFail: 0, select: 0 });
+    expect(snap.volume).toBe(DEFAULT_VOLUME);
     expect(eng.isMuted()).toBe(false);
   });
 
@@ -149,10 +153,76 @@ describe('sound engine runtime', () => {
     expect(() => eng.playKeyClick(Math.random)).not.toThrow();
     expect(() => eng.playStep()).not.toThrow();
     expect(() => eng.playMeetingChime()).not.toThrow();
-    expect(eng.dbg().calls).toEqual({ key: 1, step: 1, chime: 1 });
+    expect(eng.dbg().calls).toEqual({ key: 1, step: 1, chime: 1, taskDone: 0, taskFail: 0, select: 0 });
     expect(eng.isStarted()).toBe(true);
     const osc = ctx.__log.osc[0];
     expect(gainChain(osc).g.connectedTo.connectedTo).toBe(ctx.destination);
+  });
+
+  it('playTaskDone: 4 nada naik C5-E5-G5-C6, gain 0.04→0.001, sine', () => {
+    const { eng, ctx, timeouts } = makeEngine();
+    eng.playTaskDone();
+    expect(timeouts).toHaveLength(TASK_DONE_FREQS.length);
+    timeouts.forEach((t, i) => expect(t.ms).toBeCloseTo(i * TASK_DONE_DELAY_SEC));
+    timeouts.forEach((t, i) => {
+      t.fn();
+      const osc = ctx.__log.osc[i];
+      expect(osc.type).toBe('sine');
+      expect(osc.frequency.value).toBe(TASK_DONE_FREQS[i]);
+      const { g } = gainChain(osc);
+      expect(g.gain.value).toBe(TASK_DONE_GAIN);
+      expect(g.gain.ramps[0]).toEqual([TASK_DONE_END_GAIN, ctx.currentTime + TASK_DONE_TONE_SEC]);
+      expect(g.connectedTo.connectedTo).toBe(ctx.destination);
+      expect(osc.stoppedAt).toBeCloseTo(TASK_DONE_TONE_SEC, 10);
+    });
+    expect(eng.dbg().calls.taskDone).toBe(1);
+  });
+
+  it('playTaskFail: 2 nada peringatan A4-Eb4, gain 0.035→0.001, triangle', () => {
+    const { eng, ctx, timeouts } = makeEngine();
+    eng.playTaskFail();
+    expect(timeouts).toHaveLength(TASK_FAIL_FREQS.length);
+    timeouts.forEach((t, i) => {
+      t.fn();
+      const osc = ctx.__log.osc[i];
+      expect(osc.type).toBe('triangle');
+      expect(osc.frequency.value).toBe(TASK_FAIL_FREQS[i]);
+      const { g } = gainChain(osc);
+      expect(g.gain.value).toBe(TASK_FAIL_GAIN);
+      expect(g.gain.ramps[0]).toEqual([TASK_FAIL_END_GAIN, ctx.currentTime + TASK_FAIL_TONE_SEC]);
+      expect(g.connectedTo.connectedTo).toBe(ctx.destination);
+    });
+    expect(eng.dbg().calls.taskFail).toBe(1);
+  });
+
+  it('playSelect: blip interaksi C6, sine, gain 0.015', () => {
+    const { eng, ctx } = makeEngine();
+    eng.playSelect();
+    expect(ctx.__log.osc).toHaveLength(1);
+    const osc = ctx.__log.osc[0];
+    expect(osc.type).toBe('sine');
+    expect(osc.frequency.value).toBe(SELECT_FREQ);
+    const { g } = gainChain(osc);
+    expect(g.gain.value).toBe(SELECT_GAIN);
+    expect(osc.stoppedAt).toBeCloseTo(SELECT_SEC, 10);
+    expect(eng.dbg().calls.select).toBe(1);
+  });
+
+  it('setVolume: mengubah gain master saat unmuted, tetap 0 saat muted', () => {
+    const { eng, ctx } = makeEngine();
+    eng.ensure();
+    eng.setVolume(0.5);
+    expect(eng.getVolume()).toBe(0.5);
+    expect(eng.dbg().volume).toBe(0.5);
+    eng.playSelect();
+    const osc = ctx.__log.osc[0];
+    expect(gainChain(osc).g.connectedTo.gain.value).toBe(0.5);
+
+    eng.setMuted(true);
+    expect(gainChain(osc).g.connectedTo.gain.value).toBe(0);
+
+    eng.setMuted(false);
+    expect(gainChain(osc).g.connectedTo.gain.value).toBe(0.5);
   });
 
   it('dispose: clear semua pending chime + close ctx + reset ke state none', () => {

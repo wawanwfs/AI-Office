@@ -135,6 +135,7 @@ function saveMuted(){try{localStorage.setItem('wfs_audio_muted',audioMuted?'1':'
 const __sound=createSoundEngine({ctxFactory:()=>new(window.AudioContext||window.webkitAudioContext)()});
 __sound.setMuted(audioMuted);
 __sound.dbg(s=>{window.__audio=s;});
+window.__officeSound=__sound;
 const __ensureAudio=()=>{if(window.__officeSceneDestroyed)return;__sound.ensure();};
 const __ensureAudioEarly=()=>{if(window.__officeSceneDestroyed)return;__sound.ensure();try{const c=__sound.rawCtx();if(c&&c.state==='suspended'&&c.resume)c.resume();}catch{/* abaikan */}};
 // Listener wake {once:true} HARUS bisa dilepas di destroy(): tanpa itu, scene lama
@@ -162,6 +163,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   const hits=ray.intersectObjects([...targets,...boardTargets,...nexusTarget],true);
   if(!hits.length){ if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius,reset:true}} selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null); return; }
   if((boardMesh&&hits[0].object===boardMesh)||(boardFrame&&(hits[0].object===boardFrame||(boardFrame.getObjectById&&boardFrame.getObjectById(hits[0].object.id))))) {
+    __sound.playSelect();
     if(homeRadius===null)homeRadius=Math.max(24,Math.min(60,sph.radius));
     if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
     const bpos=boardMesh?boardMesh.position:new THREE.Vector3(-8.35,3.8,9.3);
@@ -172,6 +174,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
     return;
   }
   if(nxChar&&(hits[0].object===nxChar||(nxChar.getObjectById&&nxChar.getObjectById(hits[0].object.id)))) {
+    __sound.playSelect();
     if(homeRadius===null)homeRadius=Math.max(24,Math.min(60,sph.radius));
     if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
     const np=new THREE.Vector3(7.6,1.20+0.8,6.1);
@@ -192,6 +195,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
     while(p){ const f=agentData.find(ad=>ad.sittingChar===p||ad.walker===p); if(f){root=f;break} p=p.parent; }
   }
   if(root){
+    __sound.playSelect();
     if(window.__wfsSelectAgent){
       const idMap={}; window.__wfsAgentIdList&&window.__wfsAgentIdList.forEach(x=>idMap[x.name]=x.id);
       window.__wfsSelectAgent(idMap[root.agent.name]||root.agent.name);
@@ -1606,6 +1610,10 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       if(__meet.active){__meet.update(-1)}
     } else if(action==='tour'){
       agentData.forEach(ad=>{ if(ad.state==='sitting'){ad.timer=0.1;} });
+    } else if(action==='test_audio'){
+      if(audioMuted) return false;
+      __sound.playTaskDone();
+      return true;
     }
   }
   return {
@@ -1665,6 +1673,13 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
     },
     setAudioMuted: (v) => { audioMuted=!!v; __sound.setMuted(audioMuted); saveMuted(); __sound.dbg(s=>{window.__audio=s;}); },
     isAudioMuted: () => audioMuted,
+    playTaskDone: () => __sound.playTaskDone(),
+    playTaskFail: () => __sound.playTaskFail(),
+    playSelect: () => __sound.playSelect(),
+    testAudio: () => { if(audioMuted) return false; __sound.playTaskDone(); return true; },
+    setAudioVolume: (v) => { __sound.setVolume(v); },
+    getAudioVolume: () => __sound.getVolume(),
+    getAudioEngine: () => __sound,
     destroy: () => {
       window.__officeSceneDestroyed=true;
       __intervals.forEach(clearInterval);
@@ -1688,6 +1703,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       try { __shift && __shift.dispose && __shift.dispose() } catch{/* abaikan */}
       // Audio: engine menutup AudioContext scene lama (mencegah MaxAudioContextsExceeded)
       try { __sound.dispose() } catch{/* abaikan */}
+      delete window.__officeSound;
       delete window.__toggleNeon;
       delete window.__sceneSelRing;
       if(renderer){renderer.dispose();container.removeChild(renderer.domElement);}
