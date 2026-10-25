@@ -85,6 +85,10 @@ export default function ShConsole({ show, onClose }) {
       setGitMsg(''); await loadWsGit(pid); setErr('')
     } catch (e) { setErr(e.message) }
   }
+  const sbAction = async (pid, action) => {
+    try { await api('projects/' + pid + '/sandbox/' + action, { method: 'POST', body: {} }); await loadProjects(); setErr('') }
+    catch (e) { setErr(e.message) }
+  }
 
   useEffect(() => {
     if (!show) return
@@ -232,6 +236,11 @@ export default function ShConsole({ show, onClose }) {
                     <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
                       <button style={STYLE.btnGhost} onClick={() => loadWsFiles(wsId, '')}>Refresh</button>
                       {wsPath && <button style={STYLE.btnGhost} onClick={() => loadWsFiles(wsId, wsPath.split('/').slice(0, -1).join('/'))}>⬆ Naik</button>}
+                    </div>
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                      <button style={STYLE.btnGhost} onClick={() => sbAction(wsId, 'restart')}>⟳ Restart</button>
+                      <button style={STYLE.btnGhost} onClick={() => sbAction(wsId, 'stop')}>⏹ Stop</button>
+                      <button style={STYLE.btnGhost} onClick={() => sbAction(wsId, 'start')}>▶ Start</button>
                     </div>
                     {entries.map((en) => (
                       <div key={en.name} style={{ ...STYLE.row, cursor: 'pointer' }}

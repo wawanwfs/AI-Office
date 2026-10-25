@@ -381,6 +381,27 @@ def api_project_logs(pid: int, lines: int = 100):
     return {"logs": out.stdout.splitlines()[-lines:]}
 
 
+@app.post("/api/projects/{pid}/sandbox/{action}")
+def api_project_sandbox_action(pid: int, action: str):
+    if action not in ("start", "stop", "restart"):
+        raise HTTPException(400, "action harus start/stop/restart")
+    _, proj = _project_workspace(pid)
+    cname = proj.get("container_name")
+    if not cname:
+        raise HTTPException(404, "container belum ada")
+    try:
+        out = subprocess.run(["docker", action, cname],
+                             capture_output=True, text=True, timeout=60)
+    except Exception as e:
+        raise HTTPException(502, f"{action} error: {e}")
+    if out.returncode != 0:
+        raise HTTPException(502, out.stderr.strip()[:300])
+    ps = subprocess.run(["docker", "ps", "--filter", f"name=^{cname}$", "--format", "{{.Names}}"],
+                        capture_output=True, text=True, timeout=10)
+    running = cname in ps.stdout
+    return {"ok": True, "action": action, "running": running}
+
+
 @app.get("/api/projects/{pid}/git")
 def api_project_git(pid: int):
     base, _ = _project_workspace(pid)

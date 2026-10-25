@@ -99,8 +99,9 @@ describe('ShConsole — konsol software house', () => {
     expect(screen.getByText(/Lantai 1/)).toBeTruthy()
   })
 
-  it('tab Workspace: pilih project → file list → buka file → git commit', async () => {
+  it('tab Workspace: pilih project → file list → buka file → git commit → restart container', async () => {
     const commits = []
+    const acts = []
     stubFetch({
       '/wfs-api/sh/overview': OV,
       '/wfs-api/projects': PROJ_RESP,
@@ -109,6 +110,7 @@ describe('ShConsole — konsol software house', () => {
       '/wfs-api/projects/1/logs?lines=100': { logs: ['INFO line'] },
       '/wfs-api/projects/1/git': { repo: false },
       '/wfs-api/projects/1/git/commit': () => { commits.push('commit'); return { ok: true, committed: true } },
+      '/wfs-api/projects/1/sandbox/restart': () => { acts.push('restart'); return { ok: true, running: true } },
     })
     render(<ShConsole show onClose={() => {}} />)
     clickTab('Workspace')
@@ -120,6 +122,8 @@ describe('ShConsole — konsol software house', () => {
     fireEvent.change(screen.getByLabelText('Pesan commit'), { target: { value: 'init' } })
     fireEvent.click(screen.getByText('Init + Commit'))
     await waitFor(() => expect(commits).toContain('commit'))
+    fireEvent.click(screen.getByText(/Restart/))
+    await waitFor(() => expect(acts).toContain('restart'))
   })
 
   it('tab Approvals: list pending + putuskan', async () => {
