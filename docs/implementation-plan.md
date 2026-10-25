@@ -32,12 +32,12 @@ Status: Fase 1 (Audit) → Fase 2 (Fondasi). Dokumen hidup.
 
 ## Fase 4 — GUI Software House
 
-- [ ] Dashboard owner (angka dari DB/event nyata).
-- [ ] Global Task Composer (+ New Project / Give Your Agents a Task).
-- [ ] Project workspace (overview, file explorer, task board, assignments, terminal, preview, logs, test, git).
-- [ ] Agents dashboard.
-- [ ] Visualisasi 3 lantai fungsional (F1 product, F2 engineering, F3 QA/security/delivery).
-- [ ] Activity feed + notifikasi.
+- [x] Dashboard owner (Konsol Overview — angka dari DB/event nyata via /api/sh/overview).
+- [ ] Global Task Composer (sebagian: tab Tasks di Konsol — buat task manual + jalankan; wizard "Give Your Agents a Task" belum).
+- [ ] Project workspace (sebagian: preview URL + status container ada di daftar project & /preview reverse-proxy; file explorer/terminal/git belum).
+- [x] Agents dashboard (tab Agents di Konsol — daftar role/lantai/model/status).
+- [ ] Visualisasi 3 lantai fungsional (F1 product, F2 engineering, F3 QA/security/delivery) — seed agent 12 role @3 lantai sudah ada di database; korelasi visual scene 3D belum penuh.
+- [ ] Activity feed + notifikasi (sebagian: log terbaru di Overview).
 
 ## Fase 5 — Docker Sandbox (REQUIREMENT INTI)
 
@@ -47,7 +47,7 @@ Status: Fase 1 (Audit) → Fase 2 (Fondasi). Dokumen hidup.
 - [x] Dynamic port allocation & preview routing (hindari bentrok) — `allocate_port()` 3100-3900 + loopback mapping.
 - [x] Isolasi & least-privilege (non-root, resource limits, no docker socket mount) — `--memory=512m --cpus=1.0 --pids-limit=100`, port loopback, tanpa mount docker.sock.
 - [x] Health checks + status jujur (ready/unhealthy/failed) — HTTP health check 200 pada start_container.
-- [ ] Integrasi dengan GUI + endpoint API (create project → scaffold → start → preview URL).
+- [x] Integrasi dengan GUI + endpoint API (create project → scaffold → start → preview URL; `/preview` reverse-proxy terverifikasi lewat 8787 & 9503).
 
 ## Fase 6 — Engineering Workspace
 
