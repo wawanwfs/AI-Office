@@ -728,6 +728,7 @@ allAgents.forEach((agent,i)=>{
   const label=makeLabel(agent);
   if(!namesVisible)label.visible=false;
   label.position.set(dp.x,deskY+LABEL_Y,dp.z+.55);
+  label.userData.baseY=deskY+LABEL_Y; label.userData.baseX=dp.x; label.userData.antiY=0; label.userData.antiX=0;
   office.add(label);
   agentData.push({
     agent,state:'sitting',timer:rng.r(8,25),
@@ -1110,8 +1111,9 @@ function checkConversations(){
   })), CHAT_RADIUS);
   for(const [a,b] of pairs){
     const phrase=chatPhrases[Math.floor(Math.random()*chatPhrases.length)];
-    const anc={get x(){return a.walker.position.x},get z(){return a.walker.position.z},y:1.4};
-    createBubble(a.walker.position.x,1.4,a.walker.position.z,phrase,a.agent.hex,anc);
+    const bay=(a.walker&&a.walker.visible?a.walker.position.y:a.home.y)||0;
+    const anc={get x(){return a.walker.position.x},get z(){return a.walker.position.z},y:bay+2.6};
+    createBubble(a.walker.position.x,bay+2.6,a.walker.position.z,phrase,a.agent.hex,anc);
     a._chatCooldown=CHAT_COOLDOWN_SEC;b._chatCooldown=CHAT_COOLDOWN_SEC;
   }
   for(let i=0;i<agentData.length;i++){
@@ -1202,7 +1204,9 @@ function animate(){
     helmetVisor.material.opacity=fx.visor;
     agentData.forEach((a,i)=>{
       if(a.state==='sitting'){
-        a.label.position.y=LABEL_Y+ambientFx(elapsed,i).label;
+        const baseLabelY=((a.home&&a.home.y)||0)+LABEL_Y;
+        a.label.userData.baseY=baseLabelY; a.label.userData.baseX=a.home.x;
+        a.label.position.y=baseLabelY+(a.label.userData.antiY||0)+ambientFx(elapsed,i).label;
         if(a.sittingChar&&a.sittingChar.visible){
           applyCharMotion(a.sittingChar, charMotion(elapsed, i, 'desk'));
         }
@@ -1211,7 +1215,7 @@ function animate(){
     if(nxChar){
       applyCharMotion(nxChar, charMotion(elapsed, 0, 'reception'));
     }
-    nxLabel.position.y=LABEL_Y-.5+fx.nx;
+    nxLabel.position.y=3.3+fx.nx;
     if(__meet&&__meet.active&&typeof __meet.attendees==='function'){
       const att=__meet.attendees();
       att.forEach((ai,seatIdx)=>{
@@ -1239,9 +1243,10 @@ function animate(){
     const p=selAnchor(a);
     if(!p){selRing.visible=false}
     else{
+      const targetY = ((a.walker && a.walker.visible ? a.walker.position.y : a.home.y) || 0) + SEL_RING.Y;
       selRing.position.x += (p.x - selRing.position.x) * 0.25;
       selRing.position.z += (p.z + p.off - selRing.position.z) * 0.25;
-      selRing.position.y = 0.03;
+      selRing.position.y += (targetY - selRing.position.y) * 0.25;
       selRing.rotation.z += 0.012;
       selRing.visible=true;
     }
@@ -1411,7 +1416,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       agentData.forEach(ad=>{
         if(ad.state!=='sitting')return;
         ad.state='walking_out';ad.sittingChar.visible=false;ad.walker.visible=true;
-        ad.walker.position.set(ad.home.x,0,ad.home.z);
+        ad.walker.position.set(ad.home.x,(ad.home&&ad.home.y)||0,ad.home.z);
         ad.walkTarget={x:-9.5+rng.r(-1,1),z:7.5+rng.r(-.5,.5)}; // area kafe
         ad._route=null; // recalc otomatis: tanpa rute, stepRoute jatuh ke walkTarget
         ad.walkPause=12;
@@ -1422,7 +1427,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
         if(ad.state==='meeting'||ad.state==='walking_out'||ad.state==='walking_back'){
           ad.walker.visible=false;ad.sittingChar.visible=true;
           ad.state='sitting';ad.timer=rng.r(8,20);
-          ad.label.position.set(ad.home.x,LABEL_Y,ad.home.z);
+          ad.label.position.set(ad.home.x,((ad.home&&ad.home.y)||0)+LABEL_Y,ad.home.z);
         }
         if(!namesVisible)ad.label.visible=false;
       });

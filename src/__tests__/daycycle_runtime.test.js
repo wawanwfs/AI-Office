@@ -194,6 +194,7 @@ describe('createShift — mesin fase shift (eksekusi efek)', () => {
       expect(a._route).toBeNull();
       expect(a.resetStride).toBe(true);
       expect(a.sittingChar.visible).toBe(false);
+      expect(a.walker.position.y).toBeCloseTo(1.20, 2);
     }
     s.dispose();
   });
@@ -255,6 +256,7 @@ describe('createShift — mesin fase shift (eksekusi efek)', () => {
       expect(a._route).toBeNull();
       expect(a.resetStride).toBe(true);
       expect(a.sittingChar.visible).toBe(false);
+      expect(a.walker.position.y).toBeCloseTo(1.20, 2);
     }
     s.dispose();
   });

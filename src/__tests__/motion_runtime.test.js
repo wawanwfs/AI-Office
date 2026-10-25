@@ -228,8 +228,35 @@ describe('createMotion — walking_back', () => {
     expect(ad.walker.children[0].position.z).toBe(0);
     expect(ad.walker.children[0].rotation.x).toBe(0);
     expect(ad.walker.children[2].rotation.x).toBe(0);
-    expect(ad.walker.position.y).toBe(0);
+    expect(ad.walker.position.y).toBe(0.60); // Lantai 2 (z=1.5): Y bertengger di 0.60
     expect(ad.label.position.x).toBe(-4); // label balik ke meja
+    expect(ad.label.position.y).toBeCloseTo(0.60 + 2.45, 2); // label terangkat di atas meja L2
+  });
+
+  it('sampai home di Lantai 1 (z=-3) & Lantai 3 (z=6) → elevasi walker dan label mengikuti lantai', () => {
+    // Lantai 1 (z=-3, Y=0)
+    const adL1 = mkAd(1, { x: -4, z: -3 });
+    adL1.state = 'walking_back';
+    adL1.walkTarget = { x: -4, z: -3 };
+    adL1.walker.visible = true;
+    adL1.walker.position.set(-4.1, 0, -3);
+    const updateL1 = createMotion(mkCtx([adL1]));
+    updateL1(0.2);
+    expect(adL1.state).toBe('sitting');
+    expect(adL1.walker.position.y).toBe(0);
+    expect(adL1.label.position.y).toBeCloseTo(2.45, 2);
+
+    // Lantai 3 (z=6, Y=1.20)
+    const adL3 = mkAd(2, { x: -4, z: 6 });
+    adL3.state = 'walking_back';
+    adL3.walkTarget = { x: -4, z: 6 };
+    adL3.walker.visible = true;
+    adL3.walker.position.set(-4.1, 1.2, 6);
+    const updateL3 = createMotion(mkCtx([adL3]));
+    updateL3(0.2);
+    expect(adL3.state).toBe('sitting');
+    expect(adL3.walker.position.y).toBe(1.20);
+    expect(adL3.label.position.y).toBeCloseTo(1.20 + 2.45, 2);
   });
 
   it('flag resetStride (spawn shift) → pose direset sebelum bergerak', () => {

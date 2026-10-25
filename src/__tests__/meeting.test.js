@@ -53,6 +53,25 @@ describe('meeting.update() state machine', () => {
     expect(m.figures.every((f) => f.visible === false)).toBe(true);
   });
 
+  it('akhir rapat mengembalikan label agen ke elevasi lantai meja masing-masing (L1 Y=0, L2 Y=0.60, L3 Y=1.20)', () => {
+    const { ctx, agentData } = mkCtx();
+    const labelCalls = {};
+    agentData[0].home = { x: -8, y: 0, z: -3 };
+    agentData[0].label = { position: { set: (x, y, z) => { labelCalls[0] = { x, y, z }; } } };
+    agentData[1].home = { x: -4, y: 0.60, z: 1.5 };
+    agentData[1].label = { position: { set: (x, y, z) => { labelCalls[1] = { x, y, z }; } } };
+    agentData[2].home = { x: -8, y: 1.20, z: 6 };
+    agentData[2].label = { position: { set: (x, y, z) => { labelCalls[2] = { x, y, z }; } } };
+
+    const m = createMeeting(ctx);
+    m.update(610); // mulai rapat
+    m.update(631); // rapat selesai
+    // Peserta yang kembali ke meja mendapatkan posisi Y = ad.home.y + LABEL_Y
+    if (labelCalls[0]) expect(labelCalls[0].y).toBeCloseTo(0 + 2.45, 2);
+    if (labelCalls[1]) expect(labelCalls[1].y).toBeCloseTo(0.60 + 2.45, 2);
+    if (labelCalls[2]) expect(labelCalls[2].y).toBeCloseTo(1.20 + 2.45, 2);
+  });
+
   it('rotasi antar window: peserta window 0 ≠ window 1 (hash mulai berbeda, tanpa restart manual)', () => {
     const { ctx } = mkCtx(14, 4);
     const m = createMeeting(ctx);

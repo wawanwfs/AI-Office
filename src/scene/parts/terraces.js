@@ -1,13 +1,11 @@
 // parts/terraces.js — Arsitektur Gedung Bertingkat 3 Lantai Nyata (Cascading High-Rise Headquarter Terraces)
 // Posisi lantai bertingkat alami dari depan ke belakang (Lantai 1: Y=0, Lantai 2: Y=0.60, Lantai 3: Y=1.20),
 // tangga arsitektural naik, tekstur prosedural marmer Carrara & parket jati mewah tanpa z-fighting/flicker.
+import { L1_Y, L2_Y, L3_Y, floorElevationAt } from './floor_elevation.js';
+export { L1_Y, L2_Y, L3_Y, floorElevationAt };
 
 export function createTerraces({ THREE, office, M, MB }) {
   const terraces = new THREE.Group();
-
-  // Ketinggian Lantai Gedung Nyata yang Elegan & Proporsional
-  const L2_Y = 0.60;
-  const L3_Y = 1.20;
 
   // Koleksi lampu & strip LED untuk sinkronisasi mode Gelap / Terang
   const stepStrips = [];

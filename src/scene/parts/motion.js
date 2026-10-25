@@ -5,6 +5,7 @@ import { routePath as routePathPure } from './routing.js';
 import { collabTarget } from './trip_plan.js';
 import { OBSTACLES, inObstacle, seatOccupied } from './obstacles.js';
 import { talkStep, isConverseOver, speakerIsVisitor } from './converse_timing.js';
+import { floorElevationAt } from './floor_elevation.js';
 import {
   WALK_SPEED as WALK, EXIT_SPEED as EXIT, LINE_SEC, COLLAB_OFFSET, DEST_JITTER,
   COLLAB_CHANCE, TRIP_PAUSE_MIN, TRIP_PAUSE_JITTER, SIT_TIMER_MIN, SIT_TIMER_JITTER,
@@ -45,17 +46,25 @@ export function createMotion(ctx) {
         c.rotation.x = pose.armRotX; // lengan berlawanan fase dgn kaki
       }
     });
-    // Bob badan: naik-turun kecil 2x per siklus langkah + sway pinggul alami
-    ad.walker.position.y = poseBob(t);
+    // Bob badan: naik-turun kecil 2x per siklus langkah + sway pinggul alami di atas elevasi lantai
+    const baseY = floorElevationAt(ad.walker.position.z);
+    ad.walker.position.y = baseY + poseBob(t);
     ad.walker.rotation.z = Math.sin(t) * 0.022;
   }
   const poseBob = (t) => stridePose(t).bob;
   function resetStride(ad) {
     ad.walker.children.forEach((c) => { if (c.userData && c.userData.isLeg) { c.position.z = 0; c.rotation.x = 0; } else if (c.userData && c.userData.isArm) { c.rotation.x = 0; } });
-    ad.walker.position.y = 0;
+    const deskY = (ad.home && Number.isFinite(ad.home.y)) ? ad.home.y : floorElevationAt(ad.walker.position.z);
+    ad.walker.position.y = deskY;
     ad.walker.rotation.z = 0;
   }
-  function follow(ad) { ad.label.position.set(ad.walker.position.x, 2.45, ad.walker.position.z); }
+  function follow(ad) {
+    const baseY = floorElevationAt(ad.walker.position.z);
+    const u = ad.label.userData || (ad.label.userData = {});
+    u.baseY = baseY + 2.45;
+    u.baseX = ad.walker.position.x;
+    ad.label.position.set(ad.walker.position.x, baseY + 2.45 + (u.antiY || 0), ad.walker.position.z);
+  }
 
   // Jalan lewat rute (waypoint koridor) — return true saat sampai tujuan akhir
   function stepRoute(ad, speed, delta) {
@@ -106,10 +115,12 @@ export function createMotion(ctx) {
     if (step !== ad._talk && step < lines.length) {
       ad._talk = step;
       const mine = speakerIsVisitor(step);
+      const myY = floorElevationAt(me.z);
+      const prY = (pr.home && Number.isFinite(pr.home.y)) ? pr.home.y : floorElevationAt(pr.home.z);
       const anchor = mine
-        ? { get x(){return me.x}, get z(){return me.z}, y:2.0 }
-        : { get x(){return pr.home.x}, get z(){return pr.home.z}, y:2.0 };
-      createBubble(anchor.x, 2.6, anchor.z, lines[step], (mine ? ad : pr).agent.hex, anchor);
+        ? { get x(){return me.x}, get z(){return me.z}, y: myY + 2.6 }
+        : { get x(){return pr.home.x}, get z(){return pr.home.z}, y: prY + 2.6 };
+      createBubble(anchor.x, anchor.y, anchor.z, lines[step], (mine ? ad : pr).agent.hex, anchor);
     }
     if (isConverseOver(ad.walkPause, lines.length, LINE_SEC)) {
       pr.sittingChar.rotation.y = 0;
@@ -126,7 +137,8 @@ export function createMotion(ctx) {
       ad.state = 'walking_out';
       ad.sittingChar.visible = false;
       ad.walker.visible = true;
-      ad.walker.position.set(ad.home.x, 0, ad.home.z);
+      const startY = (ad.home && Number.isFinite(ad.home.y)) ? ad.home.y : floorElevationAt(ad.home.z);
+      ad.walker.position.set(ad.home.x, startY, ad.home.z);
       chooseTrip(ad);
     },
     walking_out(ad, delta) {
@@ -135,8 +147,9 @@ export function createMotion(ctx) {
         if (stepRoute(ad, WALK, delta)) {
           ad.walkPause += delta;
           if (Math.random() < delta * 0.12) {
-            const lunchAnc={get x(){return ad.walker.position.x},get z(){return ad.walker.position.z},y:2.6};
-            createBubble(ad.walker.position.x, 2.6, ad.walker.position.z,
+            const cafeY = floorElevationAt(ad.walker.position.z);
+            const lunchAnc = { get x(){return ad.walker.position.x}, get z(){return ad.walker.position.z}, y: cafeY + 2.6 };
+            createBubble(ad.walker.position.x, cafeY + 2.6, ad.walker.position.z,
               ['“makan siang dulu”', '“kopi wajib”', '“paket nasi goreng”', '“sesh sore nanti?”'][Math.floor(Math.random() * 4)],
               ad.agent.hex, lunchAnc);
           }
@@ -157,7 +170,10 @@ export function createMotion(ctx) {
         ad.state = 'sitting';
         ad.walker.visible = false;
         ad.sittingChar.visible = true;
-        ad.label.position.set(ad.home.x, 2.45, ad.home.z);
+        const deskY = (ad.home && Number.isFinite(ad.home.y)) ? ad.home.y : floorElevationAt(ad.home.z);
+        const u = ad.label.userData || (ad.label.userData = {});
+        u.baseY = deskY + 2.45; u.baseX = ad.home.x; u.antiY = 0; u.antiX = 0;
+        ad.label.position.set(ad.home.x, deskY + 2.45, ad.home.z);
         ad.timer = SIT_TIMER_MIN + rng.r(0, SIT_TIMER_JITTER);
         resetStride(ad);
         return;
@@ -168,7 +184,10 @@ export function createMotion(ctx) {
       const { d } = dist2(ad.walker.position, ad.walkTarget);
       if (d < 0.5) {
         ad.walker.visible = false; ad.state = 'offsite';
-        ad.label.position.set(ad.home.x, 2.45, ad.home.z);
+        const deskY = (ad.home && Number.isFinite(ad.home.y)) ? ad.home.y : floorElevationAt(ad.home.z);
+        const u = ad.label.userData || (ad.label.userData = {});
+        u.baseY = deskY + 2.45; u.baseX = ad.home.x; u.antiY = 0; u.antiX = 0;
+        ad.label.position.set(ad.home.x, deskY + 2.45, ad.home.z);
         return;
       }
       stepRoute(ad, EXIT, delta);

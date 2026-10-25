@@ -260,10 +260,12 @@ const PX_PER_TAN = (clientH, fovDeg) => clientH / (2 * Math.tan((fovDeg * Math.P
 export function buildAgentPts(vis, k, pxW, pxH) {
   return vis.map(a => {
     const u = a.label.userData, v = a.proj;
+    const by = (u && Number.isFinite(u.baseY)) ? u.baseY : (a.label.position.y - (u.antiY || 0));
+    const bx = (u && Number.isFinite(u.baseX)) ? u.baseX : (a.label.position.x - (u.antiX || 0));
     return {
       a, zone: false,
       sw: a.label.scale.x * k, sh: a.label.scale.y * k,
-      baseY: a.label.position.y - (u.antiY || 0), baseX: a.label.position.x - (u.antiX || 0),
+      baseY: by, baseX: bx,
       x: v.x * pxW, y: v.y * pxH, offY: 0, offX: 0,
     };
   });

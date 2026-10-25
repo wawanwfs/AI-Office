@@ -1,5 +1,6 @@
 // Waktu, pencahayaan, mode neon, dan pergantian shift WFS Project.
 import * as shiftSpec from './shift_spec.js';
+import { floorElevationAt } from './floor_elevation.js';
 
 // ── Kurva waktu: menit → status teks & faktor siang (0 malam … 1 siang) ──
 export const SCHEDULE = [
@@ -117,13 +118,14 @@ export function createShift(ctx) {
 
   function arrive() {
     const handled = new Set();
+    const doorY = floorElevationAt(DOOR.z);
     ARRIVE.forEach((idx, i) => {
       handled.add(idx);
       const ad = agentData[idx];
       if (!ad || ad.state !== 'offsite') return;
       later(i * 800, () => {
         ad.walker.visible = true;
-        ad.walker.position.set(DOOR.x, 0, DOOR.z);
+        ad.walker.position.set(DOOR.x, doorY, DOOR.z);
         ad.sittingChar.visible = false;
         // Pulang ke mejanya masing-masing — WAJIB set walkTarget: tanpa ini
         // walking_back memakai target lama (pintu keluar/kafe) → agent tidak
@@ -140,7 +142,7 @@ export function createShift(ctx) {
       if (handled.has(idx) || !ad || ad.state !== 'offsite') return;
       later((extraIndex++) * 600, () => {
         ad.walker.visible = true;
-        ad.walker.position.set(DOOR.x, 0, DOOR.z);
+        ad.walker.position.set(DOOR.x, doorY, DOOR.z);
         ad.sittingChar.visible = false;
         ad.walkTarget = { x: ad.home.x, z: ad.home.z };
         ad._route = null;

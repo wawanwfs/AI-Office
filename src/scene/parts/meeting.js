@@ -53,7 +53,11 @@ export function createMeeting(ctx) {
       ad.sittingChar.visible = false;
       ad.state = 'meeting';
       // Label pindah mengambang di atas kursi rapat
-      if (ad.label) ad.label.position.set(seat.x, (LABEL_Y || 2.45) + 0.6, seat.z + 0.55);
+      if (ad.label) {
+        const u = ad.label.userData || (ad.label.userData = {});
+        u.baseY = (LABEL_Y || 2.45) + 0.6; u.baseX = seat.x; u.antiY = 0; u.antiX = 0;
+        ad.label.position.set(seat.x, (LABEL_Y || 2.45) + 0.6, seat.z + 0.55);
+      }
     });
   }
   function end() {
@@ -66,7 +70,12 @@ export function createMeeting(ctx) {
       if (!ad) return;
       ad.state = 'sitting';
       ad.sittingChar.visible = true;
-      if (ad.label) ad.label.position.set(ad.home.x, LABEL_Y || 2.45, ad.home.z);
+      const deskY = (ad.home && Number.isFinite(ad.home.y)) ? ad.home.y : 0;
+      if (ad.label) {
+        const u = ad.label.userData || (ad.label.userData = {});
+        u.baseY = deskY + (LABEL_Y || 2.45); u.baseX = ad.home.x; u.antiY = 0; u.antiX = 0;
+        ad.label.position.set(ad.home.x, deskY + (LABEL_Y || 2.45), ad.home.z);
+      }
       ad.timer = 3 + rng.r(0, 6);
     });
     currentIdx = [];
