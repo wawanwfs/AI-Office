@@ -56,3 +56,14 @@ def test_log_event_and_recent(db):
     db.log_event("test message", project_id="p99", level="INFO", source="test")
     logs = db.get_recent_logs(limit=5)
     assert logs and logs[0]["message"] == "test message"
+
+
+def test_approval_lifecycle(db):
+    aid = db.add_approval(project_id="2", action_type="project_launch",
+                          description="Setujui peluncuran POS")
+    pending = db.list_approvals("pending")
+    assert any(a["id"] == aid and a["status"] == "pending" for a in pending)
+    assert db.set_approval(aid, "approved") is True
+    assert db.set_approval("tidak-ada", "approved") is False
+    approved = db.list_approvals("approved")
+    assert any(a["id"] == aid and a["status"] == "approved" for a in approved)

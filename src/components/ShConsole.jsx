@@ -55,6 +55,7 @@ export default function ShConsole({ show, onClose }) {
   const [gitInfo, setGitInfo] = useState(null)
   const [termCmd, setTermCmd] = useState('')
   const [termOut, setTermOut] = useState('')
+  const [approvals, setApprovals] = useState([])
 
   const loadOverview = useCallback(async () => {
     try { setOv(await api('sh/overview')); setErr('') } catch (e) { setErr(e.message) }
@@ -68,6 +69,14 @@ export default function ShConsole({ show, onClose }) {
   const loadAgents = useCallback(async () => {
     try { const d = await api('agents'); setAgents(Array.isArray(d) ? d : []); setErr('') } catch (e) { setErr(e.message) }
   }, [])
+  const loadApprovals = useCallback(async () => {
+    try { const d = await api('approvals'); setApprovals(d.approvals || []); setErr('') }
+    catch (e) { setErr(e.message) }
+  }, [])
+  const decideApproval = async (aid, action) => {
+    try { await api('approvals/' + aid + '/decide', { method: 'POST', body: { action } }); await loadApprovals() }
+    catch (e) { setErr(e.message) }
+  }
 
   useEffect(() => {
     if (!show) return
@@ -76,7 +85,8 @@ export default function ShConsole({ show, onClose }) {
     else if (tab === 'tasks') loadTasks()
     else if (tab === 'agents') loadAgents()
     else if (tab === 'ws' && projects.length === 0) loadProjects()
-  }, [show, tab, loadOverview, loadProjects, loadTasks, loadAgents, projects.length])
+    else if (tab === 'approvals') loadApprovals()
+  }, [show, tab, loadOverview, loadProjects, loadTasks, loadAgents, projects.length, loadApprovals])
 
   const create = async () => {
     if (!name.trim() || !brief.trim()) { setErr('Nama dan brief wajib diisi'); return }
@@ -146,7 +156,7 @@ export default function ShConsole({ show, onClose }) {
           <button className="ibtn" onClick={onClose} aria-label="Tutup konsol" title="Tutup">✕</button>
         </div>
         <div style={STYLE.tabbar}>
-          {[['overview', 'Overview'], ['projects', 'Projects'], ['tasks', 'Tasks'], ['agents', 'Agents'], ['ws', 'Workspace'], ['new', 'Project Baru']].map(([k, label]) => (
+          {[['overview', 'Overview'], ['projects', 'Projects'], ['tasks', 'Tasks'], ['agents', 'Agents'], ['ws', 'Workspace'], ['approvals', 'Approvals'], ['new', 'Project Baru']].map(([k, label]) => (
             <button key={k} aria-label={'Tab ' + label} style={{ ...STYLE.tab, ...(tab === k ? STYLE.tabActive : {}) }} onClick={() => setTab(k)}>{label}</button>
           ))}
         </div>
@@ -259,6 +269,29 @@ export default function ShConsole({ show, onClose }) {
                   </div>
                 </div>
               )}
+            </div>
+          )}
+          {tab === 'approvals' && (
+            <div>
+              <div style={STYLE.card}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ fontWeight: 700 }}>Menunggu persetujuan ({approvals.length})</div>
+                  <button style={STYLE.btnGhost} onClick={loadApprovals}>Refresh</button>
+                </div>
+                {approvals.length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>Tidak ada approval pending.</div>}
+                {approvals.map((a) => (
+                  <div key={a.id} style={{ ...STYLE.row, alignItems: 'flex-start' }}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: '#eaf1ff' }}>[{a.action_type}] project #{a.project_id || '-'}</div>
+                      <div style={{ fontSize: 12, color: '#8fa2c4' }}>{a.description}</div>
+                    </div>
+                    <div style={{ display: 'flex', gap: 6 }}>
+                      <button style={STYLE.btn} onClick={() => decideApproval(a.id, 'approve')}>Setujui</button>
+                      <button style={{ ...STYLE.btn, background: '#4a2030' }} onClick={() => decideApproval(a.id, 'reject')}>Tolak</button>
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           {tab === 'new' && (

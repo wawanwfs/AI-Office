@@ -116,4 +116,21 @@ describe('ShConsole — konsol software house', () => {
     fireEvent.click(screen.getByText(/Dockerfile/))
     expect(await screen.findByText(/FROM python:3.12-slim/)).toBeTruthy()
   })
+
+  it('tab Approvals: list pending + putuskan', async () => {
+    const calls = []
+    stubFetch({
+      '/wfs-api/sh/overview': OV,
+      '/wfs-api/approvals': (url, opts) => {
+        if ((opts?.method || 'GET') === 'POST') { calls.push('create'); return { ok: true } }
+        return { approvals: [{ id: 'a1', action_type: 'project_launch', project_id: '2', description: 'Setujui POS', status: 'pending' }] }
+      },
+      '/wfs-api/approvals/a1/decide': () => { calls.push('decide'); return { ok: true } },
+    })
+    render(<ShConsole show onClose={() => {}} />)
+    clickTab('Approvals')
+    expect(await screen.findByText(/Setujui POS/)).toBeTruthy()
+    fireEvent.click(screen.getByText('Setujui'))
+    await waitFor(() => expect(calls).toContain('decide'))
+  })
 })

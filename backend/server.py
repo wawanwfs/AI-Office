@@ -304,6 +304,12 @@ async def api_new_project(body: dict):
         except Exception as e:
             print("plan err:", e)
     asyncio.create_task(_plan())
+    try:
+        sh_db.add_approval(project_id=str(pid), action_type="project_launch",
+                           description=(f"Setujui peluncuran project '{name}' untuk mulai eksekusi task "
+                                        f"(container {sandbox.get('container_name') if sandbox else '-'})."))
+    except Exception as e:
+        print("approval seed:", e)
     return {"ok": True, "project_id": pid, "planning": True, "sandbox": sandbox}
 
 
@@ -408,6 +414,33 @@ def api_project_exec(pid: int, body: dict):
     except Exception as e:
         raise HTTPException(502, f"exec error: {e}")
     return {"exit": out.returncode, "stdout": out.stdout[-8000:], "stderr": out.stderr[-4000:]}
+
+@app.get("/api/approvals")
+def api_approvals(status: str = "pending"):
+    if status not in ("pending", "approved", "rejected", "all"):
+        raise HTTPException(400, "status tidak valid")
+    if status == "all":
+        conn = sh_db.get_db()
+        rows = conn.execute(
+            "SELECT id, task_id, project_id, action_type, description, status, created_at "
+            "FROM approvals ORDER BY created_at DESC").fetchall()
+        conn.close()
+        return {"approvals": [{"id": r[0], "task_id": r[1], "project_id": r[2],
+                               "action_type": r[3], "description": r[4],
+                               "status": r[5], "created_at": r[6]} for r in rows]}
+    return {"approvals": sh_db.list_approvals(status)}
+
+
+@app.post("/api/approvals/{aid}/decide")
+def api_approval_decide(aid: str, body: dict):
+    action = (body or {}).get("action")
+    if action not in ("approve", "reject"):
+        raise HTTPException(400, "action harus 'approve'/'reject'")
+    new_status = "approved" if action == "approve" else "rejected"
+    if not sh_db.set_approval(aid, new_status):
+        raise HTTPException(404, "approval tidak ditemukan")
+    return {"ok": True, "id": aid, "status": new_status}
+
 
 @app.get("/api/tasks")
 async def api_tasks(project: int = None):

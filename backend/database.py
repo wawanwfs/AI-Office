@@ -7,6 +7,7 @@ import os
 import sqlite3
 import json
 import time
+import uuid
 
 DB_DIR = os.path.expanduser("~/wfs-projects")
 DB_PATH = os.path.join(DB_DIR, "wfs_software_house.db")
@@ -222,6 +223,44 @@ def update_agent_status(agent_id, status, current_task_id=None):
             (status, current_task_id, time.time(), agent_id, f"%{agent_id}%")
         )
     conn.close()
+
+
+def add_approval(task_id=None, project_id=None, action_type="build", description=""):
+    """Buat permintaan approval (status pending)."""
+    conn = get_db()
+    aid = uuid.uuid4().hex[:12]
+    now = time.time()
+    with conn:
+        conn.execute(
+            "INSERT INTO approvals(id, task_id, project_id, action_type, description, status, created_at, updated_at) "
+            "VALUES(?,?,?,?,?, 'pending', ?, ?)",
+            (aid, task_id, project_id, action_type, description, now, now))
+    conn.close()
+    return aid
+
+
+def list_approvals(status="pending"):
+    conn = get_db()
+    rows = conn.execute(
+        "SELECT id, task_id, project_id, action_type, description, status, created_at FROM approvals "
+        "WHERE status = ? ORDER BY created_at DESC", (status,)).fetchall()
+    conn.close()
+    return [{"id": r[0], "task_id": r[1], "project_id": r[2],
+             "action_type": r[3], "description": r[4],
+             "status": r[5], "created_at": r[6]} for r in rows]
+
+
+def set_approval(aid, status, decided_by="owner"):
+    conn = get_db()
+    try:
+        with conn:
+            cur = conn.execute(
+                "UPDATE approvals SET status = ?, updated_at = ? WHERE id = ?",
+                (status, time.time(), aid))
+            rowcount = cur.rowcount
+    finally:
+        conn.close()
+    return rowcount != 0
 
 
 def get_overview():
