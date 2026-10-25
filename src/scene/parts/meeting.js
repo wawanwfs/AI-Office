@@ -5,11 +5,14 @@ export const isMeetingTime = (minutes) => MEETING_WINDOWS.some(([a, b]) => minut
 export const meetingWindowIndex = (minutes) => MEETING_WINDOWS.findIndex(([a, b]) => minutes >= a && minutes <= b);
 
 export function createMeeting(ctx) {
-  const { THREE, office, rng, agents, agentData, buildChar, seats, roomZ, onChange, LABEL_Y } = ctx;
+  const { THREE, office, rng, agents, agentData, buildChar, seats, roomZ, onChange, LABEL_Y, looksOf, addBlobShadow } = ctx;
   // Figur dibuat untuk semua agent; hanya peserta window aktif yang tampil di kursi.
   const figures = agents.map((agent) => {
     const fig = buildChar(agent, false);
-    fig.scale.setScalar(1.7);
+    const h = (looksOf ? looksOf(agent).h : 1) || 1;
+    if (fig.scale && fig.scale.set) fig.scale.set(2.2, 2.2 * h, 2.2);
+    else if (fig.scale && fig.scale.setScalar) fig.scale.setScalar(2.2);
+    if (addBlobShadow) addBlobShadow(fig, 0.72);
     fig.visible = false;
     office.add(fig);
     return fig;
@@ -28,7 +31,7 @@ export function createMeeting(ctx) {
   }
 
   function placeFigure(fig, seat) {
-    fig.position.set(seat.x, 0, seat.z);
+    fig.position.set(seat.x, 0.04, seat.z);
     // Baris belakang (z lebih kecil) menghadap +Z ke meja, baris depan menghadap -Z
     fig.rotation.y = seat.z < roomZ ? Math.PI : 0;
   }

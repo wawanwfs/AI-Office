@@ -39,16 +39,21 @@ class WS:
         s.sock.sendall(h + mask + bytes(b ^ mask[i % 4] for i, b in enumerate(d)))
 
     def recv(s):
+        def recv_exact(n):
+            b = b""
+            while len(b) < n:
+                chunk = s.sock.recv(n - len(b))
+                if not chunk: raise ConnectionResetError("socket closed")
+                b += chunk
+            return b
+
         def frame():
-            hdr = s.sock.recv(2); op = hdr[0] & 0xf; n = hdr[1] & 0x7f
+            hdr = recv_exact(2); op = hdr[0] & 0xf; n = hdr[1] & 0x7f
             if n == 126:
-                n = struct.unpack(">H", s.sock.recv(2))[0]
+                n = struct.unpack(">H", recv_exact(2))[0]
             elif n == 127:
-                n = struct.unpack(">Q", s.sock.recv(8))[0]
-            d = b""
-            while len(d) < n:
-                d += s.sock.recv(n - len(d))
-            return op, d
+                n = struct.unpack(">Q", recv_exact(8))[0]
+            return op, recv_exact(n)
         op, d = frame()
         while op == 0:
             op, d2 = frame(); d += d2

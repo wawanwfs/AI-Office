@@ -104,7 +104,7 @@ let __userRot=null;try{const __v=localStorage.getItem('wfs_autorot');if(__v==='0
 const autoRotDefault=()=>__userRot!==null?__userRot:(__prm?!__prm.matches:true);
 let autoRot=autoRotDefault(),autoTmr;
 __prm&&__prm.addEventListener&&__prm.addEventListener('change',e=>{if(__userRot===null)autoRot=!e.matches});
-let focusGoal=null;const HOME_TGT=new THREE.Vector3(0,1.8,0);let homeRadius=null;
+let focusGoal=null;const HOME_TGT=new THREE.Vector3(0,1.4,0.3);let homeRadius=null;
 function updCam(){const p=Math.max(.18,Math.min(Math.PI/2.3,sph.phi));sph.phi=p;camera.position.set(sph.radius*Math.sin(p)*Math.sin(sph.theta)+tgt.x,sph.radius*Math.cos(p)+tgt.y,sph.radius*Math.sin(p)*Math.cos(sph.theta)+tgt.z);camera.lookAt(tgt)}
 const __vo=()=>{const w=container.clientWidth,h=container.clientHeight;if(w/h<0.6)camera.setViewOffset(w,h,-w*0.045,0,w,h);else camera.clearViewOffset()};__vo();
 updCam();
@@ -605,9 +605,10 @@ function makeLabel(agent){
     const tex=new THREE.CanvasTexture(lc); tex.minFilter=THREE.LinearFilter; return {tex,as:W/H};
   };
   const full=mk(true), short=mk(false);
-  const label=new THREE.Sprite(new THREE.SpriteMaterial({map:short.tex,transparent:true,depthTest:false,sizeAttenuation:false}));
+  const label=new THREE.Sprite(new THREE.SpriteMaterial({map:short.tex,transparent:true,depthTest:true,sizeAttenuation:true}));
+  label.scale.set(short.as * 0.38, 0.38, 1);
   label.userData={full,short,mode:'short'};
-  label.renderOrder=35; // Selalu di depan balon bicara (renderOrder 30) agar nama agen tidak tertutup
+  label.renderOrder=15; // Berada tepat di atas kepala tanpa menutupi seluruh layar
   return label;
 }
 // Ukuran label tetap di layar (sizeAttenuation=false): tinggi ≈ fraksi tinggi viewport.
@@ -621,7 +622,7 @@ function sizeLabels(){
     const u=L.userData; const mode=wantFull?'full':'short';
     if(u.mode!==mode){u.mode=mode;L.material.map=u[mode].tex;L.material.needsUpdate=true}
     const as=u[mode].as;
-    L.scale.set(frac*as,frac,1);
+    L.scale.set(as * 0.38, 0.38, 1);
   };
   agentData.forEach(a=>apply(a.label)); if(nxLabel)apply(nxLabel);
   window.__labelFrac=+frac.toFixed(4);
@@ -800,7 +801,7 @@ const pickCollabLocal=(ad)=>pickCollab(ad,agentData);
 // ═══════════════════════════════════════════════════
 // MEETING LOGIC
 // ═══════════════════════════════════════════════════
-const __meet=createMeeting({THREE,office,rng,agents:AGENTS,agentData,buildChar,seats:meetSeats,roomZ:MRZ,onChange:onMeetingChange});
+const __meet=createMeeting({THREE,office,rng,agents:allAgents,agentData,buildChar,seats:meetSeats,roomZ:MRZ,onChange:onMeetingChange,looksOf,addBlobShadow});
 const updateMeeting=m=>__meet.update(m);
 
 
@@ -811,7 +812,7 @@ const addPlant=__furn.addPlant;
 // ═══ RECEPTION DESK WITH WFS LOGO (front-right, near meeting room) ═══
 // Builder murni di parts/reception.js (diuji unit); di sini tinggal injek konteks.
 // Footprint OBSTACLES didaftarkan di dalam builder (import obstacles.js).
-const __rc=createReception({ THREE, office, M, MB, drawResepsiLogo, makeLabel, buildChar });
+const __rc=createReception({ THREE, office, M, MB, drawResepsiLogo, makeLabel, buildChar, looksOf, blobMat: __blobMat });
 if(__rc&&__rc.reception)__rc.reception.position.y=1.20;
 const rcLight=__rc.rcLight; const nxLabel=__rc.nxLabel; const nxChar=__rc.nexusChar;
 
@@ -823,14 +824,14 @@ createZones({THREE,office,namesVisible});
 
 // --- CAFÉ / COFFEE BAR (depan kiri) ---
 // Builder murni di parts/cafe.js (diuji unit); di sini tinggal injek konteks.
-const __cafe=createCafe({ THREE, office, M, MB });
+const __cafe=createCafe({ THREE, office, M, MB, blobMat: __blobMat });
 if(__cafe&&__cafe.cafe)__cafe.cafe.position.y=1.20;
 
 // --- WELCOME & LOUNGE (kanan depan): set sofa lengkap, bukan lantai kosong ---
 // Sofa besar sudah ada di (10.5, 6) menghadap -X. Dilengkapi: karpet lounge,
 // coffee table + majalah, 2 kursi santai, lampu berdiri, meja majalah/TV info.
 // Builder murni di parts/lounge.js (diuji unit); di sini tinggal injek konteks.
-const __loungeObj=createLounge({ THREE, office, M, MB, drawTvDashboard });
+const __loungeObj=createLounge({ THREE, office, M, MB, drawTvDashboard, blobMat: __blobMat });
 if(__loungeObj&&__loungeObj.lounge)__loungeObj.lounge.position.y=1.20;
 // --- SERVER ROOM + WATER COOLER ---
 // Builder murni di parts/serverroom.js (diuji unit); di sini tinggal injek konteks.
@@ -840,7 +841,7 @@ const __leds=__server.leds;
 
 // --- RAK BUKU (dinding kiri belakang) ---
 // Builder murni di parts/bookshelf.js (diuji unit); di sini tinggal injek konteks.
-const __shelfObj=createBookshelf({ THREE, office, M, rng });
+const __shelfObj=createBookshelf({ THREE, office, M, rng, blobMat: __blobMat });
 
 
 // Papan PROYEK NYATA dibantuin.com — kartu dari task engine sungguhan (parts/projectboard.js)

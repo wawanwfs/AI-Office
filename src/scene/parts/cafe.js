@@ -4,7 +4,7 @@
 import { drawMenuBoard } from './sign_canvas.js';
 
 export function createCafe(ctx) {
-  const { THREE, office, M, MB } = ctx;
+  const { THREE, office, M, MB, blobMat } = ctx;
   const cafe = new THREE.Group();
   cafe.position.y = 1.20; // Elevasi Lantai 3 (Executive Penthouse / Cafe Deck)
   const CFX = -9.5, CFZ = 7.5;
@@ -13,6 +13,21 @@ export function createCafe(ctx) {
   c1.position.set(CFX, .475, CFZ); c1.castShadow = true; cafe.add(c1);
   const c2 = new THREE.Mesh(new THREE.BoxGeometry(.6, .95, 1.6), M(0x6D4C41));
   c2.position.set(CFX + 1.6, .475, CFZ - 1); c2.castShadow = true; cafe.add(c2);
+  if (blobMat) {
+    const c1Shadow = new THREE.Mesh(new THREE.PlaneGeometry(3.5, 0.9), blobMat);
+    c1Shadow.rotation.x = -Math.PI / 2;
+    c1Shadow.position.set(CFX, 0.012, CFZ);
+    c1Shadow.renderOrder = 2;
+    c1Shadow.userData.blob = true;
+    cafe.add(c1Shadow);
+
+    const c2Shadow = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 1.8), blobMat);
+    c2Shadow.rotation.x = -Math.PI / 2;
+    c2Shadow.position.set(CFX + 1.6, 0.012, CFZ - 1);
+    c2Shadow.renderOrder = 2;
+    c2Shadow.userData.blob = true;
+    cafe.add(c2Shadow);
+  }
   // Countertop
   const ct1 = new THREE.Mesh(new THREE.BoxGeometry(3.4, .05, .75), M(0xFFECB3));
   ct1.position.set(CFX, .975, CFZ); cafe.add(ct1);
@@ -53,6 +68,14 @@ export function createCafe(ctx) {
   // Coolbox / snack fridge
   const fr = new THREE.Mesh(new THREE.BoxGeometry(.55, 1.1, .5), M(0xECEFF1));
   fr.position.set(CFX + 2.5, .55, CFZ - .2); fr.castShadow = true; cafe.add(fr);
+  if (blobMat) {
+    const frShadow = new THREE.Mesh(new THREE.PlaneGeometry(0.8, 0.7), blobMat);
+    frShadow.rotation.x = -Math.PI / 2;
+    frShadow.position.set(CFX + 2.5, 0.012, CFZ - 0.2);
+    frShadow.renderOrder = 2;
+    frShadow.userData.blob = true;
+    cafe.add(frShadow);
+  }
   const frG = new THREE.Mesh(new THREE.BoxGeometry(.4, .5, .02), MB(0x4FC3F7));
   frG.position.set(CFX + 2.5, .72, CFZ + .06); cafe.add(frG);
   office.add(cafe);

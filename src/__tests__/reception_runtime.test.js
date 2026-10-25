@@ -33,7 +33,7 @@ class SpriteMat { constructor(o = {}) { Object.assign(this, o) } }
 class MeshBasicMat extends Mat { constructor(o = {}) { super(o); this.isMeshBasicMaterial = true } }
 
 const THREE = {
-  Mesh, Group: Obj, BoxGeometry: Geom, PlaneGeometry: Geom,
+  Mesh, Group: Obj, BoxGeometry: Geom, PlaneGeometry: Geom, CylinderGeometry: Geom,
   MeshLambertMaterial: Mat, MeshBasicMaterial: MeshBasicMat,
   PointLight: Light, CanvasTexture: Tex, Sprite, SpriteMaterial: SpriteMat,
   LinearFilter: 'linear',
@@ -144,12 +144,12 @@ describe('createReception — meja resepsionis kantor 3D', () => {
     expect(back.position).toMatchObject({ x: RCX - 0.4, y: 0.67, z: RCZ - 0.59 })
   })
 
-  it('karakter NEXUS "WAHYU FS" dibangun (standing=false), scale 1.7, di (RCX−.4, 0, RCZ−.4) rot π menghadap +Z', async () => {
+  it('karakter NEXUS "WAHYU FS" dibangun (standing=false), scale 2.2, di (RCX−.4, 0.04, RCZ−.4) rot π menghadap +Z', async () => {
     const { refs, ctx } = await build(makeCtx())
     expect(ctx.charAgent()).toMatchObject({ name: 'WAHYU FS', color: 0xF59E0B, role: 'Founder / CEO', shirt: 0xB45309 })
     expect(ctx.charStanding()).toBe(false)
-    expect(refs.nexusChar.scale.s).toBe(1.7)
-    expect(refs.nexusChar.position).toMatchObject({ x: RCX - 0.4, y: 0, z: RCZ - 0.4 })
+    expect(refs.nexusChar.scale.s || refs.nexusChar.scale.sx).toBe(2.2)
+    expect(refs.nexusChar.position).toMatchObject({ x: RCX - 0.4, y: 0.04, z: RCZ - 0.4 })
     expect(refs.nexusChar.rotation.y).toBe(Math.PI)
   })
 

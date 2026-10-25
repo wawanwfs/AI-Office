@@ -17,7 +17,7 @@ export const DESKS = [
   { x: 4,  z: 6 },   // SARI
   { x: 8,  z: -3 },  // TRAINER AI
   { x: 8,  z: 1.5 }, // INTEGRATOR BOT
-  { x: 8,  z: 6 },   // SUPPORT HUMAN
+  { x: 0,  z: 6 },   // SUPPORT HUMAN (slot baris 3 bebas tabrakan meja resepsi)
 ];
 
 // Kolom x meja (kiri→kanan), baris z unik

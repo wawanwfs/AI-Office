@@ -11,7 +11,7 @@ describe('DESKS — layout 14 meja', () => {
   it('posisi historis semua 14 meja (urutan agen)', () => {
     const expected = [
       [-8, -3], [-4, -3], [-8, 1.5], [-4, 1.5], [0, -3], [0, 1.5], [-8, 6], [-4, 6],
-      [4, -3], [4, 1.5], [4, 6], [8, -3], [8, 1.5], [8, 6],
+      [4, -3], [4, 1.5], [4, 6], [8, -3], [8, 1.5], [0, 6],
     ];
     DESKS.forEach((d, i) => {
       expect(d.x).toBe(expected[i][0]);
@@ -35,9 +35,9 @@ describe('DESKS — layout 14 meja', () => {
     expect(g.empty).toHaveLength(1);
   });
 
-  it('slot kosong persis (0,6) — satu-satunya sel grid tanpa meja', () => {
+  it('slot kosong persis (8,6) — sel grid untuk meja resepsionis Founder WFS', () => {
     const g = deskGrid();
-    expect(g.empty).toEqual([{ x: 0, z: 6 }]);
+    expect(g.empty).toEqual([{ x: 8, z: 6 }]);
   });
 
   it('semua koordinat finite number', () => {

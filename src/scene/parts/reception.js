@@ -5,12 +5,20 @@
 // Footprint meja didaftarkan ke OBSTACLES agar agen tak berjalan menembus meja.
 import { OBSTACLES } from './obstacles.js';
 
-export function createReception({ THREE, office, M, MB, drawResepsiLogo, makeLabel, buildChar }) {
+export function createReception({ THREE, office, M, MB, drawResepsiLogo, makeLabel, buildChar, looksOf, blobMat }) {
   const reception = new THREE.Group();
   const RCX = 8, RCZ = 6.5;
   // Main desk body (curved front)
   const rcDesk = new THREE.Mesh(new THREE.BoxGeometry(2.5, .9, .6), M(0x1A2A3A));
   rcDesk.position.set(RCX, .45, RCZ); rcDesk.castShadow = true; reception.add(rcDesk);
+  if (blobMat) {
+    const rcShadow = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 1.2), blobMat);
+    rcShadow.rotation.x = -Math.PI / 2;
+    rcShadow.position.set(RCX, 0.012, RCZ);
+    rcShadow.renderOrder = 2;
+    rcShadow.userData.blob = true;
+    reception.add(rcShadow);
+  }
   // Top surface
   const rcTop = new THREE.Mesh(new THREE.BoxGeometry(2.6, .04, .7), M(0xDDE4EC));
   rcTop.position.set(RCX, .92, RCZ); rcTop.castShadow = true; reception.add(rcTop);
@@ -57,23 +65,28 @@ export function createReception({ THREE, office, M, MB, drawResepsiLogo, makeLab
   const rcMouse = new THREE.Mesh(new THREE.BoxGeometry(.05, .02, .07), M(0x333333));
   rcMouse.position.set(RCX - .1, .95, RCZ + .15); reception.add(rcMouse);
 
-  // Reception chair (positioned in NEXUS fix above)
+  // Reception chair (behind desk)
   const rcChairSeat = new THREE.Mesh(new THREE.BoxGeometry(.4, .04, .4), M(0x37474F));
-  reception.add(rcChairSeat);
+  rcChairSeat.position.set(RCX - .4, .44, RCZ - .4); reception.add(rcChairSeat);
   const rcChairBack = new THREE.Mesh(new THREE.BoxGeometry(.4, .42, .04), M(0x37474F));
-  reception.add(rcChairBack);
+  rcChairBack.position.set(RCX - .4, .67, RCZ - .59); reception.add(rcChairBack);
+  const rcPole = new THREE.Mesh(new THREE.BoxGeometry(.05, .38, .05), M(0x94A3B8));
+  rcPole.position.set(RCX - .4, .2, RCZ - .4); reception.add(rcPole);
+  const rcBase = new THREE.Mesh(new THREE.CylinderGeometry(.22, .26, .04, 10), M(0x64748B));
+  rcBase.position.set(RCX - .4, .02, RCZ - .4); reception.add(rcBase);
 
   // RECEPTION AGENT — "NEXUS" (white/silver, the coordinator)
   const nexusAgent = { name: 'WAHYU FS', color: 0xF59E0B, hex: '#F59E0B', role: 'Founder / CEO', hair: 0x1a1a1a, shirt: 0xB45309, pants: 0x292524 };
   const nexusChar = buildChar(nexusAgent, false);
-  nexusChar.scale.setScalar(1.7);
-  nexusChar.position.set(RCX - .4, 0, RCZ - .4); // behind desk
+  const hMult = (looksOf ? looksOf(nexusAgent).h : 1.04) || 1.04;
+  if (nexusChar.scale && nexusChar.scale.set) {
+    nexusChar.scale.set(2.2, 2.2 * hMult, 2.2);
+  } else if (nexusChar.scale && nexusChar.scale.setScalar) {
+    nexusChar.scale.setScalar(2.2);
+  }
+  nexusChar.position.set(RCX - .4, .04, RCZ - .4); // behind desk
   nexusChar.rotation.y = Math.PI; // face +Z toward visitors
   reception.add(nexusChar);
-
-  // Reception chair (behind desk)
-  rcChairSeat.position.set(RCX - .4, .44, RCZ - .4);
-  rcChairBack.position.set(RCX - .4, .67, RCZ - .59);
 
   // Label Founder (plat sama seperti agent lain)
   const nxLabel = makeLabel(nexusAgent);

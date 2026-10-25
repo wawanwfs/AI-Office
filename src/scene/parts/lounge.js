@@ -3,7 +3,7 @@
 // meja majalah, TV info dgn dashboard live dari /wfs-project.
 // Builder berbasis konteks (THREE, office, M, MB, drawTvDashboard) — pola sama dgn cafe.js.
 export function createLounge(ctx) {
-  const { THREE, office, M, MB, drawTvDashboard } = ctx;
+  const { THREE, office, M, MB, drawTvDashboard, blobMat } = ctx;
   const lounge = new THREE.Group();
   lounge.position.y = 1.20; // Elevasi Lantai 3 (Welcome Lounge)
   // Karpet lounge (bulat-ish: dua kotak bertumpuk warna hangat)
@@ -14,6 +14,14 @@ export function createLounge(ctx) {
   // Coffee table (kaca + kayu) di depan sofa
   const ctB = new THREE.Mesh(new THREE.BoxGeometry(1.0, .06, .6), M(0x6D4C41));
   ctB.position.set(9.55, .36, 6.4); lounge.add(ctB);
+  if (blobMat) {
+    const ctShadow = new THREE.Mesh(new THREE.PlaneGeometry(1.3, 0.8), blobMat);
+    ctShadow.rotation.x = -Math.PI / 2;
+    ctShadow.position.set(9.55, 0.012, 6.4);
+    ctShadow.renderOrder = 2;
+    ctShadow.userData.blob = true;
+    lounge.add(ctShadow);
+  }
   const ctTop = new THREE.Mesh(new THREE.BoxGeometry(1.1, .03, .7), M(0xB0BEC5, { transparent: true, opacity: .55 }));
   ctTop.position.set(9.55, .42, 6.4); lounge.add(ctTop);
   [[-.42, -.22], [.42, -.22], [-.42, .22], [.42, .22]].forEach(([ox, oz]) => {
