@@ -65,7 +65,7 @@ export function createProjectBoard(office, THREE) {
     // judul
     g.fillStyle = '#10E5A0'
     g.font = 'bold 52px sans-serif'; g.textAlign = 'left'
-    g.fillText('PROYEK: dibantuin.com', 36, 66)
+    g.fillText('WFS PROJECT: SOFTWARE HOUSE', 36, 66)
     g.fillStyle = '#8fa3bd'; g.font = '30px sans-serif'
     let sub = subLine(T, new Date(lastOk).toLocaleTimeString('id-ID'))
     g.fillText(sub, 36, 112)
@@ -175,5 +175,5 @@ export function createProjectBoard(office, THREE) {
   }, 500)
 
   function destroy() { clearInterval(iv); clearInterval(forceVisible); document.removeEventListener('visibilitychange', onVis) }
-  return { destroy, refresh: pull, mesh }
+  return { destroy, refresh: pull, mesh, frame }
 }

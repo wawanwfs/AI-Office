@@ -84,7 +84,7 @@ export default function AgentInspector({ agent, onClose, onChatWith }) {
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '8px 10px' }}>
             <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 3 }}>Proyek</span>
             <div style={{ fontSize: 12, color: '#fff', fontWeight: 600 }}>
-              dibantuin.com
+              WFS PROJECT
             </div>
           </div>
         </div>

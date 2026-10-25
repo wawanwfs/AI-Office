@@ -88,8 +88,8 @@ async function mount(snap = SNAP) {
 }
 
 describe('createProjectBoard — pemasangan', () => {
-  it('menambahkan mesh papan + bingkai ke office pada posisi dinding belakang', async () => {
-    const { added } = await mount()
+  it('menambahkan mesh papan + bingkai ke office pada posisi dinding belakang dan mengembalikan referensi keduanya', async () => {
+    const { added, board } = await mount()
     expect(added).toHaveLength(2)
     const [mesh, frame] = added
     expect(mesh.geometry.args).toEqual([7.4, 4.04])
@@ -97,6 +97,8 @@ describe('createProjectBoard — pemasangan', () => {
     expect(mesh.rotation.y).toBe(Math.PI) // menghadap ke dalam ruangan
     expect(frame.userData.__keep).toBe(1) // tidak ikut wallFade
     expect(frame.geometry.args).toEqual([7.65, 4.25, .05])
+    expect(board.mesh).toBe(mesh)
+    expect(board.frame).toBe(frame)
   })
 
   it('fetch /wfs-project dipanggil segera saat mount lalu tiap 60 detik', async () => {

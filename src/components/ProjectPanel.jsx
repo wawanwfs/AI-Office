@@ -2,149 +2,283 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
 import { IconRocket, IconClose } from './Icons'
-
-// Panel Proyek Nyata: data live dibantuin.com dari endpoint /wfs-project (server 9503).
-// Semua data diambil server-side — tidak ada kredensial di frontend.
-const ST = { done: ['Selesai', '#10E5A0'], running: ['Jalan', '#F59E0B'], review: ['Review', '#448AFF'], failed: ['Gagal', '#ef4444'], pending: ['Antri', '#9aa7b8'] }
+import GlobalTaskComposer from './GlobalTaskComposer'
+import ProjectWorkspaceModal from './ProjectWorkspaceModal'
 
 export default function ProjectPanel() {
   const [open, setOpen] = useState(false)
   const box = useRef(null)
   useModalFlag(open)
-  // onClose stabil (useCallback + ref): inline closure membuat effect useDialogA11y
-  // re-run tiap render — panel ini re-render tiap 15 dtk dari polling /wfs-project,
-  // cleanup-nya memindahkan fokus ke tombol ✕ berulang (pola bug sama dgn WfsPanel).
+
   const onCloseRef = useRef(() => setOpen(false))
   const closePanel = useCallback(() => onCloseRef.current(), [])
   useDialogA11y({ open, onClose: closePanel, ref: box })
-  const [d, setD] = useState(null)
-  const [err, setErr] = useState(false)
 
-  const load = useCallback(async (signal) => {
+  const [projects, setProjects] = useState([])
+  const [stats, setStats] = useState(null)
+  const [err, setErr] = useState(false)
+  const [showComposer, setShowComposer] = useState(false)
+  const [selectedWorkspaceProj, setSelectedWorkspaceProj] = useState(null)
+
+  const loadData = useCallback(async (signal) => {
     try {
-      const r = await fetch('/wfs-project', { signal })
-      if (!r.ok) throw new Error('HTTP ' + r.status)
-      setD(await r.json()); setErr(false)
-    } catch (e) { if (e.name !== 'AbortError') setErr(true) }
+      const [projRes, statsRes] = await Promise.all([
+        fetch('/api/projects', { signal }),
+        fetch('/api/dashboard/stats', { signal })
+      ])
+      if (projRes.ok) {
+        const pd = await projRes.json()
+        setProjects(pd.projects || [])
+      }
+      if (statsRes.ok) {
+        setStats(await statsRes.json())
+      }
+      setErr(false)
+    } catch (e) {
+      if (e.name !== 'AbortError') setErr(true)
+    }
   }, [])
 
   useEffect(() => {
     if (!open) return
     const ac = new AbortController()
-    const t0 = setTimeout(() => load(ac.signal), 0)
-    const iv = setInterval(() => { if (document.visibilityState === 'visible') load(ac.signal) }, 15000)
+    const t0 = setTimeout(() => loadData(ac.signal), 0)
+    const iv = setInterval(() => {
+      if (document.visibilityState === 'visible') loadData(ac.signal)
+    }, 10000)
     const k = (e) => { if (e.key === 'Escape') setOpen(false) }
     document.addEventListener('keydown', k)
-    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k) }
-  }, [open, load])
+    return () => {
+      clearTimeout(t0)
+      ac.abort()
+      clearInterval(iv)
+      document.removeEventListener('keydown', k)
+    }
+  }, [open, loadData])
 
-  const T = d?.tasks || {}
-  const S = d?.saas || {}
-  const pct = T.total ? Math.round((T.done / T.total) * 100) : 0
+  const runningCount = projects.filter(p => p.status === 'running').length
+  const totalCount = projects.length
 
   return (
     <>
-      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="project-panel" aria-label="Proyek dibantuin.com" title="Ringkasan proyek live dibantuin.com">
-        <span className="ic"><IconRocket size={19} /><span className="sr-only">🚀</span></span><span className="lb">Proyek</span>
+      <button
+        className="ibtn"
+        onClick={() => setOpen(v => !v)}
+        aria-expanded={open}
+        aria-controls="project-panel"
+        aria-label="WFS Project Software House"
+        title="Buka panel proyek WFS Software House"
+      >
+        <span className="ic"><IconRocket size={19} /><span className="sr-only">🚀</span></span>
+        <span className="lb">Proyek</span>
       </button>
+
       {open && (
-        <section ref={box} id="project-panel" className="panel left" role="dialog" aria-label="Proyek dibantuin.com" aria-modal="true">
-          <div className="ph">
+        <section
+          ref={box}
+          id="project-panel"
+          className="panel left"
+          role="dialog"
+          aria-label="WFS Project Software House"
+          aria-modal="true"
+          style={{ width: 'min(440px, 95vw)', zIndex: 110 }}
+        >
+          {/* Header */}
+          <div className="ph" style={{ borderBottom: '1px solid rgba(255,255,255,0.08)' }}>
             <div className="t">
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <IconRocket size={16} style={{ color: 'var(--cyan)' }} />
-                <span>Proyek: dibantuin.com</span>
+                <span style={{ fontWeight: 700, letterSpacing: '0.03em' }}>WFS PROJECT</span>
               </span>
-              <small>{err ? 'gagal memuat' : 'data live · refresh 15 dtk'}</small>
+              <small style={{ color: 'var(--text-muted)' }}>Software House · Docker Sandbox</small>
             </div>
-            <button className="x" onClick={() => setOpen(false)} aria-label="Tutup panel proyek" title="Tutup panel proyek (Esc)">
+            <button
+              className="x"
+              onClick={() => setOpen(false)}
+              aria-label="Tutup panel proyek"
+              title="Tutup panel proyek (Esc)"
+            >
               <IconClose size={18} />
               <span className="sr-only">✕</span>
             </button>
           </div>
-          <div style={{ padding: '12px 14px', overflowY: 'auto' }}>
-            {err && <div className="msg err">Gagal memuat data proyek. <button className="btn" onClick={() => load()}>Coba lagi</button></div>}
-            {!d && !err && <div className="skeleton">Memuat data proyek…</div>}
-            {d && (
-              <>
-                {/* Progres task engine */}
-                <div style={{ marginBottom: 14 }}>
-                  <div className="note" style={{ marginBottom: 4 }}>Progres pengerjaan — {T.done}/{T.total} task selesai ({pct}%)</div>
-                  <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={`Progres task: ${pct}% selesai`}
-                    style={{ height: 10, background: 'rgba(255,255,255,.08)', borderRadius: 6, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: pct + '%', background: 'linear-gradient(90deg,#10E5A0,#448AFF)', borderRadius: 6, transition: 'width .6s' }} />
-                  </div>
-                  <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
-                    {Object.entries(ST).map(([k, [l, c]]) => T[k] > 0 && (
-                      <span key={k} className="note" style={{ color: c, fontWeight: 600 }}>{l}: {T[k]}</span>
-                    ))}
-                  </div>
-                </div>
 
-                {/* Task terbaru */}
-                <label className="note">Task terakhir dikerjakan</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: '6px 0 14px' }}>
-                  {(T.recent || []).map(x => (
-                    <div key={x.id} className="note" style={{ display: 'flex', gap: 8, alignItems: 'baseline', color: '#cfd8e3' }}>
-                      <span style={{ color: ST[x.status]?.[1] || '#888', fontWeight: 700 }}>{x.status === 'done' ? '✓' : '•'}</span>
-                      <span style={{ fontSize: 12.5 }}>#{x.id} {x.title}</span>
+          <div style={{ padding: '14px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {err && (
+              <div className="msg err">
+                Gagal memuat status proyek. <button className="btn" onClick={() => loadData()}>Coba lagi</button>
+              </div>
+            )}
+
+            {/* Quick Stats Banner */}
+            <div style={{
+              background: 'rgba(15, 23, 42, 0.6)',
+              border: '1px solid rgba(255, 255, 255, 0.08)',
+              borderRadius: 12,
+              padding: '12px 14px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between'
+            }}>
+              <div>
+                <div style={{ fontSize: 11, color: '#94A3B8', fontFamily: 'monospace' }}>DOCKER RUNTIMES</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: '#F8FAFC' }}>
+                  {runningCount} <span style={{ fontSize: 12, fontWeight: 400, color: '#64748B' }}>/ {totalCount} Aktif</span>
+                </div>
+              </div>
+              <button
+                className="btn primary"
+                onClick={() => setShowComposer(true)}
+                style={{
+                  padding: '7px 12px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  borderRadius: 8,
+                  background: '#10E5A0',
+                  color: '#0B0F17'
+                }}
+              >
+                + Beri Tugas Baru
+              </button>
+            </div>
+
+            {/* Projects List */}
+            <div>
+              <div style={{ fontSize: 11, color: '#94A3B8', fontFamily: 'monospace', marginBottom: 8, textTransform: 'uppercase' }}>
+                Daftar Proyek Software House
+              </div>
+
+              {projects.length === 0 ? (
+                <div style={{
+                  padding: '24px 16px',
+                  textAlign: 'center',
+                  background: 'rgba(255,255,255,0.02)',
+                  borderRadius: 12,
+                  border: '1px dashed rgba(255,255,255,0.1)'
+                }}>
+                  <div style={{ fontSize: 24, marginBottom: 6 }}>⚡</div>
+                  <div style={{ color: '#F8FAFC', fontSize: 13, fontWeight: 600, marginBottom: 4 }}>Belum ada proyek</div>
+                  <p style={{ color: '#94A3B8', fontSize: 11, marginBottom: 12 }}>
+                    Beri tugas baru untuk membiarkan AI agents membangun website atau aplikasi di Docker sandbox.
+                  </p>
+                  <button className="btn primary" onClick={() => setShowComposer(true)}>
+                    Mulai Proyek Pertama
+                  </button>
+                </div>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  {projects.map(p => (
+                    <div
+                      key={p.id}
+                      style={{
+                        background: 'rgba(15, 23, 42, 0.45)',
+                        border: '1px solid rgba(255, 255, 255, 0.08)',
+                        borderRadius: 10,
+                        padding: '10px 12px',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: 6
+                      }}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span style={{ fontWeight: 600, color: '#F8FAFC', fontSize: 13 }}>{p.name}</span>
+                        <span style={{
+                          fontSize: 10,
+                          padding: '2px 8px',
+                          borderRadius: 99,
+                          fontFamily: 'monospace',
+                          background: p.status === 'running' ? 'rgba(16, 229, 160, 0.15)' : 'rgba(255,255,255,0.08)',
+                          color: p.status === 'running' ? '#10E5A0' : '#94A3B8',
+                          border: p.status === 'running' ? '1px solid rgba(16, 229, 160, 0.3)' : '1px solid rgba(255,255,255,0.1)'
+                        }}>
+                          {p.status?.toUpperCase() || 'READY'}
+                        </span>
+                      </div>
+
+                      <div style={{ fontSize: 11, color: '#94A3B8', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                        {p.description || p.project_type}
+                      </div>
+
+                      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginTop: 4, paddingTop: 6, borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+                        <span style={{ fontSize: 11, fontFamily: 'monospace', color: '#64748B' }}>
+                          {p.preview_port ? `PORT: ${p.preview_port}` : 'SANDBOX READY'}
+                        </span>
+
+                        <div style={{ display: 'flex', gap: 6 }}>
+                          <button
+                            className="btn sm"
+                            onClick={() => setSelectedWorkspaceProj(p)}
+                            style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6 }}
+                          >
+                            Workspace
+                          </button>
+                          {p.preview_url && (
+                            <a
+                              href={p.preview_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="btn sm primary"
+                              style={{ fontSize: 11, padding: '4px 8px', borderRadius: 6, textDecoration: 'none' }}
+                            >
+                              Live Preview ↗
+                            </a>
+                          )}
+                        </div>
+                      </div>
                     </div>
                   ))}
                 </div>
+              )}
+            </div>
 
-                {/* SaaS live */}
-                <label className="note">Produk SaaS (live)</label>
-                {S.online ? (
-                  <div style={{ background: 'rgba(16,229,160,.08)', border: '1px solid rgba(16,229,160,.25)', borderRadius: 10, padding: '8px 12px', margin: '6px 0 14px' }}>
-                    <div className="note" style={{ color: '#10E5A0', fontWeight: 600 }}>● Backend online</div>
-                    <div className="note" style={{ marginTop: 4 }}>
-                      {S.stats?.tenants ?? 0} tenant · {S.stats?.conversations ?? 0} percakapan · {S.stats?.messages ?? 0} pesan
-                    </div>
-                    <div className="note" style={{ marginTop: 4 }}>
-                      Tenant: {(S.tenants || []).map(t => t.name).join(', ') || '—'}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="msg err" style={{ margin: '6px 0 14px' }}>Backend SaaS tidak merespons</div>
-                )}
-
-                {/* Sandbox agent */}
-                <label className="note">Sandbox agent</label>
-                <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginTop: 6 }}>
-                  {(d.agents || []).map(a => (
-                    <span key={a.name} className="note" style={{
-                      background: a.status === 'Up' ? 'rgba(16,229,160,.12)' : 'rgba(239,68,68,.12)',
-                      color: a.status === 'Up' ? '#10E5A0' : '#ef4444',
-                      border: `1px solid ${a.status === 'Up' ? 'rgba(16,229,160,.3)' : 'rgba(239,68,68,.3)'}`,
-                      borderRadius: 8, padding: '3px 10px', fontWeight: 600,
-                    }}>{a.status === 'Up' ? '●' : '○'} {a.name}</span>
-                  ))}
-                  {!(d.agents || []).length && <span className="note">Tidak ada agent aktif</span>}
+            {/* Recent Execution Activity */}
+            {stats?.logs && stats.logs.length > 0 && (
+              <div>
+                <div style={{ fontSize: 11, color: '#94A3B8', fontFamily: 'monospace', marginBottom: 6, textTransform: 'uppercase' }}>
+                  Aktivitas Eksekusi Agen Terbaru
                 </div>
-
-                {/* OmniRoute Router AI */}
-                {d.omniroute && (
-                  <div style={{ marginTop: 14 }}>
-                    <label className="note">AI Router (OmniRoute)</label>
-                    <div style={{
-                      background: d.omniroute.online ? 'rgba(13,238,243,.08)' : 'rgba(239,68,68,.12)',
-                      border: `1px solid ${d.omniroute.online ? 'rgba(13,238,243,.25)' : 'rgba(239,68,68,.3)'}`,
-                      borderRadius: 10, padding: '8px 12px', marginTop: 6,
-                    }}>
-                      <div className="note" style={{ color: d.omniroute.online ? 'var(--teal)' : '#ef4444', fontWeight: 600 }}>
-                        {d.omniroute.online ? '● OmniRoute Online (Port 20128)' : '○ OmniRoute Offline'}
-                      </div>
-                      <div className="note" style={{ marginTop: 2 }}>
-                        Multi-model AI router aktif di container Docker
-                      </div>
+                <div style={{
+                  background: 'rgba(0, 0, 0, 0.3)',
+                  border: '1px solid rgba(255,255,255,0.06)',
+                  borderRadius: 8,
+                  padding: '8px 10px',
+                  maxHeight: 120,
+                  overflowY: 'auto',
+                  fontFamily: 'monospace',
+                  fontSize: 11,
+                  display: 'flex',
+                  flexDirection: 'column',
+                  gap: 4
+                }}>
+                  {stats.logs.slice(0, 5).map((l, i) => (
+                    <div key={i} style={{ color: l.level === 'ERROR' ? '#F87171' : l.level === 'SUCCESS' ? '#34D399' : '#CBD5E1' }}>
+                      <span style={{ color: '#64748B' }}>[{l.level}]</span> {l.message}
                     </div>
-                  </div>
-                )}
-              </>
+                  ))}
+                </div>
+              </div>
             )}
           </div>
         </section>
       )}
+
+      {/* Global Task Composer Dialog */}
+      <GlobalTaskComposer
+        open={showComposer}
+        onClose={() => setShowComposer(false)}
+        onProjectCreated={() => {
+          loadData()
+          setShowComposer(false)
+        }}
+      />
+
+      {/* Project Workspace Modal */}
+      <ProjectWorkspaceModal
+        project={selectedWorkspaceProj}
+        open={!!selectedWorkspaceProj}
+        onClose={() => setSelectedWorkspaceProj(null)}
+        onRefreshProject={() => loadData()}
+      />
     </>
   )
 }

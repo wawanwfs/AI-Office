@@ -14,7 +14,7 @@ export const chatPhrases=[
 ];
 
 export const roleTalk={
-  'BANTUIN AI':['“Siang kak! Mau cek order?”','“Chat 47 hari ini 👍”','“CS AI standby 24/7 ⚡”'],
+  'BANTUIN AI':['“Sandbox ready 🟢”','“Task queue aktif 👍”','“WFS AI standby 24/7 ⚡”'],
   'BUDI':['“API-nya udah jalan”','“Push dulu…”','“Query di-cache Redis 🚀”'],
   'RIZKY':['“Webhook Midtrans ✓”','“Query ku-optimize”','“DB indexing selesai 📊”'],
   'DEWI':['“Responsive rapi ✨”','“Dark mode siap”','“Tailwind rapi pol 🎨”'],

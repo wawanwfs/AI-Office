@@ -95,5 +95,5 @@ export function createReception({ THREE, office, M, MB, drawResepsiLogo, makeLab
 
   office.add(reception);
 
-  return { reception, rcLight, nexusChar, nxLabel };
+  return { reception, rcLight, nexusChar, nxLabel, nexusAgent };
 }

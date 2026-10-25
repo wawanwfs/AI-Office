@@ -66,12 +66,13 @@ describe('createReception — meja resepsionis kantor 3D', () => {
     OBSTACLES.length = 0
   })
 
-  it('mengembalikan referensi lengkap: reception, rcLight, nexusChar, nxLabel', async () => {
+  it('mengembalikan referensi lengkap: reception, rcLight, nexusChar, nxLabel, nexusAgent', async () => {
     const { refs } = await build(makeCtx())
     expect(refs.reception).toBeInstanceOf(Obj)
     expect(refs.rcLight).toBeInstanceOf(Light)
     expect(refs.nexusChar).toBeInstanceOf(Obj)
     expect(refs.nxLabel).toBeInstanceOf(Sprite)
+    expect(refs.nexusAgent).toMatchObject({ role: 'Founder / CEO' })
   })
 
   it('office menerima tepat 1 grup reception', async () => {
