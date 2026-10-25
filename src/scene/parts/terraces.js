@@ -81,35 +81,35 @@ export function createTerraces({ THREE, office, M, MB }) {
   l1Downlight.position.set(0, 3.8, -7.4);
   terraces.add(l1Downlight);
 
-  // ── AREA INDOOR ZEN GARDEN LANTAI 1 (Bonsai & River Pebbles Halus) ──
+  // ── AREA INDOOR ZEN GARDEN LANTAI 1 (Bonsai & River Pebbles Halus di Sudut Atrium) ──
   const zenGroup = new THREE.Group();
-  const zenBase = new THREE.Mesh(new THREE.BoxGeometry(6.4, 0.08, 4.2), M(0xD4AF37));
-  zenBase.position.set(-11.5, 0.04, -10.5);
+  const zenBase = new THREE.Mesh(new THREE.BoxGeometry(3.6, 0.08, 2.8), M(0xD4AF37));
+  zenBase.position.set(-10.0, 0.04, -6.8);
   zenGroup.add(zenBase);
-  const sand = new THREE.Mesh(new THREE.BoxGeometry(6.1, 0.02, 3.9), M(0xFAF8F5));
-  sand.position.set(-11.5, 0.09, -10.5);
+  const sand = new THREE.Mesh(new THREE.BoxGeometry(3.3, 0.02, 2.5), M(0xFAF8F5));
+  sand.position.set(-10.0, 0.09, -6.8);
   sand.receiveShadow = true;
   zenGroup.add(sand);
-  // Batu kali lonjong halus (bukan balok kardus)
+  // Batu kali lonjong halus tertata rapi di dalam halaman zen
   const PebbleGeom = THREE.SphereGeometry || THREE.BoxGeometry;
-  [[-13, -11.5], [-11.5, -10], [-10.2, -11]].forEach(([bx, bz], bi) => {
-    const pebble = new THREE.Mesh(new PebbleGeom(0.32 + bi * 0.06, 12, 10), M(0x334155));
-    if (pebble.scale && pebble.scale.set) pebble.scale.set(1.4, 0.55, 1.0);
+  [[-10.8, -7.4], [-9.4, -6.3], [-10.4, -6.2]].forEach(([bx, bz], bi) => {
+    const pebble = new THREE.Mesh(new PebbleGeom(0.24 + bi * 0.05, 12, 10), M(0x334155));
+    if (pebble.scale && pebble.scale.set) pebble.scale.set(1.3, 0.55, 1.0);
     pebble.position.set(bx, 0.16, bz);
     pebble.rotation.y = bi * 0.8;
     pebble.castShadow = true;
     zenGroup.add(pebble);
   });
-  // Bonsai eksotis di tengah taman zen
+  // Bonsai eksotis di tengah halaman zen
   const TrunkGeom = THREE.CylinderGeometry || THREE.BoxGeometry;
   const trunk = new THREE.Mesh(new TrunkGeom(0.08, 0.12, 0.75, 8), M(0x4A2E18));
-  trunk.position.set(-11.5, 0.45, -10.5);
+  trunk.position.set(-10.0, 0.45, -6.8);
   trunk.rotation.z = -0.15;
   zenGroup.add(trunk);
   const FoliageGeom = THREE.SphereGeometry || THREE.BoxGeometry;
-  const foliage = new THREE.Mesh(new FoliageGeom(0.48, 12, 10), M(0x10B981));
-  if (foliage.scale && foliage.scale.set) foliage.scale.set(1.4, 0.65, 1.2);
-  foliage.position.set(-11.6, 0.82, -10.5);
+  const foliage = new THREE.Mesh(new FoliageGeom(0.46, 12, 10), M(0x10B981));
+  if (foliage.scale && foliage.scale.set) foliage.scale.set(1.3, 0.65, 1.1);
+  foliage.position.set(-10.1, 0.82, -6.8);
   foliage.castShadow = true;
   zenGroup.add(foliage);
   terraces.add(zenGroup);
