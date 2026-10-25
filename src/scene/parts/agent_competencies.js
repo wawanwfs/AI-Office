@@ -159,7 +159,10 @@ export function getAgentCompetency(agentOrName) {
     return AGENT_COMPETENCIES[cleanName];
   }
 
-  const matchedKey = Object.keys(AGENT_COMPETENCIES).find((k) => cleanName.startsWith(k) || k.startsWith(cleanName));
+  // cleanName kosong (objek tanpa properti name / string spasi): jangan biarkan
+  // prefix-match `k.startsWith('')` selalu true — itu akan mengembalikan profil
+  // Founder untuk agen tanpa nama. Langsung ke fallback berbasis role.
+  const matchedKey = cleanName && Object.keys(AGENT_COMPETENCIES).find((k) => cleanName.startsWith(k) || k.startsWith(cleanName));
   if (matchedKey) {
     return AGENT_COMPETENCIES[matchedKey];
   }

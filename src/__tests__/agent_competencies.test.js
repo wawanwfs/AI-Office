@@ -66,4 +66,18 @@ describe('agent_competencies — getAgentCompetency helper', () => {
     expect(customRole.domain).toBe('Quantum Physicist');
     expect(customRole.tags).toContain('Quantum Physicist');
   });
+
+  it('objek tanpa name (hanya role) jatuh ke fallback role, bukan profil Founder', () => {
+    const anonymous = getAgentCompetency({ role: 'Data Engineer' });
+    expect(anonymous.domain).toBe('Data Engineer');
+    expect(anonymous.tags).toContain('AI Specialist');
+    expect(anonymous.isFounder).not.toBe(true);
+  });
+
+  it('string kosong / spasi tidak pernah jatuh ke profil Founder', () => {
+    expect(getAgentCompetency('').domain).toBe('Autonomous Specialist'); // nullish guard
+    const ws = getAgentCompetency('   ');
+    expect(ws.domain).toBe('Specialist');
+    expect(ws.isFounder).not.toBe(true);
+  });
 });
