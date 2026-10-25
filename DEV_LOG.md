@@ -2369,3 +2369,10 @@
 - Verifikasi visual (CDP chrome + Xvfb :99): scene hidup (agents 14, __dbg {t:693,ph:working}); screenshot CDP 506 KB; zoom: **poster "FOKUS" terbaca jelas di dinding belakang** antara banner WFS PROJECT. Shot.sh standalone kini hasilnya 237 KB + "Scene 3D tidak aktif" padahal via CDP scene OK — diduga chrome standalone gagal mount WebGL pada sesi ini (bukan regresi kode; dicatat utk diselidiki).
 - Sampingan infra: bersih-bersih disk (/tmp chrome-dbg dsb ~350 MB, apt cache) → disk 94%.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia); selidiki kenapa chrome standalone shot gagal WebGL.
+
+## 2026-10-25 12:00 WIB — Siklus 56: ROOT CAUSE shot.sh gagal WebGL ditemukan & diperbaiki (ANGLE butuh X display utk xcb_connect)
+- Selidiki backlog "chrome standalone shot gagal WebGL": dump log chrome --enable-logging=stderr → 10× `DisplayVkXcb.cpp:59 xcb_connect() failed, error 1` + `eglInitialize SwANGLE failed EGL_NOT_INITIALIZED` + GPU process exit. Penyebab: ANGLE/SwiftShader backend tetap memanggil xcb_connect ke X display; tanpa DISPLAY yang valid (DISPLAY=:0 kosong, Xvfb :99 tak berjalan) EGL init gagal total → scene tak pernah mount → screenshot 237 KB "scene mati".
+- Fix: X server yang hidup saat ini adalah **Xorg :10 milik xrdp-sesman** (`/usr/lib/xorg/Xorg :10`). `DISPLAY=:10 chrome …` → screenshot **733.884 bytes** (scene hidup penuh). Tidak perlu spawn Xvfb baru.
+- Perubahan: `~/.hermes/cache/scratch/shot.sh` ditulis ulang — `timeout 70 env DISPLAY=${XDISP:-:10} chrome …` + komentar root cause (fallback via env XDISP bila :10 tidak ada). Repo tak disentuh (fix infra murni, 0 file src).
+- Bukti: shot.sh baru → ck4.png 735.604 bytes (>500 KB = WebGL OK, poster & scene ter-render); bukti lama ck/ck2 (237 KB) & artefak pembersihan dihapus dari repo & ~/wfs-hq/ck.png (stale) dihapus juga. git status bersih, HEAD a4309a4 (tidak ada commit kode — hanya perbaikan tooling di scratch).
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
