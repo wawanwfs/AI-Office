@@ -596,19 +596,68 @@ const screenData=[];
 const LABEL_Y=2.45; // tepat di atas kepala (tinggi duduk ≈1.95)
 const _LF=LABEL_FULL, _LS=LABEL_SHORT;
 function makeLabel(agent){
-  // Dua kanvas: ringkas (nama saja) dan lengkap (nama + role). Ringkas dipakai saat jauh / layar kecil.
   const mk=(full)=>{
     const spec=full?_LF:_LS;
-    const W=spec.W,H=spec.H,lc=document.createElement('canvas');lc.width=W;lc.height=H;
+    const W=spec.W, H=spec.H + 14;
+    const lc=document.createElement('canvas'); lc.width=W; lc.height=H;
     const c=lc.getContext('2d');
+    
+    // 1. Gambar teks label base
     drawLabelText(c,agent,spec,full);
-    const tex=new THREE.CanvasTexture(lc); tex.minFilter=THREE.LinearFilter; return {tex,as:W/H};
+    
+    // 2. Glowing glassmorphism border dengan warna identitas agen
+    const rad = spec.RADIUS || 14;
+    c.save();
+    c.strokeStyle = agent.hex || '#38BDF8';
+    c.lineWidth = 3.5;
+    c.shadowColor = agent.hex || '#38BDF8';
+    c.shadowBlur = 10;
+    if (c.roundRect) {
+      c.beginPath();
+      c.roundRect(2, 2, W - 4, spec.H - 4, rad);
+      c.stroke();
+    } else {
+      c.strokeRect(2, 2, W - 4, spec.H - 4);
+    }
+    
+    // 3. Ekor segitiga speech bubble mengarah ke kepala karakter
+    c.fillStyle = 'rgba(10,14,24,0.96)';
+    c.beginPath();
+    c.moveTo(W / 2 - 10, spec.H - 4);
+    c.lineTo(W / 2, spec.H + 11);
+    c.lineTo(W / 2 + 10, spec.H - 4);
+    c.closePath();
+    c.fill();
+    c.strokeStyle = agent.hex || '#38BDF8';
+    c.lineWidth = 3.0;
+    c.beginPath();
+    c.moveTo(W / 2 - 10, spec.H - 4);
+    c.lineTo(W / 2, spec.H + 11);
+    c.lineTo(W / 2 + 10, spec.H - 4);
+    c.stroke();
+    
+    // 4. Status dot online (hijau neon menyala)
+    c.fillStyle = '#10E5A0';
+    c.shadowColor = '#10E5A0';
+    c.shadowBlur = 8;
+    c.beginPath();
+    c.arc(16, full ? 22 : spec.H / 2, 4.5, 0, Math.PI * 2);
+    c.fill();
+    c.restore();
+
+    const tex=new THREE.CanvasTexture(lc); tex.minFilter=THREE.LinearFilter;
+    return {tex, as: W / H};
   };
   const full=mk(true), short=mk(false);
-  const label=new THREE.Sprite(new THREE.SpriteMaterial({map:short.tex,transparent:true,depthTest:true,sizeAttenuation:true}));
-  label.scale.set(short.as * 0.38, 0.38, 1);
+  const label=new THREE.Sprite(new THREE.SpriteMaterial({
+    map: short.tex,
+    transparent: true,
+    depthTest: false,
+    sizeAttenuation: false
+  }));
+  label.scale.set(0.032 * short.as, 0.032, 1);
   label.userData={full,short,mode:'short'};
-  label.renderOrder=15; // Berada tepat di atas kepala tanpa menutupi seluruh layar
+  label.renderOrder=35; // Selalu di depan agar tidak tertutup perabotan
   return label;
 }
 // Ukuran label tetap di layar (sizeAttenuation=false): tinggi ≈ fraksi tinggi viewport.
@@ -618,14 +667,18 @@ function sizeLabels(){
   const w=container.clientWidth||800, h=container.clientHeight||600;
   const near=camera.position.distanceTo(tgt);
   const {frac,wantFull}=labelScale(w,h,camera.fov,near);
+  // Bubble frac proporsional (±32-36px tinggi) agar teks nama terbaca sangat jelas
+  const bubbleFrac = Math.max(0.025, Math.min(0.048, frac * 1.55));
   const apply=L=>{
+    if(!L)return;
     const u=L.userData; const mode=wantFull?'full':'short';
     if(u.mode!==mode){u.mode=mode;L.material.map=u[mode].tex;L.material.needsUpdate=true}
     const as=u[mode].as;
-    L.scale.set(as * 0.38, 0.38, 1);
+    L.scale.set(bubbleFrac * as, bubbleFrac, 1);
   };
-  agentData.forEach(a=>apply(a.label)); if(nxLabel)apply(nxLabel);
-  window.__labelFrac=+frac.toFixed(4);
+  agentData.forEach(a=>apply(a.label));
+  try{ if(typeof nxLabel!=='undefined'&&nxLabel)apply(nxLabel); }catch{}
+  window.__labelFrac=+bubbleFrac.toFixed(4);
 }
 
 function buildDesk(agent,dp){
@@ -746,6 +799,11 @@ allAgents.forEach((agent,i)=>{
     walkTarget:null,walkPause:0
   });
 });
+setTimeout(()=>{
+  try{
+    createBubble(-8,2.8,-2.5,'“Halo! Semua tim AI Dibantuin.com aktif 24/7!”','#10E5A0');
+  }catch{}
+},1200);
 
   window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
   // Badge status real-time: poll gateway tiap 20s, warnai badge dada sesuai status task
@@ -815,6 +873,7 @@ const addPlant=__furn.addPlant;
 const __rc=createReception({ THREE, office, M, MB, drawResepsiLogo, makeLabel, buildChar, looksOf, blobMat: __blobMat });
 if(__rc&&__rc.reception)__rc.reception.position.y=1.20;
 const rcLight=__rc.rcLight; const nxLabel=__rc.nxLabel; const nxChar=__rc.nexusChar;
+sizeLabels();
 
 // ═══════════════════════════════════════════════════
 // WFS EXTRAS — kafe, server room, rak buku, water cooler, zona lantai
