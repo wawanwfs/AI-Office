@@ -27,16 +27,26 @@ export function createMeetingRoom(ctx, glassMat) {
     put(B(0.045, 0.4, 0.045), M(0x8a9ca6), s.x, 0.2, s.z);
   });
 
-  // Whiteboard dengan agenda sprint
+  // Whiteboard dengan agenda sprint — LIVE: data task nyata dari window.__tvData
+  // (refresh bersama tvPull, 60 dtk + saat tab visible). Tanpa data → fallback
+  // ke agenda statis (drawSprintBoard tanpa T).
   put(B(2.7, 1.15, 0.035), M(0xbfc5ca), CX, 2.2, CZ - 2.55);
   const cv = document.createElement('canvas'); cv.width = 320; cv.height = 128;
   const g = cv.getContext('2d');
-  drawSprintBoard(g);
   const board = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.0), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv) }));
   board.position.set(CX, 2.2, CZ - 2.52);
   office.add(board);
+  const redraw = () => {
+    drawSprintBoard(g, typeof window !== 'undefined' ? window.__tvData?.tasks : undefined);
+    board.material.map.needsUpdate = true;
+    if (typeof window !== 'undefined') window.__lastWbDrawAt = Date.now();
+  };
+  redraw();
+  const wbIv = setInterval(redraw, 60000);
+  const wbOnVis = () => { if (document.visibilityState === 'visible') redraw() };
+  document.addEventListener('visibilitychange', wbOnVis);
 
-  return { MRX: CX, MRZ: CZ, meetSeats: seats };
+  return { MRX: CX, MRZ: CZ, meetSeats: seats, boardRedraw: redraw, boardIv: wbIv, boardOnVis: wbOnVis };
 }
 
 export function createWallClock(ctx, x, y, z, faceRotY = Math.PI) {
