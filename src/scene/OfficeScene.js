@@ -905,17 +905,9 @@ const __neon=createNeonMode({ambient,sun,renderer,floor:fl,carpet:cp,ceiling:cei
   restoreTime:()=>updateTime(timeOfDay)});
 function toggleCyberpunk(){
   cyberpunkMode=__neon.toggle();
-  // Jaminan pencahayaan mewah stabil: ruangan tidak boleh hancur/gelap gulita
-  ambient.intensity=0.52;
-  sun.intensity=1.35;
-  renderer.toneMappingExposure=1.15;
-  fl.material.color.set(0xffffff);
-  cp.material.color.set(0xd0d8e0);
   try{localStorage.setItem('wfs_neon',cyberpunkMode?'1':'0')}catch{/* abaikan */}
 }
-try{localStorage.removeItem('wfs_neon')}catch{/* abaikan */}
-cyberpunkMode=false;
-if(cyberpunkMode)__neon.toggle();
+if(cyberpunkMode)__neon.toggle(); // terapkan neon tersimpan saat init (toggle false→true)
 
 // ═══════════════════════════════════════════════════
 // PARTICLES

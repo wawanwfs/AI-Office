@@ -2395,3 +2395,22 @@
   - e2e_err: HTTP 200 (index-D83o5euG.js, 0 "Scene init failed", PID 3637035).
   - Visual e2e: `scripts/e2e_shot.py` → 673.997 bytes (>500KB = WebGL hidup, agents: 14, ws: true).
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+
+## 2026-10-25 13:55 WIB — Siklus 59: FIX regresi persistensi & toggle neon di OfficeScene (hapus removeItem & override siang) + test kontrak persist
+
+- Pilihan: audit integritas pasca commit bf3f871 menemukan regresi kritis pada fitur Neon persist (yang baru diselesaikan di Siklus 58):
+  1) `localStorage.removeItem('wfs_neon')` dan `cyberpunkMode=false` sempat tersisip di body `OfficeScene.js`, sehingga preferensi neon user selalu terhapus setiap kali halaman di-refresh.
+  2) `toggleCyberpunk()` meng-override warna lantai `fl`/karpet `cp` ke putih/abu terang dan `ambient`/`sun` ke tingkat siang hari setiap kali dipanggil, merusak visual gelap bercahaya khas mode cyberpunk saat diaktifkan.
+- Perubahan:
+  - `src/scene/OfficeScene.js`: bersihkan `localStorage.removeItem`, kembalikan `toggleCyberpunk()` murni memanggil `__neon.toggle()` & menyimpan status ke `localStorage`, dan pulihkan inisialisasi `if(cyberpunkMode)__neon.toggle()` agar mode tersimpan langsung aktif saat refresh.
+  - `src/__tests__/neon_persist.test.js` (+3 unit test): verifikasi pembacaan `wfs_neon` tanpa penghapusan, kontrak toggle bolak-balik '1'/'0', serta penerapan neon tersimpan saat init.
+- Bukti terukur:
+  - Vitest: **1175/1175 (107 file)** (+3 test baru di `neon_persist.test.js`).
+  - ESLint: 0 warning, 0 error (`npx eslint .`).
+  - Build: Berhasil (exit 0, 35 precache 1576.95 KiB, chunk `OfficeScene-DmxEe72D.js` 841.37 KB / gzip 226.08 KB).
+  - Deploy: `dist/*` di-copy ke `~/wfs-hq/`, 3 chunk stale lama (`CsWidget-5H0J2trM.js`, `index-DGE4SgxA.js`, `OfficeScene-BuXQ3KPh.js`) dibersihkan dari server.
+  - e2e_err: HTTP 200 (index & `index-CEVg7fTQ.js`, 0 "Scene init failed", PID 3671916).
+  - e2e_tv: **E2E_TV OK** (tasks 23/23 done, pct 100, drawnAt terisi, agents 14).
+  - e2e_zone_multi: **E2E_ZONE_MULTI OK** (iso, front, top: 0 OFFSCREEN, 0 ABOVE/BELOW margin).
+  - e2e_shot visual: **637.140 bytes** (>500KB = WebGL aktif, agents: 14, E2E_VISUAL: OK).
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
