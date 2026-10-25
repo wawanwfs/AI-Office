@@ -82,7 +82,7 @@ scene.name = 'Office3D';
   }
   if(renderer){
     renderer.setSize(container.clientWidth,container.clientHeight);
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,1.5));
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2.0));
     renderer.shadowMap.enabled=true;
     renderer.shadowMap.type=THREE.PCFSoftShadowMap;
     renderer.toneMapping=THREE.ACESFilmicToneMapping;
@@ -96,8 +96,8 @@ let namesVisible=(function(){try{return localStorage.getItem('wfs_names')!=='0'}
 const __asp=container.clientWidth/Math.max(1,container.clientHeight);
 const __portrait=__asp<0.8;
 if(__portrait){camera.fov=__asp<0.6?66:54;camera.updateProjectionMatrix();}
-let sph={theta:__portrait?2.35:Math.PI*0.78,phi:__portrait?0.62:1.0,radius:__asp<0.6?34:__asp<0.8?36:__asp<1.2?56:__asp<1.5?47:40};
-const tgt=new THREE.Vector3(0,1.8,0);
+let sph={theta:__portrait?2.35:Math.PI*0.78,phi:__portrait?0.62:0.95,radius:__asp<0.6?24:__asp<0.8?26:__asp<1.2?30:28};
+const tgt=new THREE.Vector3(0,1.2,0);
 // Preferensi auto-rotate: hormati prefers-reduced-motion bila user belum set eksplisit (localStorage wfs_autorot 0/1)
 const __prm=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):null;
 let __userRot=null;try{const __v=localStorage.getItem('wfs_autorot');if(__v==='0')__userRot=false;else if(__v==='1')__userRot=true}catch{/* abaikan */}
@@ -577,9 +577,9 @@ function buildChar(agent, standing=false){
     lany.position.set(SITTING.lanyard.x,SITTING.lanyard.y,SITTING.lanyard.z);g.add(lany);
   }
   { const a = accessoryAnchor(standing); addAccessories(g,agent,a.headY,a.fz,a.torsoY); }
-  // Rim outline tipis agar figur tidak menyatu dgn lantai (edge glow halus)
-  const rim=new THREE.PointLight(agent.color,.12,1.6,2);
-  rim.position.set(0,.7,.5);g.add(rim);
+  // Selection halo indicator di bawah kaki/kursi agent (cincin halus agar figur terbaca jelas)
+  const baseHalo=new THREE.Mesh(new THREE.RingGeometry(.18,.22,16),new THREE.MeshBasicMaterial({color:agent.color,side:THREE.DoubleSide,transparent:true,opacity:.35}));
+  baseHalo.rotation.x=-Math.PI/2; baseHalo.position.set(0,.01,0); g.add(baseHalo);
   return g;
 }
 
@@ -635,36 +635,36 @@ function buildDesk(agent,dp){
     const leg=new THREE.Mesh(new THREE.BoxGeometry(.05,.72,.05),M(0x3A4350));
     leg.position.set(lx,.36,lz);g.add(leg);
   });
-  // Monitor
+  // Monitor — digeser ke samping kanan (+X=0.32) agar wajah & badan agent di X=0 terlihat jelas tanpa terhalang
   const mBase=new THREE.Mesh(new THREE.BoxGeometry(.22,.02,.14),M(0xAABBCC));
-  mBase.position.set(0,.78,-.22);g.add(mBase);
+  mBase.position.set(.32,.78,-.22);g.add(mBase);
   const mStand=new THREE.Mesh(new THREE.BoxGeometry(.04,.2,.04),M(0xAABBCC));
-  mStand.position.set(0,.88,-.24);g.add(mStand);
-  const mBody=new THREE.Mesh(new THREE.BoxGeometry(.85,.5,.035),M(0x1E1E24));
-  mBody.position.set(0,1.2,-.24);mBody.castShadow=true;g.add(mBody);
+  mStand.position.set(.32,.88,-.24);g.add(mStand);
+  const mBody=new THREE.Mesh(new THREE.BoxGeometry(.72,.42,.035),M(0x1E1E24));
+  mBody.position.set(.32,1.08,-.24);mBody.castShadow=true;g.add(mBody);
   // Layar (canvas screen)
   const sc=document.createElement('canvas');sc.width=128;sc.height=76;
   const sctx=sc.getContext('2d');
   const stx=new THREE.CanvasTexture(sc);stx.minFilter=THREE.LinearFilter;
-  const screen=new THREE.Mesh(new THREE.PlaneGeometry(.78,.44),new THREE.MeshBasicMaterial({map:stx}));
-  screen.position.set(0,1.2,-.22);g.add(screen);
+  const screen=new THREE.Mesh(new THREE.PlaneGeometry(.66,.36),new THREE.MeshBasicMaterial({map:stx}));
+  screen.position.set(.32,1.08,-.22);g.add(screen);
   screenData.push({ctx:sctx,canvas:sc,tex:stx,type:agent.screen||'terminal',hex:agent.hex});
   // Screen light — warna agent
-  const sLight=new THREE.PointLight(agent.color,.3,2.2,2);
-  sLight.position.set(0,1.15,-.05);g.add(sLight);
-  // Keyboard & mouse
+  const sLight=new THREE.PointLight(agent.color,.35,2.5,2);
+  sLight.position.set(.32,1.08,-.05);g.add(sLight);
+  // Keyboard & mouse di depan agent
   const kb=new THREE.Mesh(new THREE.BoxGeometry(.4,.02,.14),M(0x2A2A30));
-  kb.position.set(0,.79,-.05);g.add(kb);
+  kb.position.set(-.06,.79,-.05);g.add(kb);
   const mouse=new THREE.Mesh(new THREE.BoxGeometry(.05,.02,.08),M(0x2A2A30));
-  mouse.position.set(.28,.79,-.05);g.add(mouse);
-  // Kursi
-  const seat=new THREE.Mesh(new THREE.BoxGeometry(.4,.05,.4),M(0x37474F));
-  seat.position.set(0,.42,.55);g.add(seat);
-  const back=new THREE.Mesh(new THREE.BoxGeometry(.4,.45,.05),M(0x37474F));
-  back.position.set(0,.68,.76);g.add(back);
-  const pole=new THREE.Mesh(new THREE.BoxGeometry(.05,.38,.05),M(0x607080));
+  mouse.position.set(.22,.79,-.05);g.add(mouse);
+  // Kursi kantor ergonomis
+  const seat=new THREE.Mesh(new THREE.BoxGeometry(.42,.06,.42),M(0x3B4A5A));
+  seat.position.set(0,.44,.55);g.add(seat);
+  const back=new THREE.Mesh(new THREE.BoxGeometry(.38,.38,.05),M(0x2E3B48));
+  back.position.set(0,.65,.74);g.add(back);
+  const pole=new THREE.Mesh(new THREE.BoxGeometry(.05,.38,.05),M(0x94A3B8));
   pole.position.set(0,.2,.55);g.add(pole);
-  const base=new THREE.Mesh(new THREE.CylinderGeometry(.22,.26,.04,10),M(0x556068));
+  const base=new THREE.Mesh(new THREE.CylinderGeometry(.22,.26,.04,10),M(0x64748B));
   base.position.set(0,.02,.55);g.add(base);
   // Glow di bawah meja (dGlow — dipakai updateShift/cyberpunk)
   const dGlow=new THREE.PointLight(agent.color,.15,3,2);
@@ -715,29 +715,29 @@ allAgents.forEach((agent,i)=>{
   // Posisi Lantai Bertingkat Alami (Lantai 1: Y=0, Lantai 2: Y=0.60, Lantai 3: Y=1.20)
   const deskY = dp.z < -0.8 ? 0 : (dp.z <= 4.5 ? 0.60 : 1.20);
   const {dGlow,screenLight}=buildDesk(agent,{...dp,y:deskY});
-  // Karakter duduk
+  // Karakter duduk — skala 2.2x proporsional gagah dan terlihat jelas dari kamera
   const sittingChar=buildChar(agent,false);
-  sittingChar.scale.set(1.7,1.7*looksOf(agent).h,1.7);
-  sittingChar.position.set(dp.x,deskY,dp.z+.55);
-  addBlobShadow(sittingChar,0.62);
+  sittingChar.scale.set(2.2,2.2*looksOf(agent).h,2.2);
+  sittingChar.position.set(dp.x,deskY+0.04,dp.z+.46);
+  addBlobShadow(sittingChar,0.72);
   sittingChar.traverse(o=>{if(o.isMesh&&o.material&&!o.material.isMeshBasicMaterial){o.castShadow=true;}});
   office.add(sittingChar);
   // Walker
   const walker=buildChar(agent,true);
-  walker.scale.set(1.7,1.7*looksOf(agent).h,1.7);
+  walker.scale.set(2.2,2.2*looksOf(agent).h,2.2);
   walker.visible=false;
-  addBlobShadow(walker,0.62);
+  addBlobShadow(walker,0.72);
   walker.traverse(o=>{if(o.isMesh&&o.material&&!o.material.isMeshBasicMaterial){o.castShadow=true;}});
   office.add(walker);
   // Label
   const label=makeLabel(agent);
   if(!namesVisible)label.visible=false;
-  label.position.set(dp.x,deskY+LABEL_Y,dp.z+.55);
-  label.userData.baseY=deskY+LABEL_Y; label.userData.baseX=dp.x; label.userData.antiY=0; label.userData.antiX=0;
+  label.position.set(dp.x,deskY+LABEL_Y+0.35,dp.z+.46);
+  label.userData.baseY=deskY+LABEL_Y+0.35; label.userData.baseX=dp.x; label.userData.antiY=0; label.userData.antiX=0;
   office.add(label);
   agentData.push({
     agent,state:'sitting',timer:rng.r(8,25),
-    home:{x:dp.x,y:deskY,z:dp.z+.55},
+    home:{x:dp.x,y:deskY+0.04,z:dp.z+.46},
     sittingChar,walker,label,dGlow,screenLight,
     walkTarget:null,walkPause:0
   });
