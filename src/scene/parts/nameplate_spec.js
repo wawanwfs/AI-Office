@@ -22,7 +22,7 @@ export const PLATE = {
 
 // "bantuin ai" -> "Bantuin AI" (word-initial capitalization; kata khas akronim
 // dalam daftar ACRONYMS di-uppecase-kan semua: "ai"→"AI", "hr"→"HR", "qa"→"QA").
-export const ACRONYMS = new Set(['ai', 'hr', 'qa', 'ui', 'ux', 'ml', 'api', 'sql']);
+export const ACRONYMS = new Set(['ai', 'hr', 'qa', 'ui', 'ux', 'ml', 'api', 'sql', 'fs', 'wfs', 'cs', 'pm', 'it', 'cto', 'ceo']);
 export function titleCase(s) {
   return String(s).toLowerCase().replace(/(^|\s)(\w+)|(\w+)$/g, (m, sp, w) => {
     if (w === undefined) return m;

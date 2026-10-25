@@ -104,7 +104,7 @@ let __userRot=null;try{const __v=localStorage.getItem('wfs_autorot');if(__v==='0
 const autoRotDefault=()=>__userRot!==null?__userRot:(__prm?!__prm.matches:true);
 let autoRot=autoRotDefault(),autoTmr;
 __prm&&__prm.addEventListener&&__prm.addEventListener('change',e=>{if(__userRot===null)autoRot=!e.matches});
-let focusGoal=null;const HOME_TGT=new THREE.Vector3(0,1.4,0.3);let homeRadius=null;
+let focusGoal=null;const HOME_TGT=new THREE.Vector3(0,1.4,0.3);let homeRadius=null;let nxChar=null;
 function updCam(){const p=Math.max(.18,Math.min(Math.PI/2.3,sph.phi));sph.phi=p;camera.position.set(sph.radius*Math.sin(p)*Math.sin(sph.theta)+tgt.x,sph.radius*Math.cos(p)+tgt.y,sph.radius*Math.sin(p)*Math.cos(sph.theta)+tgt.z);camera.lookAt(tgt)}
 const __vo=()=>{const w=container.clientWidth,h=container.clientHeight;if(w/h<0.6)camera.setViewOffset(w,h,-w*0.045,0,w,h);else camera.clearViewOffset()};__vo();
 updCam();
@@ -155,11 +155,21 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   agentData.forEach(ad=>{ if(ad.sittingChar.visible)targets.push(ad.sittingChar); if(ad.walker.visible)targets.push(ad.walker); });
   // papan proyek juga bisa diklik → kamera zoom ke papan
   const boardMesh=window.__projectBoard&&window.__projectBoard.mesh;
-  const hits=ray.intersectObjects(boardMesh?[...targets,boardMesh]:targets,true);
+  const boardFrame=window.__projectBoard&&window.__projectBoard.frame;
+  const boardTargets=[ ...(boardMesh?[boardMesh]:[]), ...(boardFrame?[boardFrame]:[]) ];
+  const nexusTarget=(nxChar&&nxChar.visible!==false)?[nxChar]:[];
+  const hits=ray.intersectObjects([...targets,...boardTargets,...nexusTarget],true);
   if(!hits.length){ if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius,reset:true}} selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null); return; }
-  if(boardMesh&&hits[0].object===boardMesh){
-    focusGoal={t:new THREE.Vector3(-8.35,2.55,9.2),r:8.5};
-    createBubble(-8.35,4.4,7.8,'“Proyek dibantuin.com — klik tombol Proyek untuk detail”','#10E5A0');
+  if((boardMesh&&hits[0].object===boardMesh)||(boardFrame&&hits[0].object===boardFrame)){
+    const bpos=boardMesh?boardMesh.position:new THREE.Vector3(-8.35,3.8,9.3);
+    focusGoal={t:new THREE.Vector3(bpos.x,bpos.y,9.2),r:8.5};
+    createBubble(bpos.x,bpos.y+2.15,7.8,'“Proyek dibantuin.com — klik tombol Proyek untuk detail”','#10E5A0');
+    return;
+  }
+  if(nxChar&&(hits[0].object===nxChar||(nxChar.getObjectById&&nxChar.getObjectById(hits[0].object.id)))){
+    const np=new THREE.Vector3(7.6,1.20+0.8,6.1);
+    focusGoal={t:np,r:16};
+    createBubble(7.6,1.20+2.2,6.1,'“Halo! Selamat datang di markas WFS Project & dibantuin.com!”','#F59E0B');
     return;
   }
   let obj=hits[0].object;let root=null;
@@ -191,8 +201,11 @@ renderer.domElement&&renderer.domElement.addEventListener('dblclick',e=>{
   const ray=new THREE.Raycaster();ray.setFromCamera(ndc,camera);
   const targets=[];agentData.forEach(ad=>{if(ad.sittingChar.visible)targets.push(ad.sittingChar);if(ad.walker.visible)targets.push(ad.walker)});
   const bm=window.__projectBoard&&window.__projectBoard.mesh;
-  const hits=ray.intersectObjects(bm?[...targets,bm]:targets,true);
-  if(hits.length){focusGoal={t:hits[0].point.clone().setY(1.5),r:Math.min(sph.radius,18)}}
+  const bf=window.__projectBoard&&window.__projectBoard.frame;
+  const bt=[...(bm?[bm]:[]),...(bf?[bf]:[])];
+  const nt=(nxChar&&nxChar.visible!==false)?[nxChar]:[];
+  const hits=ray.intersectObjects([...targets,...bt,...nt],true);
+  if(hits.length){focusGoal={t:hits[0].point.clone().setY(Math.max(1.5,(hits[0].point.y||0)+0.8)),r:Math.min(sph.radius,18)}}
   else{focusGoal={t:tgt.clone(),r:Math.max(14,sph.radius*0.7)}}
 });
 
@@ -235,7 +248,10 @@ renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
     hoverRay.setFromCamera(hoverNdc,camera);
     const targets=[];agentData.forEach(ad=>{if(ad.sittingChar.visible)targets.push(ad.sittingChar);if(ad.walker.visible)targets.push(ad.walker)});
     const bm=window.__projectBoard&&window.__projectBoard.mesh;
-    const hh=hoverRay.intersectObjects(bm?[...targets,bm]:targets,true);
+    const bf=window.__projectBoard&&window.__projectBoard.frame;
+    const bt=[...(bm?[bm]:[]),...(bf?[bf]:[])];
+    const nt=(nxChar&&nxChar.visible!==false)?[nxChar]:[];
+    const hh=hoverRay.intersectObjects([...targets,...bt,...nt],true);
     renderer.domElement.style.cursor=hh.length?'pointer':'';
     // highlight visual agent saat hover
     let ha=null;
@@ -872,7 +888,7 @@ const addPlant=__furn.addPlant;
 // Footprint OBSTACLES didaftarkan di dalam builder (import obstacles.js).
 const __rc=createReception({ THREE, office, M, MB, drawResepsiLogo, makeLabel, buildChar, looksOf, blobMat: __blobMat });
 if(__rc&&__rc.reception)__rc.reception.position.y=1.20;
-const rcLight=__rc.rcLight; const nxLabel=__rc.nxLabel; const nxChar=__rc.nexusChar;
+const rcLight=__rc.rcLight; const nxLabel=__rc.nxLabel; nxChar=__rc.nexusChar;
 sizeLabels();
 
 // ═══════════════════════════════════════════════════

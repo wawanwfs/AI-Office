@@ -40,8 +40,13 @@ describe('nameplate_spec — konstanta', () => {
 
 describe('titleCase', () => {
   it('lowercase diawali kapital, akronim AI diuppecase-kan', () => { expect(titleCase('bantuin ai')).toBe('Bantuin AI'); });
-  it('huruf besar semua dinormalisasi ke Title Case', () => { expect(titleCase('WAHYU FS')).toBe('Wahyu Fs'); });
-  it('akronim lain juga diuppecase-kan (hr/qa/ui/ux)', () => { expect(titleCase('ui ux designer')).toBe('UI UX Designer'); });
+  it('huruf besar semua dinormalisasi ke Title Case (akronim FS diuppecase-kan)', () => { expect(titleCase('WAHYU FS')).toBe('Wahyu FS'); });
+  it('akronim lain juga diuppecase-kan (hr/qa/ui/ux/wfs/cs/pm)', () => {
+    expect(titleCase('ui ux designer')).toBe('UI UX Designer');
+    expect(titleCase('wfs project')).toBe('WFS Project');
+    expect(titleCase('cs support')).toBe('CS Support');
+    expect(titleCase('pm lead')).toBe('PM Lead');
+  });
   it('non-string dipaksa string', () => { expect(titleCase(42)).toBe('42'); });
   it('kosong tetap kosong', () => { expect(titleCase('')).toBe(''); });
 });

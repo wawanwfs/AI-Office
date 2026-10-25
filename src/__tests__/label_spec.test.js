@@ -31,10 +31,11 @@ describe('label_spec', () => {
     expect(LABEL_SHORT.NAME_Y).toBe(26);
   });
 
-  it('labelName: title-case tiap kata, akronim AI diuppecase-kan', () => {
-    expect(labelName('wahyu fs')).toBe('Wahyu Fs');
+  it('labelName: title-case tiap kata, akronim AI & FS diuppecase-kan', () => {
+    expect(labelName('wahyu fs')).toBe('Wahyu FS');
     expect(labelName('BANTUIN AI')).toBe('Bantuin AI');
     expect(labelName('trainer ai')).toBe('Trainer AI');
+    expect(labelName('cs support')).toBe('CS Support');
     expect(labelName('dewi')).toBe('Dewi');
     expect(labelName('a')).toBe('A');
     expect(labelName('  multi  space ')).toBe('  Multi  Space ');
@@ -214,7 +215,7 @@ describe('drawLabelText', () => {
     const c = recorderCtx();
     drawLabelText(c, AG, LABEL_FULL, true);
     const ft = c.ops.filter(o => o[0] === 'fillText');
-    expect(ft[0][1]).toBe('Wahyu Fs');
+    expect(ft[0][1]).toBe('Wahyu FS');
     expect(ft[0][2]).toBe(LABEL_FULL.W / 2 + 4);
     expect(ft[0][3]).toBe(LABEL_FULL.NAME_Y);
   });
