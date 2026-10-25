@@ -25,6 +25,7 @@ import { WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { OBSTACLES } from './parts/obstacles.js';
 import { MUTED_KEY, tickSoundTimer } from './parts/sound_spec.js';
 import { advanceSimClock, setSimManual, SIM_SEC_PER_MIN as __SIM_SPM, MANUAL_RESUME_MS as __SIM_RESUME } from './parts/sim_clock.js';
+import { simMinutesToClockSeconds } from './parts/clock_units.js';
 import { createSoundEngine } from './parts/sound_engine.js';
 import { createProjectBoard } from './parts/projectboard.js';
 import { createBookshelf } from './parts/bookshelf.js';
@@ -1206,7 +1207,10 @@ function animate(){
   }
   // jam dinding di-throttle: canvas 96×96 + upload tekstur cukup ~3×/dtk
   // (jarum detik diskrit per detik) — dulu digambar ulang tiap frame.
-  if(shouldRedrawClock(frame))drawClock(timeOfDay);
+  // timeOfDay = MENIT simulasi (0-1440) → drawClockFace mengharapkan DETIK
+  // sejak tengah malam (minutes = nowSeconds/60). Tanpa konversi, jarum selalu
+  // menunjuk ~00:xx (bug lama: 14:30 ditampilkan sebagai 00:14).
+  if(shouldRedrawClock(frame))drawClock(simMinutesToClockSeconds(timeOfDay));
 
   // Sounds — tick keyboard agent yang duduk + langkah kaki agent yang jalan
   // keyclick & langkah kaki via tickSoundTimer (murni, diuji unit):

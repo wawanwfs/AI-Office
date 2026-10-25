@@ -2333,3 +2333,10 @@
 - Perubahan: + src/lib/wakelock.js — createWakeLockManager(nav, {onState}) murni/teruji: unsupported bila tanpa Wake Lock API (tanpa error), acquire('screen')/release, state() (held/released), reacquire setelah lock dilepas browser saat tab hidden (lock=null di event 'release', bukan sentinel lama yang `released:true` — bug yang tertangkap test). Integrasi App.jsx: useEffect mount → acquire, visibilitychange visible → reacquire, unmount → release. 0 file scene disentuh.
 - Bukti: build OK (exit 0); vitest **1131/1131 (100 file)** (+8); eslint 0 error; cp dist→~/wfs-hq OK; e2e_err HTTP 200 (index & index-dLT-oHBR.js, 0 "Scene init failed", 404 API :8787 normal); e2e_shot: agents=14, __wallState true, screenshot 720.885 bytes → E2E_VISUAL OK.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+
+## 2026-10-25 09:20 WIB — Siklus 51: FIX jam dinding 3D selalu menunjuk ~00:xx (unit salah: menit → detik)
+- Temuan (audit kode, bukan tebakan): OfficeScene memanggil drawClock(timeOfDay) dgn MENIT simulasi (0–1440), sedangkan drawClockFace (parts/clock_canvas.js) mengharapkan DETIK sejak tengah malam (minutes = nowSeconds/60) → minutes = timeOfDay/60 = maks 24 menit → jarum jam terkunci di angka 12 sepanjang hari (14:30 tergambar 00:14). Bug ada sejak jam diekstrak ke parts (jam tampil di dinding belakang z=9.27).
+- Perubahan: + parts/clock_units.js (simMinutesToClockSeconds = ×60, murni); call-site di-ganti drawClock(simMinutesToClockSeconds(timeOfDay)). + test clock_units.test.js (4 test: konversi, regresi 14:30 → jarum antara 2–3 & menit di 6, regresi 09:00 → jarum di 9, guard NaN).
+- Bukti: build OK (exit 0); vitest **1135/1135 (101 file)** (+4); eslint 0 error; cp dist→~/wfs-hq OK; e2e_err HTTP 200 (index & index-BZmknjfY.js, 0 "Scene init failed", 404 API :8787 normal); e2e_shot: agents=14, __wallState true, __dbg {t:553, ph:working}, screenshot 724.437 bytes → E2E_VISUAL OK.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+
