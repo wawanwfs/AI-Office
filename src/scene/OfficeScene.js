@@ -7,7 +7,7 @@ import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles } from './parts/effects.js';
-import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
+import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { perfStep } from './parts/perf_quality.js';
 import { updateFollowGoal, focusStep, autoRotateStep } from './parts/kamera_focus.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
@@ -1300,8 +1300,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
         }
         if(!namesVisible)ad.label.visible=false;
       });
-      if(window.__zoneLabels)window.__zoneLabels.forEach(zt=>{zt.userData.antiY=0;zt.userData.antiX=0;
-        const zb=window.__zoneBase&&window.__zoneBase.get(zt);if(zb){zt.position.y=zb.y;zt.position.x=zb.x}});
+      if(window.__zoneLabels)resetZoneBaseOffsets(window.__zoneLabels.map(zt=>({ref:zt,base:window.__zoneBase&&window.__zoneBase.get(zt)})));
       if(__meet.active){__meet.update(-1)}
     } else if(action==='tour'){
       agentData.forEach(ad=>{ if(ad.state==='sitting'){ad.timer=0.1;} });
@@ -1311,8 +1310,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
     teamAction,
     toggleNames: () => { namesVisible=!namesVisible; try{localStorage.setItem('wfs_names',namesVisible?'1':'0')}catch{/* abaikan */};
       agentData.forEach(ad=>{ad.label.visible=namesVisible;ad.label.userData.antiY=0;ad.label.userData.antiX=0});
-      if(window.__zoneLabels)window.__zoneLabels.forEach(zt=>{zt.visible=namesVisible;zt.userData.antiY=0;zt.userData.antiX=0;
-        const zb=window.__zoneBase&&window.__zoneBase.get(zt);if(zb){zt.position.y=zb.y;zt.position.x=zb.x}}); },
+      if(window.__zoneLabels)resetZoneBaseOffsets(window.__zoneLabels.map(zt=>({ref:zt,base:window.__zoneBase&&window.__zoneBase.get(zt),visible:namesVisible}))); },
     isNamesVisible: () => namesVisible,
     setSelected: (idx) => { selectedIdx=idx; applySelected(); },
     getSelected: () => selectedIdx,

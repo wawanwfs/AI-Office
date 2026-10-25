@@ -2321,3 +2321,9 @@
 - Bukti: build OK (exit 0); vitest **1118/1118 (98 file)** (+1); eslint 0 error; cp dist→~/wfs-hq OK; e2e_err 200 (index & index-DMMMCmSz.js, 0 "Scene init failed"); e2e_shot: agents=14, __wallState true, screenshot 697.068 bytes → E2E_VISUAL OK; **e2e_zone_multi: OK** — iso/front/top: NOL OFFSCREEN, NOL ABOVE/BELOW margin (view top: zona di belakang kamera = by-design dilewati guard).
 - Commit & push siklus ini.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+
+## 2026-10-25 08:15 WIB — Siklus 49: dedupe 3 salinan inline reset zona → resetZoneBaseOffsets (backlog NAMES toggle)
+- Pilihan: backlog "NAMES toggle mengembalikan zoneBase" — dicek ternyata perilaku sudah ada sejak lama (3 salinan inline identik di OfficeScene.js: toggleNames, teamAction('work'), plus satu lagi), hanya belum diekstrak & teruji. Rencana test runtime penuh OfficeScene DIBATALKAN (butuh WebGL/jsdom tidak memadai; harness office_common.js tidak ada — tidak mengarang infrastruktur).
+- Perubahan: fungsi murni `resetZoneBaseOffsets(zones)` di parts/label_overlap.js (nol-kan antiY/antiX, kembalikan posisi ke base, set visible opsional); 2 call-site OfficeScene.js diganti pemanggilan fungsi (toggleNames kirim visible=namesVisible, teamAction('work') tanpa visible). 0 perubahan perilaku.
+- Bukti: build OK (exit 0); vitest **1123/1123 (99 file)** (+5); eslint 0 error; cp dist→~/wfs-hq OK; e2e_err HTTP 200 (index & index-BouFo4zk.js, 0 "Scene init failed"); e2e_shot: agents=14, __wallState true, screenshot 721.097 bytes → E2E_VISUAL OK.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).

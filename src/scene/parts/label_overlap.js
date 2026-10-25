@@ -280,3 +280,20 @@ export function buildBubblePts(bubbles, k, pxW, pxH) {
 }
 
 export { PX_PER_TAN };
+
+// Reset offset label zona ke posisi dasar (window.__zoneBase / map base): nol-kan
+// akumulasi antiY/antiX dan kembalikan posisi ke base. Dipakai toggleNames (off/on)
+// dan teamAction('work') — sebelumnya 3 salinan inline identik di OfficeScene.js.
+// zones: [{ref, base, antiY, antiX, visible}]; return jumlah zona di-reset.
+export function resetZoneBaseOffsets(zones) {
+  if (!zones) return 0;
+  let n = 0;
+  zones.forEach(z => {
+    if (!z || !z.ref) return;
+    z.ref.userData.antiY = 0; z.ref.userData.antiX = 0;
+    if (z.base) { z.ref.position.y = z.base.y; z.ref.position.x = z.base.x; }
+    if (z.visible !== undefined) z.ref.visible = z.visible;
+    n++;
+  });
+  return n;
+}
