@@ -415,6 +415,40 @@ def api_project_exec(pid: int, body: dict):
         raise HTTPException(502, f"exec error: {e}")
     return {"exit": out.returncode, "stdout": out.stdout[-8000:], "stderr": out.stderr[-4000:]}
 
+@app.get("/api/projects/{pid}/report")
+def api_project_report(pid: int):
+    """Ringkasan status project (artifact delivery) — diagregasi dari state nyata."""
+    proj = sh_db.get_project(str(pid))
+    if not proj:
+        raise HTTPException(404, "project tidak ditemukan")
+    tasks = [t for t in taskengine.list_tasks(pid)]
+    from collections import Counter
+    by_status = dict(Counter(t["status"] for t in tasks))
+    base = proj.get("workspace_path")
+    nfiles = 0
+    if base and os.path.isdir(base):
+        for root, dirs, files in os.walk(base):
+            dirs[:] = [d for d in dirs if d not in (".git", "__pycache__", "node_modules")]
+            nfiles += len(files)
+    pending_approvals = sum(1 for a in sh_db.list_approvals("pending") if a["project_id"] == str(pid))
+    port = proj.get("preview_port")
+    return {
+        "project_id": str(pid),
+        "name": proj.get("name"),
+        "status": proj.get("status"),
+        "container_name": proj.get("container_name"),
+        "preview_url": proj.get("preview_url"),
+        "port": port,
+        "direct_url": ("http://127.0.0.1:%s/" % port) if port else None,
+        "workspace": base,
+        "files": nfiles,
+        "tasks_total": len(tasks),
+        "tasks_by_status": by_status,
+        "pending_approvals": pending_approvals,
+        "report_generated_at": time.time(),
+    }
+
+
 @app.get("/api/approvals")
 def api_approvals(status: str = "pending"):
     if status not in ("pending", "approved", "rejected", "all"):
