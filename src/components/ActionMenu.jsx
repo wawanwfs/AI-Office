@@ -102,7 +102,7 @@ export default function ActionMenu({ sceneRef, onFlash, actionMenuRef }) {
           </button>
         </div>
       )}
-      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-haspopup="menu">
+      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-haspopup="menu" title="Aksi cepat tim (Meeting, Break, Tour)">
         <span className="ic"><IconBolt size={19} /><span className="sr-only">⚡</span></span>
         <span className="lb">Aksi</span>
       </button>

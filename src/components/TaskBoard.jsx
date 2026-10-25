@@ -70,7 +70,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
 
   return (
     <>
-      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="task-board" aria-label="Papan task">
+      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="task-board" aria-label="Papan task" title="Papan task (Kanban)">
         <span className="ic"><IconBoard size={19} /><span className="sr-only">📋</span></span>
         <span className="lb">Papan</span>
       </button>

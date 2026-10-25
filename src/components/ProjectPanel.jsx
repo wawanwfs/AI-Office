@@ -44,7 +44,7 @@ export default function ProjectPanel() {
 
   return (
     <>
-      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="project-panel">
+      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="project-panel" aria-label="Proyek dibantuin.com" title="Ringkasan proyek live dibantuin.com">
         <span className="ic"><IconRocket size={19} /><span className="sr-only">🚀</span></span><span className="lb">Proyek</span>
       </button>
       {open && (
