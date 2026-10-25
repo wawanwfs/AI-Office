@@ -76,27 +76,28 @@ describe('clampViewport', () => {
     expect(pts.every(p => p.offY === 0 && p.offX === 0)).toBe(true);
   });
 
-  it('mendorong label yang masuk lane toolbar (bawah) ke atas', () => {
-    // BOT = 400-110 = 290; half=25 -> fy=300 melanggar (300+25=325>290)
+  it('menurunkan label yang masuk lane header (atas) ke bawah', () => {
+    // TOP = 400 - 140 = 260; half=25 -> fy=300 melanggar (300+25=325>260)
     const pts = [AG(300, 300)];
     expect(clampViewport(pts, OPTS)).toBe(true);
-    expect(pts[0].y + pts[0].offY + 25).toBeCloseTo(290);
+    expect(pts[0].y + pts[0].offY + 25).toBeCloseTo(260);
   });
 
-  it('menurunkan label yang bocor keluar layar atas', () => {
-    // TOP = 260; fy - 25 < -260 -> fy = -300 melanggar
+  it('mendorong label yang bocor ke toolbar (bawah) ke atas', () => {
+    // BOT = 400 - 110 = 290; fy - 25 < -290 -> fy = -300 melanggar (-325 < -290)
     const pts = [AG(300, -300)];
     expect(clampViewport(pts, OPTS)).toBe(true);
-    expect(pts[0].y + pts[0].offY - 25).toBeCloseTo(-260);
+    expect(pts[0].y + pts[0].offY - 25).toBeCloseTo(-290);
   });
 
   it('zona punya margin atas ekstra ZONE_TOP_EXTRA (agent lebih longgar)', () => {
-    // ZONE_TOP_EXTRA=130 → batas zona = -(H2-140+130) = -390; y-282 (tepi -312) TIDAK melanggar.
-    // Agent (tanpa extra): batas -(H2-140) = -260 → fy-25=-307 melanggar → tepi di -260.
-    const z = ZN(300, -282); const a = AG(300, -282);
+    // TOP agent = 260; TOP zona = 260 - 130 = 130.
+    // y=200: agent (200+25=225 <= 260) tidak melanggar.
+    // Zona (200+30=230 > 130) melanggar -> tepi atas ditarik ke 130.
+    const z = ZN(300, 200); const a = AG(300, 200);
     expect(clampViewport([z, a], OPTS)).toBe(true);
-    expect(z.y + z.offY - 30).toBeCloseTo(-312); // zona tak digeser (masih dalam margin ekstra)
-    expect(a.y + a.offY - 25).toBeCloseTo(-260);
+    expect(z.y + z.offY + 30).toBeCloseTo(130);
+    expect(a.y + a.offY + 25).toBeCloseTo(225); // agent tidak digeser
   });
 
   it('clamp horizontal kanan dengan pad zona 6 vs agent 2', () => {
@@ -108,8 +109,7 @@ describe('clampViewport', () => {
   });
 
   it('clamp horizontal kiri', () => {
-    const _pts = [AG(30, 100)]; // fx-50=-20 < -(600-2)=-598? tidak -> x=20: 20-50=-30... perlu x-50<-598 -> x kecil banget
-    // x=20 tidak melanggar; pakai zona lebar zw=150 di x=-500: -500-75=-575 < -594? tidak. x=-520: -595<-594 pelanggar
+    const _pts = [AG(30, 100)];
     const z = ZN(-520, 100);
     expect(clampViewport([z], OPTS)).toBe(true);
     expect(z.x + z.offX - 75).toBeCloseTo(-594);
@@ -123,12 +123,12 @@ describe('clampViewport', () => {
 });
 
 describe('sweepClampRounds (siklus penuh)', () => {
-  it('kluster menumpuk dekat bawah: sweep turun lalu clamp menarik ke dalam toolbar', () => {
+  it('kluster menumpuk dekat atas: sweep lalu clamp menarik ke dalam header', () => {
     const pts = [AG(300, 270), AG(300, 275), AG(300, 280)];
     sweepClampRounds(pts, OPTS);
     pts.forEach(p => {
-      expect(p.y + p.offY + 25).toBeLessThanOrEqual(290 + 1e-9);
-      expect(p.y + p.offY - 25).toBeGreaterThanOrEqual(-260 - 1e-9);
+      expect(p.y + p.offY + 25).toBeLessThanOrEqual(260 + 1e-9);
+      expect(p.y + p.offY - 25).toBeGreaterThanOrEqual(-290 - 1e-9);
     });
   });
 

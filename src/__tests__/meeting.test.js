@@ -30,6 +30,46 @@ describe('meeting.update() state machine', () => {
     m.attendees().forEach((ai) => expect(agentData[ai].state).toBe('meeting'));
   });
 
+  it('staggering vertikal kursi rapat: kursi belakang (z < roomZ) lebih tinggi dibanding kursi depan', () => {
+    const { ctx, agentData } = mkCtx();
+    ctx.seats = [
+      { x: 6.6, z: -4.1 }, // z < -2 -> baris belakang (stagger 0.95)
+      { x: 6.6, z: 0.5 },  // z > -2 -> baris depan (stagger 0.40)
+    ];
+    const labelSets = [];
+    agentData.forEach((ad, i) => {
+      ad.label = { position: { set(x, y, z) { labelSets[i] = { x, y, z }; } }, userData: {} };
+    });
+    const m = createMeeting(ctx);
+    m.update(600);
+    expect(m.active).toBe(true);
+    const att = m.attendees();
+    expect(labelSets[att[0]].y).toBeCloseTo(2.45 + 0.95, 2);
+    expect(labelSets[att[1]].y).toBeCloseTo(2.45 + 0.40, 2);
+    expect(labelSets[att[0]].y).toBeGreaterThan(labelSets[att[1]].y);
+  });
+
+  it('sembunyikan non-peserta di ruang meeting saat rapat, pulihkan saat akhir rapat', () => {
+    const { ctx, agentData } = mkCtx();
+    // Agent 12 mejanya di dalam ruang meeting (x=8, z=-3) tapi bukan peserta
+    agentData[12].home = { x: 8, z: -3 };
+    agentData[12].label = { visible: true, position: { set() {} }, userData: {} };
+    agentData[12].sittingChar = { visible: true };
+    agentData[12].state = 'sitting';
+
+    const m = createMeeting(ctx);
+    m.update(600);
+    expect(m.active).toBe(true);
+    if (!m.attendees().includes(12)) {
+      expect(agentData[12].label.visible).toBe(false);
+      expect(agentData[12].sittingChar.visible).toBe(false);
+    }
+    m.update(631);
+    expect(m.active).toBe(false);
+    expect(agentData[12].label.visible).toBe(true);
+    expect(agentData[12].sittingChar.visible).toBe(true);
+  });
+
   it('tahan di dalam jendela tanpa restart peserta (menit 600→629: attendee & state stabil)', () => {
     const { ctx, agentData } = mkCtx();
     const m = createMeeting(ctx);

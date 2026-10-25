@@ -45,18 +45,25 @@ export function sweepVertical(pts, gap = SWEEP_GAP) {
 // Clamp viewport: batas atas tepi layar, bawah toolbar, plus horizontal kiri/kanan.
 // opts: {height, width, topMargin, botMargin}. Mengembalikan true bila ada pelanggaran
 // yang dikoreksi (frame belum stabil), false bila semua label sudah dalam batas.
+// Semantik Three.js NDC (y-up): atas layar = fy positif (+H/2), bawah = fy negatif (-H/2).
 export function clampViewport(pts, opts) {
-  const H2 = opts.height / 2, TOP = H2 - (opts.topMargin ?? VIEW_TOP_MARGIN), BOT = H2 - (opts.botMargin ?? VIEW_BOT_MARGIN);
+  const H2 = opts.height / 2;
+  const botLim = H2 - (opts.botMargin ?? VIEW_BOT_MARGIN);
   const W2 = opts.width / 2;
   let violated = false;
   pts.forEach(p => {
     const fy = p.y + p.offY, half = (p.sh || p.zh || 0) / 2;
-    const topLim = p.zone ? TOP + ZONE_TOP_EXTRA : TOP; // zona margin ekstra
-    // FIX sign bug: dulu BOT+half-p.y yang MENDORONG label makin ke bawah
-    // (masih melanggar tiap round -> 3 round sia-sia; label "terpotong toolbar",
-    // kasus historis Rina @90). Benar: tarik ke atas sampai tepi bawah = BOT.
-    if (fy + half > BOT) { p.offY = BOT - half - p.y; violated = true; }       // masuk toolbar -> naik
-    else if (fy - half < -(topLim)) { p.offY = -(topLim) + half - p.y; violated = true; } // keluar layar atas -> turun
+    const topLim = H2 - (opts.topMargin ?? VIEW_TOP_MARGIN) - (p.zone ? ZONE_TOP_EXTRA : 0);
+    // Bocor atas (masuk header/ticker): fy + half > topLim → dorong turun (offY negatif)
+    if (fy + half > topLim) {
+      p.offY = topLim - half - p.y;
+      violated = true;
+    }
+    // Bocor bawah (masuk toolbar): fy - half < -botLim → dorong naik (offY positif)
+    else if (fy - half < -botLim) {
+      p.offY = -botLim + half - p.y;
+      violated = true;
+    }
     // clamp HORIZONTAL: label tak boleh bocor keluar tepi kiri/kanan viewport
     const wHalf = (p.sw || p.zw || 0) / 2, fx = p.x + p.offX;
     const padX = p.zone ? PAD_X_ZONE : PAD_X_AGENT;

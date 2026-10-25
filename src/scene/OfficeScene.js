@@ -604,7 +604,7 @@ function makeLabel(agent){
   const full=mk(true), short=mk(false);
   const label=new THREE.Sprite(new THREE.SpriteMaterial({map:short.tex,transparent:true,depthTest:false,sizeAttenuation:false}));
   label.userData={full,short,mode:'short'};
-  label.renderOrder=20;
+  label.renderOrder=35; // Selalu di depan balon bicara (renderOrder 30) agar nama agen tidak tertutup
   return label;
 }
 // Ukuran label tetap di layar (sizeAttenuation=false): tinggi ≈ fraksi tinggi viewport.
@@ -1316,9 +1316,11 @@ function animate(){
     pts.forEach(p=>{
       if(p.zone) return; // zona adalah penghalang statis bagi label agent, posisinya dikendalikan oleh guard viewport
       const {dy,dx}=labelWorldOffset(p,wpp);
+      const cdy=Math.max(-0.35,Math.min(1.6,dy));
+      const cdx=Math.max(-1.5,Math.min(1.5,dx));
       const u=p.a.label.userData;
-      const prevY=(u.antiY===undefined)?dy:u.antiY+(dy-u.antiY)*LBL_SMOOTH;
-      const prevX=(u.antiX===undefined)?dx:u.antiX+(dx-u.antiX)*LBL_SMOOTH;
+      const prevY=(u.antiY===undefined)?cdy:u.antiY+(cdy-u.antiY)*LBL_SMOOTH;
+      const prevX=(u.antiX===undefined)?cdx:u.antiX+(cdx-u.antiX)*LBL_SMOOTH;
       p.a.label.position.y=p.baseY+prevY; p.a.label.position.x=p.baseX+prevX;
       u.antiY=prevY; u.antiX=prevX; // utk base frame berikutnya (nilai ter-damping)
     });

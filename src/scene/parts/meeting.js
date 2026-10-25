@@ -53,10 +53,20 @@ export function createMeeting(ctx) {
       ad.sittingChar.visible = false;
       ad.state = 'meeting';
       // Label pindah mengambang di atas kursi rapat
+      // Staggering vertikal: kursi baris belakang (z < roomZ) lebih tinggi (+0.95m) dibanding depan (+0.40m)
+      // agar billboard nama tidak saling menutupi pada sudut pandang isometrik
+      const rowStagger = (seat.z < (roomZ || -3)) ? 0.95 : 0.40;
       if (ad.label) {
         const u = ad.label.userData || (ad.label.userData = {});
-        u.baseY = (LABEL_Y || 2.45) + 0.6; u.baseX = seat.x; u.antiY = 0; u.antiX = 0;
-        ad.label.position.set(seat.x, (LABEL_Y || 2.45) + 0.6, seat.z + 0.55);
+        u.baseY = (LABEL_Y || 2.45) + rowStagger; u.baseX = seat.x; u.antiY = 0; u.antiX = 0;
+        ad.label.position.set(seat.x, (LABEL_Y || 2.45) + rowStagger, seat.z + 0.55);
+      }
+    });
+    // Non-peserta yang mejanya di dalam ruang meeting (x=8, z=-3) disembunyikan sementara agar tidak bertabrakan dengan peserta
+    agentData.forEach((ad, i) => {
+      if (!currentIdx.includes(i) && ad.home && Math.abs(ad.home.x - 8) < 2.5 && Math.abs(ad.home.z - (roomZ || -3)) < 2.5) {
+        if (ad.label) ad.label.visible = false;
+        if (ad.sittingChar) ad.sittingChar.visible = false;
       }
     });
   }
@@ -65,6 +75,12 @@ export function createMeeting(ctx) {
     lastWin = -1; // reset supaya window yang sama bisa begin() lagi setelah end
     onChange && onChange(false);
     figures.forEach((f) => { f.visible = false; });
+    agentData.forEach((ad, i) => {
+      if (!currentIdx.includes(i) && ad.home && Math.abs(ad.home.x - 8) < 2.5 && Math.abs(ad.home.z - (roomZ || -3)) < 2.5) {
+        if (ad.label) ad.label.visible = true;
+        if (ad.sittingChar && ad.state === 'sitting') ad.sittingChar.visible = true;
+      }
+    });
     currentIdx.forEach((ai) => {
       const ad = agentData[ai];
       if (!ad) return;
