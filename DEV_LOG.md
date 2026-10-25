@@ -2382,3 +2382,16 @@
 - Perubahan: + parts/audio_wake.js `installAudioWake(ensureFn, opts)` — pasang 2 listener sekali-pakai (self-remove di handler + guard `armed`), return `dispose()` idempoten yang melepas listener belum terpicu; exception di ensureFn tertelan (interaksi wake tak boleh crash). OfficeScene: pasang via helper, `destroy()` memanggil `__disposeAudioWake()`. Perilaku runtime scene tidak berubah (wake tetap keydown/pointerdown pertama).
 - Bukti: build OK (35 precache 1552.70 KiB); vitest **1157/1157 (103 file)** (+5 test audio_wake: trigger sekali, dispose pra-interaksi, idempoten, exception-safe, guard no-op); eslint 0 error; cp dist→~/wfs-hq OK; e2e_err HTTP 200 (index-CcXBk3BS.js, 0 "Scene init failed", 404 API :8787 normal); shot.sh DISPLAY=:10 → 737.287 bytes (WebGL hidup).
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+
+## 2026-10-25 13:05 WIB — Siklus 58: Kinematika karakter rapat & resepsi via charMotion/applyCharMotion + sinkronisasi penuh dock Neon persist
+- Backlog diselesaikan:
+  1) Backlog dock Neon persist: sebelumnya class/aria tombol dock Neon (`wfs_neon`) belum sinkron saat reload karena `useState(false)` di App.jsx tanpa membaca `localStorage` pada initial render. Kini `useState` membaca `localStorage.getItem('wfs_neon') === '1'` secara sinkron di initial state, sehingga tombol langsung aktif (`aria-pressed="true"`, class `on`) tanpa kedipan atau desync; dead `useEffect` bergantung `[flash]` dibersihkan; `destroy()` scene membersihkan hook `window.__toggleNeon` & `__sceneSelRing`.
+  2) Animasi hidup karakter diperluas ke ruang meeting & resepsi: modul baru `charMotion(elapsed, i, mode)` dan `applyCharMotion(group, motion)` di `parts/effects.js` menyatukan kinematika napas, gerak kepala (tengok/angguk), dan tangan meja/ketik. Peserta rapat (`__meet.attendees()`) kini bernapas dan menoleh aktif ke sekeliling meja diskusi, bukan lagi manekin statis.
+- Bukti:
+  - Vitest: **1171/1171 (105 file)** (+14 test baru: 8 test di `char_motion.test.js`, 2 test neon persist & shortcut di `app_integration.test.jsx`, dan 4 test `agent_inspector.test.jsx`).
+  - ESLint: 0 warning, 0 error.
+  - Build: OK (35 precache 1573.58 KiB, chunk OfficeScene 838.24 KB / gzip 225.00 KB).
+  - Deploy ~/wfs-hq: OK, chunk stale dibersihkan.
+  - e2e_err: HTTP 200 (index-D83o5euG.js, 0 "Scene init failed", PID 3637035).
+  - Visual e2e: `scripts/e2e_shot.py` → 673.997 bytes (>500KB = WebGL hidup, agents: 14, ws: true).
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
