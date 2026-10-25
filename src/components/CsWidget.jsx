@@ -26,7 +26,7 @@ export default function CsWidget() {
           <iframe src={import.meta.env.VITE_CS_WIDGET_URL || '/cs-widget/'} style={{ border: 0, width: '100%', flex: 1 }} title="AI CS dibantuin" />
         </div>
       )}
-      <button className="ibtn" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="cs-widget" aria-label="Buka widget AI CS">
+      <button className="ibtn" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="cs-widget" aria-label="Buka widget AI CS" title="AI Customer Service Widget">
         <span className="ic"><IconHeadset size={19} /><span className="sr-only">🛎</span></span><span className="lb">AI CS</span>
       </button>
     </>

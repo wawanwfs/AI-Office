@@ -87,7 +87,7 @@ export default function TeamStats() {
           </div>
         </div>
       )}
-      <button className="ibtn" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="team-stats" aria-label="Statistik tim">
+      <button className="ibtn" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="team-stats" aria-label="Statistik tim" title="Statistik & performa tim">
         <span className="ic"><IconStats size={19} /><span className="sr-only">📊</span></span><span className="lb">Statistik</span>
       </button>
     </>

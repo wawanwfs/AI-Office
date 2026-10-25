@@ -127,7 +127,7 @@ export default function WfsPanel() {
 
   return (
     <>
-      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="wfs-panel">
+      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="wfs-panel" aria-label="Chat AI Team" title="Chat langsung dengan AI Team">
         <span className="ic"><IconChat size={19} /><span className="sr-only">💬</span></span><span className="lb">Chat</span>
       </button>
       {open && (
