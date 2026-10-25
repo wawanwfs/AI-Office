@@ -62,8 +62,8 @@ describe('createTerraces — struktur 3 lantai bertingkat & tangga', () => {
     const MB = (c) => new Mat({ color: c })
 
     const res = createTerraces({ THREE, office, M, MB })
-    expect(res.L2_Y).toBe(1.60)
-    expect(res.L3_Y).toBe(3.20)
+    expect(res.L2_Y).toBe(0.60)
+    expect(res.L3_Y).toBe(1.20)
     expect(office.children).toContain(res.terraces)
     expect(res.terraces.children.length).toBeGreaterThan(10)
 

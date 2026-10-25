@@ -289,6 +289,9 @@ function addBlobShadow(obj,r=0.55){
 // (jendela sky-view dinding belakang & kiri dibangun di blok dinding __wallFade di bawah)
 const __st=createStructure({ THREE, office, M, drawAoStrip, drawWoodFloor, drawSky, drawGlassSheen });
 const fl=__st.fl, cp=__st.cp, skyTex=__st.skyTex, glassSheen=__st.glassSheen;
+// Sembunyikan lantai dasar lama agar tidak tumpang-tindih (eliminasi 100% z-fighting & flicker)
+if(fl)fl.visible=false;
+if(cp)cp.visible=false;
 // Struktur 3 Lantai Bertingkat (Stepped High-Rise Terraces & Stairs)
 const __terraces=createTerraces({ THREE, office, M, MB });
 
@@ -668,11 +671,13 @@ const allAgents=allAgentsFn();
 allAgents.forEach((agent,i)=>{
   const dp=allDesks[i];
   if(!dp)return;
-  const {dGlow,screenLight}=buildDesk(agent,dp);
+  // Posisi Lantai Bertingkat Alami (Lantai 1: Y=0, Lantai 2: Y=0.60, Lantai 3: Y=1.20)
+  const deskY = dp.z < -0.8 ? 0 : (dp.z <= 4.5 ? 0.60 : 1.20);
+  const {dGlow,screenLight}=buildDesk(agent,{...dp,y:deskY});
   // Karakter duduk
   const sittingChar=buildChar(agent,false);
   sittingChar.scale.set(1.7,1.7*looksOf(agent).h,1.7);
-  sittingChar.position.set(dp.x,0,dp.z+.55);
+  sittingChar.position.set(dp.x,deskY,dp.z+.55);
   addBlobShadow(sittingChar,0.62);
   sittingChar.traverse(o=>{if(o.isMesh&&o.material&&!o.material.isMeshBasicMaterial){o.castShadow=true;}});
   office.add(sittingChar);
@@ -686,11 +691,11 @@ allAgents.forEach((agent,i)=>{
   // Label
   const label=makeLabel(agent);
   if(!namesVisible)label.visible=false;
-  label.position.set(dp.x,LABEL_Y,dp.z+.55);
+  label.position.set(dp.x,deskY+LABEL_Y,dp.z+.55);
   office.add(label);
   agentData.push({
     agent,state:'sitting',timer:rng.r(8,25),
-    home:{x:dp.x,z:dp.z+.55},
+    home:{x:dp.x,y:deskY,z:dp.z+.55},
     sittingChar,walker,label,dGlow,screenLight,
     walkTarget:null,walkPause:0
   });
@@ -761,6 +766,7 @@ const addPlant=__furn.addPlant;
 // Builder murni di parts/reception.js (diuji unit); di sini tinggal injek konteks.
 // Footprint OBSTACLES didaftarkan di dalam builder (import obstacles.js).
 const __rc=createReception({ THREE, office, M, MB, drawResepsiLogo, makeLabel, buildChar });
+if(__rc&&__rc.reception)__rc.reception.position.y=1.20;
 const rcLight=__rc.rcLight; const nxLabel=__rc.nxLabel; const nxChar=__rc.nexusChar;
 
 // ═══════════════════════════════════════════════════
@@ -771,13 +777,15 @@ createZones({THREE,office,namesVisible});
 
 // --- CAFÉ / COFFEE BAR (depan kiri) ---
 // Builder murni di parts/cafe.js (diuji unit); di sini tinggal injek konteks.
-createCafe({ THREE, office, M, MB });
+const __cafe=createCafe({ THREE, office, M, MB });
+if(__cafe&&__cafe.cafe)__cafe.cafe.position.y=1.20;
 
 // --- WELCOME & LOUNGE (kanan depan): set sofa lengkap, bukan lantai kosong ---
 // Sofa besar sudah ada di (10.5, 6) menghadap -X. Dilengkapi: karpet lounge,
 // coffee table + majalah, 2 kursi santai, lampu berdiri, meja majalah/TV info.
 // Builder murni di parts/lounge.js (diuji unit); di sini tinggal injek konteks.
 const __loungeObj=createLounge({ THREE, office, M, MB, drawTvDashboard });
+if(__loungeObj&&__loungeObj.lounge)__loungeObj.lounge.position.y=1.20;
 // --- SERVER ROOM + WATER COOLER ---
 // Builder murni di parts/serverroom.js (diuji unit); di sini tinggal injek konteks.
 // LEDs server room (fase & laju acak per LED) dikumpulkan utk animasi blink.
@@ -791,6 +799,10 @@ const __shelfObj=createBookshelf({ THREE, office, M, rng });
 
 // Papan PROYEK NYATA dibantuin.com — kartu dari task engine sungguhan (parts/projectboard.js)
 window.__projectBoard = createProjectBoard(office, THREE);
+if(window.__projectBoard&&window.__projectBoard.mesh){
+  window.__projectBoard.mesh.position.y=2.6+1.20;
+  if(window.__projectBoard.frame)window.__projectBoard.frame.position.y=2.6+1.20;
+}
 // --- DEKORASI TAMBAHAN: poster, tanaman besar, partisi kaca, rug, lampu lounge ---
 // Builder murni di parts/decor.js (diuji unit); di sini tinggal injek konteks.
 createDecor({ THREE, office, M });
