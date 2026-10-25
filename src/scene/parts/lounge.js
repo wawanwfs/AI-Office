@@ -74,8 +74,8 @@ export function createLounge(ctx) {
   function drawTv() { drawTvDashboard(tvx, window.__tvData); window.__lastTvDrawAt = Date.now() }
   drawTv();
   const tvTex = new THREE.CanvasTexture(tvC); tvTex.minFilter = THREE.LinearFilter;
-  async function tvPull() {
-    if (document.visibilityState === 'hidden') return;
+  async function tvPull(force = false) {
+    if (!force && document.visibilityState === 'hidden') return;
     try {
       const r = await fetch('/wfs-project');
       if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -84,7 +84,7 @@ export function createLounge(ctx) {
       drawTv(); tvTex.needsUpdate = true;
     } catch { /* tampilan terakhir tetap */ }
   }
-  tvPull();
+  tvPull(true);
   const tvIv = setInterval(tvPull, 60000);
   const tvOnVis = () => { if (document.visibilityState === 'visible') tvPull() };
   document.addEventListener('visibilitychange', tvOnVis);
