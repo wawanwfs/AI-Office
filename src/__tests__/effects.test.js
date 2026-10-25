@@ -1,6 +1,6 @@
 // Unit test efek layar: semua renderer menggambar, fallback tipe tak dikenal,
 // drawScreenFrame mereset alpha & menandai needsUpdate, dan drift dokumen memantul di batas ruangan.
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { SCREEN_RENDERERS, drawScreenFrame, createDriftingPages } from '../scene/parts/effects.js';
 
 // Stub 2D context: mencatat panggilan gambar tanpa canvas asli.
@@ -20,8 +20,8 @@ const TYPES = Object.keys(SCREEN_RENDERERS);
 describe('SCREEN_RENDERERS', () => {
   it('mencakup 9 tipe layar yang dipakai scene', () => {
     expect(TYPES.sort()).toEqual(
-      ['bugs', 'charts', 'deploy', 'docs', 'lead', 'map', 'palette', 'terminal', 'tracking'].length === TYPES.length
-        ? ['bugs', 'charts', 'deploy', 'docs', 'lead', 'map', 'palette', 'terminal', 'tracking']
+      ['bugs', 'board', 'charts', 'deploy', 'docs', 'lead', 'map', 'palette', 'terminal', 'tracking'].length === TYPES.length
+        ? ['bugs', 'board', 'charts', 'deploy', 'docs', 'lead', 'map', 'palette', 'terminal', 'tracking']
         : TYPES // fallback: cukup pastikan >= 8 renderer ada
     );
     expect(TYPES.length).toBeGreaterThanOrEqual(8);
@@ -63,6 +63,33 @@ describe('drawScreenFrame', () => {
     const s = { ctx: c, canvas: { width: 64, height: 40 }, type: 'tidak_ada', hex: '#fff', tex: { needsUpdate: false } };
     expect(() => drawScreenFrame(s, 0)).not.toThrow();
     expect(c.calls.fillText).toBeGreaterThan(0);
+  });
+});
+
+describe('SCREEN_RENDERERS.board (papan task live PM)', () => {
+  afterEach(() => { delete globalThis.window?.__tvData; });
+
+  it('dengan __tvData.tasks: gambar bar progres + persen + dot live', () => {
+    globalThis.window = { __tvData: { tasks: { total: 30, done: 23 } } };
+    const c = stubCtx();
+    SCREEN_RENDERERS.board(c, 128, 80, 1.0, '#F59E0B');
+    expect(c.calls.fillText).toBeGreaterThanOrEqual(2);   // judul + persen
+    expect(c.calls.fillRect).toBeGreaterThanOrEqual(2);   // track + isi bar
+    expect(c.globalAlpha).toBeLessThanOrEqual(1);
+  });
+
+  it('tanpa data: tampil "memuat" + bar animasi (tidak melempar, tidak kosong)', () => {
+    const c = stubCtx();
+    expect(() => SCREEN_RENDERERS.board(c, 128, 80, 1.0, '#F59E0B')).not.toThrow();
+    expect(c.calls.fillText).toBeGreaterThan(0);
+    expect(c.calls.fillRect).toBeGreaterThan(0);
+  });
+
+  it('total 0: persen 0 (tanpa NaN)', () => {
+    globalThis.window = { __tvData: { tasks: { total: 0, done: 0 } } };
+    const c = stubCtx();
+    SCREEN_RENDERERS.board(c, 128, 80, 1.0, '#F59E0B');
+    expect(c.calls.fillText).toBeGreaterThan(0); // '0% · 0/0 task' tergambar
   });
 });
 

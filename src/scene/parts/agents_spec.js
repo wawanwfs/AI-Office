@@ -22,7 +22,7 @@ export const AGENTS_EXTRA = [
   {name:'SUPPORT', color:0x84CC16,hex:'#84CC16',role:'Customer Success', screen:'docs',   hair:0x3B2412,shirt:0x3F6212,pants:0x1A2E05},
 ];
 
-export const SCREENS = ['terminal','charts','palette','deploy','map','docs','bugs'];
+export const SCREENS = ['terminal','charts','palette','deploy','map','docs','bugs','board'];
 
 export function allAgents(a = AGENTS, extra = AGENTS_EXTRA) {
   return [...a, ...extra];
