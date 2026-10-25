@@ -47,6 +47,14 @@ export default function ShConsole({ show, onClose }) {
   const [tTitle, setTTitle] = useState('')
   const [tRole, setTRole] = useState('backend')
   const [tPrompt, setTPrompt] = useState('')
+  const [wsId, setWsId] = useState(null)
+  const [wsPath, setWsPath] = useState('')
+  const [entries, setEntries] = useState([])
+  const [fileView, setFileView] = useState(null)
+  const [logs, setLogs] = useState([])
+  const [gitInfo, setGitInfo] = useState(null)
+  const [termCmd, setTermCmd] = useState('')
+  const [termOut, setTermOut] = useState('')
 
   const loadOverview = useCallback(async () => {
     try { setOv(await api('sh/overview')); setErr('') } catch (e) { setErr(e.message) }
@@ -67,7 +75,8 @@ export default function ShConsole({ show, onClose }) {
     else if (tab === 'projects') loadProjects()
     else if (tab === 'tasks') loadTasks()
     else if (tab === 'agents') loadAgents()
-  }, [show, tab, loadOverview, loadProjects, loadTasks, loadAgents])
+    else if (tab === 'ws' && projects.length === 0) loadProjects()
+  }, [show, tab, loadOverview, loadProjects, loadTasks, loadAgents, projects.length])
 
   const create = async () => {
     if (!name.trim() || !brief.trim()) { setErr('Nama dan brief wajib diisi'); return }
@@ -93,6 +102,40 @@ export default function ShConsole({ show, onClose }) {
     catch (e) { setErr(e.message) }
   }
 
+  const loadWsFiles = useCallback(async (pid, path) => {
+    try {
+      const q = path ? '?path=' + encodeURIComponent(path) : ''
+      const d = await api('projects/' + pid + '/files' + q)
+      setEntries(d.entries || []); setWsPath(d.path || ''); setErr('')
+    } catch (e) { setErr(e.message) }
+  }, [])
+  const openWsFile = async (pid, path) => {
+    try {
+      const d = await api('projects/' + pid + '/file?path=' + encodeURIComponent(path))
+      setFileView({ name: path, content: d.content }); setErr('')
+    } catch (e) { setErr(e.message) }
+  }
+  const loadWsLogs = async (pid) => {
+    try { const d = await api('projects/' + pid + '/logs?lines=100'); setLogs(d.logs || []); setErr('') }
+    catch (e) { setErr(e.message) }
+  }
+  const loadWsGit = async (pid) => {
+    try { setGitInfo(await api('projects/' + pid + '/git')); setErr('') }
+    catch (e) { setErr(e.message) }
+  }
+  const runTerm = async (pid) => {
+    if (!termCmd.trim()) return
+    setTermOut('menjalankan…')
+    try {
+      const d = await api('projects/' + pid + '/exec', { method: 'POST', body: { cmd: termCmd } })
+      setTermOut((d.stderr || '') + (d.stdout || ''))
+    } catch (e) { setTermOut('ERROR: ' + e.message) }
+  }
+  const selectWsProject = (pid) => {
+    setWsId(pid); setFileView(null); setTermOut(''); setGitInfo(null); setLogs([])
+    if (pid) { loadWsFiles(pid, ''); loadWsLogs(pid); loadWsGit(pid) }
+  }
+
   if (!show) return null
 
   return (
@@ -103,7 +146,7 @@ export default function ShConsole({ show, onClose }) {
           <button className="ibtn" onClick={onClose} aria-label="Tutup konsol" title="Tutup">✕</button>
         </div>
         <div style={STYLE.tabbar}>
-          {[['overview', 'Overview'], ['projects', 'Projects'], ['tasks', 'Tasks'], ['agents', 'Agents'], ['new', 'Project Baru']].map(([k, label]) => (
+          {[['overview', 'Overview'], ['projects', 'Projects'], ['tasks', 'Tasks'], ['agents', 'Agents'], ['ws', 'Workspace'], ['new', 'Project Baru']].map(([k, label]) => (
             <button key={k} aria-label={'Tab ' + label} style={{ ...STYLE.tab, ...(tab === k ? STYLE.tabActive : {}) }} onClick={() => setTab(k)}>{label}</button>
           ))}
         </div>
@@ -155,6 +198,67 @@ export default function ShConsole({ show, onClose }) {
                   </div>
                 ))}
               </div>
+            </div>
+          )}
+          {tab === 'ws' && (
+            <div>
+              <select style={STYLE.select} aria-label="Pilih project" value={wsId || ''} onChange={(e) => selectWsProject(e.target.value)}>
+                <option value="">— pilih project —</option>
+                {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+              </select>
+              {!wsId && <div style={{ color: '#8fa2c4' }}>Pilih project untuk melihat workspace.</div>}
+              {wsId && (
+                <div>
+                  <div style={STYLE.card}>
+                    <div style={{ fontWeight: 700, marginBottom: 8 }}>📁 File · {wsPath || '/'}</div>
+                    <div style={{ display: 'flex', gap: 6, marginBottom: 8 }}>
+                      <button style={STYLE.btnGhost} onClick={() => loadWsFiles(wsId, '')}>Refresh</button>
+                      {wsPath && <button style={STYLE.btnGhost} onClick={() => loadWsFiles(wsId, wsPath.split('/').slice(0, -1).join('/'))}>⬆ Naik</button>}
+                    </div>
+                    {entries.map((en) => (
+                      <div key={en.name} style={{ ...STYLE.row, cursor: 'pointer' }}
+                        onClick={() => en.type === 'dir'
+                          ? loadWsFiles(wsId, (wsPath ? wsPath + '/' : '') + en.name)
+                          : openWsFile(wsId, (wsPath ? wsPath + '/' : '') + en.name)}>
+                        <span>{en.type === 'dir' ? '📁 ' : '📄 '}{en.name}</span>
+                        {en.size != null && <span style={STYLE.tag}>{en.size} B</span>}
+                      </div>
+                    ))}
+                    {entries.length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>(folder kosong)</div>}
+                    {fileView && (
+                      <pre style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 220, overflow: 'auto', fontSize: 12, marginTop: 8 }}
+                        onClick={(e) => e.stopPropagation()}>{fileView.content}</pre>
+                    )}
+                  </div>
+                  <div style={STYLE.card}>
+                    <div style={{ fontWeight: 700, marginBottom: 8 }}>🪵 Container Logs</div>
+                    <button style={STYLE.btnGhost} onClick={() => loadWsLogs(wsId)}>Muat ulang</button>
+                    <pre style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 180, overflow: 'auto', fontSize: 11 }}>
+                      {logs.length ? logs.join('\n') : '(log kosong)'}</pre>
+                  </div>
+                  <div style={STYLE.card}>
+                    <div style={{ fontWeight: 700, marginBottom: 8 }}>🌿 Git</div>
+                    <button style={STYLE.btnGhost} onClick={() => loadWsGit(wsId)}>Status</button>
+                    {gitInfo && (gitInfo.repo
+                      ? <div>
+                          <pre style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 160, overflow: 'auto', fontSize: 11 }}>{gitInfo.status || '(bersih)'}</pre>
+                          <pre style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 160, overflow: 'auto', fontSize: 11 }}>{gitInfo.log}</pre>
+                        </div>
+                      : <div style={{ color: '#8fa2c4', fontSize: 13 }}>Workspace belum di-inisialisasi git.</div>)}
+                  </div>
+                  <div style={STYLE.card}>
+                    <div style={{ fontWeight: 700, marginBottom: 8 }}>💻 Terminal (di dalam container)</div>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <input style={{ ...STYLE.input, marginBottom: 0, flex: 1 }} placeholder="mis. ls / python3 test_app.py" aria-label="Command"
+                        value={termCmd} onChange={(e) => setTermCmd(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === 'Enter') runTerm(wsId) }} />
+                      <button style={STYLE.btn} onClick={() => runTerm(wsId)}>Jalankan</button>
+                    </div>
+                    <pre style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 200, overflow: 'auto', fontSize: 11, marginTop: 8 }}>
+                      {termOut || '(belum ada output)'}</pre>
+                  </div>
+                </div>
+              )}
             </div>
           )}
           {tab === 'new' && (

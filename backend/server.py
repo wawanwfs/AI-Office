@@ -5,7 +5,7 @@ WFS Project — Virtual Office Agent Gateway
 Backend nyata: chat agent per-role dengan API key/model yang dikonfigurasi user.
 Default AI diatur lewat env WFS_AI_BASE / WFS_AI_KEY / WFS_AI_MODEL.
 """
-import json, os, re, time, asyncio, pathlib
+import json, os, re, time, asyncio, pathlib, subprocess
 from typing import Optional
 import httpx
 from fastapi import FastAPI, HTTPException, Request
@@ -305,6 +305,109 @@ async def api_new_project(body: dict):
             print("plan err:", e)
     asyncio.create_task(_plan())
     return {"ok": True, "project_id": pid, "planning": True, "sandbox": sandbox}
+
+
+# ---------------------------------------------------------------
+# Engineering Workspace — file explorer, logs, git, sandbox exec
+# ---------------------------------------------------------------
+def _project_workspace(pid):
+    proj = sh_db.get_project(str(pid))
+    ws = proj and proj.get("workspace_path")
+    if not ws or not os.path.isdir(ws):
+        raise HTTPException(404, "workspace project tidak ditemukan")
+    return ws, proj
+
+
+def _safe_resolve(base, rel):
+    base_r = os.path.realpath(base)
+    p = os.path.realpath(os.path.join(base, rel or ""))
+    if p != base_r and not p.startswith(base_r + os.sep):
+        raise HTTPException(403, "path di luar workspace")
+    return p
+
+
+@app.get("/api/projects/{pid}/files")
+def api_project_files(pid: int, path: str = ""):
+    base, _ = _project_workspace(pid)
+    target = _safe_resolve(base, path)
+    if not os.path.isdir(target):
+        raise HTTPException(404, "folder tidak ditemukan")
+    entries = []
+    for name in sorted(os.listdir(target), key=str.lower):
+        full = os.path.join(target, name)
+        try:
+            st = os.stat(full)
+            is_dir = os.path.isdir(full)
+            entries.append({
+                "name": name, "type": "dir" if is_dir else "file",
+                "size": st.st_size if not is_dir else None,
+                "mtime": int(st.st_mtime),
+            })
+        except OSError:
+            continue
+    return {"path": path, "entries": entries}
+
+
+@app.get("/api/projects/{pid}/file")
+def api_project_file(pid: int, path: str = ""):
+    base, _ = _project_workspace(pid)
+    target = _safe_resolve(base, path)
+    if not os.path.isfile(target):
+        raise HTTPException(404, "file tidak ditemukan")
+    if os.path.getsize(target) > 200_000:
+        raise HTTPException(413, "file terlalu besar untuk ditampilkan")
+    with open(target, "r", errors="replace") as f:
+        return {"path": path, "content": f.read()}
+
+
+@app.get("/api/projects/{pid}/logs")
+def api_project_logs(pid: int, lines: int = 100):
+    _, proj = _project_workspace(pid)
+    cname = proj.get("container_name")
+    if not cname:
+        raise HTTPException(404, "container belum ada")
+    lines = max(10, min(int(lines), 500))
+    out = subprocess.run(
+        ["docker", "logs", "--tail", str(lines), cname],
+        capture_output=True, text=True, timeout=30)
+    if out.returncode != 0:
+        raise HTTPException(502, (out.stderr or out.stdout or "").strip()[:300])
+    return {"logs": out.stdout.splitlines()[-lines:]}
+
+
+@app.get("/api/projects/{pid}/git")
+def api_project_git(pid: int):
+    base, _ = _project_workspace(pid)
+    try:
+        st = subprocess.run(["git", "-C", base, "status", "--short"],
+                            capture_output=True, text=True, timeout=20)
+        lg = subprocess.run(["git", "-C", base, "log", "--oneline", "-10"],
+                            capture_output=True, text=True, timeout=20)
+        if lg.returncode != 0 and st.returncode != 0:
+            return {"repo": False, "status": "", "log": ""}
+        return {"repo": True, "status": st.stdout.strip(), "log": lg.stdout.strip()}
+    except Exception:
+        return {"repo": False, "status": "", "log": ""}
+
+
+@app.post("/api/projects/{pid}/exec")
+def api_project_exec(pid: int, body: dict):
+    _, proj = _project_workspace(pid)
+    cname = proj.get("container_name")
+    if not cname:
+        raise HTTPException(404, "container belum ada")
+    cmd = (body or {}).get("cmd", "").strip()
+    if not cmd or len(cmd) > 1000:
+        raise HTTPException(400, "cmd wajib / terlalu panjang")
+    try:
+        out = subprocess.run(["docker", "exec", "-w", "/app", cname,
+                              "sh", "-lc", cmd],
+                             capture_output=True, text=True, timeout=40)
+    except subprocess.TimeoutExpired:
+        raise HTTPException(408, "timeout eksekusi")
+    except Exception as e:
+        raise HTTPException(502, f"exec error: {e}")
+    return {"exit": out.returncode, "stdout": out.stdout[-8000:], "stderr": out.stderr[-4000:]}
 
 @app.get("/api/tasks")
 async def api_tasks(project: int = None):
