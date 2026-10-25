@@ -82,7 +82,7 @@ export function createLounge(ctx) {
       const d = await r.json();
       window.__tvData = { ...d, at: Date.now() };
       drawTv(); tvTex.needsUpdate = true;
-    } catch { /* tampilan terakhir tetap */ }
+    } catch (e) { window.__tvPullErr = String(e && e.stack || e); }
   }
   tvPull(true);
   const tvIv = setInterval(tvPull, 60000);

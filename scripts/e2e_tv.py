@@ -87,12 +87,17 @@ def main():
                     return r
 
         cmd("Page.enable"); cmd("Runtime.enable")
-        time.sleep(18)  # scene init + tvPull pertama (fetch /wfs-project)
-        r = cmd("Runtime.evaluate", expression=(
-            "JSON.stringify({tv: window.__tvData || null,"
-            " drawnAt: window.__lastTvDrawAt || 0,"
-            " agents: window.__agentData ? window.__agentData.length : -1})"))
-        st = json.loads(r["result"]["result"].get("value", "{}"))
+        st = {}
+        for _ in range(40):
+            time.sleep(0.5)
+            r = cmd("Runtime.evaluate", expression=(
+                "JSON.stringify({tv: window.__tvData || null,"
+                " drawnAt: window.__lastTvDrawAt || 0,"
+                " agents: window.__agentData ? window.__agentData.length : -1})"))
+            if r and "result" in r and "result" in r["result"]:
+                st = json.loads(r["result"]["result"].get("value", "{}"))
+                if st.get("tv") and st.get("drawnAt", 0) > 0 and st.get("agents", -1) > 0:
+                    break
         tv = st.get("tv") or {}
         t = tv.get("tasks") or {}
         total, done = t.get("total"), t.get("done")

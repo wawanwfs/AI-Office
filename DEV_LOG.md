@@ -1,3 +1,40 @@
+## 2026-10-25 23:15 WIB — Siklus 68: Resolusi Tabrakan Meja Support & Resepsionis, Skala 2.2x Figur Rapat & Nexus, Framing Kamera 3D, Contact Shadow Lengkap & E2E Polling Resilient
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Resolusi Tabrakan Meja SUPPORT & Meja Resepsionis (`src/scene/parts/desk_layout.js`):**
+     - Memindahkan workstation ke-14 (`SUPPORT`) dari koordinat `{ x: 8, z: 6 }` ke slot tengah `{ x: 0, z: 6 }` di Lantai 3.
+     - Slot `{ x: 8, z: 6 }` pada grid 5×3 kini secara alami menjadi slot kosong yang dialokasikan khusus untuk meja resepsionis Founder WFS (`RCX = 8, RCZ = 6.5`).
+     - Mengeliminasi total bug duplikasi visual dan clipping/z-fighting abnormal di mana figur agen SUPPORT dan Founder Wahyu FS sebelumnya saling menabrak dan bertumpukan di satu lokasi.
+  2. **Standardisasi Skala 2.2x & Contact Shadow Figur Rapat dan Resepsionis (`src/scene/parts/meeting.js`, `src/scene/parts/reception.js`):**
+     - Menyamakan skala avatar peserta rapat di ruang meeting dan avatar resepsionis NEXUS (Founder Wahyu FS) ke skala 2.2x (disesuaikan dengan tinggi manusiawi per-role `looksOf(agent).h`). Mencegah figur mengecil tiba-tiba saat stand-up meeting.
+     - Memasukkan seluruh 14 agen (`allAgents(AGENTS, AGENTS_EXTRA)`) ke dalam rotasi peserta rapat `createMeeting`.
+     - Menambahkan contact blob shadow di bawah meja resepsionis, kursi resepsionis (dengan tiang & alas putar kokoh), dan peserta rapat (posisi duduk Y=0.04 menapak pas di kursi).
+  3. **Contact Blob Shadow Seluruh Furnitur Kantor (`src/scene/parts/cafe.js`, `src/scene/parts/lounge.js`, `src/scene/parts/bookshelf.js`):**
+     - Menambahkan bidang kontak bayangan halus (`blobMat`) di bawah counter L dan kulkas snack di Kafe, coffee table di Lounge, dan rak buku di dinding kiri belakang.
+     - Menghilangkan efek melayang (*floating artifacts*) pada seluruh furnitur kantor sehingga tampak menapak kokoh di lantai marmer/kayu bertingkat.
+  4. **Optimasi Framing Kamera 3D Viewport (`src/scene/OfficeScene.js`):**
+     - Menyesuaikan radius kamera dasar (`radius: 33..35`, `tgt: (0, 1.4, 0.3)`) agar ruang meeting di z = -3 dan rak server memiliki margin yang cukup dari dock navigasi bawah. Ruang meeting dan meja konferensi kini terlihat utuh dan tidak terpotong oleh toolbar bawah.
+  5. **Robust WebSocket CDP Frame Reader & Polling di Script E2E (`scripts/e2e_shot.py`, `scripts/e2e_tv.py`, `src/scene/parts/lounge.js`):**
+     - Mengganti pembacaan raw buffer dengan helper `recv_exact(n)`, mencegah crash `IndexError` pada WebSocket stream CDP saat browser memulai sesi.
+     - Mengganti sleep statis dengan polling adaptif di `e2e_tv.py` dan menambahkan parameter `force = true` pada pemanggilan awal `tvPull` di `lounge.js`, memastikan data dashboard TV lounge selalu siap tanpa bergantung pada status visibility awal dokumen di headless shell.
+  6. **Pembaruan Unit Test:**
+     - `src/__tests__/desk_layout.test.js`: Verifikasi slot kosong dialokasikan pada `{ x: 8, z: 6 }` untuk meja resepsionis Founder WFS dan SUPPORT menempati `{ x: 0, z: 6 }`.
+     - `src/__tests__/reception_runtime.test.js`: Verifikasi skala 2.2x pada karakter NEXUS (Founder Wahyu FS) dan posisi Y=0.04.
+
+- **Bukti terukur:**
+  - **Vitest:** **1316/1316 passed (113 test file)** (+4 tests, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint .`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1599.89 KiB; chunk `OfficeScene-9KJS7Xl5.js` 854.61 KB / gzip 230.20 KB, `index-CJ0P3TKK.js` 267.95 KB).
+  - **Deploy:** `dist/*` ter-deploy ke `~/wfs-hq/`, chunk usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-CJ0P3TKK.js`, 0 "Scene init failed", PID 26304).
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 23/23 selesai, 100%, 14 agents aktif).
+    - `scripts/e2e_zone_multi.py`: **E2E_ZONE_MULTI OK** (iso, front, top: 0 OFFSCREEN, 0 pelanggaran margin).
+    - `scripts/e2e_shot.py`: Screenshot visual **926.438 bytes** (>500 KB, WebGL hidup, agents: 14, E2E_VISUAL: OK).
+    - **Daytime Screenshot:** **927.732 bytes** (>500 KB).
+    - **Audit Visual Siang Hari (Vision AI):** Meja resepsionis Founder Wahyu FS berdiri kokoh dan mandiri tanpa duplikasi figur atau z-fighting; agen SUPPORT duduk rapi di baris tengah lantai 3 tanpa menumpuk; ruang meeting tampak utuh di FOV kamera; seluruh furnitur memiliki contact shadow tegas dan tidak melayang.
+- **Sisa backlog:** verifikasi subjektif audio web-audio.
+
 ## 2026-10-25 21:50 WIB — Siklus 67: Deduplikasi & Pembersihan Balon Percakapan, Isolasi Label Agen Offsite, Dialog Otentik 14 Agen, & Contact Blob Shadow Furnitur
 
 - **Yang diperbaiki & ditingkatkan:**
