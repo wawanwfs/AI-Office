@@ -8,8 +8,8 @@
 // return: goal baru (objek sama, dimutasi t.set) atau goal reset baru.
 export function updateFollowGoal(goal, homeRadius, radiusFallback, homeT = { x: 0, y: 1.8, z: 0 }) {
   const f = goal.follow;
-  const fp = f.walker && f.walker.visible ? f.walker.position : { x: f.home.x, y: 0, z: f.home.z };
-  goal.t.set(fp.x, 1.5, fp.z);
+  const fp = f.walker && f.walker.visible ? f.walker.position : { x: f.home.x, y: f.home.y || 0, z: f.home.z };
+  goal.t.set(fp.x, (fp.y || 0) + 1.5, fp.z);
   if (f.state === 'offsite') {
     return { t: homeT.clone ? homeT.clone() : { ...homeT }, r: homeRadius || radiusFallback, reset: true };
   }

@@ -352,8 +352,8 @@ function addAccessories(g,agent,headY,fz,torsoY){
   const add=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);g.add(m);return m};
   const B=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
   if(has('glasses')){
-    [-1,1].forEach(sd=>add(B(.075,.06,.012),new THREE.MeshBasicMaterial({color:0x111111}),sd*.06,headY+.02,fz*.118));
-    add(B(.04,.012,.012),new THREE.MeshBasicMaterial({color:0x111111}),0,headY+.025,fz*.118);
+    [-1,1].forEach(sd=>add(B(.075,.06,.012),new THREE.MeshBasicMaterial({color:0x111111}),sd*.06,headY+.02,fz*.138));
+    add(B(.04,.012,.012),new THREE.MeshBasicMaterial({color:0x111111}),0,headY+.025,fz*.138);
   }
   if(has('hijab')){
     const c=0xF5F0E6, hc=agent.color;

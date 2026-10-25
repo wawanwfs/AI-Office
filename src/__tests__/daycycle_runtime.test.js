@@ -205,8 +205,34 @@ describe('createShift — mesin fase shift (eksekusi efek)', () => {
     for (let m = 400; m <= 900; m++) s.update(m); // fajar → siang → lunch → sore
     // phase berakhir working (sore sebelum pulang)
     expect(s.phase).toBe('working');
-    // agen yang tadinya sitting: setelah lunch window ia walking_back (bukan stuck 'walking_out' duplikat)
-    expect(ctx.agentData[0].state).toBe('walking_back');
+    // agen yang tadinya sitting: setelah lunch window ia walking_back (bukan stuck 'walking_out' duplikat)\n    expect(ctx.agentData[0].state).toBe('walking_back');
+    s.dispose();
+  });
+
+  it('arrive: mendukung agen ekstra di luar 8 indeks historis', () => {
+    vi.useFakeTimers();
+    const ctx = shiftCtx();
+    const s = createShift(ctx);
+    s.update(400); // transisi ke night
+    s.update(SHIFT.ARRIVE_FROM); // 480 → arrive
+    const extraAd = ctx.agentData[8]; // agen ke-8 (indeks 8, di luar ARRIVE 0..7)
+    extraAd.state = 'offsite';
+    vi.advanceTimersByTime(14 * 800 + 50);
+    expect(extraAd.walker.visible).toBe(true);
+    expect(extraAd.state).toBe('walking_back');
+    s.dispose();
+  });
+
+  it('working_am / working_pm: memulihkan agen offsite langsung ke meja kerja', () => {
+    const ctx = shiftCtx();
+    const ad = ctx.agentData[1];
+    const s = createShift(ctx);
+    s.update(400); // night
+    expect(ad.state).toBe('offsite');
+    s.update(600); // 10:00 AM: dari night ke working_am
+    expect(ad.state).toBe('sitting');
+    expect(ad.sittingChar.visible).toBe(true);
+    expect(ad.walker.visible).toBe(false);
     s.dispose();
   });
 

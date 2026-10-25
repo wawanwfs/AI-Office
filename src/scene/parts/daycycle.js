@@ -116,7 +116,9 @@ export function createShift(ctx) {
   const later = (ms, fn) => { const id = setTimeout(() => { timers.delete(id); fn(); }, ms); timers.add(id); };
 
   function arrive() {
+    const handled = new Set();
     ARRIVE.forEach((idx, i) => {
+      handled.add(idx);
       const ad = agentData[idx];
       if (!ad || ad.state !== 'offsite') return;
       later(i * 800, () => {
@@ -132,21 +134,50 @@ export function createShift(ctx) {
         ad.state = 'walking_back';
       });
     });
+    // Agen ekstra di luar daftar historis (mis. AGENTS_EXTRA)
+    let extraIndex = ARRIVE.length;
+    agentData.forEach((ad, idx) => {
+      if (handled.has(idx) || !ad || ad.state !== 'offsite') return;
+      later((extraIndex++) * 600, () => {
+        ad.walker.visible = true;
+        ad.walker.position.set(DOOR.x, 0, DOOR.z);
+        ad.sittingChar.visible = false;
+        ad.walkTarget = { x: ad.home.x, z: ad.home.z };
+        ad._route = null;
+        ad.resetStride = true;
+        ad.state = 'walking_back';
+      });
+    });
   }
   function depart() {
+    const handled = new Set();
     DEPART.forEach((idx, i) => {
+      handled.add(idx);
       const ad = agentData[idx];
       if (!ad) return;
       later(i * 800, () => {
         if (ad.state !== 'sitting') return;
         ad.sittingChar.visible = false;
         ad.walker.visible = true;
-        ad.walker.position.set(ad.home.x, 0, ad.home.z);
+        ad.walker.position.set(ad.home.x, ad.home.y || 0, ad.home.z);
         // Pintu keluar: target titik DI DALAM kantor dekat celah pintu (x=-12, z=8),
         // lalu rute koridor via stepRoute — dulu langsung DOOR dengan tanpa rute
         // (leaving pakai stepRoute → garis lurus menembus baris meja).
         ad.walkTarget = { x: -12, z: 8 };
         ad._route = null; // recalc otomatis via stepRoute fallback
+        ad.state = 'leaving';
+      });
+    });
+    let extraIndex = DEPART.length;
+    agentData.forEach((ad, idx) => {
+      if (handled.has(idx) || !ad) return;
+      later((extraIndex++) * 600, () => {
+        if (ad.state !== 'sitting') return;
+        ad.sittingChar.visible = false;
+        ad.walker.visible = true;
+        ad.walker.position.set(ad.home.x, ad.home.y || 0, ad.home.z);
+        ad.walkTarget = { x: -12, z: 8 };
+        ad._route = null;
         ad.state = 'leaving';
       });
     });
@@ -164,15 +195,23 @@ export function createShift(ctx) {
     });
   }
 
+  function restoreWorkingDesks() {
+    agentData.forEach((ad) => {
+      if (ad.state === 'offsite') {
+        ad.sittingChar.visible = true; ad.walker.visible = false; ad.state = 'sitting';
+        ad.timer = 4 + rng.r(0, 8);
+      }
+    });
+  }
+
   // ── Lunch break 12:00–13:00: agent ramai-ramai ke CAFÉ, lalu kembali ──
-  // Dipicu dari OfficeScene: saat menit masuk window lunch, setLunch(true);
-  // saat keluar window, setLunch(false) → semua yang sedang lunch pulang ke meja.
+  // Dipicu dari OfficeScene: saat menit masuk window lunch, setLunch(true);\n  // saat keluar window, setLunch(false) → semua yang sedang lunch pulang ke meja.
   function sendToLunch() {
     phase = 'lunch';
     agentData.forEach((ad) => {
       if (ad.state !== 'sitting') return;
       ad.sittingChar.visible = false; ad.walker.visible = true;
-      ad.walker.position.set(ad.home.x, 0, ad.home.z);
+      ad.walker.position.set(ad.home.x, ad.home.y || 0, ad.home.z);
       ad.lunch = true;
       ad.state = 'walking_out';
       const spot = lunchSpot(rng);
@@ -208,6 +247,7 @@ export function createShift(ctx) {
         else if (ev === 'depart') depart();
         else if (ev === 'nightfall') nightfall();
         else if (ev === 'dawn') dawn();
+        else if (ev === 'working_am' || ev === 'working_pm') restoreWorkingDesks();
       }
     },
     dispose() { timers.forEach(clearTimeout); timers.clear(); },

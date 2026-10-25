@@ -24,6 +24,12 @@ describe('updateFollowGoal', () => {
     expect(g.t.x).toBe(5); expect(g.t.y).toBe(1.5); expect(g.t.z).toBe(6);
   });
 
+  it('target memperhitungkan elevasi lantai bertingkat (home.y > 0)', () => {
+    const g = mkGoal({ visible: false }, 'walking_out', { x: 4, y: 1.20, z: 6 });
+    updateFollowGoal(g, 30, 20);
+    expect(g.t.x).toBe(4); expect(g.t.y).toBeCloseTo(2.70); expect(g.t.z).toBe(6);
+  });
+
   it('agent offsite → goal reset ke HOME dengan r = homeRadius', () => {
     const g = mkGoal({ visible: true, position: { x: 1, z: 1 } }, 'offsite');
     const out = updateFollowGoal(g, 30, 20, { clone: cloneHome });
