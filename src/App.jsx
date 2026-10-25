@@ -185,11 +185,12 @@ export default function App() {
         }
         window.__wfsSceneSelect = (name) => {
           const s = sceneRef.current
-          if (!s || !s.setSelected) return
+          if (!s || !s.setSelected || !name) return
           const idMap = {}
           ;(window.__wfsAgentIdList || []).forEach(x => { idMap[x.name] = x.id })
-          const sceneName = SCENE_BY_ID[idMap[name]] || name
-          const idx = (window.__agentData || []).findIndex(ad => ad.agent && ad.agent.name === sceneName)
+          const mapped = SCENE_BY_ID[idMap[name]] || SCENE_BY_ID[name] || name
+          const targetName = String(mapped).toUpperCase()
+          const idx = (window.__agentData || []).findIndex(ad => ad.agent && String(ad.agent.name || '').toUpperCase() === targetName)
           if (idx >= 0) s.setSelected(idx)
         }
       } catch (err) {

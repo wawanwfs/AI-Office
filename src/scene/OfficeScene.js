@@ -191,9 +191,11 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
     let p=hits[0].object;
     while(p){ const f=agentData.find(ad=>ad.sittingChar===p||ad.walker===p); if(f){root=f;break} p=p.parent; }
   }
-  if(root&&window.__wfsSelectAgent){
-    const idMap={}; window.__wfsAgentIdList&&window.__wfsAgentIdList.forEach(x=>idMap[x.name]=x.id);
-    window.__wfsSelectAgent(idMap[root.agent.name]||root.agent.name);
+  if(root){
+    if(window.__wfsSelectAgent){
+      const idMap={}; window.__wfsAgentIdList&&window.__wfsAgentIdList.forEach(x=>idMap[x.name]=x.id);
+      window.__wfsSelectAgent(idMap[root.agent.name]||root.agent.name);
+    }
     const wp=root.walker.visible?root.walker.position:{x:root.home.x,y:root.home.y||0,z:root.home.z};
     if(homeRadius===null)homeRadius=Math.max(24,Math.min(60,sph.radius));
     focusGoal={t:new THREE.Vector3(wp.x,(wp.y||0)+1.5,wp.z),r:Math.min(sph.radius,24),follow:root};

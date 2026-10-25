@@ -31,9 +31,13 @@ describe('extended_desks — EXTENDED_SPECIALISTS', () => {
     }
   });
 
-  it('setiap lantai (1, 2, 3) punya minimal satu spesialis', () => {
+  it('setiap lantai (1, 2, 3) punya tepat 4 spesialis kerja terdistribusi', () => {
     const floors = new Set(EXTENDED_SPECIALISTS.map((a) => a.floor));
     expect(floors).toEqual(new Set([1, 2, 3]));
+    for (const f of [1, 2, 3]) {
+      const perFloor = EXTENDED_SPECIALISTS.filter((a) => a.floor === f);
+      expect(perFloor).toHaveLength(4);
+    }
   });
 
   it('tiap spesialis punya role & screen yang terisi', () => {

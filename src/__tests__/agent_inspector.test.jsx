@@ -24,6 +24,19 @@ describe('AgentInspector — kartu profil agen 3D', () => {
     expect(screen.getByText('Founder / CEO')).toBeTruthy()
     expect(screen.getByText('WFS PROJECT')).toBeTruthy()
     expect(screen.getByText('OmniRoute / GLM-5')).toBeTruthy()
+    expect(screen.getByText('Lokasi Lantai')).toBeTruthy()
+  })
+
+  it('menampilkan badge lokasi lantai dinamis jika agent.floor disediakan', () => {
+    const l1Agent = { ...mockAgent, name: 'Aris', role: 'Solution Architect', floor: 1 }
+    const { rerender } = render(<AgentInspector agent={l1Agent} onClose={vi.fn()} onChatWith={vi.fn()} />)
+    expect(screen.getByText('L1 · Ops & AI')).toBeTruthy()
+
+    rerender(<AgentInspector agent={{ ...mockAgent, floor: 2 }} onClose={vi.fn()} onChatWith={vi.fn()} />)
+    expect(screen.getByText('L2 · Engineering')).toBeTruthy()
+
+    rerender(<AgentInspector agent={{ ...mockAgent, floor: 3 }} onClose={vi.fn()} onChatWith={vi.fn()} />)
+    expect(screen.getByText('L3 · Executive')).toBeTruthy()
   })
 
   it('klik tombol tutup memanggil onClose', () => {

@@ -72,7 +72,7 @@ export default function AgentInspector({ agent, onClose, onChatWith }) {
       </div>
 
       <div style={{ padding: '14px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
-        {/* Status Chip & Proyek */}
+        {/* Status Chip & Lokasi Lantai */}
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '8px 10px' }}>
             <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 3 }}>Status</span>
@@ -82,15 +82,19 @@ export default function AgentInspector({ agent, onClose, onChatWith }) {
             </div>
           </div>
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '8px 10px' }}>
-            <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 3 }}>Proyek</span>
+            <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 3 }}>Lokasi Lantai</span>
             <div style={{ fontSize: 12, color: '#fff', fontWeight: 600 }}>
-              WFS PROJECT
+              {agent.floor ? `L${agent.floor} · ${agent.floor === 1 ? 'Ops & AI' : agent.floor === 2 ? 'Engineering' : 'Executive'}` : 'L3 · Penthouse'}
             </div>
           </div>
         </div>
 
-        {/* AI Engine & Sandbox */}
+        {/* AI Engine, Proyek & Sandbox */}
         <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '10px 12px' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>
+            <span>Proyek</span>
+            <span style={{ color: '#fff', fontWeight: 600 }}>WFS PROJECT</span>
+          </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>
             <span>Model AI</span>
             <span style={{ color: 'var(--teal)', fontWeight: 600 }}>OmniRoute / GLM-5</span>

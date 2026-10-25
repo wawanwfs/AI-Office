@@ -73,7 +73,11 @@ export default function WfsPanel() {
           (x.name && id && x.name.toLowerCase() === String(id).toLowerCase()) ||
           (x.id && id && x.id.toLowerCase() === String(id).toLowerCase())
         )
-        if (a) { setOpen(true); setTab('chat'); choose(a) }
+        if (a) {
+          setOpen(true); setTab('chat'); choose(a)
+        } else {
+          setOpen(true); setTab('chat')
+        }
       }
     }).catch(e => setLoadErr('Gagal memuat daftar agent: ' + e.message)).finally(() => setLoading(false))
   }, [choose])

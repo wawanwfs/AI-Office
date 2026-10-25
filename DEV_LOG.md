@@ -1,3 +1,30 @@
+## 2026-10-26 03:10 WIB — Siklus 72: Ketahanan Interaksi 26 Agen Kampus 3D, Badge Lokasi Lantai AgentInspector & Sinkronisasi Seleksi Multi-Lantai
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Ketahanan Interaksi Klik & Seleksi Agen 3D (`src/scene/OfficeScene.js`):**
+     - Memperbaiki pengkondisian seleksi agen di mana sebelumnya seluruh handler klik 3D (`pointerup`) dibungkus dalam `if(root&&window.__wfsSelectAgent)`. Jika hook global `__wfsSelectAgent` belum siap atau panel belum dimuat, klik pada karakter 3D diabaikan total tanpa feedback.
+     - Kini `if(root)` selalu menjalankan fokus kamera, cincin seleksi emas (`selRing`), speech bubble sapaan, dan pemanggilan callback `onSelectAgent(root.agent)`, sembari memanggil `window.__wfsSelectAgent` bila tersedia.
+  2. **Badge Lokasi Lantai Real-Time pada Profil Agen (`src/components/AgentInspector.jsx`, `src/__tests__/agent_inspector.test.jsx`):**
+     - Menambahkan indikator 'Lokasi Lantai' pada kartu inspektur agen (`L1 · Ops & AI`, `L2 · Engineering`, `L3 · Executive`, atau default Penthouse Suite) mendampingi status 'Aktif Bekerja' dan proyek 'WFS PROJECT'. Pengguna kini langsung mengetahui posisi fisik agen di kampus 3D bertingkat saat agen diklik.
+     - Menambahkan pengujian reaktivitas lokasi lantai dinamis di unit test.
+  3. **Seleksi Dua Arah Case-Insensitive & Fallback Panel Chat (`src/App.jsx`, `src/components/WfsPanel.jsx`):**
+     - Memperbarui `window.__wfsSceneSelect` agar memetakan ID gateway dan nama agen secara case-insensitive (`toUpperCase()`), sehingga pencarian nama seperti 'Aris' / 'aris' dapat langsung memilih spesialis 'ARIS' di kampus 3D tanpa mismatch.
+     - Menyediakan fallback pembukaan panel chat pada `window.__wfsSelectAgent` di `WfsPanel.jsx` jika agen belum terdaftar di list backend gateway.
+  4. **Penyelarasan Pengujian Spesialis Kampus (`src/__tests__/extended_desks.test.js`):**
+     - Memutakhirkan unit test data spesialis kampus WFS PROJECT dari 6 menjadi 12 spesialis terdistribusi simetris (masing-masing 4 spesialis kerja di Lantai 1, Lantai 2, dan Lantai 3).
+
+- **Bukti terukur:**
+  - **Vitest:** **1366/1366 passed (119 test file)** (+1 test baru, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint .`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1627.20 KiB; chunk `OfficeScene-DcP7AcAN.js` 861.01 KB / gzip 232.11 KB, `index-8_JBfe4Y.js` 288.22 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, chunk usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-8_JBfe4Y.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **552.421 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `scripts/e2e_zone_multi.py`: **E2E_ZONE_MULTI: OK** (iso, front, top).
+- **Sisa backlog:** verifikasi subjektif audio web-audio.
+
 ## 2026-10-26 02:05 WIB — Siklus 71: Presisi Navigasi Lantai Bertingkat (FloorNavigator Capsule), Eliminasi Overlap Ticker-HUD-Label, dan Elevasi Alami Balon Obrolan 3D
 
 - **Yang diperbaiki & ditingkatkan:**
