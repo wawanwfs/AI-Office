@@ -1,3 +1,34 @@
+## 2026-10-25 23:55 WIB — Siklus 69: Interaktivitas Lengkap Meja Resepsionis Founder Wahyu FS, Presisi Framing & Fokus Papan Proyek 3D Lantai 3, Standardisasi Tipografi Akronim (Wahyu FS) & Deploy Otomatis
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Interaktivitas Meja Resepsionis Founder Wahyu FS (`src/scene/OfficeScene.js`):**
+     - Menghubungkan figur NEXUS (Founder Wahyu FS) di meja resepsionis Lantai 3 (`x: 7.6, z: 6.1, y: 1.24`) ke raycaster klik dan hover.
+     - Saat diklik, kamera secara mulus berfokus ke meja Founder (`focusGoal = { t: (7.6, 2.04, 6.1), r: 16 }`) dan memunculkan speech bubble sambutan otentik: `“Halo! Selamat datang di markas WFS Project & dibantuin.com!”` beraksen emas `#F59E0B`.
+     - Hover pointer mendeteksi figur Founder dan mengubah kursor menjadi pointer tangan (`cursor: pointer`).
+  2. **Presisi Framing, Fokus & Deteksi Klik Papan Proyek 3D Lantai 3 (`src/scene/OfficeScene.js`, `src/scene/parts/projectboard.js`):**
+     - Menyesuaikan koordinat target kamera saat papan proyek diklik ke ketinggian Lantai 3 yang sesungguhnya (`Y = 3.80`), bukan lagi membidik ke lantai bawah (`Y = 2.55`), sehingga papan proyek 7.4m × 4.04m terbingkai penuh di tengah viewport.
+     - Elevasi balon petunjuk navigasi dinaikkan ke Y = 5.95 (`bpos.y + 2.15`), bertengger rapi tepat di atas bingkai papan dan tidak menutupi kartu task nyata.
+     - Deteksi klik dan hover diperluas mencakup bingkai papan (`boardFrame`), sehingga interaksi pengguna responsif baik saat mengklik area kartu maupun tepian bingkai.
+     - Double click pada seluruh lantai memperhitungkan elevasi aktual titik klik (`Math.max(1.5, (hits[0].point.y || 0) + 0.8)`), mempertahankan sudut pandang vertikal yang konsisten di Lantai 1, 2, maupun 3.
+  3. **Standardisasi Tipografi Akronim Nama & Nameplate (`src/scene/parts/nameplate_spec.js`, `src/scene/parts/label_spec.js`):**
+     - Memperluas kamus `ACRONYMS` dengan `'fs'`, `'wfs'`, `'cs'`, `'pm'`, `'it'`, `'cto'`, `'ceo'`, memastikan nama Founder `'WAHYU FS'` dirender secara anggun sebagai `'Wahyu FS'` (bukan `'Wahyu Fs'`) baik pada 3D floating badge nameplate maupun avatar desk plate.
+  4. **Pembaruan & Penambahan Unit Test:**
+     - `src/__tests__/reception_runtime.test.js`: Menambahkan verifikasi normalisasi nama Founder menjadi `'Wahyu FS'` dan role `'Founder / CEO'`.
+     - `src/__tests__/nameplate_spec.test.js` & `src/__tests__/label_spec.test.js`: Verifikasi kapitalisasi akronim `FS`, `WFS`, `CS`, `PM`.
+     - `src/__tests__/projectboard_runtime.test.js`: Verifikasi posisi X papan proyek di -8.35.
+
+- **Bukti terukur:**
+  - **Vitest:** **1322/1322 passed (114 test file)** (+6 tests, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint .`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1601.37 KiB; chunk `OfficeScene-B0o8wew5.js` 856.12 KB / gzip 230.79 KB, `index-Db_DrLKs.js` 267.95 KB).
+  - **Deploy:** `dist/*` ter-deploy ke `~/wfs-hq/`, chunk usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-Db_DrLKs.js`, 0 "Scene init failed", PID 78911).
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 23/23 selesai, 100%, 14 agents aktif).
+    - `scripts/e2e_zone_multi.py`: **E2E_ZONE_MULTI OK** (iso, front, top: 0 OFFSCREEN, 0 pelanggaran margin).
+    - `scripts/e2e_shot.py`: Screenshot visual **946.943 bytes** (>500 KB, WebGL hidup, agents: 14, E2E_VISUAL: OK).
+- **Sisa backlog:** verifikasi subjektif audio web-audio.
+
 ## 2026-10-25 23:15 WIB — Siklus 68: Resolusi Tabrakan Meja Support & Resepsionis, Skala 2.2x Figur Rapat & Nexus, Framing Kamera 3D, Contact Shadow Lengkap & E2E Polling Resilient
 
 - **Yang diperbaiki & ditingkatkan:**

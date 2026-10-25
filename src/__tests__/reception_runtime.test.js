@@ -161,6 +161,13 @@ describe('createReception — meja resepsionis kantor 3D', () => {
     expect(refs.nxLabel.position).toMatchObject({ x: RCX - 0.4, y: 3.3, z: RCZ - 0.4 })
   })
 
+  it('nama Founder WAHYU FS dinormalisasi dengan akronim FS menjadi Wahyu FS', async () => {
+    const { labelName } = await import('../scene/parts/label_spec.js')
+    const { ctx } = await build(makeCtx())
+    expect(labelName(ctx.labeledWith().name)).toBe('Wahyu FS')
+    expect(ctx.labeledWith().role).toBe('Founder / CEO')
+  })
+
   it('footprint meja didaftarkan ke OBSTACLES: [RCX−1.3, RCX+1.55, RCZ−.35, RCZ+.35]', async () => {
     const { OBSTACLES } = await import('../scene/parts/obstacles.js')
     const before = OBSTACLES.length
