@@ -6,10 +6,11 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
 
 const texts = []
+const pathMoves = []
 function makeCtx() {
   return {
     fillStyle: '', strokeStyle: '', lineWidth: 0, font: '', textAlign: '', textBaseline: 'alphabetic',
-    fillRect() {}, strokeRect() {}, beginPath() {}, moveTo() {}, lineTo() {}, arcTo() {},
+    fillRect() {}, strokeRect() {}, beginPath() {}, moveTo(x, y) { pathMoves.push([x, y]) }, lineTo() {}, arcTo() {},
     closePath() {}, fill() {}, stroke() {},
     fillText(t) { texts.push(String(t)) },
     measureText(s) { return { width: String(s).length * 10 } },
@@ -62,6 +63,7 @@ let fetchMock
 beforeEach(() => {
   vi.useFakeTimers()
   texts.length = 0
+  pathMoves.length = 0
   canvases = []
   stubCreateElement()
   Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
@@ -129,6 +131,12 @@ describe('createProjectBoard — render konten', () => {
     expect(texts.some(t => t.includes('GAGAL 1'))).toBe(true)
     expect(texts.some(t => t.includes('REVIEW 2'))).toBe(true)
     expect(texts.some(t => t.includes('#7 task gagal'))).toBe(true)
+  })
+
+  it('kotak latar banner GAGAL/REVIEW memakai lebar numerik (regresi: measureText tanpa .width → NaN)', async () => {
+    await mount()
+    const nonFinite = pathMoves.filter(([x, y]) => !Number.isFinite(x) || !Number.isFinite(y))
+    expect(nonFinite).toEqual([])
   })
 
   it('tanpa task bermasalah → banner tidak digambar', async () => {

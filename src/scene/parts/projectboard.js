@@ -85,7 +85,7 @@ export function createProjectBoard(office, THREE) {
       if (full) {
         g.font = 'bold 24px sans-serif'
         const nameStr = full.names.join('  ·  ')
-        const bw = g.measureText(parts.map(p => p[0]).join(' · ') + ' — ') + g.measureText('  ·  ') * (full.names.length - 1) + g.measureText(nameStr).width + 44
+        const bw = g.measureText(parts.map(p => p[0]).join(' · ') + ' — ').width + g.measureText('  ·  ').width * (full.names.length - 1) + g.measureText(nameStr).width + 44
         g.fillStyle = 'rgba(239,68,68,.12)'; roundRect((W - bw) / 2, 166, bw, 34, 8); g.fill()
         g.strokeStyle = 'rgba(239,68,68,.5)'; g.lineWidth = 2; roundRect((W - bw) / 2, 166, bw, 34, 8); g.stroke()
         g.textAlign = 'left'
