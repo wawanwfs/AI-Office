@@ -104,11 +104,41 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(msg)
 
+    def _proxy_preview(self):
+        """Forward /preview/{project}/... ke gateway API (8787) yang reverse-proxy ke container."""
+        url = "http://127.0.0.1:8787" + self.path
+        try:
+            req = urllib.request.Request(url, method="GET")
+            with urllib.request.urlopen(req, timeout=60) as r:
+                data = r.read()
+                ctype = r.headers.get("Content-Type", "text/html; charset=utf-8")
+                self.send_response(r.status)
+                self.send_header("Content-Type", ctype)
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+        except urllib.error.HTTPError as e:
+            data = e.read()
+            self.send_response(e.code)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+        except Exception as e:
+            msg = json.dumps({"error": str(e)}).encode()
+            self.send_response(502)
+            self.send_header("Content-Type", "application/json")
+            self.send_header("Content-Length", str(len(msg)))
+            self.end_headers()
+            self.wfile.write(msg)
+
     def do_GET(self):
         if project_api and self.path.split("?")[0] == "/wfs-project":
             return project_api.handle_project(self)
         if self.path.startswith("/wfs-api/"):
             return self._proxy()
+        if self.path.startswith("/preview/"):
+            return self._proxy_preview()
         if self._serve_static():
             return
         if self.path.split("?")[0] in ("/", "/index.html"):

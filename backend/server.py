@@ -8,9 +8,9 @@ Default AI diatur lewat env WFS_AI_BASE / WFS_AI_KEY / WFS_AI_MODEL.
 import json, os, re, time, asyncio, pathlib
 from typing import Optional
 import httpx
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, Response
 from pydantic import BaseModel
 
 BASE = pathlib.Path(__file__).parent
@@ -132,6 +132,29 @@ def health():
 def software_house_overview():
     """Ringkasan dashboard owner — angka nyata dari state SQLite."""
     return sh_db.get_overview()
+
+
+@app.api_route("/preview/{slug}/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])
+async def preview_proxy(slug: str, path: str, request: Request):
+    """Reverse-proxy ke container sandbox project (preview URL nyata, bukan localhost host)."""
+    proj = sh_db.get_project(slug)
+    port = proj and proj.get("preview_port")
+    if not port:
+        raise HTTPException(404, "project/preview tidak ditemukan")
+    target = f"http://127.0.0.1:{port}/{path}"
+    if request.url.query:
+        sep = "&" if "?" in target else "?"
+        target += sep + request.url.query
+    body = await request.body() if request.method in ("POST", "PUT", "PATCH") else None
+    headers = {k: v for k, v in request.headers.items() if k.lower() not in
+               ("host", "content-length", "connection", "accept-encoding")}
+    try:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+            r = await client.request(request.method, target, content=body, headers=headers)
+        return Response(content=r.content, status_code=r.status_code,
+                        media_type=r.headers.get("content-type"))
+    except Exception as e:
+        raise HTTPException(502, f"preview error: {e}")
 
 @app.get("/api/status")
 def status():
