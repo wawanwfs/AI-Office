@@ -56,6 +56,7 @@ export default function ShConsole({ show, onClose }) {
   const [termCmd, setTermCmd] = useState('')
   const [termOut, setTermOut] = useState('')
   const [approvals, setApprovals] = useState([])
+  const [gitMsg, setGitMsg] = useState('')
 
   const loadOverview = useCallback(async () => {
     try { setOv(await api('sh/overview')); setErr('') } catch (e) { setErr(e.message) }
@@ -76,6 +77,13 @@ export default function ShConsole({ show, onClose }) {
   const decideApproval = async (aid, action) => {
     try { await api('approvals/' + aid + '/decide', { method: 'POST', body: { action } }); await loadApprovals() }
     catch (e) { setErr(e.message) }
+  }
+  const commitWs = async (pid) => {
+    if (!gitMsg.trim()) { setErr('Pesan commit wajib'); return }
+    try {
+      await api('projects/' + pid + '/git/commit', { method: 'POST', body: { message: gitMsg.trim() } })
+      setGitMsg(''); await loadWsGit(pid); setErr('')
+    } catch (e) { setErr(e.message) }
   }
 
   useEffect(() => {
@@ -247,14 +255,31 @@ export default function ShConsole({ show, onClose }) {
                       {logs.length ? logs.join('\n') : '(log kosong)'}</pre>
                   </div>
                   <div style={STYLE.card}>
-                    <div style={{ fontWeight: 700, marginBottom: 8 }}>🌿 Git</div>
-                    <button style={STYLE.btnGhost} onClick={() => loadWsGit(wsId)}>Status</button>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                      <div style={{ fontWeight: 700 }}>🌿 Git</div>
+                      <button style={STYLE.btnGhost} onClick={() => loadWsGit(wsId)}>Status</button>
+                    </div>
                     {gitInfo && (gitInfo.repo
                       ? <div>
+                          <div style={{ fontSize: 12, color: '#8fa2c4', marginBottom: 6 }}>branch: {gitInfo.branch || '—'}</div>
+                          <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                            <input style={{ ...STYLE.input, marginBottom: 0, flex: 1 }} placeholder="pesan commit…" aria-label="Pesan commit"
+                              value={gitMsg} onChange={(e) => setGitMsg(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') commitWs(wsId) }} />
+                            <button style={STYLE.btn} onClick={() => commitWs(wsId)}>Commit</button>
+                          </div>
                           <pre style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 160, overflow: 'auto', fontSize: 11 }}>{gitInfo.status || '(bersih)'}</pre>
                           <pre style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 160, overflow: 'auto', fontSize: 11 }}>{gitInfo.log}</pre>
                         </div>
-                      : <div style={{ color: '#8fa2c4', fontSize: 13 }}>Workspace belum di-inisialisasi git.</div>)}
+                      : <div>
+                          <div style={{ color: '#8fa2c4', fontSize: 13, marginBottom: 8 }}>Workspace belum di-inisialisasi git — commit pertama akan init otomatis.</div>
+                          <div style={{ display: 'flex', gap: 8 }}>
+                            <input style={{ ...STYLE.input, marginBottom: 0, flex: 1 }} placeholder="pesan commit…" aria-label="Pesan commit"
+                              value={gitMsg} onChange={(e) => setGitMsg(e.target.value)}
+                              onKeyDown={(e) => { if (e.key === 'Enter') commitWs(wsId) }} />
+                            <button style={STYLE.btn} onClick={() => commitWs(wsId)}>Init + Commit</button>
+                          </div>
+                        </div>)}
                   </div>
                   <div style={STYLE.card}>
                     <div style={{ fontWeight: 700, marginBottom: 8 }}>💻 Terminal (di dalam container)</div>

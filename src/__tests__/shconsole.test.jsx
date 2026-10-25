@@ -99,7 +99,8 @@ describe('ShConsole — konsol software house', () => {
     expect(screen.getByText(/Lantai 1/)).toBeTruthy()
   })
 
-  it('tab Workspace: pilih project → file list → buka file', async () => {
+  it('tab Workspace: pilih project → file list → buka file → git commit', async () => {
+    const commits = []
     stubFetch({
       '/wfs-api/sh/overview': OV,
       '/wfs-api/projects': PROJ_RESP,
@@ -107,6 +108,7 @@ describe('ShConsole — konsol software house', () => {
       '/wfs-api/projects/1/file?path=Dockerfile': { path: 'Dockerfile', content: 'FROM python:3.12-slim' },
       '/wfs-api/projects/1/logs?lines=100': { logs: ['INFO line'] },
       '/wfs-api/projects/1/git': { repo: false },
+      '/wfs-api/projects/1/git/commit': () => { commits.push('commit'); return { ok: true, committed: true } },
     })
     render(<ShConsole show onClose={() => {}} />)
     clickTab('Workspace')
@@ -115,6 +117,9 @@ describe('ShConsole — konsol software house', () => {
     expect(await screen.findByText(/Dockerfile/)).toBeTruthy()
     fireEvent.click(screen.getByText(/Dockerfile/))
     expect(await screen.findByText(/FROM python:3.12-slim/)).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Pesan commit'), { target: { value: 'init' } })
+    fireEvent.click(screen.getByText('Init + Commit'))
+    await waitFor(() => expect(commits).toContain('commit'))
   })
 
   it('tab Approvals: list pending + putuskan', async () => {

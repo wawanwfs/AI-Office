@@ -389,11 +389,36 @@ def api_project_git(pid: int):
                             capture_output=True, text=True, timeout=20)
         lg = subprocess.run(["git", "-C", base, "log", "--oneline", "-10"],
                             capture_output=True, text=True, timeout=20)
+        br = subprocess.run(["git", "-C", base, "branch", "--show-current"],
+                            capture_output=True, text=True, timeout=20)
         if lg.returncode != 0 and st.returncode != 0:
-            return {"repo": False, "status": "", "log": ""}
-        return {"repo": True, "status": st.stdout.strip(), "log": lg.stdout.strip()}
+            return {"repo": False, "status": "", "log": "", "branch": ""}
+        return {"repo": True, "status": st.stdout.strip(), "log": lg.stdout.strip(),
+                "branch": br.stdout.strip() or "(detached)"}
     except Exception:
-        return {"repo": False, "status": "", "log": ""}
+        return {"repo": False, "status": "", "log": "", "branch": ""}
+
+
+@app.post("/api/projects/{pid}/git/commit")
+def api_project_git_commit(pid: int, body: dict):
+    base, _ = _project_workspace(pid)
+    msg = (body or {}).get("message", "").strip()
+    if not msg or len(msg) > 500:
+        raise HTTPException(400, "message wajib (≤500 karakter)")
+    def sh(*args):
+        return subprocess.run(list(args), cwd=base, capture_output=True, text=True, timeout=30)
+    if sh("git", "status", "--short").returncode != 0:  # belum repo → init + identitas lokal
+        sh("git", "init", "-q")
+        sh("git", "config", "user.name", "WFS Bot")
+        sh("git", "config", "user.email", "bot@wfs.local")
+    sh("git", "add", "-A")
+    if not sh("git", "status", "--porcelain").stdout.strip():
+        return {"ok": True, "committed": False, "reason": "nothing_to_commit"}
+    c = sh("git", "commit", "-m", msg)
+    if c.returncode != 0:
+        raise HTTPException(502, c.stderr.strip()[:300] or "commit gagal")
+    rev = sh("git", "rev-parse", "--short", "HEAD")
+    return {"ok": True, "committed": True, "hash": rev.stdout.strip() or ""}
 
 
 @app.post("/api/projects/{pid}/exec")
