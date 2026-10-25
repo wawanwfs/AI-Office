@@ -2469,3 +2469,34 @@
   - e2e_zone_multi: **E2E_ZONE_MULTI OK** (preset iso, front, top: 0 OFFSCREEN, 0 pelanggaran margin).
   - e2e_shot visual: **645.731 bytes** (>500KB = WebGL aktif, agents: 14, E2E_VISUAL: OK).
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+
+## 2026-10-25 16:52 WIB — Siklus 62: Isolasi modal selectedAgent di App.jsx, modernisasi SVG close button seluruh panel, perbaikan guard zona top-down & integrasi pencahayaan night studio bertingkat
+
+- Pilihan: penuntasan integrasi UX modal & stabilitas rendering viewport zona pada gedung bertingkat 3 lantai:
+  1) State `selectedAgent` di `App.jsx` belum dimasukkan ke evaluasi `window.__wfsModalOpen`, `chromeModal`, dan keyboard shortcut listener, sehingga shortcut dock (m, 1, n) masih bisa tertrigger dan elemen chrome (`header, .hud, .ticker`) tidak ter-`inert` saat kartu profil agen 3D terbuka.
+  2) Mengganti unicode raw `✕` pada tombol close seluruh panel modal (`TaskBoard`, `ProjectPanel`, `TeamStats`, `CsWidget`, `WfsPanel`) dengan SVG murni `IconClose` + label aksesibel `title` deskriptif (Esc) dan `<span className="sr-only">✕</span>` demi kompatibilitas screen reader dan asersi teks uji.
+  3) Modernisasi aksi dan tab `WfsPanel` (`IconChat`, `IconGear`, `IconSave`, `IconPlay`, `IconRotate`) dan tombol jalankan task pada `TaskBoard`.
+  4) Fix run-away displacement pada `zoneViewportGuard`: penambahan batas clamp `MAX_ZONE_DISP_Y` & `MAX_ZONE_DISP_X` (±2.0m) agar koreksi margin tidak menenggelamkan label zona ke bawah tanah secara eksponensial.
+  5) Deteksi kamera top-down curam (`(camera.position.y - zt.position.y) / dz > 0.8`): saat pandangan atas curam, koreksi vertikal layar dialihkan ke sumbu Z lantai (arah tengah kantor) dan bukan sumbu Y (ketinggian), sehingga label zona tetap berada di atas lantai marmer.
+  6) Eliminasi konflik anti-overlap agent vs zona pada `OfficeScene.js`: `pts.forEach` tidak lagi menggeser posisi statis zona (`if (p.zone) return;`), mencegah drift berulang.
+  7) Penyesuaian radius preset `top` (56m) pada gedung luas 34x30m agar seluruh 3 lantai dan zona terbingkai sempurna di antara header dan dock.
+- Perubahan:
+  - `src/App.jsx`: integrasi `selectedAgent` ke `window.__wfsModalOpen`, `chromeModal`, dan filter shortcut keyboard listener.
+  - `src/components/Icons.jsx`: export `IconGear`, `IconSave`, `IconPlay`, pembaruan `IconRotate`.
+  - `src/components/AgentInspector.jsx`, `CsWidget.jsx`, `ProjectPanel.jsx`, `TaskBoard.jsx`, `TeamStats.jsx`, `WfsPanel.jsx`: modernisasi SVG `IconClose` dan styling flexbox.
+  - `src/scene/OfficeScene.js`: radius preset `top` 56m untuk gedung 34x30m, isolasi label zona dari mutasi anti-overlap agent.
+  - `src/scene/parts/label_overlap.js`: bounded clamp pergeseran zona + pergeseran sumbu Z lantai pada sudut kamera top-down.
+  - Unit test:
+    - `src/__tests__/agent_inspector.test.jsx`: verifikasi tombol tutup dan tooltip `title`.
+    - `src/__tests__/app_integration.test.jsx`: verifikasi chrome inert (`header, .hud, .ticker`) & blokir shortcut saat inspector terbuka serta penutupan via Escape.
+    - `src/__tests__/zone_viewport_guard.test.js`: +2 unit test baru (clamp displacement anti run-away & pergeseran sumbu Z pada kamera top-down).
+- Bukti terukur:
+  - Vitest: **1185/1185 (107 file)** (+5 test baru, 0 fail).
+  - ESLint: 0 warning, 0 error (`npx eslint .`).
+  - Build: Berhasil (exit 0, 35 precache entries 1586.90 KiB, chunk `OfficeScene-BjEq8CjI.js` 846.04 KB / gzip 227.42 KB, `index-Bh0ZtL7v.js` 265.00 KB).
+  - Deploy: `dist/*` ter-deploy ke `~/wfs-hq/`, chunk lama dibersihkan.
+  - E2E & Servis:
+    - `e2e_err.py`: HTTP 200 (index & `index-Bh0ZtL7v.js`, 0 "Scene init failed", PID 3813725).
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 23/23 selesai, 100%, 14 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **582.245 bytes** (>500 KB, WebGL hidup, agents: 14, E2E_VISUAL: OK).
+- Sisa backlog: verifikasi subjektif audio web-audio.

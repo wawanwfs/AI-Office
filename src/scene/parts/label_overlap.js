@@ -116,18 +116,37 @@ export function zoneViewportGuard(zoneLabels, deps) {
       const zu = zt.userData || (zt.userData = {});
       if (zu.baseY === undefined) zu.baseY = zt.position.y;
       if (zu.baseX === undefined) zu.baseX = zt.position.x;
-      const MAX_ZONE_DISP_Y = 2.0, MAX_ZONE_DISP_X = 2.0;
-      const targetY = zt.position.y + corr * wpp2;
-      const clampedY = Math.max(zu.baseY - MAX_ZONE_DISP_Y, Math.min(zu.baseY + MAX_ZONE_DISP_Y, targetY));
+      if (zu.baseZ === undefined) zu.baseZ = zt.position.z;
+      const MAX_ZONE_DISP_X = 2.0;
       const targetX = zt.position.x + cx * wpp2;
       const clampedX = Math.max(zu.baseX - MAX_ZONE_DISP_X, Math.min(zu.baseX + MAX_ZONE_DISP_X, targetX));
-      const actDy = clampedY - zt.position.y;
       const actDx = clampedX - zt.position.x;
-      if (Math.abs(actDy) > 1e-4 || Math.abs(actDx) > 1e-4) {
-        zt.position.y = clampedY;
+      if (Math.abs(actDx) > 1e-4) {
         zt.position.x = clampedX;
-        deps.accumulate(zt, actDy, actDx);
+        deps.accumulate(zt, 0, actDx);
         fixed++;
+      }
+      const isTopDown = (camera.position && typeof camera.position.y === 'number') &&
+        ((camera.position.y - zt.position.y) / dz > 0.8);
+      if (isTopDown) {
+        const targetZ = zt.position.z + corr * wpp2;
+        const clampedZ = Math.max(zu.baseZ - 1.5, Math.min(zu.baseZ + 1.5, targetZ));
+        const actDz = clampedZ - zt.position.z;
+        if (Math.abs(actDz) > 1e-4) {
+          zt.position.z = clampedZ;
+          deps.accumulate(zt, actDz, 0);
+          fixed++;
+        }
+      } else {
+        const MAX_ZONE_DISP_Y = 2.0;
+        const targetY = zt.position.y + corr * wpp2;
+        const clampedY = Math.max(zu.baseY - MAX_ZONE_DISP_Y, Math.min(zu.baseY + MAX_ZONE_DISP_Y, targetY));
+        const actDy = clampedY - zt.position.y;
+        if (Math.abs(actDy) > 1e-4) {
+          zt.position.y = clampedY;
+          deps.accumulate(zt, actDy, 0);
+          fixed++;
+        }
       }
     }
   });
@@ -307,6 +326,9 @@ export function resetZoneBaseOffsets(zones) {
     if (z.base) {
       z.ref.position.y = z.base.y; z.ref.position.x = z.base.x;
       z.ref.userData.baseY = z.base.y; z.ref.userData.baseX = z.base.x;
+      if (z.ref.userData.baseZ !== undefined) {
+        z.ref.position.z = z.ref.userData.baseZ;
+      }
     }
     if (z.visible !== undefined) z.ref.visible = z.visible;
     n++;

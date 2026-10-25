@@ -1259,7 +1259,7 @@ function animate(){
     const wpp = worldPerPx(camera.position.distanceTo(tgt), camera.fov, container.clientHeight);
     const LBL_SMOOTH=1-Math.exp(-12*(deltaFrame||0.016));
     pts.forEach(p=>{
-      if(p.zone){if(p.zt){const {dyz,dxz}=labelWorldOffset(p,wpp); p.zt.position.y=p.baseY+dyz; p.zt.position.x=p.baseX+dxz; accumulateZoneAnti(p.zt,dyz,dxz);} return;} // BUBBLE tidak disentuh anti-overlap (dianimasikan updateBubbles — menyentuhnya bikin loncat)
+      if(p.zone) return; // zona adalah penghalang statis bagi label agent, posisinya dikendalikan oleh guard viewport
       const {dy,dx}=labelWorldOffset(p,wpp);
       const u=p.a.label.userData;
       const prevY=(u.antiY===undefined)?dy:u.antiY+(dy-u.antiY)*LBL_SMOOTH;
@@ -1413,7 +1413,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       else{
         const asp=container.clientWidth/Math.max(1,container.clientHeight);
         const homeMobile=asp<0.6?34:asp<0.8?36:null;
-        sph.radius=(name==='top')?(asp<1.2?58:50):(homeRadius||homeMobile||Math.max(24,Math.min(60,sph.radius)));
+        sph.radius=(name==='top')?(asp<1.2?60:56):(homeRadius||homeMobile||Math.max(24,Math.min(60,sph.radius)));
       }
       updCam(); return true;
     },
