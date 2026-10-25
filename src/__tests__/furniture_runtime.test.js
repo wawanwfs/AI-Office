@@ -83,7 +83,7 @@ describe('createFurniture — perabot kantor 3D', () => {
     expect(groups.length).toBe(4)
     // poster = mesh langsung di office
     const planes = added.filter((o) => o instanceof Mesh && o.geometry?.args?.[0] === 0.46)
-    expect(planes.length).toBe(5)
+    expect(planes.length).toBe(8)
   })
 
   it('dispenser: 3 box (tub 0.3×0.6, galon biru 0x7fb8ea, keran 0x4a6a86) di (-10.5, *, 0)', async () => {
@@ -158,20 +158,25 @@ describe('createFurniture — perabot kantor 3D', () => {
     expect(micro.geometry.args).toEqual([0.36, 0.22, 0.26])
   })
 
-  it('poster: 5 canvas 120×160, teks slogan digambar per kata, plane 0.46×0.66 menghadap sesuai dinding', async () => {
+  it('poster: 8 canvas 120×160, teks slogan digambar per kata, plane 0.46×0.66 menghadap sesuai dinding', async () => {
     const { added } = await build()
-    expect(canvases.length).toBe(5)
+    expect(canvases.length).toBe(8)
     expect(canvases.every((c) => c.width === 120 && c.height === 160)).toBe(true)
     const texts = drawCalls.map((d) => d.text)
     expect(texts).toContain('SHIP'); expect(texts).toContain('IT')
     expect(texts).toContain('KUALITAS'); expect(texts).toContain('WFS'); expect(texts).toContain('PROJECT')
     const planes = added.filter((o) => o instanceof Mesh && o.geometry?.args?.[0] === 0.46)
-    expect(planes.length).toBe(5)
+    expect(planes.length).toBe(8)
     // dinding kiri (x=-11.4) → menghadap +x (rot π/2), dinding kanan → -π/2
     for (const p of planes) {
       const x = p.position.x
+      if (Math.abs(p.position.z) > 9) continue // poster dinding z diuji di bawah
       expect(p.rotation.y).toBe(x < 0 ? Math.PI / 2 : -Math.PI / 2)
       expect(Math.abs(p.position.x - x)).toBeLessThan(0.05) // offset ±0.03 dari dinding
+    }
+    // poster dinding belakang (z-) menghadap 0, dinding depan (z+) menghadap π
+    for (const p of planes.filter((q) => Math.abs(q.position.z) > 9)) {
+      expect(p.rotation.y).toBe(p.position.z < 0 ? 0 : Math.PI)
     }
   })
 

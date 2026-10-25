@@ -1,14 +1,14 @@
 import { describe, it, expect } from 'vitest';
 import {
   POSTERS, POSTER_Y, POSTER_W, POSTER_H, CANVAS_W, CANVAS_H, LINE_H,
-  posterFacing, posterOffset, posterLineY,
+  posterFacing, posterOffset, posterLineY, posterWall, posterFacingFor, posterOffsetFor,
 } from '../scene/parts/poster_spec.js';
 
 const HEX = /^#[0-9a-f]{6}$/i;
 
 describe('poster_spec — poster dinding kantor', () => {
-  it('ada 5 poster', () => {
-    expect(POSTERS).toHaveLength(5);
+  it('ada 8 poster (5 dinding samping + 3 dinding z)', () => {
+    expect(POSTERS).toHaveLength(8);
   });
 
   it('setiap poster punya field lengkap & valid', () => {
@@ -21,17 +21,49 @@ describe('poster_spec — poster dinding kantor', () => {
     }
   });
 
-  it('semua poster menempel di dinding samping (x ±11.4, di dalam lantai ±13/±10)', () => {
-    for (const p of POSTERS) {
+  it('dinding samping: semua poster menempel di x ±11.4, di dalam lantai ±13/±10', () => {
+    for (const p of POSTERS.filter((q) => !q.wall)) {
       expect(Math.abs(p.x)).toBeCloseTo(11.4, 5);
       expect(Math.abs(p.x)).toBeLessThanOrEqual(13);
       expect(Math.abs(p.z)).toBeLessThanOrEqual(10);
     }
   });
 
-  it('ada poster di kedua sisi dinding (kiri & kanan)', () => {
-    expect(POSTERS.filter((p) => p.x < 0).length).toBeGreaterThan(0);
-    expect(POSTERS.filter((p) => p.x > 0).length).toBeGreaterThan(0);
+  it('poster dinding z punya wall z-/z+, koordinat di dalam lantai ±13/±10', () => {
+    const zw = POSTERS.filter((p) => p.wall === 'z-' || p.wall === 'z+');
+    expect(zw.length).toBeGreaterThanOrEqual(3);
+    for (const p of zw) {
+      expect(Math.abs(p.x)).toBeLessThanOrEqual(13);
+      expect(Math.abs(p.z)).toBeLessThanOrEqual(10);
+      expect(Math.abs(p.z)).toBeGreaterThan(9); // dekat dinding
+    }
+  });
+
+  it('posterFacingFor: z- menghadap 0, z+ menghadap π, samping tetap posterFacing', () => {
+    expect(posterFacingFor({ wall: 'z-', x: 0, z: -9.9 })).toBe(0);
+    expect(posterFacingFor({ wall: 'z+', x: 4, z: 9.9 })).toBe(Math.PI);
+    expect(posterFacingFor({ x: -11.4, z: 3 })).toBe(posterFacing(-11.4));
+  });
+
+  it('posterOffsetFor: menjauh dari dinding, magnitudo 0.03 semua dinding', () => {
+    for (const p of POSTERS) {
+      expect(Math.abs(posterOffsetFor(p))).toBeCloseTo(0.03, 5);
+    }
+    expect(posterOffsetFor({ wall: 'z-', x: 0, z: -9.9 })).toBeCloseTo(0.03, 5);
+    expect(posterOffsetFor({ wall: 'z+', x: 4, z: 9.9 })).toBeCloseTo(-0.03, 5);
+  });
+
+  it('posterWall: fallback dinding samping dari tanda x, wall eksplisit dipertahankan', () => {
+    expect(posterWall({ x: -11.4, z: 3 })).toBe('x-');
+    expect(posterWall({ x: 11.4, z: 3 })).toBe('x+');
+    expect(posterWall({ wall: 'z+', x: 4, z: 9.9 })).toBe('z+');
+  });
+
+  it('ada poster di kedua sisi dinding samping (kiri & kanan) & di dinding z', () => {
+    expect(POSTERS.filter((p) => p.x < 0 && !p.wall).length).toBeGreaterThan(0);
+    expect(POSTERS.filter((p) => p.x > 0 && !p.wall).length).toBeGreaterThan(0);
+    expect(POSTERS.some((p) => p.wall === 'z-')).toBe(true);
+    expect(POSTERS.some((p) => p.wall === 'z+')).toBe(true);
   });
 
   it('tidak ada dua poster pada posisi dinding yang sama', () => {
