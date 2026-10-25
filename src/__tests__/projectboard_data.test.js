@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { computePct, clip, cardY, CARD_H, COLUMN_BOTTOM, subtitle, bannerParts, bannerNames, bannerLayout, columnItems, stripSegments, clampStripTenant, stripLayout } from '../scene/parts/projectboard_data.js'
+import { computePct, clip, cardY, CARD_H, COLUMN_BOTTOM, subtitle, bannerParts, bannerNames, bannerLayout, columnItems, stripSegments, clampStripTenant, stripLayout, BASE_DROP_ORDER, OMNI_DROP_ORDER, STRIP_GAP } from '../scene/parts/projectboard_data.js'
 
 describe('cardY (tata letak kartu tidak menabrak strip bawah)', () => {
   it('6 kartu terakhir masih di dalam kolom', () => {
@@ -243,5 +243,21 @@ describe('stripLayout', () => {
     expect(tight.dropped).toContain('omni')
     expect(tight.kept.some(s => s.txt === 'OMNI')).toBe(false)
     expect(tight.kept.some(s => s.txt === 'be1 ●')).toBe(true)
+  })
+})
+
+describe('drop order — prioritas buang segmen strip', () => {
+  it('BASE_DROP_ORDER: terbaru → pesan → chat → online', () => {
+    expect(BASE_DROP_ORDER).toEqual(['latest', 'messages', 'chats', 'online'])
+  })
+  it('OMNI_DROP_ORDER menyisipkan omni sebelum online (omni dikorbankan dulu)', () => {
+    expect(OMNI_DROP_ORDER).toEqual(['latest', 'messages', 'chats', 'omni', 'online'])
+    // invariant: urutan BASE adalah prefix OMNI minus 'omni'
+    const base = BASE_DROP_ORDER.filter(k => k !== 'omni')
+    expect(base).toEqual(['latest', 'messages', 'chats', 'online'])
+    expect(OMNI_DROP_ORDER.indexOf('omni')).toBeLessThan(OMNI_DROP_ORDER.indexOf('online'))
+  })
+  it('STRIP_GAP default 26px', () => {
+    expect(STRIP_GAP).toBe(26)
   })
 })
