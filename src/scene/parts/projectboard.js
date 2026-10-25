@@ -16,13 +16,13 @@ export function createProjectBoard(office, THREE) {
     new THREE.PlaneGeometry(7.4, 4.04),
     new THREE.MeshBasicMaterial({ map: tex, fog: false })
   )
-  mesh.position.set(-8.6, 2.6, 9.3)
+  mesh.position.set(-8.35, 2.6, 9.3)
   mesh.rotation.y = Math.PI
   mesh.renderOrder = 5
   office.add(mesh)
-  // bingkai elegan (mengelilingi papan proyek secara presisi)
+  // bingkai elegan (mengelilingi papan proyek secara presisi, tidak menabrak dinding samping)
   const frame = new THREE.Mesh(new THREE.BoxGeometry(7.65, 4.25, .05), new THREE.MeshLambertMaterial({ color: 0x1A263E }))
-  frame.position.set(-8.6, 2.6, 9.28)
+  frame.position.set(-8.35, 2.6, 9.28)
   frame.userData.__keep = 1 // jangan ikut fade dinding belakang (wallFade collect)
   office.add(frame)
 

@@ -158,8 +158,8 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   const hits=ray.intersectObjects(boardMesh?[...targets,boardMesh]:targets,true);
   if(!hits.length){ if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius,reset:true}} selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null); return; }
   if(boardMesh&&hits[0].object===boardMesh){
-    focusGoal={t:new THREE.Vector3(-8.6,2.55,9.2),r:8.5};
-    createBubble(-8.6,4.4,7.8,'“Proyek dibantuin.com — klik tombol Proyek untuk detail”','#10E5A0');
+    focusGoal={t:new THREE.Vector3(-8.35,2.55,9.2),r:8.5};
+    createBubble(-8.35,4.4,7.8,'“Proyek dibantuin.com — klik tombol Proyek untuk detail”','#10E5A0');
     return;
   }
   let obj=hits[0].object;let root=null;
