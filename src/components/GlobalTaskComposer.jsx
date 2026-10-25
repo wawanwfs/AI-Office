@@ -153,10 +153,11 @@ export default function GlobalTaskComposer({ open, onClose, onProjectCreated }) 
 
           {/* Prompt Input */}
           <div>
-            <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+            <label htmlFor="gtc-instr" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
               Instruksi Proyek (Bahasa Indonesia / English) *
             </label>
             <textarea
+              id="gtc-instr"
               rows={4}
               value={instruction}
               onChange={(e) => setInstruction(e.target.value)}
@@ -168,10 +169,11 @@ export default function GlobalTaskComposer({ open, onClose, onProjectCreated }) 
           {/* Project Name (Optional) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+              <label htmlFor="gtc-project" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                 Nama Proyek (Opsional)
               </label>
               <input
+                id="gtc-project"
                 type="text"
                 value={projectName}
                 onChange={(e) => setProjectName(e.target.value)}
@@ -180,10 +182,11 @@ export default function GlobalTaskComposer({ open, onClose, onProjectCreated }) 
               />
             </div>
             <div>
-              <label className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
+              <label htmlFor="gtc-stack" className="block text-xs font-semibold uppercase tracking-wider text-slate-300 mb-1.5">
                 Pilihan Tech Stack
               </label>
               <select
+                id="gtc-stack"
                 value={techStack}
                 onChange={(e) => setTechStack(e.target.value)}
                 className="w-full px-3.5 py-2.5 bg-slate-950/80 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500 transition"

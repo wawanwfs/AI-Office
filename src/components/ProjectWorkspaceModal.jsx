@@ -246,6 +246,7 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
                 <textarea
                   value={fileContent}
                   onChange={(e) => setFileContent(e.target.value)}
+                  aria-label={`Isi file ${selectedFile}`}
                   className="flex-1 p-6 bg-slate-950/90 text-slate-200 font-mono text-xs focus:outline-none resize-none leading-relaxed"
                 />
               </div>
@@ -264,6 +265,7 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
                   type="text"
                   value={termCmd}
                   onChange={(e) => setTermCmd(e.target.value)}
+                  aria-label="Perintah terminal"
                   placeholder="Ketik perintah (misal: ls -la, python3 test_app.py)"
                   className="flex-1 px-4 py-2.5 bg-slate-900 border border-slate-800 rounded-xl text-white focus:outline-none focus:border-emerald-500"
                 />

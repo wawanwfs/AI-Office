@@ -42,6 +42,13 @@ describe('WFS PROJECT Software House — GlobalTaskComposer', () => {
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it('label field terasosiasi dengan kontrolnya (a11y)', () => {
+    render(<GlobalTaskComposer open onClose={vi.fn()} />)
+    expect(screen.getByLabelText(/Nama Proyek/i)).toBeTruthy()
+    expect(screen.getByLabelText(/Pilihan Tech Stack/i)).toBeTruthy()
+    expect(screen.getByLabelText(/Instruksi Proyek/i)).toBeTruthy()
+  })
 })
 
 describe('WFS PROJECT Software House — ProjectWorkspaceModal', () => {
@@ -77,5 +84,13 @@ describe('WFS PROJECT Software House — ProjectWorkspaceModal', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Quality & QA' }))
     expect(screen.getByText('Automated QA & Security Gate')).toBeTruthy()
     expect(screen.getByText('ALL CRITERIA PASSED')).toBeTruthy()
+  })
+
+  it('terminal & editor file punya nama aksesibel (a11y)', () => {
+    render(<ProjectWorkspaceModal project={mockProject} open onClose={vi.fn()} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Terminal' }))
+    expect(screen.getByRole('textbox', { name: /Perintah terminal/i })).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'File Explorer' }))
+    expect(screen.getByRole('textbox', { name: /Isi file/i })).toBeTruthy()
   })
 })
