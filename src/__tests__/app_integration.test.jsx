@@ -156,4 +156,51 @@ describe('App — integrasi UI', () => {
     expect(btn.getAttribute('aria-pressed')).toBe('true')
     expect(btn.className).toContain('on')
   })
+
+  it('audio muted persist di localStorage: tombol dock Suara langsung aktif dalam status bisu', () => {
+    localStorage.store.wfs_audio_muted = '1'
+    stubFetch([])
+    render(<App />)
+    const btn = screen.getByRole('button', { name: 'Nyalakan suara' })
+    expect(btn.getAttribute('aria-pressed')).toBe('true')
+    expect(screen.getByText('Suara Mati')).toBeTruthy()
+  })
+
+  it('inspeksi agen: callback onSelectAgent membuka profil dan tombol tutup memanggil scene.setSelected(-1) & resetFocus()', async () => {
+    let capturedCallbacks = null
+    const mockSetSelected = vi.fn()
+    const mockResetFocus = vi.fn()
+    const sceneMod = await import('../scene/OfficeScene')
+    sceneMod.createOfficeScene.mockImplementationOnce((_canvas, cbs) => {
+      capturedCallbacks = cbs
+      return {
+        isAudioMuted: () => false,
+        setAudioMuted: vi.fn(),
+        isCyberpunk: () => false,
+        toggleCyberpunk: vi.fn(),
+        setSelected: mockSetSelected,
+        resetFocus: mockResetFocus,
+        setTime: vi.fn(),
+        destroy: vi.fn(),
+      }
+    })
+    stubFetch([])
+    render(<App />)
+    await waitFor(() => expect(capturedCallbacks).toBeTruthy())
+
+    // Simulasi klik agen di scene 3D
+    act(() => {
+      capturedCallbacks.onSelectAgent({ name: 'TONI', role: 'DevOps Engineer', hex: '#34D399' })
+    })
+
+    expect(screen.getByText('TONI')).toBeTruthy()
+    expect(screen.getByText('DevOps Engineer')).toBeTruthy()
+
+    // Tutup kartu via tombol tutup ✕
+    fireEvent.click(screen.getByLabelText('Tutup kartu agen'))
+
+    expect(screen.queryByText('DevOps Engineer')).toBeNull()
+    expect(mockSetSelected).toHaveBeenCalledWith(-1)
+    expect(mockResetFocus).toHaveBeenCalled()
+  })
 })

@@ -2414,3 +2414,31 @@
   - e2e_zone_multi: **E2E_ZONE_MULTI OK** (iso, front, top: 0 OFFSCREEN, 0 ABOVE/BELOW margin).
   - e2e_shot visual: **637.140 bytes** (>500KB = WebGL aktif, agents: 14, E2E_VISUAL: OK).
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+
+## 2026-10-25 14:25 WIB — Siklus 60: Sinkronisasi kartu AgentInspector ke scene 3D (Escape, reset ring & fokus kamera, case-insensitive chat) + persistensi audio mute instan + elim TDZ audio
+
+- Pilihan: audit integrasi interaksi 3D & UI (AgentInspector, WfsPanel, audio persistence):
+  1) Kartu profil `AgentInspector` yang muncul saat mengklik agen di scene 3D tidak menutup saat tombol `Escape` ditekan, dan menutup kartu via tombol ✕ tidak mereset cincin seleksi emas (`selRing`) maupun fokus kamera di scene 3D (agen tetap terfokus & cincin berputar di lantai).
+  2) Tombol "Buka Chat dengan [Agent]" di `AgentInspector` memanggil `window.__wfsSelectAgent(ag.name)` (huruf besar kapital, misal 'TONI'), sementara endpoint gateway menyimpan nama 'Budi'/'Toni' (title case) atau ID 'devops1', sehingga pencarian agen di WfsPanel gagal menemukan target akibat case mismatch.
+  3) Tombol dock "Suara" (audio mute) mengulang masalah desync yang sama seperti mode Neon: memakai `useState(false)` lalu baru sinkron asinkron lewat `useEffect`, memicu kedipan status/ikon pada awal render; serta inisialisasi `__sound` di `OfficeScene.js` berada di baris 1050 (di bawah listener wake awal baris 129), menyisakan risiko TDZ.
+- Perubahan:
+  - `src/components/AgentInspector.jsx`: pasang listener tombol `Escape` di `useEffect` untuk menutup kartu secara elegan.
+  - `src/App.jsx`:
+    - `handleCloseInspector`: saat kartu ditutup, panggil `sceneRef.current.setSelected(-1)` dan `resetFocus()` agar cincin emas terhapus dan kamera kembali ke overview kantor.
+    - Sinkronkan mapping nama agen ke gateway ID (`window.__wfsAgentIdList`) saat memanggil `__wfsSelectAgent`.
+    - Inisialisasi state `muted` secara sinkron dari `localStorage.getItem('wfs_audio_muted') === '1'` untuk menghilangkan kedipan/desync awal.
+  - `src/components/WfsPanel.jsx`: buat pencarian agen di `window.__wfsSelectAgent` case-insensitive (`toLowerCase()`) terhadap ID maupun nama agen.
+  - `src/scene/OfficeScene.js`: pindahkan deklarasi `audioMuted`, `saveMuted`, dan `__sound` ke bagian atas sebelum `__ensureAudioEarly` dan `installAudioWake`, mengeliminasi risiko TDZ saat event interaksi dini.
+  - Unit test:
+    - `src/__tests__/agent_inspector.test.jsx`: +1 test verifikasi penekanan tombol Escape menutup kartu profil.
+    - `src/__tests__/app_integration.test.jsx`: +2 test verifikasi persistensi audio mute instan dari `localStorage` dan interaksi `onSelectAgent` / `handleCloseInspector` yang me-reset seleksi & fokus kamera di scene.
+- Bukti terukur:
+  - Vitest: **1178/1178 (107 file)** (+3 test baru).
+  - ESLint: 0 warning, 0 error (`npx eslint .`).
+  - Build: Berhasil (exit 0, 35 precache 1577.37 KiB, chunk `OfficeScene-D_3R_Gum.js` 841.37 KB / gzip 226.09 KB, `index-B4W_EnVj.js` 260.18 KB).
+  - Deploy: `dist/*` di-copy ke `~/wfs-hq/`, chunk stale lama (`CsWidget-VUjwxHPU.js`, `index-CEVg7fTQ.js`, `OfficeScene-DmxEe72D.js`) dibersihkan.
+  - e2e_err: HTTP 200 (index & `index-B4W_EnVj.js`, 0 "Scene init failed", PID 3671916).
+  - e2e_tv: **E2E_TV OK** (tasks 23/23 selesai, 100%, 14 agents aktif).
+  - e2e_zone_multi: **E2E_ZONE_MULTI OK** (preset iso, front, top: 0 OFFSCREEN, 0 pelanggaran margin).
+  - e2e_shot visual: **649.070 bytes** (>500KB = WebGL aktif, agents: 14, E2E_VISUAL: OK).
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).

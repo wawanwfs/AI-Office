@@ -1,8 +1,20 @@
-import React from 'react'
+import React, { useEffect } from 'react'
 import { IconClose, IconChat, IconUser } from './Icons'
 
 // Kartu Inspektur Agen Interaktif — Tampil saat agen 3D diklik di ruangan
 export default function AgentInspector({ agent, onClose, onChatWith }) {
+  useEffect(() => {
+    if (!agent) return
+    const onKey = (e) => {
+      if (e.key === 'Escape') {
+        e.stopPropagation()
+        onClose()
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [agent, onClose])
+
   if (!agent) return null
 
   return (

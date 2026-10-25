@@ -67,7 +67,12 @@ export default function WfsPanel() {
       if (list.length) setSel(s => s || list[0])
       window.__wfsAgentIdList = list.map(a => ({ name: a.name, id: a.id }))
       window.__wfsSelectAgent = (id) => {
-        const a = agentsRef.current.find(x => x.id === id || x.name === id)
+        const a = agentsRef.current.find(x =>
+          x.id === id ||
+          x.name === id ||
+          (x.name && id && x.name.toLowerCase() === String(id).toLowerCase()) ||
+          (x.id && id && x.id.toLowerCase() === String(id).toLowerCase())
+        )
         if (a) { setOpen(true); setTab('chat'); choose(a) }
       }
     }).catch(e => setLoadErr('Gagal memuat daftar agent: ' + e.message)).finally(() => setLoading(false))

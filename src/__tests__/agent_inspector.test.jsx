@@ -41,4 +41,11 @@ describe('AgentInspector — kartu profil agen 3D', () => {
     expect(onChat).toHaveBeenCalledWith(mockAgent)
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it('menekan tombol Escape memanggil onClose', () => {
+    const onClose = vi.fn()
+    render(<AgentInspector agent={mockAgent} onClose={onClose} onChatWith={vi.fn()} />)
+    fireEvent.keyDown(window, { key: 'Escape' })
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
 })

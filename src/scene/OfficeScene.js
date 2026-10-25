@@ -126,6 +126,15 @@ renderer.domElement&&renderer.domElement.addEventListener('touchmove',e=>{
   }
 },{passive:false});
 renderer.domElement&&renderer.domElement.addEventListener('touchend',()=>{pinchDist=null},{passive:true});
+// ═══════════════════════════════════════════════════
+// SOUND SYSTEM — Web Audio API (runtime di parts/sound_engine.js, teruji unit)
+// ═══════════════════════════════════════════════════
+let audioMuted=(function(){try{return localStorage.getItem('wfs_audio_muted')==='1'}catch{return false}})();
+function saveMuted(){try{localStorage.setItem('wfs_audio_muted',audioMuted?'1':'0')}catch{/* abaikan */}}
+const __sound=createSoundEngine({ctxFactory:()=>new(window.AudioContext||window.webkitAudioContext)()});
+__sound.setMuted(audioMuted);
+__sound.dbg(s=>{window.__audio=s;});
+const __ensureAudio=()=>{if(window.__officeSceneDestroyed)return;__sound.ensure();};
 const __ensureAudioEarly=()=>{if(window.__officeSceneDestroyed)return;__sound.ensure();try{const c=__sound.rawCtx();if(c&&c.state==='suspended'&&c.resume)c.resume();}catch{/* abaikan */}};
 // Listener wake {once:true} HARUS bisa dilepas di destroy(): tanpa itu, scene lama
 // (HMR/remount) meninggalkan listener yang saat interaksi pertama pengguna
@@ -1041,16 +1050,6 @@ function updateBubbles(delta){
 // ═══════════════════════════════════════════════════
 const __shift=createShift({THREE,agentData,rng});
 const updateShift=m=>__shift.update(m);
-
-// ═══════════════════════════════════════════════════
-// SOUND SYSTEM — Web Audio API (runtime di parts/sound_engine.js, teruji unit)
-// ═══════════════════════════════════════════════════
-let audioMuted=(function(){try{return localStorage.getItem('wfs_audio_muted')==='1'}catch{return false}})();
-function saveMuted(){try{localStorage.setItem('wfs_audio_muted',audioMuted?'1':'0')}catch{/* abaikan */}}
-const __sound=createSoundEngine({ctxFactory:()=>new(window.AudioContext||window.webkitAudioContext)()});
-__sound.setMuted(audioMuted);
-__sound.dbg(s=>{window.__audio=s;});
-const __ensureAudio=()=>{if(window.__officeSceneDestroyed)return;__sound.ensure();};
 
 // Track keyboard sounds — kini benar-benar dipakai: tick keyboard & langkah saat agent jalan
 let keyTimer=0, stepTimer=0;

@@ -44,12 +44,17 @@ export default function App() {
   const [pendingCount, setPendingCount] = useState(0)
   const [toast, setToast] = useState(null)          // {msg, err}
   const [showLog, setShowLog] = useState(false)
-  const [muted, setMuted] = useState(false)
+  const [muted, setMuted] = useState(() => {
+    try { return typeof localStorage !== 'undefined' && localStorage.getItem('wfs_audio_muted') === '1' } catch { return false }
+  })
   const [selectedAgent, setSelectedAgent] = useState(null)
-  useEffect(() => {
+  const handleCloseInspector = useCallback(() => {
+    setSelectedAgent(null)
     const s = sceneRef.current
-    if (s && s.isAudioMuted) setMuted(s.isAudioMuted())
-    else if (typeof localStorage !== 'undefined') setMuted(localStorage.getItem('wfs_audio_muted') === '1')
+    if (s) {
+      if (s.setSelected) s.setSelected(-1)
+      if (s.resetFocus) s.resetFocus()
+    }
   }, [])
   const toggleMute = () => {
     const s = sceneRef.current
@@ -364,9 +369,14 @@ export default function App() {
 
       <AgentInspector
         agent={selectedAgent}
-        onClose={() => setSelectedAgent(null)}
+        onClose={handleCloseInspector}
         onChatWith={(ag) => {
-          if (window.__wfsSelectAgent) window.__wfsSelectAgent(ag.name)
+          if (window.__wfsSelectAgent) {
+            const idMap = {}
+            ;(window.__wfsAgentIdList || []).forEach(x => { idMap[x.name] = x.id })
+            const gid = idMap[ag.name] || ag.name
+            window.__wfsSelectAgent(gid)
+          }
         }}
       />
 
