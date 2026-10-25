@@ -119,6 +119,44 @@ describe('ActionMenu — toggle nama & rotasi', () => {
     const cb = screen.getAllByRole('menuitemcheckbox')[1]
     fireEvent.click(cb)
     expect(scene.setAutoRotate).toHaveBeenCalledWith(true)
+    expect(cb.getAttribute('aria-checked')).toBe('true')
+    expect(cb.textContent).toContain('ON')
+  })
+
+  it('inisialisasi state nama & rotasi sinkron dari localStorage saat render awal', () => {
+    localStorage.setItem('wfs_names', '0')
+    localStorage.setItem('wfs_autorot', '1')
+    try {
+      renderMenu(null)
+      openMenu()
+      const boxes = screen.getAllByRole('menuitemcheckbox')
+      expect(boxes[0].getAttribute('aria-checked')).toBe('false')
+      expect(boxes[0].textContent).toContain('Tampilkan')
+      expect(boxes[1].getAttribute('aria-checked')).toBe('true')
+      expect(boxes[1].textContent).toContain('ON')
+    } finally {
+      localStorage.removeItem('wfs_names')
+      localStorage.removeItem('wfs_autorot')
+    }
+  })
+
+  it('semua item menu & checkbox memiliki title tooltip deskriptif dan SVG ikon', () => {
+    renderMenu(mkScene())
+    openMenu()
+    const menu = screen.getByRole('menu')
+    const items = screen.getAllByRole('menuitem')
+    expect(items[0].getAttribute('title')).toBe('Semua dikumpulkan ke ruang meeting')
+    expect(items[1].getAttribute('title')).toBe('Semua istirahat ke kafe')
+    expect(items[2].getAttribute('title')).toBe('Semua kembali ke meja')
+    expect(items[3].getAttribute('title')).toBe('Agent jalan-jalan keliling kantor')
+
+    const boxes = screen.getAllByRole('menuitemcheckbox')
+    expect(boxes[0].getAttribute('title')).toBe('Sembunyikan label nama agent & zona')
+    expect(boxes[1].getAttribute('title')).toBe('Nyalakan rotasi kamera otomatis')
+
+    // 4 menuitem + 2 checkbox = 6 SVG ikon bersih di popover
+    const svgs = menu.querySelectorAll('svg')
+    expect(svgs).toHaveLength(6)
   })
 })
 

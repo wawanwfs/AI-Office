@@ -2442,3 +2442,30 @@
   - e2e_zone_multi: **E2E_ZONE_MULTI OK** (preset iso, front, top: 0 OFFSCREEN, 0 pelanggaran margin).
   - e2e_shot visual: **649.070 bytes** (>500KB = WebGL aktif, agents: 14, E2E_VISUAL: OK).
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+
+## 2026-10-25 15:10 WIB — Siklus 61: Modernisasi SVG ikon ActionMenu (IconTag & IconRotate), eliminasi emoji telanjang, perbaikan typo rotasi & inisialisasi sinkron persistensi nama/rotasi
+
+- Pilihan: audit konsistensi visual dan robustnes state pada ActionMenu & Icons:
+  1) ActionMenu masih memakai emoji telanjang `🏷️` dan `🔄` di dalam `<span className="pop-ic">`, satu-satunya elemen UI yang belum dimigrasi ke vektor SVG bersih.
+  2) Handler klik tombol putar otomatis di `ActionMenu.jsx` memiliki typo `else setRotOn(!cur)` di mana variabel `cur` tidak terdefinisi di scope komponen tersebut (potensi `ReferenceError: cur is not defined` jika fallback dieksekusi).
+  3) State `namesOn` dan `rotOn` masih diinisialisasi secara naif (`useState(true)` dan `useState(false)`), menimbulkan kedipan state awal saat pengguna menyimpan preferensi `wfs_names='0'` atau `wfs_autorot='1'`.
+  4) Seluruh item menu dan checkbox di ActionMenu belum memiliki atribut `title` untuk tooltip hover yang informatif di desktop.
+- Perubahan:
+  - `src/components/Icons.jsx`: menambahkan komponen ikon SVG `IconTag` (vektor label badge 24×24) dan `IconRotate` (vektor putar 360° searah jarum jam) dengan styling stroke modern konsisten.
+  - `src/components/ActionMenu.jsx`:
+    - Mengganti emoji telanjang `🏷️` dan `🔄` dengan `<IconTag size={16} />` dan `<IconRotate size={16} />` sembari mempertahankan `<span className="sr-only">` untuk keterbacaan screen reader & kompatibilitas uji teks.
+    - Memperbaiki bug typo `else setRotOn(!cur)` menjadi `else setRotOn(v => !v)`.
+    - Menginisialisasi state `namesOn` dan `rotOn` secara sinkron dari `localStorage` (`wfs_names` dan `wfs_autorot`) untuk eliminasi desync/flicker render awal.
+    - Melengkapi atribut `title` deskriptif pada 4 menuitem aksi dan 2 checkbox preferensi.
+  - Unit test:
+    - `src/__tests__/action_menu.test.jsx`: +2 unit test baru (verifikasi sinkronisasi state dari `localStorage` pada render awal, verifikasi keberadaan 6 SVG ikon dan tooltip `title` pada seluruh item menu, serta fallback toggling saat `isAutoRotate` absent).
+- Bukti terukur:
+  - Vitest: **1180/1180 (107 file)** (+2 test baru).
+  - ESLint: 0 warning, 0 error (`npx eslint .`).
+  - Build: Berhasil (exit 0, 35 precache 1578.45 KiB, chunk `OfficeScene-hBPOEBiu.js` 841.37 KB / gzip 226.09 KB, `index-BN3oZCYV.js` 261.28 KB).
+  - Deploy: `dist/*` di-copy ke `~/wfs-hq/`, chunk stale lama (`CsWidget-BsMuni13.js`, `index-B4W_EnVj.js`, `OfficeScene-D_3R_Gum.js`) dibersihkan.
+  - e2e_err: HTTP 200 (index & `index-BN3oZCYV.js`, 0 "Scene init failed", PID 3671916).
+  - e2e_tv: **E2E_TV OK** (tasks 23/23 selesai, 100%, 14 agents aktif).
+  - e2e_zone_multi: **E2E_ZONE_MULTI OK** (preset iso, front, top: 0 OFFSCREEN, 0 pelanggaran margin).
+  - e2e_shot visual: **645.731 bytes** (>500KB = WebGL aktif, agents: 14, E2E_VISUAL: OK).
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).

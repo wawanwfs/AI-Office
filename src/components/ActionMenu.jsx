@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
-import { IconBolt, IconMeeting, IconCoffee, IconBriefcase, IconWalk } from './Icons'
+import { IconBolt, IconMeeting, IconCoffee, IconBriefcase, IconWalk, IconTag, IconRotate } from './Icons'
 
 export default function ActionMenu({ sceneRef, onFlash, actionMenuRef }) {
   const [open, setOpen] = useState(false)
@@ -13,8 +13,12 @@ export default function ActionMenu({ sceneRef, onFlash, actionMenuRef }) {
   const onCloseRef = useRef(() => setOpen(false))
   const closeMenu = useCallback(() => onCloseRef.current(), [])
   useDialogA11y({ open, onClose: closeMenu, ref: pop })
-  const [namesOn, setNamesOn] = useState(true)
-  const [rotOn, setRotOn] = useState(false)
+  const [namesOn, setNamesOn] = useState(() => {
+    try { return typeof localStorage !== 'undefined' ? localStorage.getItem('wfs_names') !== '0' : true } catch { return true }
+  })
+  const [rotOn, setRotOn] = useState(() => {
+    try { return typeof localStorage !== 'undefined' ? localStorage.getItem('wfs_autorot') === '1' : false } catch { return false }
+  })
   const wrap = useRef(null)
 
   // expose aksi nama/rotasi agar shortcut keyboard (K/R) bisa memicunya dari App
@@ -30,7 +34,7 @@ export default function ActionMenu({ sceneRef, onFlash, actionMenuRef }) {
         const s = sceneRef && sceneRef.current
         if (!s || !s.setAutoRotate) return onFlash && onFlash('Scene 3D tidak aktif (WebGL tidak tersedia)', true)
         const cur = s.isAutoRotate ? s.isAutoRotate() : rotOn
-        s.setAutoRotate(!cur); if (s.isAutoRotate) setRotOn(s.isAutoRotate()); else setRotOn(!cur)
+        s.setAutoRotate(!cur); if (s.isAutoRotate) setRotOn(s.isAutoRotate()); else setRotOn(v => !v)
       },
     }
     if (actionMenuRef) {
@@ -83,7 +87,7 @@ export default function ActionMenu({ sceneRef, onFlash, actionMenuRef }) {
       {open && (
         <div ref={pop} className="pop" role="menu" aria-label="Aksi tim" aria-modal="true" style={{ left: 0 }} onKeyDown={menuKeys}>
           {items.map(([ic, label, key, msg]) => (
-            <button key={key} role="menuitem" onClick={() => act(key, msg)}>
+            <button key={key} role="menuitem" onClick={() => act(key, msg)} title={msg}>
               <span className="pop-ic">
                 {ic === '📢' ? <IconMeeting size={16} /> : ic === '☕' ? <IconCoffee size={16} /> : ic === '💼' ? <IconBriefcase size={16} /> : <IconWalk size={16} />}
                 <span className="sr-only">{ic}</span>
@@ -92,12 +96,12 @@ export default function ActionMenu({ sceneRef, onFlash, actionMenuRef }) {
             </button>
           ))}
           <hr />
-          <button role="menuitemcheckbox" aria-checked={namesOn} onClick={() => { if (scene() && scene().toggleNames) { scene().toggleNames(); if (scene().isNamesVisible) setNamesOn(scene().isNamesVisible()); else setNamesOn(v => !v) } }}>
-            <span className="pop-ic"><span className="sr-only">🏷️</span>🏷️</span>
+          <button role="menuitemcheckbox" aria-checked={namesOn} title={namesOn ? 'Sembunyikan label nama agent & zona' : 'Tampilkan label nama agent & zona'} onClick={() => { if (scene() && scene().toggleNames) { scene().toggleNames(); if (scene().isNamesVisible) setNamesOn(scene().isNamesVisible()); else setNamesOn(v => !v) } }}>
+            <span className="pop-ic"><IconTag size={16} /><span className="sr-only">🏷️</span></span>
             {namesOn ? 'Sembunyikan' : 'Tampilkan'} nama
           </button>
-          <button role="menuitemcheckbox" aria-checked={rotOn} onClick={() => { if (scene() && scene().setAutoRotate) { scene().setAutoRotate(!rotOn); if (scene().isAutoRotate) setRotOn(scene().isAutoRotate()); else setRotOn(v => !v) } }}>
-            <span className="pop-ic"><span className="sr-only">🔄</span>🔄</span>
+          <button role="menuitemcheckbox" aria-checked={rotOn} title={rotOn ? 'Hentikan rotasi kamera otomatis' : 'Nyalakan rotasi kamera otomatis'} onClick={() => { if (scene() && scene().setAutoRotate) { scene().setAutoRotate(!rotOn); if (scene().isAutoRotate) setRotOn(scene().isAutoRotate()); else setRotOn(v => !v) } }}>
+            <span className="pop-ic"><IconRotate size={16} /><span className="sr-only">🔄</span></span>
             Putar otomatis: {rotOn ? 'ON' : 'OFF'}
           </button>
         </div>
