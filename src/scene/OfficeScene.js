@@ -390,148 +390,182 @@ function buildChar(agent, standing=false){
   const isHairLong = isLongHair(agent.name);
 
   if(standing){
-    // STANDING CHARACTER — proporsi lebih manusiawi
-    // Kaki (lebih panjang)
+    // ── STANDING CHARACTER (Human Stylized 3D Avatar) ──
+    // Kaki silinder mulus manusiawi (tapered)
     [-1,1].forEach(sd=>{
-      const leg=new THREE.Mesh(new THREE.BoxGeometry(.11,.52,.11),M(agent.pants));
+      const leg=new THREE.Mesh(new THREE.CylinderGeometry(.052,.044,.52,12),M(agent.pants));
       leg.position.set(sd*.075,.26,0);leg.userData.isLeg=true;leg.userData.phase=sd>0?0:Math.PI;leg.castShadow=true;g.add(leg);
-      const sh=new THREE.Mesh(new THREE.BoxGeometry(.12,.06,.19),M(0x2B2B33));
-      sh.position.set(sd*.075,.03,.02);g.add(sh);
+      // Sepatu Sneakers: sol putih + bodi berwarna + toe cap
+      const sole=new THREE.Mesh(new THREE.BoxGeometry(.11,.03,.20),M(0xFFFFFF));
+      sole.position.set(sd*.075,.015,.02);g.add(sole);
+      const shoe=new THREE.Mesh(new THREE.BoxGeometry(.10,.05,.18),M(agent.color));
+      shoe.position.set(sd*.075,.055,.01);g.add(shoe);
+      const toe=new THREE.Mesh(new THREE.SphereGeometry(.048,10,8),M(0xFFFFFF));
+      toe.position.set(sd*.075,.045,.09);g.add(toe);
     });
-    // Torso — trapesium feel: dada lebih lebar dari pinggang
-    const hips=new THREE.Mesh(new THREE.BoxGeometry(.26,.1,.15),M(agent.pants));
+    // Pinggul & Torso ramping alami
+    const hips=new THREE.Mesh(new THREE.CylinderGeometry(.13,.12,.12,12),M(agent.pants));
     hips.position.set(0,.56,0);g.add(hips);
-    const torso=new THREE.Mesh(new THREE.BoxGeometry(.32,.34,.18),M(agent.shirt));
+    const torso=new THREE.Mesh(new THREE.CylinderGeometry(.15,.13,.34,14),M(agent.shirt));
     torso.position.set(0,.79,0);torso.castShadow=true;g.add(torso);
-    // Collar + kancing
-    const col=new THREE.Mesh(new THREE.BoxGeometry(.2,.05,.12),M(0xFFFFFF));
+    // Kerah baju melingkar halus
+    const col=new THREE.Mesh(new THREE.CylinderGeometry(.09,.08,.04,12),M(0xFFFFFF));
     col.position.set(0,.965,0);g.add(col);
     const btn=new THREE.Mesh(new THREE.BoxGeometry(.025,.09,.01),MB(new THREE.Color(agent.shirt).multiplyScalar(.6)));
     btn.position.set(0,.8,.095);g.add(btn);
-    // Lengan: upper + forearm menggantung natural
+    // Lengan silinder halus & tangan bulat manusiawi
     [-1,1].forEach(sd=>{
-      const ua=new THREE.Mesh(new THREE.BoxGeometry(.09,.18,.09),M(agent.shirt));
+      const ua=new THREE.Mesh(new THREE.CylinderGeometry(.045,.04,.18,10),M(agent.shirt));
       ua.position.set(sd*.215,.8,0);ua.userData.isArm=true;ua.userData.phase=sd>0?0:Math.PI;g.add(ua);
-      const fa=new THREE.Mesh(new THREE.BoxGeometry(.075,.17,.075),M(skin));
+      const fa=new THREE.Mesh(new THREE.CylinderGeometry(.038,.035,.17,10),M(skin));
       fa.position.set(sd*.215,.62,0);g.add(fa);
-      const hand=new THREE.Mesh(new THREE.BoxGeometry(.08,.07,.08),M(skin));
+      const hand=new THREE.Mesh(new THREE.SphereGeometry(.038,10,8),M(skin));
       hand.position.set(sd*.215,.51,0);g.add(hand);
     });
-    // Leher
-    const neck=new THREE.Mesh(new THREE.BoxGeometry(.09,.07,.09),M(skin));
+    // Leher silinder
+    const neck=new THREE.Mesh(new THREE.CylinderGeometry(.045,.05,.08,12),M(skin));
     neck.position.set(0,.99,0);g.add(neck);
-    // Kepala — sedikit oval (tumpuk 2 box)
-    const head=new THREE.Mesh(new THREE.BoxGeometry(.24,.22,.22),M(skin));
+    // Kepala manusia oval mulus (Stylized Human Head)
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.125,20,16),M(skin));
+    head.scale.set(0.96,1.12,1.0);
     head.position.set(0,1.14,0);head.castShadow=true;g.add(head);
-    const jaw=new THREE.Mesh(new THREE.BoxGeometry(.2,.06,.19),M(skin));
-    jaw.position.set(0,1.01,0);g.add(jaw);
-    // Hidung
-    const nose=new THREE.Mesh(new THREE.BoxGeometry(.035,.05,.035),M(new THREE.Color(skin).multiplyScalar(.88).getHex()));
-    nose.position.set(0,1.13,.125);g.add(nose);
-    // Telinga
+    // Telinga halus
     [-1,1].forEach(sd=>{
-      const ear=new THREE.Mesh(new THREE.BoxGeometry(.03,.07,.06),M(skin));
+      const ear=new THREE.Mesh(new THREE.SphereGeometry(.032,10,8),M(skin));
+      ear.scale.set(0.5,1.0,0.8);
       ear.position.set(sd*.13,1.13,0);g.add(ear);
     });
-    // Mata + alis
+    // Hidung mungil halus
+    const nose=new THREE.Mesh(new THREE.SphereGeometry(.022,8,8),M(new THREE.Color(skin).multiplyScalar(.90).getHex()));
+    nose.position.set(0,1.13,.125);g.add(nose);
+    // Pipi bersemu merah alami (Blush)
     [-1,1].forEach(sd=>{
-      const eye=new THREE.Mesh(new THREE.BoxGeometry(.045,.05,.015),MB(0xFFFFFF));
-      eye.position.set(sd*.06,1.16,.112);g.add(eye);
-      const pup=new THREE.Mesh(new THREE.BoxGeometry(.022,.028,.012),MB(0x27303F));
-      pup.position.set(sd*.06,1.155,.118);g.add(pup);
-      const brow=new THREE.Mesh(new THREE.BoxGeometry(.05,.018,.015),M(agent.hair));
-      brow.position.set(sd*.06,1.215,.112);g.add(brow);
+      const blush=new THREE.Mesh(new THREE.SphereGeometry(.025,8,8),M(0xFCA5A5));
+      blush.scale.set(1.0,0.6,0.3);
+      blush.position.set(sd*.08,1.10,.115);g.add(blush);
     });
-    // Mulut senyum tipis
-    const mouth=new THREE.Mesh(new THREE.BoxGeometry(.06,.014,.012),MB(0x9C5A4A));
-    mouth.position.set(0,1.06,.118);g.add(mouth);
-    // Rambut — gaya beda per gender-ish
-    const hairTop=new THREE.Mesh(new THREE.BoxGeometry(.26,.09,.24),M(agent.hair));
-    hairTop.position.set(0,1.265,0);g.add(hairTop);
-    const hairBk=new THREE.Mesh(new THREE.BoxGeometry(.24,.2,.05),M(agent.hair));
-    hairBk.position.set(0,1.16,-.125);g.add(hairBk);
-    const fringe=new THREE.Mesh(new THREE.BoxGeometry(.24,.06,.03),M(agent.hair));
-    fringe.position.set(0,1.235,.105);g.add(fringe);
+    // Mata hidup: sklera putih + pupil espresso + specular glint
+    [-1,1].forEach(sd=>{
+      const eye=new THREE.Mesh(new THREE.SphereGeometry(.025,10,8),MB(0xFFFFFF));
+      eye.scale.set(1.0,1.1,0.4);
+      eye.position.set(sd*.058,1.16,.118);g.add(eye);
+      const pup=new THREE.Mesh(new THREE.SphereGeometry(.016,8,8),MB(0x1E293B));
+      pup.scale.set(1.0,1.1,0.4);
+      pup.position.set(sd*.058,1.158,.125);g.add(pup);
+      const glint=new THREE.Mesh(new THREE.SphereGeometry(.006,6,6),MB(0xFFFFFF));
+      glint.position.set(sd*.058+.006,1.166,.132);g.add(glint);
+      const brow=new THREE.Mesh(new THREE.BoxGeometry(.045,.015,.012),M(agent.hair));
+      brow.rotation.z=sd*-.12;
+      brow.position.set(sd*.058,1.21,.115);g.add(brow);
+    });
+    // Mulut senyum ramah
+    const mouth=new THREE.Mesh(new THREE.BoxGeometry(.055,.014,.012),MB(0xB45309));
+    mouth.position.set(0,1.06,.12);g.add(mouth);
+    // Rambut bersiluet alami melengkung
+    const hairVol=new THREE.Mesh(new THREE.SphereGeometry(.135,18,14),M(agent.hair));
+    hairVol.scale.set(0.98,1.12,1.02);
+    hairVol.position.set(0,1.16,-.01);g.add(hairVol);
+    const fringe=new THREE.Mesh(new THREE.SphereGeometry(.065,12,10),M(agent.hair));
+    fringe.scale.set(1.8,0.7,0.8);
+    fringe.position.set(0,1.24,.075);g.add(fringe);
     if(isHairLong){
       [-1,1].forEach(sd=>{
-        const strand=new THREE.Mesh(new THREE.BoxGeometry(.06,.3,.06),M(agent.hair));
-        strand.position.set(sd*.115,1.05,-.09);g.add(strand);
+        const strand=new THREE.Mesh(new THREE.CylinderGeometry(.032,.022,.35,10),M(agent.hair));
+        strand.position.set(sd*.115,1.02,-.04);strand.rotation.z=sd*-.08;g.add(strand);
       });
     }
-    // Badge perusahaan di dada (material unik agar bisa diubah warna via badgeSync)
+    // Badge & Lanyard
     const badge=new THREE.Mesh(new THREE.BoxGeometry(.06,.06,.015),MB(agent.color));
     badge.position.set(STANDING.badge.x,STANDING.badge.y,STANDING.badge.z);g.add(badge);
     g.userData.badge = badge;
-    // Lanyard/ID card
     const lany=new THREE.Mesh(new THREE.BoxGeometry(.03,.16,.01),MB(0x35507A));
     lany.position.set(STANDING.lanyard.x,STANDING.lanyard.y,STANDING.lanyard.z);g.add(lany);
   } else {
-    // SITTING CHARACTER — faces -Z (toward monitor)
-    // Paha ke arah meja
+    // ── SITTING CHARACTER (Menghadap -Z ke monitor) ──
+    // Paha silinder halus mengarah ke meja (-Z)
     [-1,1].forEach(sd=>{
-      const thigh=new THREE.Mesh(new THREE.BoxGeometry(.12,.11,.26),M(agent.pants));
+      const thigh=new THREE.Mesh(new THREE.CylinderGeometry(.055,.05,.26,12),M(agent.pants));
+      thigh.rotation.x=Math.PI/2;
       thigh.position.set(sd*.085,.44,-.08);thigh.castShadow=true;g.add(thigh);
-      const shin=new THREE.Mesh(new THREE.BoxGeometry(.11,.3,.11),M(agent.pants));
+      const shin=new THREE.Mesh(new THREE.CylinderGeometry(.048,.044,.30,12),M(agent.pants));
       shin.position.set(sd*.085,.24,-.2);g.add(shin);
-      const shoe=new THREE.Mesh(new THREE.BoxGeometry(.12,.06,.17),M(0x2B2B33));
-      shoe.position.set(sd*.085,.07,-.24);g.add(shoe);
+      // Sepatu di bawah meja
+      const sole=new THREE.Mesh(new THREE.BoxGeometry(.11,.03,.18),M(0xFFFFFF));
+      sole.position.set(sd*.085,.015,-.24);g.add(sole);
+      const shoe=new THREE.Mesh(new THREE.BoxGeometry(.10,.05,.16),M(agent.color));
+      shoe.position.set(sd*.085,.055,-.24);g.add(shoe);
     });
-    const hips=new THREE.Mesh(new THREE.BoxGeometry(.28,.12,.16),M(agent.pants));
+    const hips=new THREE.Mesh(new THREE.CylinderGeometry(.14,.13,.12,12),M(agent.pants));
     hips.position.set(0,.5,.02);g.add(hips);
-    // Torso tegak
-    const torso=new THREE.Mesh(new THREE.BoxGeometry(.32,.36,.18),M(agent.shirt));
+    // Torso manusiawi tegak
+    const torso=new THREE.Mesh(new THREE.CylinderGeometry(.15,.13,.36,14),M(agent.shirt));
     torso.position.set(0,.74,.02);torso.castShadow=true;g.add(torso);
     torso.userData.isTorso=true; torso.userData.baseY=.74;
-    const col=new THREE.Mesh(new THREE.BoxGeometry(.2,.05,.12),M(0xFFFFFF));
+    const col=new THREE.Mesh(new THREE.CylinderGeometry(.09,.08,.04,12),M(0xFFFFFF));
     col.position.set(0,.93,.02);g.add(col);
     const btn=new THREE.Mesh(new THREE.BoxGeometry(.025,.1,.01),MB(new THREE.Color(agent.shirt).multiplyScalar(.6)));
     btn.position.set(0,.76,.115);g.add(btn);
-    // Lengan menjangkau keyboard (upper + forearm)
+    // Lengan santai menjangkau keyboard
     [-1,1].forEach(sd=>{
-      const ua=new THREE.Mesh(new THREE.BoxGeometry(.09,.2,.09),M(agent.shirt));
+      const ua=new THREE.Mesh(new THREE.CylinderGeometry(.045,.04,.20,10),M(agent.shirt));
       ua.position.set(sd*.215,.68,-.03);ua.rotation.x=.35;g.add(ua);
-      const fa=new THREE.Mesh(new THREE.BoxGeometry(.075,.075,.2),M(skin));
-      fa.position.set(sd*.215,.56,-.2);g.add(fa);
-      const hand=new THREE.Mesh(new THREE.BoxGeometry(.08,.05,.09),M(skin));
+      const fa=new THREE.Mesh(new THREE.CylinderGeometry(.038,.035,.18,10),M(skin));
+      fa.position.set(sd*.215,.56,-.2);fa.rotation.x=Math.PI/2.4;g.add(fa);
+      const hand=new THREE.Mesh(new THREE.SphereGeometry(.038,10,8),M(skin));
       hand.position.set(sd*.16,.55,-.31);g.add(hand);
       hand.userData.isTypeHand=true; hand.userData.side=sd; hand.userData.baseY=.55;
     });
-    // Leher + kepala
-    const neck=new THREE.Mesh(new THREE.BoxGeometry(.09,.07,.09),M(skin));
+    // Leher silinder
+    const neck=new THREE.Mesh(new THREE.CylinderGeometry(.045,.05,.08,12),M(skin));
     neck.position.set(0,.955,.02);g.add(neck);
-    const head=new THREE.Mesh(new THREE.BoxGeometry(.24,.22,.22),M(skin));
+    // Kepala manusia oval mulus
+    const head=new THREE.Mesh(new THREE.SphereGeometry(.125,20,16),M(skin));
+    head.scale.set(0.96,1.12,1.0);
     head.position.set(0,1.1,.02);head.castShadow=true;g.add(head);
     head.userData.isHead=true; head.userData.baseY=1.1;
-    const jaw=new THREE.Mesh(new THREE.BoxGeometry(.2,.06,.19),M(skin));
-    jaw.position.set(0,.97,.02);g.add(jaw);
-    const nose=new THREE.Mesh(new THREE.BoxGeometry(.035,.05,.035),M(new THREE.Color(skin).multiplyScalar(.88).getHex()));
-    nose.position.set(0,1.09,-.105);g.add(nose);
+    // Telinga halus
     [-1,1].forEach(sd=>{
-      const ear=new THREE.Mesh(new THREE.BoxGeometry(.03,.07,.06),M(skin));
+      const ear=new THREE.Mesh(new THREE.SphereGeometry(.032,10,8),M(skin));
+      ear.scale.set(0.5,1.0,0.8);
       ear.position.set(sd*.13,1.09,.02);g.add(ear);
+    });
+    // Hidung mungil halus (arah -Z)
+    const nose=new THREE.Mesh(new THREE.SphereGeometry(.022,8,8),M(new THREE.Color(skin).multiplyScalar(.90).getHex()));
+    nose.position.set(0,1.09,-.105);g.add(nose);
+    // Pipi bersemu merah (arah -Z)
+    [-1,1].forEach(sd=>{
+      const blush=new THREE.Mesh(new THREE.SphereGeometry(.025,8,8),M(0xFCA5A5));
+      blush.scale.set(1.0,0.6,0.3);
+      blush.position.set(sd*.08,1.06,-.095);g.add(blush);
     });
     // Mata menghadap monitor (-Z)
     [-1,1].forEach(sd=>{
-      const eye=new THREE.Mesh(new THREE.BoxGeometry(.045,.05,.015),MB(0xFFFFFF));
-      eye.position.set(sd*.06,1.12,-.112);g.add(eye);
-      const pup=new THREE.Mesh(new THREE.BoxGeometry(.022,.028,.012),MB(0x27303F));
-      pup.position.set(sd*.06,1.115,-.118);g.add(pup);
-      const brow=new THREE.Mesh(new THREE.BoxGeometry(.05,.018,.015),M(agent.hair));
-      brow.position.set(sd*.06,1.175,-.112);g.add(brow);
+      const eye=new THREE.Mesh(new THREE.SphereGeometry(.025,10,8),MB(0xFFFFFF));
+      eye.scale.set(1.0,1.1,0.4);
+      eye.position.set(sd*.058,1.12,-.108);g.add(eye);
+      const pup=new THREE.Mesh(new THREE.SphereGeometry(.016,8,8),MB(0x1E293B));
+      pup.scale.set(1.0,1.1,0.4);
+      pup.position.set(sd*.058,1.118,-.115);g.add(pup);
+      const glint=new THREE.Mesh(new THREE.SphereGeometry(.006,6,6),MB(0xFFFFFF));
+      glint.position.set(sd*.058+.006,1.126,-.122);g.add(glint);
+      const brow=new THREE.Mesh(new THREE.BoxGeometry(.045,.015,.012),M(agent.hair));
+      brow.rotation.z=sd*-.12;
+      brow.position.set(sd*.058,1.17,-.105);g.add(brow);
     });
-    const mouth=new THREE.Mesh(new THREE.BoxGeometry(.06,.014,.012),MB(0x9C5A4A));
-    mouth.position.set(0,1.02,-.118);g.add(mouth);
-    // Rambut (belakang kepala = +Z)
-    const hairTop=new THREE.Mesh(new THREE.BoxGeometry(.26,.09,.24),M(agent.hair));
-    hairTop.position.set(0,1.225,.02);g.add(hairTop);
-    const hairBk=new THREE.Mesh(new THREE.BoxGeometry(.24,.2,.05),M(agent.hair));
-    hairBk.position.set(0,1.12,.135);g.add(hairBk);
-    const fringe=new THREE.Mesh(new THREE.BoxGeometry(.24,.06,.03),M(agent.hair));
-    fringe.position.set(0,1.19,-.095);g.add(fringe);
+    // Mulut senyum (arah -Z)
+    const mouth=new THREE.Mesh(new THREE.BoxGeometry(.055,.014,.012),MB(0xB45309));
+    mouth.position.set(0,1.02,-.11);g.add(mouth);
+    // Rambut bersiluet alami (arah belakang = +Z)
+    const hairVol=new THREE.Mesh(new THREE.SphereGeometry(.135,18,14),M(agent.hair));
+    hairVol.scale.set(0.98,1.12,1.02);
+    hairVol.position.set(0,1.12,.03);g.add(hairVol);
+    const fringe=new THREE.Mesh(new THREE.SphereGeometry(.065,12,10),M(agent.hair));
+    fringe.scale.set(1.8,0.7,0.8);
+    fringe.position.set(0,1.20,-.065);g.add(fringe);
     if(isHairLong){
       [-1,1].forEach(sd=>{
-        const strand=new THREE.Mesh(new THREE.BoxGeometry(.06,.3,.06),M(agent.hair));
-        strand.position.set(sd*.115,.98,.1);g.add(strand);
+        const strand=new THREE.Mesh(new THREE.CylinderGeometry(.032,.022,.35,10),M(agent.hair));
+        strand.position.set(sd*.115,.98,.06);strand.rotation.z=sd*-.08;g.add(strand);
       });
     }
     const badge=new THREE.Mesh(new THREE.BoxGeometry(.06,.06,.015),MB(agent.color));
