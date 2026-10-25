@@ -54,6 +54,11 @@ describe('ConfirmModal', () => {
     expect(onCancel).toHaveBeenCalledTimes(2)
     fireEvent.click(dlg)
     expect(onCancel).toHaveBeenCalledTimes(2)
+    // tombol tutup silang (IconClose) memicu onCancel
+    const xBtn = screen.getByRole('button', { name: /Tutup dialog konfirmasi/i })
+    expect(xBtn.getAttribute('title')).toBe('Batal (Esc)')
+    fireEvent.click(xBtn)
+    expect(onCancel).toHaveBeenCalledTimes(3)
   })
   it('busy → label Memproses… dan tombol disabled', () => {
     render(<ConfirmModal show title="t" text="x" busy onConfirm={() => {}} onCancel={() => {}} />)

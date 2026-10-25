@@ -143,6 +143,16 @@ describe('createProjectBoard — render konten', () => {
     expect(texts.some(t => t === 'sbx-be1 ●')).toBe(true)
   })
 
+  it('strip bawah menyertakan segmen OMNI saat data omniroute tersedia', async () => {
+    const snapWithOmni = {
+      ...SNAP,
+      omniroute: { online: true, port: 20128 },
+    }
+    await mount(snapWithOmni)
+    expect(texts.some(t => t === 'OMNI')).toBe(true)
+    expect(texts.some(t => t === ':20128 ●')).toBe(true)
+  })
+
   it('payload null / fetch gagal → tidak throw, papan tidak menggambar data', async () => {
     // mount() menimpa stub fetch — injeksikan payload null (sama seperti catch: snap tetap null)
     await mount(null)

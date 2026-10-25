@@ -154,6 +154,26 @@ describe('stripSegments', () => {
     expect(segs.map(s => s.txt)).toContain('offline')
     expect(segs.some(s => s.txt === 'AGENT')).toBe(false)
   })
+  it('omniroute online/offline disertakan dengan port & status yang sesuai', () => {
+    const segsOnline = stripSegments({
+      saas: { online: true },
+      agents: [],
+      omniroute: { online: true, port: 20128 },
+    })
+    expect(segsOnline.map(s => s.txt)).toContain('OMNI')
+    expect(segsOnline.map(s => s.txt)).toContain(':20128 ●')
+    const omniSeg = segsOnline.find(s => s.txt === ':20128 ●')
+    expect(omniSeg.col).toBe('#10E5A0')
+
+    const segsOffline = stripSegments({
+      saas: { online: true },
+      agents: [],
+      omniroute: { online: false },
+    })
+    expect(segsOffline.map(s => s.txt)).toContain('offline')
+    const offOmni = segsOffline.find(s => s.txt === 'offline' && s.__isOmni)
+    expect(offOmni.col).toBe('#ef4444')
+  })
 })
 
 describe('clampStripTenant', () => {
@@ -207,5 +227,21 @@ describe('stripLayout', () => {
         expect(w).toBeLessThanOrEqual(budget)
       }
     }
+  })
+  it('omniroute tampil bila muat dan dibuang secara bertahap bila budget menyempit', () => {
+    const snapOmni = {
+      ...snap,
+      omniroute: { online: true, port: 20128 },
+    }
+    const wide = stripLayout(snapOmni, m(5000))
+    expect(wide.kept.some(s => s.txt === 'OMNI')).toBe(true)
+    expect(wide.kept.some(s => s.txt === ':20128 ●')).toBe(true)
+    expect(wide.dropped).toEqual([])
+
+    // budget sangat ketat: omni dibuang sebelum agen
+    const tight = stripLayout(snapOmni, m(400))
+    expect(tight.dropped).toContain('omni')
+    expect(tight.kept.some(s => s.txt === 'OMNI')).toBe(false)
+    expect(tight.kept.some(s => s.txt === 'be1 ●')).toBe(true)
   })
 })

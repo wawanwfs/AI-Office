@@ -74,7 +74,7 @@ export function columnItems(T, i) {
   return ((T && T.recent) || []).filter(r => r.status === want).slice(0, 6)
 }
 
-// segmen strip bawah [{txt, col}] dari snapshot penuh (saas + agents)
+// segmen strip bawah [{txt, col}] dari snapshot penuh (saas + agents + omniroute)
 export function stripSegments(snap) {
   const segs = []
   const s = (snap && snap.saas) || {}
@@ -96,6 +96,16 @@ export function stripSegments(snap) {
     segs.push({ txt: 'AGENT', col: '#448AFF' })
     ags.forEach(a => segs.push({ txt: a.name + ' ' + (a.status === 'Up' ? '●' : '○'), col: a.status === 'Up' ? '#10E5A0' : '#ef4444' }))
   }
+  const omni = (snap && snap.omniroute) || null
+  if (omni) {
+    segs.push({ txt: '·', col: '#44506a' })
+    segs.push({ txt: 'OMNI', col: '#448AFF' })
+    segs.push({
+      txt: omni.online ? (omni.port ? `:${omni.port} ●` : 'online') : 'offline',
+      col: omni.online ? '#10E5A0' : '#ef4444',
+      __isOmni: true,
+    })
+  }
   return segs
 }
 
@@ -111,26 +121,44 @@ export function clampStripTenant(name, max = 24) {
 
 // Wajib-segmen strip (label yang tidak boleh dibuang): label SaaS + status agen.
 // stripLayout() memangkas segmen prioritas-rendah dari kanan sampai muat:
-// urutan buang: 'terbaru: …' → '… pesan' → '… chat' → online.
+// urutan buang: 'terbaru: …' → '… pesan' → '… chat' → omniroute → online.
 export const STRIP_GAP = 26, STRIP_LEFT = 44, STRIP_RIGHT = 44
-const DROP_ORDER = ['latest', 'messages', 'chats', 'online']
+export const BASE_DROP_ORDER = ['latest', 'messages', 'chats', 'online']
+export const OMNI_DROP_ORDER = ['latest', 'messages', 'chats', 'omni', 'online']
+
 export function stripLayout(snap, measure) {
   const segs = stripSegments(snap).map(sg => ({ ...sg }))
+  const hasOmni = !!(snap && snap.omniroute)
+  const dropOrder = hasOmni ? OMNI_DROP_ORDER : BASE_DROP_ORDER
   // tandai segmen yang boleh dibuang
+  let inOmni = false
   segs.forEach(sg => {
     if (sg.txt.startsWith('terbaru: ')) sg.__drop = 'latest'
     else if (/ \d+ pesan$/.test(sg.txt)) sg.__drop = 'messages'
     else if (/ \d+ chat$/.test(sg.txt)) sg.__drop = 'chats'
-    else if (sg.txt === 'online') sg.__drop = 'online'
+    else if (sg.txt === 'online' && !inOmni && !sg.__isOmni) sg.__drop = 'online'
+    else if (sg.txt === 'OMNI') {
+      sg.__drop = 'omni'
+      inOmni = true
+    } else if (inOmni || sg.__isOmni) {
+      sg.__drop = 'omni'
+      inOmni = false
+    }
   })
+  // tandai pemisah '·' yang mendahului OMNI agar ikut terbuang saat OMNI dibuang
+  for (let i = 0; i < segs.length - 1; i++) {
+    if (segs[i].txt === '·' && segs[i + 1]?.__drop === 'omni') {
+      segs[i].__drop = 'omni'
+    }
+  }
   const budget = measure.budget
   const gap = measure.gap ?? STRIP_GAP
   const width = (list) => list.reduce((a, s) => a + measure.text(s.txt) + gap, 0) - gap
-  for (let i = 0; i <= DROP_ORDER.length; i++) {
-    const drops = new Set(DROP_ORDER.slice(0, i))
+  for (let i = 0; i <= dropOrder.length; i++) {
+    const drops = new Set(dropOrder.slice(0, i))
     const kept = segs.filter(sg => !drops.has(sg.__drop))
     if (width(kept) <= budget) return { kept, dropped: [...drops] }
   }
   // tetap tak muat (layar sempit ekstrem): buang semua opsional + pangkas nama agen tidak mungkin — kembalikan minimal
-  return { kept: segs.filter(sg => !sg.__drop), dropped: [...DROP_ORDER] }
+  return { kept: segs.filter(sg => !sg.__drop), dropped: [...dropOrder] }
 }

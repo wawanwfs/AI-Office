@@ -70,6 +70,13 @@ describe('ConfirmModal', () => {
     expect(onNo).toHaveBeenCalledTimes(1)
     expect(onOk).not.toHaveBeenCalled()
   })
+  it('tombol silang ✕ memicu onCancel', () => {
+    const onOk = vi.fn(), onNo = vi.fn()
+    render(<ConfirmModal show title="t" text="b" onConfirm={onOk} onCancel={onNo} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Tutup dialog konfirmasi' }))
+    expect(onNo).toHaveBeenCalledTimes(1)
+    expect(onOk).not.toHaveBeenCalled()
+  })
   it('busy: tombol konfirmasi disabled & label Memproses…', () => {
     const onOk = vi.fn()
     render(<ConfirmModal show title="t" text="b" busy onConfirm={onOk} onCancel={() => {}} />)

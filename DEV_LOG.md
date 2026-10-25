@@ -2537,3 +2537,32 @@
     - `scripts/e2e_shot.py`: Screenshot visual **583.870 bytes** (>500 KB, WebGL hidup, agents: 14, E2E_VISUAL: OK).
     - `shot.sh` (XDISP=:99): **587.471 bytes**.
 - Sisa backlog: verifikasi subjektif audio web-audio.
+
+## 2026-10-25 17:55 WIB — Siklus 64: Integrasi status OmniRoute di strip 3D ProjectBoard, penuntasan SVG close button ConfirmModal & penyesuaian drop order responsif
+
+- Pilihan: integrasi status AI router Docker (OmniRoute) ke visualisasi kantor 3D dan penuntasan standardisasi modal close button:
+  1) Integrasi status OmniRoute pada papan proyek 3D (`projectboard_data.js`): `/wfs-project` menyediakan snapshot `omniroute` (`online`, `port`), yang telah ditampilkan di `ProjectPanel` tetapi belum masuk ke strip status bawah kanvas 3D ProjectBoard di dinding kantor. Kini `stripSegments` menyertakan segmen `OMNI` dan status port (`:20128 ●` hijau / `offline` merah).
+  2) Algoritma layout responsif strip bawah (`stripLayout`): mendukung `omni` drop order secara kondisional saat lebar kanvas menyempit, membuang segmen `OMNI` dan titik pemisah sebelum mengorbankan segmen wajib (`SaaS` & `AGENT`), sembari mempertahankan kompatibilitas deterministik penuh dengan `BASE_DROP_ORDER`.
+  3) Modernisasi SVG close button `ConfirmModal.jsx`: melengkapi penutupan modal dialog terakhir dengan tombol silang modern `<button type="button" className="x"><IconClose size={16} /><span className="sr-only">✕</span></button>`, tooltip `Batal (Esc)`, padding judul `paddingRight: 32` agar tidak tumpang tindih, dan dukungan aksesibilitas screen reader.
+- Perubahan:
+  - `src/components/ConfirmModal.jsx`: impor `IconClose`, pasang tombol `.x` dengan handler `onCancel` dan tooltip (Esc), penyesuaian styling header.
+  - `src/scene/parts/projectboard_data.js`:
+    - `stripSegments`: tambahkan penanganan `snap.omniroute` (`OMNI` + status/port).
+    - `stripLayout`: implementasikan `BASE_DROP_ORDER` dan `OMNI_DROP_ORDER` adaptif dengan pembersihan pemisah `·` otomatis.
+  - Unit test:
+    - `src/__tests__/projectboard_data.test.js`: +2 test baru verifikasi segmen `omniroute` (online/port & offline) serta degradasi anggun pada `stripLayout`.
+    - `src/__tests__/projectboard_runtime.test.js`: +1 test baru verifikasi render canvas 3D `OMNI` dan `:20128 ●`.
+    - `src/__tests__/remaining_components.test.jsx`: verifikasi tombol tutup silang `IconClose` pada `ConfirmModal` memicu `onCancel`.
+    - `src/__tests__/ui_components.test.jsx`: +1 test verifikasi interaksi tombol silang `ConfirmModal`.
+- Bukti terukur:
+  - Vitest: **1192/1192 (107 file)** (+4 test baru, 0 fail).
+  - ESLint: 0 warning, 0 error (`npx eslint .`).
+  - Build: Berhasil (exit 0, 35 precache entries 1588.00 KiB, chunk `OfficeScene-BZlzXO7x.js` 845.92 KB / gzip 227.38 KB, `index-F671EB-J.js` 265.85 KB).
+  - Deploy: `dist/*` ter-deploy ke `~/wfs-hq/`, chunk lama dibersihkan.
+  - E2E & Servis:
+    - `e2e_err.py`: HTTP 200 (index & `index-F671EB-J.js`, 0 "Scene init failed", PID 3964547).
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 23/23 selesai, 100%, 14 agents aktif).
+    - `scripts/e2e_zone_multi.py`: **E2E_ZONE_MULTI OK** (iso, front, top: 0 OFFSCREEN, 0 pelanggaran margin).
+    - `scripts/e2e_shot.py`: Screenshot visual **709.711 bytes** (>500 KB, WebGL hidup, agents: 14, E2E_VISUAL: OK).
+    - `shot.sh` (DISPLAY=:10): **714.812 bytes**.
+- Sisa backlog: verifikasi subjektif audio web-audio.
