@@ -211,7 +211,25 @@ import tasks as taskengine
 
 @app.get("/api/projects")
 async def api_projects():
-    return {"projects": taskengine.list_projects()}
+    base = taskengine.list_projects()          # [{id,name,status}]
+    try:
+        sh_map = {str(p["id"]): p for p in sh_db.list_projects()}
+    except Exception as e:
+        print("projects sh_db merge err:", e); sh_map = {}
+    out = []
+    for p in base:
+        rec = dict(p)
+        s = sh_map.get(str(p["id"]))
+        if s:
+            rec["description"] = s.get("description") or ""
+            rec["preview_url"] = s.get("preview_url")
+            port = s.get("preview_port")
+            rec["direct_url"] = ("http://127.0.0.1:%s/" % port) if port else None
+            rec["container_name"] = s.get("container_name")
+            rec["container_status"] = s.get("status")
+            rec["workspace_path"] = s.get("workspace_path")
+        out.append(rec)
+    return {"projects": out}
 
 @app.post("/api/projects")
 async def api_new_project(body: dict):
