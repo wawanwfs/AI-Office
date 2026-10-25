@@ -165,6 +165,9 @@ def _send_head_with_token(self):
 
 http.server.SimpleHTTPRequestHandler.send_head = _send_head_with_token
 
-socketserver.TCPServer.allow_reuse_address = True
-with socketserver.TCPServer(("0.0.0.0", 9503), H) as s:
+class ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
+    daemon_threads = True
+    allow_reuse_address = True
+
+with ThreadingTCPServer(("0.0.0.0", 9503), H) as s:
     s.serve_forever()

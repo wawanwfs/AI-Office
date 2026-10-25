@@ -105,6 +105,31 @@ def handle_api_request(handler, method, path):
         handler.end_headers()
         handler.wfile.write(payload)
 
+    # ── SSE REAL-TIME EVENTS: /api/events ──
+    if api_path == "events" and method == "GET":
+        handler.send_response(200)
+        handler.send_header("Content-Type", "text/event-stream")
+        handler.send_header("Cache-Control", "no-cache")
+        handler.send_header("Connection", "keep-alive")
+        handler.send_header("Access-Control-Allow-Origin", "*")
+        handler.end_headers()
+        try:
+            init_msg = json.dumps({"type": "connected", "software_house": "WFS PROJECT"}).encode("utf-8")
+            handler.wfile.write(b"data: " + init_msg + b"\n\n")
+            handler.wfile.flush()
+            conn = get_db()
+            cur = conn.cursor()
+            cur.execute("SELECT * FROM execution_logs ORDER BY id DESC LIMIT 15")
+            rows = [dict(r) for r in cur.fetchall()]
+            conn.close()
+            for r in reversed(rows):
+                evt = json.dumps({"type": "log", "data": r}).encode("utf-8")
+                handler.wfile.write(b"data: " + evt + b"\n\n")
+            handler.wfile.flush()
+        except (BrokenPipeError, ConnectionResetError):
+            pass
+        return True
+
     # ── PROJECTS ──
     if api_path == "projects":
         if method == "GET":

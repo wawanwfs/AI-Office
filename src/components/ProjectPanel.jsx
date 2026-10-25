@@ -29,6 +29,12 @@ export default function ProjectPanel() {
   }, [])
 
   useEffect(() => {
+    const handleOpen = () => setOpen(true)
+    window.addEventListener('wfs-open-project-panel', handleOpen)
+    return () => window.removeEventListener('wfs-open-project-panel', handleOpen)
+  }, [])
+
+  useEffect(() => {
     if (!open) return
     const ac = new AbortController()
     const t0 = setTimeout(() => load(ac.signal), 0)
