@@ -2327,3 +2327,9 @@
 - Perubahan: fungsi murni `resetZoneBaseOffsets(zones)` di parts/label_overlap.js (nol-kan antiY/antiX, kembalikan posisi ke base, set visible opsional); 2 call-site OfficeScene.js diganti pemanggilan fungsi (toggleNames kirim visible=namesVisible, teamAction('work') tanpa visible). 0 perubahan perilaku.
 - Bukti: build OK (exit 0); vitest **1123/1123 (99 file)** (+5); eslint 0 error; cp dist→~/wfs-hq OK; e2e_err HTTP 200 (index & index-BouFo4zk.js, 0 "Scene init failed"); e2e_shot: agents=14, __wallState true, screenshot 721.097 bytes → E2E_VISUAL OK.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+
+## 2026-10-25 08:45 WIB — Siklus 50: Screen Wake Lock — layar kiosk kantor tidak sleep
+- Pilihan: backlog "verifikasi suara" butuh telinga manusia; dipilih fitur nyata untuk display yang dipajang terus-menerus — tanpa interaksi, browser mematikan layar (screen sleep) dan scene 3D berhenti terlihat.
+- Perubahan: + src/lib/wakelock.js — createWakeLockManager(nav, {onState}) murni/teruji: unsupported bila tanpa Wake Lock API (tanpa error), acquire('screen')/release, state() (held/released), reacquire setelah lock dilepas browser saat tab hidden (lock=null di event 'release', bukan sentinel lama yang `released:true` — bug yang tertangkap test). Integrasi App.jsx: useEffect mount → acquire, visibilitychange visible → reacquire, unmount → release. 0 file scene disentuh.
+- Bukti: build OK (exit 0); vitest **1131/1131 (100 file)** (+8); eslint 0 error; cp dist→~/wfs-hq OK; e2e_err HTTP 200 (index & index-dLT-oHBR.js, 0 "Scene init failed", 404 API :8787 normal); e2e_shot: agents=14, __wallState true, screenshot 720.885 bytes → E2E_VISUAL OK.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).

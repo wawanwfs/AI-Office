@@ -16,6 +16,7 @@ import ProjectPanel from './components/ProjectPanel'
 import ActivityLog from './components/ActivityLog'
 import { api } from './lib/api'
 import { anyModalOpen } from './lib/modal'
+import { createWakeLockManager } from './lib/wakelock.js'
 
 const CsWidget = lazy(() => import('./components/CsWidget'))
 
@@ -115,6 +116,18 @@ export default function App() {
     window.addEventListener('online', on)
     return () => { clearInterval(iv); window.removeEventListener('offline', off); window.removeEventListener('online', on) }
   }, [refreshStatus, flash])
+
+  // ---- Wake Lock: layar kiosk kantor tidak boleh sleep saat tab terlihat ----
+  // Scene 3D dipajang tanpa interaksi → browser bisa mematikan layar. Manager
+  // (lib/wakelock.js, diuji unit) acquire saat mount, reacquire otomatis saat
+  // tab kembali visible (browser melepas wakeLock saat hidden — perilaku spesifikasi).
+  useEffect(() => {
+    const wl = createWakeLockManager(typeof navigator !== 'undefined' ? navigator : null)
+    wl.acquire()
+    const onVis = () => { if (document.visibilityState === 'visible') wl.acquire() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { document.removeEventListener('visibilitychange', onVis); wl.release() }
+  }, [])
 
   // ---- judul tab dinamis: status task & jam kantor terlihat dari tab browser ----
   useEffect(() => {
