@@ -29,8 +29,10 @@ export default function OverlayHelp({ show, onClose }) {
           <IconClose size={16} />
           <span className="sr-only">✕</span>
         </button>
-        <h3 id="help-t">{STEPS[step].title} <span style={{ opacity: .6, fontSize: 12 }}>({step + 1}/{STEPS.length})</span></h3>
-        <p>{STEPS[step].text}</p>
+        <div aria-live="polite">
+          <h3 id="help-t">{STEPS[step].title} <span style={{ opacity: .6, fontSize: 12 }}>({step + 1}/{STEPS.length})</span></h3>
+          <p>{STEPS[step].text}</p>
+        </div>
         <div className="modal-actions" style={{ justifyContent: 'space-between' }}>
           <button className="btn" disabled={step === 0} onClick={() => setStep(s => s - 1)}>← Sebelumnya</button>
           {step < STEPS.length - 1

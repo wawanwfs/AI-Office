@@ -4,7 +4,7 @@
 // ErrorBoundary, TeamStats, Header. Melengkapi cakupan komponen src/components.
 import React from 'react'
 import { describe, it, expect, vi, afterEach, beforeEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, within, cleanup } from '@testing-library/react'
 
 import ConfirmModal from '../components/ConfirmModal'
 import OverlayHelp from '../components/OverlayHelp'
@@ -95,6 +95,13 @@ describe('OverlayHelp', () => {
     expect(btn.getAttribute('title')).toBe('Tutup panduan (Esc)')
     fireEvent.click(btn)
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+  it('konten langkah dibungkus region aria-live (pengumuman SR saat navigasi)', () => {
+    render(<OverlayHelp show onClose={() => {}} />)
+    const liveBox = screen.getByText(/1\/6/).closest('[aria-live="polite"]')
+    expect(liveBox).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: /Berikutnya/ }))
+    expect(within(liveBox).getByText(/2\/6/)).toBeTruthy()
   })
 })
 
