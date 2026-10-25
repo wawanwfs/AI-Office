@@ -23,15 +23,14 @@
      - Menambahkan pengujian verifikasi nama autentik 3 lantai dan reaktivitas sinkronisasi prop `currentFloor`.
 
 - **Bukti terukur:**
-  - **Vitest:** **1344/1344 passed (117 test file)** (+1 test baru, 0 fail).
+  - **Vitest:** **1349/1349 passed (118 test file)** (+5 tests baru, 0 fail).
   - **ESLint:** 0 warning, 0 error (`npx eslint .`).
-  - **Build:** Berhasil (exit 0, 35 precache entries 1623.09 KiB; chunk `OfficeScene-0J1w7dfo.js` 857.64 KB / gzip 231.22 KB, `index-DV1BEDuV.js` 287.38 KB).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1625.84 KiB; chunk `OfficeScene-B2ZEfqGi.js` 860.15 KB / gzip 231.87 KB, `index-BAa1fJ4R.js` 287.68 KB).
   - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, chunk usang dibersihkan dari server.
   - **E2E & Visual:**
-    - `e2e_err.py`: HTTP 200 (index & `index-DV1BEDuV.js`, 0 "Scene init failed").
-    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 14 agents aktif).
-    - `scripts/e2e_zone_multi.py`: **E2E_ZONE_MULTI OK** (iso, front, top: 0 OFFSCREEN, 0 pelanggaran margin).
-    - `scripts/e2e_shot.py`: Screenshot visual **949.234 bytes** (>500 KB, WebGL hidup, agents: 14, E2E_VISUAL: OK).
+    - `e2e_err.py`: HTTP 200 (index & `index-BAa1fJ4R.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 20 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **999.568 bytes** (>500 KB, WebGL hidup, agents: 20, E2E_VISUAL: OK).
 - **Sisa backlog:** verifikasi subjektif audio web-audio.
 
 ## 2026-10-26 01:00 WIB — Siklus 70: Interaktivitas Profil Founder Wahyu FS (Inspector Card & Golden Selection Ring), Perbaikan Presisi Frame Papan Proyek 3D & Sinkronisasi Software House
