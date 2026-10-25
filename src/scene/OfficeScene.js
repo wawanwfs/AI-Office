@@ -6,7 +6,7 @@ import { createLighting, createNeonMode, createShift, mixHex } from './parts/day
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles, charMotion, applyCharMotion } from './parts/effects.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { perfStep } from './parts/perf_quality.js';
 import { updateFollowGoal, focusStep, autoRotateStep } from './parts/kamera_focus.js';
@@ -52,7 +52,7 @@ export function createOfficeScene(container, callbacks = {}) {
   // scene baru dibuat → flag destroy scene LAMA dicabut; tanpa ini remount/hot-reload
   // membuat scene baru dengan audio mati permanen (__ensureAudio selalu return early).
   window.__officeSceneDestroyed = false;
-  const { onTimeUpdate, onStatusUpdate, onMeetingChange } = callbacks;
+  const { onTimeUpdate, onStatusUpdate, onMeetingChange, onSelectAgent } = callbacks;
 
 // ═══════════════════════════════════════════════════
 // THE AGENCY v3
@@ -146,7 +146,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   // papan proyek juga bisa diklik → kamera zoom ke papan
   const boardMesh=window.__projectBoard&&window.__projectBoard.mesh;
   const hits=ray.intersectObjects(boardMesh?[...targets,boardMesh]:targets,true);
-  if(!hits.length){ if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius,reset:true}} selectedIdx=-1;applySelected(); return; }
+  if(!hits.length){ if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius,reset:true}} selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null); return; }
   if(boardMesh&&hits[0].object===boardMesh){
     focusGoal={t:new THREE.Vector3(-8.6,2.55,9.2),r:8.5};
     createBubble(-8.6,4.4,7.8,'“Proyek dibantuin.com — klik tombol Proyek untuk detail”','#10E5A0');
@@ -167,6 +167,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
     if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
     createBubble(wp.x,2.6,wp.z,'“Halo! Aku '+root.agent.name+'”',root.agent.hex);
     selectedIdx=agentData.indexOf(root);applySelected();
+    if(onSelectAgent)onSelectAgent(root.agent);
   }
 });
 let onDragUp=null, onDragMove=null;
@@ -1114,34 +1115,23 @@ function animate(){
       if(a.state==='sitting'){
         a.label.position.y=LABEL_Y+ambientFx(elapsed,i).label;
         if(a.sittingChar&&a.sittingChar.visible){
-          a.sittingChar.children.forEach(c=>{
-            if(!c.userData)return;
-            if(c.userData.isTypeHand){
-              c.position.y=c.userData.baseY+Math.sin(elapsed*9+c.userData.side*2.8+i)*0.008;
-            } else if(c.userData.isTorso){
-              c.position.y=c.userData.baseY+Math.sin(elapsed*1.8+i)*0.006;
-            } else if(c.userData.isHead){
-              c.rotation.y=Math.sin(elapsed*0.5+i*1.1)*0.035;
-              c.rotation.x=Math.sin(elapsed*1.8+i)*0.015;
-            }
-          });
+          applyCharMotion(a.sittingChar, charMotion(elapsed, i, 'desk'));
         }
       }
     });
     if(nxChar){
-      nxChar.children.forEach(c=>{
-        if(!c.userData)return;
-        if(c.userData.isTypeHand){
-          c.position.y=c.userData.baseY+Math.sin(elapsed*8+c.userData.side*2.5)*0.007;
-        } else if(c.userData.isTorso){
-          c.position.y=c.userData.baseY+Math.sin(elapsed*1.6)*0.005;
-        } else if(c.userData.isHead){
-          c.rotation.y=Math.sin(elapsed*0.4)*0.03;
-          c.rotation.x=Math.sin(elapsed*1.6)*0.015;
+      applyCharMotion(nxChar, charMotion(elapsed, 0, 'reception'));
+    }
+    nxLabel.position.y=LABEL_Y-.5+fx.nx;
+    if(__meet&&__meet.active&&typeof __meet.attendees==='function'){
+      const att=__meet.attendees();
+      att.forEach((ai,seatIdx)=>{
+        const fig=__meet.figures&&__meet.figures[ai];
+        if(fig&&fig.visible){
+          applyCharMotion(fig, charMotion(elapsed, seatIdx, 'meeting'));
         }
       });
     }
-    nxLabel.position.y=LABEL_Y-.5+fx.nx;
   }
 
   // Dust drift — di-throttle ~20×/dtk (drift sangat lambat; dulu 40×sin/cos +
@@ -1321,7 +1311,7 @@ const onResize=()=>{camera.aspect=container.clientWidth/container.clientHeight;c
   const asp2=container.clientWidth/Math.max(1,container.clientHeight);
   if(!focusGoal&&!sph.__saved){sph.radius=asp2<0.6?34:asp2<0.8?36:Math.min(sph.radius,56);updCam();}
 };window.addEventListener('resize',onResize);
-const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius||sph.radius,reset:true};selectedIdx=-1;applySelected();delete sph.__saved;} };window.addEventListener('keydown',onKey);
+const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius||sph.radius,reset:true};selectedIdx=-1;applySelected();if(onSelectAgent)onSelectAgent(null);delete sph.__saved;} };window.addEventListener('keydown',onKey);
 
   // Return controls for React UI
   // ── Kontrol aksi tim (dipakai menu React) ──
@@ -1359,7 +1349,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       agentData.forEach(ad=>{ad.label.visible=namesVisible;ad.label.userData.antiY=0;ad.label.userData.antiX=0});
       if(window.__zoneLabels)resetZoneBaseOffsets(window.__zoneLabels.map(zt=>({ref:zt,base:window.__zoneBase&&window.__zoneBase.get(zt),visible:namesVisible}))); },
     isNamesVisible: () => namesVisible,
-    setSelected: (idx) => { selectedIdx=idx; applySelected(); },
+    setSelected: (idx) => { selectedIdx=idx; applySelected(); if(onSelectAgent)onSelectAgent(idx>=0&&idx<agentData.length?agentData[idx].agent:null); },
     getSelected: () => selectedIdx,
     resetFocus: () => { if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius||sph.radius,reset:true}} },
     setAutoRotate: (v) => { autoRot=!!v; __userRot=!!v; try{localStorage.setItem('wfs_autorot',autoRot?'1':'0')}catch{/* abaikan */} },
@@ -1372,7 +1362,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
     setView: (name) => {
       if(name==='iso'||name==='front'||name==='top'){
         // ganti sudut kamera = batalkan fokus/pilihan agent (konsisten dgn Escape & klik kosong)
-        if(selectedIdx!==-1){selectedIdx=-1;applySelected();}
+        if(selectedIdx!==-1){selectedIdx=-1;applySelected();if(onSelectAgent)onSelectAgent(null);}
         delete sph.__saved;
       }
       focusGoal=null; tgt.copy(HOME_TGT);
@@ -1413,6 +1403,8 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       try { __shift && __shift.dispose && __shift.dispose() } catch{/* abaikan */}
       // Audio: engine menutup AudioContext scene lama (mencegah MaxAudioContextsExceeded)
       try { __sound.dispose() } catch{/* abaikan */}
+      delete window.__toggleNeon;
+      delete window.__sceneSelRing;
       if(renderer){renderer.dispose();container.removeChild(renderer.domElement);}
     }
   };

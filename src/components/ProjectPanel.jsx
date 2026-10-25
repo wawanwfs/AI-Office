@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
+import { IconRocket } from './Icons'
 
 // Panel Proyek Nyata: data live dibantuin.com dari endpoint /wfs-project (server 9503).
 // Semua data diambil server-side — tidak ada kredensial di frontend.
@@ -44,7 +45,7 @@ export default function ProjectPanel() {
   return (
     <>
       <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="project-panel">
-        <span className="ic">🚀</span><span className="lb">Proyek</span>
+        <span className="ic"><IconRocket size={19} /><span className="sr-only">🚀</span></span><span className="lb">Proyek</span>
       </button>
       {open && (
         <section ref={box} id="project-panel" className="panel left" role="dialog" aria-label="Proyek dibantuin.com" aria-modal="true">
@@ -111,6 +112,25 @@ export default function ProjectPanel() {
                   ))}
                   {!(d.agents || []).length && <span className="note">Tidak ada agent aktif</span>}
                 </div>
+
+                {/* OmniRoute Router AI */}
+                {d.omniroute && (
+                  <div style={{ marginTop: 14 }}>
+                    <label className="note">AI Router (OmniRoute)</label>
+                    <div style={{
+                      background: d.omniroute.online ? 'rgba(13,238,243,.08)' : 'rgba(239,68,68,.12)',
+                      border: `1px solid ${d.omniroute.online ? 'rgba(13,238,243,.25)' : 'rgba(239,68,68,.3)'}`,
+                      borderRadius: 10, padding: '8px 12px', marginTop: 6,
+                    }}>
+                      <div className="note" style={{ color: d.omniroute.online ? 'var(--teal)' : '#ef4444', fontWeight: 600 }}>
+                        {d.omniroute.online ? '● OmniRoute Online (Port 20128)' : '○ OmniRoute Offline'}
+                      </div>
+                      <div className="note" style={{ marginTop: 2 }}>
+                        Multi-model AI router aktif di container Docker
+                      </div>
+                    </div>
+                  </div>
+                )}
               </>
             )}
           </div>

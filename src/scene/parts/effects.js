@@ -198,6 +198,62 @@ export function ambientFx(elapsed, i = 0) {
   };
 }
 
+// ── Kinematika animasi karakter duduk / rapat / resepsi ──
+export function charMotion(elapsed, i = 0, mode = 'desk') {
+  if (!Number.isFinite(elapsed)) elapsed = 0;
+  if (!Number.isFinite(i)) i = 0;
+  if (mode === 'meeting') {
+    return {
+      torsoY: Math.sin(elapsed * 1.5 + i) * 0.005,
+      headRotY: Math.sin(elapsed * 0.7 + i * 1.3) * 0.08,
+      headRotX: Math.sin(elapsed * 1.5 + i) * 0.02,
+      handY: (side) => {
+        const s = Number.isFinite(side) ? side : 1;
+        return Math.sin(elapsed * 1.2 + s + i) * 0.003;
+      },
+    };
+  }
+  if (mode === 'reception') {
+    return {
+      torsoY: Math.sin(elapsed * 1.6) * 0.005,
+      headRotY: Math.sin(elapsed * 0.4) * 0.03,
+      headRotX: Math.sin(elapsed * 1.6) * 0.015,
+      handY: (side) => {
+        const s = Number.isFinite(side) ? side : 1;
+        return Math.sin(elapsed * 8 + s * 2.5) * 0.007;
+      },
+    };
+  }
+  return {
+    torsoY: Math.sin(elapsed * 1.8 + i) * 0.006,
+    headRotY: Math.sin(elapsed * 0.5 + i * 1.1) * 0.035,
+    headRotX: Math.sin(elapsed * 1.8 + i) * 0.015,
+    handY: (side) => {
+      const s = Number.isFinite(side) ? side : 1;
+      return Math.sin(elapsed * 9 + s * 2.8 + i) * 0.008;
+    },
+  };
+}
+
+export function applyCharMotion(group, motion) {
+  if (!group || !Array.isArray(group.children) || !motion) return;
+  group.children.forEach((c) => {
+    if (!c || !c.userData) return;
+    if (c.userData.isTypeHand && typeof motion.handY === 'function') {
+      const bY = Number.isFinite(c.userData.baseY) ? c.userData.baseY : c.position.y;
+      c.position.y = bY + motion.handY(c.userData.side || 1);
+    } else if (c.userData.isTorso && Number.isFinite(motion.torsoY)) {
+      const bY = Number.isFinite(c.userData.baseY) ? c.userData.baseY : c.position.y;
+      c.position.y = bY + motion.torsoY;
+    } else if (c.userData.isHead) {
+      if (c.rotation) {
+        if (Number.isFinite(motion.headRotY)) c.rotation.y = motion.headRotY;
+        if (Number.isFinite(motion.headRotX)) c.rotation.x = motion.headRotX;
+      }
+    }
+  });
+}
+
 // Cincin denyut agent utama: fase (pulseT) & skala/opacity — murni agar bisa diuji.
 export function pulseFx(elapsed) {
   if (!Number.isFinite(elapsed)) elapsed = 0;

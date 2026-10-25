@@ -4,6 +4,7 @@ import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
 import { fileCount } from '../lib/files'
+import { IconStats } from './Icons'
 
 /* Statistik Tim — data nyata dari task engine + resource host */
 export default function TeamStats() {
@@ -86,7 +87,9 @@ export default function TeamStats() {
           </div>
         </div>
       )}
-      <button className="ibtn" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="team-stats" aria-label="Statistik tim"><span className="ic">📊</span><span className="lb">Statistik</span></button>
+      <button className="ibtn" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="team-stats" aria-label="Statistik tim">
+        <span className="ic"><IconStats size={19} /><span className="sr-only">📊</span></span><span className="lb">Statistik</span>
+      </button>
     </>
   )
 }

@@ -96,7 +96,7 @@ describe('createProjectBoard — pemasangan', () => {
     expect(mesh.position.x).toBe(-8.6); expect(mesh.position.y).toBe(2.6); expect(mesh.position.z).toBe(9.3)
     expect(mesh.rotation.y).toBe(Math.PI) // menghadap ke dalam ruangan
     expect(frame.userData.__keep).toBe(1) // tidak ikut wallFade
-    expect(frame.geometry.args).toEqual([5.75, 3.21, .05])
+    expect(frame.geometry.args).toEqual([7.65, 4.25, .05])
   })
 
   it('fetch /wfs-project dipanggil segera saat mount lalu tiap 60 detik', async () => {

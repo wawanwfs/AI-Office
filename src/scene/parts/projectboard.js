@@ -20,8 +20,8 @@ export function createProjectBoard(office, THREE) {
   mesh.rotation.y = Math.PI
   mesh.renderOrder = 5
   office.add(mesh)
-  // bingkai (menggantikan bingkai kanban lama yang dipasang di OfficeScene)
-  const frame = new THREE.Mesh(new THREE.BoxGeometry(5.75, 3.21, .05), new THREE.MeshLambertMaterial({ color: 0x23324d }))
+  // bingkai elegan (mengelilingi papan proyek secara presisi)
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(7.65, 4.25, .05), new THREE.MeshLambertMaterial({ color: 0x1A263E }))
   frame.position.set(-8.6, 2.6, 9.28)
   frame.userData.__keep = 1 // jangan ikut fade dinding belakang (wallFade collect)
   office.add(frame)

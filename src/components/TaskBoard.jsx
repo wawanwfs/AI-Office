@@ -3,6 +3,7 @@ import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
 import { parseFileList } from '../lib/files'
+import { IconBoard } from './Icons'
 
 const ST = { done: ['Selesai', '#10E5A0'], running: ['Jalan', '#F59E0B'], review: ['Review', '#448AFF'], failed: ['Gagal', '#ef4444'], pending: ['Antri', '#9aa7b8'] }
 const FILTERS = [['all', 'Semua'], ['pending', 'Antri'], ['running', 'Jalan'], ['done', 'Selesai'], ['failed', 'Gagal']]
@@ -69,7 +70,10 @@ export default function TaskBoard({ onFlash, onAsk }) {
 
   return (
     <>
-      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="task-board" aria-label="Papan task"><span className="ic">📋</span><span className="lb">Papan</span></button>
+      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="task-board" aria-label="Papan task">
+        <span className="ic"><IconBoard size={19} /><span className="sr-only">📋</span></span>
+        <span className="lb">Papan</span>
+      </button>
       {open && (
         <section ref={board} id="task-board" className="panel left" role="dialog" aria-label="Papan task" aria-modal="true">
           <div className="ph">

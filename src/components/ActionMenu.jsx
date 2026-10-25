@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
+import { IconBolt, IconMeeting, IconCoffee, IconBriefcase, IconWalk } from './Icons'
 
 export default function ActionMenu({ sceneRef, onFlash, actionMenuRef }) {
   const [open, setOpen] = useState(false)
@@ -81,13 +82,30 @@ export default function ActionMenu({ sceneRef, onFlash, actionMenuRef }) {
     <span className="anchor" ref={wrap}>
       {open && (
         <div ref={pop} className="pop" role="menu" aria-label="Aksi tim" aria-modal="true" style={{ left: 0 }} onKeyDown={menuKeys}>
-          {items.map(([ic, label, key, msg]) => <button key={key} role="menuitem" onClick={() => act(key, msg)}><span>{ic}</span>{label}</button>)}
+          {items.map(([ic, label, key, msg]) => (
+            <button key={key} role="menuitem" onClick={() => act(key, msg)}>
+              <span className="pop-ic">
+                {ic === '📢' ? <IconMeeting size={16} /> : ic === '☕' ? <IconCoffee size={16} /> : ic === '💼' ? <IconBriefcase size={16} /> : <IconWalk size={16} />}
+                <span className="sr-only">{ic}</span>
+              </span>
+              {label}
+            </button>
+          ))}
           <hr />
-          <button role="menuitemcheckbox" aria-checked={namesOn} onClick={() => { if (scene() && scene().toggleNames) { scene().toggleNames(); if (scene().isNamesVisible) setNamesOn(scene().isNamesVisible()); else setNamesOn(v => !v) } }}><span>🏷️</span>{namesOn ? 'Sembunyikan' : 'Tampilkan'} nama</button>
-          <button role="menuitemcheckbox" aria-checked={rotOn} onClick={() => { if (scene() && scene().setAutoRotate) { scene().setAutoRotate(!rotOn); if (scene().isAutoRotate) setRotOn(scene().isAutoRotate()); else setRotOn(v => !v) } }}><span>🔄</span>Putar otomatis: {rotOn ? 'ON' : 'OFF'}</button>
+          <button role="menuitemcheckbox" aria-checked={namesOn} onClick={() => { if (scene() && scene().toggleNames) { scene().toggleNames(); if (scene().isNamesVisible) setNamesOn(scene().isNamesVisible()); else setNamesOn(v => !v) } }}>
+            <span className="pop-ic"><span className="sr-only">🏷️</span>🏷️</span>
+            {namesOn ? 'Sembunyikan' : 'Tampilkan'} nama
+          </button>
+          <button role="menuitemcheckbox" aria-checked={rotOn} onClick={() => { if (scene() && scene().setAutoRotate) { scene().setAutoRotate(!rotOn); if (scene().isAutoRotate) setRotOn(scene().isAutoRotate()); else setRotOn(v => !v) } }}>
+            <span className="pop-ic"><span className="sr-only">🔄</span>🔄</span>
+            Putar otomatis: {rotOn ? 'ON' : 'OFF'}
+          </button>
         </div>
       )}
-      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-haspopup="menu"><span className="ic">⚡</span><span className="lb">Aksi</span></button>
+      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-haspopup="menu">
+        <span className="ic"><IconBolt size={19} /><span className="sr-only">⚡</span></span>
+        <span className="lb">Aksi</span>
+      </button>
     </span>
   )
 }

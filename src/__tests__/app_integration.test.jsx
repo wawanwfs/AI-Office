@@ -123,4 +123,37 @@ describe('App — integrasi UI', () => {
     fireEvent.click(screen.getByText('Bersihkan'))
     expect(localStorage.store.wfs_activity).toBeUndefined()
   })
+
+  it('mode neon persist di localStorage: tombol dock Neon langsung aktif (aria-pressed=true & class on)', () => {
+    localStorage.store.wfs_neon = '1'
+    stubFetch([])
+    render(<App />)
+    const btn = screen.getByLabelText('Lampu neon')
+    expect(btn.getAttribute('aria-pressed')).toBe('true')
+    expect(btn.className).toContain('on')
+  })
+
+  it('shortcut "n" toggle mode neon dan memanggil scene.toggleCyberpunk', async () => {
+    let mockNeon = false
+    const sceneMod = await import('../scene/OfficeScene')
+    sceneMod.createOfficeScene.mockImplementationOnce(() => ({
+      isAudioMuted: () => false,
+      setAudioMuted: vi.fn(),
+      isCyberpunk: () => mockNeon,
+      toggleCyberpunk: () => { mockNeon = !mockNeon },
+      setTime: vi.fn(),
+      zoomIn: vi.fn(),
+      zoomOut: vi.fn(),
+      setView: vi.fn(),
+      destroy: vi.fn(),
+    }))
+    stubFetch([])
+    render(<App />)
+    const btn = screen.getByLabelText('Lampu neon')
+    expect(btn.getAttribute('aria-pressed')).toBe('false')
+    await waitFor(() => expect(screen.queryByText('Memuat ruangan…')).toBeNull())
+    fireEvent.keyDown(window, { key: 'n' })
+    expect(btn.getAttribute('aria-pressed')).toBe('true')
+    expect(btn.className).toContain('on')
+  })
 })

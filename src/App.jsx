@@ -14,6 +14,8 @@ import ConfirmModal from './components/ConfirmModal'
 import TaskBoard from './components/TaskBoard'
 import ProjectPanel from './components/ProjectPanel'
 import ActivityLog from './components/ActivityLog'
+import AgentInspector from './components/AgentInspector'
+import { IconVolume, IconVolumeMute, IconScroll, IconHelp } from './components/Icons'
 import { api } from './lib/api'
 import { anyModalOpen } from './lib/modal'
 import { createWakeLockManager } from './lib/wakelock.js'
@@ -29,7 +31,9 @@ export default function App() {
     const d = new Date(); return d.getHours() * 60 + d.getMinutes(); })
   const [status, setStatus] = useState('Memuat…')
   const [statusKind, setStatusKind] = useState('')
-  const [cyberpunk, setCyberpunk] = useState(false)
+  const [cyberpunk, setCyberpunk] = useState(() => {
+    try { return typeof localStorage !== 'undefined' && localStorage.getItem('wfs_neon') === '1' } catch { return false }
+  })
   const [inMeeting, setInMeeting] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
   const [showTask, setShowTask] = useState(false)
@@ -41,6 +45,7 @@ export default function App() {
   const [toast, setToast] = useState(null)          // {msg, err}
   const [showLog, setShowLog] = useState(false)
   const [muted, setMuted] = useState(false)
+  const [selectedAgent, setSelectedAgent] = useState(null)
   useEffect(() => {
     const s = sceneRef.current
     if (s && s.isAudioMuted) setMuted(s.isAudioMuted())
@@ -149,6 +154,7 @@ export default function App() {
           onTimeUpdate: (min) => setTime(min),
           onStatusUpdate: () => {},
           onMeetingChange: (m) => setInMeeting(m),
+          onSelectAgent: (ag) => setSelectedAgent(ag),
         })
         setSceneReady(true)
         // sinkron state awal dari scene (mute, neon) saat scene (re)created —
@@ -176,6 +182,7 @@ export default function App() {
       } catch (err) {
         console.error('Scene init failed — UI-only mode:', err)
         setSceneErr(true)
+        setCyberpunk(false)
         flash('WebGL tidak tersedia — mode UI saja', true)
       }
     }).catch((err) => {
@@ -200,11 +207,6 @@ export default function App() {
     sceneRef.current.toggleCyberpunk()
     // baca state scene sungguhan (anti-desync, pola sama dgn ActionMenu)
     setCyberpunk(!!sceneRef.current.isCyberpunk())
-  }, [flash])
-
-  // sinkron state awal dari scene saat scene baru dibuat
-  useEffect(() => {
-    if (sceneRef.current) setCyberpunk(!!sceneRef.current.isCyberpunk())
   }, [flash])
 
   // ---- flag modal utk scene: Escape saat overlay terbuka TIDAK boleh reset kamera ----
@@ -341,13 +343,32 @@ export default function App() {
         <TaskBoard onFlash={flash} onAsk={setAsk} />
         <ProjectPanel />
         <TeamStats />
-        <button className="ibtn" onClick={toggleMute} title={muted ? 'Nyalakan suara notifikasi' : 'Bisukan suara notifikasi'} aria-label={muted ? 'Nyalakan suara' : 'Bisukan suara'} aria-pressed={muted}><span className="ic">{muted ? '🔇' : '🔊'}</span><span className="lb">{muted ? 'Suara Mati' : 'Suara'}</span></button>
-        <button className="ibtn" onClick={() => setShowLog(true)} title="Log aktivitas kantor" aria-label="Log aktivitas"><span className="ic">📜</span><span className="lb">Log</span></button>
+        <button className="ibtn" onClick={toggleMute} title={muted ? 'Nyalakan suara notifikasi' : 'Bisukan suara notifikasi'} aria-label={muted ? 'Nyalakan suara' : 'Bisukan suara'} aria-pressed={muted}>
+          <span className="ic">
+            {muted ? <><IconVolumeMute size={19} /><span className="sr-only">🔇</span></> : <><IconVolume size={19} /><span className="sr-only">🔊</span></>}
+          </span>
+          <span className="lb">{muted ? 'Suara Mati' : 'Suara'}</span>
+        </button>
+        <button className="ibtn" onClick={() => setShowLog(true)} title="Log aktivitas kantor" aria-label="Log aktivitas">
+          <span className="ic"><IconScroll size={19} /><span className="sr-only">📜</span></span>
+          <span className="lb">Log</span>
+        </button>
         <span className="sep" />
         <WfsPanel />
         <Suspense fallback={null}><CsWidget /></Suspense>
-        <button className="ibtn" onClick={() => setShowHelp(true)} title="Panduan penggunaan kantor" aria-label="Bantuan"><span className="ic">❔</span><span className="lb">Bantuan</span></button>
+        <button className="ibtn" onClick={() => setShowHelp(true)} title="Panduan penggunaan kantor" aria-label="Bantuan">
+          <span className="ic"><IconHelp size={19} /><span className="sr-only">❔</span></span>
+          <span className="lb">Bantuan</span>
+        </button>
       </div>
+
+      <AgentInspector
+        agent={selectedAgent}
+        onClose={() => setSelectedAgent(null)}
+        onChatWith={(ag) => {
+          if (window.__wfsSelectAgent) window.__wfsSelectAgent(ag.name)
+        }}
+      />
 
       <ActivityLog show={showLog} items={logItems} onClose={() => setShowLog(false)} onClear={clearLog} />
       <OverlayHelp show={showHelp} onClose={() => setShowHelp(false)} />
