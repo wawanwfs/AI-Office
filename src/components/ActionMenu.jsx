@@ -38,7 +38,6 @@ export default function ActionMenu({ sceneRef, onFlash, actionMenuRef }) {
       },
     }
     if (actionMenuRef) {
-      window.__amApiSet = Date.now() // debug: bukti effect ActionMenu jalan
       actionMenuRef.current = amRef.current
     }
     return () => { if (actionMenuRef) actionMenuRef.current = null }

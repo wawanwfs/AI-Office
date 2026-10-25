@@ -217,7 +217,8 @@ export default function App() {
   // ---- flag modal utk scene: Escape saat overlay terbuka TIDAK boleh reset kamera ----
   // Set saat render (bukan useEffect): update discrete-event React di-flush sinkron
   // sebelum listener window scene jalan, jadi flag pasti sudah benar saat Escape dicek.
-  window.__wfsModalOpen = !!(showTask || confirm || ask || showHelp || showLog || selectedAgent) || anyModalOpen()
+  const modalActive = !!(showTask || confirm || ask || showHelp || showLog || selectedAgent) || anyModalOpen()
+  window.__wfsModalOpen = modalActive
 
   // Snapshot flag di fase CAPTURE (window capture jalan sebelum semua bubble handler):
   // handler Escape overlay menutup modal & React flush sinkron, sehingga saat handler
@@ -233,7 +234,7 @@ export default function App() {
   // screen reader tidak membacakan UI yang tertutup. (modal-scrim sudah memblokir
   // klik; inert menutup celah navigasi keyboard.) Panel dgn state internal
   // (TaskBoard/WfsPanel/CsWidget/…) juga tercakup via anyModalOpen() (useModalFlag).
-  const chromeModal = !!(showTask || confirm || ask || showHelp || showLog || selectedAgent) || anyModalOpen()
+  const chromeModal = modalActive
   useEffect(() => {
     // Catatan: panel-panel modal internal (Papan Task/Proyek/Statistik/…) dirender
     // DI DALAM elemen .dock. Meng-inert-kan dock utuh saat modal itu terbuka ikut
