@@ -7,18 +7,20 @@ Status: Fase 1 (Audit) → Fase 2 (Fondasi). Dokumen hidup.
 - [x] Inventaris backend (server.py, tasks.py, hq_proxy.py, sandbox_exec.py, project_api.py).
 - [x] Inventaris frontend (src/components, scene, CSS) — paralel oleh Agent B.
 - [x] Deteksi referensi dibantuin.com (70 tempat).
-- [x] Cek Docker runtime → **belum aktif di VM init** (blocker sandbox).
-- [ ] Verifikasi test suite baseline (1328 lulus).
-- [ ] Inventory env vars & konfigurasi.
+- [x] Cek Docker runtime → **belum aktif di VM ini** (blocker sandbox).
+- [x] Verifikasi test suite baseline (1328 lulus).
+- [x] Inventory env vars & konfigurasi → `.env.example` dibuat.
 
 ## Fase 2 — Fondasi (mulai setelah audit)
 
 - [ ] Hapus integrasi dibantuin.com (fokus, aman, migration terkontrol).
 - [ ] Struktur navigasi baru (Overview, Projects, AI Office, Tasks, Agents,
       Workspaces, Preview Apps, Testing, Activity, Settings).
-- [ ] Core data models (SQLite): projects, tasks, subtasks, agents, runs, events.
+- [x] Core data models (SQLite): projects, tasks, subtasks, agents, runs, events
+      (`backend/database.py`, 12 role terserd di 3 lantai). Test `backend/test_database.py` (4 pass).
+- [x] API overview nyata (`GET /api/sh/overview`) — angka dari SQLite utk dashboard owner.
 - [ ] Task lifecycle & event model (Draft→Planning→Ready→Running→Testing→Review→Completed + Queued/Blocked/Awaiting/Failed/Cancelled/Retrying).
-- [ ] Config/env scaffolding (`.env.example`, validasi).
+- [x] Config/env scaffolding (`.env.example` dibuat di root).
 
 ## Fase 3 — Agent Orchestration
 

@@ -223,6 +223,35 @@ def update_agent_status(agent_id, status, current_task_id=None):
         )
     conn.close()
 
+
+def get_overview():
+    """Ringkasan perangkat lunak (untuk dashboard owner) — dihitung dari state
+    persisten SQLite yang nyata, bukan angka hardcoded."""
+    conn = get_db()
+    cur = conn.cursor()
+    cur.execute("SELECT COUNT(*) FROM projects")
+    projects = cur.fetchone()[0]
+    cur.execute("SELECT status, COUNT(*) FROM tasks GROUP BY status")
+    task_counts = {r[0]: r[1] for r in cur.fetchall()}
+    cur.execute("SELECT status, COUNT(*) FROM agents GROUP BY status")
+    agent_status = {r[0]: r[1] for r in cur.fetchall()}
+    cur.execute("SELECT COUNT(*) FROM subtasks WHERE status='running'")
+    running_subtasks = cur.fetchone()[0]
+    cur.execute("SELECT COUNT(*) FROM execution_logs")
+    total_logs = cur.fetchone()[0]
+    log_rows = get_recent_logs(limit=8)
+    conn.close()
+    return {
+        "projects": projects,
+        "tasks": sum(task_counts.values()),
+        "task_by_status": task_counts,
+        "agents": sum(agent_status.values()),
+        "agent_by_status": agent_status,
+        "running_subtasks": running_subtasks,
+        "total_logs": total_logs,
+        "recent_logs": log_rows,
+    }
+
 if __name__ == "__main__":
     init_db()
     print("Database initialized successfully at:", DB_PATH)

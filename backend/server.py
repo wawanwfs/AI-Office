@@ -31,6 +31,10 @@ DEFAULT_AI = load_default()
 
 app = FastAPI(title="WFS Virtual Office Gateway")
 
+# ---------- WFS Software House — persistent state (SQLite) ----------
+import database as sh_db
+sh_db.init_db()
+
 # ---------- config per agent ----------
 def load_cfg() -> dict:
     if CFG_FILE.exists():
@@ -122,6 +126,12 @@ ROLE_PROMPTS = {
 def health():
     return {"ok": True, "time": time.time(), "default_model": DEFAULT_AI["model"],
             "default_provider": DEFAULT_AI["base"]}
+
+
+@app.get("/api/sh/overview")
+def software_house_overview():
+    """Ringkasan dashboard owner — angka nyata dari state SQLite."""
+    return sh_db.get_overview()
 
 @app.get("/api/status")
 def status():
