@@ -16,6 +16,7 @@ import TaskBoard from './components/TaskBoard'
 import ProjectPanel from './components/ProjectPanel'
 import ActivityLog from './components/ActivityLog'
 import AgentInspector from './components/AgentInspector'
+import ShConsole from './components/ShConsole'
 import { IconVolume, IconVolumeMute, IconScroll, IconHelp } from './components/Icons'
 import { api } from './lib/api'
 import { anyModalOpen } from './lib/modal'
@@ -37,6 +38,7 @@ export default function App() {
   })
   const [inMeeting, setInMeeting] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  const [showConsole, setShowConsole] = useState(false)
   const [showTask, setShowTask] = useState(false)
   const [confirm, setConfirm] = useState(null)      // 'pause' | 'resume' | null
   const [confirmBusy, setConfirmBusy] = useState(false)
@@ -364,6 +366,10 @@ export default function App() {
         <span className="sep" />
         <WfsPanel />
         <Suspense fallback={null}><CsWidget /></Suspense>
+        <button className="ibtn" onClick={() => setShowConsole(true)} title="Konsol Software House (Overview · Projects · Buat project)" aria-label="Konsol Software House">
+          <span className="ic"><span aria-hidden="true">🖥️</span><span className="sr-only">🖥️</span></span>
+          <span className="lb">Konsol</span>
+        </button>
         <button className="ibtn" onClick={() => setShowHelp(true)} title="Panduan penggunaan kantor" aria-label="Bantuan">
           <span className="ic"><IconHelp size={19} /><span className="sr-only">❔</span></span>
           <span className="lb">Bantuan</span>
@@ -384,6 +390,7 @@ export default function App() {
       />
 
       <ActivityLog show={showLog} items={logItems} onClose={() => setShowLog(false)} onClear={clearLog} />
+      <ShConsole show={showConsole} onClose={() => setShowConsole(false)} />
       <OverlayHelp show={showHelp} onClose={() => setShowHelp(false)} />
       <TaskModal show={showTask} onClose={() => setShowTask(false)} onDone={(m) => { flash(m); refreshStatus() }} />
       <ConfirmModal
