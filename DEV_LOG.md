@@ -2566,3 +2566,37 @@
     - `scripts/e2e_shot.py`: Screenshot visual **709.711 bytes** (>500 KB, WebGL hidup, agents: 14, E2E_VISUAL: OK).
     - `shot.sh` (DISPLAY=:10): **714.812 bytes**.
 - Sisa backlog: verifikasi subjektif audio web-audio.
+
+## 2026-10-25 18:38 WIB — Siklus 65: Elevasi meja bertingkat alami (Lantai 2 Y=0.60, Lantai 3 Y=1.20), koreksi z-index kacamata avatar & restorasi kehadiran agen shift kerja
+
+- Pilihan: koreksi elevasi meja dan perabotan kerja di lantai bertingkat, reposisi kacamata avatar stylized human, dan restorasi kehadiran agen kerja shift harian:
+  1) Elevasi perabotan meja bertingkat (`buildDesk`): `buildDesk` menerima parameter `dp.y` (Y=0.60 pada Lantai 2 Mezzanine, Y=1.20 pada Lantai 3 Penthouse), namun grup meja sebelumnya di-hardcode ke `g.position.set(dp.x, 0, dp.z)` sehingga meja, kursi, monitor, dan nameplate di lantai atas tenggelam ke bawah lantai marmer/slate. Kini diubah menjadi `g.position.set(dp.x, dp.y || 0, dp.z)` sehingga seluruh perabotan bertengger sempurna di atas lantai masing-masing.
+  2) Sinkronisasi elevasi 3D cincin & interaksi: cincin seleksi (`selRing`) dan hover (`hoverRing`) kini menghitung offset ketinggian `(a.walker.visible ? a.walker.position.y : a.home.y) || 0`, dan fokus kamera `updateFollowGoal` / `focusGoal.t` menghitung `(wp.y || 0) + 1.5`. Speech bubble `createBubble` dan autotalk kini menggunakan anchor `baseAy + 2.6` agar tidak menutupi wajah atau monitor karakter di lantai atas.
+  3) Koreksi Z-index kacamata avatar stylized human (`OfficeScene.js`): kacamata pada avatar di `addAccessories` sebelumnya berada di `fz * 0.118`, tertinggal di belakang bola mata/pupil (z=0.125, glint z=0.132 pada standing; z=-0.115 pada sitting). Diposisikan ke `fz * 0.138` agar kacamata bertengger rapi di depan bola mata tanpa kliping.
+  4) Restorasi kehadiran shift kerja (`daycycle.js`): `arrive()` dan `depart()` kini mencakup seluruh 14 agen kantor (termasuk agen ekstra 8..13 seperti RINA, LINA, SARI, TRAINER AI, INTEGRATOR BOT, SUPPORT) agar tidak tertinggal permanen dalam status `offsite`. Event `working_am` dan `working_pm` kini otomatis memulihkan agen dari status `offsite` ke meja duduk saat jam kerja dibuka.
+- Perubahan:
+  - `src/scene/OfficeScene.js`:
+    - `buildDesk`: posisikan grup meja ke `g.position.set(dp.x, dp.y || 0, dp.z)`.
+    - `addAccessories`: reposisi kacamata ke `fz * 0.138` (depan sklera & glint).
+    - Pointer click/hover & applySelected: sinkronisasi elevasi Y `selRing` & `hoverRing`.
+    - `createBubble`: elevasi ketinggian bubble berbasis `baseAy + 2.6` (autotalk, select, alert).
+  - `src/scene/parts/daycycle.js`:
+    - `arrive()` & `depart()`: tangani agen ekstra di luar 8 indeks historis.
+    - `restoreWorkingDesks`: aktifkan kembali agen `offsite` saat jam kerja `working_am` / `working_pm`.
+  - `src/scene/parts/kamera_focus.js`:
+    - `updateFollowGoal`: target Y kamera memperhitungkan `(fp.y || 0) + 1.5`.
+  - Unit test:
+    - `src/__tests__/daycycle_runtime.test.js`: +2 test baru (verifikasi kehadiran agen ekstra dan restorasi agen offsite ke meja).
+    - `src/__tests__/kamera_focus.test.js`: +1 test baru (verifikasi elevasi target kamera bertingkat).
+- Bukti terukur:
+  - Vitest: **1195/1195 (107 file)** (+3 test baru, 0 fail).
+  - ESLint: 0 warning, 0 error (`npx eslint .`).
+  - Build: Berhasil (exit 0, 35 precache entries 1589.87 KiB, chunk `OfficeScene-BDXYHY_E.js` 847.84 KB / gzip 227.88 kB, `index-xbzyENQR.js` 265.85 KB).
+  - Deploy: `dist/*` ter-deploy ke `~/wfs-hq/`, chunk lama dibersihkan.
+  - E2E & Servis:
+    - `e2e_err.py`: HTTP 200 (index & `index-xbzyENQR.js`, 0 "Scene init failed", PID 3989694).
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 23/23 selesai, 100%, 14 agents aktif).
+    - `scripts/e2e_zone_multi.py`: **E2E_ZONE_MULTI OK** (iso, front, top: 0 OFFSCREEN, 0 pelanggaran margin).
+    - `scripts/e2e_shot.py`: Screenshot visual **723.425 bytes** (>500 KB, WebGL hidup, agents: 14, E2E_VISUAL: OK).
+    - Screenshot daytime: **743.771 bytes** (14 agen hadir: 8 di meja kerja terangkat rapi di atas lantai + 6 di ruang rapat).
+- Sisa backlog: verifikasi subjektif audio web-audio.

@@ -171,11 +171,11 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   if(root&&window.__wfsSelectAgent){
     const idMap={}; window.__wfsAgentIdList&&window.__wfsAgentIdList.forEach(x=>idMap[x.name]=x.id);
     window.__wfsSelectAgent(idMap[root.agent.name]||root.agent.name);
-    const wp=root.walker.visible?root.walker.position:{x:root.home.x,y:0,z:root.home.z};
+    const wp=root.walker.visible?root.walker.position:{x:root.home.x,y:root.home.y||0,z:root.home.z};
     if(homeRadius===null)homeRadius=Math.max(24,Math.min(60,sph.radius));
-    focusGoal={t:new THREE.Vector3(wp.x,1.5,wp.z),r:Math.min(sph.radius,24),follow:root};
+    focusGoal={t:new THREE.Vector3(wp.x,(wp.y||0)+1.5,wp.z),r:Math.min(sph.radius,24),follow:root};
     if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
-    createBubble(wp.x,2.6,wp.z,'“Halo! Aku '+root.agent.name+'”',root.agent.hex);
+    createBubble(wp.x,(wp.y||0)+2.6,wp.z,'“Halo! Aku '+root.agent.name+'”',root.agent.hex);
     selectedIdx=agentData.indexOf(root);applySelected();
     if(onSelectAgent)onSelectAgent(root.agent);
   }
@@ -215,7 +215,8 @@ function applySelected(){
   const p=selAnchorOf(a);
   if(!p)return;
   ensureSelRing();
-  selRing.position.set(p.x,SEL_RING.Y,p.z+p.off);
+  const hy=(a.walker&&a.walker.visible?a.walker.position.y:a.home.y)||0;
+  selRing.position.set(p.x,hy+SEL_RING.Y,p.z+p.off);
   selRing.visible=true;
 }
 // posisi ring utk agent: walker (berjalan) / home (duduk) / null (tidak terlihat di kantor)
@@ -246,7 +247,8 @@ renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
     if(hoveredAgent){
       ensureHoverRing();
       const src=hoveredAgent.walker.visible?hoveredAgent.walker.position:hoveredAgent.home;
-      hoverRing.position.set(src.x,0.02,src.z+ (hoveredAgent.walker.visible?0:.55));
+      const hy=(hoveredAgent.walker&&hoveredAgent.walker.visible?hoveredAgent.walker.position.y:hoveredAgent.home.y)||0;
+      hoverRing.position.set(src.x,hy+0.02,src.z+ (hoveredAgent.walker.visible?0:.55));
       hoverRing.visible=true;
     }else if(hoverRing)hoverRing.visible=false;
   },80)};
@@ -693,7 +695,7 @@ function buildDesk(agent,dp){
     const leaf=new THREE.Mesh(new THREE.SphereGeometry(r,6,5),M(0x43A047));
     leaf.position.set(.58+px,py,-.28+pz);g.add(leaf);
   });
-  g.position.set(dp.x,0,dp.z);
+  g.position.set(dp.x, dp.y || 0, dp.z);
   office.add(g);
   return {dGlow,screenLight:sLight};
 }
@@ -768,8 +770,9 @@ allAgents.forEach((agent,i)=>{
         }else if(act.type==='wake'){
           if(act.ad.state==='sitting')act.ad.timer=0.5; // paksa bangun segera
         }else if(act.type==='alert'){
-          const wp=act.ad.walker.visible?act.ad.walker.position:{x:act.ad.home.x,z:act.ad.home.z};
-          createBubble(wp.x,2.6,wp.z,'Ada task failed! Cek log…','#f66');
+          const bay=(act.ad.walker.visible?act.ad.walker.position.y:act.ad.home.y)||0;
+          const wp=act.ad.walker.visible?act.ad.walker.position:{x:act.ad.home.x,y:bay,z:act.ad.home.z};
+          createBubble(wp.x,bay+2.6,wp.z,'Ada task failed! Cek log…','#f66');
         }
       });
     }catch{ /* abaikan */ }
@@ -1090,10 +1093,11 @@ function autoTalk(){
   const ad=agentData[Math.floor(Math.random()*agentData.length)];
   const text=autoTalkText(ad,window.__wfsRunningTasks,window.__wfsAgentIdMap);
   if(!ad||text==null)return;
-  const wp=ad.walker.visible?ad.walker.position:{x:ad.home.x,z:ad.home.z};
+  const baseAy=(ad.walker.visible?ad.walker.position.y:ad.home.y)||0;
+  const wp=ad.walker.visible?ad.walker.position:{x:ad.home.x,y:baseAy,z:ad.home.z};
   // anchor mengikuti agent agar bubble tidak tertinggal di posisi lama saat agent berjalan
-  const anc={get x(){return ad.walker.visible?ad.walker.position.x:ad.home.x},get z(){return ad.walker.visible?ad.walker.position.z:ad.home.z},y:2.6};
-  createBubble(wp.x,2.6,wp.z,text,ad.agent.hex,anc);
+  const anc={get x(){return ad.walker.visible?ad.walker.position.x:ad.home.x},get z(){return ad.walker.visible?ad.walker.position.z:ad.home.z},y:baseAy+2.6};
+  createBubble(wp.x,baseAy+2.6,wp.z,text,ad.agent.hex,anc);
 }
 // Sinkron task running: tidak ada interval sendiri — data status + tasks diambil di pollStatus (SATU fetch /agents/status)
 let deltaFrame=0; // delta dtk frame terakhir (utk cooldown chat berbasis waktu nyata)
