@@ -30,7 +30,7 @@ export function drawSprintLive(ctx, T, w = WB_W, h = WB_H) {
   const rows = sprintLiveRows(T);
   if (!rows) return false; // tanpa data valid → pemanggil fallback ke agenda statis
   ctx.fillStyle = '#8fa3bd'; ctx.font = '12px monospace';
-  ctx.fillText('live · WFS PROJECT', WB_ITEM_X, WB_ITEM_Y0 - 8);
+  ctx.fillText('live · dibantuin.com', WB_ITEM_X, WB_ITEM_Y0 - 8);
   rows.forEach(([label, val, col], i) => {
     const y = WB_ITEM_Y0 + i * WB_ITEM_DY;
     ctx.fillStyle = '#8fa3bd'; ctx.font = '13px sans-serif';

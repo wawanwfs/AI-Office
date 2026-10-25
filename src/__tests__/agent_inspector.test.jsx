@@ -22,7 +22,7 @@ describe('AgentInspector — kartu profil agen 3D', () => {
     render(<AgentInspector agent={mockAgent} onClose={vi.fn()} onChatWith={vi.fn()} />)
     expect(screen.getByText('Wahyu Fajar Setiawan')).toBeTruthy()
     expect(screen.getByText('Founder / CEO')).toBeTruthy()
-    expect(screen.getByText('dibantuin.com')).toBeTruthy()
+    expect(screen.getByText('WFS PROJECT')).toBeTruthy()
     expect(screen.getByText('OmniRoute / GLM-5')).toBeTruthy()
   })
 
