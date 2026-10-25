@@ -17,14 +17,16 @@ export function updateFollowGoal(goal, homeRadius, radiusFallback, homeT = { x: 
 }
 
 // Satu langkah kamera: lerp posisi target & radius ke goal (faktor .06),
+// opsi goalPhi untuk menyelaraskan pitch kamera bila disediakan,
 // lalu bila goal.reset dan target sudah dekat HOME_TGT (<.05) goal selesai.
 // tgt = {x,y,z}, sph = {radius,theta,phi,...} — dimutasi langsung.
 // return: true bila goal reset selesai (pemanggil boleh set focusGoal=null).
-export function focusStep(tgt, sph, goalT, goalR) {
+export function focusStep(tgt, sph, goalT, goalR, goalPhi) {
   tgt.x += (goalT.x - tgt.x) * .06;
   tgt.y += (goalT.y - tgt.y) * .06;
   tgt.z += (goalT.z - tgt.z) * .06;
   sph.radius += (goalR - sph.radius) * .06;
+  if (goalPhi !== undefined) sph.phi += (goalPhi - sph.phi) * .06;
   return Math.sqrt(tgt.x * tgt.x + (tgt.y - 1.8) * (tgt.y - 1.8) + tgt.z * tgt.z) < .05;
 }
 

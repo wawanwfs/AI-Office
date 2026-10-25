@@ -80,6 +80,13 @@ describe('focusStep', () => {
     const tgt = { x: 0, y: 1.86, z: 0 }; // deviasi y 0.06 → jarak .06 ≥ .05
     expect(focusStep(tgt, { radius: 20 }, HOME, 20)).toBe(false);
   });
+
+  it('lerp sudut pitch (phi) bila goalPhi disediakan', () => {
+    const tgt = { x: 0, y: 1.8, z: 0 };
+    const sph = { radius: 20, phi: 0.35 };
+    focusStep(tgt, sph, HOME, 20, 1.05);
+    expect(sph.phi).toBeCloseTo(0.35 + (1.05 - 0.35) * 0.06);
+  });
 });
 
 describe('autoRotateStep', () => {

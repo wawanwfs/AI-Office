@@ -1,3 +1,31 @@
+## 2026-10-26 03:50 WIB — Siklus 73: Eliminasi Desinkronisasi State FloorNavigator, Penyelarasan Pitch Kamera (Phi Lerp) & Shortcut Keyboard Navigasi Multi-Lantai
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Eliminasi Desinkronisasi State FloorNavigator (`src/components/FloorNavigator.jsx`, `src/__tests__/floor_navigator.test.jsx`):**
+     - Memperbaiki bug di mana `FloorNavigator` mengabaikan pembaruan prop `currentFloor` dari luar jika tombol lantai pernah diklik sebelumnya (akibat `selectedFloor ?? currentFloor` yang terkunci pada nilai lokal).
+     - Mengubah komponen menjadi pola terkontrol murni: memprioritaskan prop `currentFloor` saat disediakan (`const activeFloor = isControlled ? currentFloor : internalFloor`), dengan fallback state internal hanya untuk mode tanpa kontrol prop. Tombol kini selalu sinkron dengan state kantor saat pengguna berpindah lantai melalui agen, shortcut, atau tombol reset.
+     - Menambahkan navigasi keyboard tombol panah (`ArrowLeft`/`ArrowUp` untuk turun lantai, `ArrowRight`/`ArrowDown` untuk naik lantai) pada kapsul navigasi lantai.
+  2. **Penyelarasan Elevasi Pitch Kamera Saat Fokus Lantai (`src/scene/parts/kamera_focus.js`, `src/scene/OfficeScene.js`, `src/__tests__/kamera_focus.test.js`):**
+     - Memperluas fungsi `focusStep(tgt, sph, goalT, goalR, goalPhi)` dengan dukungan lerping sudut pitch vertikal (`phi`) secara halus.
+     - Saat pengguna memanggil `focusFloor(floorNum)` atau `setView('l1'|'l2'|'l3')` dari sudut kamera ekstrem (misal top-down view `phi < 0.7` atau elevasi rendah `phi > 1.35`), kamera secara otomatis menyelaraskan sudut pandang `phi` ke sudut isometrik ideal (`1.05 rad`). Hal ini memastikan arsitektur 3D dan karakter di tiap lantai langsung terlihat proporsional dan gagah alih-alih terlihat lingkaran gepeng dari atas.
+  3. **Shortcut Keyboard Navigasi Multi-Lantai & Sinkronisasi Reset (`src/App.jsx`, `src/components/OverlayHelp.jsx`, `src/__tests__/app_integration.test.jsx`):**
+     - Menambahkan shortcut navigasi cepat: `[` (lantai sebelumnya / turun), `]` (lantai berikutnya / naik), serta `Shift+1`, `Shift+2`, `Shift+3` untuk langsung fokus ke Lantai 1 (Ops & AI), 2 (Engineering), atau 3 (Executive).
+     - Menghubungkan shortcut `0` (reset kamera) agar ikut menyinkronkan state `currentFloor` kembali ke Lantai 1 (Ground / Atrium Overview).
+     - Memperbarui dokumentasi panduan shortcut pada `OverlayHelp.jsx` tanpa mengubah struktur 6 langkah modal panduan.
+
+- **Bukti terukur:**
+  - **Vitest:** **1378/1378 passed (119 test file)** (+5 tests baru, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint .`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1628.31 KiB; chunk `OfficeScene-BdhhPtiQ.js` 861.18 KB / gzip 232.17 KB, `index-CdGQVp9A.js` 289.19 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, chunk usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-CdGQVp9A.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **550.390 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `scripts/e2e_zone_multi.py`: **E2E_ZONE_MULTI: OK** (iso, front, top).
+    - `shot.sh`: Screenshot ck.png **587.471 bytes** (>500 KB).
+- **Sisa backlog:** verifikasi subjektif audio web-audio.
+
 ## 2026-10-26 03:10 WIB — Siklus 72: Ketahanan Interaksi 26 Agen Kampus 3D, Badge Lokasi Lantai AgentInspector & Sinkronisasi Seleksi Multi-Lantai
 
 - **Yang diperbaiki & ditingkatkan:**

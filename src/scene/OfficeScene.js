@@ -1324,8 +1324,8 @@ function animate(){
     if(focusGoal.follow&&!focusGoal.reset){ // follow agent berjalan: target kamera ikut posisi agent saat ini (murni, parts/kamera_focus.js)
       focusGoal=updateFollowGoal(focusGoal,homeRadius,sph.radius,HOME_TGT);
     }
-    if(focusGoal.reset&&focusStep(tgt,sph,focusGoal.t,focusGoal.r))focusGoal=null;
-    else{focusStep(tgt,sph,focusGoal.t,focusGoal.r)}
+    if(focusGoal.reset&&focusStep(tgt,sph,focusGoal.t,focusGoal.r,focusGoal.phi))focusGoal=null;
+    else{focusStep(tgt,sph,focusGoal.t,focusGoal.r,focusGoal.phi)}
     updCam();
   }
   if(autoRot){autoRotateStep(sph);updCam()}
@@ -1626,22 +1626,24 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
     focusFloor: (floorNum) => {
       if (selectedIdx !== -1) { selectedIdx = -1; applySelected(); if (onSelectAgent) onSelectAgent(null); }
       delete sph.__saved;
+      const targetPhi = (sph.phi < 0.7 || sph.phi > 1.35) ? 1.05 : undefined;
       if (floorNum === 1 || floorNum === '1') {
-        focusGoal = { t: new THREE.Vector3(0, 0.5, -3.0), r: 18 };
+        focusGoal = { t: new THREE.Vector3(0, 0.5, -3.0), r: 18, phi: targetPhi };
         return true;
       } else if (floorNum === 2 || floorNum === '2') {
-        focusGoal = { t: new THREE.Vector3(0, 1.1, 1.5), r: 19 };
+        focusGoal = { t: new THREE.Vector3(0, 1.1, 1.5), r: 19, phi: targetPhi };
         return true;
       } else if (floorNum === 3 || floorNum === '3') {
-        focusGoal = { t: new THREE.Vector3(0, 1.8, 6.0), r: 21 };
+        focusGoal = { t: new THREE.Vector3(0, 1.8, 6.0), r: 21, phi: targetPhi };
         return true;
       }
       return false;
     },
     setView: (name) => {
-      if(name==='l1'||name==='floor1'){ focusGoal={t:new THREE.Vector3(0,0.5,-3.0),r:18}; return true; }
-      if(name==='l2'||name==='floor2'){ focusGoal={t:new THREE.Vector3(0,1.1,1.5),r:19}; return true; }
-      if(name==='l3'||name==='floor3'){ focusGoal={t:new THREE.Vector3(0,1.8,6.0),r:21}; return true; }
+      const targetPhi = (sph.phi < 0.7 || sph.phi > 1.35) ? 1.05 : undefined;
+      if(name==='l1'||name==='floor1'){ focusGoal={t:new THREE.Vector3(0,0.5,-3.0),r:18,phi:targetPhi}; return true; }
+      if(name==='l2'||name==='floor2'){ focusGoal={t:new THREE.Vector3(0,1.1,1.5),r:19,phi:targetPhi}; return true; }
+      if(name==='l3'||name==='floor3'){ focusGoal={t:new THREE.Vector3(0,1.8,6.0),r:21,phi:targetPhi}; return true; }
       if(name==='iso'||name==='front'||name==='top'){
         // ganti sudut kamera = batalkan fokus/pilihan agent (konsisten dgn Escape & klik kosong)
         if(selectedIdx!==-1){selectedIdx=-1;applySelected();if(onSelectAgent)onSelectAgent(null);}

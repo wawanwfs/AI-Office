@@ -256,4 +256,37 @@ describe('App — integrasi UI', () => {
     // Setelah ditutup: header kembali tidak inert
     await waitFor(() => expect(header?.hasAttribute('inert')).toBe(false))
   })
+
+  it('shortcut keyboard navigasi lantai ("[" dan "]") memanggil focusFloor dan memperbarui tombol aktif', async () => {
+    const mockFocusFloor = vi.fn()
+    const sceneMod = await import('../scene/OfficeScene')
+    sceneMod.createOfficeScene.mockImplementationOnce(() => ({
+      isAudioMuted: () => false,
+      setAudioMuted: vi.fn(),
+      isCyberpunk: () => false,
+      toggleCyberpunk: vi.fn(),
+      focusFloor: mockFocusFloor,
+      setTime: vi.fn(),
+      destroy: vi.fn(),
+    }))
+    stubFetch([])
+    render(<App />)
+    await waitFor(() => expect(screen.queryByText('Memuat ruangan…')).toBeNull())
+
+    const btnL1 = screen.getByText('L1 · Ops & AI').closest('button')
+    const btnL2 = screen.getByText('L2 · Engineering').closest('button')
+
+    expect(btnL1.getAttribute('aria-pressed')).toBe('true')
+
+    // Tekan ']' untuk naik lantai: 1 -> 2
+    fireEvent.keyDown(window, { key: ']' })
+    expect(mockFocusFloor).toHaveBeenCalledWith(2)
+    expect(btnL2.getAttribute('aria-pressed')).toBe('true')
+    expect(btnL1.getAttribute('aria-pressed')).toBe('false')
+
+    // Tekan '[' untuk turun lantai: 2 -> 1
+    fireEvent.keyDown(window, { key: '[' })
+    expect(mockFocusFloor).toHaveBeenCalledWith(1)
+    expect(btnL1.getAttribute('aria-pressed')).toBe('true')
+  })
 })

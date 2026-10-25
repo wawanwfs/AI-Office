@@ -33,14 +33,31 @@ const FLOORS = [
   }
 ]
 
-export default function FloorNavigator({ onSelectFloor, currentFloor = 1 }) {
-  const [selectedFloor, setSelectedFloor] = useState(null)
-  const activeFloor = selectedFloor ?? currentFloor
+export default function FloorNavigator({ onSelectFloor, currentFloor }) {
+  const [internalFloor, setInternalFloor] = useState(1)
+  const isControlled = currentFloor !== undefined && currentFloor !== null
+  const activeFloor = isControlled ? currentFloor : internalFloor
 
   const handleFloorClick = (fl) => {
-    setSelectedFloor(fl.num)
+    if (!isControlled) {
+      setInternalFloor(fl.num)
+    }
     if (onSelectFloor) {
       onSelectFloor(fl.num, fl.id)
+    }
+  }
+
+  const handleKeyDown = (e) => {
+    if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      e.preventDefault()
+      const nextNum = activeFloor >= 3 ? 1 : activeFloor + 1
+      const fl = FLOORS.find(f => f.num === nextNum)
+      if (fl) handleFloorClick(fl)
+    } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      e.preventDefault()
+      const prevNum = activeFloor <= 1 ? 3 : activeFloor - 1
+      const fl = FLOORS.find(f => f.num === prevNum)
+      if (fl) handleFloorClick(fl)
     }
   }
 
@@ -49,6 +66,7 @@ export default function FloorNavigator({ onSelectFloor, currentFloor = 1 }) {
       className="floor-nav"
       role="navigation"
       aria-label="Navigasi Lantai Kantor WFS PROJECT"
+      onKeyDown={handleKeyDown}
     >
       <div className="floor-nav-label">
         LANTAI

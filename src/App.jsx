@@ -263,7 +263,7 @@ export default function App() {
     dir > 0 ? s.zoomIn() : s.zoomOut()
   }, [flash])
 
-  const handleFloorSelect = (floorNum, floorId) => {
+  const handleFloorSelect = useCallback((floorNum, floorId) => {
     setCurrentFloor(floorNum)
     const s = sceneRef.current
     if (s && s.focusFloor) {
@@ -273,7 +273,7 @@ export default function App() {
       s.setView(floorId)
       flash(`Fokus ke Lantai ${floorNum}`)
     }
-  }
+  }, [flash])
 
   // ---- shortcut keyboard (abaikan saat fokus di input/textarea/modal) ----
   useEffect(() => {
@@ -287,6 +287,40 @@ export default function App() {
       else if (k === 'l') { e.preventDefault(); setShowLog(v => !v) }
       else if (k === 'h' || k === '?') { e.preventDefault(); setShowHelp(v => !v) }
       else if (k === 'n') { e.preventDefault(); handleCyberpunk() }
+      else if (e.shiftKey && (e.code === 'Digit1' || k === '!' || k === '1')) {
+        e.preventDefault()
+        handleFloorSelect(1, 'l1')
+      }
+      else if (e.shiftKey && (e.code === 'Digit2' || k === '@' || k === '2')) {
+        e.preventDefault()
+        handleFloorSelect(2, 'l2')
+      }
+      else if (e.shiftKey && (e.code === 'Digit3' || k === '#' || k === '3')) {
+        e.preventDefault()
+        handleFloorSelect(3, 'l3')
+      }
+      else if (k === '[' || k === '{') {
+        e.preventDefault()
+        setCurrentFloor(prev => {
+          const next = prev <= 1 ? 3 : prev - 1
+          const s = sceneRef.current
+          if (s && s.focusFloor) s.focusFloor(next)
+          else if (s && s.setView) s.setView(`l${next}`)
+          flash(`Fokus ke Lantai ${next}`)
+          return next
+        })
+      }
+      else if (k === ']' || k === '}') {
+        e.preventDefault()
+        setCurrentFloor(prev => {
+          const next = prev >= 3 ? 1 : prev + 1
+          const s = sceneRef.current
+          if (s && s.focusFloor) s.focusFloor(next)
+          else if (s && s.setView) s.setView(`l${next}`)
+          flash(`Fokus ke Lantai ${next}`)
+          return next
+        })
+      }
       else if (k === '1' || k === '2' || k === '3') {
         e.preventDefault()
         const s = sceneRef.current
@@ -294,6 +328,7 @@ export default function App() {
       }
       else if (k === '0') {
         e.preventDefault()
+        setCurrentFloor(1)
         const s = sceneRef.current
         if (s && s.setView) { s.setView('iso'); if (s.resetFocus) s.resetFocus() }
       }
@@ -310,7 +345,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [showTask, confirm, ask, showHelp, showLog, selectedAgent, handleCyberpunk, zoom, flash, amRef])
+  }, [showTask, confirm, ask, showHelp, showLog, selectedAgent, handleCyberpunk, handleFloorSelect, zoom, flash, amRef])
 
   // ---- Pause / Resume nyata (konfirmasi dulu) ----
   const doConfirm = async () => {
