@@ -10,20 +10,30 @@ export const STAIR1_END_Z = -0.6;
 export const STAIR2_START_Z = 3.8;
 export const STAIR2_END_Z = 5.0;
 
+// Grand Staircase kembar di X = ±2.6 dengan lebar bentang 3.4m (radius 1.7m)
+export const STAIR_WIDTH = 3.4;
+export const isNearStairX = (x) => {
+  if (x === undefined || x === null || !Number.isFinite(x)) return true;
+  return Math.abs(Math.abs(x) - 2.6) <= STAIR_WIDTH / 2;
+};
+
 /**
- * Menghitung elevasi lantai vertikal Y (m) berdasarkan koordinat Z di kantor WFS.
- * Termasuk tanjakan tangga arsitektural L1→L2 dan L2→L3 secara kontinu.
+ * Menghitung elevasi lantai vertikal Y (m) berdasarkan koordinat Z dan opsional X di kantor WFS.
+ * Termasuk tanjakan tangga arsitektural L1→L2 dan L2→L3 secara presisi dan kontinu.
  * @param {number} z Koordinat sumbu Z di ruang 3D kantor
+ * @param {number} [x] Koordinat sumbu X (opsional; bila tidak diberikan, diasumsikan di lintasan tangga)
  * @returns {number} Ketinggian permukaan lantai (meter)
  */
-export function floorElevationAt(z) {
+export function floorElevationAt(z, x) {
   if (z <= STAIR1_START_Z) return L1_Y;
   if (z < STAIR1_END_Z) {
+    if (!isNearStairX(x)) return L1_Y;
     const t = (z - STAIR1_START_Z) / (STAIR1_END_Z - STAIR1_START_Z);
     return L1_Y + t * (L2_Y - L1_Y);
   }
   if (z <= STAIR2_START_Z) return L2_Y;
   if (z < STAIR2_END_Z) {
+    if (!isNearStairX(x)) return L2_Y;
     const t = (z - STAIR2_START_Z) / (STAIR2_END_Z - STAIR2_START_Z);
     return L2_Y + t * (L3_Y - L2_Y);
   }

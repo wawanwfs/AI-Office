@@ -47,19 +47,19 @@ export function createMotion(ctx) {
       }
     });
     // Bob badan: naik-turun kecil 2x per siklus langkah + sway pinggul alami di atas elevasi lantai
-    const baseY = floorElevationAt(ad.walker.position.z);
+    const baseY = floorElevationAt(ad.walker.position.z, ad.walker.position.x);
     ad.walker.position.y = baseY + poseBob(t);
     ad.walker.rotation.z = Math.sin(t) * 0.022;
   }
   const poseBob = (t) => stridePose(t).bob;
   function resetStride(ad) {
     ad.walker.children.forEach((c) => { if (c.userData && c.userData.isLeg) { c.position.z = 0; c.rotation.x = 0; } else if (c.userData && c.userData.isArm) { c.rotation.x = 0; } });
-    const deskY = (ad.home && Number.isFinite(ad.home.y)) ? ad.home.y : floorElevationAt(ad.walker.position.z);
+    const deskY = (ad.home && Number.isFinite(ad.home.y)) ? ad.home.y : floorElevationAt(ad.walker.position.z, ad.walker.position.x);
     ad.walker.position.y = deskY;
     ad.walker.rotation.z = 0;
   }
   function follow(ad) {
-    const baseY = floorElevationAt(ad.walker.position.z);
+    const baseY = floorElevationAt(ad.walker.position.z, ad.walker.position.x);
     const u = ad.label.userData || (ad.label.userData = {});
     u.baseY = baseY + 2.45;
     u.baseX = ad.walker.position.x;
@@ -115,8 +115,8 @@ export function createMotion(ctx) {
     if (step !== ad._talk && step < lines.length) {
       ad._talk = step;
       const mine = speakerIsVisitor(step);
-      const myY = floorElevationAt(me.z);
-      const prY = (pr.home && Number.isFinite(pr.home.y)) ? pr.home.y : floorElevationAt(pr.home.z);
+      const myY = floorElevationAt(me.z, me.x);
+      const prY = (pr.home && Number.isFinite(pr.home.y)) ? pr.home.y : floorElevationAt(pr.home.z, pr.home.x);
       const anchor = mine
         ? { get x(){return me.x}, get z(){return me.z}, y: myY + 2.6 }
         : { get x(){return pr.home.x}, get z(){return pr.home.z}, y: prY + 2.6 };
@@ -147,7 +147,7 @@ export function createMotion(ctx) {
         if (stepRoute(ad, WALK, delta)) {
           ad.walkPause += delta;
           if (Math.random() < delta * 0.12) {
-            const cafeY = floorElevationAt(ad.walker.position.z);
+            const cafeY = floorElevationAt(ad.walker.position.z, ad.walker.position.x);
             const lunchAnc = { get x(){return ad.walker.position.x}, get z(){return ad.walker.position.z}, y: cafeY + 2.6 };
             createBubble(ad.walker.position.x, cafeY + 2.6, ad.walker.position.z,
               ['“makan siang dulu”', '“kopi wajib”', '“paket nasi goreng”', '“sesh sore nanti?”'][Math.floor(Math.random() * 4)],

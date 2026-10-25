@@ -39,6 +39,27 @@ describe('AgentInspector — kartu profil agen 3D', () => {
     expect(screen.getByText('L3 · Executive')).toBeTruthy()
   })
 
+  it('klik tombol lokasi lantai memanggil onFocusFloor dengan lantai agen yang sesuai', () => {
+    const onFocus = vi.fn()
+    const l2Agent = { ...mockAgent, name: 'Gilang', role: 'Backend Lead', floor: 2 }
+    render(<AgentInspector agent={l2Agent} onClose={vi.fn()} onChatWith={vi.fn()} onFocusFloor={onFocus} />)
+
+    const floorBtn = screen.getByLabelText('Fokus kamera ke Lantai 2')
+    fireEvent.click(floorBtn)
+    expect(onFocus).toHaveBeenCalledWith(2)
+  })
+
+  it('Wahyu FS fallback lantai ke Lantai 3 (Executive Penthouse)', () => {
+    const onFocus = vi.fn()
+    const founderAgent = { name: 'Wahyu FS', role: 'Founder / CEO', hex: '#F59E0B' }
+    render(<AgentInspector agent={founderAgent} onClose={vi.fn()} onChatWith={vi.fn()} onFocusFloor={onFocus} />)
+
+    expect(screen.getByText('L3 · Executive')).toBeTruthy()
+    const floorBtn = screen.getByLabelText('Fokus kamera ke Lantai 3')
+    fireEvent.click(floorBtn)
+    expect(onFocus).toHaveBeenCalledWith(3)
+  })
+
   it('klik tombol tutup memanggil onClose', () => {
     const onClose = vi.fn()
     render(<AgentInspector agent={mockAgent} onClose={onClose} onChatWith={vi.fn()} />)

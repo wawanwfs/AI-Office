@@ -1,3 +1,30 @@
+## 2026-10-26 04:00 WIB — Siklus 74: Presisi Koridor Tangga Antar-Lantai (L1-L3), Elevasi Realistis 2D Multi-Lantai & Aksi Interaktif Fokus Lantai pada AgentInspector
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Presisi Navigasi Koridor Tangga Antar-Lantai (`src/scene/parts/routing.js`, `src/__tests__/stair_routing.test.js`):**
+     - Memperbaiki waypoint routing antar-lantai (khususnya L1 <-> L3 yang melintasi dua Grand Staircase sekaligus). Sebelumnya ketika agen berpindah dari tangga 1 di sayap barat (`sx1 = -2.6`) ke tangga 2 di sayap timur (`sx2 = +2.6`), rute langsung melompat secara diagonal melintasi area tengah/meja kerja Lantai 2.
+     - Kini agen diarahkan melangkah keluar secara realistis ke koridor terbuka Lantai 2 (`FRONT[1] = 0.35`) di `sx1` sebelum menyusuri koridor ke `sx2`, menghindari pemotongan diagonal liar di udara atau menembus meja kerja.
+  2. **Elevasi Lantai Realistis 2D Multi-Lantai (`src/scene/parts/floor_elevation.js`, `src/scene/parts/motion.js`, `src/__tests__/floor_elevation.test.js`):**
+     - Memperluas fungsi `floorElevationAt(z, x)` dengan deteksi bentang tangga arsitektural 2D (`STAIR_WIDTH = 3.4m`, `isNearStairX(x)`).
+     - Menghilangkan bug di mana agen yang berada di luar bentang tangga (misal di sayap barat/timur Lantai 1 atau 2 pada koordinat Z transisi tangga) sebelumnya terangkat melayang seolah berada di tangga gaib. Kini jika karakter berada di luar tangga, ketinggian tetap berada pada level lantai sebenarnya (L1 = 0m, L2 = 0.60m, L3 = 1.20m), dengan backward-compatibility 100% jika `x` tidak disediakan.
+     - Mengintegrasikan koordinat X agen pada kalkulasi langkah kaki (`stride`), `resetStride`, `follow` nameplate, sapaan `converse`, dan istirahat kafe.
+  3. **Aksi Interaktif Fokus Lantai pada Kartu Profil Agen (`src/components/AgentInspector.jsx`, `src/App.jsx`, `src/scene/OfficeScene.js`, `src/__tests__/agent_inspector.test.jsx`):**
+     - Mengubah badge lokasi lantai pada `AgentInspector` menjadi tombol aksi interaktif dengan indikator visual `FOKUS ↗`.
+     - Mengklik lokasi lantai agen (L1 / L2 / L3) memicu `onFocusFloor` yang otomatis mengarahkan sudut kamera 3D ke lantai tempat agen bertugas dan menyinkronkan state `FloorNavigator`.
+     - Memastikan Founder Wahyu FS pada `setSelected(-2)` selalu memiliki properti `floor: 3` dan fallback ke Lantai 3 (Executive Penthouse).
+
+- **Bukti terukur:**
+  - **Vitest:** **1399/1399 passed (121 test file)** (+6 tests baru, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint .`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1629.47 KiB; chunk `OfficeScene-Gy4Tb5UN.js` 861.46 KB / gzip 232.25 KB, `index-61QEa42C.js` 290.09 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, chunk usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-61QEa42C.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **551.039 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `shot.sh`: Screenshot ck.png **587.471 bytes** (>500 KB).
+- **Sisa backlog:** verifikasi subjektif audio web-audio.
+
 ## 2026-10-26 03:50 WIB — Siklus 73: Eliminasi Desinkronisasi State FloorNavigator, Penyelarasan Pitch Kamera (Phi Lerp) & Shortcut Keyboard Navigasi Multi-Lantai
 
 - **Yang diperbaiki & ditingkatkan:**

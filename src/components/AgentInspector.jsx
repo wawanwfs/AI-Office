@@ -2,7 +2,7 @@ import React, { useEffect } from 'react'
 import { IconClose, IconChat, IconUser } from './Icons'
 
 // Kartu Inspektur Agen Interaktif — Tampil saat agen 3D diklik di ruangan
-export default function AgentInspector({ agent, onClose, onChatWith }) {
+export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloor }) {
   useEffect(() => {
     if (!agent) return
     const onKey = (e) => {
@@ -81,12 +81,44 @@ export default function AgentInspector({ agent, onClose, onChatWith }) {
               Aktif Bekerja
             </div>
           </div>
-          <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '8px 10px' }}>
-            <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 3 }}>Lokasi Lantai</span>
+          <button
+            type="button"
+            className="agent-floor-badge-btn"
+            onClick={() => onFocusFloor && onFocusFloor(agent.floor || (agent.name === 'Wahyu FS' ? 3 : 1))}
+            title={`Fokus kamera ke Lantai ${agent.floor || (agent.name === 'Wahyu FS' ? 3 : 1)}`}
+            aria-label={`Fokus kamera ke Lantai ${agent.floor || (agent.name === 'Wahyu FS' ? 3 : 1)}`}
+            style={{
+              background: 'rgba(255,255,255,0.04)',
+              border: '1px solid rgba(255,255,255,0.06)',
+              borderRadius: 12,
+              padding: '8px 10px',
+              textAlign: 'left',
+              cursor: onFocusFloor ? 'pointer' : 'default',
+              transition: 'background .15s, border-color .15s',
+              color: 'inherit',
+              font: 'inherit',
+            }}
+            onMouseEnter={(e) => {
+              if (onFocusFloor) {
+                e.currentTarget.style.borderColor = 'var(--teal)'
+                e.currentTarget.style.background = 'rgba(0,240,255,0.08)'
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (onFocusFloor) {
+                e.currentTarget.style.borderColor = 'rgba(255,255,255,0.06)'
+                e.currentTarget.style.background = 'rgba(255,255,255,0.04)'
+              }
+            }}
+          >
+            <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 3 }}>
+              <span>Lokasi Lantai</span>
+              {onFocusFloor && <span style={{ fontSize: 9, color: 'var(--teal)', fontWeight: 700 }}>FOKUS ↗</span>}
+            </span>
             <div style={{ fontSize: 12, color: '#fff', fontWeight: 600 }}>
-              {agent.floor ? `L${agent.floor} · ${agent.floor === 1 ? 'Ops & AI' : agent.floor === 2 ? 'Engineering' : 'Executive'}` : 'L3 · Penthouse'}
+              {agent.floor ? `L${agent.floor} · ${agent.floor === 1 ? 'Ops & AI' : agent.floor === 2 ? 'Engineering' : 'Executive'}` : (agent.name === 'Wahyu FS' ? 'L3 · Executive' : 'L3 · Penthouse')}
             </div>
-          </div>
+          </button>
         </div>
 
         {/* AI Engine, Proyek & Sandbox */}

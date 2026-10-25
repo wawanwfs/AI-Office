@@ -433,6 +433,7 @@ export default function App() {
       <AgentInspector
         agent={selectedAgent}
         onClose={handleCloseInspector}
+        onFocusFloor={(fl) => handleFloorSelect(fl, `l${fl}`)}
         onChatWith={(ag) => {
           if (window.__wfsSelectAgent) {
             const idMap = {}

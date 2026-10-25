@@ -49,14 +49,22 @@ export function routePath(a, b) {
         // L1 -> Stair 1 -> L2 -> Stair 2 -> L3
         path.push(
           { x: sx1, z: FRONT[0] }, { x: sx1, z: -1.8 }, { x: sx1, z: -0.6 },
-          { x: sx2, z: FRONT[1] }, { x: sx2, z: 3.8 }, { x: sx2, z: 5.0 },
+          { x: sx1, z: FRONT[1] }
+        );
+        if (sx1 !== sx2) path.push({ x: sx2, z: FRONT[1] });
+        path.push(
+          { x: sx2, z: 3.8 }, { x: sx2, z: 5.0 },
           { x: b.x, z: FRONT[2] }
         );
       } else {
         // L3 -> Stair 2 -> L2 -> Stair 1 -> L1
         path.push(
           { x: sx1, z: FRONT[2] }, { x: sx1, z: 5.0 }, { x: sx1, z: 3.8 },
-          { x: sx2, z: FRONT[1] }, { x: sx2, z: -0.6 }, { x: sx2, z: -1.8 },
+          { x: sx1, z: FRONT[1] }
+        );
+        if (sx1 !== sx2) path.push({ x: sx2, z: FRONT[1] });
+        path.push(
+          { x: sx2, z: -0.6 }, { x: sx2, z: -1.8 },
           { x: b.x, z: FRONT[0] }
         );
       }

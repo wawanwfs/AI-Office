@@ -3,6 +3,7 @@ import { describe, it, expect } from 'vitest';
 import {
   L1_Y, L2_Y, L3_Y,
   STAIR1_START_Z, STAIR1_END_Z, STAIR2_START_Z, STAIR2_END_Z,
+  STAIR_WIDTH, isNearStairX,
   floorElevationAt,
 } from '../scene/parts/floor_elevation.js';
 
@@ -11,6 +12,24 @@ describe('floor_elevation.js — konstanta arsitektur', () => {
     expect(L1_Y).toBe(0);
     expect(L2_Y).toBe(0.60);
     expect(L3_Y).toBe(1.20);
+  });
+
+  it('lebar bentang tangga kembar terdefinisi 3.4m dan deteksi isNearStairX akurat', () => {
+    expect(STAIR_WIDTH).toBe(3.4);
+    // Tangga kiri (x = -2.6): rentang [-4.3, -0.9]
+    expect(isNearStairX(-2.6)).toBe(true);
+    expect(isNearStairX(-2.0)).toBe(true);
+    expect(isNearStairX(-4.0)).toBe(true);
+    // Tangga kanan (x = 2.6): rentang [0.9, 4.3]
+    expect(isNearStairX(2.6)).toBe(true);
+    expect(isNearStairX(3.5)).toBe(true);
+    // Di luar bentang tangga (misal di sayap barat/timur jauh atau tengah atrium)
+    expect(isNearStairX(0)).toBe(false);
+    expect(isNearStairX(-8.0)).toBe(false);
+    expect(isNearStairX(10.0)).toBe(false);
+    // Backward compatibility: x tidak disediakan (undefined/null) diasumsikan true
+    expect(isNearStairX(undefined)).toBe(true);
+    expect(isNearStairX(null)).toBe(true);
   });
 
   it('batas Z tangga arsitektural L1→L2 dan L2→L3 terdefinisi konsisten', () => {
@@ -35,6 +54,22 @@ describe('floorElevationAt(z) — perhitungan ketinggian lantai', () => {
     expect(floorElevationAt(-1.2)).toBeCloseTo(0.30, 4); // Tengah tangga 1
     expect(floorElevationAt(-1.5)).toBeCloseTo(0.15, 4);
     expect(floorElevationAt(-0.9)).toBeCloseTo(0.45, 4);
+  });
+
+  it('elevasi 2D akurat: di luar tangga, Z transisi tetap pada level lantai masing-masing', () => {
+    // Pada koordinat Z tangga 1 (z = -1.2): jika di tangga (x = -2.6 atau 2.6) -> 0.30m
+    expect(floorElevationAt(-1.2, -2.6)).toBeCloseTo(0.30, 4);
+    expect(floorElevationAt(-1.2, 2.6)).toBeCloseTo(0.30, 4);
+    // Jika di luar tangga (misal di x = -8.0 pada deck Lantai 1) -> 0m
+    expect(floorElevationAt(-1.2, -8.0)).toBe(0);
+    expect(floorElevationAt(-1.2, 0)).toBe(0);
+
+    // Pada koordinat Z tangga 2 (z = 4.4): jika di tangga -> 0.90m
+    expect(floorElevationAt(4.4, -2.6)).toBeCloseTo(0.90, 4);
+    expect(floorElevationAt(4.4, 2.6)).toBeCloseTo(0.90, 4);
+    // Jika di luar tangga (misal di x = -8.0 pada deck Lantai 2) -> 0.60m
+    expect(floorElevationAt(4.4, -8.0)).toBe(0.60);
+    expect(floorElevationAt(4.4, 10.0)).toBe(0.60);
   });
 
   it('Lantai 2 (Level 02: -0.6 <= z <= 3.8) selalu bernilai Y = 0.60', () => {

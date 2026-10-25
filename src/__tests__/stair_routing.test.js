@@ -33,6 +33,31 @@ describe('Stair Routing — Antar Lantai WFS PROJECT', () => {
     expect(idxStair2).toBeGreaterThan(idxStair1);
   });
 
+  it('berpindah L1 -> L3 melangkah keluar ke koridor L2 (z = 0.35) sebelum menaiki tangga kedua', () => {
+    const a = { x: -8, z: -3 }; // meja L1 barat (tangga kiri x = -2.6)
+    const b = { x: 8, z: 6 };   // meja L3 timur (tangga kanan x = 2.6)
+    const path = routePath(a, b);
+
+    // Harus melewati koridor L2 di x = -2.6 dan x = 2.6 pada z = 0.35
+    const idxL2Corridor1 = path.findIndex(p => Math.abs(p.x - (-2.6)) < 0.1 && Math.abs(p.z - 0.35) < 0.1);
+    const idxL2Corridor2 = path.findIndex(p => Math.abs(p.x - 2.6) < 0.1 && Math.abs(p.z - 0.35) < 0.1);
+
+    expect(idxL2Corridor1).toBeGreaterThan(0);
+    expect(idxL2Corridor2).toBeGreaterThan(idxL2Corridor1);
+  });
+
+  it('berpindah L3 -> L1 melangkah keluar ke koridor L2 (z = 0.35) sebelum menuruni tangga pertama', () => {
+    const a = { x: 8, z: 6 };    // meja L3 timur
+    const b = { x: -8, z: -3 };  // meja L1 barat
+    const path = routePath(a, b);
+
+    const idxL2Corridor1 = path.findIndex(p => Math.abs(p.x - 2.6) < 0.1 && Math.abs(p.z - 0.35) < 0.1);
+    const idxL2Corridor2 = path.findIndex(p => Math.abs(p.x - (-2.6)) < 0.1 && Math.abs(p.z - 0.35) < 0.1);
+
+    expect(idxL2Corridor1).toBeGreaterThan(0);
+    expect(idxL2Corridor2).toBeGreaterThan(idxL2Corridor1);
+  });
+
   it('berpindah L3 -> L1 wajib menuruni tangga 2 lalu menuruni tangga 1 secara berurutan', () => {
     const a = { x: 0, z: 6 };    // meja L3
     const b = { x: -8, z: -3 };  // meja L1
