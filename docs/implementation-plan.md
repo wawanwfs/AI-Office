@@ -38,6 +38,7 @@ Status: Fase 1 (Audit) → Fase 2 (Fondasi). Dokumen hidup.
 - [x] Agents dashboard (tab Agents di Konsol — daftar role/lantai/model/status).
 - [ ] Visualisasi 3 lantai fungsional (F1 product, F2 engineering, F3 QA/security/delivery) — seed agent 12 role @3 lantai sudah ada di database; korelasi visual scene 3D belum penuh.
 - [ ] Activity feed + notifikasi (sebagian: log terbaru di Overview).
+- [x] Approval system (tab Approvals di Konsol + GET /api/approvals & POST decide; create project otomatis membikin approval pending).
 
 ## Fase 5 — Docker Sandbox (REQUIREMENT INTI)
 
@@ -51,10 +52,11 @@ Status: Fase 1 (Audit) → Fase 2 (Fondasi). Dokumen hidup.
 
 ## Fase 6 — Engineering Workspace
 
-- [ ] Terminal terisolasi per proyek.
-- [ ] File explorer.
-- [ ] Build/test execution.
-- [ ] Git integration (branch/commit/diff/checkpoint).
+- [x] Terminal terisolasi per proyek (POST /api/projects/{pid}/exec → docker exec di container; UI Terminal di tab Workspace).
+- [x] File explorer (GET /files & /file; UI browse + view).
+- [x] Build/test execution (via terminal; quick-run test dimungkinkan).
+- [ ] Git integration penuh (branch/commit/diff/checkpoint) — sementara status & log git (GET /git) ada; commit UI belum.
+- [x] Laporan status project / artifact delivery (GET /api/projects/{pid}/report).
 
 ## Fase 7 — QA, Security & Stabilisasi
 
