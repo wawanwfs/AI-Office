@@ -3,6 +3,7 @@ import {
   PAD_AGENT, PAD_ZONE, overlapPass,
   K_AGENT_AGENT, K_AGENT_BARRIER, K_ZONE_FROM_ZONE, K_AGENT_PUSHED,
   K_ZONE_TAG_ALONG, K_ZONE_TAG_X,
+  labelWorldOffset, accumulateZoneAnti,
 } from '../scene/parts/label_overlap.js';
 
 const agent = (x, y, sw, sh, extra = {}) => ({ x, y, offX: 0, offY: 0, sw, sh, ...extra });
@@ -117,5 +118,48 @@ describe('overlapPass — kluster padat 4 label', () => {
     expect(sep0).toBeGreaterThanOrEqual(0);
     // total perpindahan > 0 berarti pemisahan terjadi
     expect(pts.some(p => p.offY !== 0 || p.offX !== 0)).toBe(true);
+  });
+});
+
+describe('labelWorldOffset — konversi offset piksel → dunia', () => {
+  it('agent: dy = offY×wpp×1.2 (tanpa clamp atas), dx clamp ±16', () => {
+    expect(labelWorldOffset({ offY: 10, offX: 5 }, 1)).toEqual({ dy: 12, dx: 5 });
+    expect(labelWorldOffset({ offY: -10, offX: -5 }, 1)).toEqual({ dy: -12, dx: -5 });
+    // wpp ≠ 1 proporsional
+    expect(labelWorldOffset({ offY: 10, offX: 5 }, 2).dy).toBe(24);
+  });
+  it('agent: dx di-clamp ke ±16', () => {
+    expect(labelWorldOffset({ offY: 0, offX: 50 }, 1).dx).toBe(16);
+    expect(labelWorldOffset({ offY: 0, offX: -50 }, 1).dx).toBe(-16);
+  });
+  it('zona: dyz tanpa clamp, dxz clamp ±36 (lebih lebar dari agent)', () => {
+    expect(labelWorldOffset({ zone: true, offY: 10, offX: 10 }, 1)).toEqual({ dyz: 12, dxz: 10 });
+    expect(labelWorldOffset({ zone: true, offY: 0, offX: 50 }, 1).dxz).toBe(36);
+    expect(labelWorldOffset({ zone: true, offY: 0, offX: -50 }, 1).dxz).toBe(-36);
+  });
+  it('wpp 0 → dy/dx 0 (tanpa pergerakan)', () => {
+    expect(labelWorldOffset({ offY: 10, offX: 5 }, 0)).toEqual({ dy: 0, dx: 0 });
+  });
+});
+
+describe('accumulateZoneAnti — akumulasi offset anti-tumpuk zona', () => {
+  it('membuat userData bila belum ada & mengakumulasi', () => {
+    const zt = {};
+    const zu = accumulateZoneAnti(zt, 2, -3);
+    expect(zt.userData).toBe(zu);
+    expect(zu.antiY).toBe(2);
+    expect(zu.antiX).toBe(-3);
+  });
+  it('menjumlahkan ke nilai yang sudah ada (bukan mengganti)', () => {
+    const zt = { userData: { antiY: 5, antiX: 7 } };
+    accumulateZoneAnti(zt, 1, 2);
+    expect(zt.userData.antiY).toBe(6);
+    expect(zt.userData.antiX).toBe(9);
+  });
+  it('nilai 0 tetap tercatat', () => {
+    const zt = {};
+    const zu = accumulateZoneAnti(zt, 0, 0);
+    expect(zu.antiY).toBe(0);
+    expect(zu.antiX).toBe(0);
   });
 });
