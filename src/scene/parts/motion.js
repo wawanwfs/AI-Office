@@ -20,8 +20,16 @@ export function createMotion(ctx) {
     const s = stepMove(ad.walker.position, target, speed, delta);
     ad.walker.position.x = s.x;
     ad.walker.position.z = s.z;
-    ad.walker.rotation.y = s.rot;
-    if (!s.arrived) stride(ad);
+    if (!s.arrived) {
+      // Rotasi halus menuju arah jalan (slerp/lerp sudut terpendek), bukan snap mendadak
+      let diff = s.rot - ad.walker.rotation.y;
+      while (diff > Math.PI) diff -= Math.PI * 2;
+      while (diff < -Math.PI) diff += Math.PI * 2;
+      ad.walker.rotation.y += diff * Math.min(1, 14 * delta);
+      stride(ad);
+    } else {
+      ad.walker.rotation.y = s.rot;
+    }
     return s.arrived;
   }
 
@@ -37,13 +45,15 @@ export function createMotion(ctx) {
         c.rotation.x = pose.armRotX; // lengan berlawanan fase dgn kaki
       }
     });
-    // Bob badan: naik-turun kecil 2x per siklus langkah
+    // Bob badan: naik-turun kecil 2x per siklus langkah + sway pinggul alami
     ad.walker.position.y = poseBob(t);
+    ad.walker.rotation.z = Math.sin(t) * 0.022;
   }
   const poseBob = (t) => stridePose(t).bob;
   function resetStride(ad) {
     ad.walker.children.forEach((c) => { if (c.userData && c.userData.isLeg) { c.position.z = 0; c.rotation.x = 0; } else if (c.userData && c.userData.isArm) { c.rotation.x = 0; } });
     ad.walker.position.y = 0;
+    ad.walker.rotation.z = 0;
   }
   function follow(ad) { ad.label.position.set(ad.walker.position.x, 2.45, ad.walker.position.z); }
 

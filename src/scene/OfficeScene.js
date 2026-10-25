@@ -27,6 +27,7 @@ import { MUTED_KEY, tickSoundTimer } from './parts/sound_spec.js';
 import { advanceSimClock, setSimManual, SIM_SEC_PER_MIN as __SIM_SPM, MANUAL_RESUME_MS as __SIM_RESUME } from './parts/sim_clock.js';
 import { simMinutesToClockSeconds } from './parts/clock_units.js';
 import { createSoundEngine } from './parts/sound_engine.js';
+import { installAudioWake } from './parts/audio_wake.js';
 import { createProjectBoard } from './parts/projectboard.js';
 import { createBookshelf } from './parts/bookshelf.js';
 import { createReception } from './parts/reception.js';
@@ -125,8 +126,11 @@ renderer.domElement&&renderer.domElement.addEventListener('touchmove',e=>{
 },{passive:false});
 renderer.domElement&&renderer.domElement.addEventListener('touchend',()=>{pinchDist=null},{passive:true});
 const __ensureAudioEarly=()=>{if(window.__officeSceneDestroyed)return;__sound.ensure();try{const c=__sound.rawCtx();if(c&&c.state==='suspended'&&c.resume)c.resume();}catch{/* abaikan */}};
-window.addEventListener('keydown',__ensureAudioEarly,{once:true});
-window.addEventListener('pointerdown',__ensureAudioEarly,{once:true});
+// Listener wake {once:true} HARUS bisa dilepas di destroy(): tanpa itu, scene lama
+// (HMR/remount) meninggalkan listener yang saat interaksi pertama pengguna
+// membangunkan engine audio LAMA yang sudah dispose → AudioContext bocor
+// (installAudioWake: parts/audio_wake.js, diuji unit).
+const __disposeAudioWake=installAudioWake(__ensureAudioEarly);
 renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{isDrag=true;prev={x:e.clientX,y:e.clientY};autoRot=false;clearTimeout(autoTmr);__ensureAudioEarly();if(renderer.domElement.style.cursor!=='pointer')renderer.domElement.style.cursor='grabbing'});
 renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{downXY={x:e.clientX,y:e.clientY}});
 renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
@@ -1359,6 +1363,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       window.removeEventListener('pointermove', onDragMove);
       window.removeEventListener('keydown', __ensureAudio);
       window.removeEventListener('pointerdown', __ensureAudio);
+      __disposeAudioWake && __disposeAudioWake(); // lepaskan listener wake audio sekali-pakai (anti AudioContext leak)
       // Papan proyek: hentikan interval fetch /wfs-project + listener visibilitychange
       // (tanpa ini, tiap remount meninggalkan papan lama yang terus fetch selamanya).
       try { window.__projectBoard && window.__projectBoard.destroy() } catch{/* abaikan */}
