@@ -115,7 +115,7 @@ describe('createProjectBoard — pemasangan', () => {
 describe('createProjectBoard — render konten', () => {
   it('menggambar judul, persen, tiga kolom, dan kartu task nyata', async () => {
     await mount()
-    expect(texts.some(t => t.includes('PROYEK: dibantuin.com'))).toBe(true)
+    expect(texts.some(t => t.includes('WFS PROJECT: SOFTWARE HOUSE'))).toBe(true)
     expect(texts.some(t => t === '65% selesai')).toBe(true)
     expect(texts.some(t => t === 'ANTRI (4)')).toBe(true)
     expect(texts.some(t => t === 'JALAN (2)')).toBe(true)

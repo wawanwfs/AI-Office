@@ -133,9 +133,9 @@ describe('HUD & Header', () => {
   })
   it('Header menampilkan judul & sub', () => {
     render(<Header />)
-    expect(screen.getByText('WFS')).toBeTruthy()
-    expect(screen.getByText('Project HQ')).toBeTruthy()
-    expect(screen.getByText(/dibantuin\.com/)).toBeTruthy()
+    expect(screen.getByText(/WFS/)).toBeTruthy()
+    expect(screen.getByText(/PROJECT/)).toBeTruthy()
+    expect(screen.getByText(/Autonomous AI Software House/)).toBeTruthy()
   })
 })
 
