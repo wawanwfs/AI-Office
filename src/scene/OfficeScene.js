@@ -915,24 +915,22 @@ const __neon=createNeonMode({ambient,sun,renderer,floor:fl,carpet:cp,ceiling:cei
 function toggleCyberpunk() {
   cyberpunkMode = !cyberpunkMode;
   if (cyberpunkMode) {
-    // ── MODE GELAP MEWAH (Night Studio) ──
-    // 1. Lampu tabung plafon dan aksen LED gedung menyala cyan tajam
+    // ── MODE GELAP MEWAH (Cyberpunk Night Studio) ──
     tubeLights.forEach(l => { l.intensity = 0.85; l.color.set(0x00F0FF); });
     tubeMeshes.forEach(m => { m.material.color.set(0x18E0FF); m.material.opacity = 0.95; });
-    // 2. Pencahayaan interior tetap TERANG dan MEWAH (tidak pernah gelap gulita)
     ambient.intensity = 0.58;
     sun.intensity = 1.25;
     renderer.toneMappingExposure = 1.15;
-    // 3. Warna lantai dan karpet beralih ke navy arsitektural mewah dengan kontras tajam
-    fl.material.color.set(0x203048);
-    cp.material.color.set(0x18263A);
-    ceiling.material.opacity = 0.75;
-    // 4. Glow meja dan layar monitor menyala
+    fl.material.color.set(0x1a2638);
+    cp.material.color.set(0x142033);
+    if (ceil && ceil.material) ceil.material.opacity = 0.75;
     agentData.forEach(a => { if (a.dGlow) { a.dGlow.intensity = 0.9; a.dGlow.distance = 4.5; } });
     screenLights.forEach(l => { l.intensity = 0.6; });
     if (rcLight) rcLight.intensity = 0.9;
+    // SINKRONISASI SEMUA LANTAI KE MODE GELAP
+    if (__terraces && __terraces.setMode) __terraces.setMode(true);
   } else {
-    // ── MODE TERANG (Daylight Studio) ──
+    // ── MODE TERANG (Daylight Architectural Studio) ──
     tubeLights.forEach(l => { l.intensity = 0; });
     tubeMeshes.forEach(m => { m.material.color.set(0x334466); m.material.opacity = 0.3; });
     ambient.intensity = 0.52;
@@ -940,16 +938,19 @@ function toggleCyberpunk() {
     renderer.toneMappingExposure = 1.15;
     fl.material.color.set(0xffffff);
     cp.material.color.set(0xd0d8e0);
-    ceiling.material.opacity = 0.45;
+    if (ceil && ceil.material) ceil.material.opacity = 0.45;
     agentData.forEach(a => { if (a.dGlow) { a.dGlow.intensity = 0.25; a.dGlow.distance = 3.0; } });
     screenLights.forEach(l => { l.intensity = 0; });
     if (rcLight) rcLight.intensity = 0.4;
+    // SINKRONISASI SEMUA LANTAI KE MODE TERANG
+    if (__terraces && __terraces.setMode) __terraces.setMode(false);
   }
   try { localStorage.setItem('wfs_neon', cyberpunkMode ? '1' : '0'); } catch { /* abaikan */ }
   return cyberpunkMode;
 }
 try { localStorage.removeItem('wfs_neon'); } catch { /* abaikan */ }
 cyberpunkMode = false;
+if (__terraces && __terraces.setMode) __terraces.setMode(false);
 
 // ═══════════════════════════════════════════════════
 // PARTICLES
