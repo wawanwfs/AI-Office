@@ -118,13 +118,14 @@ describe('createZones — patch lantai & label zona', () => {
     expect(spr[2].scale.x).toBeCloseTo(4.25)
     expect(spr[2].scale.y).toBeCloseTo(0.8)
   })
-  it('window.__zoneBase: Map label→posisi dasar (x, y) untuk anti-tumpuk', async () => {
+  it('window.__zoneBase: Map label→posisi dasar (x, y, z) untuk anti-tumpuk', async () => {
     const { added } = await build()
     expect(window.__zoneBase).toBeInstanceOf(Map)
     expect(window.__zoneBase.size).toBe(5)
     const [sprite, base] = [...window.__zoneBase.entries()][0]
     expect(sprite).toBeInstanceOf(Sprite)
-    expect(base).toEqual({ y: 1.15, x: -6 })
+    expect(base).toMatchObject({ y: 1.15, x: -6 })
+    expect(base.z).toBeCloseTo(-4.25)
     expect(added.filter((o) => o.userData && o.userData.label).length).toBe(5) // userData.label = label zona
     expect([...window.__zoneLabels].every((s) => s.userData.label)).toBe(true)
   })

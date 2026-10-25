@@ -106,7 +106,7 @@ describe('zoneViewportGuard', () => {
     expect(zt.position.y).toBeLessThan(1.15);
   });
 
-  it('kamera top-down curam menggeser sumbu Z lantai bukan Y', () => {
+  it('kamera top-down curam menggeser sumbu Z lantai bukan Y dan dibatasi MAX_ZONE_DISP_Z', () => {
     // Kamera di atas ketinggian 50m menghadap lantai Y=0
     const topCam = {
       fov: 50,
@@ -117,9 +117,12 @@ describe('zoneViewportGuard', () => {
     zt.position.y = 1.15;
     zt.position.z = 7.5;
     zt.position.clone = () => ({ project: () => ({ x: 0, y: 1, z: 0.5 }) });
-    const n = zoneViewportGuard([zt], DEPS(topCam));
+    const deps = DEPS(topCam);
+    deps.worldPerPx = () => 100; // wpp sangat besar -> uji clamp
+    const n = zoneViewportGuard([zt], deps);
     expect(n).toBe(1);
     expect(zt.position.y).toBe(1.15); // Y tidak ditenggelamkan ke bawah tanah
+    expect(zt.position.z).toBeGreaterThanOrEqual(7.5 - 2.0); // clamp -2.0m aman
     expect(zt.position.z).toBeLessThan(7.5); // Z digeser ke arah tengah lantai
   });
 });

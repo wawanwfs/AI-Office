@@ -1,5 +1,6 @@
 import React, { useRef, useCallback, useEffect } from 'react'
 import { useDialogA11y } from '../lib/dialogA11y'
+import { IconClose } from './Icons'
 
 const COL = { done: '#10E5A0', running: '#F59E0B', failed: '#FB7185', review: '#60A5FA', pending: '#9aa3b5' }
 
@@ -14,6 +15,10 @@ export default function ActivityLog({ show, items, onClose, onClear }) {
   return (
     <div className="modal-scrim" onClick={onClose}>
       <div ref={box} className="modal" role="dialog" aria-label="Log aktivitas" aria-modal="true" onClick={e => e.stopPropagation()}>
+        <button className="x" onClick={onClose} title="Tutup log aktivitas (Esc)" aria-label="Tutup log aktivitas">
+          <IconClose size={16} />
+          <span className="sr-only">✕</span>
+        </button>
         <h3>Log Aktivitas</h3>
         {items.length === 0
           ? <p>Belum ada perubahan status task sejak log dipantau.</p>

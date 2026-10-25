@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { api } from '../lib/api'
 import { useDialogA11y } from '../lib/dialogA11y'
+import { IconClose } from './Icons'
 
 const ROLES = ['backend', 'frontend', 'mobile', 'design', 'devops', 'qa', 'marketing', 'pm']
 
@@ -35,6 +36,10 @@ export default function TaskModal({ show, onClose, onDone }) {
   return (
     <div className="modal-scrim" onClick={onClose}>
       <form ref={box} className="modal" role="dialog" aria-modal="true" aria-labelledby="tm-t" onClick={e => e.stopPropagation()} onSubmit={e => { e.preventDefault(); submit(false) }}>
+        <button type="button" className="x" onClick={onClose} title="Tutup form task (Esc)" aria-label="Tutup form task">
+          <IconClose size={16} />
+          <span className="sr-only">✕</span>
+        </button>
         <h3 id="tm-t">＋ Task Baru</h3>
         <label htmlFor="tm-title">Judul</label>
         <input id="tm-title" ref={first} value={title} onChange={e => setTitle(e.target.value)} maxLength={200} placeholder="mis. Buat endpoint /api/invoice" aria-required="true" aria-invalid={!!err && !title.trim()} aria-describedby={err ? 'tm-err' : undefined} />

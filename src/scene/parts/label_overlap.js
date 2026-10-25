@@ -129,8 +129,9 @@ export function zoneViewportGuard(zoneLabels, deps) {
       const isTopDown = (camera.position && typeof camera.position.y === 'number') &&
         ((camera.position.y - zt.position.y) / dz > 0.8);
       if (isTopDown) {
+        const MAX_ZONE_DISP_Z = 2.0;
         const targetZ = zt.position.z + corr * wpp2;
-        const clampedZ = Math.max(zu.baseZ - 1.5, Math.min(zu.baseZ + 1.5, targetZ));
+        const clampedZ = Math.max(zu.baseZ - MAX_ZONE_DISP_Z, Math.min(zu.baseZ + MAX_ZONE_DISP_Z, targetZ));
         const actDz = clampedZ - zt.position.z;
         if (Math.abs(actDz) > 1e-4) {
           zt.position.z = clampedZ;
@@ -326,8 +327,10 @@ export function resetZoneBaseOffsets(zones) {
     if (z.base) {
       z.ref.position.y = z.base.y; z.ref.position.x = z.base.x;
       z.ref.userData.baseY = z.base.y; z.ref.userData.baseX = z.base.x;
-      if (z.ref.userData.baseZ !== undefined) {
-        z.ref.position.z = z.ref.userData.baseZ;
+      const baseZ = z.base.z !== undefined ? z.base.z : z.ref.userData.baseZ;
+      if (baseZ !== undefined) {
+        z.ref.position.z = baseZ;
+        z.ref.userData.baseZ = baseZ;
       }
     }
     if (z.visible !== undefined) z.ref.visible = z.visible;

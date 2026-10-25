@@ -1,5 +1,6 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useDialogA11y } from '../lib/dialogA11y'
+import { IconClose } from './Icons'
 
 const STEPS = [
   { title: 'Navigasi 3D', text: 'Tarik untuk memutar, scroll / cubit untuk zoom, atau pakai tombol 🔍＋ / 🔍－. Geser slider untuk mengubah waktu.' },
@@ -24,6 +25,10 @@ export default function OverlayHelp({ show, onClose }) {
   return (
     <div className="modal-scrim" onClick={close}>
       <div className="modal" role="dialog" aria-modal="true" aria-labelledby="help-t" tabIndex={-1} ref={ref} onClick={e => e.stopPropagation()}>
+        <button className="x" onClick={close} title="Tutup panduan (Esc)" aria-label="Tutup panduan">
+          <IconClose size={16} />
+          <span className="sr-only">✕</span>
+        </button>
         <h3 id="help-t">{STEPS[step].title} <span style={{ opacity: .6, fontSize: 12 }}>({step + 1}/{STEPS.length})</span></h3>
         <p>{STEPS[step].text}</p>
         <div className="modal-actions" style={{ justifyContent: 'space-between' }}>

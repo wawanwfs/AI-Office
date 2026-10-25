@@ -12,13 +12,21 @@ function mk(over = {}) {
 }
 
 describe('resetZoneBaseOffsets', () => {
-  it('nol-kan antiY/antiX dan kembalikan posisi ke base', () => {
-    const z = mk()
+  it('nol-kan antiY/antiX dan kembalikan posisi ke base (termasuk sumbu z)', () => {
+    const z = mk({ base: { y: 2.5, x: -4, z: 7.5 }, ref: { position: { y: 999, x: -888, z: 99 }, userData: { antiY: 55, antiX: 33 } } })
     expect(resetZoneBaseOffsets([z])).toBe(1)
     expect(z.ref.userData.antiY).toBe(0)
     expect(z.ref.userData.antiX).toBe(0)
     expect(z.ref.position.y).toBe(2.5)
     expect(z.ref.position.x).toBe(-4)
+    expect(z.ref.position.z).toBe(7.5)
+    expect(z.ref.userData.baseZ).toBe(7.5)
+  })
+
+  it('restorasi baseZ fallback dari ref.userData.baseZ bila base.z tidak terdefinisi', () => {
+    const z = mk({ base: { y: 2.5, x: -4 }, ref: { position: { y: 999, x: -888, z: 12 }, userData: { antiY: 55, antiX: 33, baseZ: 6.0 } } })
+    resetZoneBaseOffsets([z])
+    expect(z.ref.position.z).toBe(6.0)
   })
 
   it('tanpa base: offset di-nol-kan, posisi tidak disentuh', () => {

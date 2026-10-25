@@ -45,6 +45,6 @@ export function createZones(ctx){
     zl.position.set(z.x,1.15,zly);office.add(zl);
     (window.__zoneLabels=window.__zoneLabels||[]).push(zl); // dipakai anti-tumpuk label
     zl.userData.label=z.label;
-    (window.__zoneBase=window.__zoneBase||new Map()).set(zl,{y:zl.position.y,x:zl.position.x});
+    (window.__zoneBase=window.__zoneBase||new Map()).set(zl,{y:zl.position.y,x:zl.position.x,z:zl.position.z});
   });
 }

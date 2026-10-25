@@ -83,6 +83,14 @@ describe('OverlayHelp', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Selesai' }))
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+  it('tombol tutup pojok kanan atas memanggil onClose', () => {
+    const onClose = vi.fn()
+    render(<OverlayHelp show onClose={onClose} />)
+    const btn = screen.getByRole('button', { name: 'Tutup panduan' })
+    expect(btn.getAttribute('title')).toBe('Tutup panduan (Esc)')
+    fireEvent.click(btn)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('ActivityLog', () => {
@@ -93,6 +101,8 @@ describe('ActivityLog', () => {
     expect(screen.getByText('Log Aktivitas')).toBeTruthy()
     expect(screen.getByText(/Fix UI/)).toBeTruthy()
     expect(screen.getByRole('button', { name: 'Bersihkan' })).toBeTruthy()
+    const xBtn = screen.getByRole('button', { name: 'Tutup log aktivitas' })
+    expect(xBtn.getAttribute('title')).toBe('Tutup log aktivitas (Esc)')
     fireEvent.click(screen.getByRole('button', { name: 'Bersihkan' }))
     expect(onClear).toHaveBeenCalledTimes(1)
     rerender(<ActivityLog show items={[]} onClose={onClose} onClear={onClear} />)
@@ -100,6 +110,8 @@ describe('ActivityLog', () => {
     expect(screen.queryByRole('button', { name: 'Bersihkan' })).toBeNull()
     fireEvent.click(screen.getByRole('button', { name: 'Tutup' }))
     expect(onClose).toHaveBeenCalledTimes(1)
+    fireEvent.click(screen.getByRole('button', { name: 'Tutup log aktivitas' }))
+    expect(onClose).toHaveBeenCalledTimes(2)
   })
 })
 

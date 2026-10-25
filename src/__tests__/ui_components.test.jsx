@@ -201,6 +201,14 @@ describe('TaskModal', () => {
     resolveApi({ ok: true, status: 200, json: async () => ({ task_id: 1 }) })
     await waitFor(() => expect(screen.getByText('Simpan').disabled).toBe(false))
   })
+  it('tombol tutup pojok kanan atas memanggil onClose', () => {
+    const onClose = vi.fn()
+    render(<TaskModal show onClose={onClose} onDone={() => {}} />)
+    const btn = screen.getByRole('button', { name: 'Tutup form task' })
+    expect(btn.getAttribute('title')).toBe('Tutup form task (Esc)')
+    fireEvent.click(btn)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
 })
 
 describe('OverlayHelp', () => {
