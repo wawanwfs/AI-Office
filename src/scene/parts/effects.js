@@ -98,7 +98,7 @@ export const SCREEN_RENDERERS = {
     c.globalAlpha = 0.85; c.fillStyle = '#fff'; c.font = '6px monospace';
     c.fillText(pct + '% · ' + T.done + '/' + T.total + ' task', 6, 30);
     c.globalAlpha = 0.5; c.fillStyle = col;
-    c.fillText((T.review ? 'REVIEW: ' + T.review + '  ' : '') + (T.failed ? 'GAGAL: ' + T.failed : T.failed ? '' : 'on track'), 6, 42);
+    c.fillText((T.review ? 'REVIEW: ' + T.review + '  ' : '') + (T.failed ? 'GAGAL: ' + T.failed : 'on track'), 6, 42);
     if (Math.sin(t * 2.5) > 0) { c.globalAlpha = 0.9; c.fillStyle = '#4ade80'; c.fillRect(w - 11, 6, 5, 5); } // dot live
   },
   // QA: daftar hasil tes
