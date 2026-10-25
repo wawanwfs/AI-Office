@@ -30,6 +30,19 @@ export const roleTalk={
   'TRAINER AI':['“Fine-tuning model 98% ⚡”','“Dataset siap dilatih 📊”','“Loss konvergen rapi 🎯”'],
   'INTEGRATOR BOT':['“Sync multi-agent aktif 🔄”','“Pipeline CI/CD hijau 🟢”','“API gateway stabil 🌐”'],
   'SUPPORT':['“Tiket #104 terselesaikan ✅”','“CS respons < 1 menit ⚡”','“Rating pelanggan 4.9 ⭐”'],
+  // ── Spesialis Kampus Multi-Lantai WFS PROJECT ──
+  'ARIS':['“Microservices decoupled rapi 🏛️”','“Event-driven architecture siap ⚡”','“Sistem siap scale 100k RPS 📐”'],
+  'CLARA':['“Hasil user interview masuk 📊”','“Usability testing skor 89% ✨”','“User journey makin intuitif 💡”'],
+  'RIAN':['“Product roadmap Q4 locked 🎯”','“Product-market fit verified 🚀”','“Fitur baru selaras KPI 📈”'],
+  'TARI':['“Design system token sinkron 🎨”','“Iconography v2 konsisten ✨”','“Visual aesthetic premium 💎”'],
+  'FERRY':['“Read replica Postgres aktif 🐘”','“Query latency drop ke 1.8ms ⚡”','“Sharding partisi lancar 📊”'],
+  'GILANG':['“High throughput pipeline stabil 🟢”','“gRPC service terhubung rapi 🔗”','“Concurrency race condition aman 🛡️”'],
+  'HENDRA':['“Multi-region failover ready ☁️”','“Terraform infra apply sukses 🏗️”','“Cloud cost efisien 32% 💰”'],
+  'DONI':['“SLO 99.99% terjaga ketat 🛡️”','“Zero downtime deployment ⚡”','“Auto-scaling pod responsif 🟢”'],
+  'SECBOT':['“Vulnerability scan: 0 critical 🔒”','“Pen-test perimeter lolos 🛡️”','“Auth token encrypted AES-256 🔑”'],
+  'BAGAS':['“Secret scanning di CI bersih 🛡️”','“Container image signed Cosign 🔐”','“Zero trust policy enforced 🌐”'],
+  'NINA':['“Staging changelog approved 📋”','“Rollout Canary v10.8 siap 🚀”','“Semua greenlight untuk rilis ✨”'],
+  'CITRA':['“Audit compliance 100% lolos 📜”','“Code quality metric A+ 🌟”','“Standard SOP terverifikasi ✅”'],
 };
 
 // autoTalk: keputusan murni (diuji unit) — delay acak & pilihan teks.
@@ -51,10 +64,22 @@ export function autoTalkText(ad, runningTasks, agentIdMap, rng = Math) {
   const name = ad.agent?.name ? String(ad.agent.name).toUpperCase() : '';
   const role = ad.agent?.role ? String(ad.agent.role).toUpperCase() : '';
   const lines = roleTalk[name] ||
-                (role.includes('CEO') ? roleTalk.CEO : null) ||
+                (role.includes('CEO') ? (roleTalk['WAHYU FS'] || roleTalk.CEO) : null) ||
                 (role.includes('TRAINER') ? roleTalk['TRAINER AI'] : null) ||
                 (role.includes('INTEGRAT') ? roleTalk['INTEGRATOR BOT'] : null) ||
                 (role.includes('SUPPORT') || role.includes('SUCCESS') ? roleTalk.SUPPORT : null) ||
+                (role.includes('ARCHITECT') ? roleTalk.ARIS : null) ||
+                (role.includes('RESEARCH') ? roleTalk.CLARA : null) ||
+                (role.includes('STRATEG') ? roleTalk.RIAN : null) ||
+                (role.includes('VISUAL') ? roleTalk.TARI : null) ||
+                (role.includes('DATABASE') ? roleTalk.FERRY : null) ||
+                (role.includes('SENIOR') || (role.includes('BACKEND') && role.includes('LEAD')) ? roleTalk.GILANG : null) ||
+                (role.includes('CLOUD') || role.includes('INFRA') ? roleTalk.HENDRA : null) ||
+                (role.includes('RELIABILITY') || role.includes('SRE') ? roleTalk.DONI : null) ||
+                (role.includes('SECURITY') ? roleTalk.SECBOT : null) ||
+                (role.includes('DEVSECOPS') ? roleTalk.BAGAS : null) ||
+                (role.includes('RELEASE') ? roleTalk.NINA : null) ||
+                (role.includes('GOVERNANCE') ? roleTalk.CITRA : null) ||
                 roleTalk[role] ||
                 roleTalk[ad.agent?.name] ||
                 ['“Fokus dulu…”'];
@@ -73,6 +98,17 @@ export const COLLAB_PAIRS=[
   ['GROWTH','PROJECT MANAGER',['Leads minggu ini naik 18%','Bagus, lanjutkan kampanye','Kita perlu fitur referral','Masuk backlog sprint depan']],
   ['AI CUSTOMER','BACKEND',['Banyak tanya soal harga paket','Kubuatkan endpoint FAQ','Jawaban otomatis makin akurat','Siap, kutambah data latihnya']],
   ['MOBILE','BACKEND',['Endpoint push notif sudah ada?','Sudah, dokumennya di wiki','Aplikasi lolos uji Android','Mantap, kirim build-nya']],
+  // ── Kolaborasi Antar-Lantai Spesialis Kampus WFS PROJECT ──
+  ['ARCHITECT','BACKEND',['Desain event-driven siap diimplementasi?','Siap, payload Kafka distandarkan','Bagus, perhatikan idempotent consumer','Sudah ada deduping di Redis 🚀']],
+  ['ARCHITECT','DEVSECOPS',['Bagaimana perimeter network cluster?','Kita pasang mTLS antar service 🔐','Arsitektur zero-trust terpenuhi','Audit trail juga langsung aktif 🛡️']],
+  ['RESEARCH','DESIGN',['User kesulitan di bagian checkout','Bisa kurampingkan jadi 2 step ✨','Heatmap konversi bakal naik 📈','Prototipe langsung ku-update 🎨']],
+  ['STRATEGIST','PROJECT MANAGER',['Fitur prioritas Q4 sudah disepakati?','Sprint backlog siap dibagi ke tim 🎯','Timeline delivery tetap on-track','Aman, alokasi tim seimbang 📋']],
+  ['DATABASE','BACKEND',['Query analytics lambat di jam sibuk','Sudah kubuat index komposit baru 🐘','Latency turun dari 450ms ke 12ms ⚡','Mantap, beban server langsung lega']],
+  ['RELIABILITY','INFRA',['Traffic spike 3x lipat terdeteksi 📈','Kubernetes HPA scale ke 12 pod ☁️','Resource CPU masih aman di 45%','Load balancer routing merata 🟢']],
+  ['SECURITY','DEVSECOPS',['Hasil SAST scanner aman semua?','Nol vulnerabilitas critical di build ini 🔒','Image docker signed dengan Cosign 🔐','Aman masuk pipeline deploy 🛡️']],
+  ['RELEASE','QA',['Semua regression test sudah hijau?','1402 unit test & e2e lolos 100% 🧪','Canary rollout ke 10% user siap 🚀','Kupantau error rate di Datadog 📊']],
+  ['VISUAL','FRONTEND',['Design token typography sudah update?','CSS variable langsung terhubung 🎨','Render di semua viewport tajam ✨','Bagus, visual makin konsisten']],
+  ['GOVERNANCE','RELEASE',['Dokumen audit compliance sudah lengkap?','Semua sign-off lead sudah ada 📜','Checklist governance terpenuhi ✅','Release disetujui untuk deploy 🚀']],
 ];
 
 // Pilih pasangan kolaborasi utk agent ad: 75% menghampiri rekan dengan role

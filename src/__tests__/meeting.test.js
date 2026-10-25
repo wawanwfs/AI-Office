@@ -157,4 +157,22 @@ describe('meeting.update() state machine', () => {
     expect(isMeetingTime(599) || isMeetingTime(631)).toBe(false);
     expect(meetingWindowIndex(841)).toBe(1);
   });
+
+  it('skalabilitas 26 agen kampus: rotasi meeting mencakup spesialis multi-lantai (indeks ≥ 14)', () => {
+    const { ctx } = mkCtx(26, 6); // 26 agen kampus, 6 kursi rapat
+    const m = createMeeting(ctx);
+    m.update(610); // window 0
+    const w0 = m.attendees();
+    expect(w0.length).toBe(6);
+
+    // Buka window 1 (menit 841)
+    m.update(841);
+    const w1 = m.attendees();
+    expect(w1.length).toBe(6);
+
+    // Kumpulkan peserta dari beberapa window simulasi (misal win 0, 1, 2)
+    // Formula rotasi: (win * 7 + 3) % 26
+    const allWinAttendees = new Set([...w0, ...w1]);
+    expect(Array.from(allWinAttendees).some(idx => idx >= 14)).toBe(true);
+  });
 });

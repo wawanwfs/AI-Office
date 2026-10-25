@@ -21,7 +21,7 @@ import { drawResepsiLogo, drawWallTitle } from './parts/logo_canvas.js';
 import { createWalls } from './parts/walls.js';
 import { drawBlobShadow } from './parts/blob_canvas.js';
 import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelScale, drawLabelText } from './parts/label_spec.js';
-import { WALK_DESTINATIONS } from './parts/walk_destinations.js';
+import { WALK_DESTINATIONS, CAMPUS_WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { OBSTACLES } from './parts/obstacles.js';
 import { MUTED_KEY, tickSoundTimer } from './parts/sound_spec.js';
 import { advanceSimClock, setSimManual, SIM_SEC_PER_MIN as __SIM_SPM, MANUAL_RESUME_MS as __SIM_RESUME } from './parts/sim_clock.js';
@@ -940,7 +940,8 @@ const pickCollabLocal=(ad)=>pickCollab(ad,agentData);
 // ═══════════════════════════════════════════════════
 // MEETING LOGIC
 // ═══════════════════════════════════════════════════
-const __meet=createMeeting({THREE,office,rng,agents:allAgents,agentData,buildChar,seats:meetSeats,roomZ:MRZ,onChange:onMeetingChange,looksOf,addBlobShadow});
+const allOfficeAgents = [...allAgents, ...EXTENDED_SPECIALISTS];
+const __meet=createMeeting({THREE,office,rng,agents:allOfficeAgents,agentData,buildChar,seats:meetSeats,roomZ:MRZ,onChange:onMeetingChange,looksOf,addBlobShadow});
 const updateMeeting=m=>__meet.update(m);
 
 
@@ -1300,9 +1301,9 @@ const updateShift=m=>__shift.update(m);
 
 // Track keyboard sounds — kini benar-benar dipakai: tick keyboard & langkah saat agent jalan
 let keyTimer=0, stepTimer=0;
-// Tujuan jalan-jalan agent: pantry, dispenser, printer, lounge, ruang meeting, resepsionis
+// Tujuan jalan-jalan agent: pantry, dispenser, printer, lounge, ruang meeting, resepsionis + multi-lantai kampus
 // — diekstrak ke walk_destinations.js (murni + unit test; lounge dikoreksi keluar footprint sofa).
-const walkDestinations = WALK_DESTINATIONS;
+const walkDestinations = CAMPUS_WALK_DESTINATIONS || WALK_DESTINATIONS;
 const updateWalkers=createMotion({rng,agentData,walkDestinations,pickCollab:pickCollabLocal,createBubble});
 let lastMeetingState=false;
 const clock=new THREE.Clock();
@@ -1587,7 +1588,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
         if(ad.state!=='sitting')return;
         ad.state='walking_out';ad.sittingChar.visible=false;ad.walker.visible=true;
         ad.walker.position.set(ad.home.x,(ad.home&&ad.home.y)||0,ad.home.z);
-        ad.walkTarget={x:-9.5+rng.r(-1,1),z:7.5+rng.r(-.5,.5)}; // area kafe
+        ad.walkTarget={x:-6.0+rng.r(-0.8,0.8),z:5.6+rng.r(-0.4,0.4)}; // Executive Cafe Promenade (L3)
         ad._route=null; // recalc otomatis: tanpa rute, stepRoute jatuh ke walkTarget
         ad.walkPause=12;
       });

@@ -1,3 +1,30 @@
+## 2026-10-26 04:05 WIB — Siklus 75: Kolaborasi Otonom 26 Agen Multi-Lantai, Dialog Khas 12 Spesialis, Inklusi Rotasi Meeting Kampus & Koridor Kafe Realistis
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Dialog Khas & Kolaborasi Lintas Domain 26 Agen (`src/scene/parts/dialog.js`, `src/__tests__/dialog.test.js`):**
+     - Mengembangkan frasa dialog khas teknis (`roleTalk`) untuk seluruh 12 spesialis kampus multi-lantai (Aris, Clara, Rian, Tari, Ferry, Gilang, Hendra, Doni, Secbot, Bagas, Nina, Citra), mengeliminasi fallback pasif `“Fokus dulu…”` saat speech bubble otomatis dipicu.
+     - Memperluas pemetaan kolaborasi (`COLLAB_PAIRS`) dari 10 menjadi 20 pasangan lintas disiplin (Architect↔Backend, Architect↔DevSecOps, UX Research↔Design, Product↔Project Manager, Database↔Backend, SRE↔Cloud Infra, Security↔DevSecOps, Release↔QA, Visual Design↔Frontend, Governance↔Release).
+     - Memungkinkan agen dari Lantai 1, 2, dan 3 saling mengunjungi secara otonom melintasi Grand Staircase arsitektural.
+  2. **Inklusi 26 Agen pada Rotasi Rapat Tim & Koreksi Area Rehat Kafe (`src/scene/OfficeScene.js`, `src/scene/parts/meeting.js`, `src/__tests__/meeting.test.js`):**
+     - Mendaftarkan seluruh 26 profil agen kampus (`[...allAgents, ...EXTENDED_SPECIALISTS]`) ke instance `createMeeting`, sehingga seluruh spesialis di tiap lantai terjadwal dalam rotasi stand-up dan sprint review ruang rapat (Lantai 1) secara berkala dan otomatis dipulangkan ke lantai kerja masing-masing saat rapat berakhir.
+     - Mengoreksi target rehat kopi (`action==='break'`): memindahkan walk target dari koordinat internal counter/stools yang menabrak furnitur (`[-9.5, 7.5]`) ke area terbuka teras pemesanan kafe Lantai 3 (`x: -6.0 ± 0.8, z: 5.6 ± 0.4`), sehingga seluruh tim naik tangga secara realistis dan berkumpul di hadapan barista counter Lantai 3.
+  3. **Perluasan Destinasi Penjelajahan Kampus Multi-Lantai (`src/scene/parts/walk_destinations.js`, `src/__tests__/walk_destinations.test.js`):**
+     - Menambahkan `CAMPUS_WALK_DESTINATIONS` yang mencakup 8 destinasi baru di seluruh lantai (Datacenter Glass Wall L1, East Innovation Terrace L1, West Architecture Hub L1, Mezzanine East Balcony L2, Mezzanine West Pod L2, Executive Cafe Promenade L3, Penthouse Strategy Terrace L3, Founder Suite View Deck L3).
+     - Menjamin seluruh titik aman dari rintangan statis (`inObstacle`), menjaga jarak aman dari meja kerja agen, dan mempertahankan kompatibilitas 100% untuk `WALK_DESTINATIONS` historis.
+
+- **Bukti terukur:**
+  - **Vitest:** **1428/1428 passed (124 test file)** (+7 tests baru, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint .`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1633.71 KiB; chunk `OfficeScene-SJMRN5XN.js` 865.80 KB / gzip 234.48 KB, `index-TF6hVOMC.js` 290.09 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, chunk usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-TF6hVOMC.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **552.844 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `scripts/e2e_zone_multi.py`: **E2E_ZONE_MULTI: OK** (iso, front, top).
+    - `shot.sh`: Screenshot ck.png **587.471 bytes** (>500 KB).
+- **Sisa backlog:** verifikasi subjektif audio web-audio.
+
 ## 2026-10-26 04:00 WIB — Siklus 74: Presisi Koridor Tangga Antar-Lantai (L1-L3), Elevasi Realistis 2D Multi-Lantai & Aksi Interaktif Fokus Lantai pada AgentInspector
 
 - **Yang diperbaiki & ditingkatkan:**

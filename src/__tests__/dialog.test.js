@@ -12,18 +12,18 @@ describe('dialog: data', () => {
     chatPhrases.forEach((p) => expect(typeof p).toBe('string'));
   });
 
-  it('roleTalk: 16 role terdaftar, tiap role punya ≥2 baris non-empty', () => {
-    expect(Object.keys(roleTalk).length).toBe(16);
+  it('roleTalk: 28 role terdaftar (16 historis + 12 spesialis kampus), tiap role punya ≥2 baris non-empty', () => {
+    expect(Object.keys(roleTalk).length).toBe(28);
     for (const [role, lines] of Object.entries(roleTalk)) {
       expect(lines.length, role).toBeGreaterThanOrEqual(2);
       lines.forEach((l) => expect(l.trim().length, role).toBeGreaterThan(0));
     }
   });
 
-  it('COLLAB_PAIRS: 10 pasangan, pasangan tidak duplikat (urut aba), tiap pasangan ≥4 baris', () => {
-    expect(COLLAB_PAIRS.length).toBe(10);
+  it('COLLAB_PAIRS: 20 pasangan (10 historis + 10 lintas domain spesialis), pasangan tidak duplikat (urut aba), tiap pasangan ≥4 baris', () => {
+    expect(COLLAB_PAIRS.length).toBe(20);
     const keys = COLLAB_PAIRS.map(([a, b]) => [a, b].sort().join('|'));
-    expect(new Set(keys).size).toBe(10);
+    expect(new Set(keys).size).toBe(20);
     for (const [, , lines] of COLLAB_PAIRS) {
       expect(lines.length).toBeGreaterThanOrEqual(4);
       lines.forEach((l) => expect(typeof l).toBe('string'));
@@ -218,5 +218,53 @@ describe('dialog: autoTalk (murni)', () => {
     const t1 = autoTalkText(adToni, null, {}, { random: () => 0.9999 });
     expect(t0).toBe(roleTalk.TONI[0]);
     expect(roleTalk.TONI).toContain(t1);
+  });
+
+  it('autoTalkText: 12 spesialis kampus menghasilkan dialog khas teknis masing-masing', () => {
+    const specialists = [
+      { name: 'ARIS', role: 'Solution Architect' },
+      { name: 'CLARA', role: 'UX Researcher' },
+      { name: 'RIAN', role: 'Product Strategist' },
+      { name: 'TARI', role: 'Visual Designer' },
+      { name: 'FERRY', role: 'Database Engineer' },
+      { name: 'GILANG', role: 'Senior Backend Lead' },
+      { name: 'HENDRA', role: 'Cloud Infra Engineer' },
+      { name: 'DONI', role: 'Site Reliability Eng' },
+      { name: 'SECBOT', role: 'Security Engineer' },
+      { name: 'BAGAS', role: 'DevSecOps Specialist' },
+      { name: 'NINA', role: 'Release Manager' },
+      { name: 'CITRA', role: 'Quality Governance Lead' }
+    ];
+    specialists.forEach(sp => {
+      const ad = { agent: sp };
+      const text = autoTalkText(ad, null, {});
+      expect(roleTalk[sp.name]).toContain(text);
+      expect(text).not.toBe('“Fokus dulu…”');
+    });
+  });
+
+  it('pickCollab: spesialis multi-lantai berhasil kolaborasi lintas domain', () => {
+    const campusAgents = [
+      { agent: { name: 'ARIS', role: 'Solution Architect' }, state: 'sitting' },
+      { agent: { name: 'GILANG', role: 'Senior Backend Lead' }, state: 'sitting' },
+      { agent: { name: 'BAGAS', role: 'DevSecOps Specialist' }, state: 'sitting' },
+      { agent: { name: 'SECBOT', role: 'Security Engineer' }, state: 'sitting' },
+      { agent: { name: 'NINA', role: 'Release Manager' }, state: 'sitting' },
+      { agent: { name: 'CITRA', role: 'Quality Governance Lead' }, state: 'sitting' },
+    ];
+    // ARIS berkolaborasi dengan BACKEND (GILANG) dan DEVSECOPS (BAGAS)
+    const collabAris = pickCollab(campusAgents[0], campusAgents);
+    expect(collabAris).not.toBeNull();
+    expect(['GILANG', 'BAGAS']).toContain(collabAris.partner.agent.name);
+
+    // SECBOT berkolaborasi dengan DEVSECOPS (BAGAS)
+    const collabSec = pickCollab(campusAgents[3], campusAgents);
+    expect(collabSec).not.toBeNull();
+    expect(collabSec.partner.agent.name).toBe('BAGAS');
+
+    // CITRA (Governance) berkolaborasi dengan NINA (Release)
+    const collabGov = pickCollab(campusAgents[5], campusAgents);
+    expect(collabGov).not.toBeNull();
+    expect(collabGov.partner.agent.name).toBe('NINA');
   });
 });

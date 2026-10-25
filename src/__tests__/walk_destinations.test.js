@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { WALK_DESTINATIONS, isSafeDestination } from '../scene/parts/walk_destinations.js';
+import { WALK_DESTINATIONS, CAMPUS_WALK_DESTINATIONS, isSafeDestination } from '../scene/parts/walk_destinations.js';
 import { OBSTACLES, inObstacle } from '../scene/parts/obstacles.js';
 import { DESKS } from '../scene/parts/desk_layout.js';
 
@@ -81,5 +81,37 @@ describe('isSafeDestination — validasi tujuan', () => {
   it('menghormati bounds kustom & fungsi obstacle injeksi', () => {
     expect(isSafeDestination({ x: 11.9, z: 9.3 }, () => false, { x: 12.5, z: 9.5 })).toBe(true);
     expect(isSafeDestination({ x: 0, z: 0 }, () => true)).toBe(false);
+  });
+});
+
+describe('CAMPUS_WALK_DESTINATIONS — destinasi multi-lantai kampus WFS PROJECT', () => {
+  it('mencakup 16 destinasi (8 historis + 8 multi-lantai)', () => {
+    expect(CAMPUS_WALK_DESTINATIONS.length).toBe(16);
+  });
+
+  it('semua destinasi multi-lantai finite, aman dalam bounds (|x|≤12.5, |z|≤9.5) dan di luar rintangan', () => {
+    CAMPUS_WALK_DESTINATIONS.forEach((d) => {
+      expect(Number.isFinite(d.x)).toBe(true);
+      expect(Number.isFinite(d.z)).toBe(true);
+      expect(Math.abs(d.x)).toBeLessThanOrEqual(12.5);
+      expect(Math.abs(d.z)).toBeLessThanOrEqual(9.5);
+      expect(inObstacle(d.x, d.z)).toBe(false);
+      expect(isSafeDestination(d, inObstacle)).toBe(true);
+    });
+  });
+
+  it('semua destinasi kampus unik tanpa koordinat duplikat', () => {
+    const keys = CAMPUS_WALK_DESTINATIONS.map((d) => `${d.x},${d.z}`);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it('terdistribusi ke 3 lantai (L1 Atrium, L2 Mezzanine, L3 Penthouse)', () => {
+    const l1Dests = CAMPUS_WALK_DESTINATIONS.filter((d) => d.z < -0.75);
+    const l2Dests = CAMPUS_WALK_DESTINATIONS.filter((d) => d.z >= -0.75 && d.z < 3.75);
+    const l3Dests = CAMPUS_WALK_DESTINATIONS.filter((d) => d.z >= 3.75);
+
+    expect(l1Dests.length).toBeGreaterThanOrEqual(4); // Datacenter, East Innovation, West Arch, Printer, Tanaman
+    expect(l2Dests.length).toBeGreaterThanOrEqual(4); // Mezzanine Balcony, West Pod, Dispenser, Meeting Door
+    expect(l3Dests.length).toBeGreaterThanOrEqual(4); // Cafe Promenade, Penthouse Terrace, Founder Suite Deck, Reception
   });
 });

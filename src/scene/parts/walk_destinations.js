@@ -12,6 +12,19 @@ export const WALK_DESTINATIONS = [
   { x: -3.2, z: -6.2 },  // dekat tanaman belakang
 ];
 
+// Perluasan destinasi multi-lantai kampus WFS PROJECT (L1 Atrium, L2 Mezzanine, L3 Penthouse)
+export const CAMPUS_WALK_DESTINATIONS = [
+  ...WALK_DESTINATIONS,
+  { x: 2.2, z: -5.8, label: 'Datacenter Glass Wall (L1)' },
+  { x: 11.5, z: -5.2, label: 'East Innovation Terrace (L1)' },
+  { x: -11.5, z: -5.2, label: 'West Architecture Hub (L1)' },
+  { x: 11.5, z: 1.2, label: 'Mezzanine East Balcony (L2)' },
+  { x: -11.5, z: 1.2, label: 'Mezzanine West Pod (L2)' },
+  { x: -6.0, z: 5.6, label: 'Executive Cafe Promenade (L3)' },
+  { x: 6.5, z: 5.6, label: 'Penthouse Strategy Terrace (L3)' },
+  { x: 0.0, z: 8.5, label: 'Founder Suite View Deck (L3)' },
+];
+
 // Semua titik tujuan harus berada di luar rintangan & dalam batas ruangan
 // (lantai BoxGeometry(26, 20) → ±13 / ±10). Dipakai test & bisa dipakai ulang
 // saat menambah tujuan baru supaya agen tidak pernah ditugaskan ke spot valid.
