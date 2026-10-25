@@ -94,6 +94,7 @@ describe('ProjectPanel', () => {
     render(<ProjectPanel />)
     openPanel()
     await waitFor(() => expect(screen.getByText(/Gagal memuat data proyek/)).toBeTruthy())
+    expect(screen.getByRole('alert')).toBeTruthy()
     mockOk()
     fireEvent.click(screen.getByText('Coba lagi'))
     await waitFor(() => expect(screen.queryByText(/Gagal memuat data proyek/)).toBeNull())

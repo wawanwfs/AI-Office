@@ -69,7 +69,7 @@ export default function ProjectPanel() {
             </button>
           </div>
           <div style={{ padding: '12px 14px', overflowY: 'auto' }}>
-            {err && <div className="msg err">Gagal memuat data proyek. <button className="btn" onClick={() => load()}>Coba lagi</button></div>}
+            {err && <div className="msg err" role="alert">Gagal memuat data proyek. <button className="btn" onClick={() => load()}>Coba lagi</button></div>}
             {!d && !err && <div className="skeleton">Memuat data proyek…</div>}
             {d && (
               <>

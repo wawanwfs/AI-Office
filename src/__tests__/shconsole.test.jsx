@@ -164,6 +164,13 @@ describe('ShConsole — konsol software house', () => {
     await waitFor(() => expect(calls).toContain('decide'))
   })
 
+  it('a11y: error API ditampilkan dengan role=alert', async () => {
+    stubFetch({ '/wfs-api/sh/overview': () => { throw new Error('gateway down') } })
+    render(<ShConsole show onClose={() => {}} />)
+    const alert = await screen.findByRole('alert')
+    expect(alert.textContent).toMatch(/gateway down/)
+  })
+
   it('a11y: fokus pindah ke dalam drawer dan Esc menutup', async () => {
     stubFetch({ '/wfs-api/sh/overview': OV })
     const onClose = vi.fn()

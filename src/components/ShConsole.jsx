@@ -179,7 +179,7 @@ export default function ShConsole({ show, onClose }) {
           ))}
         </div>
         <div style={STYLE.body}>
-          {err && <div style={STYLE.err}>⚠ {err}</div>}
+          {err && <div style={STYLE.err} role="alert">⚠ {err}</div>}
           {tab === 'overview' && <Overview ov={ov} />}
           {tab === 'projects' && <Projects projects={projects} onRefresh={loadProjects} />}
           {tab === 'tasks' && (
