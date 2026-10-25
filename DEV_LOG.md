@@ -1,3 +1,32 @@
+## 2026-10-25 21:05 WIB — Siklus 66: Perbaikan Koordinat NDC Viewport Clamp, Isolasi Meja Ruang Meeting, Staggering Vertikal Kursi Rapat, & Z-Index Label vs Balon Bicara
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Koreksi Semantik Y-Up NDC pada `clampViewport` (`src/scene/parts/label_overlap.js`):**
+     - Memperbaiki bug logika terbalik pada `clampViewport`: sebelumnya batas atas dan bawah memakai asumsi canvas 2D (`fy > BOT` dikira masuk toolbar), padahal Three.js NDC bersifat Y-up (+H/2 atas layar, -H/2 bawah toolbar). Akibatnya label yang terdorong ke atas oleh `sweepVertical` dikira bocor ke toolbar bawah dan dipaksa turun dengan `p.offY` negatif besar (-80px s.d. -200px) yang terkonversi menjadi `antiY` negatif (-2.7m s.d. -5.8m), menarik label agen masuk ke bawah lantai. Kini disinkronkan ke NDC: `fy + half > topLim` ditarik turun dari header, dan `fy - half < -botLim` ditarik naik dari toolbar.
+  2. **Bounding Clamp Keamanan 3D Offset Dunia (`src/scene/OfficeScene.js`):**
+     - Menambahkan proteksi `cdy = Math.max(-0.35, Math.min(1.6, dy))` dan `cdx = Math.max(-1.5, Math.min(1.5, dx))` pada penerapan offset dunia ke label 3D. Menjamin label agen tidak pernah tenggelam ke bawah kepala avatar (minimal 2.10m di atas lantai) atau tembus plafon (maksimal 4.05m), serta tidak melayang horizontal menjauhi area workstation.
+  3. **Staggering Vertikal Kursi Ruang Rapat (`src/scene/parts/meeting.js`):**
+     - Memberikan elevasi bertingkat pada billboard peserta rapat di ruang meeting: kursi baris belakang (`z < roomZ`) diberi elevasi dasar `Y = 2.45 + 0.95 = 3.40m`, sedangkan baris depan (`z > roomZ`) diberi `Y = 2.45 + 0.40 = 2.85m`. Hal ini mengeliminasi tumpang-tindih (occlusion) billboard nama peserta sepanjang garis pandang isometrik kamera.
+  4. **Isolasi Meja Non-Peserta di Ruang Meeting (`src/scene/parts/meeting.js`):**
+     - Agen yang meja regulernya berada di dalam area kaca ruang meeting (x=8, z=-3) otomatis disembunyikan sementara (karakter duduk dan label) saat rapat berlangsung jika mereka bukan peserta rapat aktif, dan dipulihkan kembali saat rapat selesai. Mencegah tabrakan antara workstation reguler dengan peserta rapat di meja konferensi.
+  5. **Z-Index Prioritas Visual Label Agen (`src/scene/OfficeScene.js`):**
+     - Mengubah `label.renderOrder = 35` (sebelumnya 20, sedangkan balon bicara adalah 30). Karena sprite menggunakan `depthTest: false`, billboard nama agen kini selalu dirender tajam di lapisan paling depan, tidak pernah tertutup atau terpotong oleh balon percakapan sistem/agen di latar depan.
+  6. **Penambahan & Pembaruan Unit Test:**
+     - `src/__tests__/label_sweep.test.js`: Menyelaraskan pengujian `clampViewport` dengan semantik NDC Y-up (bocor header atas vs bocor toolbar bawah).
+     - `src/__tests__/meeting.test.js`: +2 test baru untuk verifikasi vertical staggering kursi rapat dan isolasi penyembunyian non-peserta di ruang meeting.
+
+- **Bukti terukur:**
+  - **Vitest:** **1248/1248 passed (111 file)** (+2 test baru siklus 66, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint .`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1591.95 KiB; chunk `OfficeScene-DfksadcG.js` 849.98 KB / gzip 228.48 KB, `index-CsqADJ-4.js` 265.85 KB).
+  - **Deploy:** `dist/*` ter-deploy ke `~/wfs-hq/`, chunk usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-CsqADJ-4.js`, 0 "Scene init failed", PID 3989694).
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 23/23 selesai, 100%, 14 agents aktif).
+    - `scripts/e2e_zone_multi.py`: **E2E_ZONE_MULTI OK** (iso, front, top: 0 OFFSCREEN, 0 pelanggaran margin).
+    - `scripts/e2e_shot.py`: Screenshot visual **725.078 bytes** (>500 KB, WebGL hidup, agents: 14, E2E_VISUAL: OK).
+    - **Audit Visual Siang Hari (Vision AI):** Tabrakan/tumpang-tindih antara Toni dan Trainer AI teratasi 100%, seluruh label nama agen (Bantuin AI, Maya, Toni, Dewi, Andi, Rina, Lina, Rizky, Wahyu Fs, Sari, Budi, Integrator) mengambang bersih di atas avatar masing-masing di ketiga lantai tanpa tertutup balon dialog atau tenggelam ke meja.
+
 ## 2026-10-24 13:43 WIB — maintenance deploy (build ulang + deploy dist + pembersihan chunk stale)
 
 - Backlog dipilih: pembersihan ~24 chunk build lama di ~/wfs-hq/assets (OfficeScene-*/index-* dari 10月 22) — deploy sebelumnya meng-copy dist/* tanpa menghapus file lama, aset 9.5MB (28 file) padahal hanya 5 file yang dipakai runtime (precache sw.js).
