@@ -108,7 +108,7 @@ export function createNeonMode(ctx) {
 export function createShift(ctx) {
   const { THREE, agentData, rng, isNamesVisible } = ctx;
   const namesOn = () => (typeof isNamesVisible === 'function' ? isNamesVisible() : true);
-  const { SHIFT, lunchSpot, lunchPause, shiftStep } = shiftSpec;
+  const { SHIFT, lunchSpot, campusLunchSpot, lunchPause, shiftStep } = shiftSpec;
   const ARRIVE = SHIFT.ARRIVE;
   const DEPART = SHIFT.DEPART;
   const DOOR = SHIFT.DOOR;
@@ -224,8 +224,10 @@ export function createShift(ctx) {
       ad.walker.position.set(ad.home.x, ad.home.y || 0, ad.home.z);
       ad.lunch = true;
       ad.state = 'walking_out';
-      const spot = lunchSpot(rng);
-      ad.walkTarget = spot; // depan bar stools (bukan di atasnya — stools di z 8.5)
+      const spot = (ctx.isCampus && typeof campusLunchSpot === 'function')
+        ? campusLunchSpot(rng)
+        : lunchSpot(rng);
+      ad.walkTarget = spot; // L3 Executive Cafe Promenade pada kampus multi-lantai (bebas rintangan)
       ad._route = null;
       ad.walkPause = lunchPause(rng); // rencana ngopi lama
     });

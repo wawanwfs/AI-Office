@@ -1296,7 +1296,7 @@ function updateBubbles(delta){
 // ═══════════════════════════════════════════════════
 // SHIFT CHANGE — Agents arrive/leave
 // ═══════════════════════════════════════════════════
-const __shift=createShift({THREE,agentData,rng,isNamesVisible:()=>namesVisible,alwaysActive:true});
+const __shift=createShift({THREE,agentData,rng,isNamesVisible:()=>namesVisible,alwaysActive:true,isCampus:true});
 const updateShift=m=>__shift.update(m);
 
 // Track keyboard sounds — kini benar-benar dipakai: tick keyboard & langkah saat agent jalan

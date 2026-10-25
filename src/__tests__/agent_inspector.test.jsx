@@ -84,4 +84,44 @@ describe('AgentInspector — kartu profil agen 3D', () => {
     fireEvent.keyDown(window, { key: 'Escape' })
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it('menampilkan domain kompetensi & tech stack tags untuk spesialis AI', () => {
+    const arisAgent = { name: 'ARIS', role: 'Solution Architect', floor: 1 }
+    render(<AgentInspector agent={arisAgent} onClose={vi.fn()} onChatWith={vi.fn()} />)
+    expect(screen.getByText('Distributed Architecture & Microservices')).toBeTruthy()
+    expect(screen.getByText('Microservices')).toBeTruthy()
+    expect(screen.getByText('Kafka')).toBeTruthy()
+  })
+
+  it('menampilkan kartu task berjalan saat agen sedang mengerjakan task nyata', () => {
+    window.__wfsRunningTasks = {
+      byAgent: {
+        be1: { id: 77, title: 'Implementasi Webhook Gateway & DB Index' }
+      }
+    }
+    const budiAgent = { name: 'BUDI', role: 'Backend Dev', floor: 1 }
+    render(<AgentInspector agent={budiAgent} onClose={vi.fn()} onChatWith={vi.fn()} />)
+    expect(screen.getByText(/Mengerjakan Task #77/i)).toBeTruthy()
+    expect(screen.getByText('Implementasi Webhook Gateway & DB Index')).toBeTruthy()
+    delete window.__wfsRunningTasks
+  })
+
+  it('menampilkan tombol konsol eksekutif untuk Founder Wahyu FS dan memicu onOpenConsole', () => {
+    const onOpenConsole = vi.fn()
+    const onClose = vi.fn()
+    const founderAgent = { name: 'Wahyu FS', role: 'Founder / CEO', hex: '#F59E0B' }
+    render(
+      <AgentInspector
+        agent={founderAgent}
+        onClose={onClose}
+        onChatWith={vi.fn()}
+        onOpenConsole={onOpenConsole}
+      />
+    )
+    const consoleBtn = screen.getByText(/Buka Konsol Software House/i)
+    expect(consoleBtn).toBeTruthy()
+    fireEvent.click(consoleBtn)
+    expect(onOpenConsole).toHaveBeenCalledTimes(1)
+    expect(onClose).toHaveBeenCalledTimes(1)
+  })
 })

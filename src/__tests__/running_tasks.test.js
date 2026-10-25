@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { agentIdMap, buildRunningByAgent } from '../scene/parts/running_tasks.js';
+import { agentIdMap, buildRunningByAgent, resolveAgentId, SCENE_NAME_TO_ID } from '../scene/parts/running_tasks.js';
 
 describe('agentIdMap (murni, diekstrak pollRunning)', () => {
   it('memetakan nama→id', () => {
@@ -48,5 +48,50 @@ describe('buildRunningByAgent (murni, diekstrak pollRunning)', () => {
   });
   it('semua running=0 & task kosong → kosong', () => {
     expect(buildRunningByAgent({ qa1: { running: 0 } }, [])).toEqual({});
+  });
+});
+
+describe('resolveAgentId (resolusi identitas agen & gateway ID)', () => {
+  it('memetakan nama adegan 3D historis ke ID gateway yang tepat', () => {
+    expect(resolveAgentId('BUDI', null)).toBe('be1');
+    expect(resolveAgentId('RIZKY', null)).toBe('be2');
+    expect(resolveAgentId('DEWI', null)).toBe('fe1');
+    expect(resolveAgentId('ANDI', null)).toBe('fe2');
+    expect(resolveAgentId('TONI', null)).toBe('devops1');
+    expect(resolveAgentId('RINA', null)).toBe('qa1');
+    expect(resolveAgentId('SARI', null)).toBe('pm1');
+    expect(resolveAgentId('WAHYU FS', null)).toBe('ceo');
+    expect(resolveAgentId('CEO', null)).toBe('ceo');
+  });
+
+  it('memetakan 12 spesialis kampus multi-lantai ke ID spesialis', () => {
+    expect(resolveAgentId('ARIS', null)).toBe('arch1');
+    expect(resolveAgentId('CLARA', null)).toBe('ux2');
+    expect(resolveAgentId('RIAN', null)).toBe('prod1');
+    expect(resolveAgentId('TARI', null)).toBe('dsgn1');
+    expect(resolveAgentId('FERRY', null)).toBe('db1');
+    expect(resolveAgentId('GILANG', null)).toBe('be-lead');
+    expect(resolveAgentId('HENDRA', null)).toBe('infra1');
+    expect(resolveAgentId('DONI', null)).toBe('sre1');
+    expect(resolveAgentId('SECBOT', null)).toBe('sec1');
+    expect(resolveAgentId('BAGAS', null)).toBe('secops1');
+    expect(resolveAgentId('NINA', null)).toBe('rel1');
+    expect(resolveAgentId('CITRA', null)).toBe('gov1');
+  });
+
+  it('memprioritaskan entri dari list dinamis / map aktual', () => {
+    const list = [
+      { name: 'Budi Santoso', id: 'be1' },
+      { name: 'Wahyu Fajar S.', id: 'ceo' },
+      { name: 'Special Agent X', id: 'custom-99' },
+    ];
+    expect(resolveAgentId('Budi', list)).toBe('be1');
+    expect(resolveAgentId('Special Agent X', list)).toBe('custom-99');
+    expect(resolveAgentId('Wahyu Fajar S.', list)).toBe('ceo');
+  });
+
+  it('null/kosong mengembalikan null', () => {
+    expect(resolveAgentId(null, null)).toBeNull();
+    expect(resolveAgentId('', null)).toBeNull();
   });
 });

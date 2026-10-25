@@ -3,8 +3,8 @@
 // (createBubble & autoTalk pindah ke OfficeScene.js — pakai THREE/DOM)
 // ═══════════════════════════════════════════════════
 
-// Dialog & frasa agent diekstrak murni (tanpa THREE/canvas) agar bisa di-unit-test.
-// ═══════════════════════════════════════════════════
+import { SCENE_NAME_TO_ID } from './running_tasks.js';
+
 // Dialog & frasa agent diekstrak murni (tanpa THREE/canvas) agar bisa di-unit-test.
 export const chatPhrases=[
   'pushing to prod...','merge conflict!!','coffee?','ship it!',
@@ -57,7 +57,8 @@ export function autoTalkText(ad, runningTasks, agentIdMap, rng = Math) {
   if (!ad) return null;
   const rt = runningTasks;
   if (rt && rt.byAgent) {
-    const rid = agentIdMap && agentIdMap[ad.agent?.name];
+    const rawName = ad.agent?.name ? String(ad.agent.name).toUpperCase() : '';
+    const rid = (agentIdMap && (agentIdMap[ad.agent?.name] || agentIdMap[rawName])) || SCENE_NAME_TO_ID[rawName];
     const run = rid && rt.byAgent[rid];
     if (run) return 'Task #' + run.id + ': ' + clampBubbleText(run.title);
   }

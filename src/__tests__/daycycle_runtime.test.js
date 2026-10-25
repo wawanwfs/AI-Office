@@ -2,7 +2,7 @@
 // belum tercakup daycycle.test.js (statusAt/daylight/mixHex sudah ada di sana).
 import { describe, it, expect, vi, afterEach } from 'vitest';
 import { createNeonMode, createShift, createLighting, statusAt } from '../scene/parts/daycycle.js';
-import { SHIFT } from '../scene/parts/shift_spec.js';
+import { SHIFT, CAMPUS_LUNCH_SPOT } from '../scene/parts/shift_spec.js';
 
 // ── Stub scene objects: objek dengan properti yang diubah enable/disable ──
 const light = () => ({ intensity: 1, color: { set: vi.fn() }, distance: 0 });
@@ -136,6 +136,22 @@ describe('createShift — mesin fase shift (eksekusi efek)', () => {
     expect(a.walkTarget.z).toBeGreaterThanOrEqual(SHIFT.LUNCH_SPOT_Z);
     expect(a.walkTarget.z).toBeLessThanOrEqual(SHIFT.LUNCH_SPOT_Z + SHIFT.LUNCH_SPOT_JITTER_Z);
     expect(a.walkPause).toBe(SHIFT.LUNCH_PAUSE_MIN); // rng.r(a,b)=a
+    s.dispose();
+  });
+
+  it('sendToLunch pada isCampus: true mengarahkan ke CAMPUS_LUNCH_SPOT (L3 Cafe Promenade)', () => {
+    const ctx = shiftCtx();
+    ctx.isCampus = true;
+    ctx.agentData[0].state = 'sitting';
+    const s = createShift(ctx);
+    s.update(SHIFT.LUNCH_START);
+    const a = ctx.agentData[0];
+    expect(a.lunch).toBe(true);
+    expect(a.state).toBe('walking_out');
+    expect(a.walkTarget.x).toBeGreaterThanOrEqual(CAMPUS_LUNCH_SPOT.x - CAMPUS_LUNCH_SPOT.jitterX);
+    expect(a.walkTarget.x).toBeLessThanOrEqual(CAMPUS_LUNCH_SPOT.x + CAMPUS_LUNCH_SPOT.jitterX);
+    expect(a.walkTarget.z).toBeGreaterThanOrEqual(CAMPUS_LUNCH_SPOT.z - CAMPUS_LUNCH_SPOT.jitterZ);
+    expect(a.walkTarget.z).toBeLessThanOrEqual(CAMPUS_LUNCH_SPOT.z + CAMPUS_LUNCH_SPOT.jitterZ);
     s.dispose();
   });
 

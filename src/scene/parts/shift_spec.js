@@ -14,6 +14,21 @@ export const SHIFT = {
   LUNCH_PAUSE_MIN: 6, LUNCH_PAUSE_MAX: 14,
 };
 
+// ── Kampus multi-lantai: Executive Cafe Promenade Lantai 3 (terbuka & aman dari furniture) ──
+export const CAMPUS_LUNCH_SPOT = {
+  x: -6.0,
+  z: 5.6,
+  jitterX: 0.8,
+  jitterZ: 0.4
+};
+
+export function campusLunchSpot(r) {
+  return {
+    x: CAMPUS_LUNCH_SPOT.x + r.r(-CAMPUS_LUNCH_SPOT.jitterX, CAMPUS_LUNCH_SPOT.jitterX),
+    z: CAMPUS_LUNCH_SPOT.z + r.r(-CAMPUS_LUNCH_SPOT.jitterZ, CAMPUS_LUNCH_SPOT.jitterZ),
+  };
+}
+
 export function lunchWindowOpen(m) {
   return m >= SHIFT.LUNCH_START && m < SHIFT.LUNCH_END;
 }

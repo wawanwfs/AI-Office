@@ -1,6 +1,7 @@
 // Unit test untuk spesifikasi mesin fase shift (src/scene/parts/shift_spec.js).
 import { describe, it, expect } from 'vitest';
-import { SHIFT, lunchWindowOpen, lunchSpot, lunchPause, shiftStep } from '../scene/parts/shift_spec.js';
+import { SHIFT, CAMPUS_LUNCH_SPOT, lunchWindowOpen, lunchSpot, campusLunchSpot, lunchPause, shiftStep } from '../scene/parts/shift_spec.js';
+import { inObstacle } from '../scene/parts/obstacles.js';
 
 const rngStub = { r: (a, b) => a + (b - a) / 2 };
 
@@ -55,6 +56,24 @@ describe('shift: lunchSpot & lunchPause', () => {
     const lo = { r: (a) => a }, hi = { r: (a, b) => b };
     expect(lunchPause(lo)).toBe(6);
     expect(lunchPause(hi)).toBe(14);
+  });
+
+  it('campusLunchSpot: berada di area terbuka Cafe Promenade L3 (x: -6.0, z: 5.6) dan bebas rintangan', () => {
+    expect(CAMPUS_LUNCH_SPOT.x).toBe(-6.0);
+    expect(CAMPUS_LUNCH_SPOT.z).toBe(5.6);
+    expect(CAMPUS_LUNCH_SPOT.jitterX).toBe(0.8);
+    expect(CAMPUS_LUNCH_SPOT.jitterZ).toBe(0.4);
+
+    const spot = campusLunchSpot(rngStub);
+    expect(spot.x).toBeCloseTo(-6.0);
+    expect(spot.z).toBeCloseTo(5.6);
+
+    // Pastikan seluruh rentang jitter bebas dari rintangan furniture kafe
+    [-0.8, 0, 0.8].forEach((jx) => {
+      [-0.4, 0, 0.4].forEach((jz) => {
+        expect(inObstacle(-6.0 + jx, 5.6 + jz)).toBe(false);
+      });
+    });
   });
 });
 

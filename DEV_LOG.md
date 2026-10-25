@@ -1,3 +1,32 @@
+## 2026-10-26 04:48 WIB — Siklus 76: Matriks Kompetensi & Stack Teknologi 26 Agen + Founder, Integrasi Live Task pada AgentInspector, Presisi Resolusi Identitas Gateway & Harmonisasi Rehat Siang L3 Cafe Promenade
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Matriks Kompetensi & Domain Spesialisasi 26 Agen + Founder (`src/scene/parts/agent_competencies.js`, `src/__tests__/agent_competencies.test.js`):**
+     - Mendefinisikan profil keahlian teknis lengkap (domain spesialisasi, ringkasan tanggung jawab, serta chip stack teknologi seperti `Kafka`, `gRPC`, `PostgreSQL`, `Kubernetes`, `Terraform`, `Cosign`, `Vitest`, `React`) untuk seluruh 26 agen kampus (L1 Atrium, L2 Mezzanine, L3 Penthouse) dan Founder Wahyu FS.
+     - Helper murni `getAgentCompetency` mendukung pencarian cerdas berbasis nama (case-insensitive, first name matching) dan objek profil dengan fallback aman.
+  2. **Peningkatan Interaktif `AgentInspector.jsx` & Integrasi Task Nyata (`src/components/AgentInspector.jsx`, `src/__tests__/agent_inspector.test.jsx`, `src/App.jsx`):**
+     - Menampilkan chip badge stack teknologi dan ringkasan kompetensi di dalam panel inspektur agen ketika karakter diklik di ruang 3D.
+     - Menampilkan kartu indikator real-time `SEDANG MENGERJAKAN TASK #{id}` dengan visual pulsing dot hijau saat agen bersangkutan aktif menjalankan task dari `/wfs-api/tasks` (`window.__wfsRunningTasks`).
+     - Menyediakan penanganan khusus untuk Founder Wahyu FS: tombol aksi primer membuka konsol eksekutif `ShConsole` (`onOpenConsole`), dan pemetaan chat cerdas langsung ke ID `ceo` (`Wahyu Fajar S.`).
+  3. **Resolusi Identitas Agen & Gateway ID (`src/scene/parts/running_tasks.js`, `src/scene/parts/dialog.js`, `src/__tests__/running_tasks.test.js`):**
+     - Menambahkan fungsi murni `resolveAgentId` dan tabel pemetaan `SCENE_NAME_TO_ID` yang menjembatani perbedaan nama scene 3D (`BUDI`, `SARI`, `WAHYU FS`, dsb.) dengan format nama gateway (`Budi Santoso`, `Wahyu Fajar S.`, dsb.) maupun 12 spesialis kampus (`arch1`, `be-lead`, `sec1`, dsb.).
+     - Memperbaiki speech bubble obrolan otomatis (`autoTalkText`) agar dapat membaca task running agen secara deterministik.
+  4. **Harmonisasi Jam Istirahat Siang (Lunch Break) Multi-Lantai (`src/scene/parts/shift_spec.js`, `src/scene/parts/daycycle.js`, `src/scene/OfficeScene.js`, `src/__tests__/shift_spec.test.js`, `src/__tests__/daycycle_runtime.test.js`):**
+     - Menambahkan `CAMPUS_LUNCH_SPOT` dan `campusLunchSpot` di `shift_spec.js` pada koordinat terbuka L3 Executive Cafe Promenade (`x: -6.0 ± 0.8, z: 5.6 ± 0.4`), menjamin seluruh agen saat fase makan siang (12:00–13:00) menaiki Grand Staircase ke Lantai 3 dan tidak menabrak rintangan statis kafe (`inObstacle` = false).
+
+- **Bukti terukur:**
+  - **Vitest:** **1449/1449 passed (125 test file)** (+21 tests baru terintegrasi, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint .`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1643.37 KiB; chunk `OfficeScene-kfzPB0rS.js` 866.04 KB / gzip 234.62 KB, `index-Cn1J-rnX.js` 299.75 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, chunk usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-Cn1J-rnX.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **551.898 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `scripts/e2e_zone_multi.py`: **E2E_ZONE_MULTI: OK** (iso, front, top).
+    - `shot.sh`: Screenshot ck.png **587.471 bytes** (>500 KB).
+- **Sisa backlog:** verifikasi subjektif audio web-audio.
+
 ## 2026-10-26 04:05 WIB — Siklus 75: Kolaborasi Otonom 26 Agen Multi-Lantai, Dialog Khas 12 Spesialis, Inklusi Rotasi Meeting Kampus & Koridor Kafe Realistis
 
 - **Yang diperbaiki & ditingkatkan:**

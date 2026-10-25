@@ -1,8 +1,10 @@
 import React, { useEffect } from 'react'
 import { IconClose, IconChat, IconUser } from './Icons'
+import { getAgentCompetency } from '../scene/parts/agent_competencies.js'
+import { resolveAgentId } from '../scene/parts/running_tasks.js'
 
 // Kartu Inspektur Agen Interaktif — Tampil saat agen 3D diklik di ruangan
-export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloor }) {
+export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloor, onOpenConsole }) {
   useEffect(() => {
     if (!agent) return
     const onKey = (e) => {
@@ -16,6 +18,12 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
   }, [agent, onClose])
 
   if (!agent) return null
+
+  const comp = getAgentCompetency(agent)
+  const runningByAgent = window.__wfsRunningTasks?.byAgent || {}
+  const agentGid = resolveAgentId(agent.name, window.__wfsAgentIdList)
+  const activeTask = agentGid ? runningByAgent[agentGid] : null
+  const isFounder = comp.isFounder || agent.name === 'Wahyu FS'
 
   return (
     <aside
@@ -84,9 +92,9 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
           <button
             type="button"
             className="agent-floor-badge-btn"
-            onClick={() => onFocusFloor && onFocusFloor(agent.floor || (agent.name === 'Wahyu FS' ? 3 : 1))}
-            title={`Fokus kamera ke Lantai ${agent.floor || (agent.name === 'Wahyu FS' ? 3 : 1)}`}
-            aria-label={`Fokus kamera ke Lantai ${agent.floor || (agent.name === 'Wahyu FS' ? 3 : 1)}`}
+            onClick={() => onFocusFloor && onFocusFloor(agent.floor || (isFounder ? 3 : 1))}
+            title={`Fokus kamera ke Lantai ${agent.floor || (isFounder ? 3 : 1)}`}
+            aria-label={`Fokus kamera ke Lantai ${agent.floor || (isFounder ? 3 : 1)}`}
             style={{
               background: 'rgba(255,255,255,0.04)',
               border: '1px solid rgba(255,255,255,0.06)',
@@ -116,9 +124,53 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
               {onFocusFloor && <span style={{ fontSize: 9, color: 'var(--teal)', fontWeight: 700 }}>FOKUS ↗</span>}
             </span>
             <div style={{ fontSize: 12, color: '#fff', fontWeight: 600 }}>
-              {agent.floor ? `L${agent.floor} · ${agent.floor === 1 ? 'Ops & AI' : agent.floor === 2 ? 'Engineering' : 'Executive'}` : (agent.name === 'Wahyu FS' ? 'L3 · Executive' : 'L3 · Penthouse')}
+              {agent.floor ? `L${agent.floor} · ${agent.floor === 1 ? 'Ops & AI' : agent.floor === 2 ? 'Engineering' : 'Executive'}` : (isFounder ? 'L3 · Executive' : 'L3 · Penthouse')}
             </div>
           </button>
+        </div>
+
+        {/* Live Active Task (bila ada task aktif yang dikerjakan) */}
+        {activeTask && activeTask.id && activeTask.id !== '?' ? (
+          <div style={{ background: 'rgba(16,229,160,0.08)', border: '1px solid rgba(16,229,160,0.25)', borderRadius: 12, padding: '10px 12px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: 'var(--green)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 8px var(--green)' }} />
+              Mengerjakan Task #{activeTask.id}
+            </div>
+            <div style={{ fontSize: 12, color: '#fff', fontWeight: 600, lineHeight: 1.35 }}>
+              {activeTask.title}
+            </div>
+          </div>
+        ) : null}
+
+        {/* Profil Kompetensi & Stack Teknologi */}
+        <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '10px 12px' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
+            Kompetensi & Spesialisasi
+          </div>
+          <div style={{ fontSize: 12, color: '#fff', fontWeight: 600, marginBottom: 4 }}>
+            {comp.domain}
+          </div>
+          <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4, marginBottom: 8 }}>
+            {comp.summary}
+          </div>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 5 }}>
+            {comp.tags.map((tag) => (
+              <span
+                key={tag}
+                style={{
+                  fontSize: 10,
+                  background: 'rgba(255,255,255,0.05)',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  borderRadius: 6,
+                  padding: '2px 7px',
+                  color: '#cbd5e1',
+                  fontWeight: 500,
+                }}
+              >
+                {tag}
+              </span>
+            ))}
+          </div>
         </div>
 
         {/* AI Engine, Proyek & Sandbox */}
@@ -138,6 +190,33 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
         </div>
 
         {/* Quick Actions */}
+        {isFounder && onOpenConsole && (
+          <button
+            type="button"
+            className="btn"
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 8,
+              width: '100%',
+              fontWeight: 700,
+              background: 'rgba(245,158,11,0.12)',
+              border: '1px solid rgba(245,158,11,0.3)',
+              color: '#F59E0B',
+              borderRadius: 8,
+              padding: '8px 12px',
+            }}
+            onClick={() => {
+              onOpenConsole()
+              onClose()
+            }}
+            title="Buka konsol manajemen proyek software house WFS"
+          >
+            🖥️ Buka Konsol Software House
+          </button>
+        )}
+
         <button
           className="btn primary"
           style={{
@@ -154,7 +233,7 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
           }}
         >
           <IconChat size={16} />
-          Buka Chat dengan {agent.name.split(' ')[0]}
+          Buka Chat dengan {agent.name ? agent.name.split(' ')[0] : 'Agen'}
         </button>
       </div>
     </aside>

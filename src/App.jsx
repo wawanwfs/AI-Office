@@ -182,6 +182,7 @@ export default function App() {
           'mob1': 'YOGA', 'ux1': 'MAYA', 'devops1': 'TONI', 'qa1': 'RINA',
           'ai-cs': 'BANTUIN AI', 'ai-train': 'TRAINER AI', 'integ': 'INTEGRATOR BOT',
           'mkt1': 'LINA', 'cs-h': 'SUPPORT', 'pm1': 'SARI',
+          'ceo': 'WAHYU FS',
         }
         window.__wfsSceneSelect = (name) => {
           const s = sceneRef.current
@@ -190,6 +191,10 @@ export default function App() {
           ;(window.__wfsAgentIdList || []).forEach(x => { idMap[x.name] = x.id })
           const mapped = SCENE_BY_ID[idMap[name]] || SCENE_BY_ID[name] || name
           const targetName = String(mapped).toUpperCase()
+          if (targetName === 'WAHYU FS' || targetName === 'CEO' || targetName === 'WAHYU FAJAR S.') {
+            s.setSelected(-2)
+            return
+          }
           const idx = (window.__agentData || []).findIndex(ad => ad.agent && String(ad.agent.name || '').toUpperCase() === targetName)
           if (idx >= 0) s.setSelected(idx)
         }
@@ -434,11 +439,12 @@ export default function App() {
         agent={selectedAgent}
         onClose={handleCloseInspector}
         onFocusFloor={(fl) => handleFloorSelect(fl, `l${fl}`)}
+        onOpenConsole={() => setShowConsole(true)}
         onChatWith={(ag) => {
           if (window.__wfsSelectAgent) {
             const idMap = {}
             ;(window.__wfsAgentIdList || []).forEach(x => { idMap[x.name] = x.id })
-            const gid = idMap[ag.name] || ag.name
+            const gid = (ag.name === 'Wahyu FS' || ag.name === 'Wahyu Fajar Setiawan') ? 'ceo' : (idMap[ag.name] || ag.name)
             window.__wfsSelectAgent(gid)
           }
         }}
