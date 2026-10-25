@@ -85,7 +85,7 @@ export default function ActionMenu({ sceneRef, onFlash, actionMenuRef }) {
   return (
     <span className="anchor" ref={wrap}>
       {open && (
-        <div ref={pop} className="pop" role="menu" aria-label="Aksi tim" aria-modal="true" style={{ left: 0 }} onKeyDown={menuKeys}>
+        <div ref={pop} className="pop" role="menu" aria-label="Aksi tim" style={{ left: 0 }} onKeyDown={menuKeys}>
           {items.map(([ic, label, key, msg]) => (
             <button key={key} role="menuitem" onClick={() => act(key, msg)} title={msg}>
               <span className="pop-ic">

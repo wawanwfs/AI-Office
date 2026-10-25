@@ -40,6 +40,12 @@ describe('ActionMenu — popover & struktur menu', () => {
     expect(btn.getAttribute('aria-haspopup')).toBe('menu')
   })
 
+  it('popover menu TIDAK memakai aria-modal (hanya valid untuk role dialog/alertdialog)', () => {
+    renderMenu(mkScene())
+    openMenu()
+    expect(screen.getByRole('menu').getAttribute('aria-modal')).toBeNull()
+  })
+
   it('menampilkan 4 menuitem aksi tim dgn urutan & ikon yang benar', () => {
     renderMenu(mkScene())
     openMenu()
