@@ -62,7 +62,7 @@ export function createLounge(ctx) {
   // drawTv diekstrak murni ke parts/tv_canvas.js (diuji unit); di sini cukup injek ctx.
   const tvC = document.createElement('canvas'); tvC.width = 256; tvC.height = 144;
   const tvx = tvC.getContext('2d');
-  function drawTv() { drawTvDashboard(tvx, window.__tvData) }
+  function drawTv() { drawTvDashboard(tvx, window.__tvData); window.__lastTvDrawAt = Date.now() }
   drawTv();
   const tvTex = new THREE.CanvasTexture(tvC); tvTex.minFilter = THREE.LinearFilter;
   async function tvPull() {

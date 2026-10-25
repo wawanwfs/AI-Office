@@ -2340,3 +2340,10 @@
 - Bukti: build OK (exit 0); vitest **1135/1135 (101 file)** (+4); eslint 0 error; cp dist→~/wfs-hq OK; e2e_err HTTP 200 (index & index-BZmknjfY.js, 0 "Scene init failed", 404 API :8787 normal); e2e_shot: agents=14, __wallState true, __dbg {t:553, ph:working}, screenshot 724.437 bytes → E2E_VISUAL OK.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
 
+
+## 2026-10-25 09:55 WIB — Siklus 52: E2E live-data TV lounge + debug hook __lastTvDrawAt
+- Pilihan: belum ada verifikasi otomatis bahwa TV lounge (dashboard /wfs-project) benar-benar menerima data — kalau fetch gagal selamanya, TV diam-diam stuck "menghubungkan..." tanpa sinyal ke pengujian.
+- Audit: endpoint /wfs-project di server wfs-hq (port 9503) HTTP 200 dgn data nyata (dibantuin.com, 23/23 task). Salinan helper tidak terpakai dieksport di parts (K_ZONE_TAG_ALONG/X, BUBBLE_SMOOTH_RATE, PAGES_UPDATE_INTERVAL, CARD_TOP, TV_ACCENT/TV_DIM) dipakai internal masing-masing file — bukan kode mati; tidak ada mesh yatim baru (pemindaian deklarasi THREE × usage).
+- Perubahan: + scripts/e2e_tv.py (harness CDP chrome-headless-shell + Xvfb :99: cek window.__tvData ada, tasks.total/done numerik valid, __lastTvDrawAt > 0, agents 14); + 1 baris di parts/lounge.js: drawTv() kini set window.__lastTvDrawAt = Date.now() (debug hook pola __lastBubbleAt, tak mengubah render).
+- Bukti: build OK (exit 0); vitest **1135/1135 (101 file)** tetap hijau; eslint 0 error; cp dist→~/wfs-hq OK; e2e_tv: **E2E_TV OK** (tasks 23/23, pct 100, at & drawnAt terisi, agents 14 — dashboard TV tergambar ulang dgn data nyata); e2e_err 200 (index & index-DMPB-ZnY.js, 0 "Scene init failed", 404 API :8787 normal); e2e_shot: agents=14, __wallState true, screenshot 720.518 bytes → E2E_VISUAL OK.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
