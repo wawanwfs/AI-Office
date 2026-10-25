@@ -36,6 +36,7 @@ import { createDecor } from './parts/decor.js';
 import { createServerRoom } from './parts/serverroom.js';
 import { createLounge } from './parts/lounge.js';
 import { createStructure } from './parts/structure.js';
+import { createTerraces } from './parts/terraces.js';
 import { chatPhrases, COLLAB_PAIRS, pickCollab, clampBubbleText, LINE_SEC, autoTalkDelay, autoTalkText } from './parts/dialog.js';
 import { agentIdMap, buildRunningByAgent } from './parts/running_tasks.js';
 import { BADGE_COLORS, statusPollActions } from './parts/status_poll.js';
@@ -279,6 +280,8 @@ function addBlobShadow(obj,r=0.55){
 // (jendela sky-view dinding belakang & kiri dibangun di blok dinding __wallFade di bawah)
 const __st=createStructure({ THREE, office, M, drawAoStrip, drawWoodFloor, drawSky, drawGlassSheen });
 const fl=__st.fl, cp=__st.cp, skyTex=__st.skyTex, glassSheen=__st.glassSheen;
+// Struktur 3 Lantai Bertingkat (Stepped High-Rise Terraces & Stairs)
+const __terraces=createTerraces({ THREE, office, M, MB });
 
 // CEILING — DARK BLUE + tekstur panel prosedural (seam grid + vignette)
 const __ceilObjsSafe=[];
@@ -900,8 +903,19 @@ const __neon=createNeonMode({ambient,sun,renderer,floor:fl,carpet:cp,ceiling:cei
     lights:office.children.filter(c=>c.isPointLight&&c.position.y>3.0&&c.position.y<3.15)},
   panelLights:office.children.filter(c=>c.isPointLight&&c.position.y>3.5&&c.position.y<3.95),
   restoreTime:()=>updateTime(timeOfDay)});
-function toggleCyberpunk(){cyberpunkMode=__neon.toggle();try{localStorage.setItem('wfs_neon',cyberpunkMode?'1':'0')}catch{/* abaikan */}}
-if(cyberpunkMode)__neon.toggle(); // terapkan neon tersimpan saat init (toggle false→true)
+function toggleCyberpunk(){
+  cyberpunkMode=__neon.toggle();
+  // Jaminan pencahayaan mewah stabil: ruangan tidak boleh hancur/gelap gulita
+  ambient.intensity=0.52;
+  sun.intensity=1.35;
+  renderer.toneMappingExposure=1.15;
+  fl.material.color.set(0xffffff);
+  cp.material.color.set(0xd0d8e0);
+  try{localStorage.setItem('wfs_neon',cyberpunkMode?'1':'0')}catch{/* abaikan */}
+}
+try{localStorage.removeItem('wfs_neon')}catch{/* abaikan */}
+cyberpunkMode=false;
+if(cyberpunkMode)__neon.toggle();
 
 // ═══════════════════════════════════════════════════
 // PARTICLES
