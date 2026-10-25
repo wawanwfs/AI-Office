@@ -677,7 +677,7 @@ function sizeLabels(){
     L.scale.set(bubbleFrac * as, bubbleFrac, 1);
   };
   agentData.forEach(a=>apply(a.label));
-  try{ if(typeof nxLabel!=='undefined'&&nxLabel)apply(nxLabel); }catch{}
+  try{ if(typeof nxLabel!=='undefined'&&nxLabel)apply(nxLabel); }catch{ /* abaikan: label tambahan opsional */ }
   window.__labelFrac=+bubbleFrac.toFixed(4);
 }
 
@@ -802,7 +802,7 @@ allAgents.forEach((agent,i)=>{
 setTimeout(()=>{
   try{
     createBubble(-8,2.8,-2.5,'“Halo! Semua tim AI Dibantuin.com aktif 24/7!”','#10E5A0');
-  }catch{}
+  }catch{ /* abaikan: bubble intro opsional */ }
 },1200);
 
   window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
