@@ -74,4 +74,22 @@ describe('motion_math: stepMove', () => {
       expect(s.z).toBeLessThanOrEqual(BOUNDS.zMax);
     }
   });
+  it('clamp pojok: X dan Z terjepit sekaligus dalam satu langkah', () => {
+    const s = stepMove({ x: 12, z: 9, rot: 0 }, { x: 50, z: 50 }, 100, 1);
+    expect(s.x).toBe(BOUNDS.xMax);
+    expect(s.z).toBe(BOUNDS.zMax);
+    expect(s.clamped).toBe(true);
+  });
+  it('delta 0 / speed×delta=0: tidak bergerak, belum arrived bila jarak jauh', () => {
+    const s = stepMove({ x: 0, z: 0, rot: 0 }, { x: 10, z: 0 }, 2, 0);
+    expect(s.x).toBe(0);
+    expect(s.z).toBe(0);
+    expect(s.arrived).toBe(false);
+    expect(s.clamped).toBe(false);
+  });
+  it('rot dipertahankan saat arrived (tidak di-reorientasi ke target)', () => {
+    const s = stepMove({ x: 1, z: 1, rot: 1.23 }, { x: 1.01, z: 1.01 }, 2, 1);
+    expect(s.arrived).toBe(true);
+    expect(s.rot).toBe(1.23);
+  });
 });

@@ -5,7 +5,7 @@ export const SIM_SEC_PER_MIN = 5; // 1 menit simulasi / 5 dtk nyata (1 hari kerj
 export const MANUAL_RESUME_MS = 8000;
 
 export function advanceSimClock(prev, nowMs) {
-  const p = prev || { acc: 0, last: 0, manual: false, lastManualSet: 0, time: 0 };
+  const p = prev || { acc: 0, last: null, manual: false, lastManualSet: 0, time: 0 };
   // mode MANUAL: tunggu sampai pengguna diam MANUAL_RESUME_MS, lalu autoplay lanjut dari posisi baru
   if (p.manual) {
     if (nowMs - p.lastManualSet > MANUAL_RESUME_MS) {

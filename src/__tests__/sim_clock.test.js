@@ -74,3 +74,28 @@ describe('mode manual (slider)', () => {
     expect(s.manual).toBe(true); // belum resume karena sentuhan baru
   });
 });
+
+describe('advanceSimClock — state default & batas resume manual', () => {
+  it('prev undefined → state default lengkap, tick pertama tak melangkah', () => {
+    const s = advanceSimClock(undefined, 5000);
+    expect(s.time).toBe(0);
+    expect(s.acc).toBe(0);
+    expect(s.manual).toBe(false);
+    expect(s.last).toBe(5000);
+    expect(s.stepped).toBeFalsy();
+  });
+  it('tanpa prev, tick kedua tetap autoplay normal (manual default false)', () => {
+    let s = advanceSimClock(undefined, 0);
+    s = advanceSimClock(s, SIM_SEC_PER_MIN * 1000);
+    expect(s.time).toBe(1);
+    expect(s.stepped).toBe(true);
+  });
+  it('resume manual tepat di MANUAL_RESUME_MS belum resume (pakai >)', () => {
+    let s = setSimManual(900, 5000);
+    s = advanceSimClock(s, 5000 + MANUAL_RESUME_MS);
+    expect(s.manual).toBe(true);
+    s = advanceSimClock(s, 5000 + MANUAL_RESUME_MS + 1);
+    expect(s.manual).toBe(false);
+    expect(s.time).toBe(900);
+  });
+});
