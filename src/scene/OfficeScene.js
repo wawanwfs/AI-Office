@@ -96,9 +96,9 @@ let isDrag=false,prev={x:0,y:0};
 let namesVisible=(function(){try{return localStorage.getItem('wfs_names')!=='0'}catch{return true}})();
 const __asp=container.clientWidth/Math.max(1,container.clientHeight);
 const __portrait=__asp<0.8;
-if(__portrait){camera.fov=__asp<0.6?66:54;camera.updateProjectionMatrix();}
-let sph={theta:__portrait?2.35:Math.PI*0.78,phi:__portrait?0.62:0.95,radius:__asp<0.6?28:__asp<0.8?30:__asp<1.2?33:32.5};
-const tgt=new THREE.Vector3(0,1.0,0.5);
+if(__portrait){camera.fov=__asp<0.6?68:56;camera.updateProjectionMatrix();}else{camera.fov=54;camera.updateProjectionMatrix();}
+let sph={theta:__portrait?2.35:Math.PI*0.78,phi:__portrait?0.62:0.92,radius:__asp<0.6?36:__asp<0.8?39:__asp<1.2?44:42.5};
+const tgt=new THREE.Vector3(0,1.2,1.2);
 // Preferensi auto-rotate: hormati prefers-reduced-motion bila user belum set eksplisit (localStorage wfs_autorot 0/1)
 const __prm=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):null;
 let __userRot=null;try{const __v=localStorage.getItem('wfs_autorot');if(__v==='0')__userRot=false;else if(__v==='1')__userRot=true}catch{/* abaikan */}
@@ -1215,9 +1215,8 @@ function createBubble(x,y,z,text,color,anchor){
       chatBubbles.splice(i,1);
     }
   }
-  // ROTASI BUBBLE (UX fix): batasi bubble aktif agar scene tidak tertutup.
-  // Di layar sempit (viewport < 760px) lebih sedikit lagi yang boleh tampil.
-  const MAX_BUBBLES = (()=>{ try{ return (window.innerWidth||1280) < 760 ? 3 : 6; }catch{ return 6; } })();
+  // ROTASI BUBBLE (UX fix): batasi bubble aktif (maks 3) agar kampus 3D luas tetap bersih dan terbaca
+  const MAX_BUBBLES = (()=>{ try{ return (window.innerWidth||1280) < 760 ? 2 : 3; }catch{ return 3; } })();
   while(chatBubbles.length >= MAX_BUBBLES){
     const old=chatBubbles.shift();
     office.remove(old.sprite);

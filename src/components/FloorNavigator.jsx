@@ -8,8 +8,8 @@ const FLOORS = [
     shortName: 'L1',
     roleLabel: 'Datacenter, AI Lab & Architecture Atrium',
     color: '#F59E0B',
-    desc: 'Aris (Architect), Clara (UX), Andi, Budi, Rina, Trainer AI',
-    agents: ['Aris', 'Clara', 'Bantuin AI', 'Budi', 'Andi', 'Rina', 'Trainer AI']
+    desc: 'Aris, Clara, Rian, Tari, Andi, Budi, Rina, Trainer AI, Bantuin AI',
+    agents: ['Aris', 'Clara', 'Rian', 'Tari', 'Bantuin AI', 'Budi', 'Andi', 'Rina', 'Trainer AI']
   },
   {
     num: 2,
@@ -18,8 +18,8 @@ const FLOORS = [
     shortName: 'L2',
     roleLabel: 'Core Engineering & Cloud Database Pod',
     color: '#00F0FF',
-    desc: 'Ferry (DBA), Hendra (Cloud), Rizky, Dewi, Yoga, Lina, Integrator Bot',
-    agents: ['Ferry', 'Hendra', 'Rizky', 'Dewi', 'Yoga', 'Lina', 'Integrator Bot']
+    desc: 'Ferry, Gilang, Hendra, Doni, Rizky, Dewi, Yoga, Lina, Integrator Bot',
+    agents: ['Ferry', 'Gilang', 'Hendra', 'Doni', 'Rizky', 'Dewi', 'Yoga', 'Lina', 'Integrator Bot']
   },
   {
     num: 3,
@@ -28,8 +28,8 @@ const FLOORS = [
     shortName: 'L3',
     roleLabel: 'Executive Penthouse, Security & Delivery Suite',
     color: '#10E5A0',
-    desc: 'SecBot (Security), Nina (Release), Wahyu FS (Founder), Maya, Toni, Sari, Support',
-    agents: ['SecBot', 'Nina', 'Wahyu FS', 'Maya', 'Toni', 'Sari', 'Support']
+    desc: 'SecBot, Bagas, Nina, Citra, Wahyu FS, Maya, Toni, Sari, Support',
+    agents: ['SecBot', 'Bagas', 'Nina', 'Citra', 'Wahyu FS', 'Maya', 'Toni', 'Sari', 'Support']
   }
 ]
 
