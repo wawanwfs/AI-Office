@@ -465,6 +465,7 @@ function buildChar(agent, standing=false){
     // Torso tegak
     const torso=new THREE.Mesh(new THREE.BoxGeometry(.32,.36,.18),M(agent.shirt));
     torso.position.set(0,.74,.02);torso.castShadow=true;g.add(torso);
+    torso.userData.isTorso=true; torso.userData.baseY=.74;
     const col=new THREE.Mesh(new THREE.BoxGeometry(.2,.05,.12),M(0xFFFFFF));
     col.position.set(0,.93,.02);g.add(col);
     const btn=new THREE.Mesh(new THREE.BoxGeometry(.025,.1,.01),MB(new THREE.Color(agent.shirt).multiplyScalar(.6)));
@@ -477,12 +478,14 @@ function buildChar(agent, standing=false){
       fa.position.set(sd*.215,.56,-.2);g.add(fa);
       const hand=new THREE.Mesh(new THREE.BoxGeometry(.08,.05,.09),M(skin));
       hand.position.set(sd*.16,.55,-.31);g.add(hand);
+      hand.userData.isTypeHand=true; hand.userData.side=sd; hand.userData.baseY=.55;
     });
     // Leher + kepala
     const neck=new THREE.Mesh(new THREE.BoxGeometry(.09,.07,.09),M(skin));
     neck.position.set(0,.955,.02);g.add(neck);
     const head=new THREE.Mesh(new THREE.BoxGeometry(.24,.22,.22),M(skin));
     head.position.set(0,1.1,.02);head.castShadow=true;g.add(head);
+    head.userData.isHead=true; head.userData.baseY=1.1;
     const jaw=new THREE.Mesh(new THREE.BoxGeometry(.2,.06,.19),M(skin));
     jaw.position.set(0,.97,.02);g.add(jaw);
     const nose=new THREE.Mesh(new THREE.BoxGeometry(.035,.05,.035),M(new THREE.Color(skin).multiplyScalar(.88).getHex()));
@@ -1102,12 +1105,29 @@ function animate(){
   pulseRing.scale.set(pf.scale,1,pf.scale);
   pulseRing.material.opacity=pf.opacity;
   // Efek ambient berbasis elapsed di-throttle ~20×/dtk (AMBIENT_EVERY=3):
-  // ring, visor, label duduk, label NX — dulu 4 sin() + 2 assign opacity TIAP frame.
+  // ring, visor, label duduk, label NX, dan animasi hidup karakter duduk (napas, ketik, lirik layar)
   if(shouldUpdateAmbient(frame)){
     const fx=ambientFx(elapsed);
     ringMat.opacity=fx.ring;
     helmetVisor.material.opacity=fx.visor;
-    agentData.forEach((a,i)=>{if(a.state==='sitting')a.label.position.y=LABEL_Y+ambientFx(elapsed,i).label});
+    agentData.forEach((a,i)=>{
+      if(a.state==='sitting'){
+        a.label.position.y=LABEL_Y+ambientFx(elapsed,i).label;
+        if(a.sittingChar&&a.sittingChar.visible){
+          a.sittingChar.children.forEach(c=>{
+            if(!c.userData)return;
+            if(c.userData.isTypeHand){
+              c.position.y=c.userData.baseY+Math.sin(elapsed*9+c.userData.side*2.8+i)*0.008;
+            } else if(c.userData.isTorso){
+              c.position.y=c.userData.baseY+Math.sin(elapsed*1.8+i)*0.006;
+            } else if(c.userData.isHead){
+              c.rotation.y=Math.sin(elapsed*0.5+i*1.1)*0.035;
+              c.rotation.x=Math.sin(elapsed*1.8+i)*0.015;
+            }
+          });
+        }
+      }
+    });
     nxLabel.position.y=LABEL_Y-.5+fx.nx;
   }
 
