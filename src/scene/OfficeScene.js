@@ -331,7 +331,7 @@ for(let i=-2;i<=2;i++){for(let j=-1;j<=1;j++){
 }}
 
 // ═══ RUANG MEETING (modul parts/room.js) ═══
-const __mr=createMeetingRoom({THREE,office,M},Glass());
+const __mr=createMeetingRoom({THREE,office,M,blobMat:__blobMat},Glass());
 const MRX=__mr.MRX,MRZ=__mr.MRZ,meetSeats=__mr.meetSeats;
 
 // ═══════════════════════════════════════════════════
@@ -695,6 +695,11 @@ function buildDesk(agent,dp){
     const leaf=new THREE.Mesh(new THREE.SphereGeometry(r,6,5),M(0x43A047));
     leaf.position.set(.58+px,py,-.28+pz);g.add(leaf);
   });
+  // Contact blob shadow di bawah meja kerja (menancapkan meja & laci kabinet ke lantai)
+  const deskShadow=new THREE.Mesh(new THREE.PlaneGeometry(1.6,1.1),__blobMat);
+  deskShadow.rotation.x=-Math.PI/2;deskShadow.position.set(0,0.012,0.15);deskShadow.renderOrder=2;
+  deskShadow.userData.blob=true;g.add(deskShadow);
+
   g.position.set(dp.x, dp.y || 0, dp.z);
   office.add(g);
   return {dGlow,screenLight:sLight};
@@ -827,7 +832,7 @@ if(__loungeObj&&__loungeObj.lounge)__loungeObj.lounge.position.y=1.20;
 // --- SERVER ROOM + WATER COOLER ---
 // Builder murni di parts/serverroom.js (diuji unit); di sini tinggal injek konteks.
 // LEDs server room (fase & laju acak per LED) dikumpulkan utk animasi blink.
-const __server=createServerRoom({ THREE, office, M, MB });
+const __server=createServerRoom({ THREE, office, M, MB, blobMat: __blobMat });
 const __leds=__server.leds;
 
 // --- RAK BUKU (dinding kiri belakang) ---
@@ -1057,6 +1062,17 @@ office.add(pulseRing);
 const chatBubbles=[];
 
 function createBubble(x,y,z,text,color,anchor){
+  // Hapus bubble lama milik agent yang sama atau posisi yang sangat berdekatan (< 1.2m)
+  for(let i=chatBubbles.length-1;i>=0;i--){
+    const b=chatBubbles[i];
+    const sameAgent=anchor&&anchor.agent&&b.anchor&&b.anchor.agent===anchor.agent;
+    const samePos=Math.hypot(b.sprite.position.x-x,b.sprite.position.z-z)<1.2;
+    if(sameAgent||samePos){
+      office.remove(b.sprite);
+      b.sprite.material.dispose();
+      chatBubbles.splice(i,1);
+    }
+  }
   // ROTASI BUBBLE (UX fix): batasi bubble aktif agar scene tidak tertutup.
   // Di layar sempit (viewport < 760px) lebih sedikit lagi yang boleh tampil.
   const MAX_BUBBLES = (()=>{ try{ return (window.innerWidth||1280) < 760 ? 3 : 6; }catch{ return 6; } })();
@@ -1091,13 +1107,15 @@ function autoTalk(){
   const now=performance.now();
   if(now-lastTalkRT<autoTalkDelay())return;
   lastTalkRT=now;
-  const ad=agentData[Math.floor(Math.random()*agentData.length)];
+  const activeAgents=agentData.filter(a=>a.state!=='offsite'&&(a.sittingChar.visible||a.walker.visible));
+  if(activeAgents.length===0)return;
+  const ad=activeAgents[Math.floor(Math.random()*activeAgents.length)];
   const text=autoTalkText(ad,window.__wfsRunningTasks,window.__wfsAgentIdMap);
   if(!ad||text==null)return;
   const baseAy=(ad.walker.visible?ad.walker.position.y:ad.home.y)||0;
   const wp=ad.walker.visible?ad.walker.position:{x:ad.home.x,y:baseAy,z:ad.home.z};
   // anchor mengikuti agent agar bubble tidak tertinggal di posisi lama saat agent berjalan
-  const anc={get x(){return ad.walker.visible?ad.walker.position.x:ad.home.x},get z(){return ad.walker.visible?ad.walker.position.z:ad.home.z},y:baseAy+2.6};
+  const anc={agent:ad,get x(){return ad.walker.visible?ad.walker.position.x:ad.home.x},get z(){return ad.walker.visible?ad.walker.position.z:ad.home.z},y:baseAy+2.6};
   createBubble(wp.x,baseAy+2.6,wp.z,text,ad.agent.hex,anc);
 }
 // Sinkron task running: tidak ada interval sendiri — data status + tasks diambil di pollStatus (SATU fetch /agents/status)
@@ -1134,7 +1152,7 @@ function updateBubbles(delta){
 // ═══════════════════════════════════════════════════
 // SHIFT CHANGE — Agents arrive/leave
 // ═══════════════════════════════════════════════════
-const __shift=createShift({THREE,agentData,rng});
+const __shift=createShift({THREE,agentData,rng,isNamesVisible:()=>namesVisible});
 const updateShift=m=>__shift.update(m);
 
 // Track keyboard sounds — kini benar-benar dipakai: tick keyboard & langkah saat agent jalan
@@ -1269,7 +1287,7 @@ function animate(){
   });
   if(namesVisible&&shouldRelayoutLabels(frame)){
     sizeLabels();
-    const vis=agentData.filter(a=>a.label.visible);
+    const vis=agentData.filter(a=>a.label.visible && a.state !== 'offsite');
     // k = px per unit tan(fov/2); proyeksi kamera per label dihitung di sini,
     // pembangunan pts (agent/zona/bubble) via parts/label_overlap.js (murni, diuji unit).
     const k=PX_PER_TAN(container.clientHeight,camera.fov);
@@ -1442,7 +1460,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
   return {
     teamAction,
     toggleNames: () => { namesVisible=!namesVisible; try{localStorage.setItem('wfs_names',namesVisible?'1':'0')}catch{/* abaikan */};
-      agentData.forEach(ad=>{ad.label.visible=namesVisible;ad.label.userData.antiY=0;ad.label.userData.antiX=0});
+      agentData.forEach(ad=>{ad.label.visible=namesVisible && ad.state !== 'offsite';ad.label.userData.antiY=0;ad.label.userData.antiX=0});
       if(window.__zoneLabels)resetZoneBaseOffsets(window.__zoneLabels.map(zt=>({ref:zt,base:window.__zoneBase&&window.__zoneBase.get(zt),visible:namesVisible}))); },
     isNamesVisible: () => namesVisible,
     setSelected: (idx) => { selectedIdx=idx; applySelected(); if(onSelectAgent)onSelectAgent(idx>=0&&idx<agentData.length?agentData[idx].agent:null); },

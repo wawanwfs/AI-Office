@@ -1,3 +1,37 @@
+## 2026-10-25 21:50 WIB — Siklus 67: Deduplikasi & Pembersihan Balon Percakapan, Isolasi Label Agen Offsite, Dialog Otentik 14 Agen, & Contact Blob Shadow Furnitur
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Deduplikasi & Pembersihan Balon Dialog Menumpuk (`src/scene/OfficeScene.js`):**
+     - Di `createBubble`: bersihkan/dispose bubble lama milik agen yang sama atau yang posisinya sangat berdekatan (< 1.2m) sebelum bubble baru ditambahkan. Menghilangkan bug visual dua dialog box bertumpukan secara anomali pada spot yang sama.
+     - Di `autoTalk()`: filter kandidat agen yang berbicara hanya untuk agen yang aktif onsite di kantor (`ad.state !== 'offsite' && (ad.sittingChar.visible || ad.walker.visible)`). Mencegah agen yang sedang pulang di malam hari memicu balon bicara di atas meja kosong.
+  2. **Isolasi Visibilitas Label Nama Agen dengan Keberadaan Fisik / Offsite (`src/scene/parts/daycycle.js`, `src/scene/parts/motion.js`, & `src/scene/OfficeScene.js`):**
+     - Saat agen pulang/offsite (`nightfall()` atau mencapai pintu keluar di `leaving`), sembunyikan label nama (`ad.label.visible = false`).
+     - Saat agen datang atau kembali ke workstation (`arrive()`, `dawn()`, `restoreWorkingDesks()`), pulihkan label nama sesuai preferensi tampilan (`ad.label.visible = namesVisible`).
+     - Sinkronkan `toggleNames()` dan filter `vis` pada loop rendering agar hanya memproses agen onsite. Mengeliminasi total anomali "Ghost Office" (label nama melayang di atas kursi kosong saat di luar jam kerja).
+  3. **Dialog Otentik Per-Role Lengkap 14 Agen (`src/scene/parts/dialog.js`):**
+     - Menambahkan lini dialog otentik untuk Founder/CEO (`WAHYU FS` / `CEO`), `TRAINER AI`, `INTEGRATOR BOT`, dan `SUPPORT` dengan kosakata operasional AI software house nyata (Fine-tuning 98%, CI/CD multi-agent, CS respons cepat, scale up WFS).
+     - Menambahkan fallback pencocokan berbasis role name di `autoTalkText`, memastikan seluruh 14 agen memiliki identitas obrolan unik tanpa jatuh ke teks generik.
+  4. **Penambahan Contact Blob Shadow pada Furnitur Kantor (`src/scene/OfficeScene.js`, `src/scene/parts/room.js`, `src/scene/parts/serverroom.js`):**
+     - Memasang bidang kontak bayangan halus (`__blobMat`) di bawah setiap meja workstation (`buildDesk`), meja konferensi ruang meeting (`createMeetingRoom`), dan rak server (`createServerRoom`).
+     - Mengeliminasi efek furnitur melayang (*floating artifacts*) sehingga seluruh meja, kursi, dan rak server berpijak kokoh di atas lantai.
+  5. **Penambahan Unit Test:**
+     - `src/__tests__/dialog.test.js`: verifikasi 16 role terdaftar pada `roleTalk` dan frasa per-role untuk Wahyu FS dan Trainer AI.
+     - `src/__tests__/daycycle_runtime.test.js`: verifikasi `ad.label.visible = false` saat `nightfall` dan dipulihkan kembali saat `working_am`/`restoreWorkingDesks`.
+
+- **Bukti terukur:**
+  - **Vitest:** **1312/1312 passed (112 test file)** (0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint .`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1594.83 KiB; chunk `OfficeScene-BybZkFbA.js` 852.29 KB / gzip 229.43 KB, `index-BU2rb8dW.js` 266.48 KB).
+  - **Deploy:** `dist/*` ter-deploy ke `~/wfs-hq/`, chunk usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-BU2rb8dW.js`, 0 "Scene init failed", PID 3989694).
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 23/23 selesai, 100%, 14 agents aktif).
+    - `scripts/e2e_zone_multi.py`: **E2E_ZONE_MULTI OK** (iso, front, top: 0 OFFSCREEN, 0 pelanggaran margin).
+    - `scripts/e2e_shot.py`: Screenshot visual **723.524 bytes** (>500 KB, WebGL hidup, agents: 14, E2E_VISUAL: OK).
+    - **Daytime Screenshot:** **740.155 bytes** (>500 KB).
+    - **Audit Visual Siang Hari (Vision AI):** Contact blob shadow di bawah meja kerja, meja rapat, dan rak server berpijak kokoh di atas lantai; 14 avatar 3D duduk rapi di meja masing-masing di lantai bertingkat; balon percakapan bersih tanpa tumpukan teks anomali.
+- **Sisa backlog:** verifikasi subjektif audio web-audio.
+
 ## 2026-10-25 21:05 WIB — Siklus 66: Perbaikan Koordinat NDC Viewport Clamp, Isolasi Meja Ruang Meeting, Staggering Vertikal Kursi Rapat, & Z-Index Label vs Balon Bicara
 
 - **Yang diperbaiki & ditingkatkan:**

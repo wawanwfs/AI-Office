@@ -14,18 +14,22 @@ export const chatPhrases=[
 ];
 
 export const roleTalk={
-  'BANTUIN AI':['“Siang kak! Mau cek order?”','“Chat 47 hari ini ”'],
-  'BUDI':['“API-nya udah jalan”','“Push dulu…”'],
-  'RIZKY':['“Webhook Midtrans ✓”','“Query ku-optimize”'],
-  'DEWI':['“Responsive rapi ”','“Dark mode siap”'],
-  'ANDI':['“Lighthouse 97! ”','“Hover-nya lucu”'],
-  'YOGA':['“Build APK selesai”','“Push notif live”'],
-  'MAYA':['“Design v3 ”','“Spacing dikoreksi”'],
-  'TONI':['“CPU 12%, aman”','“Docker up ”'],
-  'RINA':['“214 test passing ”','“1 bug ketemu”'],
-  'LINA':['“CPC turun 18% ”','“Leads naik!”'],
-  'SARI':['“Sprint on track ”','“Demo ya besok”'],
-  'CEO':['“Deal baru ”','“Kopi dulu ”'],
+  'BANTUIN AI':['“Siang kak! Mau cek order?”','“Chat 47 hari ini 👍”','“CS AI standby 24/7 ⚡”'],
+  'BUDI':['“API-nya udah jalan”','“Push dulu…”','“Query di-cache Redis 🚀”'],
+  'RIZKY':['“Webhook Midtrans ✓”','“Query ku-optimize”','“DB indexing selesai 📊”'],
+  'DEWI':['“Responsive rapi ✨”','“Dark mode siap”','“Tailwind rapi pol 🎨”'],
+  'ANDI':['“Lighthouse 97! ⚡”','“Hover-nya lucu”','“Micro-interaction smooth ✨”'],
+  'YOGA':['“Build APK selesai”','“Push notif live”','“Mobile view verified 📱”'],
+  'MAYA':['“Design v3 🎨”','“Spacing dikoreksi”','“Figma to code pas 📐”'],
+  'TONI':['“CPU 12%, aman”','“Docker up 🟢”','“Cluster k8s normal 🛡️”'],
+  'RINA':['“214 test passing ✓”','“1 bug ketemu”','“Coverage 94% aman 🧪”'],
+  'LINA':['“CPC turun 18% 📈”','“Leads naik!”','“Traffic campaign +35% 🚀”'],
+  'SARI':['“Sprint on track 🎯”','“Demo ya besok”','“Backlog tersaring rapi 📋”'],
+  'CEO':['“WFS siap scale up 🚀”','“Deal baru 🤝”','“Kopi dulu ☕”'],
+  'WAHYU FS':['“WFS siap scale up 🚀”','“Sprint on track 🎯”','“Klien puas, produk jalan ✨”'],
+  'TRAINER AI':['“Fine-tuning model 98% ⚡”','“Dataset siap dilatih 📊”','“Loss konvergen rapi 🎯”'],
+  'INTEGRATOR BOT':['“Sync multi-agent aktif 🔄”','“Pipeline CI/CD hijau 🟢”','“API gateway stabil 🌐”'],
+  'SUPPORT':['“Tiket #104 terselesaikan ✅”','“CS respons < 1 menit ⚡”','“Rating pelanggan 4.9 ⭐”'],
 };
 
 // autoTalk: keputusan murni (diuji unit) — delay acak & pilihan teks.
@@ -40,11 +44,20 @@ export function autoTalkText(ad, runningTasks, agentIdMap, rng = Math) {
   if (!ad) return null;
   const rt = runningTasks;
   if (rt && rt.byAgent) {
-    const rid = agentIdMap && agentIdMap[ad.agent.name];
+    const rid = agentIdMap && agentIdMap[ad.agent?.name];
     const run = rid && rt.byAgent[rid];
     if (run) return 'Task #' + run.id + ': ' + clampBubbleText(run.title);
   }
-  const lines = roleTalk[ad.agent.name] || ['“Fokus dulu…”'];
+  const name = ad.agent?.name ? String(ad.agent.name).toUpperCase() : '';
+  const role = ad.agent?.role ? String(ad.agent.role).toUpperCase() : '';
+  const lines = roleTalk[name] ||
+                (role.includes('CEO') ? roleTalk.CEO : null) ||
+                (role.includes('TRAINER') ? roleTalk['TRAINER AI'] : null) ||
+                (role.includes('INTEGRAT') ? roleTalk['INTEGRATOR BOT'] : null) ||
+                (role.includes('SUPPORT') || role.includes('SUCCESS') ? roleTalk.SUPPORT : null) ||
+                roleTalk[role] ||
+                roleTalk[ad.agent?.name] ||
+                ['“Fokus dulu…”'];
   return lines[Math.floor(rng.random() * lines.length)];
 }
 

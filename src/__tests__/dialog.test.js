@@ -12,8 +12,8 @@ describe('dialog: data', () => {
     chatPhrases.forEach((p) => expect(typeof p).toBe('string'));
   });
 
-  it('roleTalk: 12 role terdaftar, tiap role punya ≥2 baris non-empty', () => {
-    expect(Object.keys(roleTalk).length).toBe(12);
+  it('roleTalk: 16 role terdaftar, tiap role punya ≥2 baris non-empty', () => {
+    expect(Object.keys(roleTalk).length).toBe(16);
     for (const [role, lines] of Object.entries(roleTalk)) {
       expect(lines.length, role).toBeGreaterThanOrEqual(2);
       lines.forEach((l) => expect(l.trim().length, role).toBeGreaterThan(0));
@@ -203,6 +203,10 @@ describe('dialog: autoTalk (murni)', () => {
     expect(roleTalk.TONI).toContain(autoTalkText(adToni, null, {}));
     expect(autoTalkText(adUnknown, null, {})).toBe('“Fokus dulu…”');
     expect(roleTalk.TONI).toContain(autoTalkText(adToni, { byAgent: {} }, {}));
+    const adWahyu = { agent: { name: 'WAHYU FS', role: 'Founder / CEO' } };
+    expect(roleTalk['WAHYU FS']).toContain(autoTalkText(adWahyu, null, {}));
+    const adTrainer = { agent: { name: 'TRAINER AI', role: 'AI Knowledge Engineer' } };
+    expect(roleTalk['TRAINER AI']).toContain(autoTalkText(adTrainer, null, {}));
   });
 
   it('autoTalkText: agent null → null (pemanggil tidak membuat bubble)', () => {

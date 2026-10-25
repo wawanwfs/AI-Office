@@ -28,6 +28,14 @@ export function createServerRoom(ctx) {
     }
     g.position.set(x, 0, z);
     g.traverse(o => { if (o.isMesh && !o.material.isMeshBasicMaterial) o.castShadow = true; });
+    if (ctx.blobMat) {
+      const rackShadow = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.95), ctx.blobMat);
+      rackShadow.rotation.x = -Math.PI / 2;
+      rackShadow.position.set(x, 0.012, z);
+      rackShadow.renderOrder = 2;
+      rackShadow.userData.blob = true;
+      office.add(rackShadow);
+    }
     office.add(g);
     return g;
   };

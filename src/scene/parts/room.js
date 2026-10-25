@@ -18,6 +18,14 @@ export function createMeetingRoom(ctx, glassMat) {
   const top = put(B(3.9, 0.07, 1.55), M(0xe7ecf1), CX, 0.72, CZ);
   top.castShadow = top.receiveShadow = true;
   [-1.55, 1.55].forEach((dx) => put(B(0.08, 0.7, 1.1), M(0xa9bccd), CX + dx, 0.35, CZ));
+  if (ctx.blobMat) {
+    const tableShadow = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 1.8), ctx.blobMat);
+    tableShadow.rotation.x = -Math.PI / 2;
+    tableShadow.position.set(CX, 0.012, CZ);
+    tableShadow.renderOrder = 2;
+    tableShadow.userData.blob = true;
+    office.add(tableShadow);
+  }
 
   // Kursi (3 per sisi)
   const seats = meetingSeats(CX, CZ);

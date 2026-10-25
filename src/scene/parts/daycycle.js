@@ -106,7 +106,8 @@ export function createNeonMode(ctx) {
 
 // ── Shift: datang 08:00–08:30, pulang 18:00–18:30, malam hanya agent utama ──
 export function createShift(ctx) {
-  const { THREE, agentData, rng } = ctx;
+  const { THREE, agentData, rng, isNamesVisible } = ctx;
+  const namesOn = () => (typeof isNamesVisible === 'function' ? isNamesVisible() : true);
   const { SHIFT, lunchSpot, lunchPause, shiftStep } = shiftSpec;
   const ARRIVE = SHIFT.ARRIVE;
   const DEPART = SHIFT.DEPART;
@@ -127,6 +128,7 @@ export function createShift(ctx) {
         ad.walker.visible = true;
         ad.walker.position.set(DOOR.x, doorY, DOOR.z);
         ad.sittingChar.visible = false;
+        if (ad.label) ad.label.visible = namesOn();
         // Pulang ke mejanya masing-masing — WAJIB set walkTarget: tanpa ini
         // walking_back memakai target lama (pintu keluar/kafe) → agent tidak
         // pernah jalan dari pintu, langsung duduk / lari ke tempat salah.
@@ -144,6 +146,7 @@ export function createShift(ctx) {
         ad.walker.visible = true;
         ad.walker.position.set(DOOR.x, doorY, DOOR.z);
         ad.sittingChar.visible = false;
+        if (ad.label) ad.label.visible = namesOn();
         ad.walkTarget = { x: ad.home.x, z: ad.home.z };
         ad._route = null;
         ad.resetStride = true;
@@ -186,13 +189,15 @@ export function createShift(ctx) {
   }
   function nightfall() {
     agentData.forEach((ad, i) => {
-      if (i === 0 || ad.state === 'offsite') return;
+      if (i === 0) return;
       ad.sittingChar.visible = false; ad.walker.visible = false; ad.state = 'offsite';
+      if (ad.label) ad.label.visible = false;
     });
   }
   function dawn() {
     agentData.forEach((ad) => {
       ad.sittingChar.visible = true; ad.walker.visible = false; ad.state = 'sitting';
+      if (ad.label) ad.label.visible = namesOn();
       ad.timer = 4 + rng.r(0, 8);
     });
   }
@@ -201,6 +206,7 @@ export function createShift(ctx) {
     agentData.forEach((ad) => {
       if (ad.state === 'offsite') {
         ad.sittingChar.visible = true; ad.walker.visible = false; ad.state = 'sitting';
+        if (ad.label) ad.label.visible = namesOn();
         ad.timer = 4 + rng.r(0, 8);
       }
     });

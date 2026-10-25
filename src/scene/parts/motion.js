@@ -184,6 +184,7 @@ export function createMotion(ctx) {
       const { d } = dist2(ad.walker.position, ad.walkTarget);
       if (d < 0.5) {
         ad.walker.visible = false; ad.state = 'offsite';
+        if (ad.label) ad.label.visible = false;
         const deskY = (ad.home && Number.isFinite(ad.home.y)) ? ad.home.y : floorElevationAt(ad.home.z);
         const u = ad.label.userData || (ad.label.userData = {});
         u.baseY = deskY + 2.45; u.baseX = ad.home.x; u.antiY = 0; u.antiX = 0;

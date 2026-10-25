@@ -96,6 +96,7 @@ function stubAgent(i) {
     state: i === 0 ? 'sitting' : 'offsite',
     walker: { visible: false, position: { x: 0, y: 0, z: 0, set(x, y, z) { this.x = x; this.y = y; this.z = z; } }, rotation: { y: 0 } },
     sittingChar: { visible: true },
+    label: { visible: true },
     walkTarget: null,
     _route: null,
     resetStride: false,
@@ -166,11 +167,14 @@ describe('createShift — mesin fase shift (eksekusi efek)', () => {
     expect(s.phase).toBe('night');
     // nightfall melewatkan i===0 → agent utama tetap sitting; agen duduk lain offsite
     expect(ctx.agentData[0].state).toBe('sitting');
+    expect(ctx.agentData[0].label.visible).toBe(true);
     expect(ctx.agentData[2].state).toBe('offsite');
     expect(ctx.agentData[2].sittingChar.visible).toBe(false);
     expect(ctx.agentData[2].walker.visible).toBe(false);
+    expect(ctx.agentData[2].label.visible).toBe(false);
     // offsite tetap offsite (tidak diubah)
     expect(ctx.agentData[3].state).toBe('offsite');
+    expect(ctx.agentData[3].label.visible).toBe(false);
     s.dispose();
   });
 
@@ -230,10 +234,12 @@ describe('createShift — mesin fase shift (eksekusi efek)', () => {
     const s = createShift(ctx);
     s.update(400); // night
     expect(ad.state).toBe('offsite');
+    expect(ad.label.visible).toBe(false);
     s.update(600); // 10:00 AM: dari night ke working_am
     expect(ad.state).toBe('sitting');
     expect(ad.sittingChar.visible).toBe(true);
     expect(ad.walker.visible).toBe(false);
+    expect(ad.label.visible).toBe(true);
     s.dispose();
   });
 
