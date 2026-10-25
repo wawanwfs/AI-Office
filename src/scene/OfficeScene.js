@@ -748,7 +748,7 @@ const addPlant=__furn.addPlant;
 // Builder murni di parts/reception.js (diuji unit); di sini tinggal injek konteks.
 // Footprint OBSTACLES didaftarkan di dalam builder (import obstacles.js).
 const __rc=createReception({ THREE, office, M, MB, drawResepsiLogo, makeLabel, buildChar });
-const rcLight=__rc.rcLight; const nxLabel=__rc.nxLabel;
+const rcLight=__rc.rcLight; const nxLabel=__rc.nxLabel; const nxChar=__rc.nexusChar;
 
 // ═══════════════════════════════════════════════════
 // WFS EXTRAS — kafe, server room, rak buku, water cooler, zona lantai
@@ -1128,6 +1128,19 @@ function animate(){
         }
       }
     });
+    if(nxChar){
+      nxChar.children.forEach(c=>{
+        if(!c.userData)return;
+        if(c.userData.isTypeHand){
+          c.position.y=c.userData.baseY+Math.sin(elapsed*8+c.userData.side*2.5)*0.007;
+        } else if(c.userData.isTorso){
+          c.position.y=c.userData.baseY+Math.sin(elapsed*1.6)*0.005;
+        } else if(c.userData.isHead){
+          c.rotation.y=Math.sin(elapsed*0.4)*0.03;
+          c.rotation.x=Math.sin(elapsed*1.6)*0.015;
+        }
+      });
+    }
     nxLabel.position.y=LABEL_Y-.5+fx.nx;
   }
 
@@ -1141,12 +1154,18 @@ function animate(){
     pG.attributes.position.needsUpdate=true;
   }
   // Labels (bobbing duduk di-throttle di blok ambient di atas)
-  // cincin emas mengikuti agent terpilih (juga saat berjalan/meeting)
+  // cincin emas mengikuti agent terpilih (juga saat berjalan/meeting) dgn tracking halus & rotasi elegan
   if(selRing&&selectedIdx>=0&&selectedIdx<agentData.length){
     const a=agentData[selectedIdx];
     const p=selAnchor(a);
     if(!p){selRing.visible=false}
-    else{selRing.position.set(p.x,0.03,p.z+p.off);selRing.visible=true}
+    else{
+      selRing.position.x += (p.x - selRing.position.x) * 0.25;
+      selRing.position.z += (p.z + p.off - selRing.position.z) * 0.25;
+      selRing.position.y = 0.03;
+      selRing.rotation.z += 0.012;
+      selRing.visible=true;
+    }
   }
   // Atap & lampu panel disembunyikan saat kamera di atas (agar isi kantor terlihat), dimunculkan dari sudut rendah
   if(window.__wallFade)window.__wallFade(camera.position);

@@ -309,7 +309,7 @@ export default function App() {
       <div ref={canvasRef} style={{ position: 'fixed', inset: 0, zIndex: 0 }} aria-hidden="true" />
       {!sceneReady && !sceneErr && <div className="scene-loading" role="status">Memuat ruangan…</div>}
       {sceneErr && <div className="scene-loading err" role="alert">Scene 3D tidak aktif — mode UI saja. Muat ulang halaman untuk mencoba lagi.</div>}
-      <div style={{ position: 'fixed', inset: 0, zIndex: 5, pointerEvents: 'none', background: 'radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(0,6,16,0.5) 100%)' }} />
+      <div className="vignette" aria-hidden="true" />
 
       <SkipLink />
       <Header />
