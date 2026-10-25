@@ -166,7 +166,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
     const bpos=boardMesh?boardMesh.position:new THREE.Vector3(-8.35,3.8,9.3);
     focusGoal={t:new THREE.Vector3(bpos.x,bpos.y,9.2),r:8.5};
     createBubble(bpos.x,bpos.y+2.15,7.8,'“WFS PROJECT Software House — membuka detail proyek…”','#10E5A0');
-    try { window.dispatchEvent(new CustomEvent('wfs-open-project-panel')); } catch(_e){}
+    try { window.dispatchEvent(new CustomEvent('wfs-open-project-panel')); } catch { /* panel listener opsional, abaikan error */ }
     selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null);
     return;
   }
