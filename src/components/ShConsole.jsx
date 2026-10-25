@@ -1,21 +1,21 @@
 // ShConsole — Console "WFS PROJECT AI Software House" (drawer kanan).
-// Mengonsumsi API nyata backend: /wfs-api/sh/overview & /wfs-api/projects.
-// Tiga tab: Overview (statistik), Projects (daftar + preview container), New Project.
+// Mengonsumsi API nyata backend: /wfs-api/sh/overview, projects, tasks, agents.
+// Tab: Overview | Projects | Tasks | Agents | Project Baru.
 import React, { useEffect, useState, useCallback } from 'react'
 import { api } from '../lib/api'
 
 const STYLE = {
   overlay: { position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,.45)' },
   drawer: {
-    position: 'fixed', top: 0, right: 0, height: '100%', width: 420, maxWidth: '92vw',
+    position: 'fixed', top: 0, right: 0, height: '100%', width: 460, maxWidth: '94vw',
     background: 'linear-gradient(180deg,#0c1220 0%,#0a0e18 100%)', color: '#d7e0f0',
     borderLeft: '1px solid #1e2a44', boxShadow: '-12px 0 40px rgba(0,0,0,.55)',
     display: 'flex', flexDirection: 'column', zIndex: 2001,
   },
   head: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid #1e2a44' },
   title: { margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: '.5px', color: '#f2f6ff' },
-  tabbar: { display: 'flex', gap: 6, padding: '10px 14px', borderBottom: '1px solid #1e2a44' },
-  tab: { flex: 1, padding: '8px 0', border: 0, borderRadius: 8, background: '#141c30', color: '#9fb0d0', cursor: 'pointer', fontWeight: 600 },
+  tabbar: { display: 'flex', gap: 4, padding: '10px 12px', borderBottom: '1px solid #1e2a44', flexWrap: 'wrap' },
+  tab: { padding: '7px 10px', border: 0, borderRadius: 8, background: '#141c30', color: '#9fb0d0', cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   tabActive: { background: '#23324f', color: '#fff' },
   body: { flex: 1, overflowY: 'auto', padding: '14px 16px' },
   card: { background: '#111827', border: '1px solid #1e2a44', borderRadius: 12, padding: 14, marginBottom: 10 },
@@ -24,20 +24,29 @@ const STYLE = {
   v: { fontWeight: 700, fontSize: 16, color: '#eaf1ff' },
   row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '10px 0', borderBottom: '1px dashed #1b2944' },
   btn: { background: '#23324f', border: 0, color: '#fff', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', fontWeight: 600 },
+  btnGhost: { background: '#1a2340', border: 0, color: '#c5d2ec', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', fontSize: 12 },
   input: { width: '100%', background: '#0d1526', border: '1px solid #23324f', color: '#eaf1ff', borderRadius: 8, padding: '10px 12px', marginBottom: 10, boxSizing: 'border-box' },
+  select: { width: '100%', background: '#0d1526', border: '1px solid #23324f', color: '#eaf1ff', borderRadius: 8, padding: '10px', marginBottom: 10 },
   tag: { fontSize: 11, padding: '2px 8px', borderRadius: 99, background: '#1e2a44', color: '#aebfe0', whiteSpace: 'nowrap' },
   err: { color: '#ff8080', fontSize: 13, padding: 8 },
   logLine: { fontSize: 12, color: '#9fb0d0', borderBottom: '1px dashed #18233c', padding: '6px 0' },
 }
 
+const ROLES = ['backend', 'frontend', 'pm', 'design', 'qa', 'devops', 'research', 'content', 'security']
+
 export default function ShConsole({ show, onClose }) {
   const [tab, setTab] = useState('overview')
   const [ov, setOv] = useState(null)
   const [projects, setProjects] = useState([])
+  const [tasks, setTasks] = useState([])
+  const [agents, setAgents] = useState([])
   const [err, setErr] = useState('')
   const [busy, setBusy] = useState(false)
   const [name, setName] = useState('')
   const [brief, setBrief] = useState('')
+  const [tTitle, setTTitle] = useState('')
+  const [tRole, setTRole] = useState('backend')
+  const [tPrompt, setTPrompt] = useState('')
 
   const loadOverview = useCallback(async () => {
     try { setOv(await api('sh/overview')); setErr('') } catch (e) { setErr(e.message) }
@@ -45,21 +54,43 @@ export default function ShConsole({ show, onClose }) {
   const loadProjects = useCallback(async () => {
     try { const d = await api('projects'); setProjects(d.projects || d || []); setErr('') } catch (e) { setErr(e.message) }
   }, [])
+  const loadTasks = useCallback(async () => {
+    try { const d = await api('tasks'); setTasks(d.tasks || []); setErr('') } catch (e) { setErr(e.message) }
+  }, [])
+  const loadAgents = useCallback(async () => {
+    try { const d = await api('agents'); setAgents(Array.isArray(d) ? d : []); setErr('') } catch (e) { setErr(e.message) }
+  }, [])
 
   useEffect(() => {
     if (!show) return
     if (tab === 'overview') loadOverview()
-    if (tab === 'projects') loadProjects()
-  }, [show, tab, loadOverview, loadProjects])
+    else if (tab === 'projects') loadProjects()
+    else if (tab === 'tasks') loadTasks()
+    else if (tab === 'agents') loadAgents()
+  }, [show, tab, loadOverview, loadProjects, loadTasks, loadAgents])
 
   const create = async () => {
     if (!name.trim() || !brief.trim()) { setErr('Nama dan brief wajib diisi'); return }
     setBusy(true); setErr('')
     try {
       await api('projects', { method: 'POST', body: { name: name.trim(), brief: brief.trim() } })
-      setName(''); setBrief('')
-      await loadProjects(); setTab('projects')
+      setName(''); setBrief(''); await loadProjects(); setTab('projects')
     } catch (e) { setErr(e.message) } finally { setBusy(false) }
+  }
+
+  const createTask = async () => {
+    if (!tTitle.trim()) { setErr('Judul task wajib diisi'); return }
+    setBusy(true); setErr('')
+    try {
+      await api('tasks', { method: 'POST', body: { title: tTitle.trim(), role: tRole, prompt: tPrompt.trim() } })
+      setTTitle(''); setTPrompt(''); await loadTasks()
+    } catch (e) { setErr(e.message) } finally { setBusy(false) }
+  }
+
+  const runTask = async (tid) => {
+    setErr('')
+    try { await api('tasks/' + tid + '/run', { method: 'POST', body: {} }); await loadTasks() }
+    catch (e) { setErr(e.message) }
   }
 
   if (!show) return null
@@ -72,14 +103,60 @@ export default function ShConsole({ show, onClose }) {
           <button className="ibtn" onClick={onClose} aria-label="Tutup konsol" title="Tutup">✕</button>
         </div>
         <div style={STYLE.tabbar}>
-          {[['overview', 'Overview'], ['projects', 'Projects'], ['new', 'Project Baru']].map(([k, label]) => (
-            <button key={k} style={{ ...STYLE.tab, ...(tab === k ? STYLE.tabActive : {}) }} onClick={() => setTab(k)}>{label}</button>
+          {[['overview', 'Overview'], ['projects', 'Projects'], ['tasks', 'Tasks'], ['agents', 'Agents'], ['new', 'Project Baru']].map(([k, label]) => (
+            <button key={k} aria-label={'Tab ' + label} style={{ ...STYLE.tab, ...(tab === k ? STYLE.tabActive : {}) }} onClick={() => setTab(k)}>{label}</button>
           ))}
         </div>
         <div style={STYLE.body}>
           {err && <div style={STYLE.err}>⚠ {err}</div>}
           {tab === 'overview' && <Overview ov={ov} />}
           {tab === 'projects' && <Projects projects={projects} onRefresh={loadProjects} />}
+          {tab === 'tasks' && (
+            <div>
+              <div style={STYLE.card}>
+                <div style={{ fontWeight: 700, marginBottom: 10 }}>Task baru</div>
+                <input style={STYLE.input} placeholder="Judul task (mis. Buat komponen Login)" aria-label="Judul task" value={tTitle} onChange={(e) => setTTitle(e.target.value)} />
+                <select style={STYLE.select} aria-label="Role" value={tRole} onChange={(e) => setTRole(e.target.value)}>
+                  {ROLES.map((r) => <option key={r} value={r}>{r}</option>)}
+                </select>
+                <textarea style={{ ...STYLE.input, minHeight: 70, resize: 'vertical' }} placeholder="Prompt / instruksi detail (opsional)…" aria-label="Prompt task" value={tPrompt} onChange={(e) => setTPrompt(e.target.value)} />
+                <button style={STYLE.btn} onClick={createTask} disabled={busy}>{busy ? 'Menyimpan…' : 'Tambah task'}</button>
+              </div>
+              <div style={STYLE.card}>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>Daftar task ({tasks.length})</div>
+                {tasks.length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>Belum ada task.</div>}
+                {tasks.map((t) => (
+                  <div key={t.id} style={STYLE.row}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: '#eaf1ff' }}>#{t.id} {t.title}</div>
+                      <div style={{ fontSize: 12, color: '#8fa2c4' }}>role: {t.role || '—'} · agent: {t.agent_id || '—'}</div>
+                    </div>
+                    <span style={STYLE.tag}>{t.status}</span>
+                    {(t.status === 'pending' || t.status === 'failed' || t.status === 'review') && (
+                      <button style={STYLE.btnGhost} onClick={() => runTask(t.id)}>Jalankan</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+          {tab === 'agents' && (
+            <div>
+              <div style={STYLE.card}>
+                <div style={{ fontWeight: 700, marginBottom: 8 }}>Agents ({agents.length})</div>
+                {agents.length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>Belum ada data agent.</div>}
+                {agents.map((a) => (
+                  <div key={a.id} style={STYLE.row}>
+                    <div style={{ flex: 1 }}>
+                      <div style={{ color: '#eaf1ff' }}>{a.name || a.id}</div>
+                      <div style={{ fontSize: 12, color: '#8fa2c4' }}>{a.role} · Lantai {a.floor || '—'} · {a.model || '—'}</div>
+                    </div>
+                    <span style={STYLE.tag}>{a.status || 'idle'}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           {tab === 'new' && (
             <div>
               <input style={STYLE.input} placeholder="Nama project (mis. Landing Page Agen)" aria-label="Nama project" value={name} onChange={(e) => setName(e.target.value)} />
@@ -97,7 +174,7 @@ function Overview({ ov }) {
   if (!ov) return <p style={{ color: '#8fa2c4' }}>Memuat statistik…</p>
   const stats = [
     ['Projects', ov.projects], ['Task total', ov.tasks],
-    ['Agents', ov.agents], ['Subtask jalan', ov.running_subtasks], ['Log event', ov.total_logs],
+    ['Agent total', ov.agents], ['Subtask jalan', ov.running_subtasks], ['Log event', ov.total_logs],
   ]
   return (
     <div>
