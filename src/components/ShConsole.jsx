@@ -242,15 +242,22 @@ export default function ShConsole({ show, onClose }) {
                       <button style={STYLE.btnGhost} onClick={() => sbAction(wsId, 'stop')}>⏹ Stop</button>
                       <button style={STYLE.btnGhost} onClick={() => sbAction(wsId, 'start')}>▶ Start</button>
                     </div>
-                    {entries.map((en) => (
-                      <div key={en.name} style={{ ...STYLE.row, cursor: 'pointer' }}
-                        onClick={() => en.type === 'dir'
-                          ? loadWsFiles(wsId, (wsPath ? wsPath + '/' : '') + en.name)
-                          : openWsFile(wsId, (wsPath ? wsPath + '/' : '') + en.name)}>
-                        <span>{en.type === 'dir' ? '📁 ' : '📄 '}{en.name}</span>
-                        {en.size != null && <span style={STYLE.tag}>{en.size} B</span>}
-                      </div>
-                    ))}
+                    {entries.map((en) => {
+                      const openEntry = () => en.type === 'dir'
+                        ? loadWsFiles(wsId, (wsPath ? wsPath + '/' : '') + en.name)
+                        : openWsFile(wsId, (wsPath ? wsPath + '/' : '') + en.name);
+                      return (
+                        <div key={en.name} style={{ ...STYLE.row, cursor: 'pointer' }}
+                          role="button" tabIndex={0}
+                          onClick={openEntry}
+                          onKeyDown={(e) => {
+                            if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEntry(); }
+                          }}>
+                          <span>{en.type === 'dir' ? '📁 ' : '📄 '}{en.name}</span>
+                          {en.size != null && <span style={STYLE.tag}>{en.size} B</span>}
+                        </div>
+                      );
+                    })}
                     {entries.length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>(folder kosong)</div>}
                     {fileView && (
                       <pre style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 220, overflow: 'auto', fontSize: 12, marginTop: 8 }}

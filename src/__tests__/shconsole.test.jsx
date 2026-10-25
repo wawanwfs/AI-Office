@@ -126,6 +126,27 @@ describe('ShConsole — konsol software house', () => {
     await waitFor(() => expect(acts).toContain('restart'))
   })
 
+  it('tab Workspace: entri file dapat diakses keyboard (Enter/Space + peran button)', async () => {
+    stubFetch({
+      '/wfs-api/sh/overview': OV,
+      '/wfs-api/projects': PROJ_RESP,
+      '/wfs-api/projects/1/files': { path: '', entries: [{ name: 'src', type: 'dir' }, { name: 'Dockerfile', type: 'file', size: 120 }] },
+      '/wfs-api/projects/1/file?path=Dockerfile': { path: 'Dockerfile', content: 'FROM python:3.12-slim' },
+      '/wfs-api/projects/1/logs?lines=100': { logs: ['INFO line'] },
+      '/wfs-api/projects/1/git': { repo: false },
+    })
+    render(<ShConsole show onClose={() => {}} />)
+    clickTab('Workspace')
+    expect(await screen.findByLabelText('Pilih project')).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Pilih project'), { target: { value: '1' } })
+    expect(await screen.findByText(/Dockerfile/)).toBeTruthy()
+    // baris file ber-peran tombol & fokusable (a11y keyboard)
+    const row = screen.getByRole('button', { name: /Dockerfile/ })
+    expect(row.getAttribute('tabindex')).toBe('0')
+    fireEvent.keyDown(row, { key: 'Enter' })
+    expect(await screen.findByText(/FROM python:3.12-slim/)).toBeTruthy()
+  })
+
   it('tab Approvals: list pending + putuskan', async () => {
     const calls = []
     stubFetch({
