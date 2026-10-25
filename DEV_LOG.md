@@ -2361,3 +2361,11 @@
 - e2e visual (CDP chrome headless + Xvfb :99 — catatan infra: DISPLAY=:0 mati sehingga shot.sh lama <500KB; WebGL butuh X server hidup): scene hidup (agents 14, __wallState true, __lastWbDrawAt terisi, screenshot 566 KB); zoom ke whiteboard (ck_wbB.png 1.25 MB) terbaca jelas: **"WFS SPRINT · live · dibantuin.com · selesai 23/23 (100%) · status on track · bar hijau penuh"** — agenda statis lama tidak ada lagi.
 - Sampingan infra: disk penuh 99% sempat membuat WebGL gagal mount → docker builder prune (1.38 GB) + journalctl vacuum (479 MB) → disk 95%, scene normal kembali.
 - Sisa backlog: verifikasi subjektif suara (butuh telinga manusia).
+
+## 2026-10-25 11:40 WIB — Siklus 55: poster dinding kini di 4 dinding (3 poster baru dinding z) + renderer poster digeneralisasi
+- Pilihan: audit visual — poster slogan hanya menempel di 2 dinding samping (x ±11.4); dinding depan & belakang kosong, padahal area itu paling sering tampil di kamera default.
+- Perubahan: poster_spec.js — +3 poster {wall:'z-'} 'FOKUS' (x=0) & {wall:'z+'} 'SELESAIKAN'/'ANTAR TEPAT WAKTU' (x=±4, z=±9.9); fungsi baru posterWall(p), posterFacingFor(p), posterOffsetFor(p) (poster lama tanpa `wall` → perilaku dinding samping tak berubah, API posterFacing/posterOffset dipertahankan). furniture.js: call-site pakai versi For(p). Test: poster_spec +5 test baru, furniture_runtime diadaptasi (5→8 plane, rotasi dinding z diuji).
+- Bukti: build OK; vitest **1152/1152 (102 file)** (+4 net); eslint 0 error; cp dist→~/wfs-hq OK; e2e_err 200 (index-BASs9yvG.js).
+- Verifikasi visual (CDP chrome + Xvfb :99): scene hidup (agents 14, __dbg {t:693,ph:working}); screenshot CDP 506 KB; zoom: **poster "FOKUS" terbaca jelas di dinding belakang** antara banner WFS PROJECT. Shot.sh standalone kini hasilnya 237 KB + "Scene 3D tidak aktif" padahal via CDP scene OK — diduga chrome standalone gagal mount WebGL pada sesi ini (bukan regresi kode; dicatat utk diselidiki).
+- Sampingan infra: bersih-bersih disk (/tmp chrome-dbg dsb ~350 MB, apt cache) → disk 94%.
+- Sisa backlog: verifikasi subjektif suara (butuh telinga manusia); selidiki kenapa chrome standalone shot gagal WebGL.
