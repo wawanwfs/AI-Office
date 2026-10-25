@@ -114,8 +114,8 @@ describe('SettingsModal component', () => {
     expect(btn50.getAttribute('aria-pressed')).toBe('false')
   })
 
-  it('tombol mute toggle memanggil onToggleMute', () => {
-    render(
+  it('tombol mute toggle memanggil onToggleMute dan mencerminkan state via aria-pressed', () => {
+    const { rerender } = render(
       <SettingsModal
         show={true}
         onClose={mockClose}
@@ -125,8 +125,22 @@ describe('SettingsModal component', () => {
       />
     )
     const muteBtn = screen.getByRole('button', { name: 'Bisukan suara' })
+    expect(muteBtn.getAttribute('aria-pressed')).toBe('false')
     fireEvent.click(muteBtn)
     expect(mockToggleMute).toHaveBeenCalled()
+
+    // saat muted = true, label berubah jadi aksi nyalakan + aria-pressed true
+    rerender(
+      <SettingsModal
+        show={true}
+        onClose={mockClose}
+        sceneRef={{ current: mockScene }}
+        muted={true}
+        onToggleMute={mockToggleMute}
+      />
+    )
+    const unmuteBtn = screen.getByRole('button', { name: 'Nyalakan suara' })
+    expect(unmuteBtn.getAttribute('aria-pressed')).toBe('true')
   })
 
   it('slider dan tombol uji dinonaktifkan saat muted = true', () => {

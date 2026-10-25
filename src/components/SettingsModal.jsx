@@ -192,6 +192,7 @@ export default function SettingsModal({
               className="btn"
               onClick={onToggleMute}
               style={{ fontSize: 12, padding: '4px 10px', height: 'auto', minHeight: 28 }}
+              aria-pressed={muted}
               aria-label={muted ? 'Nyalakan suara' : 'Bisukan suara'}
             >
               {muted ? 'Nyalakan' : 'Bisukan'}
