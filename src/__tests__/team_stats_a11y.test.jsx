@@ -99,7 +99,7 @@ const TASKS = [
 const RES = {
   load: '0.42', ram_mb: 2048,
   containers: [
-    { name: 'saas-dibantuin-backend', cpu: '1%', mem: '80MB' },
+    { name: 'wfs-sandbox-backend', cpu: '1%', mem: '80MB' },
     { name: 'wfs-agent-be1', cpu: '2%', mem: '120MB' },
   ],
 }

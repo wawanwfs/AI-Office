@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-// Unit test ProjectPanel (panel 🚀 Proyek dibantuin.com) — komponen UI tanpa test
+// Unit test ProjectPanel (panel 🚀 Proyek WFS PROJECT) — komponen UI tanpa test
 // langsung sebelumnya (hanya disinggung komentar di dialog_a11y). Kode komponen
 // TIDAK diubah; fetch di-stub penuh lewat vi.stubGlobal.
 import React from 'react'

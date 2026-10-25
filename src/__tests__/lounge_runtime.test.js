@@ -57,8 +57,8 @@ let origCreate
 beforeEach(() => {
   canvases = []
   origCreate = stubCreateElement()
-  window.__tvData = { project: 'dibantuin.com', done: 23, total: 30 }
-  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ project: 'dibantuin.com', done: 23, total: 30 }) }))
+  window.__tvData = { project: 'WFS PROJECT', done: 23, total: 30 }
+  vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: true, json: async () => ({ project: 'WFS PROJECT', done: 23, total: 30 }) }))
   vi.useFakeTimers()
 })
 afterEach(() => {
@@ -178,7 +178,7 @@ describe('createLounge — welcome & lounge kantor 3D', () => {
     const { refs } = await build()
     expect(refs.tvCanvas.width).toBe(256)
     expect(refs.tvCanvas.height).toBe(144)
-    expect(refs.tvCanvas.getContext().fillStyle).toBe('tv:dibantuin.com') // drawTvDashboard dipanggil dgn __tvData
+    expect(refs.tvCanvas.getContext().fillStyle).toBe('tv:WFS PROJECT') // drawTvDashboard dipanggil dgn __tvData
     expect(refs.tvTex.needsUpdate).toBe(false) // belum ada refresh pasca-initial draw
     expect(refs.tvScreen.geometry.args).toEqual([1.2, .68])
     expect(refs.tvScreen.rotation.y).toBe(-Math.PI / 2)
@@ -189,7 +189,7 @@ describe('createLounge — welcome & lounge kantor 3D', () => {
     const { refs } = await build()
     await vi.runOnlyPendingTimersAsync()
     expect(fetch).toHaveBeenCalledWith('/wfs-project')
-    expect(window.__tvData.project).toBe('dibantuin.com')
+    expect(window.__tvData.project).toBe('WFS PROJECT')
     expect(window.__tvData.at).toBeGreaterThan(0)
     // interval berikutnya memicu fetch lagi
     const calls = fetch.mock.calls.length

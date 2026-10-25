@@ -1,4 +1,4 @@
-// Papan proyek nyata dibantuin.com di dinding kantor.
+// Papan proyek nyata WFS PROJECT di dinding kantor.
 // Menggantikan kanban statis: kartu diambil dari data task engine sungguhan via /wfs-project,
 // diperbarui otomatis setiap 60 detik. Jika fetch gagal → fallback ke data terakhir.
 // Modul murni-canvas; dipasang di OfficeScene dengan satu pemanggilan.

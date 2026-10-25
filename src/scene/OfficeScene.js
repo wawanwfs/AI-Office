@@ -944,7 +944,7 @@ const __leds=__server.leds;
 const __shelfObj=createBookshelf({ THREE, office, M, rng, blobMat: __blobMat });
 
 
-// Papan PROYEK NYATA dibantuin.com — kartu dari task engine sungguhan (parts/projectboard.js)
+// Papan PROYEK NYATA WFS PROJECT — kartu dari task engine sungguhan (parts/projectboard.js)
 window.__projectBoard = createProjectBoard(office, THREE);
 if(window.__projectBoard&&window.__projectBoard.mesh){
   window.__projectBoard.mesh.position.y=2.6+1.20;

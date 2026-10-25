@@ -112,7 +112,7 @@ export default function TeamStats() {
                 <div style={{ color: '#10E5A0', fontWeight: 700, marginBottom: 4 }}>🖥 HOST: load {res.load} · RAM {res.ram_mb} MB</div>
                 {(res.containers || []).slice(0, 9).map(c => (
                   <div key={c.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '1px 0', color: 'var(--text-tertiary)' }}>
-                    <span>{c.name.replace('saas-dibantuin-', '').replace('wfs-agent-', 'sbx-')}</span>
+                    <span>{c.name.replace('saas-dibantuin-', '').replace('wfs-sandbox-', '').replace('wfs-agent-', 'sbx-')}</span>
                     <span style={{ color: '#fff' }}>{c.cpu} · {c.mem}</span>
                   </div>
                 ))}
