@@ -2500,3 +2500,40 @@
     - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 23/23 selesai, 100%, 14 agents aktif).
     - `scripts/e2e_shot.py`: Screenshot visual **582.245 bytes** (>500 KB, WebGL hidup, agents: 14, E2E_VISUAL: OK).
 - Sisa backlog: verifikasi subjektif audio web-audio.
+
+## 2026-10-25 17:20 WIB — Siklus 63: Modernisasi SVG close button modal dialog (ActivityLog, TaskModal, OverlayHelp), persistensi koordinat 3D window.__zoneBase (x, y, z), clamp 3D guard zona & sinkronisasi konvergensi RAF harness e2e_zone_multi
+
+- Pilihan: penuntasan konsistensi visual modal dialog, integritas 3D base coordinate zona, dan determinisme pengujian viewport:
+  1) Modernisasi UI modal dialog tersisa: `ActivityLog`, `TaskModal`, dan `OverlayHelp` sebelumnya belum memiliki tombol tutup SVG pojok kanan atas `IconClose` seperti panel modal lainnya (`TaskBoard`, `ProjectPanel`, dll.), menyisakan inkonsistensi UX saat menutup modal dialog di desktop.
+  2) Penuntasan persistensi posisi dasar label zona di `window.__zoneBase`: sebelumnya hanya mencatat `{y, x}` tanpa sumbu `z`, sehingga saat reset label zona atau evaluasi kamera top-down, posisi `z` tidak ter-reset secara deterministik.
+  3) Harmonisasi clamp 3D pada `zoneViewportGuard`: memastikan batas pergeseran `MAX_ZONE_DISP_Z = 2.0` konsisten dengan sumbu X dan Y (anti run-away) serta `resetZoneBaseOffsets` memulihkan sumbu Z dari `base.z` / `userData.baseZ`.
+  4) Harness `scripts/e2e_zone_multi.py`: sinkronisasi preset top (radius 56m) dan injeksi pompa `requestAnimationFrame` untuk menjamin konvergensi guard pada lingkungan headless Chromium tanpa desync frame.
+- Perubahan:
+  - `src/components/ActivityLog.jsx`, `src/components/OverlayHelp.jsx`, `src/components/TaskModal.jsx`: pasang tombol tutup modern `<button className="x"><IconClose size={16}/><span className="sr-only">✕</span></button>` dengan tooltip `(Esc)` dan aksesibilitas screen reader.
+  - `src/index.css`: tambahkan selector `.modal { position: relative; }` dan `.modal .x` (position absolute, border radius, hover transition halus).
+  - `src/scene/parts/flooring.js`: simpan `{y, x, z}` lengkap pada `window.__zoneBase`.
+  - `src/scene/parts/label_overlap.js`:
+    - `resetZoneBaseOffsets`: dukung restorasi `base.z` dan sinkronisasi `userData.baseZ`.
+    - `zoneViewportGuard`: clamp `MAX_ZONE_DISP_Z = 2.0` simetris dengan X dan Y.
+  - `scripts/e2e_zone_multi.py`:
+    - Perbarui preset `top` ke radius 56m sesuai preset `OfficeScene.js`.
+    - Injeksi pompa frame ganda `requestAnimationFrame` sebelum proyeksi evaluasi.
+    - Sinkronkan restorasi `z.position.z` di script evaluasi.
+  - Unit test:
+    - `src/__tests__/flooring_runtime.test.js`: verifikasi simpanan `base.z` pada `window.__zoneBase`.
+    - `src/__tests__/reset_zone_base_offsets.test.js`: +2 test restorasi `base.z` dan fallback `userData.baseZ`.
+    - `src/__tests__/zone_viewport_guard.test.js`: verifikasi clamp `MAX_ZONE_DISP_Z`.
+    - `src/__tests__/remaining_components.test.jsx`: +2 test tombol tutup `IconClose` pada `OverlayHelp` dan `ActivityLog`.
+    - `src/__tests__/ui_components.test.jsx`: +1 test tombol tutup `IconClose` pada `TaskModal`.
+- Bukti terukur:
+  - Vitest: **1188/1188 (107 file)** (+3 test baru, 0 fail).
+  - ESLint: 0 warning, 0 error (`npx eslint .`).
+  - Build: Berhasil (exit 0, 35 precache entries 1587.93 KiB, chunk `OfficeScene-ogBCZmtX.js` 846.09 KB / gzip 227.44 KB, `index-BeUDGhE2.js` 265.61 KB).
+  - Deploy: `dist/*` ter-deploy ke `~/wfs-hq/`, chunk lama dibersihkan.
+  - E2E & Servis:
+    - `e2e_err.py`: HTTP 200 (index & `index-BeUDGhE2.js`, 0 "Scene init failed", PID 3813725).
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 23/23 selesai, 100%, 14 agents aktif).
+    - `scripts/e2e_zone_multi.py`: **E2E_ZONE_MULTI OK** (iso, front, top: 0 OFFSCREEN, 0 pelanggaran margin).
+    - `scripts/e2e_shot.py`: Screenshot visual **583.870 bytes** (>500 KB, WebGL hidup, agents: 14, E2E_VISUAL: OK).
+    - `shot.sh` (XDISP=:99): **587.471 bytes**.
+- Sisa backlog: verifikasi subjektif audio web-audio.

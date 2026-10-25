@@ -61,7 +61,9 @@ SET_CAM = """(function(){
 def run_view(cmd, name, theta, phi, radius):
     r = cmd("Runtime.evaluate", expression=SET_CAM % (theta, phi, radius), returnByValue=True)
     val = r.get("result", {}).get("result", {}).get("value")
-    time.sleep(3)  # beri guard beberapa frame utk konvergen
+    # Pompa frame animasi agar guard konvergen (di chrome-headless-shell RAF melambat tanpa pemicu)
+    cmd("Runtime.evaluate", expression="new Promise(r => requestAnimationFrame(() => requestAnimationFrame(r)))", awaitPromise=True)
+    time.sleep(1)
     r = cmd("Runtime.evaluate", expression=EXPR, returnByValue=True)
     res = r.get("result", {}).get("result", {})
     if "value" not in res:
