@@ -1413,7 +1413,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       else{
         const asp=container.clientWidth/Math.max(1,container.clientHeight);
         const homeMobile=asp<0.6?34:asp<0.8?36:null;
-        sph.radius=homeRadius||homeMobile||Math.max(24,Math.min(60,sph.radius));
+        sph.radius=(name==='top')?(asp<1.2?58:50):(homeRadius||homeMobile||Math.max(24,Math.min(60,sph.radius)));
       }
       updCam(); return true;
     },

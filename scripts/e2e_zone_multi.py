@@ -24,7 +24,7 @@ CHROME = g.get("CHROME") or "/usr/bin/google-chrome"
 PRESETS = {
     "iso":   (2.446, 1.0,  40),
     "front": (0.0,   1.2,  40),
-    "top":   (2.446, 0.35, 40),
+    "top":   (2.446, 0.35, 50),
 }
 
 EXPR = """
@@ -53,6 +53,7 @@ LOCK_JS = "try{localStorage.setItem('wfs_autorot','0')}catch(e){}"
 SET_CAM = """(function(){
   const c=window.__cam; if(!c||!c.sph) return 'no cam';
   c.sph.theta=%f; c.sph.phi=%f; c.sph.radius=%f; c.upd();
+  if(window.__zoneLabels)window.__zoneLabels.forEach(z=>{const b=window.__zoneBase?.get(z);if(b){z.position.y=b.y;z.position.x=b.x;z.userData.antiY=0;z.userData.antiX=0;}});
   return 'ok';
 })()"""
 

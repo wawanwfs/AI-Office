@@ -113,9 +113,22 @@ export function zoneViewportGuard(zoneLabels, deps) {
     else if (fx - zw / 2 < -(W / 2 - PAD_X_ZONE)) cx = -(W / 2 - PAD_X_ZONE) + zw / 2 - fx;
     if (corr || cx) {
       const wpp2 = deps.worldPerPx(dz, camera.fov, H);
-      zt.position.y += corr * wpp2; zt.position.x += cx * wpp2;
-      deps.accumulate(zt, corr * wpp2, cx * wpp2);
-      fixed++;
+      const zu = zt.userData || (zt.userData = {});
+      if (zu.baseY === undefined) zu.baseY = zt.position.y;
+      if (zu.baseX === undefined) zu.baseX = zt.position.x;
+      const MAX_ZONE_DISP_Y = 2.0, MAX_ZONE_DISP_X = 2.0;
+      const targetY = zt.position.y + corr * wpp2;
+      const clampedY = Math.max(zu.baseY - MAX_ZONE_DISP_Y, Math.min(zu.baseY + MAX_ZONE_DISP_Y, targetY));
+      const targetX = zt.position.x + cx * wpp2;
+      const clampedX = Math.max(zu.baseX - MAX_ZONE_DISP_X, Math.min(zu.baseX + MAX_ZONE_DISP_X, targetX));
+      const actDy = clampedY - zt.position.y;
+      const actDx = clampedX - zt.position.x;
+      if (Math.abs(actDy) > 1e-4 || Math.abs(actDx) > 1e-4) {
+        zt.position.y = clampedY;
+        zt.position.x = clampedX;
+        deps.accumulate(zt, actDy, actDx);
+        fixed++;
+      }
     }
   });
   return fixed;
@@ -291,7 +304,10 @@ export function resetZoneBaseOffsets(zones) {
   zones.forEach(z => {
     if (!z || !z.ref) return;
     z.ref.userData.antiY = 0; z.ref.userData.antiX = 0;
-    if (z.base) { z.ref.position.y = z.base.y; z.ref.position.x = z.base.x; }
+    if (z.base) {
+      z.ref.position.y = z.base.y; z.ref.position.x = z.base.x;
+      z.ref.userData.baseY = z.base.y; z.ref.userData.baseX = z.base.x;
+    }
     if (z.visible !== undefined) z.ref.visible = z.visible;
     n++;
   });
