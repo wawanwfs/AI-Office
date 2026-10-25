@@ -256,8 +256,8 @@ describe('ActionMenu', () => {
     isAutoRotate: () => false,
     teamAction: vi.fn(),
   })
-  // ActionMenu punya state internal — menu dibuka dengan klik tombol ⚡ Aksi
-  const openMenu = () => fireEvent.click(screen.getByRole('button', { name: '⚡Aksi' }))
+  // ActionMenu punya state internal — menu dibuka dengan klik tombol Aksi
+  const openMenu = () => fireEvent.click(screen.getByRole('button', { name: 'Aksi' }))
   it('expose amApi via actionMenuRef; teamAction dipanggil lalu menu tertutup', () => {
     const scene = mkScene()
     const ref = { current: null }
