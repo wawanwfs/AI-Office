@@ -52,6 +52,7 @@ export default function App() {
     try { return typeof localStorage !== 'undefined' && localStorage.getItem('wfs_audio_muted') === '1' } catch { return false }
   })
   const [selectedAgent, setSelectedAgent] = useState(null)
+  const [currentFloor, setCurrentFloor] = useState(1)
   const handleCloseInspector = useCallback(() => {
     setSelectedAgent(null)
     const s = sceneRef.current
@@ -163,7 +164,10 @@ export default function App() {
           onTimeUpdate: (min) => setTime(min),
           onStatusUpdate: () => {},
           onMeetingChange: (m) => setInMeeting(m),
-          onSelectAgent: (ag) => setSelectedAgent(ag),
+          onSelectAgent: (ag) => {
+            setSelectedAgent(ag)
+            if (ag && ag.floor) setCurrentFloor(ag.floor)
+          },
         })
         setSceneReady(true)
         // sinkron state awal dari scene (mute, neon) saat scene (re)created —
@@ -259,6 +263,7 @@ export default function App() {
   }, [flash])
 
   const handleFloorSelect = (floorNum, floorId) => {
+    setCurrentFloor(floorNum)
     const s = sceneRef.current
     if (s && s.focusFloor) {
       s.focusFloor(floorNum)
@@ -338,7 +343,7 @@ export default function App() {
       <Header />
       <SysMeter />
       <Ticker />
-      <FloorNavigator onSelectFloor={handleFloorSelect} />
+      <FloorNavigator currentFloor={currentFloor} onSelectFloor={handleFloorSelect} />
 
       {inMeeting && <div className="meeting-badge" role="status"><div><i />Rapat berlangsung</div></div>}
 

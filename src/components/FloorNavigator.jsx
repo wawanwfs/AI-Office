@@ -4,37 +4,41 @@ const FLOORS = [
   {
     num: 1,
     id: 'l1',
-    name: 'L1 · Product',
-    roleLabel: 'Product & Strategy',
+    name: 'L1 · Ops & AI',
+    shortName: 'L1',
+    roleLabel: 'Datacenter, AI Lab & Tech Ops',
     color: '#F59E0B',
-    desc: 'PM · Solution Architect · UI/UX Designer',
-    agents: ['Sari', 'Wahyu FS', 'Maya']
+    desc: 'Bantuin AI, Budi, Andi, Rina, Trainer AI',
+    agents: ['Bantuin AI', 'Budi', 'Andi', 'Rina', 'Trainer AI']
   },
   {
     num: 2,
     id: 'l2',
     name: 'L2 · Engineering',
-    roleLabel: 'Engineering & Dev',
+    shortName: 'L2',
+    roleLabel: 'Core Engineering & Product Studio',
     color: '#00F0FF',
-    desc: 'Frontend · Backend · Database · DevOps',
-    agents: ['Andi', 'Budi', 'Rizky', 'Toni']
+    desc: 'Rizky, Dewi, Yoga, Lina, Integrator Bot',
+    agents: ['Rizky', 'Dewi', 'Yoga', 'Lina', 'Integrator Bot']
   },
   {
     num: 3,
     id: 'l3',
-    name: 'L3 · Quality',
-    roleLabel: 'Quality & Security',
+    name: 'L3 · Executive',
+    shortName: 'L3',
+    roleLabel: 'Executive Penthouse & Founder Suite',
     color: '#10E5A0',
-    desc: 'QA Automation · Code Review · Security · Docs',
-    agents: ['Rina', 'Dewi', 'SecBot', 'Lina']
+    desc: 'Wahyu FS (Founder), Maya, Toni, Sari, Support Human · Papan Proyek 3D',
+    agents: ['Wahyu FS', 'Maya', 'Toni', 'Sari', 'Support']
   }
 ]
 
 export default function FloorNavigator({ onSelectFloor, currentFloor = 1 }) {
-  const [activeFloor, setActiveFloor] = useState(currentFloor)
+  const [selectedFloor, setSelectedFloor] = useState(null)
+  const activeFloor = selectedFloor ?? currentFloor
 
   const handleFloorClick = (fl) => {
-    setActiveFloor(fl.num)
+    setSelectedFloor(fl.num)
     if (onSelectFloor) {
       onSelectFloor(fl.num, fl.id)
     }
@@ -45,52 +49,28 @@ export default function FloorNavigator({ onSelectFloor, currentFloor = 1 }) {
       className="floor-nav"
       role="navigation"
       aria-label="Navigasi Lantai Kantor WFS PROJECT"
-      style={{
-        position: 'fixed',
-        top: 64,
-        left: 18,
-        zIndex: 50,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: 6,
-        background: 'rgba(13, 21, 34, 0.78)',
-        backdropFilter: 'blur(16px)',
-        WebkitBackdropFilter: 'blur(16px)',
-        border: '1px solid rgba(255, 255, 255, 0.08)',
-        borderRadius: 14,
-        padding: '6px 8px',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.45)'
-      }}
     >
-      <div style={{ fontSize: 9.5, fontWeight: 700, color: 'var(--text-tertiary, #9aa3b5)', letterSpacing: 1.2, padding: '2px 6px', textTransform: 'uppercase' }}>
-        LANTAI KANTOR
+      <div className="floor-nav-label">
+        LANTAI
       </div>
-      <div style={{ display: 'flex', gap: 4 }}>
+      <div className="floor-nav-buttons">
         {FLOORS.map(fl => {
           const isActive = activeFloor === fl.num
           return (
             <button
               key={fl.num}
+              type="button"
+              className={`floor-nav-btn ${isActive ? 'active' : ''}`}
               onClick={() => handleFloorClick(fl)}
-              title={`${fl.roleLabel} — ${fl.desc}`}
+              title={`Level 0${fl.num}: ${fl.roleLabel}\nTim: ${fl.desc}`}
               aria-label={`Fokus ke ${fl.roleLabel}`}
               aria-pressed={isActive}
               style={{
-                background: isActive ? 'rgba(255, 255, 255, 0.12)' : 'rgba(255, 255, 255, 0.02)',
-                border: `1px solid ${isActive ? fl.color : 'rgba(255, 255, 255, 0.06)'}`,
-                color: isActive ? '#fff' : 'var(--text-secondary, #cbd5e1)',
-                padding: '5px 9px',
-                borderRadius: 8,
-                fontSize: 11.5,
-                fontWeight: isActive ? 700 : 500,
-                cursor: 'pointer',
-                transition: 'all 0.18s ease',
-                display: 'flex',
-                alignItems: 'center',
-                gap: 5
+                borderColor: isActive ? fl.color : undefined,
+                boxShadow: isActive ? `0 0 10px ${fl.color}40` : undefined
               }}
             >
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: fl.color }} />
+              <span className="floor-nav-dot" style={{ background: fl.color }} />
               <span>{fl.name}</span>
             </button>
           )

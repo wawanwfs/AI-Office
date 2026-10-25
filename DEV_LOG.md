@@ -1,3 +1,39 @@
+## 2026-10-26 02:05 WIB — Siklus 71: Presisi Navigasi Lantai Bertingkat (FloorNavigator Capsule), Eliminasi Overlap Ticker-HUD-Label, dan Elevasi Alami Balon Obrolan 3D
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Navigasi Lantai Bertingkat Autentik & Desain Kapsul Kaca (`src/components/FloorNavigator.jsx`, `src/index.css`):**
+     - Menyelaraskan pembagian peran dan nama lantai pada `FloorNavigator` sesuai plakat arsitektur fisik kantor 3D di `terraces.js`:
+       - **L1 · Ops & AI** (`#F59E0B`): *Datacenter, AI Lab & Tech Ops* (Bantuin AI, Budi, Andi, Rina, Trainer AI).
+       - **L2 · Engineering** (`#00F0FF`): *Core Engineering & Product Studio* (Rizky, Dewi, Yoga, Lina, Integrator Bot).
+       - **L3 · Executive** (`#10E5A0`): *Executive Penthouse & Founder Suite* (Wahyu FS, Maya, Toni, Sari, Support Human · Papan Proyek 3D).
+     - Menata ulang komponen dari inline layout 340px lebar menjadi kapsul horizontal anggun (`.floor-nav`, `.floor-nav-label`, `.floor-nav-buttons`, `.floor-nav-btn`, `.floor-nav-dot`) dengan lebar ringkas ~240px bertengger di bawah `.hud` (`top: 58px; left: 14px;`).
+     - Menyinkronkan status tombol aktif secara reaktif dengan prop `currentFloor` tanpa re-render cascaded, dan menghubungkannya dengan auto-deteksi lantai saat agen di Lantai 1, 2, atau 3 diklik (`App.jsx`).
+  2. **Eliminasi Tabrakan Visual Ticker, Header & Nameplate 3D (`src/index.css`, `src/scene/OfficeScene.js`):**
+     - Membatasi lebar pita pengumuman horizontal `.ticker` ke `min(720px, calc(100vw - 380px))` pada desktop, memberikan jarak aman >70px dari kontrol HUD / FloorNavigator di sisi kiri dan telemetri SysMeter di sisi kanan sehingga tidak terjadi tabrakan/tumpukan teks marquee.
+     - Memperluas toleransi dorongan ke bawah pada algoritma anti-overlap label (`cdy = Math.max(-1.2, Math.min(1.6, dy))` dari sebelumnya `-0.35`), memungkinkan nameplate agen di lantai atas (Maya, Toni, Sari) didorong secukupnya oleh `sweepClampRounds` agar tidak menusuk masuk ke header/ticker HTML 2D.
+     - Menyelaraskan titik koordinat target kamera `focusFloor` dan `setView` ke titik pusat meja kerja riil:
+       - L1: `(0, 0.5, -3.0)`, `r: 18`
+       - L2: `(0, 1.1, 1.5)`, `r: 19`
+       - L3: `(0, 1.8, 6.0)`, `r: 21`
+  3. **Elevasi Proporsional Balon Obrolan 3D & Relokasi Zona Lounge (`src/scene/OfficeScene.js`, `src/scene/parts/floor_zones.js`, `src/scene/parts/flooring.js`):**
+     - Menyesuaikan ketinggian anchor obrolan `createBubble` (click, autoTalk, convo, alert) dari `baseAy + 2.6` menjadi `baseAy + 1.3`, sehingga balon obrolan melayang anggun di ketinggian ~2.65m (tepat di atas kepala agen) dan tidak melambung 4-5 meter ke langit menutupi bilah navigasi.
+     - Memindahkan titik X zona `WELCOME & LOUNGE` dari `9.4` ke `8.6`, mencegah pemotongan teks label di tepi layar kiri pada sudut pandang isometrik.
+     - Memperbaiki elevasi patch lantai zona agar mengikuti level lantai masing-masing (`zoneFloorY + 0.015`).
+  4. **Pembaruan Pengujian (`src/__tests__/floor_navigator.test.jsx`):**
+     - Menambahkan pengujian verifikasi nama autentik 3 lantai dan reaktivitas sinkronisasi prop `currentFloor`.
+
+- **Bukti terukur:**
+  - **Vitest:** **1344/1344 passed (117 test file)** (+1 test baru, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint .`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1623.09 KiB; chunk `OfficeScene-0J1w7dfo.js` 857.64 KB / gzip 231.22 KB, `index-DV1BEDuV.js` 287.38 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, chunk usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-DV1BEDuV.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 14 agents aktif).
+    - `scripts/e2e_zone_multi.py`: **E2E_ZONE_MULTI OK** (iso, front, top: 0 OFFSCREEN, 0 pelanggaran margin).
+    - `scripts/e2e_shot.py`: Screenshot visual **949.234 bytes** (>500 KB, WebGL hidup, agents: 14, E2E_VISUAL: OK).
+- **Sisa backlog:** verifikasi subjektif audio web-audio.
+
 ## 2026-10-26 01:00 WIB — Siklus 70: Interaktivitas Profil Founder Wahyu FS (Inspector Card & Golden Selection Ring), Perbaikan Presisi Frame Papan Proyek 3D & Sinkronisasi Software House
 
 - **Yang diperbaiki & ditingkatkan:**

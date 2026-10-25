@@ -22,9 +22,10 @@ export function fitZoneLabel(ctx, text) {
 export function createZones(ctx){
   const { THREE, office } = ctx;
   ZONES.forEach(z=>{
+    const zoneFloorY = z.z > 4.5 ? 1.20 : (z.z > -0.8 ? 0.60 : 0);
     const patch=new THREE.Mesh(new THREE.BoxGeometry(z.w,.02,z.d),
       new THREE.MeshLambertMaterial({color:z.color,transparent:true,opacity:z.op||.55}));
-    patch.position.set(z.x,.015,z.z);patch.receiveShadow=true;office.add(patch);
+    patch.position.set(z.x, zoneFloorY + .015, z.z);patch.receiveShadow=true;office.add(patch);
     const zc=document.createElement('canvas');zc.width=512;zc.height=96;
     const zx=zc.getContext('2d');
     zx.fillStyle='rgba(5,10,22,0.75)';

@@ -175,11 +175,11 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
     if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
     const np=new THREE.Vector3(7.6,1.20+0.8,6.1);
     focusGoal={t:np,r:16};
-    createBubble(7.6,1.20+2.2,6.1,'“Halo! Selamat datang di WFS PROJECT Autonomous Software House!”','#F59E0B');
+    createBubble(7.6,1.20+1.3,6.1,'“Halo! Selamat datang di WFS PROJECT Autonomous Software House!”','#F59E0B');
     selectedIdx=-2;
     applySelected();
     if(onSelectAgent){
-      const ag=nxAgent?{...nxAgent,name:'Wahyu FS'}:{name:'Wahyu FS',color:0xF59E0B,hex:'#F59E0B',role:'Founder / CEO',hair:0x1a1a1a,shirt:0xB45309,pants:0x292524};
+      const ag=nxAgent?{...nxAgent,name:'Wahyu FS',floor:3}:{name:'Wahyu FS',color:0xF59E0B,hex:'#F59E0B',role:'Founder / CEO',hair:0x1a1a1a,shirt:0xB45309,pants:0x292524,floor:3};
       onSelectAgent(ag);
     }
     return;
@@ -197,7 +197,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
     if(homeRadius===null)homeRadius=Math.max(24,Math.min(60,sph.radius));
     focusGoal={t:new THREE.Vector3(wp.x,(wp.y||0)+1.5,wp.z),r:Math.min(sph.radius,24),follow:root};
     if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
-    createBubble(wp.x,(wp.y||0)+2.6,wp.z,'“Halo! Aku '+root.agent.name+'”',root.agent.hex);
+    createBubble(wp.x,(wp.y||0)+1.3,wp.z,'“Halo! Aku '+root.agent.name+'”',root.agent.hex);
     selectedIdx=agentData.indexOf(root);applySelected();
     if(onSelectAgent)onSelectAgent(root.agent);
   }
@@ -813,6 +813,7 @@ allAgents.forEach((agent,i)=>{
   if(!dp)return;
   // Posisi Lantai Bertingkat Alami (Lantai 1: Y=0, Lantai 2: Y=0.60, Lantai 3: Y=1.20)
   const deskY = dp.z < -0.8 ? 0 : (dp.z <= 4.5 ? 0.60 : 1.20);
+  agent.floor = dp.z < -0.8 ? 1 : (dp.z <= 4.5 ? 2 : 3);
   const {dGlow,screenLight}=buildDesk(agent,{...dp,y:deskY});
   // Karakter duduk — skala 2.2x proporsional gagah dan terlihat jelas dari kamera
   const sittingChar=buildChar(agent,false);
@@ -882,7 +883,7 @@ setTimeout(()=>{
         }else if(act.type==='alert'){
           const bay=(act.ad.walker.visible?act.ad.walker.position.y:act.ad.home.y)||0;
           const wp=act.ad.walker.visible?act.ad.walker.position:{x:act.ad.home.x,y:bay,z:act.ad.home.z};
-          createBubble(wp.x,bay+2.6,wp.z,'Ada task failed! Cek log…','#f66');
+          createBubble(wp.x,bay+1.3,wp.z,'Ada task failed! Cek log…','#f66');
         }
       });
     }catch{ /* abaikan */ }
@@ -1220,8 +1221,8 @@ function autoTalk(){
   const baseAy=(ad.walker.visible?ad.walker.position.y:ad.home.y)||0;
   const wp=ad.walker.visible?ad.walker.position:{x:ad.home.x,y:baseAy,z:ad.home.z};
   // anchor mengikuti agent agar bubble tidak tertinggal di posisi lama saat agent berjalan
-  const anc={agent:ad,get x(){return ad.walker.visible?ad.walker.position.x:ad.home.x},get z(){return ad.walker.visible?ad.walker.position.z:ad.home.z},y:baseAy+2.6};
-  createBubble(wp.x,baseAy+2.6,wp.z,text,ad.agent.hex,anc);
+  const anc={agent:ad,get x(){return ad.walker.visible?ad.walker.position.x:ad.home.x},get z(){return ad.walker.visible?ad.walker.position.z:ad.home.z},y:baseAy+1.3};
+  createBubble(wp.x,baseAy+1.3,wp.z,text,ad.agent.hex,anc);
 }
 // Sinkron task running: tidak ada interval sendiri — data status + tasks diambil di pollStatus (SATU fetch /agents/status)
 let deltaFrame=0; // delta dtk frame terakhir (utk cooldown chat berbasis waktu nyata)
@@ -1235,8 +1236,8 @@ function checkConversations(){
   for(const [a,b] of pairs){
     const phrase=chatPhrases[Math.floor(Math.random()*chatPhrases.length)];
     const bay=(a.walker&&a.walker.visible?a.walker.position.y:a.home.y)||0;
-    const anc={get x(){return a.walker.position.x},get z(){return a.walker.position.z},y:bay+2.6};
-    createBubble(a.walker.position.x,bay+2.6,a.walker.position.z,phrase,a.agent.hex,anc);
+    const anc={get x(){return a.walker.position.x},get z(){return a.walker.position.z},y:bay+1.3};
+    createBubble(a.walker.position.x,bay+1.3,a.walker.position.z,phrase,a.agent.hex,anc);
     a._chatCooldown=CHAT_COOLDOWN_SEC;b._chatCooldown=CHAT_COOLDOWN_SEC;
   }
   for(let i=0;i<agentData.length;i++){
@@ -1446,7 +1447,7 @@ function animate(){
     pts.forEach(p=>{
       if(p.zone) return; // zona adalah penghalang statis bagi label agent, posisinya dikendalikan oleh guard viewport
       const {dy,dx}=labelWorldOffset(p,wpp);
-      const cdy=Math.max(-0.35,Math.min(1.6,dy));
+      const cdy=Math.max(-1.2,Math.min(1.6,dy));
       const cdx=Math.max(-1.5,Math.min(1.5,dx));
       const u=p.a.label.userData;
       const prevY=(u.antiY===undefined)?cdy:u.antiY+(cdy-u.antiY)*LBL_SMOOTH;
@@ -1589,21 +1590,21 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       if (selectedIdx !== -1) { selectedIdx = -1; applySelected(); if (onSelectAgent) onSelectAgent(null); }
       delete sph.__saved;
       if (floorNum === 1 || floorNum === '1') {
-        focusGoal = { t: new THREE.Vector3(0, 0.4, -6.0), r: 20 };
+        focusGoal = { t: new THREE.Vector3(0, 0.5, -3.0), r: 18 };
         return true;
       } else if (floorNum === 2 || floorNum === '2') {
-        focusGoal = { t: new THREE.Vector3(0, 1.0, 0.0), r: 22 };
+        focusGoal = { t: new THREE.Vector3(0, 1.1, 1.5), r: 19 };
         return true;
       } else if (floorNum === 3 || floorNum === '3') {
-        focusGoal = { t: new THREE.Vector3(0, 1.6, 6.5), r: 22 };
+        focusGoal = { t: new THREE.Vector3(0, 1.8, 6.0), r: 21 };
         return true;
       }
       return false;
     },
     setView: (name) => {
-      if(name==='l1'||name==='floor1'){ focusGoal={t:new THREE.Vector3(0,0.4,-6.0),r:20}; return true; }
-      if(name==='l2'||name==='floor2'){ focusGoal={t:new THREE.Vector3(0,1.0,0.0),r:22}; return true; }
-      if(name==='l3'||name==='floor3'){ focusGoal={t:new THREE.Vector3(0,1.6,6.5),r:22}; return true; }
+      if(name==='l1'||name==='floor1'){ focusGoal={t:new THREE.Vector3(0,0.5,-3.0),r:18}; return true; }
+      if(name==='l2'||name==='floor2'){ focusGoal={t:new THREE.Vector3(0,1.1,1.5),r:19}; return true; }
+      if(name==='l3'||name==='floor3'){ focusGoal={t:new THREE.Vector3(0,1.8,6.0),r:21}; return true; }
       if(name==='iso'||name==='front'||name==='top'){
         // ganti sudut kamera = batalkan fokus/pilihan agent (konsisten dgn Escape & klik kosong)
         if(selectedIdx!==-1){selectedIdx=-1;applySelected();if(onSelectAgent)onSelectAgent(null);}
