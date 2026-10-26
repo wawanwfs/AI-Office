@@ -156,7 +156,7 @@ export default function ShConsole({ show, onClose }) {
     } catch (e) { setTermOut('ERROR: ' + e.message) }
   }
   const selectWsProject = (pid) => {
-    setWsId(pid); setFileView(null); setTermOut(''); setGitInfo(null); setLogs([])
+    setWsId(pid); setFileView(null); setTermOut(''); setGitInfo(null); setLogs([]); setGitMsg('')
     if (pid) { loadWsFiles(pid, ''); loadWsLogs(pid); loadWsGit(pid) }
   }
 

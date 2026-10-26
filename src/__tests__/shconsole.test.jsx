@@ -203,4 +203,30 @@ describe('ShConsole — konsol software house', () => {
     expect(await screen.findByText('Belum ada log.')).toBeTruthy()
     expect(screen.queryByRole('alert')).toBeNull()
   })
+
+  it('tab Workspace: ganti project mengosongkan draf pesan commit', async () => {
+    stubFetch({
+      '/wfs-api/sh/overview': OV,
+      '/wfs-api/projects': { projects: [
+        { id: '1', name: 'Demo', description: 'demo', status: 'running' },
+        { id: '2', name: 'Lain', description: 'lain', status: 'idle' },
+      ] },
+      '/wfs-api/projects/1/files': { path: '', entries: [{ name: 'Dockerfile', type: 'file', size: 10 }] },
+      '/wfs-api/projects/1/logs?lines=100': { logs: [] },
+      '/wfs-api/projects/1/git': { repo: true, branch: 'main', status: '(bersih)', log: '' },
+      '/wfs-api/projects/2/files': { path: '', entries: [] },
+      '/wfs-api/projects/2/logs?lines=100': { logs: [] },
+      '/wfs-api/projects/2/git': { repo: true, branch: 'main', status: '(bersih)', log: '' },
+    })
+    render(<ShConsole show onClose={() => {}} />)
+    clickTab('Workspace')
+    await screen.findByLabelText('Pilih project')
+    fireEvent.change(screen.getByLabelText('Pilih project'), { target: { value: '1' } })
+    await screen.findByText(/Dockerfile/)
+    fireEvent.change(screen.getByLabelText('Pesan commit'), { target: { value: 'draf lama' } })
+    expect(screen.getByLabelText('Pesan commit').value).toBe('draf lama')
+    fireEvent.change(screen.getByLabelText('Pilih project'), { target: { value: '2' } })
+    // draf commit tidak boleh bocor ke project lain (tunggu git info project baru dimuat)
+    await waitFor(() => expect(screen.getByLabelText('Pesan commit').value).toBe(''))
+  })
 })
