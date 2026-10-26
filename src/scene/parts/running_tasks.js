@@ -85,8 +85,10 @@ export function buildRunningByAgent(agents, tasks) {
   });
   const list = Array.isArray(tasks) ? tasks : ((tasks && tasks.tasks) || []);
   list.forEach((t) => {
+    // guard null/undefined entry (data gateway bisa malformed) — konsisten dgn guard agents di atas
+    if (!t || t.status !== 'running') return;
     const gid = t.agent_id;
-    if (t.status === 'running' && byAgent[gid]) byAgent[gid] = { id: t.id, title: t.title, n: byAgent[gid].n };
+    if (byAgent[gid]) byAgent[gid] = { id: t.id, title: t.title, n: byAgent[gid].n };
   });
   return byAgent;
 }

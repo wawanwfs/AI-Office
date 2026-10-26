@@ -56,6 +56,25 @@ describe('buildRunningByAgent (murni, diekstrak pollRunning)', () => {
     expect(m.fe1).toEqual({ id: '?', title: 'mengerjakan', n: 2 });
     expect(m.be1).toBeUndefined();
   });
+  it('entri task null/undefined diabaikan, entri valid tetap diproses (guard anti-throw)', () => {
+    const tasks = [
+      null,
+      undefined,
+      { agent_id: 'be1', status: 'running', id: 42, title: 'Fix bug chat' },
+      null,
+    ];
+    expect(() => buildRunningByAgent(AG, tasks)).not.toThrow();
+    const m = buildRunningByAgent(AG, tasks);
+    expect(m.be1).toEqual({ id: 42, title: 'Fix bug chat', n: 2 });
+    expect(m.fe1).toEqual({ id: '?', title: 'mengerjakan', n: 1 });
+  });
+  it('entri task tanpa .agent_id / status salah tetap diabaikan (tidak melempar)', () => {
+    const tasks = [{ status: 'running', id: 1, title: 'no agent_id' }, { agent_id: 'fe1', status: 'pending', title: 'x' }];
+    expect(() => buildRunningByAgent(AG, tasks)).not.toThrow();
+    const m = buildRunningByAgent(AG, tasks);
+    expect(m.fe1).toEqual({ id: '?', title: 'mengerjakan', n: 1 });
+    expect(m.be1).toEqual({ id: '?', title: 'mengerjakan', n: 2 });
+  });
 });
 
 describe('resolveAgentId (resolusi identitas agen & gateway ID)', () => {
