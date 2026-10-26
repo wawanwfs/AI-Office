@@ -65,6 +65,20 @@ describe('failedAlerts', () => {
     failedAlerts(agents, prev, findByGid);
     expect(prev.wawan).toBe(0);
   });
+  it('transisi turun (masih ada failed) TIDAK memberi alert, tapi state tersinkron', () => {
+    const prev = { wawan: 3 };
+    const agents = { wawan: { failed: 2 }, toni: { failed: 0 } };
+    expect(failedAlerts(agents, prev, findByGid)).toEqual([]);
+    expect(prev.wawan).toBe(2);
+    // setelah turun, kenaikan baru tetap terdeteksi
+    agents.wawan.failed = 3;
+    expect(failedAlerts(agents, prev, findByGid)).toEqual([{ gid: 'wawan', ad: 'AD-wawan' }]);
+  });
+  it('agent tanpa entri (null/undefined) → prevFailed di-reset ke 0', () => {
+    const prev = { ghost: 2 };
+    expect(failedAlerts({ ghost: null }, prev, findByGid)).toEqual([]);
+    expect(prev.ghost).toBe(0);
+  });
   it('aman terhadap null', () => expect(failedAlerts(null, {}, findByGid)).toEqual([]));
 });
 

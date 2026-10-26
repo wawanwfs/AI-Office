@@ -41,12 +41,12 @@ export function wakeAgentIds(agents) {
 export function failedAlerts(agents, prevFailed, findByGid) {
   const out = [];
   Object.entries(agents || {}).forEach(([gid, v]) => {
-    if (v && v.failed > 0 && prevFailed[gid] !== v.failed) {
-      prevFailed[gid] = v.failed;
+    const failed = v && v.failed > 0 ? v.failed : 0;
+    const prev = prevFailed[gid] || 0;
+    prevFailed[gid] = failed; // selalu sinkronkan agar transisi berikutnya terbaca
+    if (failed > prev) {
       const ad = findByGid(gid);
       if (ad) out.push({ gid, ad });
-    } else if (!v || v.failed === 0) {
-      prevFailed[gid] = 0;
     }
   });
   return out;
