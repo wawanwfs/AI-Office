@@ -894,4 +894,10 @@ describe('kanban_spec — Audit Kontras Warna & Aksesibilitas WCAG (Badge & Tag)
       expect(ratio).toBeGreaterThanOrEqual(4.5);
     });
   });
+
+  it('matchTaskSearch diekspor dari kanban_spec dan berfungsi konsisten', () => {
+    expect(typeof matchTaskSearch).toBe('function');
+    expect(matchTaskSearch({ id: 1, title: 'Halo Dunia' }, 'halo')).toBe(true);
+    expect(matchTaskSearch({ id: 1, title: 'Halo Dunia' }, 'tidakada')).toBe(false);
+  });
 });

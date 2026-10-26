@@ -1,3 +1,36 @@
+## 2026-10-26 21:10 WIB — Siklus 99: Filter Pencarian Real-Time Kanban (kanban_search.js, Shortcut '/', Highlight <mark>, Empty Banner), Audit Kontras Warna WCAG AA untuk Badge & Tag Kustom, serta Reset Filter Instan
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Modul Utilitas Murni Pencarian Real-Time Kanban (`src/lib/kanban_search.js`, `src/__tests__/kanban_search.test.js`):**
+     - Mengembangkan fungsi murni `matchTaskSearch(task, query)` dengan pencocokan multi-token fleksibel (ID, `#ID`, judul, deskripsi, agent_id, role & role label, terjemahan status Bahasa Indonesia `antri/jalan/selesai/review/gagal`, prioritas, dan tags `#tag`/`tag`).
+     - Mengembangkan generator segmen penyorotan aman `getSearchMatchSegments(text, query)` yang memecah teks menjadi token `{ text, match: boolean }` tanpa bahaya XSS / `dangerouslySetInnerHTML`.
+     - Mengembangkan kalkulasi metrik real-time `calcSearchStats(tasks, query, options)` untuk melacak rasio kecocokan (`matched/total`, `pct`) pada cakupan divisi dan tag yang sedang aktif.
+     - Mengembangkan generator empty state adaptif `getKanbanColumnSearchEmptyState(columnKey, options)` yang menyesuaikan label kolom saat pencarian berlangsung.
+  2. **Audit Kontras Warna & Aksesibilitas WCAG AA Badge & Tag (`src/scene/parts/kanban_spec.js`, `src/__tests__/kanban_spec.test.js`):**
+     - Mengembangkan fungsi audit kolorimetri matematis murni: `parseHexColor`, `calcRelativeLuminance`, `calcContrastRatio`, `getContrastingTextColor`, dan `auditBadgeContrast`.
+     - Melakukan kalibrasi palet warna `TAG_PALETTE` (sky `#38BDF8`, indigo `#818CF8`, emerald `#34D399`, amber `#FBBF24`, pink `#F472B6`, purple `#A78BFA`, blue `#60A5FA`, orange `#FB923C`, teal `#2DD4BF`, lime `#A3E635`, rose `#FB7185`): seluruh 11 warna kini 100% lolos standar WCAG AA pada permukaan gelap `#151d2e` (rasio kontras 5.65 s.d. 11.17:1, syarat min. 4.5:1) dan lolos dalam status aktif pill dengan teks kontras tinggi `#0b1320` (rasio 6.24 s.d. 12.34:1).
+     - Memperbaiki warna role `qa` (`#A78BFA`, naik dari 3.98:1 menjadi 6.19:1) dan `sec` (`#FB7185`, naik dari 4.47:1 menjadi 6.26:1) sehingga bebas kegagalan kontras.
+     - Memperkaya metadata `getTaskCardBadges` dan `computeTagCloud` dengan atribut `--tag-text-color` dan `--chip-text-color` dinamis untuk kontras teks optimal.
+  3. **Antarmuka Pencarian Real-Time & Highlight Visual pada Papan Task Kanban (`src/components/TaskBoard.jsx`, `src/components/Icons.jsx`, `src/index.css`, `src/__tests__/TaskBoard.test.jsx`):**
+     - Menghadirkan ikon vektor presisi `IconSearch` pada search bar.
+     - Menambahkan badge jumlah kecocokan real-time `N/Total` (`.task-search-count-badge`) dan tombol hapus pencarian instan `✕` (`.task-search-clear-btn`) dengan tooltip & shortcut hint.
+     - Mengintegrasikan penyorotan kata kunci `<mark className="kanban-search-highlight">` pada judul kartu Kanban dan baris daftar task.
+     - Menyediakan banner status kosong ramah pengguna (`.kanban-empty-board-banner`) lengkap dengan tombol 'Bersihkan Pencarian' saat query tidak menemukan kartu.
+     - Menambahkan pintasan keyboard `/` untuk langsung memfokuskan kotak pencarian saat papan task terbuka, serta penanganan tombol `Escape` untuk membersihkan query pencarian sebelum menutup modal.
+     - Menambahkan hint `/ Cari` pada footer bar petunjuk shortcut (`.panel-footer-hints`).
+
+- **Bukti terukur:**
+  - **Vitest:** **1756/1756 passed (135 test file)** (+32 tests baru: 19 test di `kanban_search.test.js`, 7 test di `kanban_spec.test.js`, 4 test di `TaskBoard.test.jsx`, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/lib/kanban_search.js src/scene/parts/kanban_spec.js src/components/Icons.jsx src/components/TaskBoard.jsx src/__tests__/kanban_search.test.js src/__tests__/kanban_spec.test.js src/__tests__/TaskBoard.test.jsx`).
+  - **Build:** Berhasil (exit 0, 37 precache entries 1754.47 KiB; `OfficeScene` 166.70 KB / gzip 57.11 KB, `index` 186.54 KB / gzip 51.34 KB, `vendor-three` 715.76 KB, `vendor-react` 189.63 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-BrM4a5Ti.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `shot.sh` (DISPLAY=:0): Screenshot visual **647.451 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** filter ekspor ringkasan task (CSV/JSON) dan indikator status sinkronisasi WebSocket offline/reconnect.
+
 ## 2026-10-26 20:25 WIB — Siklus 98: Drag-and-Drop Kustom & Feedback Visual Kartu Kanban (kanban_drag.js), Indikator Status Target Drop, Scroll Snapping & Drawer Bottom-Sheet Responsif Mobile
 
 - **Yang diperbaiki & ditingkatkan:**

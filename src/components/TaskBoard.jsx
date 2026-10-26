@@ -55,7 +55,17 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const searchInputRef = useRef(null)
   useModalFlag(open || !!sel)
   const onEscRef = useRef(() => {})
-  useEffect(() => { onEscRef.current = () => { sel ? setSel(null) : setOpen(false) } })
+  useEffect(() => {
+    onEscRef.current = () => {
+      if (q && document.activeElement === searchInputRef.current) {
+        setQ('')
+      } else if (sel) {
+        setSel(null)
+      } else {
+        setOpen(false)
+      }
+    }
+  })
   const closeBoard = useCallback(() => onEscRef.current(), [])
   useDialogA11y({ open: open || !!sel, onClose: closeBoard, ref: board })
 
@@ -159,10 +169,20 @@ export default function TaskBoard({ onFlash, onAsk }) {
     const ac = new AbortController()
     const t0 = setTimeout(() => load(ac.signal), 0)
     const iv = setInterval(() => { if (document.visibilityState === 'visible') load(ac.signal) }, 8000)
-    const k = e => { if (e.key === 'Escape') { sel ? setSel(null) : setOpen(false) } }
+    const k = e => {
+      if (e.key === 'Escape') {
+        if (q && document.activeElement === searchInputRef.current) {
+          setQ('')
+        } else if (sel) {
+          setSel(null)
+        } else {
+          setOpen(false)
+        }
+      }
+    }
     document.addEventListener('keydown', k)
     return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k) }
-  }, [open, load, sel])
+  }, [open, load, sel, q])
 
   // Fokus ke panel detail saat task dibuka: tombol task yang diklik unmount,
   // tanpa ini fokus jatuh ke <body> — Tab/screen reader mulai lagi dari awal dokumen.

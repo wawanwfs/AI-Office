@@ -622,6 +622,118 @@ describe('TaskBoard', () => {
     expect(footer).toBeTruthy();
     expect(within(footer).getByText('Esc')).toBeTruthy();
     expect(within(footer).getByText('T')).toBeTruthy();
+    expect(within(footer).getByText('/')).toBeTruthy();
     expect(within(footer).getByText(/Shift\+Klik/)).toBeTruthy();
+  });
+
+  it('pencarian real-time pada Kanban menyaring kartu, menampilkan badge hitungan dan tombol reset', async () => {
+    const tasks = [
+      { id: 101, title: 'Build OAuth2 Provider #auth', role: 'be', agent_id: 'be-1', status: 'pending', priority: 'normal', tags: ['auth'] },
+      { id: 102, title: 'Design Landing Page UI', role: 'fe', agent_id: 'fe-1', status: 'running', priority: 'urgent', tags: ['ui/ux'] },
+    ];
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks }) })));
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />);
+    act(() => {
+      window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { view: 'kanban' } }));
+    });
+    await waitFor(() => screen.getByRole('dialog', { name: 'Papan task' }));
+
+    const searchInput = screen.getByRole('textbox', { name: 'Cari task' });
+    expect(searchInput).toBeTruthy();
+
+    // Ketik query pencarian 'OAuth2'
+    fireEvent.change(searchInput, { target: { value: 'OAuth2' } });
+
+    // Badge hitungan pencarian muncul
+    const badge = screen.getByTitle(/Ditemukan 1 task dari total 2 task/i);
+    expect(badge).toBeTruthy();
+    expect(badge.textContent).toBe('1/2');
+
+    // Kartu OAuth2 muncul dengan teks tersorot (<mark>)
+    const mark = screen.getByText('OAuth2');
+    expect(mark.tagName.toLowerCase()).toBe('mark');
+    expect(mark.className).toContain('kanban-search-highlight');
+    expect(screen.getByText((content, element) => element?.className === 'kanban-card-title' && element.textContent.includes('Build OAuth2 Provider'))).toBeTruthy();
+
+    // Kartu landing page tidak muncul
+    expect(screen.queryByText(/Design Landing Page UI/i)).toBeNull();
+
+    // Tombol hapus pencarian ✕ berfungsi mereset query
+    const clearBtn = screen.getByRole('button', { name: 'Hapus kata kunci pencarian' });
+    expect(clearBtn).toBeTruthy();
+    fireEvent.click(clearBtn);
+
+    await waitFor(() => expect(searchInput.value).toBe(''));
+    expect(screen.queryByTitle(/Ditemukan 1 task dari total 2 task/i)).toBeNull();
+    expect(screen.getByText(/Design Landing Page UI/i)).toBeTruthy();
+  });
+
+  it('menampilkan banner kosong di Kanban saat kata kunci tidak menghasilkan kecocokan dan tombol bersihkan berfungsi', async () => {
+    const tasks = [
+      { id: 201, title: 'Database Optimization', role: 'be', agent_id: 'be-1', status: 'done', priority: 'normal' },
+    ];
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks }) })));
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />);
+    act(() => {
+      window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { view: 'kanban' } }));
+    });
+    await waitFor(() => screen.getByRole('dialog', { name: 'Papan task' }));
+
+    const searchInput = screen.getByRole('textbox', { name: 'Cari task' });
+    fireEvent.change(searchInput, { target: { value: 'kata-kunci-tidak-ada-999' } });
+
+    // Banner kosong Kanban muncul
+    await waitFor(() => {
+      expect(screen.getByText(/Tidak ada task yang cocok dengan “kata-kunci-tidak-ada-999”/i)).toBeTruthy();
+    });
+
+    const resetBtn = screen.getByRole('button', { name: /Bersihkan Pencarian/i });
+    expect(resetBtn).toBeTruthy();
+    fireEvent.click(resetBtn);
+
+    await waitFor(() => expect(searchInput.value).toBe(''));
+    expect(screen.getByText(/Database Optimization/i)).toBeTruthy();
+  });
+
+  it('menekan tombol Escape di input pencarian membersihkan query sebelum menutup dialog', async () => {
+    const tasks = [
+      { id: 301, title: 'Task Test Escape', role: 'be', agent_id: 'be-1', status: 'pending', priority: 'normal' },
+    ];
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks }) })));
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />);
+    act(() => {
+      window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { view: 'kanban' } }));
+    });
+    await waitFor(() => screen.getByRole('dialog', { name: 'Papan task' }));
+
+    const searchInput = screen.getByRole('textbox', { name: 'Cari task' });
+    fireEvent.change(searchInput, { target: { value: 'Test' } });
+    expect(searchInput.value).toBe('Test');
+
+    // Tekan Escape saat input aktif
+    searchInput.focus();
+    fireEvent.keyDown(searchInput, { key: 'Escape' });
+    await waitFor(() => expect(searchInput.value).toBe(''));
+    // Dialog tetap terbuka
+    expect(screen.getByRole('dialog', { name: 'Papan task' })).toBeTruthy();
+  });
+
+  it('pintasan keyboard "/" memfokuskan input pencarian saat task board terbuka', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: [] }) })));
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />);
+    act(() => {
+      window.dispatchEvent(new CustomEvent('wfs-open-task-board'));
+    });
+    await waitFor(() => screen.getByRole('dialog', { name: 'Papan task' }));
+
+    const searchInput = screen.getByRole('textbox', { name: 'Cari task' });
+    const focusSpy = vi.spyOn(searchInput, 'focus');
+
+    // Trigger keydown '/' pada window
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '/' }));
+    });
+
+    expect(focusSpy).toHaveBeenCalled();
   });
 });
