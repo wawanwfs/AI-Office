@@ -4,11 +4,11 @@
 
 export const BASE_FOV_DESKTOP = 54;
 export const BASE_FOV_TABLET_PORTRAIT = 56;
-export const BASE_FOV_MOBILE_PORTRAIT = 68;
+export const BASE_FOV_MOBILE_PORTRAIT = 64;
 
 export const BASE_RADIUS_DESKTOP = 42.5;
-export const BASE_RADIUS_TABLET_PORTRAIT = 36;
-export const BASE_RADIUS_MOBILE_PORTRAIT = 34;
+export const BASE_RADIUS_TABLET_PORTRAIT = 48;
+export const BASE_RADIUS_MOBILE_PORTRAIT = 48;
 
 /**
  * Hitung rasio aspek kanvas secara aman (bebas pembagian dengan 0).
@@ -28,7 +28,7 @@ export function isPortraitViewport(aspect) {
 
 /**
  * Tentukan Field of View (FOV) kamera berdasarkan rasio aspek:
- * - aspect < 0.6 (mobile vertikal / split sempit): 68° agar sisi kantor tidak terpotong
+ * - aspect < 0.6 (mobile vertikal / split sempit): 64° agar sisi kampus 34m tidak terpotong
  * - aspect < 0.8 (tablet portrait / split medium): 56°
  * - default (desktop landscape / split lebar): 54°
  */

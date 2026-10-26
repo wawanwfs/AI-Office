@@ -26,9 +26,9 @@ export const CAMPUS_WALK_DESTINATIONS = [
 ];
 
 // Semua titik tujuan harus berada di luar rintangan & dalam batas ruangan
-// (lantai BoxGeometry(26, 20) → ±13 / ±10). Dipakai test & bisa dipakai ulang
+// (kampus 34 x 27 → ±17 / ±13.5; efektif ±16.5 / ±13). Dipakai test & bisa dipakai ulang
 // saat menambah tujuan baru supaya agen tidak pernah ditugaskan ke spot valid.
-export function isSafeDestination(d, inObstacleFn, bounds = { x: 12.5, z: 9.5 }) {
+export function isSafeDestination(d, inObstacleFn, bounds = { x: 16.5, z: 13.0 }) {
   return (
     Number.isFinite(d.x) && Number.isFinite(d.z) &&
     Math.abs(d.x) <= bounds.x && Math.abs(d.z) <= bounds.z &&

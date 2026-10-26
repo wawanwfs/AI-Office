@@ -1,8 +1,9 @@
 // parts/extended_desks.js — Workstation Pods & Specialist Agents Kampus WFS PROJECT
-// Memperluas area kantor 3 lantai agar setiap lantai memiliki sayap Barat & Timur yang luas dan multi-baris meja nyata.
+// 12 spesialis tambahan pada sayap Barat & Timur (x = ±10.5 / ±13.5 — DI DALAM dinding 34m),
+// tersusun terasering per lantai: L1 z=-5 (Atrium), L2 z=1 (Mezzanine), L3 z=7 (Penthouse).
 
 export const EXTENDED_SPECIALISTS = [
-  // ── LANTAI 1: Product & Strategy Atrium (Sayap Barat & Timur, Y = 0) ──
+  // ── LANTAI 1: Product & Strategy Atrium (Y = 0, z = -5) ──
   {
     name: 'ARIS',
     color: 0x00F0FF,
@@ -13,7 +14,7 @@ export const EXTENDED_SPECIALISTS = [
     hair: 0x222222,
     shirt: 0x0E7490,
     pants: 0x164E63,
-    desk: { x: -12.0, z: -7.5 }
+    desk: { x: -13.5, z: -5 }
   },
   {
     name: 'CLARA',
@@ -25,7 +26,7 @@ export const EXTENDED_SPECIALISTS = [
     hair: 0x4A148C,
     shirt: 0xBE185D,
     pants: 0x1A1A2E,
-    desk: { x: -8.0, z: -7.5 }
+    desk: { x: -10.5, z: -5 }
   },
   {
     name: 'RIAN',
@@ -37,7 +38,7 @@ export const EXTENDED_SPECIALISTS = [
     hair: 0x1E293B,
     shirt: 0x0284C7,
     pants: 0x0F172A,
-    desk: { x: 8.0, z: -7.5 }
+    desk: { x: 10.5, z: -5 }
   },
   {
     name: 'TARI',
@@ -49,10 +50,10 @@ export const EXTENDED_SPECIALISTS = [
     hair: 0x312E81,
     shirt: 0x7E22CE,
     pants: 0x1E1B4B,
-    desk: { x: 12.0, z: -7.5 }
+    desk: { x: 13.5, z: -5 }
   },
 
-  // ── LANTAI 2: Core Engineering & Cloud Database Pods (Y = 0.60) ──
+  // ── LANTAI 2: Core Engineering & Cloud Pods (Y = 0.60, z = 1) ──
   {
     name: 'FERRY',
     color: 0x22D3EE,
@@ -63,7 +64,7 @@ export const EXTENDED_SPECIALISTS = [
     hair: 0x1E293B,
     shirt: 0x0891B2,
     pants: 0x0F172A,
-    desk: { x: -13.0, z: 2.5 }
+    desk: { x: -13.5, z: 1 }
   },
   {
     name: 'GILANG',
@@ -75,7 +76,7 @@ export const EXTENDED_SPECIALISTS = [
     hair: 0x111827,
     shirt: 0x0369A1,
     pants: 0x1E293B,
-    desk: { x: -8.5, z: 2.5 }
+    desk: { x: -10.5, z: 1 }
   },
   {
     name: 'HENDRA',
@@ -87,7 +88,7 @@ export const EXTENDED_SPECIALISTS = [
     hair: 0x111827,
     shirt: 0x059669,
     pants: 0x1E293B,
-    desk: { x: 8.5, z: 2.5 }
+    desk: { x: 10.5, z: 1 }
   },
   {
     name: 'DONI',
@@ -99,10 +100,10 @@ export const EXTENDED_SPECIALISTS = [
     hair: 0x1F2937,
     shirt: 0x047857,
     pants: 0x064E3B,
-    desk: { x: 13.0, z: 2.5 }
+    desk: { x: 13.5, z: 1 }
   },
 
-  // ── LANTAI 3: Quality, Security & Delivery Penthouse (Y = 1.20) ──
+  // ── LANTAI 3: Quality, Security & Delivery Penthouse (Y = 1.20, z = 7) ──
   {
     name: 'SECBOT',
     color: 0xEF4444,
@@ -113,7 +114,7 @@ export const EXTENDED_SPECIALISTS = [
     hair: 0x000000,
     shirt: 0xB91C1C,
     pants: 0x18181B,
-    desk: { x: -12.0, z: 9.5 }
+    desk: { x: -13.5, z: 7 }
   },
   {
     name: 'BAGAS',
@@ -125,7 +126,7 @@ export const EXTENDED_SPECIALISTS = [
     hair: 0x450A0A,
     shirt: 0x991B1B,
     pants: 0x18181B,
-    desk: { x: -7.5, z: 9.5 }
+    desk: { x: -10.5, z: 7 }
   },
   {
     name: 'NINA',
@@ -137,7 +138,7 @@ export const EXTENDED_SPECIALISTS = [
     hair: 0x3E2723,
     shirt: 0xD97706,
     pants: 0x292524,
-    desk: { x: 7.5, z: 9.5 }
+    desk: { x: 10.5, z: 7 }
   },
   {
     name: 'CITRA',
@@ -149,6 +150,6 @@ export const EXTENDED_SPECIALISTS = [
     hair: 0x78350F,
     shirt: 0xB45309,
     pants: 0x451A03,
-    desk: { x: 12.0, z: 9.5 }
+    desk: { x: 13.5, z: 7 }
   }
 ];

@@ -11,6 +11,7 @@ const fmtUptime = s => {
 
 export default function SysMeter() {
   const [d, setD] = useState(null)
+  const [sceneAgents, setSceneAgents] = useState(null)
   const [err, setErr] = useState(false)
 
   useEffect(() => {
@@ -27,7 +28,11 @@ export default function SysMeter() {
     }
     load()
     const iv = setInterval(() => { if (document.visibilityState === 'visible') load() }, 12000)
-    return () => { stop = true; clearInterval(iv) }
+    // hitungan agen dari scene 3D (window.__agentData diisi OfficeScene) — sumber kebenaran visual
+    const readScene = () => setSceneAgents((window.__agentData || []).length || null)
+    readScene()
+    const iv2 = setInterval(readScene, 4000)
+    return () => { stop = true; clearInterval(iv); clearInterval(iv2) }
   }, [])
 
   if (!d) {
@@ -39,7 +44,7 @@ export default function SysMeter() {
   }
   return (
     <div className="sysmeter" role="status" aria-label="Status host">
-      <span className="sm-item sm-hl"><i />{d.agents} agent</span>
+      <span className="sm-item sm-hl" title="Agen aktif di kantor 3D"><i />{sceneAgents ?? d.agents} agent</span>
       <span className="sm-item" title="Load average host">⚡ {d.load}</span>
       <span className="sm-item" title="RAM terpakai / total">🧠 {d.ram}</span>
       <span className="sm-item" title="Disk terpakai / total">💾 {d.disk_used_gb}/{d.disk_total_gb} GB</span>

@@ -97,14 +97,14 @@ describe('createWalls — struktur dinding kantor 3D', () => {
   it('jendela sky-view mendaftar materialnya ke skyWinMats (mode neon malam)', () => {
     const ctx = makeCtx()
     build(ctx)
-    // 4 (depan) + 3 (kanan) + 2 (belakang) + 2 (kiri) = 11 jendela
-    expect(ctx.skyWinMats.length).toBe(11)
+    // 5 (depan) + 4 (kanan) + 2 (belakang) + 2 (kiri) = 13 jendela
+    expect(ctx.skyWinMats.length).toBe(13)
   })
   it('papan proyek + bingkai (__keep) & lantai/ceiling tidak ikut dikoleksi fade', () => {
     const ctx = makeCtx()
     const { refs } = build(ctx)
     const board = new Mesh(new Geom(1, 1, 1), new Mat())
-    board.position.set(-8.6, 2.6, 9.3)
+    board.position.set(-8.6, 2.6, 13.3)
     window.__projectBoard = board
     ctx.office.add(board)
     refs.wallDefs // collect terjadi via __wallFade
@@ -119,7 +119,7 @@ describe('createWalls — struktur dinding kantor 3D', () => {
     const ctx = makeCtx()
     build(ctx)
     const poster = new Mesh(new Geom(1, 1, 1), new Mat())
-    poster.position.set(2, 1.5, 9.5)
+    poster.position.set(2, 1.5, 13.5)
     ctx.office.add(poster)
     window.__wallFade({ x: 0, y: 2, z: 0 })
     
@@ -147,22 +147,22 @@ describe('createWalls — struktur dinding kantor 3D', () => {
     const { added } = build(makeCtx())
     expect(added.some((o) => o.isPointLight)).toBe(true)
   })
-  it('setelah collect, window.__corners berisi tiang sudut 4 kombinasi ±12.5/±9.5', () => {
+  it('setelah collect, window.__corners berisi tiang sudut 4 kombinasi ±17/±13.5', () => {
     const ctx = makeCtx()
     build(ctx)
     window.__wallFade({ x: 0, y: 2, z: 0 })
     const corners = window.__corners
     expect(corners.length).toBe(4)
     for (const c of corners) {
-      expect(Math.abs(Math.abs(c.position.x) - 12.5)).toBeLessThan(0.1)
-      expect(Math.abs(Math.abs(c.position.z) - 9.5)).toBeLessThan(0.1)
+      expect(Math.abs(Math.abs(c.position.x) - 17)).toBeLessThan(0.1)
+      expect(Math.abs(Math.abs(c.position.z) - 13.5)).toBeLessThan(0.1)
     }
   })
   it('collect hanya sekali: panggilan __wallFade berikutnya tidak menduplikasi objek fade', () => {
     const ctx = makeCtx()
     const { refs } = build(ctx)
     const poster = new Mesh(new Geom(1, 1, 1), new Mat())
-    poster.position.set(2, 1.5, 9.5)
+    poster.position.set(2, 1.5, 13.5)
     ctx.office.add(poster)
     window.__wallFade({ x: 0, y: 2, z: 0 })
     const n1 = refs.wallDefs.back.objs.length

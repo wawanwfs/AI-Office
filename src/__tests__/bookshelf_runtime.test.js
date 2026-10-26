@@ -56,18 +56,18 @@ describe('createBookshelf — rak buku kantor 3D', () => {
     expect(added[0]).toBe(refs.shelf)
   })
 
-  it('frame 0x5D4037 0.5×2.2×2.4 di (−11.9, 1.1, −6) + 4 papan 0x8D6E63 0.48×0.03×2.3 y=.35+lvl*.55', async () => {
+  it('frame 0x5D4037 0.5×2.2×2.4 di (−16.4, 1.1, −6) + 4 papan 0x8D6E63 0.48×0.03×2.3 y=.35+lvl*.55', async () => {
     const { refs } = await build(makeCtx())
     const kids = refs.shelf.children
     expect(kids[0].geometry.args).toEqual([0.5, 2.2, 2.4])
     expect(kids[0].material.color).toBe(0x5D4037)
-    expect(kids[0].position).toMatchObject({ x: -11.9, y: 1.1, z: -6 })
+    expect(kids[0].position).toMatchObject({ x: -16.4, y: 1.1, z: -6 })
     const boards = kids.filter((k) => k.material.color === 0x8D6E63)
     expect(boards).toHaveLength(4)
     boards.forEach((b, lvl) => {
       expect(b.geometry.args).toEqual([0.48, 0.03, 2.3])
       expect(b.position.y).toBeCloseTo(0.35 + lvl * 0.55)
-      expect(b.position.x).toBe(-11.9)
+      expect(b.position.x).toBe(-16.4)
       expect(b.position.z).toBe(-6)
     })
   })
@@ -81,7 +81,7 @@ describe('createBookshelf — rak buku kantor 3D', () => {
     books.forEach((b) => expect(bookCols).toContain(b.material.color))
     // buku pertama lvl 0: z mulai SBZ−1.05 + bw/2; rng.r(0,.07)=0 → bw=.09
     expect(books[0].position.z).toBeCloseTo(-6 - 1.05 + 0.045)
-    expect(books[0].position.x).toBeCloseTo(-11.9 + 0.02)
+    expect(books[0].position.x).toBeCloseTo(-16.4 + 0.02)
     expect(books[0].position.y).toBeCloseTo(0.35 + 0.17)
     // geometri buku pertama: bw=rng.r(0,.07)=.09 (frac 0), tinggi=rng.r(.28,.4)=.34 (frac .5)
     expect(books[0].geometry.args).toEqual([0.34, 0.34, 0.09])

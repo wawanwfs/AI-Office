@@ -76,24 +76,24 @@ describe('parts/structure.js — createStructure', () => {
     expect(calls.sheen).toBe(1);
   });
 
-  it('4 strip AO di lantai: plane 25.4×0.95 / 19.4 (kanan 1.25), rot x=-π/2, y=0.006, renderOrder 1', () => {
+  it('4 strip AO di lantai: plane 33.4×0.95 / 26.4 (kanan 1.25), rot x=-π/2, y=0.006, renderOrder 1', () => {
     const { office } = build();
     const ao = office.children.filter(m => m.isMesh && m.position.y === 0.006);
     expect(ao.length).toBe(4);
-    expect(ao[0].args[0].dims).toEqual([25.4, 0.95]);
+    expect(ao[0].args[0].dims).toEqual([33.4, 0.95]);
     expect(ao[0].rotation.x).toBeCloseTo(-Math.PI / 2);
     expect(ao[0].renderOrder).toBe(1);
-    const right = ao.find(m => Math.abs(m.position.px - 12.5) < 0.01);
-    expect(right.args[0].dims).toEqual([19.4, 1.25]);
+    const right = ao.find(m => Math.abs(m.position.px - 17) < 0.01);
+    expect(right.args[0].dims).toEqual([26.4, 1.25]);
   });
 
-  it('lantai parket Box 26×0.15×20 di y=-0.075 receiveShadow, tekstur repeat (4,3)', () => {
+  it('lantai parket Box 34×0.15×27 di y=-0.075 receiveShadow, tekstur repeat (5,4)', () => {
     const { refs } = build();
-    expect(refs.fl.args[0].dims).toEqual([26, 0.15, 20]);
+    expect(refs.fl.args[0].dims).toEqual([34, 0.15, 27]);
     expect(refs.fl.position.y).toBe(-0.075);
     expect(refs.fl.receiveShadow).toBe(true);
-    expect(refs.fl.args[1].o.map.repeat.x).toBe(4);
-    expect(refs.fl.args[1].o.map.repeat.y).toBe(3);
+    expect(refs.fl.args[1].o.map.repeat.x).toBe(5);
+    expect(refs.fl.args[1].o.map.repeat.y).toBe(4);
     expect(refs.fl.args[1].o.map.wrapS).toBe(1000);
   });
 
@@ -113,19 +113,19 @@ describe('parts/structure.js — createStructure', () => {
     expect(bands.length).toBe(4);
     expect(trims.length).toBe(4);
     // band horizontal belakang
-    const back = bands.find(m => m.args[0].dims[0] === 26 && Math.abs(m.position.pz + 9.44) < 0.001);
+    const back = bands.find(m => m.args[0].dims[0] === 34 && Math.abs(m.position.pz + 13.44) < 0.001);
     expect(back).toBeTruthy();
-    expect(back.args[0].dims).toEqual([26, 1.1, 0.1]);
+    expect(back.args[0].dims).toEqual([34, 1.1, 0.1]);
     expect(back.position.y).toBe(0.55);
     expect(back.castShadow).toBe(true);
     // trim horizontal
-    const trimBack = trims.find(m => m.args[0].dims[0] === 26);
-    expect(trimBack.args[0].dims).toEqual([26, 0.06, 0.14]);
+    const trimBack = trims.find(m => m.args[0].dims[0] === 34);
+    expect(trimBack.args[0].dims).toEqual([34, 0.06, 0.14]);
     expect(trimBack.position.y).toBe(1.12);
     // band vertikal kiri
     const left = bands.find(m => m.args[0].dims[0] === 0.1);
-    expect(left.position.px).toBe(-12.44);
-    expect(left.args[0].dims).toEqual([0.1, 1.1, 20]);
+    expect(left.position.px).toBe(-16.94);
+    expect(left.args[0].dims).toEqual([0.1, 1.1, 27]);
   });
 
   it('tekstur sky & sheen dari canvas 256×128, painter menerima ctx', () => {
@@ -135,7 +135,7 @@ describe('parts/structure.js — createStructure', () => {
     expect(refs.glassSheen.canvas.width).toBe(256);
   });
 
-  it('4 glass edge frame 0.08×4×0.08 0xAABBCC di sudut (±12.5, y=2, ±9.5)', () => {
+  it('4 glass edge frame 0.08×4×0.08 0xAABBCC di sudut (±17, y=2, ±13.5)', () => {
     const { office } = build();
     const frames = office.children.filter(m => m.isMesh && m.args[1] && m.args[1].color === 0xAABBCC);
     expect(frames.length).toBe(4);
@@ -144,7 +144,7 @@ describe('parts/structure.js — createStructure', () => {
       expect(f.position.y).toBe(2);
     });
     expect(frames.map(f => `${f.position.px},${f.position.pz}`).sort()).toEqual(
-      ['-12.5,-9.5', '-12.5,9.5', '12.5,-9.5', '12.5,9.5'].sort());
+      ['-17,-13.5', '-17,13.5', '17,-13.5', '17,13.5'].sort());
   });
 
   it('semua objek di-add ke office (4 AO + fl + cp + 8 wainscot + 4 frame = 18)', () => {

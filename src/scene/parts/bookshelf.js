@@ -3,7 +3,7 @@
 // Pola sama cafe/serverroom/lounge: konteks di-inject, tanpa dependensi global.
 export function createBookshelf({ THREE, office, M, rng, blobMat }) {
   const shelf = new THREE.Group();
-  const SBX = -11.9, SBZ = -6;
+  const SBX = -16.4, SBZ = -6;
   const frameB = new THREE.Mesh(new THREE.BoxGeometry(.5, 2.2, 2.4), M(0x5D4037));
   frameB.position.set(SBX, 1.1, SBZ); shelf.add(frameB);
   if (blobMat) {

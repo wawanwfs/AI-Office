@@ -100,18 +100,18 @@ describe('createStructure — struktur dasar kantor 3D', () => {
     const widths = ao.map(s => s.geometry.args[1]).sort((a, b) => a - b)
     expect(widths[0]).toBe(0.95)
     expect(widths[3]).toBe(1.25)
-    const right = ao.find(s => s.position.x > 12)
+    const right = ao.find(s => s.position.x > 16)
     expect(right).toBeDefined()
-    expect(right.position.x).toBeCloseTo(12.5, 2)
+    expect(right.position.x).toBeCloseTo(17, 2)
     // offset 0.42 diterapkan pada sumbu sekunder dinding kiri/kanan (|az|>... logika terbalik → dinding samping)
-    const left = ao.find(s => s.position.x < -12)
+    const left = ao.find(s => s.position.x < -16)
     expect(left.position.z).toBeCloseTo(-0.42, 2)
   })
 
-  it('lantai parket: box 26×0.15×20, y -0.075, receiveShadow, tekstur repeat (4,3) wrap Repeat', () => {
+  it('lantai parket: box 34×0.15×27, y -0.075, receiveShadow, tekstur repeat (5,4) wrap Repeat', () => {
     const { refs } = build(makeCtx())
     const fl = refs.fl
-    expect(fl.geometry.args).toEqual([26, .15, 20])
+    expect(fl.geometry.args).toEqual([34, .15, 27])
     expect(fl.position.y).toBeCloseTo(-.075)
     expect(fl.receiveShadow).toBe(true)
     expect(fl.material.map.repeat.values ?? fl.material.map.repeat).toBeDefined()
@@ -137,27 +137,27 @@ describe('createStructure — struktur dasar kantor 3D', () => {
     expect(trims.length).toBe(4)
     for (const b of bands) { expect(b.position.y).toBeCloseTo(.55); expect(b.castShadow).toBe(true) }
     for (const t of trims) { expect(t.position.y).toBeCloseTo(1.12); expect(t.castShadow).toBe(true) }
-    // horizontal (depan & belakang): panjang 26, offset z ±0.06 menjauh dari dinding
-    // horizontal (depan & belakang): panjang 26, offset z ±0.06 ke arah interior
+    // horizontal (depan & belakang): panjang 34, offset z ±0.06 menjauh dari dinding
+    // horizontal (depan & belakang): panjang 34, offset z ±0.06 ke arah interior
     const hb = bands.filter(b => b.geometry.args[2] === .1)
     expect(hb.length).toBe(2)
     const hz = hb.map(b => b.position.z).sort()
-    expect(hz[0]).toBeCloseTo(-9.44) // -9.5 + 0.06 (wz<0)
-    expect(hz[1]).toBeCloseTo(9.44)  // 9.5 - 0.06
+    expect(hz[0]).toBeCloseTo(-13.44) // -13.5 + 0.06 (wz<0)
+    expect(hz[1]).toBeCloseTo(13.44)  // 13.5 - 0.06
     // vertikal (kiri & kanan): tebal .1 pada sumbu x, offset ±0.06 ke arah interior
     const vb = bands.filter(b => b.geometry.args[0] === .1)
     expect(vb.length).toBe(2)
     const vx = vb.map(b => b.position.x).sort()
-    expect(vx[0]).toBeCloseTo(-12.44) // -12.5 + 0.06
-    expect(vx[1]).toBeCloseTo(12.44)  // 12.5 - 0.06
+    expect(vx[0]).toBeCloseTo(-16.94) // -17 + 0.06
+    expect(vx[1]).toBeCloseTo(16.94)  // 17 - 0.06
   })
 
-  it('glass edge frames: 4 tiang 0.08×4×0.08 tepat di 4 sudut (±12.5, y 2, ±9.5)', () => {
+  it('glass edge frames: 4 tiang 0.08×4×0.08 tepat di 4 sudut (±17, y 2, ±13.5)', () => {
     const { added } = build(makeCtx())
     const frames = added.filter(m => m.isMesh && m.geometry?.args?.[1] === 4)
     expect(frames.length).toBe(4)
     const pos = new Set(frames.map(f => `${f.position.x},${f.position.z}`))
-    expect(pos).toEqual(new Set(['-12.5,-9.5', '-12.5,9.5', '12.5,-9.5', '12.5,9.5']))
+    expect(pos).toEqual(new Set(['-17,-13.5', '-17,13.5', '17,-13.5', '17,13.5']))
     for (const f of frames) expect(f.position.y).toBe(2)
   })
 

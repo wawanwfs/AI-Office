@@ -26,10 +26,10 @@ describe('WALK_DESTINATIONS — 8 tujuan jalan-jalan agent', () => {
     });
   });
 
-  it('semua tujuan dalam batas ruangan (|x|≤12.5, |z|≤9.5)', () => {
+  it('semua tujuan dalam batas ruangan (|x|≤16.5, |z|≤13.0)', () => {
     WALK_DESTINATIONS.forEach((d) => {
-      expect(Math.abs(d.x)).toBeLessThanOrEqual(12.5);
-      expect(Math.abs(d.z)).toBeLessThanOrEqual(9.5);
+      expect(Math.abs(d.x)).toBeLessThanOrEqual(16.5);
+      expect(Math.abs(d.z)).toBeLessThanOrEqual(13.0);
     });
   });
 
@@ -65,8 +65,8 @@ describe('isSafeDestination — validasi tujuan', () => {
   });
 
   it('menolak titik di luar batas ruangan', () => {
-    expect(isSafeDestination({ x: 13, z: 0 }, inObstacle)).toBe(false);
-    expect(isSafeDestination({ x: 0, z: -10.5 }, inObstacle)).toBe(false);
+    expect(isSafeDestination({ x: 17.2, z: 0 }, inObstacle)).toBe(false);
+    expect(isSafeDestination({ x: 0, z: -13.8 }, inObstacle)).toBe(false);
   });
 
   it('menolak koordinat non-finite', () => {
@@ -79,7 +79,7 @@ describe('isSafeDestination — validasi tujuan', () => {
   });
 
   it('menghormati bounds kustom & fungsi obstacle injeksi', () => {
-    expect(isSafeDestination({ x: 11.9, z: 9.3 }, () => false, { x: 12.5, z: 9.5 })).toBe(true);
+    expect(isSafeDestination({ x: 11.9, z: 9.3 }, () => false, { x: 16.5, z: 13.0 })).toBe(true);
     expect(isSafeDestination({ x: 0, z: 0 }, () => true)).toBe(false);
   });
 });
@@ -89,12 +89,12 @@ describe('CAMPUS_WALK_DESTINATIONS — destinasi multi-lantai kampus WFS PROJECT
     expect(CAMPUS_WALK_DESTINATIONS.length).toBe(16);
   });
 
-  it('semua destinasi multi-lantai finite, aman dalam bounds (|x|≤12.5, |z|≤9.5) dan di luar rintangan', () => {
+  it('semua destinasi multi-lantai finite, aman dalam bounds (|x|≤16.5, |z|≤13.0) dan di luar rintangan', () => {
     CAMPUS_WALK_DESTINATIONS.forEach((d) => {
       expect(Number.isFinite(d.x)).toBe(true);
       expect(Number.isFinite(d.z)).toBe(true);
-      expect(Math.abs(d.x)).toBeLessThanOrEqual(12.5);
-      expect(Math.abs(d.z)).toBeLessThanOrEqual(9.5);
+      expect(Math.abs(d.x)).toBeLessThanOrEqual(16.5);
+      expect(Math.abs(d.z)).toBeLessThanOrEqual(13.0);
       expect(inObstacle(d.x, d.z)).toBe(false);
       expect(isSafeDestination(d, inObstacle)).toBe(true);
     });

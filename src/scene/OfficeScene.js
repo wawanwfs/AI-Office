@@ -102,8 +102,8 @@ const __portrait = isPortraitViewport(__asp);
 camera.fov = getResponsiveFov(__asp);
 camera.aspect = __asp;
 camera.updateProjectionMatrix();
-let sph = { theta: __portrait ? 2.35 : Math.PI * 0.78, phi: __portrait ? 0.62 : 0.92, radius: __asp < 0.6 ? 36 : __asp < 0.8 ? 39 : __asp < 1.2 ? 44 : 42.5 };
-const tgt=new THREE.Vector3(0,1.2,1.2);
+let sph = { theta: __portrait ? 2.35 : Math.PI * 0.78, phi: __portrait ? 0.78 : 0.92, radius: __asp < 0.6 ? 48 : __asp < 0.8 ? 48 : __asp < 1.2 ? 44 : 42.5 };
+const tgt=new THREE.Vector3(0,1.0,0.6);
 // Preferensi auto-rotate: hormati prefers-reduced-motion bila user belum set eksplisit (localStorage wfs_autorot 0/1)
 const __prm=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):null;
 let __userRot=null;try{const __v=localStorage.getItem('wfs_autorot');if(__v==='0')__userRot=false;else if(__v==='1')__userRot=true}catch{/* abaikan */}
@@ -171,10 +171,10 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   if(!hits.length){ if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius,reset:true}} selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null); return; }
   if((boardMesh&&hits[0].object===boardMesh)||(boardFrame&&(hits[0].object===boardFrame||(boardFrame.getObjectById&&boardFrame.getObjectById(hits[0].object.id))))) {
     __sound.playSelect();
-    if(homeRadius===null)homeRadius=Math.max(24,Math.min(60,sph.radius));
+    if(homeRadius===null)homeRadius=Math.max(24,Math.min(70,sph.radius));
     if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
-    const bpos=boardMesh?boardMesh.position:new THREE.Vector3(-8.35,3.8,9.3);
-    focusGoal={t:new THREE.Vector3(bpos.x,bpos.y,9.2),r:8.5};
+    const bpos=boardMesh?boardMesh.position:new THREE.Vector3(-8.35,3.8,13.3);
+    focusGoal={t:new THREE.Vector3(bpos.x,bpos.y,13.2),r:8.5};
     createBubble(bpos.x,bpos.y+2.15,7.8,'“WFS PROJECT Software House — membuka detail proyek…”','#10E5A0');
     try { window.dispatchEvent(new CustomEvent('wfs-open-project-panel')); } catch { /* panel listener opsional, abaikan error */ }
     selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null);
@@ -182,7 +182,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   }
   if(nxChar&&(hits[0].object===nxChar||(nxChar.getObjectById&&nxChar.getObjectById(hits[0].object.id)))) {
     __sound.playSelect();
-    if(homeRadius===null)homeRadius=Math.max(24,Math.min(60,sph.radius));
+    if(homeRadius===null)homeRadius=Math.max(24,Math.min(70,sph.radius));
     if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
     const np=new THREE.Vector3(7.6,1.20+0.8,6.1);
     focusGoal={t:np,r:16};
@@ -208,7 +208,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
       window.__wfsSelectAgent(idMap[root.agent.name]||root.agent.name);
     }
     const wp=root.walker.visible?root.walker.position:{x:root.home.x,y:root.home.y||0,z:root.home.z};
-    if(homeRadius===null)homeRadius=Math.max(24,Math.min(60,sph.radius));
+    if(homeRadius===null)homeRadius=Math.max(24,Math.min(70,sph.radius));
     focusGoal={t:new THREE.Vector3(wp.x,(wp.y||0)+1.5,wp.z),r:Math.min(sph.radius,24),follow:root};
     if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
     createBubble(wp.x,(wp.y||0)+1.3,wp.z,'“Halo! Aku '+root.agent.name+'”',root.agent.hex);
@@ -712,7 +712,7 @@ function makeLabel(agent){
     depthTest: false,
     sizeAttenuation: false
   }));
-  label.scale.set(0.032 * short.as, 0.032, 1);
+  label.scale.set(0.042 * short.as, 0.042, 1); // ±17px tinggi label di HP (dari 12.5px) — keterbacaan mobile
   label.userData={full,short,mode:'short'};
   label.renderOrder=35; // Selalu di depan agar tidak tertutup perabotan
   return label;
@@ -1017,10 +1017,10 @@ const wtx=wtc.getContext('2d');
 drawWallTitle(wtx);
 const wtt=new THREE.CanvasTexture(wtc);
 const wallTitle=new THREE.Mesh(new THREE.PlaneGeometry(4.6,0.9),new THREE.MeshBasicMaterial({map:wtt,transparent:true}));
-// Dipasang di dinding KIRI (x=-12.3, menghadap +X) — spot kosong antara pilar z=-9.5
+// Dipasang di dinding KIRI (x=-16.8, menghadap +X) — spot kosong antara pilar dinding kampus
 // dan jendela z=-3.4 (lebar 4.6 → z -8.8..-4.2, aman dari keduanya). Sebelumnya mesh
 // ini dibuat tapi TIDAK PERNAH di-add ke scene (kode mati).
-wallTitle.position.set(-12.29,2.9,-6.5);wallTitle.rotation.y=Math.PI/2;wallTitle.renderOrder=5;
+wallTitle.position.set(-16.79,2.9,-6.5);wallTitle.rotation.y=Math.PI/2;wallTitle.renderOrder=5;
 office.add(wallTitle);
 
 
@@ -1032,7 +1032,7 @@ office.add(wallTitle);
 createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWinMats:__skyWinMats });
 
 // ═══ JAM DINDING (modul parts/room.js) ═══
-const __clk=createWallClock({THREE,office,M},-4.6,2.9,9.27,Math.PI);
+const __clk=createWallClock({THREE,office,M},-4.6,2.9,13.27,Math.PI);
 const drawClock=__clk.draw;
 
 
@@ -1704,7 +1704,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       if(sph.__saved){sph.theta=sph.__saved.theta;sph.phi=sph.__saved.phi;sph.radius=Math.max(24,Math.min(60,sph.__saved.radius));}
       else{
         const asp=computeAspect(container.clientWidth,container.clientHeight);
-        const homeMobile=asp<0.6?34:asp<0.8?36:null;
+        const homeMobile=asp<0.6?48:asp<0.8?48:null;
         sph.radius=(name==='top')?(asp<1.2?60:56):(homeRadius||homeMobile||Math.max(24,Math.min(60,sph.radius)));
       }
       updCam(); return true;

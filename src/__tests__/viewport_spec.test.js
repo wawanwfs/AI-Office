@@ -46,9 +46,9 @@ describe('viewport_spec', () => {
   });
 
   describe('getResponsiveFov', () => {
-    it('mengembalikan FOV mobile portrait (68°) untuk rasio < 0.6', () => {
+    it('mengembalikan FOV mobile portrait (64°) untuk rasio < 0.6', () => {
       expect(getResponsiveFov(0.55)).toBe(BASE_FOV_MOBILE_PORTRAIT);
-      expect(getResponsiveFov(0.40)).toBe(68);
+      expect(getResponsiveFov(0.40)).toBe(64);
     });
 
     it('mengembalikan FOV tablet portrait (56°) untuk rasio antara 0.6 dan 0.8', () => {
@@ -189,14 +189,14 @@ describe('viewport_spec', () => {
       const narrowAsp = computeAspect(narrowW, narrowH);
       expect(isPortraitViewport(narrowAsp)).toBe(true);
       expect(getResponsiveFov(narrowAsp)).toBe(56);
-      expect(getResponsiveRadius(narrowAsp)).toBe(36);
+      expect(getResponsiveRadius(narrowAsp)).toBe(48);
 
       // 4. Split sangat sempit / mode mobile (400x900 -> asp = 0.444)
       const ultraNarrowW = 400, ultraNarrowH = 900;
       const ultraAsp = computeAspect(ultraNarrowW, ultraNarrowH);
       expect(isPortraitViewport(ultraAsp)).toBe(true);
-      expect(getResponsiveFov(ultraAsp)).toBe(68);
-      expect(getResponsiveRadius(ultraAsp)).toBe(34);
+      expect(getResponsiveFov(ultraAsp)).toBe(64);
+      expect(getResponsiveRadius(ultraAsp)).toBe(48);
     });
 
     it('memastikan NDC pointer akurat pada layar terbelah dua (kiri vs kanan)', () => {

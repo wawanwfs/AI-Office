@@ -87,8 +87,9 @@ button { font-family: inherit; }
 .sm-item.sm-hl { display: inline-flex; align-items: center; gap: 6px; color: var(--teal); font-weight: 600; }
 .sm-item.sm-hl i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); }
 @media (max-width: 760px) {
-  .sysmeter { top: 70px; right: 10px; gap: 2px; padding: 4px 8px; border-radius: 16px; }
-  .sm-item { font-size: 10px; padding: 2px 5px; }
+  .sysmeter { top: 96px; right: 8px; left: auto; gap: 2px; padding: 4px 8px; border-radius: 16px; max-width: 62vw; overflow-x: auto; scrollbar-width: none; }
+  .sysmeter::-webkit-scrollbar { display: none; }
+  .sm-item { font-size: 11px; padding: 3px 6px; }
   .sm-item:nth-last-child(-n+2) { display: none; } /* sembunyikan disk & uptime di layar kecil */
 }
 
@@ -472,6 +473,7 @@ button { font-family: inherit; }
 }
 
 @media (max-width: 760px) {
+  .hud { top: auto !important; bottom: calc(88px + var(--safe-b)); left: 0; right: 0; margin: 0 auto; width: max-content; padding: 5px 14px; }
   .dock { gap: 2px; padding: 4px; border-radius: 20px; bottom: calc(18px + var(--safe-b)); }
   .ibtn { min-width: 44px; padding: 4px 4px; font-size: 10px; }
   .ibtn .ic { font-size: 18px; }
