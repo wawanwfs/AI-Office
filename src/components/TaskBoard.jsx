@@ -5,7 +5,8 @@ import { useDialogA11y } from '../lib/dialogA11y'
 import { parseFileList } from '../lib/files'
 import { setupCardDragData, canDropTaskInColumn, formatDragDropNotification } from '../lib/kanban_drag'
 import { calcSearchStats, getSearchMatchSegments, getKanbanColumnSearchEmptyState } from '../lib/kanban_search'
-import { IconBoard, IconClose, IconPlay, IconRotate, IconList, IconKanban, IconSearch } from './Icons'
+import { exportTasks } from '../lib/kanban_export'
+import { IconBoard, IconClose, IconPlay, IconRotate, IconList, IconKanban, IconSearch, IconDownload } from './Icons'
 import {
   KANBAN_COLUMNS,
   getTaskRoleLabel,
@@ -300,6 +301,43 @@ export default function TaskBoard({ onFlash, onAsk }) {
   )
   const count = s => (tasks || []).filter(t => (s === 'all' || t.status === s) && (division === 'all' || matchTaskDivision(t, division))).length
 
+  const exportableTasks = useMemo(() => {
+    if (!tasks) return []
+    if (viewMode === 'list') {
+      return list
+    }
+    return filterTasks(tasks, {
+      filter: 'all',
+      q,
+      division,
+      sortBy,
+      tag: selectedTag,
+      tagMode,
+    })
+  }, [tasks, viewMode, list, q, division, sortBy, selectedTag, tagMode])
+
+  const handleExport = useCallback((format) => {
+    if (!tasks || exportableTasks.length === 0) {
+      if (onFlash) onFlash('Tidak ada task untuk diekspor', true)
+      return
+    }
+    const res = exportTasks(exportableTasks, {
+      format,
+      division,
+      filter: viewMode === 'list' ? filter : 'all',
+      tag: selectedTag,
+      tagMode,
+      q,
+      sortBy,
+    })
+    if (onFlash) {
+      onFlash(`${res.count} task diekspor ke ${format.toUpperCase()}`)
+    }
+    if (typeof window !== 'undefined' && window.__officeSound) {
+      window.__officeSound.playSelect?.()
+    }
+  }, [tasks, exportableTasks, viewMode, division, filter, selectedTag, tagMode, q, sortBy, onFlash])
+
   return (
     <>
       <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="task-board" aria-label="Papan task" title="Papan task (Kanban) — shortcut T">
@@ -321,6 +359,30 @@ export default function TaskBoard({ onFlash, onAsk }) {
                 ) : 'memuat…'}
               </small>
             </div>
+            {!sel && tasks && tasks.length > 0 && (
+              <div className="task-export-group" role="group" aria-label="Ekspor task">
+                <button
+                  type="button"
+                  className="task-export-btn"
+                  onClick={() => handleExport('csv')}
+                  title={`Ekspor ${exportableTasks.length} task ke CSV (Excel / Spreadsheet)`}
+                  aria-label={`Ekspor ${exportableTasks.length} task ke CSV`}
+                >
+                  <IconDownload size={13} />
+                  <span>CSV</span>
+                </button>
+                <button
+                  type="button"
+                  className="task-export-btn"
+                  onClick={() => handleExport('json')}
+                  title={`Ekspor ${exportableTasks.length} task lengkap ke format JSON`}
+                  aria-label={`Ekspor ${exportableTasks.length} task ke JSON`}
+                >
+                  <IconDownload size={13} />
+                  <span>JSON</span>
+                </button>
+              </div>
+            )}
             {!sel && (
               <div className="view-switch" role="group" aria-label="Mode tampilan task">
                 <button
@@ -1030,6 +1092,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
             <span className="hint-item"><kbd className="hint-kbd">Esc</kbd> {sel ? 'Kembali' : 'Tutup'}</span>
             <span className="hint-item"><kbd className="hint-kbd">T</kbd> Toggle Papan</span>
             <span className="hint-item"><kbd className="hint-kbd">/</kbd> Cari</span>
+            {!sel && <span className="hint-item"><kbd className="hint-kbd">CSV/JSON</kbd> Ekspor</span>}
             {!sel && <span className="hint-item"><kbd className="hint-kbd">Shift+Klik</kbd> Multi-Tag</span>}
           </footer>
         </section>

@@ -1,3 +1,31 @@
+## 2026-10-26 21:50 WIB — Siklus 100: Ekspor Ringkasan Task Kanban (CSV/JSON), Utilitas RFC 4180 dengan UTF-8 BOM, Serialisasi Terstruktur & Akses Cepat Toolbar Header
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Modul Utilitas Murni Ekspor Task (`src/lib/kanban_export.js`, `src/__tests__/kanban_export.test.js`):**
+     - Mengembangkan generator CSV berstandar RFC 4180 (`buildTaskCsv`, `formatCsvCell`, `formatCsvRow`) dengan UTF-8 Byte Order Mark (`\uFEFF`) otomatis agar kompatibel secara sempurna di Microsoft Excel, Google Sheets, dan LibreOffice tanpa masalah karakter rusak/encoding.
+     - Menyusun kolom CSV lengkap dan terstruktur: `ID`, `Judul`, `Status`, `Status_Label`, `Prioritas`, `Prioritas_Label`, `Divisi`, `Role`, `Role_Label`, `Agen`, `Tag`, `Jumlah_File`, `Review_QA`, dan `Deskripsi`.
+     - Mengembangkan generator JSON terstruktur (`buildTaskJson`) yang mencakup metadata ekspor (`generator`, `exported_at`, `total_exported`, status filter aktif divisi/status/tag/query) serta metrik agregat sprint (`total`, `done`, `running`, `pct`) dan array task terurai.
+     - Menyediakan pembuat nama berkas otomatis yang deskriptif dan aman (`generateTaskExportFilename`), menyematkan filter divisi, status, tag, dan kata kunci pencarian yang sedang aktif secara otomatis (misal: `wfs-tasks_core_done_2026-10-26.csv`).
+     - Mengimplementasikan helper unduhan berkas DOM yang aman (`downloadExportFile`) dan orkestrator ekspor instan (`exportTasks`).
+  2. **Ikon Vektor & Antarmuka Toolbar Ekspor (`src/components/Icons.jsx`, `src/components/TaskBoard.jsx`, `src/index.css`, `src/__tests__/TaskBoard.test.jsx`):**
+     - Menghadirkan ikon SVG vektor presisi baru `IconDownload` di `Icons.jsx`.
+     - Menyediakan grup tombol ekspor cepat `.task-export-group` di header papan task (tombol `CSV` dan `JSON` dengan tooltip informatif dan atribut aria aksesibel).
+     - Menghubungkan seleksi task ekspor adaptif (`exportableTasks`): di mode Kanban mengekspor seluruh task yang lolos filter divisi, tag, dan query pencarian; di mode Daftar mengekspor daftar task terfilter yang sedang aktif.
+     - Menyematkan notifikasi toast flash real-time (contoh: `N task diekspor ke CSV`) dan feedback audio klik.
+     - Menambahkan petunjuk shortcut `CSV/JSON Ekspor` pada footer hints papan task.
+
+- **Bukti terukur:**
+  - **Vitest:** **1787/1787 passed (136 test file)** (+25 tests baru: 19 test di `kanban_export.test.js`, 4 test di `TaskBoard.test.jsx`, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/lib/kanban_export.js src/components/Icons.jsx src/components/TaskBoard.jsx src/__tests__/kanban_export.test.js src/__tests__/TaskBoard.test.jsx`).
+  - **Build:** Berhasil (exit 0, 37 precache entries 1760.29 KiB; `OfficeScene` 166.73 KB / gzip 57.13 KB, `index` 191.86 KB / gzip 53.12 KB, `vendor-three` 715.76 KB, `vendor-react` 189.63 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-BdsLkETS.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `shot.sh` (DISPLAY=:0): Screenshot visual **647.045 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** indikator status sinkronisasi WebSocket offline/reconnect dan filter preset rentang tanggal task.
+
 ## 2026-10-26 21:10 WIB — Siklus 99: Filter Pencarian Real-Time Kanban (kanban_search.js, Shortcut '/', Highlight <mark>, Empty Banner), Audit Kontras Warna WCAG AA untuk Badge & Tag Kustom, serta Reset Filter Instan
 
 - **Yang diperbaiki & ditingkatkan:**

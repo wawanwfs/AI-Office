@@ -736,4 +736,76 @@ describe('TaskBoard', () => {
 
     expect(focusSpy).toHaveBeenCalled();
   });
+
+  it('menampilkan tombol ekspor CSV & JSON di header dan footer hint CSV/JSON Ekspor', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks }) })));
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />);
+    act(() => {
+      window.dispatchEvent(new CustomEvent('wfs-open-task-board'));
+    });
+    await waitFor(() => screen.getByRole('dialog', { name: 'Papan task' }));
+    await waitFor(() => screen.getByText(/Buat login/));
+
+    const csvBtn = screen.getByRole('button', { name: /Ekspor 2 task ke CSV/i });
+    const jsonBtn = screen.getByRole('button', { name: /Ekspor 2 task ke JSON/i });
+    expect(csvBtn).toBeTruthy();
+    expect(jsonBtn).toBeTruthy();
+    expect(csvBtn.querySelector('svg')).toBeTruthy();
+    expect(jsonBtn.querySelector('svg')).toBeTruthy();
+
+    expect(screen.getByText(/CSV\/JSON/i)).toBeTruthy();
+    expect(screen.getByText(/Ekspor/i)).toBeTruthy();
+  });
+
+  it('klik tombol ekspor CSV memicu download dan memanggil onFlash dengan ringkasan', async () => {
+    const onFlash = vi.fn();
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks }) })));
+    render(<TaskBoard onFlash={onFlash} onAsk={() => {}} />);
+    act(() => {
+      window.dispatchEvent(new CustomEvent('wfs-open-task-board'));
+    });
+    await waitFor(() => screen.getByRole('dialog', { name: 'Papan task' }));
+    await waitFor(() => screen.getByText(/Buat login/));
+
+    const csvBtn = screen.getByRole('button', { name: /Ekspor 2 task ke CSV/i });
+    fireEvent.click(csvBtn);
+
+    expect(onFlash).toHaveBeenCalledWith(expect.stringMatching(/2 task diekspor ke CSV/i));
+  });
+
+  it('klik tombol ekspor JSON memicu download dan memanggil onFlash dengan ringkasan', async () => {
+    const onFlash = vi.fn();
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks }) })));
+    render(<TaskBoard onFlash={onFlash} onAsk={() => {}} />);
+    act(() => {
+      window.dispatchEvent(new CustomEvent('wfs-open-task-board'));
+    });
+    await waitFor(() => screen.getByRole('dialog', { name: 'Papan task' }));
+    await waitFor(() => screen.getByText(/Buat login/));
+
+    const jsonBtn = screen.getByRole('button', { name: /Ekspor 2 task ke JSON/i });
+    fireEvent.click(jsonBtn);
+
+    expect(onFlash).toHaveBeenCalledWith(expect.stringMatching(/2 task diekspor ke JSON/i));
+  });
+
+  it('ekspor menghormati filter status aktif pada mode daftar', async () => {
+    const onFlash = vi.fn();
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks }) })));
+    render(<TaskBoard onFlash={onFlash} onAsk={() => {}} />);
+    act(() => {
+      window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { view: 'list' } }));
+    });
+    await waitFor(() => screen.getByRole('dialog', { name: 'Papan task' }));
+    await waitFor(() => screen.getByText(/Buat login/));
+
+    // Filter ke Selesai
+    fireEvent.click(screen.getByText(/^Selesai 1/));
+
+    const csvBtn = screen.getByRole('button', { name: /Ekspor 1 task ke CSV/i });
+    expect(csvBtn).toBeTruthy();
+    fireEvent.click(csvBtn);
+
+    expect(onFlash).toHaveBeenCalledWith(expect.stringMatching(/1 task diekspor ke CSV/i));
+  });
 });
