@@ -86,7 +86,7 @@ describe('isSafeDestination — validasi tujuan', () => {
 
 describe('CAMPUS_WALK_DESTINATIONS — destinasi multi-lantai kampus WFS PROJECT', () => {
   it('mencakup 16 destinasi (8 historis + 8 multi-lantai)', () => {
-    expect(CAMPUS_WALK_DESTINATIONS.length).toBe(16);
+    expect(CAMPUS_WALK_DESTINATIONS.length).toBe(25);
   });
 
   it('semua destinasi multi-lantai finite, aman dalam bounds (|x|≤16.5, |z|≤13.0) dan di luar rintangan', () => {

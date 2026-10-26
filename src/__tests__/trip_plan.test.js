@@ -50,8 +50,8 @@ describe('jitterDest', () => {
     // dengan argumen, jadi mock harus memodelkan r(min,max). Mock baru:
     const rmock = (n) => ({ r: (a, b) => a + n * (b - a), i: () => 0 });
     expect(jitterDest({ x: 9, z: 3 }, rmock(0.5))).toEqual({ x: 9, z: 3 });
-    expect(jitterDest({ x: 9, z: 3 }, rmock(1)).x).toBe(9.5);
-    expect(jitterDest({ x: 9, z: 3 }, rmock(0)).z).toBe(2.5);
+    expect(jitterDest({ x: 9, z: 3 }, rmock(1)).x).toBe(9.9);
+    expect(jitterDest({ x: 9, z: 3 }, rmock(0)).z).toBe(2.1);
     expect(jitterDest({ x: 0, z: 0 }, rmock(1), 2)).toEqual({ x: 2, z: 2 });
   });
 });

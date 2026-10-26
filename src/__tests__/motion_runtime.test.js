@@ -77,8 +77,8 @@ describe('createMotion — sitting', () => {
     expect(ad.walker.position.x).toBe(-4);
     expect(ad.walker.position.z).toBe(1.5);
     expect(ad.walkPause).toBe(0);
-    // tujuan dipilih dari walkDestinations[0] + jitter(rng stub r=a → tepat dest)
-    expect(ad.walkTarget).toEqual({ x: 6 - 0.5, z: -0.6 - 0.5 }); // jitter rng.r(a,b)=a → -0.5
+    // tujuan dipilih dari walkDestinations[0] + jitter 0.9 (rng stub r=a → tepat dest−J)
+    expect(ad.walkTarget).toEqual({ x: 6 - 0.9, z: -0.6 - 0.9 });
     // rute koridor dihitung segera (dest band 1, home z=1.5 juga band 1, dx besar → via FRONT)
     expect(Array.isArray(ad._route)).toBe(true);
   });

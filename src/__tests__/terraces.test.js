@@ -38,9 +38,9 @@ const THREE = {
 }
 
 const fakeCtx = () => ({
-  fillStyle: '', font: '', strokeStyle: '', lineWidth: 0,
+  fillStyle: '', font: '', strokeStyle: '', lineWidth: 0, globalAlpha: 1,
   fillRect() {}, stroke() {}, fill() {}, roundRect() {}, rect() {},
-  fillText() {},
+  fillText() {}, beginPath() {}, ellipse() {}, moveTo() {}, lineTo() {},
 })
 
 beforeAll(() => {

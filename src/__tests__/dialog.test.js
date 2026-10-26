@@ -182,14 +182,14 @@ describe('dialog: autoTalk (murni)', () => {
   const adToni = { agent: { name: 'TONI' } };
   const adUnknown = { agent: { name: 'XYZ' } };
 
-  it('autoTalkDelay: rentang 4000–10000 ms; rng kustom deterministik', () => {
+  it('autoTalkDelay: rentang 7000–15000 ms; rng kustom deterministik', () => {
     for (let i = 0; i < 200; i++) {
       const d = autoTalkDelay();
-      expect(d).toBeGreaterThanOrEqual(4000);
-      expect(d).toBeLessThanOrEqual(10000);
+      expect(d).toBeGreaterThanOrEqual(7000);
+      expect(d).toBeLessThanOrEqual(15000);
     }
-    expect(autoTalkDelay({ random: () => 0 })).toBe(4000);
-    expect(autoTalkDelay({ random: () => 1 })).toBe(10000);
+    expect(autoTalkDelay({ random: () => 0 })).toBe(7000);
+    expect(autoTalkDelay({ random: () => 1 })).toBe(15000);
   });
 
   it('autoTalkText: task running diprioritaskan, teks dipangkas clampBubbleText', () => {
