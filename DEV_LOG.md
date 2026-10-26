@@ -3905,3 +3905,17 @@
     - `scripts/e2e_shot.py`: Screenshot visual **723.425 bytes** (>500 KB, WebGL hidup, agents: 14, E2E_VISUAL: OK).
     - Screenshot daytime: **743.771 bytes** (14 agen hadir: 8 di meja kerja terangkat rapi di atas lantai + 6 di ruang rapat).
 - Sisa backlog: verifikasi subjektif audio web-audio.
+
+## 2026-10-27 04:46 WIB — Siklus 109: Badge koneksi gateway di kanvas TV lounge (paritas penuh chip HUD ↔ strip papan 3D ↔ TV) + hook debug __tvCanvas
+- Kandidat backlog siklus 108 tuntas: tracker `tvConn` sudah menghitung kesehatan koneksi (backoff adaptif) tapi hasilnya belum terlihat di layar TV lounge. Kini ketiga permukaan status koneksi selaras:
+  1. **`parts/tv_canvas.js`:** helper murni baru `tvConnBadge(state, ageSec)` — `live` → titik hijau `#10E5A0` + label `LIVE`; `stale` → amber `#F59E0B` + `SINKRON N dtk/mnt LALU` (umur data dari tracker, clamp ≥0); `down`/state tak dikenal/tracker kosong → merah `#ef4444` + `TERPUTUS`. `drawTvDashboard` menerima `opts.conn` opsional dan menggambar titik + label di sudut kanan atas (dot di x=TV_W-14, label rata kanan x=TV_W-22, y=21) — tanpa `opts.conn` perilaku identik dengan sebelumnya (kompatibel penuh dgn pemanggil lama).
+  2. **`parts/lounge.js`:** `drawTv()` kini menarik `{state, ageSec}` dari tracker `tvConn` tiap gambar (umur = sejak `lastOkAt`); catch `tvPull` memanggil `drawTv()` langsung sehingga badge berubah SEGERA saat fetch gagal (paritas papan 3D yang sudah begitu). Hook debug `window.__tvCanvas` diekspos untuk verifikasi pixel-level via CDP (pola sama dgn `__tvData`/`__agentData`).
+- Perubahan: `src/scene/parts/tv_canvas.js` (+tvConnBadge, +opts.conn), `src/scene/parts/lounge.js` (drawTv sadar-koneksi, drawTv di catch, hook `__tvCanvas`); test: `src/__tests__/tv_canvas.test.js` (+6: mapping state→warna/label, clamp umur negatif, render kanan-atas tak menabrak header, dasbor tetap tergambar di bawah badge, badge tanpa data "menghubungkan"), `src/__tests__/tv_lounge_runtime.test.js` (+1 alur runtime TERPUTUS→LIVE→SINKRON N dtk LALU saat fetch gagal; stub ctx +`arc`).
+- Bukti terukur:
+  - Vitest: **1928/1928 passed (142 file)** (+7 test baru dari 1920), 0 fail.
+  - ESLint: 0 warning, 0 error (`npx eslint .` exit 0).
+  - Build: sukses (37 precache 1806.24 KiB) → deploy `dist/*` → `~/wfs-hq/` OK; `wfs-hq` & `wfs-office` `active`.
+  - E2E: `e2e_shot.py` **684.267 bytes** (WebGL hidup, 26 agen, ws true); `e2e_tv.py` OK; `e2e_zone_multi.py` OK (0 OFFSCREEN); `shot.sh` :0 **682.657 bytes**.
+  - **E2E pixel badge TV (baru, `scratch/e2e_tvconn.py`):** `getImageData` kanvas TV via CDP → RGB(16,229,160) = `#10E5A0` **LIVE (hijau)** di browser nyata dengan data `/wfs-project` sungguhan.
+- Commit: lihat hash pada pesan commit siklus ini.
+- Sisa backlog: verifikasi subjektif audio web-audio (butuh pendengaran manusia); tidak ada item wajib lain.

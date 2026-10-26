@@ -72,10 +72,17 @@ export function createLounge(ctx) {
   // ("uptime: 99.98%", "agents: 14 online") = angka hardcode menyesatkan → dihapus.
   // drawTv diekstrak murni ke parts/tv_canvas.js (diuji unit); di sini cukup injek ctx.
   const tvC = document.createElement('canvas'); tvC.width = 256; tvC.height = 144;
+  window.__tvCanvas = tvC; // hook debug/uji: baca pixel badge koneksi via CDP (paritas __tvData)
   const tvx = tvC.getContext('2d');
   // Tracker kesehatan koneksi (paritas papan 3D & chip HUD) — down sejak awal.
   let tvConn = applyPollResult(null, { ok: false, error: 'init' }, 0);
-  function drawTv() { drawTvDashboard(tvx, window.__tvData); window.__lastTvDrawAt = Date.now() }
+  // Badge koneksi gateway (LIVE/TERPUTUS/SINKRON N LALU) digambar di sudut kanan
+  // atas TV setiap drawTv — ditarik dari tracker tvConn (state + umur data).
+  function drawTv() {
+    const ageSec = tvConn.lastOkAt != null ? Math.max(0, Math.floor((Date.now() - tvConn.lastOkAt) / 1000)) : 0;
+    drawTvDashboard(tvx, window.__tvData, { conn: { state: tvConn.state, ageSec } });
+    window.__lastTvDrawAt = Date.now();
+  }
   drawTv();
   const tvTex = new THREE.CanvasTexture(tvC); tvTex.minFilter = THREE.LinearFilter;
   async function tvPull(force = false) {
@@ -89,6 +96,7 @@ export function createLounge(ctx) {
       drawTv(); tvTex.needsUpdate = true;
     } catch (e) {
       tvConn = applyPollResult(tvConn, { ok: false, error: 'offline' });
+      drawTv(); // badge koneksi langsung berubah (TERPUTUS/SINKRON) tanpa menunggu tick
       window.__tvPullErr = String(e && e.stack || e);
     }
   }

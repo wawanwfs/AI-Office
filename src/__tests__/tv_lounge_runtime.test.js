@@ -14,7 +14,7 @@ const texts = []
 function makeCtx() {
   return {
     fillStyle: '', font: '', textAlign: '', textBaseline: 'alphabetic',
-    fillRect() {}, strokeRect() {}, beginPath() {}, fill() {},
+    fillRect() {}, strokeRect() {}, beginPath() {}, arc() {}, fill() {},
     fillText(t) { texts.push(String(t)) },
     measureText(s) { return { width: String(s).length * 10 } },
     createLinearGradient: () => ({ addColorStop() {} }),
@@ -179,6 +179,26 @@ describe('TV lounge — fetch & siklus hidup (tvPull)', () => {
     expect(fetchMock.mock.calls.length).toBe(base + 4)
     await vi.advanceTimersByTimeAsync(1_000) // tepat 60 dtk → fetch lagi
     expect(fetchMock.mock.calls.length).toBe(base + 5)
+    r.tvDestroy()
+  })
+
+  it('badge koneksi gateway: awal TERPUTUS → LIVE setelah fetch sukses → SINKRON N dtk LALU saat fetch gagal', async () => {
+    const r = await runTvCode()
+    // Awal: tracker down (belum pernah sukses) → label TERPUTUS sudah tergambar
+    // pada drawTv pertama (dipanggil sebelum fetch pertama selesai).
+    expect(texts.some(t => t === 'TERPUTUS')).toBe(true)
+    texts.length = 0
+    await r.tvPull() // sukses → state live
+    r.drawTv()
+    expect(texts.some(t => t === 'LIVE')).toBe(true)
+    expect(texts.some(t => t === 'TERPUTUS')).toBe(false)
+    // Fetch gagal → catch langsung drawTv ulang: badge berubah tanpa menunggu tick
+    texts.length = 0
+    fetchMock.mockImplementation(async () => { throw new Error('HTTP 500') })
+    await r.tvPull()
+    expect(texts.some(t => /^SINKRON \d+ dtk LALU$/.test(t))).toBe(true)
+    expect(texts.some(t => t === 'LIVE')).toBe(false)
+    // drawTv manual juga memakai tracker tvConn (bukan nilai basi)
     r.tvDestroy()
   })
 

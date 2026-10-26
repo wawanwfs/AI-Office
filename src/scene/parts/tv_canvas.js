@@ -21,16 +21,39 @@ export function statusRows(T){
   return rows;
 }
 
+// Badge koneksi gateway di TV (paritas chip HUD .conn-chip & strip papan 3D).
+// state tracker ('live'/'stale'/'down'/kosong) → titik warna + label Indonesia.
+// Murni: tanpa canvas — diuji unit. Warna sama dgn strip papan:
+// ok=#10E5A0, warn=#F59E0B (amber), err=TV_RED.
+export function tvConnBadge(state,ageSec){
+  if(state==='live')return{color:TV_GREEN,label:'LIVE'};
+  if(state==='stale'){
+    const s=Math.max(0,ageSec||0);
+    const ago=s<60?s+' dtk':Math.floor(s/60)+' mnt';
+    return{color:'#F59E0B',label:'SINKRON '+ago+' LALU'};
+  }
+  return{color:TV_RED,label:'TERPUTUS'};
+}
+
 // Persen progres total task (0 bila total 0 — hindari NaN).
 export function tvPct(T){return T.total?Math.round(T.done/T.total*100):0;}
 
 // Gambar seluruh dasbor TV pada ctx (2D canvas). Semua pengambilan teks
 // di-pure-kan lewat helper di atas; fungsi ini hanya urutan perintah gambar.
+// opts.conn: {state,ageSec} opsional — bila ada, badge koneksi gateway
+// digambar di sudut kanan atas (paritas chip HUD & strip papan 3D).
 export function drawTvDashboard(ctx,data,opts={}){
   const now=opts.now||Date.now();
   ctx.fillStyle=TV_BG;ctx.fillRect(0,0,TV_W,TV_H);
   ctx.fillStyle=TV_ACCENT;ctx.font='bold 16px sans-serif';ctx.textAlign='left';ctx.textBaseline='alphabetic';
   ctx.fillText('WFS HQ · LIVE',12,24);
+  const cb=opts.conn?tvConnBadge(opts.conn.state,opts.conn.ageSec):null;
+  if(cb){ // titik + label singkat di sudut kanan atas, tak menabrak header kiri
+    ctx.fillStyle=cb.color;ctx.beginPath();ctx.arc(TV_W-14,18,3.5,0,Math.PI*2);ctx.fill();
+    ctx.font='bold 9px monospace';ctx.textAlign='right';
+    ctx.fillText(cb.label,TV_W-22,21);
+    ctx.textAlign='left';
+  }
   const T=data?.tasks,S=data?.saas,AG=data?.agents||[];
   if(!T){ // belum ada data / fetch gagal
     ctx.fillStyle=TV_MUTED;ctx.font='12px monospace';

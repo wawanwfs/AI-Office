@@ -1,7 +1,7 @@
 import {describe,it,expect} from 'vitest';
 import {
   TV_W,TV_H,TV_BG,TV_MUTED,TV_GREEN,TV_BLUE,TV_RED,
-  statusRows,tvPct,drawTvDashboard
+  statusRows,tvPct,tvConnBadge,drawTvDashboard
 } from '../scene/parts/tv_canvas.js';
 
 // Mock ctx 2D: merekam perintah fillText/fillRect + warna aktif.
@@ -12,6 +12,7 @@ function mockCtx(){
     get fillStyle(){return color},set fillStyle(v){color=v;ops.push({op:'style',v})},
     font:'',textAlign:'',textBaseline:'',
     createLinearGradient(){return grd},
+    beginPath(){},arc(){},fill(){},
     fillRect:(x,y,w,h)=>ops.push({op:'rect',color,x,y,w,h}),
     fillText:(t,x,y)=>ops.push({op:'text',color,t,x,y}),
     __ops:ops
@@ -37,6 +38,53 @@ describe('statusRows',()=>{
     expect(statusRows({failed:0,review:1})[0].x).toBe(12);
     expect(statusRows({failed:2,review:1})[0].color).toBe(TV_RED);
     expect(statusRows({failed:0,review:1})[0].color).toBe(TV_BLUE);
+  });
+});
+
+describe('tvConnBadge — badge koneksi gateway TV (paritas chip HUD & strip papan 3D)',()=>{
+  it('live → titik hijau + label LIVE',()=>{
+    expect(tvConnBadge('live')).toEqual({color:TV_GREEN,label:'LIVE'});
+  });
+  it('stale → amber + umur data (<60 dtk dalam detik, ≥60 dtk dalam menit)',()=>{
+    expect(tvConnBadge('stale',45).color).toBe('#F59E0B');
+    expect(tvConnBadge('stale',45).label).toBe('SINKRON 45 dtk LALU');
+    expect(tvConnBadge('stale',125).label).toBe('SINKRON 2 mnt LALU');
+  });
+  it('down / state tak dikenal / tracker kosong → merah TERPUTUS',()=>{
+    expect(tvConnBadge('down')).toEqual({color:TV_RED,label:'TERPUTUS'});
+    expect(tvConnBadge(undefined)).toEqual({color:TV_RED,label:'TERPUTUS'});
+    expect(tvConnBadge('weird',10)).toEqual({color:TV_RED,label:'TERPUTUS'});
+  });
+  it('umur negatif di-clamp ke 0 (jam mesin mundur tidak menghasilkan label aneh)',()=>{
+    expect(tvConnBadge('stale',-5).label).toBe('SINKRON 0 dtk LALU');
+  });
+  it('render: opts.conn live → titik hijau kanan atas + label LIVE; tanpa opts.conn → tidak digambar',()=>{
+    const c=mockCtx();
+    drawTvDashboard(c,{tasks:{total:1,done:1},saas:{online:true,stats:{}},agents:[]},{now:0,conn:{state:'live',ageSec:3}});
+    const dot=c.__ops.find(o=>o.op==='text'&&o.t==='LIVE');
+    expect(dot).toBeTruthy();
+    expect(dot.color).toBe(TV_GREEN);
+    expect(dot.x).toBe(TV_W-22); // kanan atas, tidak menabrak header kiri
+    expect(dot.y).toBe(21);
+    const c2=mockCtx();
+    drawTvDashboard(c2,{tasks:{total:1,done:1},saas:{online:true,stats:{}},agents:[]},{now:0});
+    expect(texts(c2).some(o=>o.t==='LIVE'||o.t.startsWith('SINKRON')||o.t==='TERPUTUS')).toBe(false);
+  });
+  it('render: stale → label amber dgn umur; down → merah TERPUTUS; tetap menggambar dasbor di bawahnya',()=>{
+    const c=mockCtx();
+    drawTvDashboard(c,{tasks:{total:10,done:3},saas:{online:false},agents:[]},{now:0,conn:{state:'stale',ageSec:75}});
+    expect(find(c,'SINKRON 1 mnt LALU').color).toBe('#F59E0B');
+    expect(find(c,'30% · 3/10 task')).toBeTruthy(); // dasbor tetap tergambar
+    const c3=mockCtx();
+    drawTvDashboard(c3,{tasks:{total:4,done:1,failed:2,review:1},saas:{online:true,stats:{}},agents:[]},{now:0,conn:{state:'down',ageSec:0}});
+    expect(find(c3,'TERPUTUS').color).toBe(TV_RED);
+    expect(find(c3,'GAGAL: 2')).toBeTruthy(); // baris status tetap ada
+  });
+  it('render: badge digambar juga saat belum ada data (menghubungkan)',()=>{
+    const c=mockCtx();
+    drawTvDashboard(c,null,{now:0,conn:{state:'down'}});
+    expect(find(c,'TERPUTUS')).toBeTruthy();
+    expect(find(c,'menghubungkan...').color).toBe(TV_MUTED);
   });
 });
 
