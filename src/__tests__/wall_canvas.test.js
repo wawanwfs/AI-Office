@@ -45,39 +45,44 @@ describe('drawWallTex', () => {
     expect(c._ops[1]).toEqual(['fillRect', [0, 0, 512, 256]]);
   });
 
-  it('garis nat: strokeStyle/lineWidth 3, satu path per garis vertikal 0..wpx langkah step', () => {
+  it('garis nat vertikal: strokeStyle/lineWidth 3, satu path per garis 0..wpx langkah step; lalu seam horizontal 1.5', () => {
     const c = makeCtx();
     drawWallTex(c, '#E6EAF1', 'rgba(130,145,170,.30)');
     expect(c._ops[2]).toEqual(['strokeStyle', 'rgba(130,145,170,.30)']);
     expect(c._ops[3]).toEqual(['lineWidth', 3]);
-    // garis di x=0,64,...,512 → 9 garis (i<=wpx)
-    const xs = [];
-    for (let i = 4; i < c._ops.length; i++) {
-      if (c._ops[i][0] === 'moveTo') xs.push(c._ops[i][1][0]);
-    }
-    expect(xs).toEqual([0, 64, 128, 192, 256, 320, 384, 448, 512]);
-    // tiap garis: moveTo(i,0) lalu lineTo(i,hpx)
+    // garis vertikal di x=0,64,...,512 → 9 garis (i<=wpx)
+    const mov = c._ops.map((o, i) => (o[0] === 'moveTo' ? o[1] : null)).filter(Boolean);
+    const vert = mov.slice(0, 9).map(([x]) => x);
+    expect(vert).toEqual([0, 64, 128, 192, 256, 320, 384, 448, 512]);
+    // tiap garis vertikal: moveTo(i,0) lalu lineTo(i,hpx)
     for (let i = 4; i < c._ops.length - 1; i++) {
-      if (c._ops[i][0] === 'moveTo') {
-        expect(c._ops[i][1][1]).toBe(0);
+      if (c._ops[i][0] === 'moveTo' && c._ops[i][1][1] === 0) {
         expect(c._ops[i + 1][0]).toBe('lineTo');
         expect(c._ops[i + 1][1]).toEqual([c._ops[i][1][0], 256]);
       }
     }
+    // seam horizontal: lineWidth turun ke 1.5, 3 garis (j=64,128,192) moveTo(0,j)→lineTo(wpx,j)
+    const lw15 = c._ops.findIndex(o => o[0] === 'lineWidth' && o[1] === 1.5);
+    expect(lw15).toBeGreaterThan(0);
+    const seams = mov.slice(9, 12);
+    expect(seams.map(([, y]) => y)).toEqual([64, 128, 192]);
   });
 
-  it('step kustom 32 (dinding kayu) menghasilkan 17 garis', () => {
+  it('step kustom 32 (dinding kayu) menghasilkan 17 garis vertikal + 3 seam horizontal = 20 stroke', () => {
     const c = makeCtx();
     drawWallTex(c, '#8A6244', 'rgba(40,25,10,.40)', 512, 256, 32);
     const strokes = c._ops.filter(o => o[0] === 'stroke').length;
-    expect(strokes).toBe(17);
+    expect(strokes).toBe(20);
   });
 
-  it('gradien linear (0,0 → 0,hpx) dgn 2 stop kode lama, lalu fillRect penuh', () => {
+  it('empat gradien: satin, AO kiri, AO kanan, gradien vertikal akhir dgn 2 stop kode lama', () => {
     const c = makeCtx();
     drawWallTex(c, '#E6EAF1', 'rgba(130,145,170,.30)', 256, 128, 64);
-    expect(c._grads.length).toBe(1);
-    const g = c._grads[0];
+    expect(c._grads.length).toBe(4);
+    const [satin, aoL, aoR, g] = c._grads;
+    expect(satin.args).toEqual([0, 0, 256, 0]);
+    expect(aoL.args).toEqual([0, 0, 46, 0]);
+    expect(aoR.args).toEqual([256, 0, 210, 0]);
     expect(g.kind).toBe('linear');
     expect(g.args).toEqual([0, 0, 0, 128]);
     expect(g.stops).toEqual([
@@ -88,7 +93,7 @@ describe('drawWallTex', () => {
     expect(lastRect[1]).toEqual([0, 0, 256, 128]);
   });
 
-  it('urutan keseluruhan: base fill → nat stroke → gradien fill; tanpa oper lain', () => {
+  it('urutan keseluruhan: base fill → nat stroke → seam → satin → AO kiri/kanan → gradien akhir', () => {
     const c = makeCtx();
     drawWallTex(c, '#E6EAF1', 'rgba(130,145,170,.30)');
     const kinds = c._ops.map(o => o[0]);
@@ -99,9 +104,14 @@ describe('drawWallTex', () => {
     // blok nat: 9× (beginPath, moveTo, lineTo, stroke)
     const natBlock = kinds.slice(4, 4 + 36);
     expect(natBlock.join(',')).toBe('beginPath,moveTo,lineTo,stroke,'.repeat(9).replace(/,$/, '').split(',').join(','));
-    // kemudian gradien → fillStyle → fillRect
-    expect(kinds.slice(40)).toEqual(['createLinearGradient', 'fillStyle', 'fillRect']);
-    expect(c._ops.filter(o => o[0] === 'createLinearGradient').length).toBe(1);
+    // kemudian 4× (createLinearGradient, fillStyle, fillRect): satin, AO-L, AO-R, final
+    expect(kinds.slice(40)).toEqual(
+      ['createLinearGradient', 'fillStyle', 'fillRect',
+       'createLinearGradient', 'fillStyle', 'fillRect',
+       'createLinearGradient', 'fillStyle', 'fillRect',
+       'createLinearGradient', 'fillStyle', 'fillRect']
+    );
+    expect(c._ops.filter(o => o[0] === 'createLinearGradient').length).toBe(4);
   });
 
   it('dua pemanggilan tidak berbagi state gradien', () => {

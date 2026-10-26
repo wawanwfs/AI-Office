@@ -8,19 +8,19 @@ export const EXIT_SPEED = 2.0;
 export const LINE_SEC = 1.8; // durasi satu baris dialog percakapan (detik)
 
 // Offset posisi berdiri menghampiri rekan (di samping kursi partner)
-export const COLLAB_OFFSET = { x: 0.95, z: -0.15 };
+export const COLLAB_OFFSET = { x: 1.5, z: -0.2 };
 
 // Rentang jitter tujuan jalan-jalan di sekitar titik dest
-export const DEST_JITTER = 0.5;
+export const DEST_JITTER = 0.9;
 
 // Pause di tujuan trip biasa: 2 + r(0,2) detik; duduk lagi: timer 6 + r(0,14)
-export const TRIP_PAUSE_MIN = 2;
-export const TRIP_PAUSE_JITTER = 2;
-export const SIT_TIMER_MIN = 6;
-export const SIT_TIMER_JITTER = 14;
+export const TRIP_PAUSE_MIN = 4;
+export const TRIP_PAUSE_JITTER = 4;
+export const SIT_TIMER_MIN = 10;
+export const SIT_TIMER_JITTER = 18;
 
 // Peluang memilih collab dibanding jalan-jalan biasa
-export const COLLAB_CHANCE = 0.75;
+export const COLLAB_CHANCE = 0.3;
 
 // Pose langkah (stride): t = performance.now()*TIME_SCALE, phase per-limb.
 export const STRIDE = {

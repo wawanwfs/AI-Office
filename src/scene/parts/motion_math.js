@@ -3,7 +3,7 @@
 
 // Lantai: BoxGeometry(26, z 20) → ±13 / ±10. Dinding kiri x=-13, belakang z=-10.
 // Pintu masuk kantor (spawn shift) di x=-12, z=8 → walker spawn 0.6 unit di dalam.
-export const BOUNDS = { xMin: -12.4, xMax: 12.4, zMin: -9.4, zMax: 9.4 };
+export const BOUNDS = { xMin: -15.9, xMax: 15.9, zMin: -12.4, zMax: 12.4 };
 
 export const ARRIVE = 0.2;
 

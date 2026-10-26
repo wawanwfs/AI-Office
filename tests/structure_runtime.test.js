@@ -87,13 +87,13 @@ describe('parts/structure.js — createStructure', () => {
     expect(right.args[0].dims).toEqual([26.4, 1.25]);
   });
 
-  it('lantai parket Box 34×0.15×27 di y=-0.075 receiveShadow, tekstur repeat (5,4)', () => {
+  it('lantai parket Box 34×0.15×27 di y=-0.075 receiveShadow, tekstur repeat (7,5.5)', () => {
     const { refs } = build();
     expect(refs.fl.args[0].dims).toEqual([34, 0.15, 27]);
     expect(refs.fl.position.y).toBe(-0.075);
     expect(refs.fl.receiveShadow).toBe(true);
-    expect(refs.fl.args[1].o.map.repeat.x).toBe(5);
-    expect(refs.fl.args[1].o.map.repeat.y).toBe(4);
+    expect(refs.fl.args[1].o.map.repeat.x).toBe(7);
+    expect(refs.fl.args[1].o.map.repeat.y).toBe(5.5);
     expect(refs.fl.args[1].o.map.wrapS).toBe(1000);
   });
 

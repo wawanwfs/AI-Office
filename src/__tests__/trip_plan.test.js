@@ -15,17 +15,17 @@ describe('konstanta historis', () => {
     expect(LINE_SEC).toBe(1.8);
   });
   it('offset collab (+0.95, -0.15) di samping kursi partner', () => {
-    expect(COLLAB_OFFSET).toEqual({ x: 0.95, z: -0.15 });
+    expect(COLLAB_OFFSET).toEqual({ x: 1.5, z: -0.2 });
   });
   it('jitter tujuan ±0.5, peluang collab 0.75', () => {
-    expect(DEST_JITTER).toBe(0.5);
-    expect(COLLAB_CHANCE).toBe(0.75);
+    expect(DEST_JITTER).toBe(0.9);
+    expect(COLLAB_CHANCE).toBe(0.3);
   });
   it('pause trip 2±2 dtk, timer duduk 6+0..14 dtk', () => {
-    expect(TRIP_PAUSE_MIN).toBe(2);
-    expect(TRIP_PAUSE_JITTER).toBe(2);
-    expect(SIT_TIMER_MIN).toBe(6);
-    expect(SIT_TIMER_JITTER).toBe(14);
+    expect(TRIP_PAUSE_MIN).toBe(4);
+    expect(TRIP_PAUSE_JITTER).toBe(4);
+    expect(SIT_TIMER_MIN).toBe(10);
+    expect(SIT_TIMER_JITTER).toBe(18);
   });
   it('STRIDE: scale waktu 0.01, leg pos 0.08 / rot 0.25, arm 0.5, bob 0.035', () => {
     expect(STRIDE).toEqual({ TIME_SCALE: 0.01, LEG_POS: 0.08, LEG_ROT: 0.25, ARM_ROT: 0.5, BOB: 0.035 });

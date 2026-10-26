@@ -397,17 +397,17 @@ const ceilCv=document.createElement('canvas');ceilCv.width=ceilCv.height=512;
 // plafon panel prosedural — painter murni di parts/ceiling_canvas.js (diuji unit)
 drawCeiling(ceilCv.getContext('2d'));
 const ceilTex=new THREE.CanvasTexture(ceilCv);
-ceilTex.wrapS=ceilTex.wrapT=THREE.RepeatWrapping;ceilTex.repeat.set(4,3);
-const ceil=new THREE.Mesh(new THREE.BoxGeometry(26,.1,20),new THREE.MeshLambertMaterial({color:0xffffff,map:ceilTex,transparent:true,opacity:0.85}));
-ceil.position.y=4.05;office.add(ceil);
+ceilTex.wrapS=ceilTex.wrapT=THREE.RepeatWrapping;ceilTex.repeat.set(5,4);
+const ceil=new THREE.Mesh(new THREE.BoxGeometry(34,.1,27),new THREE.MeshLambertMaterial({color:0xffffff,map:ceilTex,transparent:true,opacity:0.85}));
+ceil.position.y=4.3;office.add(ceil);
 // balok rangka penopang (beams) — memecah kepolosan bidang langit
-[[0,-6],[0,0],[0,6]].forEach(([,z])=>{
-  const b=new THREE.Mesh(new THREE.BoxGeometry(24.9,.22,.4),M(0x14243D));
-  b.position.set(0,3.9,z);office.add(b);__ceilObjsSafe.push(b);
+[[0,-9],[0,-4.5],[0,0],[0,4.5],[0,9]].forEach(([,z])=>{
+  const b=new THREE.Mesh(new THREE.BoxGeometry(33.6,.22,.4),M(0x14243D));
+  b.position.set(0,4.2,z);office.add(b);__ceilObjsSafe.push(b);
 });
-[[ -9.2],[0],[9.2]].forEach(([x])=>{
-  const b=new THREE.Mesh(new THREE.BoxGeometry(.4,.22,18.9),M(0x14243D));
-  b.position.set(x,3.9,0);office.add(b);__ceilObjsSafe.push(b);
+[[-11.2],[-5.6],[0],[5.6],[11.2]].forEach(([x])=>{
+  const b=new THREE.Mesh(new THREE.BoxGeometry(.4,.22,26.4),M(0x14243D));
+  b.position.set(x,4.2,0);office.add(b);__ceilObjsSafe.push(b);
 });
 
 // Ceiling light panels (recessed) — brighter for dark bg contrast
@@ -415,9 +415,9 @@ const __ceilObjs=[];
 // Panel plafon recessed & material jendela sky-view — diregistrasi agar mode neon
 // bisa menggelapkan/mengembalikannya (dulu dibiarkan terang saat neon → jelek).
 const __ceilPanels=[];const __skyWinMats=[];
-for(let i=-2;i<=2;i++){for(let j=-1;j<=1;j++){
+for(let i=-3;i<=3;i++){for(let j=-2;j<=2;j++){
   const p=new THREE.Mesh(new THREE.BoxGeometry(3,.03,1),MB(0xF0F4FF));
-  p.position.set(i*4.5,3.98,j*5);office.add(p);__ceilObjs.push(p);__ceilPanels.push(p);
+  p.position.set(i*4.6,4.23,j*5.2);office.add(p);__ceilObjs.push(p);__ceilPanels.push(p);
   if(j===0){ // hanya 5 point light di jalur tengah — sisanya emissive saja
     const pl=new THREE.PointLight(0xFFFFFF,0.35,12,1.6);
     pl.position.set(i*4.5,3.8,j*5);office.add(pl);
@@ -1494,7 +1494,7 @@ function animate(){
   }
   // Atap & lampu panel disembunyikan saat kamera di atas (agar isi kantor terlihat), dimunculkan dari sudut rendah
   if(window.__wallFade)window.__wallFade(camera.position);
-  { const hide = sph.phi < 1.15; ceil.visible=!hide; __ceilObjs.forEach(o=>{o.visible=!hide}); __ceilObjsSafe.forEach(o=>{o.visible=!hide}); }
+  { const hide = sph.phi < 1.15 || camera.position.y > 5.2; ceil.visible=!hide; __ceilObjs.forEach(o=>{o.visible=!hide}); __ceilObjsSafe.forEach(o=>{o.visible=!hide}); }
   // Anti-tumpuk label: dorong ke atas bila label lain terlalu dekat di layar (iterasi ringan)
   // di-throttle: full pass mahal (5 iter × N label × project) — cukup tiap kelipatan 4 frame;
   // seluruh blok label (project camera per label + overlapPass + sweep/clamp) ikut dithrottle:

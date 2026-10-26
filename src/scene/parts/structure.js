@@ -19,7 +19,7 @@ export function createStructure({ THREE, office, M, drawAoStrip, drawWoodFloor, 
   const flc=document.createElement('canvas');flc.width=512;flc.height=512;
   drawWoodFloor(flc.getContext('2d'));
   const flTex=new THREE.CanvasTexture(flc);
-  flTex.wrapS=flTex.wrapT=THREE.RepeatWrapping;flTex.repeat.set(5,4);
+  flTex.wrapS=flTex.wrapT=THREE.RepeatWrapping;flTex.repeat.set(7,5.5);flTex.anisotropy=4;
   const fl=new THREE.Mesh(new THREE.BoxGeometry(34,.15,27),
     new THREE.MeshLambertMaterial({map:flTex}));
   fl.position.y=-.075;fl.receiveShadow=true;office.add(fl);

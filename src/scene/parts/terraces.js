@@ -1,3 +1,4 @@
+import { drawTerrazzo } from './floor_canvas.js';
 // parts/terraces.js — Arsitektur Gedung Bertingkat 3 Lantai Nyata (Cascading High-Rise Headquarter Terraces)
 // Posisi lantai bertingkat alami dari depan ke belakang (Lantai 1: Y=0, Lantai 2: Y=0.60, Lantai 3: Y=1.20),
 // tangga arsitektural naik, tekstur prosedural marmer Carrara & parket jati mewah tanpa z-fighting/flicker.
@@ -52,12 +53,21 @@ export function createTerraces({ THREE, office, M, MB }) {
     return m;
   };
 
+  // terazzo prosedural per deck — painter murni di floor_canvas.js (diuji unit)
+  const terrazzoMat = (tint, rx, ry) => {
+    const cv = document.createElement('canvas'); cv.width = cv.height = 512;
+    drawTerrazzo(cv.getContext('2d'), tint);
+    const t = new THREE.CanvasTexture(cv);
+    t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; t.repeat.set(rx, ry);
+    return new THREE.MeshLambertMaterial({ color: 0xFFFFFF, map: t });
+  };
+
   // ══════════════════════════════════════════════════════════
   // LANTAI 1 (Level 01 — Ground Level / Depan Kamera, Z ∈ [-14, -0.8], Y = 0)
   // ══════════════════════════════════════════════════════════
   const l1Deck = new THREE.Mesh(
     new THREE.BoxGeometry(34.0, 0.20, 13.0),
-    M(0xFFFFFF) // Marmer Putih Carrara Mewah
+    terrazzoMat('#FFFFFF', 6, 3) // Terazzo putih bervena
   );
   l1Deck.position.set(0, -0.10, -7.4);
   l1Deck.receiveShadow = true;
@@ -197,7 +207,7 @@ export function createTerraces({ THREE, office, M, MB }) {
   // ══════════════════════════════════════════════════════════
   const l2Deck = new THREE.Mesh(
     new THREE.BoxGeometry(34.0, 0.20, 5.1),
-    M(0xEAD8C2) // Scandinavian warm blonde oak parquet
+    terrazzoMat('#F7EFE0', 5, 1.6) // Oak blonde bervein lembut
   );
   l2Deck.position.set(0, L2_Y - 0.10, 1.95);
   l2Deck.receiveShadow = true;
@@ -254,7 +264,7 @@ export function createTerraces({ THREE, office, M, MB }) {
   // ══════════════════════════════════════════════════════════
   const l3Deck = new THREE.Mesh(
     new THREE.BoxGeometry(34.0, 0.20, 11.0),
-    M(0x1E293B) // Executive Midnight Smoked Slate Parquet
+    terrazzoMat('#44576E', 5, 2.4) // Slate biru eksekutif
   );
   l3Deck.position.set(0, L3_Y - 0.10, 10.5);
   l3Deck.receiveShadow = true;

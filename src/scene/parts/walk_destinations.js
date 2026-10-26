@@ -23,6 +23,15 @@ export const CAMPUS_WALK_DESTINATIONS = [
   { x: -6.0, z: 5.6, label: 'Executive Cafe Promenade (L3)' },
   { x: 6.5, z: 5.6, label: 'Penthouse Strategy Terrace (L3)' },
   { x: 0.0, z: 8.5, label: 'Founder Suite View Deck (L3)' },
+  { x: 8.0, z: -9.0, label: 'L1 South Window Walk' },
+  { x: -8.0, z: -9.0, label: 'L1 South-West Window' },
+  { x: 14.0, z: -2.0, label: 'L1 East Corridor' },
+  { x: -14.0, z: -2.0, label: 'L1 West Corridor' },
+  { x: 0.0, z: 2.6, label: 'L2 Central Walk' },
+  { x: 13.2, z: 3.4, label: 'L2 East Gallery' },
+  { x: -13.2, z: 3.4, label: 'L2 West Gallery' },
+  { x: 12.0, z: 10.5, label: 'L3 East Atrium Walk' },
+  { x: -12.0, z: 10.5, label: 'L3 West Atrium Walk' },
 ];
 
 // Semua titik tujuan harus berada di luar rintangan & dalam batas ruangan

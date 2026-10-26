@@ -47,7 +47,7 @@ export const roleTalk={
 
 // autoTalk: keputusan murni (diuji unit) — delay acak & pilihan teks.
 // Delay 4–10 dtk antar bubble obrolan otomatis.
-export const autoTalkDelay = (rng = Math) => 4000 + rng.random() * 6000;
+export const autoTalkDelay = (rng = Math) => 7000 + rng.random() * 8000;
 
 // Pilih teks bubble otomatis utk agent ad:
 // 1) task running utk agent ini → 'Task #id: judul' (status kerja nyata)
