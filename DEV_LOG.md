@@ -3917,5 +3917,5 @@
   - Build: sukses (37 precache 1806.24 KiB) → deploy `dist/*` → `~/wfs-hq/` OK; `wfs-hq` & `wfs-office` `active`.
   - E2E: `e2e_shot.py` **684.267 bytes** (WebGL hidup, 26 agen, ws true); `e2e_tv.py` OK; `e2e_zone_multi.py` OK (0 OFFSCREEN); `shot.sh` :0 **682.657 bytes**.
   - **E2E pixel badge TV (baru, `scratch/e2e_tvconn.py`):** `getImageData` kanvas TV via CDP → RGB(16,229,160) = `#10E5A0` **LIVE (hijau)** di browser nyata dengan data `/wfs-project` sungguhan.
-- Commit: lihat hash pada pesan commit siklus ini.
+- Commit: `b105ffe` — push sukses ke origin/main (rebase 1x di atas auto-dev `09df451` fitZoneLabel; vitest pasca-rebase 1928/1928).
 - Sisa backlog: verifikasi subjektif audio web-audio (butuh pendengaran manusia); tidak ada item wajib lain.
