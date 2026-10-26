@@ -1001,6 +1001,31 @@ export function toggleDivisionInFilter(divKey, currentFilter, { multi = false, c
   return norm;
 }
 
+/**
+ * Siklus preset divisi: 'all' → preset ke-1 → preset ke-2 → ... → 'all'.
+ * Dipakai shortcut keyboard cepat switch preset (D = maju, Shift+D = mundur).
+ * Aman terhadap list kosong (selalu kembali ke 'all') dan terhadap preset key
+ * yang sudah tidak ada (fallback ke 'all' sebagai titik start).
+ */
+export function cycleDivisionPreset(currentFilter, presets = DIVISION_PRESETS, { backward = false } = {}) {
+  const all = (Array.isArray(presets) ? presets : []).filter((p) => p && p.key);
+  if (!all.length) return 'all';
+
+  const keys = all.map((p) => p.key);
+  const currentIndex = keys.findIndex((k) => (
+    typeof currentFilter === 'string' && currentFilter.toLowerCase().trim() === k.toLowerCase()
+  ));
+
+  // 'all' (atau filter arbitrary bukan preset) dianggap slot maya terakhir sebelum
+  // wrap: maju → preset pertama; mundur → preset terakhir.
+  const virtualLength = keys.length + 1;
+  const at = currentIndex === -1 ? keys.length : currentIndex;
+  const next = backward
+    ? (at - 1 + virtualLength) % virtualLength
+    : (at + 1) % virtualLength;
+  return next === keys.length ? 'all' : keys[next];
+}
+
 export function formatDivisionFilterSummary(divisionFilter, customPresets = []) {
   if (!divisionFilter || divisionFilter === 'all') return 'Semua Divisi';
   const preset = getDivisionPreset(divisionFilter, customPresets);

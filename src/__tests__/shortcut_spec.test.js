@@ -142,6 +142,20 @@ describe('shortcut_spec — Spesifikasi Keyboard Shortcut Global', () => {
     expect(resolveShortcutAction({ key: 'f' })).toEqual({ type: 'TOGGLE_FULLSCREEN' });
   });
 
+  it('resolveShortcutAction memetakan siklus preset divisi (D maju, Shift+D mundur, aktif saat task_board terbuka)', () => {
+    // Di luar modal: D maju, Shift+D mundur
+    expect(resolveShortcutAction({ key: 'd' })).toEqual({ type: 'CYCLE_DIV_PRESET' });
+    expect(resolveShortcutAction({ key: 'D' })).toEqual({ type: 'CYCLE_DIV_PRESET' });
+    expect(resolveShortcutAction({ key: 'D', shiftKey: true })).toEqual({ type: 'CYCLE_DIV_PRESET_BACKWARD' });
+    // Saat task board terbuka (modal): D tetap bisa menyiklus preset
+    expect(resolveShortcutAction({ key: 'd' }, { modalOpen: true, activeModal: 'task_board' })).toEqual({ type: 'CYCLE_DIV_PRESET' });
+    // Modal lain: tidak diizinkan
+    expect(resolveShortcutAction({ key: 'd' }, { modalOpen: true, activeModal: 'project_panel' })).toBeNull();
+    // Registri & ringkasan bantuan memuat shortcut baru
+    expect(findShortcutByAction('cycle_div_preset')?.key).toBe('D');
+    expect(formatShortcutHelpSummary()).toContain('D = siklus preset divisi');
+  });
+
   it('formatShortcutHelpSummary menghasilkan string ringkasan yang mencakup fitur baru', () => {
     const summary = formatShortcutHelpSummary();
     expect(summary).toContain('T = papan task (Kanban)');

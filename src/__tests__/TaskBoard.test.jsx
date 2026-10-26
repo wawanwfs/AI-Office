@@ -1100,5 +1100,49 @@ describe('TaskBoard', () => {
       expect(screen.getByText(/Frontend React UI/)).toBeTruthy();
       expect(screen.queryByText(/Infra Helm K8s/)).toBeNull();
     });
+
+    it('shortcut event wfs-cycle-div-preset menyiklus preset divisi maju lalu wrap ke semua divisi', async () => {
+      const onFlash = vi.fn();
+      vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: multiDivTasks }) })));
+      render(<TaskBoard onFlash={onFlash} onAsk={() => {}} />);
+
+      // D pertama: 'all' → preset pertama (engineering)
+      act(() => {
+        window.dispatchEvent(new CustomEvent('wfs-cycle-div-preset', { detail: { backward: false } }));
+      });
+      await waitFor(() => screen.getByRole('dialog', { name: 'Papan task' }));
+      await waitFor(() => expect(screen.getByText(/Backend REST API/)).toBeTruthy());
+
+      // Engineering Core = BE + FE + Ops + QA → semua task tampil, strip preset aktif
+      const engBtn = screen.getByRole('button', { name: /Preset Engineering Core:/ });
+      expect(engBtn.getAttribute('aria-pressed')).toBe('true');
+      expect(onFlash).toHaveBeenCalledWith(expect.stringContaining('Engineering Core'));
+
+      // D kedua: engineering → fullstack (BE + FE), DevOps & QA tersembunyi
+      act(() => {
+        window.dispatchEvent(new CustomEvent('wfs-cycle-div-preset', { detail: { backward: false } }));
+      });
+      await waitFor(() => expect(screen.queryByText(/Infra Helm K8s/)).toBeNull());
+      expect(screen.getByText(/Backend REST API/)).toBeTruthy();
+      expect(screen.getByText(/Frontend React UI/)).toBeTruthy();
+
+      // Shift+D (backward): kembali ke engineering
+      act(() => {
+        window.dispatchEvent(new CustomEvent('wfs-cycle-div-preset', { detail: { backward: true } }));
+      });
+      await waitFor(() => expect(screen.getByText(/Infra Helm K8s/)).toBeTruthy());
+    });
+
+    it('footer hint memuat pintasan D Siklus Preset Divisi', async () => {
+      vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: [] }) })));
+      render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />);
+      act(() => {
+        window.dispatchEvent(new CustomEvent('wfs-toggle-task-board'));
+      });
+      await waitFor(() => screen.getByRole('dialog', { name: 'Papan task' }));
+      const footer = screen.getByRole('note', { name: /Petunjuk pintasan keyboard/i });
+      expect(within(footer).getByText('D')).toBeTruthy();
+      expect(within(footer).getByText('Siklus Preset Divisi')).toBeTruthy();
+    });
   });
 });

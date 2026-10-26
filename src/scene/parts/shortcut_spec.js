@@ -23,6 +23,7 @@ export const KEYBOARD_SHORTCUTS = [
   { key: '+ / −', action: 'zoom', label: 'Zoom In / Out', desc: 'Perbesar atau perkecil jarak pandang kamera 3D', category: 'navigasi' },
   { key: 'N', action: 'toggle_neon', label: 'Mode Neon / Cyberpunk', desc: 'Aktifkan estetika pencahayaan neon malam kantor', category: 'tampilan' },
   { key: 'K', action: 'toggle_names', label: 'Nama & Badge Agent', desc: 'Tampilkan / sembunyikan label nama 3D di atas agent', category: 'tampilan' },
+  { key: 'D', action: 'cycle_div_preset', label: 'Siklus Preset Divisi', desc: 'Papan task terbuka: pindah preset divisi berikutnya (Shift+D = sebelumnya)', category: 'panel' },
   { key: 'R', action: 'toggle_rotate', label: 'Putar Otomatis', desc: 'Putar kamera 3D perlahan mengelilingi kantor', category: 'tampilan' },
   { key: 'F', action: 'toggle_fullscreen', label: 'Layar Penuh', desc: 'Beralih ke mode layar penuh browser', category: 'tampilan' },
   { key: 'Esc', action: 'escape', label: 'Tutup / Batal', desc: 'Tutup dialog / panel atau batalkan fokus seleksi agent', category: 'panel' },
@@ -69,6 +70,7 @@ export function resolveShortcutAction(event, context = {}) {
   if (modalOpen) {
     if (k === 'escape') return { type: 'ESCAPE' };
     if (activeModal === 'task_board' && k === 't') return { type: 'TOGGLE_TASK_BOARD' };
+    if (activeModal === 'task_board' && k === 'd') return { type: 'CYCLE_DIV_PRESET' };
     if (activeModal === 'project_panel' && k === 'p') return { type: 'TOGGLE_PROJECT_PANEL' };
     if (activeModal === 'help' && (k === 'h' || k === '?')) return { type: 'TOGGLE_HELP' };
     if (activeModal === 'settings' && k === 'o') return { type: 'TOGGLE_SETTINGS' };
@@ -79,6 +81,7 @@ export function resolveShortcutAction(event, context = {}) {
   // Shift + combinations
   if (event.shiftKey) {
     if (k === 'a') return { type: 'CYCLE_AMBIENCE_VOLUME' };
+    if (k === 'd') return { type: 'CYCLE_DIV_PRESET_BACKWARD' };
     if (event.code === 'Digit1' || k === '!' || k === '1') return { type: 'FOCUS_FLOOR', floor: 1 };
     if (event.code === 'Digit2' || k === '@' || k === '2') return { type: 'FOCUS_FLOOR', floor: 2 };
     if (event.code === 'Digit3' || k === '#' || k === '3') return { type: 'FOCUS_FLOOR', floor: 3 };
@@ -87,6 +90,7 @@ export function resolveShortcutAction(event, context = {}) {
   // Standard keys
   if (k === 't') return { type: 'TOGGLE_TASK_BOARD' };
   if (k === 'p') return { type: 'TOGGLE_PROJECT_PANEL' };
+  if (k === 'd') return { type: 'CYCLE_DIV_PRESET' };
   if (k === 'a') return { type: 'TOGGLE_AMBIENCE' };
   if (k === 'm') return { type: 'TOGGLE_MUTE' };
   if (k === 'o') return { type: 'TOGGLE_SETTINGS' };
@@ -112,6 +116,7 @@ export function resolveShortcutAction(event, context = {}) {
 export function formatShortcutHelpSummary() {
   return [
     'T = papan task (Kanban)',
+    'D = siklus preset divisi (Shift+D mundur)',
     'P = proyek dibantuin.com',
     'A = ambience hum (Shift+A volume)',
     'M = mute suara',

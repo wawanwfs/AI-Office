@@ -1,3 +1,29 @@
+## 2026-10-27 01:50 WIB — Siklus 105: Shortcut Keyboard Cepat Switch Preset Divisi (D / Shift+D, cycleDivisionPreset, Event Bus wfs-cycle-div-preset & Hint Terintegrasi)
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Modul Utilitas Preset Divisi (`src/scene/parts/kanban_spec.js`, `src/__tests__/kanban_spec.test.js`):**
+     - Mengembangkan evaluator siklus preset `cycleDivisionPreset(currentFilter, presets, { backward })`: siklus `'all' → preset 1 → preset 2 → … → 'all'` dengan aritmetika slot maya (majumundur wrap aman), case-insensitive terhadap filter key, toleran filter arbitrary bukan preset (diperlakukan seperti `'all'`), serta aman terhadap koleksi preset kustom kosong.
+  2. **Registri Shortcut Global (`src/scene/parts/shortcut_spec.js`, `src/__tests__/shortcut_spec.test.js`):**
+     - Mendaftarkan shortcut baru `D` (aksi `cycle_div_preset`, kategori panel) ke `KEYBOARD_SHORTCUTS` + ringkasan bantuan `formatShortcutHelpSummary()`.
+     - `resolveShortcutAction` memetakan `D`/`Shift+D` ke `CYCLE_DIV_PRESET` / `CYCLE_DIV_PRESET_BACKWARD` — aktif saat papan task terbuka (activeModal task_board) maupun di desktop, ditolak di modal lain, dan tetap diabaikan pada input editable / modifier ctrl/meta/alt.
+  3. **Distribusi Aksi App (`src/App.jsx`):**
+     - Kedua aksi siklus men-dispatch event bus `wfs-cycle-div-preset` dengan `detail.backward` (pola identik shortcut `T` → `wfs-toggle-task-board`).
+  4. **Antarmuka TaskBoard (`src/components/TaskBoard.jsx`, `src/__tests__/TaskBoard.test.jsx`):**
+     - Listener `wfs-cycle-div-preset` yang membuka papan bila tertutup, menyiklus filter divisi melewati semua preset bawaan + kustom via `allDivPresets`, memicu flash `▶ Preset divisi berikutnya: …` / `◀ Preset divisi sebelumnya: …` dengan ringkasan manusiawi `formatDivisionFilterSummary`, plus feedback audio `playSelect`.
+     - Footer hint papan task kini menampilkan `<kbd>D</kbd> Siklus Preset Divisi`.
+- **Bukti terukur:**
+  - **Vitest:** **1888/1888 passed (138 test file)** (+4 tests baru: 1 di `kanban_spec.test.js`, 1 di `shortcut_spec.test.js`, 2 di `TaskBoard.test.jsx`, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/`, exit 0).
+  - **Build:** Berhasil (exit 0, 37 precache entries 1801.46 KiB; `OfficeScene` 166.74 KB / gzip 57.13 KB, `index` 223.60 KB / gzip 61.15 KB, `vendor-three` 715.76 KB, `vendor-react` 189.63 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/` (chunk baru `index-b3sElssc.js` hadir).
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-b3sElssc.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (26 agents aktif, ws true, fase night).
+    - `shot.sh` (DISPLAY=:0): Screenshot visual **679.240 bytes** (>500 KB, WebGL hidup, E2E_VISUAL: OK).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja: L1=9, L2=9, L3=8, 0 collision).
+- **Commit Hash:** `(lihat git log)`
+- **Sisa backlog:** indikator status sinkronisasi WebSocket offline/reconnect; sinkronisasi siklus preset divisi ke strip preset ProjectPanel.
+
 ## 2026-10-27 00:55 WIB — Siklus 104: Preset Kombinasi Multi-Divisi Kustom pada Task Kanban (kanban_spec.js, Panel Pembuat Preset Divisi Kustom, Multi-Select Divisi, Persistensi Storage & Indikator Komprehensif)
 
 - **Yang diperbaiki & ditingkatkan:**

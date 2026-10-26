@@ -69,6 +69,7 @@ import {
   getDivisionPreset,
   isDivisionPresetActive,
   computeDivisionPresetStats,
+  cycleDivisionPreset,
   toggleDivisionInFilter,
   formatDivisionFilterSummary,
 } from '../scene/parts/kanban_spec.js';
@@ -1348,6 +1349,33 @@ describe('kanban_spec — Audit Kontras Warna & Aksesibilitas WCAG (Badge & Tag)
       expect(eng.count).toBe(4);
       expect(eng.done).toBe(2);
       expect(eng.running).toBe(1);
+    });
+
+    it('cycleDivisionPreset menyiklus preset maju dan mundur dengan wrap ke all', () => {
+      const keys = DIVISION_PRESETS.map((p) => p.key);
+      expect(keys.length).toBeGreaterThanOrEqual(5);
+
+      // Maju dari 'all' → preset pertama
+      expect(cycleDivisionPreset('all')).toBe(keys[0]);
+      // Maju berurutan melewati seluruh preset
+      expect(cycleDivisionPreset(keys[0])).toBe(keys[1]);
+      expect(cycleDivisionPreset(keys[1], DIVISION_PRESETS, { backward: true })).toBe(keys[0]);
+      // Maju dari preset terakhir → wrap kembali ke 'all'
+      expect(cycleDivisionPreset(keys[keys.length - 1])).toBe('all');
+      // Mundur dari 'all' → preset terakhir
+      expect(cycleDivisionPreset('all', DIVISION_PRESETS, { backward: true })).toBe(keys[keys.length - 1]);
+      // Case-insensitive: filter 'FULLSTACK' tetap dikenali sebagai slot preset fullstack
+      expect(cycleDivisionPreset('FULLSTACK')).toBe(getDivisionPreset('fullstack').key === keys[1] ? keys[2] : keys[1]);
+      // Filter arbitrary bukan preset berperilaku seperti 'all'
+      expect(cycleDivisionPreset('core-be')).toBe(keys[0]);
+      expect(cycleDivisionPreset(null)).toBe(keys[0]);
+      // List preset kosong selalu aman
+      expect(cycleDivisionPreset('fullstack', [])).toBe('all');
+      // Mendukung koleksi preset kustom
+      const custom = [{ key: 'div-custom-squad', label: 'Squad', divisions: ['core-be'] }];
+      expect(cycleDivisionPreset('all', [...DIVISION_PRESETS, ...custom])).toBe(keys[0]);
+      expect(cycleDivisionPreset(keys[keys.length - 1], [...DIVISION_PRESETS, ...custom])).toBe('div-custom-squad');
+      expect(cycleDivisionPreset('div-custom-squad', [...DIVISION_PRESETS, ...custom])).toBe('all');
     });
   });
 });

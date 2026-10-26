@@ -396,6 +396,12 @@ export default function App() {
       } else if (actType === 'TOGGLE_TASK_BOARD') {
         e.preventDefault()
         window.dispatchEvent(new CustomEvent('wfs-toggle-task-board'))
+      } else if (actType === 'CYCLE_DIV_PRESET') {
+        e.preventDefault()
+        window.dispatchEvent(new CustomEvent('wfs-cycle-div-preset', { detail: { backward: false } }))
+      } else if (actType === 'CYCLE_DIV_PRESET_BACKWARD') {
+        e.preventDefault()
+        window.dispatchEvent(new CustomEvent('wfs-cycle-div-preset', { detail: { backward: true } }))
       } else if (actType === 'TOGGLE_PROJECT_PANEL') {
         e.preventDefault()
         window.dispatchEvent(new CustomEvent('wfs-toggle-project-panel'))
