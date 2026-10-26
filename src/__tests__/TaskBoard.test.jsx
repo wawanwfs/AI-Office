@@ -389,6 +389,30 @@ describe('TaskBoard', () => {
     expect(screen.getByText(/Dashboard UI/)).toBeTruthy()
   })
 
+  it('badge tag di kartu bisa diaktifkan lewat keyboard (Enter/Space) — a11y', async () => {
+    const taggedTasks = [
+      { id: 10, title: 'Auth Service', agent_id: 'be1', status: 'done', role: 'be', tags: ['auth'] },
+      { id: 20, title: 'Dashboard UI', agent_id: 'fe1', status: 'pending', role: 'fe', tags: ['react'] },
+    ]
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: taggedTasks }) })))
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />)
+    fireEvent.click(screen.getByText('Papan'))
+    await waitFor(() => screen.getByText(/Auth Service/))
+
+    // Switch ke kanban
+    fireEvent.click(screen.getByRole('button', { name: 'Tampilan Papan Kolom' }))
+    await waitFor(() => screen.getByRole('region', { name: 'Papan kanban sprint' }))
+
+    const reactBadge = screen.getByTitle('Filter berdasarkan tag #React')
+    expect(reactBadge.getAttribute('role')).toBe('button')
+    expect(reactBadge.getAttribute('tabindex')).toBe('0')
+
+    // Aktifkan via keyboard (Enter) — kartu non-react tersaring
+    fireEvent.keyDown(reactBadge, { key: 'Enter' })
+    expect(screen.queryByText(/Auth Service/)).toBeNull()
+    expect(screen.getByText(/Dashboard UI/)).toBeTruthy()
+  })
+
   it('di dalam modal detail, klik chip tag menutup modal dan menyaring papan ke tag tersebut', async () => {
     const taggedTasks = [
       { id: 10, title: 'Auth Service', agent_id: 'be1', status: 'done', role: 'be', tags: ['security'] },
