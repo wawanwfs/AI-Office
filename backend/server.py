@@ -10,7 +10,7 @@ from typing import Optional
 import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse, Response
+from fastapi.responses import Response
 from pydantic import BaseModel
 
 BASE = pathlib.Path(__file__).parent
@@ -611,7 +611,6 @@ async def api_system_resources():
 @app.get("/api/agents/status")
 async def api_agents_status():
     """Ringkasan status per agent utk kantor 3D: {agent_id: {status_count, last_status}}."""
-    from collections import defaultdict
     cnt = {}
     last = {}
     for t in taskengine.list_tasks(None):
