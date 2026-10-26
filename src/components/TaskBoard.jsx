@@ -35,6 +35,13 @@ import {
   computeTagCloud,
   normalizeTagList,
   TAG_PRESETS,
+  PRESET_ICONS,
+  TAG_PALETTE,
+  loadCustomPresets,
+  saveCustomPresets,
+  createCustomPreset,
+  deleteCustomPreset,
+  getAllPresets,
   getTagPreset,
   isPresetActive,
   computePresetStats,
@@ -64,13 +71,27 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const [sel, setSel] = useState(null)
   const [draggedTaskId, setDraggedTaskId] = useState(null)
   const [dragOverCol, setDragOverCol] = useState(null)
+  const [customPresets, setCustomPresets] = useState(() => {
+    try {
+      return loadCustomPresets(typeof localStorage !== 'undefined' ? localStorage : null)
+    } catch {
+      return []
+    }
+  })
+  const [showPresetCreator, setShowPresetCreator] = useState(false)
+  const [presetFormName, setPresetFormName] = useState('')
+  const [presetFormIcon, setPresetFormIcon] = useState('⚡')
+  const [presetFormColor, setPresetFormColor] = useState('#38BDF8')
+  const [presetFormTags, setPresetFormTags] = useState([])
   const board = useRef(null)
   const searchInputRef = useRef(null)
   useModalFlag(open || !!sel)
   const onEscRef = useRef(() => {})
   useEffect(() => {
     onEscRef.current = () => {
-      if (q && document.activeElement === searchInputRef.current) {
+      if (showPresetCreator) {
+        setShowPresetCreator(false)
+      } else if (q && document.activeElement === searchInputRef.current) {
         setQ('')
       } else if (sel) {
         setSel(null)
@@ -110,16 +131,66 @@ export default function TaskBoard({ onFlash, onAsk }) {
 
   const handlePresetClick = useCallback((presetKey) => {
     setSelectedTag((prev) => {
-      if (isPresetActive(presetKey, prev)) {
+      if (isPresetActive(presetKey, prev, customPresets)) {
         return 'all'
       }
-      const p = getTagPreset(presetKey)
+      const p = getTagPreset(presetKey, customPresets)
       return p ? p.tags : 'all'
     })
     if (typeof window !== 'undefined' && window.__officeSound) {
       window.__officeSound.playSelect?.()
     }
-  }, [])
+  }, [customPresets])
+
+  const handleSaveCustomPreset = useCallback((e) => {
+    if (e && e.preventDefault) e.preventDefault()
+    const name = presetFormName.trim()
+    if (!name || presetFormTags.length === 0) return
+
+    const newPreset = createCustomPreset({
+      label: name,
+      tags: presetFormTags,
+      icon: presetFormIcon,
+      color: presetFormColor,
+    }, customPresets)
+
+    if (!newPreset) return
+
+    const updated = [...customPresets, newPreset]
+    setCustomPresets(updated)
+    try {
+      saveCustomPresets(typeof localStorage !== 'undefined' ? localStorage : null, updated)
+    } catch { /* ignore */ }
+
+    setSelectedTag(newPreset.tags)
+    setShowPresetCreator(false)
+    setPresetFormName('')
+    if (onFlash) onFlash(`Preset kustom "${newPreset.label}" berhasil disimpan`)
+    if (typeof window !== 'undefined' && window.__officeSound) {
+      window.__officeSound.playSelect?.()
+    }
+  }, [presetFormName, presetFormTags, presetFormIcon, presetFormColor, customPresets, onFlash])
+
+  const handleDeleteCustomPreset = useCallback((presetKey, e) => {
+    if (e && e.stopPropagation) e.stopPropagation()
+    const found = customPresets.find(p => p.key === presetKey)
+    const label = found?.label || presetKey
+
+    const updated = deleteCustomPreset(presetKey, customPresets)
+    setCustomPresets(updated)
+    try {
+      saveCustomPresets(typeof localStorage !== 'undefined' ? localStorage : null, updated)
+    } catch { /* ignore */ }
+
+    if (isPresetActive(presetKey, selectedTag, customPresets)) {
+      setSelectedTag('all')
+    }
+
+    if (onFlash) onFlash(`Preset "${label}" dihapus`)
+    if (typeof window !== 'undefined' && window.__officeSound) {
+      window.__officeSound.playSelect?.()
+    }
+  }, [customPresets, selectedTag, onFlash])
 
   const toggleTagMode = useCallback(() => {
     setTagMode((prev) => (prev === 'any' ? 'all' : 'any'))
@@ -147,7 +218,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
       if (e?.detail?.division) setDivision(e.detail.division)
       else if (e?.detail?.role) setDivision(e.detail.role)
       if (e?.detail?.preset) {
-        const p = getTagPreset(e.detail.preset)
+        const p = getTagPreset(e.detail.preset, customPresets)
         if (p) setSelectedTag(p.tags)
       } else if (e?.detail?.tag) {
         setSelectedTag(e.detail.tag)
@@ -169,7 +240,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
     }
     window.addEventListener('wfs-open-task-board', handleOpen)
     return () => window.removeEventListener('wfs-open-task-board', handleOpen)
-  }, [tasks])
+  }, [tasks, customPresets])
 
   useEffect(() => {
     const handleToggle = () => {
@@ -192,7 +263,9 @@ export default function TaskBoard({ onFlash, onAsk }) {
     const iv = setInterval(() => { if (document.visibilityState === 'visible') load(ac.signal) }, 8000)
     const k = e => {
       if (e.key === 'Escape') {
-        if (q && document.activeElement === searchInputRef.current) {
+        if (showPresetCreator) {
+          setShowPresetCreator(false)
+        } else if (q && document.activeElement === searchInputRef.current) {
           setQ('')
         } else if (sel) {
           setSel(null)
@@ -203,7 +276,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
     }
     document.addEventListener('keydown', k)
     return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k) }
-  }, [open, load, sel, q])
+  }, [open, load, sel, q, showPresetCreator])
 
   // Fokus ke panel detail saat task dibuka: tombol task yang diklik unmount,
   // tanpa ini fokus jatuh ke <body> — Tab/screen reader mulai lagi dari awal dokumen.
@@ -299,7 +372,16 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const divisions = useMemo(() => extractTaskDivisions(tasks), [tasks])
   const activeDivision = useMemo(() => divisions.find(d => d.key === division) || null, [divisions, division])
   const tagCloud = useMemo(() => computeTagCloud(tasks, { divisionFilter: division }), [tasks, division])
-  const presetStats = useMemo(() => computePresetStats(tasks, TAG_PRESETS, division), [tasks, division])
+  const allPresets = useMemo(() => getAllPresets(customPresets), [customPresets])
+  const presetStats = useMemo(() => computePresetStats(tasks, allPresets, division), [tasks, allPresets, division])
+  const selectableTags = useMemo(() => {
+    const map = new Map()
+    tagCloud.forEach(t => map.set(t.tag, t.label))
+    presetFormTags.forEach(t => {
+      if (!map.has(t)) map.set(t, t)
+    })
+    return Array.from(map.entries()).map(([tag, label]) => ({ tag, label }))
+  }, [tagCloud, presetFormTags])
   const customRange = useMemo(() => {
     if (dateRange !== 'custom') return null
     return { start: customStartDate || null, end: customEndDate || null }
@@ -891,7 +973,38 @@ export default function TaskBoard({ onFlash, onAsk }) {
                 <div className="task-preset-strip" role="group" aria-label="Preset kombinasi tag">
                   <span className="task-preset-strip-label">Preset:</span>
                   {presetStats.map((p) => {
-                    const isAct = isPresetActive(p.key, selectedTag)
+                    const isAct = isPresetActive(p.key, selectedTag, customPresets)
+                    if (p.isCustom) {
+                      return (
+                        <div
+                          key={p.key}
+                          className={`task-preset-chip is-custom${isAct ? ' active' : ''}`}
+                          style={{ '--preset-color': p.color }}
+                        >
+                          <button
+                            type="button"
+                            className="task-preset-chip-main"
+                            onClick={() => handlePresetClick(p.key)}
+                            aria-pressed={isAct}
+                            title={`${p.label}: [${p.tags.map(t => '#' + t).join(', ')}] — ${p.desc} (${p.count} task)`}
+                            aria-label={`Preset ${p.label}: ${p.count} task`}
+                          >
+                            <span className="task-preset-icon" aria-hidden="true">{p.icon}</span>
+                            <span className="task-preset-label">{p.label}</span>
+                            {p.count > 0 && <span className="task-preset-count">{p.count}</span>}
+                          </button>
+                          <button
+                            type="button"
+                            className="task-preset-del-btn"
+                            onClick={(e) => handleDeleteCustomPreset(p.key, e)}
+                            title={`Hapus preset kustom ${p.label}`}
+                            aria-label={`Hapus preset kustom ${p.label}`}
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      )
+                    }
                     return (
                       <button
                         key={p.key}
@@ -909,7 +1022,139 @@ export default function TaskBoard({ onFlash, onAsk }) {
                       </button>
                     )
                   })}
+                  <button
+                    type="button"
+                    className={`task-preset-add-btn${showPresetCreator ? ' active' : ''}`}
+                    onClick={() => {
+                      if (!showPresetCreator) {
+                        setPresetFormName('')
+                        if (activeTags.length > 0) {
+                          setPresetFormTags([...activeTags])
+                        } else if (tagCloud.length > 0) {
+                          setPresetFormTags([tagCloud[0].tag])
+                        } else {
+                          setPresetFormTags([])
+                        }
+                      }
+                      setShowPresetCreator(prev => !prev)
+                      if (typeof window !== 'undefined' && window.__officeSound) {
+                        window.__officeSound.playSelect?.()
+                      }
+                    }}
+                    title={activeTags.length > 0 ? `Simpan ${activeTags.length} tag aktif sebagai preset baru` : 'Buat preset kombinasi tag baru'}
+                    aria-label="Buat preset tag baru"
+                    aria-expanded={showPresetCreator}
+                  >
+                    <span>{showPresetCreator ? '✕ Tutup' : (activeTags.length > 0 ? `+ Simpan (${activeTags.length} tag)` : '+ Preset Baru')}</span>
+                  </button>
                 </div>
+              )}
+              {/* Creator Form Preset Kustom */}
+              {tasks && showPresetCreator && (
+                <form
+                  className="task-preset-creator"
+                  onSubmit={handleSaveCustomPreset}
+                  aria-label="Form pembuatan preset tag kustom"
+                >
+                  <div className="task-preset-creator-header">
+                    <span>✨ Simpan Preset Tag Kustom</span>
+                    <button
+                      type="button"
+                      className="task-date-clear-btn"
+                      onClick={() => setShowPresetCreator(false)}
+                      title="Batal / Tutup (Esc)"
+                      aria-label="Tutup form preset"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                  <div className="task-preset-creator-row">
+                    <input
+                      type="text"
+                      className="task-preset-input"
+                      placeholder="Nama preset (misal: Cloud & Infra)..."
+                      value={presetFormName}
+                      onChange={(e) => setPresetFormName(e.target.value)}
+                      maxLength={32}
+                      aria-label="Nama preset kustom"
+                      autoFocus
+                    />
+                    <div className="task-preset-icon-picker" role="group" aria-label="Pilih ikon preset">
+                      {PRESET_ICONS.slice(0, 8).map((ic) => (
+                        <button
+                          key={ic}
+                          type="button"
+                          className={`task-preset-icon-btn${presetFormIcon === ic ? ' active' : ''}`}
+                          onClick={() => setPresetFormIcon(ic)}
+                          aria-label={`Pilih ikon ${ic}`}
+                          aria-pressed={presetFormIcon === ic}
+                        >
+                          {ic}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="task-preset-color-picker" role="group" aria-label="Pilih warna preset">
+                      {TAG_PALETTE.slice(0, 6).map((c) => (
+                        <button
+                          key={c}
+                          type="button"
+                          className={`task-preset-color-btn${presetFormColor === c ? ' active' : ''}`}
+                          style={{ background: c, '--dot-color': c }}
+                          onClick={() => setPresetFormColor(c)}
+                          aria-label={`Pilih warna ${c}`}
+                          aria-pressed={presetFormColor === c}
+                        />
+                      ))}
+                    </div>
+                  </div>
+                  <div className="task-preset-tags-section">
+                    <span className="task-tag-strip-label" style={{ marginBottom: 4, display: 'inline-block' }}>
+                      Pilih Tag ({presetFormTags.length} dipilih):
+                    </span>
+                    <div className="task-preset-tags-selector" role="group" aria-label="Pilihan tag untuk preset">
+                      {selectableTags.map((item) => {
+                        const isSel = presetFormTags.includes(item.tag)
+                        return (
+                          <button
+                            key={item.tag}
+                            type="button"
+                            className={`task-preset-tag-toggle${isSel ? ' selected' : ''}`}
+                            onClick={() => {
+                              setPresetFormTags((prev) =>
+                                prev.includes(item.tag)
+                                  ? prev.filter((t) => t !== item.tag)
+                                  : [...prev, item.tag]
+                              )
+                            }}
+                            aria-pressed={isSel}
+                            aria-label={`Tag #${item.label}`}
+                          >
+                            <span>#{item.label}</span>
+                            {isSel && <span aria-hidden="true"> ✓</span>}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+                  <div className="task-preset-creator-actions">
+                    <button
+                      type="button"
+                      className="btn"
+                      style={{ minHeight: 28, fontSize: 11 }}
+                      onClick={() => setShowPresetCreator(false)}
+                    >
+                      Batal
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn primary"
+                      style={{ minHeight: 28, fontSize: 11 }}
+                      disabled={!presetFormName.trim() || presetFormTags.length === 0}
+                    >
+                      Simpan Preset
+                    </button>
+                  </div>
+                </form>
               )}
                 {viewMode === 'list' && (
                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>

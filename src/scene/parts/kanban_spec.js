@@ -389,14 +389,130 @@ export const TAG_PRESETS = [
   },
 ];
 
-export function getTagPreset(presetKey) {
-  if (!presetKey) return null;
-  const k = String(presetKey).toLowerCase().trim();
-  return TAG_PRESETS.find((p) => p.key === k) || null;
+export const CUSTOM_PRESET_STORAGE_KEY = 'wfs_custom_tag_presets';
+
+export const PRESET_ICONS = [
+  '⚡', '🚀', '🛡', '🎨', '🐳', '🛠', '🧪', '🔍', '📱', '💡', '⚙️', '📦', '🔥', '📊', '✨'
+];
+
+export function slugifyPresetKey(name) {
+  if (!name || typeof name !== 'string') {
+    return `custom-${Date.now().toString(36)}`;
+  }
+  const clean = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return clean ? `custom-${clean}` : `custom-${Date.now().toString(36)}`;
 }
 
-export function isPresetActive(presetKey, currentTagFilter) {
-  const preset = getTagPreset(presetKey);
+export function normalizeCustomPreset(rawPreset) {
+  if (!rawPreset || typeof rawPreset !== 'object') return null;
+  const label = String(rawPreset.label || rawPreset.name || '').trim();
+  if (!label) return null;
+
+  const tags = normalizeTagList(rawPreset.tags);
+  if (!tags.length) return null;
+
+  let key = rawPreset.key ? String(rawPreset.key).toLowerCase().trim() : '';
+  if (!key) {
+    key = slugifyPresetKey(label);
+  } else if (!key.startsWith('custom-') && !TAG_PRESETS.some((p) => p.key === key)) {
+    key = `custom-${key}`;
+  }
+
+  const icon = typeof rawPreset.icon === 'string' && rawPreset.icon.trim() ? rawPreset.icon.trim() : '🏷️';
+  const color = typeof rawPreset.color === 'string' && /^#[0-9a-fA-F]{6}$/i.test(rawPreset.color.trim())
+    ? rawPreset.color.trim()
+    : TAG_PALETTE[0];
+  const textColor = getContrastingTextColor(color);
+  const desc = String(rawPreset.desc || rawPreset.description || '').trim() ||
+    `Preset: ${tags.map((t) => '#' + t).join(', ')}`;
+
+  return {
+    key,
+    label,
+    icon,
+    color,
+    textColor,
+    tags,
+    desc,
+    isCustom: true,
+  };
+}
+
+export function loadCustomPresets(storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
+  if (!storage || typeof storage.getItem !== 'function') return [];
+  try {
+    const raw = storage.getItem(CUSTOM_PRESET_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(normalizeCustomPreset).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomPresets(storage = (typeof localStorage !== 'undefined' ? localStorage : null), presets = []) {
+  if (!storage || typeof storage.setItem !== 'function') return false;
+  try {
+    const valid = (presets || []).map(normalizeCustomPreset).filter(Boolean);
+    storage.setItem(CUSTOM_PRESET_STORAGE_KEY, JSON.stringify(valid));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function createCustomPreset(params, existingCustomPresets = []) {
+  const norm = normalizeCustomPreset(params);
+  if (!norm) return null;
+
+  let key = norm.key;
+  let counter = 1;
+  const existingKeys = new Set([
+    ...TAG_PRESETS.map((p) => p.key),
+    ...(existingCustomPresets || []).map((p) => p && p.key),
+  ]);
+
+  while (existingKeys.has(key)) {
+    counter += 1;
+    key = `${norm.key}-${counter}`;
+  }
+
+  return {
+    ...norm,
+    key,
+  };
+}
+
+export function deleteCustomPreset(presetKey, existingCustomPresets = []) {
+  if (!presetKey) return [...(existingCustomPresets || [])];
+  const k = String(presetKey).toLowerCase().trim();
+  return (existingCustomPresets || []).filter((p) => p && p.key !== k);
+}
+
+export function getAllPresets(customPresets = []) {
+  const custom = (customPresets || []).map(normalizeCustomPreset).filter(Boolean);
+  return [...TAG_PRESETS, ...custom];
+}
+
+export function getTagPreset(presetKey, customPresets = []) {
+  if (!presetKey) return null;
+  const k = String(presetKey).toLowerCase().trim();
+  const foundBuiltin = TAG_PRESETS.find((p) => p.key === k);
+  if (foundBuiltin) return foundBuiltin;
+  if (Array.isArray(customPresets) && customPresets.length > 0) {
+    const foundCustom = customPresets.find((p) => p && p.key === k);
+    if (foundCustom) return normalizeCustomPreset(foundCustom);
+  }
+  return null;
+}
+
+export function isPresetActive(presetKey, currentTagFilter, customPresets = []) {
+  const preset = getTagPreset(presetKey, customPresets);
   if (!preset) return false;
   const currentList = normalizeTagList(currentTagFilter);
   if (currentList.length !== preset.tags.length) return false;
