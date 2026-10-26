@@ -1,3 +1,21 @@
+## 2026-10-27 02:35 WIB — Siklus 106: Indikator Sinkronisasi Gateway HUD + Polling Adaptif Backoff Eksponensial (lib/connection_spec.js, chip live/stale/down)
+
+- **Yang diperbaiki & ditingkatkan (backlog siklus 105: indikator status sinkronisasi offline/reconnect):**
+  1. **Modul kesehatan koneksi murni (`src/lib/connection_spec.js`, `src/__tests__/connection_spec.test.js`):**
+     - Tracker `applyPollResult(tr, result, now)`: transisi state `live` (sukses) / `stale` (gagal setelah pernah sukses — data basi tapi tampilan masih layak) / `down` (gagal tanpa pernah sukses), `failStreak`, `lastOkAt`, injeksi waktu agar testable.
+     - Backoff eksponensial polling: 5s → 10s → 20s → 40s → 80s (cap `POLL_MAX_MS=80s`), pulih otomatis ke 15s (`POLL_HEALTHY_MS`) saat sukses; `nextPollDelay()` dgn fallback sehat.
+     - `connectionBadge(tr, now)`: badge HUD selalu-aman — `live` → "Sinkron" (hijau), `stale` → "Sinkron N dtk/mnt lalu" (amber, umur data sejak sukses terakhir), `down` → "Terputus" (merah, membawa detail error).
+  2. **Polling adaptif App (`src/App.jsx`):** `setInterval` fixed 15s diganti rantai `setTimeout` yang membaca delay dari tracker — saat gateway mati browser tak lagi menghantam endpoint tiap 15s (hemat trafik & log), saat pulih langsung kembali ke ritme sehat; tab `hidden` diturunkan ke 30s. RefRESH label umur data tiap 5s hanya saat state non-live (tanpa re-render sia-sia saat sehat, tanpa fetch tambahan).
+  3. **Chip HUD sinkronisasi (`src/components/HUD.jsx`, `src/index.css`, `src/__tests__/hud_ambience.test.jsx`):** chip `.conn-chip` di samping status task — titik status + label, tooltip `title` berisi detail ("Gateway tersinkron" / "Polling gagal — data terakhir N lalu" / "Gateway tak terjangkau"), `role="status"` + `aria-label`, animasi `pulse` untuk stale/down, backward-compatible (tanpa prop `conn` chip tak dirender).
+- **Bukti terukur:**
+  - **Vitest:** **1913/1913 passed (142 test file)** (+14 test baru: 10 `connection_spec.test.js`, 4 chip HUD di `hud_ambience.test.jsx`; 11 test lain dari worker auto-dev).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/`, exit 0).
+  - **Build:** sukses (37 precache entries 1803.67 KiB; chunk `index-BWUUzqjs.js` tersaji HTTP 200).
+  - **Deploy:** `dist/*` → `~/wfs-hq/` OK.
+  - **E2E:** `e2e_err.py` 0 "Scene init failed"; `e2e_tv.py` **E2E_TV OK** (26 agents, ws true); `shot.sh` **680.847 bytes** (>500 KB, WebGL hidup); `verify_desks.mjs` **ALL_DESKS_OK** (L1=9, L2=9, L3=8, 0 collision); probe CDP baru `e2e_conn.py`: chip `.conn-chip live` "Sinkron" terender di HUD browser nyata.
+- **Commit Hash:** `(lihat git log)` — rebase di atas worker auto-dev bila ada.
+- **Sisa backlog:** sinkronisasi siklus preset divisi ke strip preset ProjectPanel; badge chip koneksi juga di Ticker/strip 3D (opsional).
+
 ## 2026-10-27 01:50 WIB — Siklus 105: Shortcut Keyboard Cepat Switch Preset Divisi (D / Shift+D, cycleDivisionPreset, Event Bus wfs-cycle-div-preset & Hint Terintegrasi)
 
 - **Yang diperbaiki & ditingkatkan:**
