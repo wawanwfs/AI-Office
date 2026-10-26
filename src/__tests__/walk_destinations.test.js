@@ -85,7 +85,7 @@ describe('isSafeDestination — validasi tujuan', () => {
 });
 
 describe('CAMPUS_WALK_DESTINATIONS — destinasi multi-lantai kampus WFS PROJECT', () => {
-  it('mencakup 16 destinasi (8 historis + 8 multi-lantai)', () => {
+  it('mencakup 25 destinasi (8 historis + 17 multi-lantai)', () => {
     expect(CAMPUS_WALK_DESTINATIONS.length).toBe(25);
   });
 
