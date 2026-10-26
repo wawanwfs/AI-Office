@@ -1,3 +1,19 @@
+## 2026-10-27 04:07 WIB — Siklus 108: Polling Adaptif Backoff Eksponensial untuk Papan Proyek 3D & TV Lounge (penuntas backlog siklus 107)
+
+- **Yang diperbaiki (backlog siklus 107: "adaptasi backoff eksponensial untuk pull papan 3D & TV lounge — masih 60 dtk fix"):**
+  1. **`src/lib/connection_spec.js` — `nextPollDelay(tr, healthyMs)`:** kini menerima cadence sehat kustom per-pemanggil (papan 3D & TV tetap 60 dtk saat sehat — perilaku lama dipertahankan; App tetap default 15s). Tracker yang sedang gagal SELALU mengembalikan delay backoff eksponensialnya (5→10→20→40→80s, cap 80s) apa pun cadence sehat; pulih otomatis ke cadence pemanggil.
+  2. **`src/scene/parts/projectboard.js` (papan proyek 3D):** `setInterval(pull, 60000)` fix diganti rantai `setTimeout` adaptif yang membaca delay dari tracker `connection_spec` (satu sumber kebenaran dengan chip HUD & badge strip). Jadwal pertama menyusul pull awal selesai agar delay dihitung dari tracker segar; `destroy()` menghentikan rantai (flag `pollStopped` + `clearTimeout`) — gateway mati tak lagi dihantam tiap 60 dtk (hemat trafik & log, paritas penuh dengan App siklus 106).
+  3. **`src/scene/parts/lounge.js` (TV lounge):** pola identik — tracker `tvConn` + rantai `setTimeout` adaptif 60 dtk sehat / backoff saat gagal; api baru `tvDestroy()` (menggantikan `clearInterval(tvIv)` manual) dan `tvSchedule()` diekspos untuk pengujian; `window.__tvPullErr` tetap disimpan saat gagal (kompatibel e2e lama).
+  4. **`src/scene/OfficeScene.js`:** destroy path TV lounge kini memanggil `__loungeObj.tvDestroy()` (bersih, try-guarded) — menggantikan `clearInterval(tvIv)` + `removeEventListener` manual.
+  5. **Test baru (+5):** `connection_spec.test.js` +1 (cadence sehat kustom: tracker kosong/live → 60 dtk pemanggil, gagal → backoff menang); `tv_lounge_runtime.test.js` +2 (backoff 60→5→10→pulih 60 dtk diverifikasi tick-demi-tick via fake timers; `tvDestroy` menghentikan rantai — 0 fetch selama 300 dtk); `projectboard_runtime.test.js` +2 (backoff papan 3D 60→5→10→pulih 60; paritas perilaku TV). Test ekstraksi TV kini menginjeksi `applyPollResult`/`nextPollDelay` (import ES modul tak terlihat `new Function`).
+- **Bukti terukur:**
+  - **Vitest:** **1916/1916 passed (142 file)** (+5 test baru, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint` pada 7 file terubah, exit 0).
+  - **Build:** sukses (exit 0, 37 precache entries 1804.55 KiB; chunk `index-CML6VP6t.js` 225.24 kB tersaji HTTP 200 di :9503).
+  - **Deploy:** `dist/*` → `~/wfs-hq/` OK; layanan `wfs-hq` & `wfs-office` tetap `active`.
+  - **E2E:** `e2e_tv.py` **E2E_TV: OK** (26 agents, ws true); `e2e_shot.py` **E2E_VISUAL: OK** — **679.458 bytes** (>500 KB, WebGL hidup); `e2e_zone_multi.py` **E2E_ZONE_MULTI: OK** (0 OFFSCREEN, label zona vis semua); `shot.sh` DISPLAY=:0 **681.866 bytes** (>500 KB).
+- **Sisa backlog:** tidak ada item wajib; kandidat lanjutan: verifikasi subjektif audio web-audio (perlu pendengaran manusia), opsi menampilkan badge koneksi TV lounge di kanvas TV (kini trackernya sudah ada).
+
 ## 2026-10-27 03:12 WIB — Siklus 107: Badge Status Koneksi Gateway di Strip 3D ProjectBoard (paritas chip HUD .conn-chip)
 
 - **Yang diperbaiki & ditingkatkan (backlog opsional siklus 106 — badge chip koneksi di strip 3D):**

@@ -236,6 +236,30 @@ describe('createProjectBoard — badge koneksi gateway di strip bawah', () => {
     await vi.advanceTimersByTimeAsync(120_000)
     expect(fetchMock).toHaveBeenCalledTimes(1)
   })
+
+  it('polling adaptif: gagal pasca-sukses → tick berikutnya 5 dtk (bukan 60 dtk), pulih → 60 dtk', async () => {
+    await mount()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    fetchMock = vi.fn(async () => { throw new TypeError('network down') })
+    vi.stubGlobal('fetch', fetchMock)
+    await vi.advanceTimersByTimeAsync(60_000) // tick pertama (sehat) → gagal → delay 5 dtk
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(5_000) // backoff ke-1 → tick ke-2 gagal → delay 10 dtk
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(9_000) // belum 10 dtk → belum fetch
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    await vi.advanceTimersByTimeAsync(1_000) // backoff ke-2 → tick ke-3
+    expect(fetchMock).toHaveBeenCalledTimes(3)
+    // pulih → delay kembali 60 dtk
+    fetchMock = vi.fn(async () => ({ ok: true, json: async () => SNAP }))
+    vi.stubGlobal('fetch', fetchMock)
+    await vi.advanceTimersByTimeAsync(20_000) // backoff ke-3 (20 dtk) → tick pulih
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(59_000) // belum 60 dtk → tidak fetch
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    await vi.advanceTimersByTimeAsync(1_000) // tepat 60 dtk → fetch lagi
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+  })
 })
 
 describe('createProjectBoard — visibilitas tab & forceVisible', () => {

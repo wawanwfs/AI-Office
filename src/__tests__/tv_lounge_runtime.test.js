@@ -155,7 +155,39 @@ describe('TV lounge — fetch & siklus hidup (tvPull)', () => {
     expect(fetchMock.mock.calls.length).toBe(base + 1)
     await vi.advanceTimersByTimeAsync(60_000)
     expect(fetchMock.mock.calls.length).toBe(base + 2)
-    clearInterval(r.tvIv)
+    r.tvDestroy()
+  })
+
+  it('polling adaptif: fetch gagal beruntun → tick berikutnya backoff 5→10 dtk (bukan 60 dtk), pulih → 60 dtk', async () => {
+    const r = await runTvCode()
+    const base = fetchMock.mock.calls.length
+    fetchMock.mockImplementation(async () => { throw new Error('HTTP 500') })
+    // mount sukses (base) → tick pertama (60 dtk) gagal → delay kini 5 dtk
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(fetchMock.mock.calls.length).toBe(base + 1)
+    await vi.advanceTimersByTimeAsync(5_000) // backoff ke-1 → tick ke-2 gagal → delay 10 dtk
+    expect(fetchMock.mock.calls.length).toBe(base + 2)
+    await vi.advanceTimersByTimeAsync(9_000) // belum 10 dtk → belum fetch
+    expect(fetchMock.mock.calls.length).toBe(base + 2)
+    await vi.advanceTimersByTimeAsync(1_000) // backoff ke-2 → tick ke-3 gagal → delay 20 dtk
+    expect(fetchMock.mock.calls.length).toBe(base + 3)
+    // pulih pada backoff ke-3 (20 dtk) → delay kembali 60 dtk
+    fetchMock.mockImplementation(async () => ({ ok: true, json: async () => SNAP }))
+    await vi.advanceTimersByTimeAsync(20_000)
+    expect(fetchMock.mock.calls.length).toBe(base + 4)
+    await vi.advanceTimersByTimeAsync(59_000) // belum 60 dtk → tidak fetch
+    expect(fetchMock.mock.calls.length).toBe(base + 4)
+    await vi.advanceTimersByTimeAsync(1_000) // tepat 60 dtk → fetch lagi
+    expect(fetchMock.mock.calls.length).toBe(base + 5)
+    r.tvDestroy()
+  })
+
+  it('tvDestroy menghentikan rantai poll adaptif — tidak ada fetch lagi setelah destroy', async () => {
+    const r = await runTvCode()
+    const base = fetchMock.mock.calls.length
+    r.tvDestroy()
+    await vi.advanceTimersByTimeAsync(300_000)
+    expect(fetchMock.mock.calls.length).toBe(base)
   })
 
   it('tab hidden → tvPull tidak fetch; fetch gagal → tidak throw, data lama dipertahankan', async () => {
