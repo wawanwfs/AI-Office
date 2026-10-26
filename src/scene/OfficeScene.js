@@ -23,7 +23,11 @@ import { drawBlobShadow } from './parts/blob_canvas.js';
 import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelScale, drawLabelText } from './parts/label_spec.js';
 import { WALK_DESTINATIONS, CAMPUS_WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { OBSTACLES } from './parts/obstacles.js';
-import { MUTED_KEY, VOLUME_KEY, DEFAULT_VOLUME, tickSoundTimer, loadAudioVolume, saveAudioVolume, clampVolume } from './parts/sound_spec.js';
+import {
+  MUTED_KEY, VOLUME_KEY, DEFAULT_VOLUME, tickSoundTimer, loadAudioVolume, saveAudioVolume, clampVolume,
+  DEFAULT_AMBIENCE_ENABLED, DEFAULT_AMBIENCE_VOLUME, loadAmbienceEnabled, saveAmbienceEnabled,
+  loadAmbienceVolume, saveAmbienceVolume, clampAmbienceVolume,
+} from './parts/sound_spec.js';
 import { advanceSimClock, setSimManual, SIM_SEC_PER_MIN as __SIM_SPM, MANUAL_RESUME_MS as __SIM_RESUME } from './parts/sim_clock.js';
 import { simMinutesToClockSeconds } from './parts/clock_units.js';
 import { createSoundEngine } from './parts/sound_engine.js';
@@ -139,7 +143,14 @@ renderer.domElement&&renderer.domElement.addEventListener('touchend',()=>{pinchD
 let audioMuted=(function(){try{return localStorage.getItem(MUTED_KEY)==='1'}catch{return false}})();
 function saveMuted(){try{localStorage.setItem(MUTED_KEY,audioMuted?'1':'0')}catch{/* abaikan */}}
 let audioVolume=(function(){try{return loadAudioVolume(typeof localStorage!=='undefined'?localStorage:null)}catch{return DEFAULT_VOLUME}})();
-const __sound=createSoundEngine({ctxFactory:()=>new(window.AudioContext||window.webkitAudioContext)(),initialVolume:audioVolume});
+let ambienceEnabled=(function(){try{return loadAmbienceEnabled(typeof localStorage!=='undefined'?localStorage:null)}catch{return DEFAULT_AMBIENCE_ENABLED}})();
+let ambienceVolume=(function(){try{return loadAmbienceVolume(typeof localStorage!=='undefined'?localStorage:null)}catch{return DEFAULT_AMBIENCE_VOLUME}})();
+const __sound=createSoundEngine({
+  ctxFactory:()=>new(window.AudioContext||window.webkitAudioContext)(),
+  initialVolume:audioVolume,
+  initialAmbienceEnabled:ambienceEnabled,
+  initialAmbienceVolume:ambienceVolume,
+});
 __sound.setMuted(audioMuted);
 __sound.dbg(s=>{window.__audio=s;});
 window.__officeSound=__sound;
@@ -1846,6 +1857,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       else if (sample === 'select') __sound.playSelect();
       else if (sample === 'chime') __sound.playMeetingChime();
       else if (sample === 'urgent') __sound.playTaskUrgent();
+      else if (sample === 'ambience') __sound.previewAmbience();
       else __sound.playTaskDone();
       return true;
     },
@@ -1856,6 +1868,22 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       __sound.dbg(s=>{window.__audio=s;});
     },
     getAudioVolume: () => audioVolume,
+    setAmbienceEnabled: (v) => {
+      ambienceEnabled = !!v;
+      __sound.setAmbienceEnabled(ambienceEnabled);
+      try { saveAmbienceEnabled(typeof localStorage !== 'undefined' ? localStorage : null, ambienceEnabled); } catch { /* abaikan */ }
+      __sound.dbg(s=>{window.__audio=s;});
+    },
+    isAmbienceEnabled: () => __sound.isAmbienceEnabled(),
+    setAmbienceVolume: (v) => {
+      ambienceVolume = clampAmbienceVolume(v);
+      __sound.setAmbienceVolume(ambienceVolume);
+      try { saveAmbienceVolume(typeof localStorage !== 'undefined' ? localStorage : null, ambienceVolume); } catch { /* abaikan */ }
+      __sound.dbg(s=>{window.__audio=s;});
+    },
+    getAmbienceVolume: () => __sound.getAmbienceVolume(),
+    isAmbienceActive: () => __sound.isAmbienceActive(),
+    previewAmbience: () => __sound.previewAmbience(),
     getAudioEngine: () => __sound,
     resize: onResize,
     destroy: () => {

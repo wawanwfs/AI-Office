@@ -95,6 +95,104 @@ export function formatVolumePercent(v) {
   return `${Math.round(clampVolume(v) * 100)}%`;
 }
 
+// ambience ruangan kantor (Web Audio ambient room hum / HVAC tone)
+export const AMBIENCE_KEY = 'wfs_audio_ambience';
+export const AMBIENCE_VOL_KEY = 'wfs_audio_ambience_volume';
+export const DEFAULT_AMBIENCE_ENABLED = false;
+export const DEFAULT_AMBIENCE_VOLUME = 0.35;
+export const AMBIENCE_BASE_FREQ = 55.0; // nada fundamental A1 (hum server / listrik kantor)
+export const AMBIENCE_OVERTONE_FREQ = 110.0; // harmonik A2 lembut
+export const AMBIENCE_FILTER_FREQ = 180; // filter lowpass Hz (desir pendingin HVAC)
+export const AMBIENCE_FILTER_Q = 1.0; // resonansi filter
+export const AMBIENCE_BASE_GAIN = 0.015; // gain plafon master ambience
+export const AMBIENCE_RAMP_SEC = 0.4; // durasi crossfade transisi halus
+export const AMBIENCE_PREVIEW_SEC = 2.5; // durasi preview uji sampel audio
+export const AMBIENCE_PRESETS = [0.20, 0.40, 0.70, 1.00];
+export const AMBIENCE_PRESET_LABELS = {
+  0.20: '20% Halus',
+  0.40: '40% Nyaman',
+  0.70: '70% Jelas',
+  1.00: '100% Penuh',
+};
+
+export function clampAmbienceVolume(v) {
+  if (!Number.isFinite(v)) return DEFAULT_AMBIENCE_VOLUME;
+  return Math.max(0, Math.min(1, Math.round(v * 100) / 100));
+}
+
+export function loadAmbienceEnabled(storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
+  if (!storage) return DEFAULT_AMBIENCE_ENABLED;
+  try {
+    const raw = storage.getItem(AMBIENCE_KEY);
+    if (raw === null || raw === undefined) return DEFAULT_AMBIENCE_ENABLED;
+    return raw === '1' || raw === 'true';
+  } catch {
+    return DEFAULT_AMBIENCE_ENABLED;
+  }
+}
+
+export function saveAmbienceEnabled(storage = (typeof localStorage !== 'undefined' ? localStorage : null), enabled = false) {
+  if (!storage) return false;
+  try {
+    storage.setItem(AMBIENCE_KEY, enabled ? '1' : '0');
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function loadAmbienceVolume(storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
+  if (!storage) return DEFAULT_AMBIENCE_VOLUME;
+  try {
+    const raw = storage.getItem(AMBIENCE_VOL_KEY);
+    if (raw === null || raw === undefined) return DEFAULT_AMBIENCE_VOLUME;
+    const v = parseFloat(raw);
+    return Number.isFinite(v) ? clampAmbienceVolume(v) : DEFAULT_AMBIENCE_VOLUME;
+  } catch {
+    return DEFAULT_AMBIENCE_VOLUME;
+  }
+}
+
+export function saveAmbienceVolume(storage = (typeof localStorage !== 'undefined' ? localStorage : null), v = DEFAULT_AMBIENCE_VOLUME) {
+  if (!storage) return false;
+  try {
+    const clamped = clampAmbienceVolume(v);
+    storage.setItem(AMBIENCE_VOL_KEY, String(clamped));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function formatAmbiencePercent(v) {
+  return `${Math.round(clampAmbienceVolume(v) * 100)}%`;
+}
+
+export function calcAmbienceGain(masterVol = DEFAULT_VOLUME, ambienceVol = DEFAULT_AMBIENCE_VOLUME, muted = false, enabled = true) {
+  if (muted || !enabled) return 0;
+  return clampVolume(masterVol) * clampAmbienceVolume(ambienceVol) * AMBIENCE_BASE_GAIN;
+}
+
+// Algoritma filter Paul Kellet untuk pink noise (1/f) bermutu tinggi
+// Menghasilkan data audio float (-1..1) untuk desir ruangan kantor / HVAC
+export function generatePinkNoiseData(samples, rng = Math.random) {
+  const len = Math.max(1, Math.floor(samples));
+  const data = new Float32Array(len);
+  let b0 = 0, b1 = 0, b2 = 0, b3 = 0, b4 = 0, b5 = 0, b6 = 0;
+  for (let i = 0; i < len; i++) {
+    const white = rng() * 2 - 1;
+    b0 = 0.99886 * b0 + white * 0.0555179;
+    b1 = 0.99332 * b1 + white * 0.0750759;
+    b2 = 0.96900 * b2 + white * 0.1538520;
+    b3 = 0.86650 * b3 + white * 0.3104856;
+    b4 = 0.55000 * b4 + white * 0.5329522;
+    b5 = -0.7616 * b5 - white * 0.0168980;
+    data[i] = (b0 + b1 + b2 + b3 + b4 + b5 + b6 + white * 0.5362) * 0.11;
+    b6 = white * 0.115926;
+  }
+  return data;
+}
+
 export function keyclickFreq(rng) {
   return KEYCLICK_BASE_FREQ + rng() * KEYCLICK_JITTER;
 }

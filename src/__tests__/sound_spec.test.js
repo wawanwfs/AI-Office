@@ -10,6 +10,11 @@ import {
   SELECT_FREQ, SELECT_GAIN, SELECT_END_GAIN, SELECT_SEC,
   VOLUME_KEY, DEFAULT_VOLUME, VOLUME_PRESETS, VOLUME_PRESET_LABELS,
   clampVolume, loadAudioVolume, saveAudioVolume, formatVolumePercent,
+  AMBIENCE_KEY, AMBIENCE_VOL_KEY, DEFAULT_AMBIENCE_ENABLED, DEFAULT_AMBIENCE_VOLUME,
+  AMBIENCE_BASE_FREQ, AMBIENCE_OVERTONE_FREQ, AMBIENCE_FILTER_FREQ, AMBIENCE_FILTER_Q,
+  AMBIENCE_BASE_GAIN, AMBIENCE_RAMP_SEC, AMBIENCE_PREVIEW_SEC, AMBIENCE_PRESETS, AMBIENCE_PRESET_LABELS,
+  clampAmbienceVolume, loadAmbienceEnabled, saveAmbienceEnabled, loadAmbienceVolume, saveAmbienceVolume,
+  formatAmbiencePercent, calcAmbienceGain, generatePinkNoiseData,
 } from '../scene/parts/sound_spec.js';
 
 describe('sound_spec — keyclick', () => {
@@ -183,5 +188,105 @@ describe('sound_spec — task urgent alert (prioritas kritis)', () => {
     expect(taskUrgentStart(0)).toBe(0);
     expect(taskUrgentStart(1)).toBeCloseTo(0.08);
     expect(taskUrgentStart(2)).toBeCloseTo(0.16);
+  });
+});
+
+describe('sound_spec — ambience ruangan kantor (Web Audio HVAC / room hum)', () => {
+  it('konstanta ambience sesuai spesifikasi', () => {
+    expect(AMBIENCE_KEY).toBe('wfs_audio_ambience');
+    expect(AMBIENCE_VOL_KEY).toBe('wfs_audio_ambience_volume');
+    expect(DEFAULT_AMBIENCE_ENABLED).toBe(false);
+    expect(DEFAULT_AMBIENCE_VOLUME).toBe(0.35);
+    expect(AMBIENCE_BASE_FREQ).toBe(55.0);
+    expect(AMBIENCE_OVERTONE_FREQ).toBe(110.0);
+    expect(AMBIENCE_FILTER_FREQ).toBe(180);
+    expect(AMBIENCE_FILTER_Q).toBe(1.0);
+    expect(AMBIENCE_BASE_GAIN).toBe(0.015);
+    expect(AMBIENCE_RAMP_SEC).toBe(0.4);
+    expect(AMBIENCE_PREVIEW_SEC).toBe(2.5);
+    expect(AMBIENCE_PRESETS).toEqual([0.20, 0.40, 0.70, 1.00]);
+    expect(AMBIENCE_PRESET_LABELS[0.20]).toBe('20% Halus');
+    expect(AMBIENCE_PRESET_LABELS[1.00]).toBe('100% Penuh');
+  });
+
+  it('clampAmbienceVolume membatasi rentang 0..1 dan fallback aman', () => {
+    expect(clampAmbienceVolume(0.5)).toBe(0.5);
+    expect(clampAmbienceVolume(-0.2)).toBe(0);
+    expect(clampAmbienceVolume(1.5)).toBe(1);
+    expect(clampAmbienceVolume('invalid')).toBe(DEFAULT_AMBIENCE_VOLUME);
+    expect(clampAmbienceVolume(NaN)).toBe(DEFAULT_AMBIENCE_VOLUME);
+  });
+
+  it('loadAmbienceEnabled dan saveAmbienceEnabled bekerja dengan aman', () => {
+    const mockStorage = {
+      _store: {},
+      getItem(k) { return this._store[k] ?? null; },
+      setItem(k, v) { this._store[k] = String(v); },
+    };
+    expect(loadAmbienceEnabled(mockStorage)).toBe(false);
+    saveAmbienceEnabled(mockStorage, true);
+    expect(mockStorage.getItem(AMBIENCE_KEY)).toBe('1');
+    expect(loadAmbienceEnabled(mockStorage)).toBe(true);
+    saveAmbienceEnabled(mockStorage, false);
+    expect(mockStorage.getItem(AMBIENCE_KEY)).toBe('0');
+    expect(loadAmbienceEnabled(mockStorage)).toBe(false);
+
+    // null storage fallback
+    expect(loadAmbienceEnabled(null)).toBe(false);
+    expect(saveAmbienceEnabled(null, true)).toBe(false);
+  });
+
+  it('loadAmbienceVolume dan saveAmbienceVolume bekerja dengan aman', () => {
+    const mockStorage = {
+      _store: {},
+      getItem(k) { return this._store[k] ?? null; },
+      setItem(k, v) { this._store[k] = String(v); },
+    };
+    expect(loadAmbienceVolume(mockStorage)).toBe(DEFAULT_AMBIENCE_VOLUME);
+    saveAmbienceVolume(mockStorage, 0.6);
+    expect(mockStorage.getItem(AMBIENCE_VOL_KEY)).toBe('0.6');
+    expect(loadAmbienceVolume(mockStorage)).toBe(0.6);
+
+    // null storage fallback
+    expect(loadAmbienceVolume(null)).toBe(DEFAULT_AMBIENCE_VOLUME);
+    expect(saveAmbienceVolume(null, 0.5)).toBe(false);
+  });
+
+  it('formatAmbiencePercent memformat persentase', () => {
+    expect(formatAmbiencePercent(0.35)).toBe('35%');
+    expect(formatAmbiencePercent(1.0)).toBe('100%');
+    expect(formatAmbiencePercent(0)).toBe('0%');
+  });
+
+  it('calcAmbienceGain menghasilkan gain yang tepat saat aktif / senyap saat mute atau disabled', () => {
+    expect(calcAmbienceGain(1.0, 1.0, false, true)).toBeCloseTo(0.015, 5);
+    expect(calcAmbienceGain(0.8, 0.5, false, true)).toBeCloseTo(0.8 * 0.5 * 0.015, 5);
+    // muted -> 0
+    expect(calcAmbienceGain(1.0, 1.0, true, true)).toBe(0);
+    // disabled -> 0
+    expect(calcAmbienceGain(1.0, 1.0, false, false)).toBe(0);
+  });
+
+  it('generatePinkNoiseData menghasilkan Float32Array dengan nilai finite dan rentang wajar', () => {
+    const samples = 1000;
+    const data = generatePinkNoiseData(samples);
+    expect(data).toBeInstanceOf(Float32Array);
+    expect(data.length).toBe(samples);
+
+    let maxVal = -Infinity;
+    let minVal = Infinity;
+    let sum = 0;
+    for (let i = 0; i < samples; i++) {
+      const v = data[i];
+      expect(Number.isFinite(v)).toBe(true);
+      if (v > maxVal) maxVal = v;
+      if (v < minVal) minVal = v;
+      sum += v;
+    }
+    // Pink noise data berada dalam kisaran amplitude audio normal (-1..1)
+    expect(maxVal).toBeLessThan(1.2);
+    expect(minVal).toBeGreaterThan(-1.2);
+    // Rata-rata mendekati nol (DC offset rendah)
+    expect(Math.abs(sum / samples)).toBeLessThan(0.3);
   });
 });

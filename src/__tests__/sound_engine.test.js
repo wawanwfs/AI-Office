@@ -14,7 +14,7 @@ import {
 } from '../scene/parts/sound_spec.js';
 
 function makeCtx(state = 'running') {
-  const log = { osc: [], buffers: [], gains: [] };
+  const log = { osc: [], buffers: [], gains: [], filters: [] };
   let st = state;
   const ctx = {
     get state() { return st; },
@@ -24,19 +24,71 @@ function makeCtx(state = 'running') {
     resume: vi.fn(async () => { st = 'running'; }),
     suspend: vi.fn(async () => { st = 'suspended'; }),
     close: vi.fn(async () => { st = 'closed'; }),
-    createGain: () => ({ gain: { value: 0, ramps: [], exponentialRampToValueAtTime(v, t) { this.ramps.push([v, t]); } }, connectedTo: null, connect(t) { this.connectedTo = t; } }),
+    createGain: () => {
+      const g = {
+        gain: {
+          value: 0,
+          ramps: [],
+          linearRamps: [],
+          setValueAtTime: vi.fn(function(v) { this.value = v; }),
+          linearRampToValueAtTime(v, t) { this.linearRamps.push([v, t]); },
+          exponentialRampToValueAtTime(v, t) { this.ramps.push([v, t]); }
+        },
+        connectedTo: null,
+        connect(t) { this.connectedTo = t; },
+        disconnect: vi.fn()
+      };
+      log.gains.push(g);
+      return g;
+    },
     createOscillator: () => {
-      const o = { type: '', frequency: { value: 0 }, connectedTo: null, started: false, stoppedAt: null,
-        connect(t) { this.connectedTo = t; }, start() { this.started = true; }, stop(t) { this.stoppedAt = t; } };
-      log.osc.push(o); return o;
+      const o = {
+        type: '',
+        frequency: { value: 0 },
+        connectedTo: null,
+        started: false,
+        stoppedAt: null,
+        connect(t) { this.connectedTo = t; },
+        start() { this.started = true; },
+        stop(t) { this.stoppedAt = t ?? ctx.currentTime; }
+      };
+      log.osc.push(o);
+      return o;
     },
-    createBuffer: (ch, len, rate) => ({ length: len, sampleRate: rate, numberOfChannels: ch,
-      getChannelData: () => new Float32Array(len) }),
+    createBuffer: (ch, len, rate) => ({
+      length: len,
+      sampleRate: rate,
+      numberOfChannels: ch,
+      getChannelData: () => new Float32Array(len),
+      copyToChannel: vi.fn()
+    }),
     createBufferSource: () => {
-      const s = { buffer: null, connectedTo: null, started: false,
-        connect(t) { this.connectedTo = t; }, start() { this.started = true; } };
-      log.buffers.push(s); return s;
+      const s = {
+        buffer: null,
+        connectedTo: null,
+        started: false,
+        loop: false,
+        stoppedAt: null,
+        connect(t) { this.connectedTo = t; },
+        start() { this.started = true; },
+        stop(t) { this.stoppedAt = t ?? ctx.currentTime; },
+        disconnect: vi.fn()
+      };
+      log.buffers.push(s);
+      return s;
     },
+    createBiquadFilter: () => {
+      const f = {
+        type: '',
+        frequency: { value: 0 },
+        Q: { value: 0 },
+        connectedTo: null,
+        connect(t) { this.connectedTo = t; },
+        disconnect: vi.fn()
+      };
+      log.filters.push(f);
+      return f;
+    }
   };
   ctx.__log = log;
   return ctx;
@@ -66,7 +118,7 @@ describe('sound engine runtime', () => {
     const snap = eng.dbg();
     expect(snap.started).toBe(false);
     expect(snap.state).toBe('none');
-    expect(snap.calls).toEqual({ key: 0, step: 0, chime: 0, taskDone: 0, taskFail: 0, select: 0, taskUrgent: 0 });
+    expect(snap.calls).toEqual({ key: 0, step: 0, chime: 0, taskDone: 0, taskFail: 0, select: 0, taskUrgent: 0, ambience: 0 });
     expect(snap.volume).toBe(DEFAULT_VOLUME);
     expect(eng.isMuted()).toBe(false);
   });
@@ -154,7 +206,7 @@ describe('sound engine runtime', () => {
     expect(() => eng.playKeyClick(Math.random)).not.toThrow();
     expect(() => eng.playStep()).not.toThrow();
     expect(() => eng.playMeetingChime()).not.toThrow();
-    expect(eng.dbg().calls).toEqual({ key: 1, step: 1, chime: 1, taskDone: 0, taskFail: 0, select: 0, taskUrgent: 0 });
+    expect(eng.dbg().calls).toEqual({ key: 1, step: 1, chime: 1, taskDone: 0, taskFail: 0, select: 0, taskUrgent: 0, ambience: 0 });
     expect(eng.isStarted()).toBe(true);
     const osc = ctx.__log.osc[0];
     expect(gainChain(osc).g.connectedTo.connectedTo).toBe(ctx.destination);
@@ -276,5 +328,70 @@ describe('sound engine runtime', () => {
   it('keyclickFreq konsisten dengan spec (800..1200)', () => {
     expect(keyclickFreq(() => 0)).toBe(KEYCLICK_BASE_FREQ);
     expect(keyclickFreq(() => 1)).toBe(KEYCLICK_BASE_FREQ + KEYCLICK_JITTER);
+  });
+
+  it('ambience: startAmbience, stopAmbience, setAmbienceEnabled mengendalikan oscillator & buffer', () => {
+    const { eng, ctx } = makeEngine();
+    expect(eng.isAmbienceEnabled()).toBe(false);
+    expect(eng.isAmbienceActive()).toBe(false);
+
+    eng.setAmbienceEnabled(true);
+    expect(eng.isAmbienceEnabled()).toBe(true);
+    expect(eng.isAmbienceActive()).toBe(true);
+    expect(ctx.__log.osc.length).toBe(2); // fundamental 55Hz & overtone 110Hz
+    expect(ctx.__log.buffers.length).toBe(1); // pink noise buffer
+    expect(ctx.__log.filters.length).toBe(1); // biquad filter lowpass
+
+    const osc1 = ctx.__log.osc[0];
+    const osc2 = ctx.__log.osc[1];
+    expect(osc1.frequency.value).toBe(55.0);
+    expect(osc2.frequency.value).toBe(110.0);
+    expect(osc1.started).toBe(true);
+    expect(osc2.started).toBe(true);
+
+    const filter = ctx.__log.filters[0];
+    expect(filter.type).toBe('lowpass');
+    expect(filter.frequency.value).toBe(180);
+
+    // Stop ambience
+    eng.stopAmbience();
+    expect(eng.isAmbienceEnabled()).toBe(false);
+  });
+
+  it('setMuted dan setAmbienceVolume menyinkronkan gain ambience', () => {
+    const { eng, ctx } = makeEngine();
+    eng.setAmbienceEnabled(true);
+    const ambGain = ctx.__log.gains.find(g => g.gain.linearRamps.length > 0);
+    expect(ambGain).toBeDefined();
+
+    // Ubah volume ambience
+    eng.setAmbienceVolume(0.8);
+    expect(eng.getAmbienceVolume()).toBe(0.8);
+
+    // Saat muted -> gain menjadi 0
+    eng.setMuted(true);
+    const lastRamp = ambGain.gain.linearRamps[ambGain.gain.linearRamps.length - 1];
+    expect(lastRamp[0]).toBe(0);
+
+    // Saat unmuted -> gain dipulihkan
+    eng.setMuted(false);
+    const restoreRamp = ambGain.gain.linearRamps[ambGain.gain.linearRamps.length - 1];
+    expect(restoreRamp[0]).toBeGreaterThan(0);
+  });
+
+  it('previewAmbience memicu pemutaran sementara dan timer stop', () => {
+    const { eng, ctx, timeouts } = makeEngine();
+    expect(eng.isAmbienceActive()).toBe(false);
+
+    const ok = eng.previewAmbience(2.0);
+    expect(ok).toBe(true);
+    expect(eng.dbg().calls.ambience).toBe(1);
+    expect(ctx.__log.osc.length).toBe(2);
+    expect(timeouts.length).toBeGreaterThan(0);
+
+    // Trigger timer selesai preview -> jika ambience disabled, stop dipanggil
+    const previewTimeout = timeouts[timeouts.length - 1];
+    previewTimeout.fn();
+    expect(eng.isAmbienceEnabled()).toBe(false);
   });
 });

@@ -40,6 +40,10 @@ describe('SettingsModal component', () => {
       toggleNames: vi.fn(),
       isAutoRotate: vi.fn(() => false),
       setAutoRotate: vi.fn(),
+      isAmbienceEnabled: vi.fn(() => false),
+      setAmbienceEnabled: vi.fn(),
+      getAmbienceVolume: vi.fn(() => 0.35),
+      setAmbienceVolume: vi.fn(),
     }
   })
 
@@ -185,6 +189,40 @@ describe('SettingsModal component', () => {
     const btnUrgent = screen.getByRole('button', { name: /Task Urgent/i })
     fireEvent.click(btnUrgent)
     expect(mockScene.testAudio).toHaveBeenCalledWith('urgent')
+
+    const btnAmbience = screen.getByRole('button', { name: /Hum Ruang/i })
+    fireEvent.click(btnAmbience)
+    expect(mockScene.testAudio).toHaveBeenCalledWith('ambience')
+  })
+
+  it('toggle ambience ruangan kantor mengaktifkan ambience dan memunculkan slider volume', () => {
+    render(
+      <SettingsModal
+        show={true}
+        onClose={mockClose}
+        sceneRef={{ current: mockScene }}
+        muted={false}
+        onToggleMute={mockToggleMute}
+        onFlash={mockFlash}
+      />
+    )
+    const toggleBtn = screen.getByRole('button', { name: 'Toggle ambience ruangan kantor' })
+    expect(toggleBtn.textContent).toBe('Nonaktif')
+    expect(toggleBtn.getAttribute('aria-pressed')).toBe('false')
+
+    // Slider belum muncul saat nonaktif
+    expect(screen.queryByLabelText('Volume ambience ruangan')).toBeNull()
+
+    // Klik toggle untuk mengaktifkan
+    fireEvent.click(toggleBtn)
+    expect(mockScene.setAmbienceEnabled).toHaveBeenCalledWith(true)
+    expect(mockFlash).toHaveBeenCalledWith(expect.stringContaining('Ambience ruangan'))
+
+    // Sekarang slider volume ambience muncul
+    const ambSlider = screen.getByLabelText('Volume ambience ruangan')
+    expect(ambSlider).toBeTruthy()
+    fireEvent.change(ambSlider, { target: { value: '0.6' } })
+    expect(mockScene.setAmbienceVolume).toHaveBeenCalledWith(0.6)
   })
 
   it('toggle visual: nama agen, auto-rotate, dan tema ruang', () => {

@@ -1,3 +1,36 @@
+## 2026-10-26 16:26 WIB — Siklus 92: Sound Engine Ambience Ruangan Kantor (Web Audio Pink Noise HVAC & Hum Drone 55Hz), Kontrol Toggle & Slider Volume Ambience di SettingsModal
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Spesifikasi & Generator Ambience Audio Murni (`src/scene/parts/sound_spec.js`, `src/__tests__/sound_spec.test.js`):**
+     - Mengembangkan spesifikasi murni audio latar ruangan kantor: `AMBIENCE_BASE_FREQ` (55.0 Hz - nada fundamental A1 hangat untuk dengung listrik/server tech office), `AMBIENCE_OVERTONE_FREQ` (110.0 Hz - resonansi A2 lembut), `AMBIENCE_FILTER_FREQ` (180 Hz low-pass filter untuk tiruan hembusan sirkulasi pendingin ruangan HVAC), dan `AMBIENCE_BASE_GAIN` (0.015 gain plafon nyaman non-intrusif).
+     - Mengimplementasikan generator murni pink noise (1/f noise) dengan algoritma filter Paul Kellet `generatePinkNoiseData(samples, rng)` yang menghasilkan distribusi energi akustik alami spektrum suara ruangan kantor tanpa artefak frekuensi tinggi.
+     - Membangun `clampAmbienceVolume`, `loadAmbienceEnabled`, `saveAmbienceEnabled`, `loadAmbienceVolume`, `saveAmbienceVolume`, `formatAmbiencePercent`, dan `calcAmbienceGain(masterVol, ambienceVol, muted, enabled)` yang aman dengan fallback storage.
+     - Menyediakan preset cepat level ambience `AMBIENCE_PRESETS` (`[0.20, 0.40, 0.70, 1.00]`).
+  2. **Runtime Web Audio Ambience Engine & Scene Integration (`src/scene/parts/sound_engine.js`, `src/scene/OfficeScene.js`, `src/__tests__/sound_engine.test.js`):**
+     - Membangun rantai node Web Audio synthesis ambience mandiri: dual-sine oscillator (55 Hz & 110 Hz) dipadukan dengan buffer sumber pink noise berputar (`loop = true`) melalui filter Biquad (`lowpass 180 Hz`, Q 1.0) yang di-submix ke `ambGain` ber-ramp halus (`linearRampToValueAtTime`) menuju `masterGain`.
+     - Menghadirkan fungsi `startAmbience()`, `stopAmbience()`, `setAmbienceEnabled(bool)`, `setAmbienceVolume(vol)`, `isAmbienceActive()`, dan `previewAmbience(durationSec)` dengan fitur crossfade 0.4s yang mulus dan bebas letupan audio (click/pop).
+     - Menghadirkan mekanisme auto-sync gain saat mute/unmute dan saat volume master berubah.
+     - Mengintegrasikan preview audio swelling interaktif: saat ambience sedang aktif, menekan tombol uji sampel membuat dengung ruangan berayun lembut 1.6x lalu kembali, memberi konfirmasi pendengaran yang jelas.
+     - Mencegah kebocoran memori dan CPU: seluruh oscillator, filter, dan buffer dibersihkan tuntas saat `dispose()` atau saat tab disembunyikan (`visibilitychange` via suspend/resume).
+     - Mengekspose kendali ambience ke `window.__officeSound` dan scene API (`setAmbienceEnabled`, `isAmbienceEnabled`, `setAmbienceVolume`, `getAmbienceVolume`, `previewAmbience`).
+  3. **Antarmuka Pengaturan Ambience di SettingsModal (`src/components/SettingsModal.jsx`, `src/__tests__/settings_modal.test.jsx`):**
+     - Menambahkan baris kartu "Ambience Ruangan (Hum Kantor)" lengkap dengan deskripsi "Desir pendingin ruangan (HVAC) & dengung lembut tech office", badge status dinamis (`TERBUNGKAM`, `AKTIF`, `NONAKTIF`), serta tombol toggle switch on/off.
+     - Menampilkan slider volume interaktif bertingkat `5%` hingga `100%` saat ambience aktif.
+     - Menambahkan tombol uji sampel `Hum Ruang` pada strip tombol uji audio dengan tooltip informatif dan live tip status polite.
+
+- **Bukti terukur:**
+  - **Vitest:** **1636/1636 passed (131 test file)** (+11 tests baru terintegrasi: konstanta & rumus ambience, clamp, storage load/save, calc gain, generatePinkNoiseData, node runtime Web Audio, mute/volume sync, preview timing, toggle & slider SettingsModal; 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/scene/parts/sound_spec.js src/scene/parts/sound_engine.js src/scene/OfficeScene.js src/components/SettingsModal.jsx src/__tests__/sound_spec.test.js src/__tests__/sound_engine.test.js src/__tests__/settings_modal.test.jsx`).
+  - **Build:** Berhasil (exit 0, 37 precache entries 1723.70 KiB; `OfficeScene` 164.58 KB / gzip 56.59 KB, `index` 165.44 KB / gzip 45.19 KB, `vendor-three` 715.76 KB, `vendor-react` 189.63 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-CPCTsXlC.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **639.181 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `shot.sh` (DISPLAY=:0): Screenshot **639.314 bytes** (>500 KB).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** evaluasi preset kombinasi multi-tag filter atau widget indikator audio ambience cepat pada toolbar HUD.
+
 ## 2026-10-26 15:45 WIB — Siklus 91: Filter Multi-Tag Kustom Task Kanban (extractTaskTags, computeTagCloud, matchTaskTags, getTagColor), Strip Filter Tag Interaktif & Mini Tag Badges pada Papan TaskBoard
 
 - **Yang diperbaiki & ditingkatkan:**

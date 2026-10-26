@@ -7,7 +7,10 @@ import {
 } from './Icons'
 import {
   VOLUME_PRESETS, clampVolume, formatVolumePercent,
-  loadAudioVolume, saveAudioVolume
+  loadAudioVolume, saveAudioVolume,
+  loadAmbienceEnabled, saveAmbienceEnabled,
+  loadAmbienceVolume, saveAmbienceVolume,
+  clampAmbienceVolume, formatAmbiencePercent,
 } from '../scene/parts/sound_spec'
 
 export default function SettingsModal({
@@ -24,6 +27,14 @@ export default function SettingsModal({
 
   const [volume, setVolume] = useState(() => {
     return loadAudioVolume(typeof localStorage !== 'undefined' ? localStorage : null)
+  })
+
+  const [ambienceOn, setAmbienceOn] = useState(() => {
+    return loadAmbienceEnabled(typeof localStorage !== 'undefined' ? localStorage : null)
+  })
+
+  const [ambienceVol, setAmbienceVol] = useState(() => {
+    return loadAmbienceVolume(typeof localStorage !== 'undefined' ? localStorage : null)
   })
 
   const [namesOn, setNamesOn] = useState(() => {
@@ -58,6 +69,16 @@ export default function SettingsModal({
         const curVol = s.getAudioVolume()
         if (Number.isFinite(curVol)) {
           setVolume(v => (Math.abs(v - curVol) < 0.001 ? v : curVol)) // eslint-disable-line react-hooks/set-state-in-effect -- sinkronisasi volume saat modal dibuka
+        }
+      }
+      if (s.isAmbienceEnabled) {
+        const curAmb = s.isAmbienceEnabled()
+        setAmbienceOn(v => (v === curAmb ? v : curAmb))
+      }
+      if (s.getAmbienceVolume) {
+        const curAmbVol = s.getAmbienceVolume()
+        if (Number.isFinite(curAmbVol)) {
+          setAmbienceVol(v => (Math.abs(v - curAmbVol) < 0.001 ? v : curAmbVol))
         }
       }
       if (s.isNamesVisible) {
@@ -96,6 +117,31 @@ export default function SettingsModal({
     }
   }
 
+  const handleToggleAmbience = () => {
+    const next = !ambienceOn
+    setAmbienceOn(next)
+    const s = sceneRef && sceneRef.current
+    if (s && s.setAmbienceEnabled) {
+      s.setAmbienceEnabled(next)
+      if (next && !muted && s.playSelect) s.playSelect()
+    } else {
+      saveAmbienceEnabled(typeof localStorage !== 'undefined' ? localStorage : null, next)
+    }
+    if (onFlash) onFlash(next ? 'Ambience ruangan aktif (HVAC & Room Hum)' : 'Ambience ruangan dinonaktifkan')
+  }
+
+  const handleAmbienceVolChange = (e) => {
+    const raw = parseFloat(e.target.value)
+    const next = clampAmbienceVolume(raw)
+    setAmbienceVol(next)
+    const s = sceneRef && sceneRef.current
+    if (s && s.setAmbienceVolume) {
+      s.setAmbienceVolume(next)
+    } else {
+      saveAmbienceVolume(typeof localStorage !== 'undefined' ? localStorage : null, next)
+    }
+  }
+
   const handleTestAudio = (sampleType = 'done') => {
     if (muted) {
       setTestTip('Audio saat ini dibisukan. Nyalakan suara untuk mendengar uji nada.')
@@ -108,7 +154,15 @@ export default function SettingsModal({
     }
     if (s.testAudio) {
       s.testAudio(sampleType)
-      const label = sampleType === 'done' ? 'Task Selesai' : sampleType === 'select' ? 'Blip Seleksi' : sampleType === 'urgent' ? 'Prioritas Urgent' : 'Peringatan'
+      const label = sampleType === 'done'
+        ? 'Task Selesai'
+        : sampleType === 'select'
+          ? 'Blip Seleksi'
+          : sampleType === 'urgent'
+            ? 'Prioritas Urgent'
+            : sampleType === 'ambience'
+              ? 'Hum Ruang (HVAC)'
+              : 'Peringatan'
       setTestTip(`Memainkan sampel suara: ${label}`)
     } else if (sampleType === 'done' && s.playTaskDone) {
       s.playTaskDone()
@@ -265,7 +319,7 @@ export default function SettingsModal({
           </div>
 
           {/* Test Audio Controls */}
-          <div>
+          <div style={{ marginBottom: 14 }}>
             <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 6 }}>Uji Sampel Audio:</div>
             <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
               <button
@@ -312,10 +366,75 @@ export default function SettingsModal({
                 <IconPlay size={14} style={{ color: '#EF4444' }} />
                 Task Urgent
               </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => handleTestAudio('ambience')}
+                disabled={muted}
+                style={{ fontSize: 12, padding: '4px 10px', height: 'auto', minHeight: 28, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                title="Dengarkan sampel desir ruangan kantor 3D (HVAC tone)"
+              >
+                <IconPlay size={14} style={{ color: '#38bdf8' }} />
+                Hum Ruang
+              </button>
             </div>
             {testTip && (
               <div role="status" aria-live="polite" style={{ fontSize: 11, marginTop: 6, color: muted ? '#fb7185' : 'var(--teal)' }}>
                 {testTip}
+              </div>
+            )}
+          </div>
+
+          {/* Ambience Ruangan Kantor (Hum HVAC & Room Tone) */}
+          <div style={{ paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: ambienceOn ? 8 : 0 }}>
+              <div>
+                <div style={{ fontSize: 13, fontWeight: 500, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 6 }}>
+                  <span>Ambience Ruangan (Hum Kantor)</span>
+                  <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: ambienceOn && !muted ? 'rgba(16,229,160,0.15)' : 'rgba(255,255,255,0.06)', color: ambienceOn && !muted ? '#10e5a0' : 'var(--text-tertiary)', fontFamily: "'DM Mono', monospace" }}>
+                    {muted ? 'TERBUNGKAM' : (ambienceOn ? 'AKTIF' : 'NONAKTIF')}
+                  </span>
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-tertiary)', marginTop: 2 }}>
+                  Desir pendingin ruangan (HVAC) & dengung lembut tech office
+                </div>
+              </div>
+              <button
+                type="button"
+                className="btn"
+                onClick={handleToggleAmbience}
+                aria-pressed={ambienceOn}
+                aria-label="Toggle ambience ruangan kantor"
+                style={{
+                  fontSize: 12,
+                  padding: '4px 10px',
+                  height: 'auto',
+                  minHeight: 28,
+                  borderColor: ambienceOn && !muted ? 'var(--teal)' : 'rgba(255,255,255,0.12)',
+                  color: ambienceOn && !muted ? 'var(--teal)' : '#cbd5e1'
+                }}
+              >
+                {ambienceOn ? 'Aktif' : 'Nonaktif'}
+              </button>
+            </div>
+
+            {ambienceOn && (
+              <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.04)' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>
+                  <span>Level Ambience:</span>
+                  <span style={{ fontFamily: "'DM Mono', monospace", color: '#cbd5e1' }}>{formatAmbiencePercent(ambienceVol)}</span>
+                </div>
+                <input
+                  type="range"
+                  min="0.05"
+                  max="1.0"
+                  step="0.05"
+                  value={ambienceVol}
+                  onChange={handleAmbienceVolChange}
+                  disabled={muted}
+                  aria-label="Volume ambience ruangan"
+                  style={{ width: '100%', cursor: muted ? 'not-allowed' : 'pointer', accentColor: 'var(--teal)' }}
+                />
               </div>
             )}
           </div>

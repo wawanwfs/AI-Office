@@ -9,25 +9,266 @@ import {
   TASK_FAIL_FREQS, TASK_FAIL_GAIN, TASK_FAIL_END_GAIN, TASK_FAIL_TONE_SEC,
   TASK_URGENT_FREQS, TASK_URGENT_GAIN, TASK_URGENT_END_GAIN, TASK_URGENT_TONE_SEC,
   SELECT_FREQ, SELECT_GAIN, SELECT_END_GAIN, SELECT_SEC, DEFAULT_VOLUME,
+  DEFAULT_AMBIENCE_ENABLED, DEFAULT_AMBIENCE_VOLUME, AMBIENCE_BASE_FREQ, AMBIENCE_OVERTONE_FREQ,
+  AMBIENCE_FILTER_FREQ, AMBIENCE_FILTER_Q, AMBIENCE_RAMP_SEC, AMBIENCE_PREVIEW_SEC,
+  clampAmbienceVolume, calcAmbienceGain, generatePinkNoiseData,
 } from './sound_spec.js';
 
 const noop = () => {};
 const noCtx = { state: 'none', close: noop };
 
-export function createSoundEngine({ ctxFactory, setTimeoutFn = setTimeout, clearTimeoutFn = clearTimeout, initialVolume = DEFAULT_VOLUME }) {
+export function createSoundEngine({
+  ctxFactory,
+  setTimeoutFn = setTimeout,
+  clearTimeoutFn = clearTimeout,
+  initialVolume = DEFAULT_VOLUME,
+  initialAmbienceEnabled = DEFAULT_AMBIENCE_ENABLED,
+  initialAmbienceVolume = DEFAULT_AMBIENCE_VOLUME,
+}) {
   let ctx = noCtx;
   let masterGain = null;
   let started = false;
   let muted = false;
   let volume = initialVolume;
+  let ambienceEnabled = !!initialAmbienceEnabled;
+  let ambienceVolume = clampAmbienceVolume(initialAmbienceVolume);
+  let ambienceNodes = null;
   const pending = [];
-  const calls = { key: 0, step: 0, chime: 0, taskDone: 0, taskFail: 0, select: 0, taskUrgent: 0 };
+  const calls = { key: 0, step: 0, chime: 0, taskDone: 0, taskFail: 0, select: 0, taskUrgent: 0, ambience: 0 };
 
   const dbg = (sink) => {
-    const snap = { started, state: ctx === noCtx ? 'none' : ctx.state, calls: { ...calls }, muted, volume };
+    const snap = {
+      started,
+      state: ctx === noCtx ? 'none' : ctx.state,
+      calls: { ...calls },
+      muted,
+      volume,
+      ambienceEnabled,
+      ambienceVolume,
+      isAmbienceActive: !!(ambienceNodes && (!muted && (ambienceEnabled || (ambienceNodes && ambienceNodes.previewTimer)))),
+    };
     if (sink) sink(snap);
     return snap;
   };
+
+  function syncAmbience(rampSec = AMBIENCE_RAMP_SEC) {
+    if (!ambienceNodes || !ambienceNodes.gain || ctx === noCtx) return;
+    const isPreviewing = !!(ambienceNodes && ambienceNodes.previewTimer);
+    const target = calcAmbienceGain(volume, ambienceVolume, muted, isPreviewing || ambienceEnabled);
+    const curTime = ctx.currentTime || 0;
+    try {
+      if (ambienceNodes.gain.gain.linearRampToValueAtTime) {
+        if (ambienceNodes.gain.gain.setValueAtTime) {
+          ambienceNodes.gain.gain.setValueAtTime(ambienceNodes.gain.gain.value, curTime);
+        }
+        ambienceNodes.gain.gain.linearRampToValueAtTime(target, curTime + rampSec);
+      } else {
+        ambienceNodes.gain.gain.value = target;
+      }
+    } catch {
+      if (ambienceNodes.gain.gain) ambienceNodes.gain.gain.value = target;
+    }
+  }
+
+  function cleanupAmbienceNodes(nodes) {
+    if (!nodes) return;
+    try { if (nodes.osc1 && nodes.osc1.stop) nodes.osc1.stop(); } catch { /* noop */ }
+    try { if (nodes.osc2 && nodes.osc2.stop) nodes.osc2.stop(); } catch { /* noop */ }
+    try { if (nodes.noiseSrc && nodes.noiseSrc.stop) nodes.noiseSrc.stop(); } catch { /* noop */ }
+    try { if (nodes.gain && nodes.gain.disconnect) nodes.gain.disconnect(); } catch { /* noop */ }
+  }
+
+  function startAmbienceNodes() {
+    if (ambienceNodes || ctx === noCtx) return;
+    try {
+      const ambGain = ctx.createGain();
+      const initialGain = calcAmbienceGain(volume, ambienceVolume, muted, ambienceEnabled);
+      ambGain.gain.value = 0;
+      ambGain.connect(masterGain);
+
+      // 1. Hum fundamental (55 Hz)
+      const osc1 = ctx.createOscillator();
+      osc1.type = 'sine';
+      osc1.frequency.value = AMBIENCE_BASE_FREQ;
+      const osc1Gain = ctx.createGain();
+      osc1Gain.gain.value = 0.5;
+      osc1.connect(osc1Gain);
+      osc1Gain.connect(ambGain);
+
+      // 2. Harmonic overtone (110 Hz)
+      const osc2 = ctx.createOscillator();
+      osc2.type = 'sine';
+      osc2.frequency.value = AMBIENCE_OVERTONE_FREQ;
+      const osc2Gain = ctx.createGain();
+      osc2Gain.gain.value = 0.25;
+      osc2.connect(osc2Gain);
+      osc2Gain.connect(ambGain);
+
+      // 3. Pink noise airflow (HVAC presence)
+      const sampleRate = ctx.sampleRate || 48000;
+      const bufLen = Math.floor(sampleRate * 2.0);
+      const pinkData = generatePinkNoiseData(bufLen);
+      const noiseBuf = ctx.createBuffer(1, bufLen, sampleRate);
+      if (noiseBuf.copyToChannel) {
+        noiseBuf.copyToChannel(pinkData, 0);
+      } else if (noiseBuf.getChannelData) {
+        const ch = noiseBuf.getChannelData(0);
+        for (let i = 0; i < bufLen; i++) ch[i] = pinkData[i];
+      }
+
+      const noiseSrc = ctx.createBufferSource();
+      noiseSrc.buffer = noiseBuf;
+      noiseSrc.loop = true;
+
+      let filter = null;
+      if (ctx.createBiquadFilter) {
+        filter = ctx.createBiquadFilter();
+        filter.type = 'lowpass';
+        filter.frequency.value = AMBIENCE_FILTER_FREQ;
+        if (filter.Q) filter.Q.value = AMBIENCE_FILTER_Q;
+      }
+
+      const noiseGain = ctx.createGain();
+      noiseGain.gain.value = 0.45;
+
+      if (filter) {
+        noiseSrc.connect(filter);
+        filter.connect(noiseGain);
+      } else {
+        noiseSrc.connect(noiseGain);
+      }
+      noiseGain.connect(ambGain);
+
+      osc1.start();
+      osc2.start();
+      noiseSrc.start();
+
+      ambienceNodes = {
+        gain: ambGain,
+        osc1,
+        osc2,
+        noiseSrc,
+        filter,
+        noiseGain,
+        previewTimer: null,
+      };
+
+      const curTime = ctx.currentTime || 0;
+      if (ambGain.gain.linearRampToValueAtTime) {
+        if (ambGain.gain.setValueAtTime) {
+          ambGain.gain.setValueAtTime(0, curTime);
+        }
+        ambGain.gain.linearRampToValueAtTime(initialGain, curTime + AMBIENCE_RAMP_SEC);
+      } else {
+        ambGain.gain.value = initialGain;
+      }
+      calls.ambience++;
+    } catch {
+      /* abaikan error Web Audio jika lingkungan tidak mendukung */
+    }
+  }
+
+  function stopAmbienceNodes(immediate = false) {
+    if (!ambienceNodes) return;
+    const nodes = ambienceNodes;
+    ambienceNodes = null;
+    if (nodes.previewTimer) {
+      clearTimeoutFn(nodes.previewTimer);
+      nodes.previewTimer = null;
+    }
+
+    if (!immediate && nodes.gain && nodes.gain.gain && nodes.gain.gain.linearRampToValueAtTime) {
+      const curTime = (ctx && ctx.currentTime) || 0;
+      try {
+        if (nodes.gain.gain.setValueAtTime) {
+          nodes.gain.gain.setValueAtTime(nodes.gain.gain.value, curTime);
+        }
+        nodes.gain.gain.linearRampToValueAtTime(0.0001, curTime + AMBIENCE_RAMP_SEC);
+      } catch { /* noop */ }
+      setTimeoutFn(() => {
+        cleanupAmbienceNodes(nodes);
+      }, Math.floor(AMBIENCE_RAMP_SEC * 1000));
+    } else {
+      cleanupAmbienceNodes(nodes);
+    }
+  }
+
+  function setAmbienceEnabled(v) {
+    ambienceEnabled = !!v;
+    ensure();
+    if (ambienceEnabled) {
+      if (!ambienceNodes) {
+        startAmbienceNodes();
+      } else {
+        syncAmbience();
+      }
+    } else {
+      if (ambienceNodes && !ambienceNodes.previewTimer) {
+        stopAmbienceNodes(false);
+      } else {
+        syncAmbience();
+      }
+    }
+    dbg();
+  }
+
+  function setAmbienceVolume(v) {
+    ambienceVolume = clampAmbienceVolume(v);
+    syncAmbience();
+    dbg();
+  }
+
+  function previewAmbience(durationSec = AMBIENCE_PREVIEW_SEC) {
+    ensure();
+    if (!ensureLive() || muted) return false;
+
+    if (ambienceNodes && ambienceEnabled) {
+      calls.ambience++;
+      const curTime = ctx.currentTime || 0;
+      const baseTarget = calcAmbienceGain(volume, ambienceVolume, muted, true);
+      const swellTarget = Math.min(1.0, baseTarget * 1.6);
+      try {
+        if (ambienceNodes.gain.gain.linearRampToValueAtTime) {
+          if (ambienceNodes.gain.gain.setValueAtTime) {
+            ambienceNodes.gain.gain.setValueAtTime(ambienceNodes.gain.gain.value, curTime);
+          }
+          ambienceNodes.gain.gain.linearRampToValueAtTime(swellTarget, curTime + 0.3);
+          ambienceNodes.gain.gain.linearRampToValueAtTime(baseTarget, curTime + durationSec);
+        }
+      } catch { /* noop */ }
+      dbg();
+      return true;
+    }
+
+    startAmbienceNodes();
+    if (!ambienceNodes) return false;
+
+    const targetGain = calcAmbienceGain(volume, ambienceVolume, false, true);
+    const curTime = ctx.currentTime || 0;
+    try {
+      if (ambienceNodes.gain.gain.linearRampToValueAtTime) {
+        if (ambienceNodes.gain.gain.setValueAtTime) {
+          ambienceNodes.gain.gain.setValueAtTime(0, curTime);
+        }
+        ambienceNodes.gain.gain.linearRampToValueAtTime(targetGain, curTime + AMBIENCE_RAMP_SEC);
+      } else {
+        ambienceNodes.gain.gain.value = targetGain;
+      }
+    } catch { /* noop */ }
+
+    const timer = setTimeoutFn(() => {
+      if (ambienceNodes) {
+        ambienceNodes.previewTimer = null;
+        if (!ambienceEnabled) {
+          stopAmbienceNodes(false);
+        }
+      }
+    }, Math.max(100, Math.floor(durationSec * 1000)));
+
+    ambienceNodes.previewTimer = timer;
+    dbg();
+    return true;
+  }
 
   function ensure() {
     if (started) return;
@@ -37,6 +278,9 @@ export function createSoundEngine({ ctxFactory, setTimeoutFn = setTimeout, clear
     masterGain = ctx.createGain();
     masterGain.gain.value = masterGainValue(muted, volume);
     masterGain.connect(ctx.destination);
+    if (ambienceEnabled && !ambienceNodes) {
+      startAmbienceNodes();
+    }
     dbg();
   }
 
@@ -168,16 +412,19 @@ export function createSoundEngine({ ctxFactory, setTimeoutFn = setTimeout, clear
   function setMuted(v) {
     muted = !!v;
     if (masterGain) masterGain.gain.value = masterGainValue(muted, volume);
+    syncAmbience();
     dbg();
   }
 
   function setVolume(v) {
     volume = Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : DEFAULT_VOLUME;
     if (masterGain) masterGain.gain.value = masterGainValue(muted, volume);
+    syncAmbience();
     dbg();
   }
 
   function dispose() {
+    stopAmbienceNodes(true);
     pending.forEach(clearTimeoutFn);
     pending.length = 0;
     try { if (ctx !== noCtx) ctx.close(); } catch { /* no-op */ }
@@ -194,6 +441,10 @@ export function createSoundEngine({ ctxFactory, setTimeoutFn = setTimeout, clear
 
   return {
     ensure, playKeyClick, playStep, playMeetingChime, playTaskDone, playTaskFail, playTaskUrgent, playSelect,
+    previewAmbience, startAmbience: () => setAmbienceEnabled(true), stopAmbience: () => setAmbienceEnabled(false),
+    setAmbienceEnabled, isAmbienceEnabled: () => ambienceEnabled,
+    setAmbienceVolume, getAmbienceVolume: () => ambienceVolume,
+    isAmbienceActive: () => !!(ambienceNodes && (!muted && (ambienceEnabled || (ambienceNodes && ambienceNodes.previewTimer)))),
     setMuted, setVolume, getVolume: () => volume, dispose, dbg,
     rawCtx, state, suspend, resume,
     isMuted: () => muted,
