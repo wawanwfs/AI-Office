@@ -1,3 +1,36 @@
+## 2026-10-26 10:35 WIB — Siklus 83: Tampilan Kanban Berkolom Interaktif (kanban_spec.js), Switcher Mode Daftar ↔ Kanban di TaskBoard, Integrasi Event Kustom 3D Whiteboard (wfs-open-task-board) & Metrik Agregat Sprint
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Spesifikasi Kanban & Pengelompokan Status Kolom (`src/scene/parts/kanban_spec.js`, `src/__tests__/kanban_spec.test.js`):**
+     - Membangun spesifikasi murni tanpa dependensi DOM/Three untuk struktur kolom papan kanban sprint:
+       - 4 kolom baku: `pending` (Antri ⏳, abu-abu `#9aa7b8`), `running` (Sedang Jalan ⚡, oranye `#F59E0B`), `review` (Review / Isu 🔍, biru `#448AFF`), dan `done` (Selesai ✅, hijau teal `#10E5A0`).
+       - Pemetaan status cerdas `getKanbanColumnKey(status)` yang mengelompokkan `running`/`in_progress` ke kolom jalan, `review`/`failed` ke kolom review/isu, `done`/`completed` ke kolom selesai, dan default ke kolom antrean.
+       - Pengelompokan aman `groupTasksByKanbanColumn(tasks, query)` yang mendukung pencarian real-time dan pengurutan ID task descending.
+       - Kalkulasi metrik agregat sprint `computeSprintMetrics(tasks)` (`total`, `done`, `running`, `pending`, `review`, `failed`, `pct` penyelesaian).
+       - Pemetaan warna badge peran tim `getTaskRoleBadgeColor(role)` (be, fe, ops, qa, pm, ai, sec, sre).
+  2. **Interaktivitas Kanban & Switcher Mode di TaskBoard (`src/components/TaskBoard.jsx`, `src/components/Icons.jsx`, `src/index.css`, `src/__tests__/TaskBoard.test.jsx`):**
+     - Menambahkan switcher mode tampilan (`Daftar` ↔ `Kanban`) dengan ikon SVG baru `IconList` dan `IconKanban` berstandar aksesibilitas (`aria-pressed`).
+     - Pada mode Kanban, panel melebar secara adaptif (`.panel.wide-kanban`, hingga 780px di desktop) dan menampilkan 4 kolom status berdampingan dengan header bergaris aksen, ikon, judul, badge jumlah, dan kartu task interaktif.
+     - Kartu task kanban menampilkan ID, agen pelaksana, judul task, badge peran berwarna, serta badge status. Mengklik kartu langsung membuka detail task (ulasan QA, file yang dihasilkan, dan tombol jalankan task).
+     - Subtitle papan task kini menampilkan ringkasan metrik sprint live: `{total} task · {done}/{total} ({pct}%) selesai` serta indikator aktif `● N jalan`.
+     - Mendengarkan event kustom `wfs-open-task-board` yang memungkinkan papan task langsung terbuka otomatis dalam mode yang diinginkan.
+  3. **Integrasi Interaktif Whiteboard 3D Ruang Rapat (`src/scene/OfficeScene.js`):**
+     - Menghubungkan klik dan double-click pada Whiteboard Ruang Rapat 3D agar tidak hanya menggeser fokus kamera, melainkan juga otomatis mendispatch event `wfs-open-task-board` dengan mode kanban (`{ view: 'kanban', source: 'whiteboard' }`).
+     - Menambahkan method `openSprintBoard()` pada objek debug `window.__whiteboard` dan mengekspos hook global `window.__openTaskBoard(opts)` yang dibersihkan saat scene `destroy()`.
+
+- **Bukti terukur:**
+  - **Vitest:** **1552/1552 passed (130 test file)** (+15 tests baru terintegrasi, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/components/TaskBoard.jsx src/components/Icons.jsx src/scene/parts/kanban_spec.js src/scene/OfficeScene.js src/__tests__/TaskBoard.test.jsx src/__tests__/kanban_spec.test.js`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1677.26 KiB; chunk `OfficeScene-UGfo5Enh.js` 873.39 KB / gzip 236.92 KB, `index-9sRSbRwa.js` 323.00 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-9sRSbRwa.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **524.063 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `shot.sh`: Screenshot ck.png **587.471 bytes** (>500 KB).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** evaluasi optimasi chunking dinamis OfficeScene atau filtering per divisi pada tampilan Kanban.
+
 ## 2026-10-26 10:20 WIB — Siklus 82: Perbaikan UI/UX Mobile & Koherensi Kampus (dari screenshot HP user)
 
 - **Pemicu:** screenshot HP 100.117.198.46:9503 — logo "WFS PR" terpotong chip, agen di luar dinding, pilar menembus ruangan, label 6px.
