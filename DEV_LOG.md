@@ -1,3 +1,32 @@
+## 2026-10-26 17:07 WIB — Siklus 93: Widget Kontrol Cepat Ambience Hum Kantor di HUD (Animasi Gelombang 3-Bar, Siklus Volume Shift+Klik, Sinkronisasi Event wfs-ambience-changed)
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Spesifikasi & Utilitas Audio Ambience Murni (`src/scene/parts/sound_spec.js`, `src/__tests__/sound_spec.test.js`):**
+     - Mengembangkan fungsi siklus preset volume ambience `getNextAmbiencePreset(currentVol, presets)` yang secara melingkar menggeser volume (`20% → 40% → 70% → 100% → 20%`).
+     - Membangun generator label ringkas `getAmbienceStatusLabel({ enabled, muted, volume })` (`'Hum 35%'`, `'Hum Off'`, `'Mute'`).
+     - Membangun `getAmbienceTooltip` dan `getAmbienceAriaLabel` dengan panduan interaksi ramah pengguna dan aksesibilitas screen reader (klik on/off, Shift+klik ganti volume, klik kanan pengaturan).
+  2. **Widget Kontrol Cepat Ambience pada HUD (`src/components/HUD.jsx`, `src/index.css`, `src/__tests__/hud_ambience.test.jsx`):**
+     - Menghadirkan widget tombol audio ambience (`.hud-amb-btn`) pada pill status atas-kiri dengan separator visual (`.hud-sep`).
+     - Mengimplementasikan visualizer 3-bar gelombang audio CSS (`.hud-amb-wave`, `.hud-amb-bar`) yang beranimasi halus saat ambience aktif dan statis saat nonaktif atau muted (dengan dukungan `@media (prefers-reduced-motion: reduce)`).
+     - Menghadirkan interaksi cepat: Klik langsung untuk toggle On/Off (otomatis unmute jika master audio sedang dibisukan), Shift+Klik untuk siklus level volume preset seketika, dan Klik Kanan (context menu) untuk membuka panel pengaturan audio lengkap (`SettingsModal`).
+  3. **Sinkronisasi State Dua-Arah & Komunikasi Scene-React (`src/scene/OfficeScene.js`, `src/components/SettingsModal.jsx`, `src/App.jsx`):**
+     - Mengintegrasikan CustomEvent `wfs-ambience-changed` pada `OfficeScene.js` (di `setAmbienceEnabled`, `setAmbienceVolume`, dan `setAudioMuted`) serta fallback `SettingsModal.jsx`.
+     - Menyinkronkan status ambience secara real-time di `App.jsx` sehingga perubahan dari HUD, SettingsModal, maupun scene hook debug langsung tercermin di seluruh UI tanpa desinkronisasi.
+     - Menyediakan notifikasi flash instan saat ambience diaktifkan, dimatikan, atau volumenya diganti.
+
+- **Bukti terukur:**
+  - **Vitest:** **1646/1646 passed (132 test file)** (+9 tests baru terintegrasi: getNextAmbiencePreset, getAmbienceStatusLabel, getAmbienceTooltip/AriaLabel, backward compatibility HUD, render Hum Off, render Hum 70% aktif dengan 3-bar wave, render Mute, Shift+Click cycle volume, right-click settings; 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/scene/parts/sound_spec.js src/scene/OfficeScene.js src/components/HUD.jsx src/components/SettingsModal.jsx src/App.jsx src/__tests__/sound_spec.test.js src/__tests__/hud_ambience.test.jsx`).
+  - **Build:** Berhasil (exit 0, 37 precache entries 1729.16 KiB; `OfficeScene` 165.08 KB / gzip 56.70 KB, `index` 168.89 KB / gzip 46.02 KB, `vendor-three` 715.76 KB, `vendor-react` 189.63 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-C088t8Hg.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **642.579 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `shot.sh` (DISPLAY=:0): Screenshot **641.569 bytes** (>500 KB).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** evaluasi preset kombinasi multi-tag filter pada papan kanban TaskBoard.
+
 ## 2026-10-26 16:26 WIB — Siklus 92: Sound Engine Ambience Ruangan Kantor (Web Audio Pink Noise HVAC & Hum Drone 55Hz), Kontrol Toggle & Slider Volume Ambience di SettingsModal
 
 - **Yang diperbaiki & ditingkatkan:**

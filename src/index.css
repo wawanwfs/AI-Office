@@ -236,6 +236,89 @@ button { font-family: inherit; }
 }
 .hud input[type=range]::-webkit-slider-thumb:hover { transform: scale(1.2); }
 
+.hud-sep {
+  width: 1px;
+  height: 14px;
+  background: rgba(255, 255, 255, 0.15);
+  margin: 0 2px;
+}
+.hud-amb-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 12px;
+  padding: 3px 8px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  cursor: pointer;
+  color: var(--text-tertiary, #9aa3b5);
+  font-family: 'DM Mono', monospace;
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  outline: none;
+  user-select: none;
+}
+.hud-amb-btn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #fff;
+  transform: translateY(-1px);
+}
+.hud-amb-btn:focus-visible {
+  outline: 2px solid var(--teal, #0deef3);
+  outline-offset: 1px;
+}
+.hud-amb-btn.active {
+  background: rgba(13, 238, 243, 0.12);
+  border-color: rgba(13, 238, 243, 0.4);
+  color: var(--teal, #0deef3);
+  box-shadow: 0 0 10px rgba(13, 238, 243, 0.25);
+}
+.hud-amb-btn.muted {
+  opacity: 0.55;
+  border-style: dashed;
+}
+.hud-amb-wave {
+  display: inline-flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: 11px;
+  width: 10px;
+}
+.hud-amb-bar {
+  width: 2px;
+  border-radius: 1px;
+  background: currentColor;
+  transition: height 0.2s ease;
+}
+.hud-amb-bar.bar-1 { height: 3px; }
+.hud-amb-bar.bar-2 { height: 5px; }
+.hud-amb-bar.bar-3 { height: 3px; }
+
+@keyframes hudWave1 {
+  0%, 100% { height: 3px; }
+  50% { height: 9px; }
+}
+@keyframes hudWave2 {
+  0%, 100% { height: 10px; }
+  50% { height: 4px; }
+}
+@keyframes hudWave3 {
+  0%, 100% { height: 4px; }
+  50% { height: 8px; }
+}
+.hud-amb-btn.active .bar-1 { animation: hudWave1 1.1s ease-in-out infinite; }
+.hud-amb-btn.active .bar-2 { animation: hudWave2 0.9s ease-in-out infinite 0.15s; }
+.hud-amb-btn.active .bar-3 { animation: hudWave3 1.25s ease-in-out infinite 0.3s; }
+
+@media (prefers-reduced-motion: reduce) {
+  .hud-amb-btn.active .bar-1 { animation: none; height: 7px; }
+  .hud-amb-btn.active .bar-2 { animation: none; height: 10px; }
+  .hud-amb-btn.active .bar-3 { animation: none; height: 6px; }
+}
+
 /* ===== Panel ===== */
 .panel {
   position: fixed; right: 14px; bottom: calc(96px + var(--safe-b)); z-index: var(--z-panel);

@@ -15,6 +15,7 @@ import {
   AMBIENCE_BASE_GAIN, AMBIENCE_RAMP_SEC, AMBIENCE_PREVIEW_SEC, AMBIENCE_PRESETS, AMBIENCE_PRESET_LABELS,
   clampAmbienceVolume, loadAmbienceEnabled, saveAmbienceEnabled, loadAmbienceVolume, saveAmbienceVolume,
   formatAmbiencePercent, calcAmbienceGain, generatePinkNoiseData,
+  getNextAmbiencePreset, getAmbienceStatusLabel, getAmbienceTooltip, getAmbienceAriaLabel,
 } from '../scene/parts/sound_spec.js';
 
 describe('sound_spec — keyclick', () => {
@@ -288,5 +289,47 @@ describe('sound_spec — ambience ruangan kantor (Web Audio HVAC / room hum)', (
     expect(minVal).toBeGreaterThan(-1.2);
     // Rata-rata mendekati nol (DC offset rendah)
     expect(Math.abs(sum / samples)).toBeLessThan(0.3);
+  });
+
+  it('getNextAmbiencePreset melakukan siklus preset volume ambience secara melingkar', () => {
+    // Presets: [0.20, 0.40, 0.70, 1.00]
+    expect(getNextAmbiencePreset(0.10)).toBe(0.20);
+    expect(getNextAmbiencePreset(0.20)).toBe(0.40);
+    expect(getNextAmbiencePreset(0.35)).toBe(0.40);
+    expect(getNextAmbiencePreset(0.40)).toBe(0.70);
+    expect(getNextAmbiencePreset(0.70)).toBe(1.00);
+    expect(getNextAmbiencePreset(1.00)).toBe(0.20); // wrap around ke awal
+    expect(getNextAmbiencePreset(undefined)).toBe(0.40); // default 0.35 -> 0.40
+    expect(getNextAmbiencePreset(0.5, [])).toBe(DEFAULT_AMBIENCE_VOLUME);
+  });
+
+  it('getAmbienceStatusLabel menghasilkan teks status ringkas HUD', () => {
+    expect(getAmbienceStatusLabel({ enabled: true, muted: false, volume: 0.35 })).toBe('Hum 35%');
+    expect(getAmbienceStatusLabel({ enabled: true, muted: false, volume: 1.0 })).toBe('Hum 100%');
+    expect(getAmbienceStatusLabel({ enabled: false, muted: false, volume: 0.35 })).toBe('Hum Off');
+    expect(getAmbienceStatusLabel({ enabled: true, muted: true, volume: 0.35 })).toBe('Mute');
+    expect(getAmbienceStatusLabel({ enabled: false, muted: true, volume: 0.35 })).toBe('Mute');
+    expect(getAmbienceStatusLabel()).toBe('Hum Off');
+  });
+
+  it('getAmbienceTooltip dan getAmbienceAriaLabel menghasilkan deskripsi yang ramah pengguna & aksesibilitas', () => {
+    const tipActive = getAmbienceTooltip({ enabled: true, muted: false, volume: 0.40 });
+    expect(tipActive).toContain('Ambience Hum Kantor Aktif (40%)');
+    expect(tipActive).toContain('Shift+Klik');
+
+    const tipOff = getAmbienceTooltip({ enabled: false, muted: false, volume: 0.40 });
+    expect(tipOff).toContain('Ambience Hum Kantor Nonaktif');
+
+    const tipMuted = getAmbienceTooltip({ enabled: true, muted: true, volume: 0.40 });
+    expect(tipMuted).toContain('Suara kantor dibisukan');
+
+    const ariaActive = getAmbienceAriaLabel({ enabled: true, muted: false, volume: 0.70 });
+    expect(ariaActive).toBe('Ambience hum kantor aktif 70%');
+
+    const ariaOff = getAmbienceAriaLabel({ enabled: false, muted: false, volume: 0.70 });
+    expect(ariaOff).toBe('Ambience hum kantor nonaktif');
+
+    const ariaMuted = getAmbienceAriaLabel({ enabled: true, muted: true, volume: 0.70 });
+    expect(ariaMuted).toContain('terbungkam');
   });
 });

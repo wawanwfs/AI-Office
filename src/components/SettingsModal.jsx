@@ -126,6 +126,11 @@ export default function SettingsModal({
       if (next && !muted && s.playSelect) s.playSelect()
     } else {
       saveAmbienceEnabled(typeof localStorage !== 'undefined' ? localStorage : null, next)
+      try {
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('wfs-ambience-changed', { detail: { enabled: next, volume: ambienceVol } }))
+        }
+      } catch { /* noop */ }
     }
     if (onFlash) onFlash(next ? 'Ambience ruangan aktif (HVAC & Room Hum)' : 'Ambience ruangan dinonaktifkan')
   }
@@ -139,6 +144,11 @@ export default function SettingsModal({
       s.setAmbienceVolume(next)
     } else {
       saveAmbienceVolume(typeof localStorage !== 'undefined' ? localStorage : null, next)
+      try {
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('wfs-ambience-changed', { detail: { enabled: ambienceOn, volume: next } }))
+        }
+      } catch { /* noop */ }
     }
   }
 

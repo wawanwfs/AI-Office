@@ -23,6 +23,15 @@ import { IconVolume, IconVolumeMute, IconScroll, IconHelp, IconGear } from './co
 import { api } from './lib/api'
 import { anyModalOpen } from './lib/modal'
 import { createWakeLockManager } from './lib/wakelock.js'
+import {
+  loadAmbienceEnabled,
+  saveAmbienceEnabled,
+  loadAmbienceVolume,
+  saveAmbienceVolume,
+  DEFAULT_AMBIENCE_VOLUME,
+  getNextAmbiencePreset,
+  formatAmbiencePercent,
+} from './scene/parts/sound_spec.js'
 
 const CsWidget = lazy(() => import('./components/CsWidget'))
 
@@ -52,6 +61,12 @@ export default function App() {
   const [showLog, setShowLog] = useState(false)
   const [muted, setMuted] = useState(() => {
     try { return typeof localStorage !== 'undefined' && localStorage.getItem('wfs_audio_muted') === '1' } catch { return false }
+  })
+  const [ambienceEnabled, setAmbienceEnabled] = useState(() => {
+    try { return loadAmbienceEnabled(typeof localStorage !== 'undefined' ? localStorage : null) } catch { return false }
+  })
+  const [ambienceVolume, setAmbienceVolume] = useState(() => {
+    try { return loadAmbienceVolume(typeof localStorage !== 'undefined' ? localStorage : null) } catch { return DEFAULT_AMBIENCE_VOLUME }
   })
   const [selectedAgent, setSelectedAgent] = useState(null)
   const [currentFloor, setCurrentFloor] = useState(1)
@@ -93,6 +108,62 @@ export default function App() {
     clearTimeout(toastTimer.current)
     toastTimer.current = setTimeout(() => setToast(null), 3500)
   }, [])
+
+  useEffect(() => {
+    const onAmbienceChange = (e) => {
+      if (e && e.detail) {
+        if (typeof e.detail.enabled === 'boolean') setAmbienceEnabled(e.detail.enabled)
+        if (typeof e.detail.volume === 'number') setAmbienceVolume(e.detail.volume)
+        if (typeof e.detail.muted === 'boolean') setMuted(e.detail.muted)
+      }
+    }
+    window.addEventListener('wfs-ambience-changed', onAmbienceChange)
+    return () => window.removeEventListener('wfs-ambience-changed', onAmbienceChange)
+  }, [])
+
+  const toggleAmbience = useCallback((e) => {
+    if (e && e.shiftKey) {
+      const nextVol = getNextAmbiencePreset(ambienceVolume)
+      setAmbienceVolume(nextVol)
+      const s = sceneRef.current
+      if (s && s.setAmbienceVolume) {
+        s.setAmbienceVolume(nextVol)
+        if (!muted && s.playSelect) s.playSelect()
+      } else {
+        try { saveAmbienceVolume(typeof localStorage !== 'undefined' ? localStorage : null, nextVol) } catch { /* noop */ }
+      }
+      flash(`Volume ambience kantor: ${formatAmbiencePercent(nextVol)}`)
+      return
+    }
+
+    const s = sceneRef.current
+    if (muted && s && s.setAudioMuted) {
+      s.setAudioMuted(false)
+      setMuted(false)
+    }
+    const next = !ambienceEnabled
+    setAmbienceEnabled(next)
+    if (s && s.setAmbienceEnabled) {
+      s.setAmbienceEnabled(next)
+      if (next && s.playSelect) s.playSelect()
+    } else {
+      try { saveAmbienceEnabled(typeof localStorage !== 'undefined' ? localStorage : null, next) } catch { /* noop */ }
+    }
+    flash(next ? `Ambience kantor aktif (${formatAmbiencePercent(ambienceVolume)})` : 'Ambience kantor dinonaktifkan')
+  }, [ambienceEnabled, ambienceVolume, muted, flash])
+
+  const cycleAmbienceVolume = useCallback(() => {
+    const nextVol = getNextAmbiencePreset(ambienceVolume)
+    setAmbienceVolume(nextVol)
+    const s = sceneRef.current
+    if (s && s.setAmbienceVolume) {
+      s.setAmbienceVolume(nextVol)
+      if (!muted && s.playSelect) s.playSelect()
+    } else {
+      try { saveAmbienceVolume(typeof localStorage !== 'undefined' ? localStorage : null, nextVol) } catch { /* noop */ }
+    }
+    flash(`Volume ambience kantor: ${formatAmbiencePercent(nextVol)}`)
+  }, [ambienceVolume, muted, flash])
 
   // ---- status nyata dari gateway ----
   const refreshStatus = useCallback(async () => {
@@ -399,8 +470,19 @@ export default function App() {
 
       {inMeeting && <div className="meeting-badge" role="status"><div><i />Rapat berlangsung</div></div>}
 
-      <HUD time={formatTime(time)} timeValue={time} status={status} statusKind={statusKind}
-        onTimeChange={handleTimeChange} />
+      <HUD
+        time={formatTime(time)}
+        timeValue={time}
+        status={status}
+        statusKind={statusKind}
+        onTimeChange={handleTimeChange}
+        ambienceEnabled={ambienceEnabled}
+        ambienceVolume={ambienceVolume}
+        muted={muted}
+        onToggleAmbience={toggleAmbience}
+        onCycleAmbienceVolume={cycleAmbienceVolume}
+        onOpenSettings={() => setShowSettings(true)}
+      />
 
       {/* Dock bawah: satu bilah, tidak ada elemen saling tumpuk. */}
       <div className="dock" role="toolbar" aria-label="Menu utama">

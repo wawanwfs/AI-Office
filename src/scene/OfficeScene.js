@@ -1845,7 +1845,17 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       }
       updCam(); return true;
     },
-    setAudioMuted: (v) => { audioMuted=!!v; __sound.setMuted(audioMuted); saveMuted(); __sound.dbg(s=>{window.__audio=s;}); },
+    setAudioMuted: (v) => {
+      audioMuted = !!v;
+      __sound.setMuted(audioMuted);
+      saveMuted();
+      __sound.dbg(s=>{window.__audio=s;});
+      try {
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('wfs-ambience-changed', { detail: { enabled: ambienceEnabled, volume: ambienceVolume, muted: audioMuted } }));
+        }
+      } catch { /* abaikan */ }
+    },
     isAudioMuted: () => audioMuted,
     playTaskDone: () => __sound.playTaskDone(),
     playTaskFail: () => __sound.playTaskFail(),
@@ -1873,6 +1883,11 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       __sound.setAmbienceEnabled(ambienceEnabled);
       try { saveAmbienceEnabled(typeof localStorage !== 'undefined' ? localStorage : null, ambienceEnabled); } catch { /* abaikan */ }
       __sound.dbg(s=>{window.__audio=s;});
+      try {
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('wfs-ambience-changed', { detail: { enabled: ambienceEnabled, volume: ambienceVolume, muted: audioMuted } }));
+        }
+      } catch { /* abaikan */ }
     },
     isAmbienceEnabled: () => __sound.isAmbienceEnabled(),
     setAmbienceVolume: (v) => {
@@ -1880,6 +1895,11 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       __sound.setAmbienceVolume(ambienceVolume);
       try { saveAmbienceVolume(typeof localStorage !== 'undefined' ? localStorage : null, ambienceVolume); } catch { /* abaikan */ }
       __sound.dbg(s=>{window.__audio=s;});
+      try {
+        if (typeof window !== 'undefined' && window.dispatchEvent) {
+          window.dispatchEvent(new CustomEvent('wfs-ambience-changed', { detail: { enabled: ambienceEnabled, volume: ambienceVolume, muted: audioMuted } }));
+        }
+      } catch { /* abaikan */ }
     },
     getAmbienceVolume: () => __sound.getAmbienceVolume(),
     isAmbienceActive: () => __sound.isAmbienceActive(),

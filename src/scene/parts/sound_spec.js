@@ -173,6 +173,39 @@ export function calcAmbienceGain(masterVol = DEFAULT_VOLUME, ambienceVol = DEFAU
   return clampVolume(masterVol) * clampAmbienceVolume(ambienceVol) * AMBIENCE_BASE_GAIN;
 }
 
+export function getNextAmbiencePreset(currentVol = DEFAULT_AMBIENCE_VOLUME, presets = AMBIENCE_PRESETS) {
+  if (!Array.isArray(presets) || !presets.length) return DEFAULT_AMBIENCE_VOLUME;
+  const clamped = clampAmbienceVolume(currentVol);
+  const found = presets.find((p) => p > clamped + 0.01);
+  return found !== undefined ? found : presets[0];
+}
+
+export function getAmbienceStatusLabel({ enabled = false, muted = false, volume = DEFAULT_AMBIENCE_VOLUME } = {}) {
+  if (muted) return 'Mute';
+  if (!enabled) return 'Hum Off';
+  return `Hum ${formatAmbiencePercent(volume)}`;
+}
+
+export function getAmbienceTooltip({ enabled = false, muted = false, volume = DEFAULT_AMBIENCE_VOLUME } = {}) {
+  if (muted) {
+    return 'Suara kantor dibisukan — Klik untuk aktifkan/unmute, Klik kanan untuk pengaturan audio';
+  }
+  if (!enabled) {
+    return 'Ambience Hum Kantor Nonaktif — Klik untuk nyalakan desir AC/server kantor, Klik kanan untuk atur';
+  }
+  return `Ambience Hum Kantor Aktif (${formatAmbiencePercent(volume)}) — Klik untuk matikan, Shift+Klik untuk siklus volume, Klik kanan untuk atur`;
+}
+
+export function getAmbienceAriaLabel({ enabled = false, muted = false, volume = DEFAULT_AMBIENCE_VOLUME } = {}) {
+  if (muted) {
+    return 'Ambience ruangan terbungkam karena master audio mute';
+  }
+  if (!enabled) {
+    return 'Ambience hum kantor nonaktif';
+  }
+  return `Ambience hum kantor aktif ${formatAmbiencePercent(volume)}`;
+}
+
 // Algoritma filter Paul Kellet untuk pink noise (1/f) bermutu tinggi
 // Menghasilkan data audio float (-1..1) untuk desir ruangan kantor / HVAC
 export function generatePinkNoiseData(samples, rng = Math.random) {
