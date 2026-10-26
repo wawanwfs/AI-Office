@@ -46,7 +46,12 @@ export default function Ticker() {
       <div id="ticker-live" role="status" aria-live="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', clipPath: 'inset(50%)', whiteSpace: 'nowrap' }}>{liveText}</div>
       <div className="ticker" role="presentation" aria-hidden="true">
         <div className="track">
-          {list.map((m, i) => <span key={i} style={{ color: m.color }} aria-hidden="true">▸ {m.text}</span>)}
+          {list.map((m, i) => {
+            // Dua salinan track (efek marquee); key harus unik antar salinan
+            // supaya tidak ada peringatan React "duplicate key" tiap render.
+            const k = i < msgs.length ? 'f' + i : 's' + (i - msgs.length)
+            return <span key={k} style={{ color: m.color }} aria-hidden="true">▸ {m.text}</span>
+          })}
         </div>
       </div>
     </>
