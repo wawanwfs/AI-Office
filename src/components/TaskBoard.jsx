@@ -47,8 +47,20 @@ import {
   computePresetStats,
   toggleTagInFilter,
   formatTagFilterSummary,
+  DIVISION_PRESET_ICONS,
+  normalizeDivisionList,
+  loadCustomDivPresets,
+  saveCustomDivPresets,
+  createCustomDivPreset,
+  deleteCustomDivPreset,
+  getAllDivisionPresets,
+  getDivisionPreset,
+  isDivisionPresetActive,
+  computeDivisionPresetStats,
+  toggleDivisionInFilter,
+  formatDivisionFilterSummary,
 } from '../scene/parts/kanban_spec'
-import { findTeamByRole, findTeamByAgent } from '../scene/parts/team_spec'
+import { TEAMS, findTeamByRole, findTeamByAgent } from '../scene/parts/team_spec'
 
 const ST = { done: ['Selesai', '#10E5A0'], running: ['Jalan', '#F59E0B'], review: ['Review', '#448AFF'], failed: ['Gagal', '#ef4444'], pending: ['Antri', '#9aa7b8'] }
 const FILTERS = [['all', 'Semua'], ['pending', 'Antri'], ['running', 'Jalan'], ['done', 'Selesai'], ['failed', 'Gagal']]
@@ -83,13 +95,28 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const [presetFormIcon, setPresetFormIcon] = useState('⚡')
   const [presetFormColor, setPresetFormColor] = useState('#38BDF8')
   const [presetFormTags, setPresetFormTags] = useState([])
+
+  const [customDivPresets, setCustomDivPresets] = useState(() => {
+    try {
+      return loadCustomDivPresets(typeof localStorage !== 'undefined' ? localStorage : null)
+    } catch {
+      return []
+    }
+  })
+  const [showDivPresetCreator, setShowDivPresetCreator] = useState(false)
+  const [divPresetFormName, setDivPresetFormName] = useState('')
+  const [divPresetFormIcon, setDivPresetFormIcon] = useState('⚡')
+  const [divPresetFormColor, setDivPresetFormColor] = useState('#38BDF8')
+  const [divPresetFormDivisions, setDivPresetFormDivisions] = useState([])
   const board = useRef(null)
   const searchInputRef = useRef(null)
   useModalFlag(open || !!sel)
   const onEscRef = useRef(() => {})
   useEffect(() => {
     onEscRef.current = () => {
-      if (showPresetCreator) {
+      if (showDivPresetCreator) {
+        setShowDivPresetCreator(false)
+      } else if (showPresetCreator) {
         setShowPresetCreator(false)
       } else if (q && document.activeElement === searchInputRef.current) {
         setQ('')
@@ -199,6 +226,91 @@ export default function TaskBoard({ onFlash, onAsk }) {
     }
   }, [])
 
+  const handleDivisionClick = useCallback((divKey, e) => {
+    const isMulti = Boolean(e && (e.shiftKey || e.ctrlKey || e.metaKey))
+    setDivision((prev) => toggleDivisionInFilter(divKey, prev, { multi: isMulti, customPresets: customDivPresets }))
+    if (typeof window !== 'undefined' && window.__officeSound) {
+      window.__officeSound.playSelect?.()
+    }
+  }, [customDivPresets])
+
+  const handleDivPresetClick = useCallback((presetKey) => {
+    setDivision((prev) => {
+      if (isDivisionPresetActive(presetKey, prev, customDivPresets)) {
+        return 'all'
+      }
+      const p = getDivisionPreset(presetKey, customDivPresets)
+      return p ? p.key : 'all'
+    })
+    if (typeof window !== 'undefined' && window.__officeSound) {
+      window.__officeSound.playSelect?.()
+    }
+  }, [customDivPresets])
+
+  const handleOpenDivPresetCreator = useCallback(() => {
+    setShowDivPresetCreator((prev) => {
+      const next = !prev
+      if (next) {
+        const norm = normalizeDivisionList(division, customDivPresets).filter((d) => d !== 'all')
+        setDivPresetFormDivisions(norm.length > 0 ? norm : ['core-be', 'fe-design'])
+      }
+      return next
+    })
+    if (typeof window !== 'undefined' && window.__officeSound) {
+      window.__officeSound.playSelect?.()
+    }
+  }, [division, customDivPresets])
+
+  const handleSaveCustomDivPreset = useCallback((e) => {
+    if (e && e.preventDefault) e.preventDefault()
+    const name = divPresetFormName.trim()
+    if (!name || divPresetFormDivisions.length === 0) return
+
+    const newPreset = createCustomDivPreset({
+      label: name,
+      divisions: divPresetFormDivisions,
+      icon: divPresetFormIcon,
+      color: divPresetFormColor,
+    }, customDivPresets)
+
+    if (!newPreset) return
+
+    const updated = [...customDivPresets, newPreset]
+    setCustomDivPresets(updated)
+    try {
+      saveCustomDivPresets(typeof localStorage !== 'undefined' ? localStorage : null, updated)
+    } catch { /* ignore */ }
+
+    setDivision(newPreset.key)
+    setShowDivPresetCreator(false)
+    setDivPresetFormName('')
+    if (onFlash) onFlash(`Preset divisi kustom "${newPreset.label}" berhasil disimpan`)
+    if (typeof window !== 'undefined' && window.__officeSound) {
+      window.__officeSound.playSelect?.()
+    }
+  }, [divPresetFormName, divPresetFormDivisions, divPresetFormIcon, divPresetFormColor, customDivPresets, onFlash])
+
+  const handleDeleteCustomDivPreset = useCallback((presetKey, e) => {
+    if (e && e.stopPropagation) e.stopPropagation()
+    const found = customDivPresets.find(p => p.key === presetKey)
+    const label = found?.label || presetKey
+
+    const updated = deleteCustomDivPreset(presetKey, customDivPresets)
+    setCustomDivPresets(updated)
+    try {
+      saveCustomDivPresets(typeof localStorage !== 'undefined' ? localStorage : null, updated)
+    } catch { /* ignore */ }
+
+    if (isDivisionPresetActive(presetKey, division, customDivPresets) || division === presetKey) {
+      setDivision('all')
+    }
+
+    if (onFlash) onFlash(`Preset divisi "${label}" dihapus`)
+    if (typeof window !== 'undefined' && window.__officeSound) {
+      window.__officeSound.playSelect?.()
+    }
+  }, [customDivPresets, division, onFlash])
+
   const load = useCallback(async (signal) => {
     try {
       const d = await api('tasks', { signal })
@@ -215,8 +327,14 @@ export default function TaskBoard({ onFlash, onAsk }) {
       setOpen(true)
       if (e?.detail?.view) setViewMode(e.detail.view)
       if (e?.detail?.filter) setFilter(e.detail.filter)
-      if (e?.detail?.division) setDivision(e.detail.division)
-      else if (e?.detail?.role) setDivision(e.detail.role)
+      if (e?.detail?.divPreset) {
+        const dp = getDivisionPreset(e.detail.divPreset, customDivPresets)
+        if (dp) setDivision(dp.key)
+      } else if (e?.detail?.division) {
+        setDivision(e.detail.division)
+      } else if (e?.detail?.role) {
+        setDivision(e.detail.role)
+      }
       if (e?.detail?.preset) {
         const p = getTagPreset(e.detail.preset, customPresets)
         if (p) setSelectedTag(p.tags)
@@ -240,7 +358,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
     }
     window.addEventListener('wfs-open-task-board', handleOpen)
     return () => window.removeEventListener('wfs-open-task-board', handleOpen)
-  }, [tasks, customPresets])
+  }, [tasks, customPresets, customDivPresets])
 
   useEffect(() => {
     const handleToggle = () => {
@@ -263,7 +381,9 @@ export default function TaskBoard({ onFlash, onAsk }) {
     const iv = setInterval(() => { if (document.visibilityState === 'visible') load(ac.signal) }, 8000)
     const k = e => {
       if (e.key === 'Escape') {
-        if (showPresetCreator) {
+        if (showDivPresetCreator) {
+          setShowDivPresetCreator(false)
+        } else if (showPresetCreator) {
           setShowPresetCreator(false)
         } else if (q && document.activeElement === searchInputRef.current) {
           setQ('')
@@ -276,7 +396,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
     }
     document.addEventListener('keydown', k)
     return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k) }
-  }, [open, load, sel, q, showPresetCreator])
+  }, [open, load, sel, q, showPresetCreator, showDivPresetCreator])
 
   // Fokus ke panel detail saat task dibuka: tombol task yang diklik unmount,
   // tanpa ini fokus jatuh ke <body> — Tab/screen reader mulai lagi dari awal dokumen.
@@ -370,10 +490,23 @@ export default function TaskBoard({ onFlash, onAsk }) {
   }, [draggedTaskId, tasks, handleMoveTask])
 
   const divisions = useMemo(() => extractTaskDivisions(tasks), [tasks])
-  const activeDivision = useMemo(() => divisions.find(d => d.key === division) || null, [divisions, division])
-  const tagCloud = useMemo(() => computeTagCloud(tasks, { divisionFilter: division }), [tasks, division])
+  const allDivPresets = useMemo(() => getAllDivisionPresets(customDivPresets), [customDivPresets])
+  const activeDivList = useMemo(() => normalizeDivisionList(division, customDivPresets), [division, customDivPresets])
+  const isDivAll = !division || division === 'all' || (Array.isArray(division) && division.includes('all'))
+  const isMultiDiv = activeDivList.length > 1 && !activeDivList.includes('all')
+  const activeDivision = useMemo(() => {
+    if (isDivAll) return null
+    if (activeDivList.length === 1) {
+      return divisions.find(d => d.key === activeDivList[0]) || null
+    }
+    return null
+  }, [divisions, isDivAll, activeDivList])
+  const divisionSummary = useMemo(() => formatDivisionFilterSummary(division, customDivPresets), [division, customDivPresets])
+  const divPresetStats = useMemo(() => computeDivisionPresetStats(tasks, allDivPresets, customDivPresets), [tasks, allDivPresets, customDivPresets])
+
+  const tagCloud = useMemo(() => computeTagCloud(tasks, { divisionFilter: division, customDivPresets }), [tasks, division, customDivPresets])
   const allPresets = useMemo(() => getAllPresets(customPresets), [customPresets])
-  const presetStats = useMemo(() => computePresetStats(tasks, allPresets, division), [tasks, allPresets, division])
+  const presetStats = useMemo(() => computePresetStats(tasks, allPresets, division, customDivPresets), [tasks, allPresets, division, customDivPresets])
   const selectableTags = useMemo(() => {
     const map = new Map()
     tagCloud.forEach(t => map.set(t.tag, t.label))
@@ -393,25 +526,25 @@ export default function TaskBoard({ onFlash, onAsk }) {
 
   const dateStats = useMemo(() => computeDateRangeStats(tasks, { customRange }), [tasks, customRange])
   const kanbanGroups = useMemo(
-    () => groupTasksByKanbanColumn(tasks, q, division, sortBy, selectedTag, tagMode, dateRange, undefined, customRange),
-    [tasks, q, division, sortBy, selectedTag, tagMode, dateRange, customRange]
+    () => groupTasksByKanbanColumn(tasks, q, division, sortBy, selectedTag, tagMode, dateRange, undefined, customRange, customDivPresets),
+    [tasks, q, division, sortBy, selectedTag, tagMode, dateRange, customRange, customDivPresets]
   )
   const totalKanbanTasks = useMemo(() => {
     return Object.values(kanbanGroups).reduce((acc, grp) => acc + grp.length, 0)
   }, [kanbanGroups])
-  const metrics = useMemo(() => computeSprintMetrics(tasks, division), [tasks, division])
+  const metrics = useMemo(() => computeSprintMetrics(tasks, division, customDivPresets), [tasks, division, customDivPresets])
   const overallMetrics = useMemo(() => computeSprintMetrics(tasks), [tasks])
-  const priorityBreakdown = useMemo(() => computePriorityBreakdown(tasks, division), [tasks, division])
+  const priorityBreakdown = useMemo(() => computePriorityBreakdown(tasks, division, customDivPresets), [tasks, division, customDivPresets])
   const searchStats = useMemo(
     () => calcSearchStats(tasks, q, { division, tag: selectedTag, tagMode }),
     [tasks, q, division, selectedTag, tagMode]
   )
 
   const list = useMemo(
-    () => filterTasks(tasks, { filter, q, division, sortBy, tag: selectedTag, tagMode, dateRange, customRange }),
-    [tasks, filter, q, division, sortBy, selectedTag, tagMode, dateRange, customRange]
+    () => filterTasks(tasks, { filter, q, division, sortBy, tag: selectedTag, tagMode, dateRange, customRange, customDivPresets }),
+    [tasks, filter, q, division, sortBy, selectedTag, tagMode, dateRange, customRange, customDivPresets]
   )
-  const count = s => (tasks || []).filter(t => (s === 'all' || t.status === s) && (division === 'all' || matchTaskDivision(t, division))).length
+  const count = s => (tasks || []).filter(t => (s === 'all' || t.status === s) && (isDivAll || matchTaskDivision(t, division, customDivPresets))).length
 
   const exportableTasks = useMemo(() => {
     if (!tasks) return []
@@ -467,8 +600,8 @@ export default function TaskBoard({ onFlash, onAsk }) {
               Papan Task
               <small>
                 {tasks ? (
-                  division !== 'all' ? (
-                    `${metrics.total}/${overallMetrics.total} task (${activeDivision?.label || division}) · ${metrics.done}/${metrics.total} (${metrics.pct}%) selesai${metrics.running ? ` · ● ${metrics.running} jalan` : ''}`
+                  !isDivAll ? (
+                    `${metrics.total}/${overallMetrics.total} task (${activeDivision?.label || divisionSummary}) · ${metrics.done}/${metrics.total} (${metrics.pct}%) selesai${metrics.running ? ` · ● ${metrics.running} jalan` : ''}`
                   ) : (
                     `${tasks.length} task · ${metrics.done}/${metrics.total} (${metrics.pct}%) selesai${metrics.running ? ` · ● ${metrics.running} jalan` : ''}`
                   )
@@ -538,15 +671,15 @@ export default function TaskBoard({ onFlash, onAsk }) {
               aria-valuemin={0}
               aria-valuemax={100}
               aria-valuenow={metrics.pct}
-              aria-label={`Progres sprint ${division !== 'all' ? (activeDivision?.fullName || division) : 'kampus'}: ${metrics.pct}% selesai`}
+              aria-label={`Progres sprint ${!isDivAll ? (activeDivision?.fullName || divisionSummary) : 'kampus'}: ${metrics.pct}% selesai`}
               title={`Progres sprint: ${metrics.done}/${metrics.total} task (${metrics.pct}%) selesai`}
             >
               <div
                 className="sprint-progress-fill"
                 style={{
                   width: `${metrics.pct}%`,
-                  background: division !== 'all' && activeDivision?.color
-                    ? `linear-gradient(90deg, ${activeDivision.color}, #448AFF)`
+                  background: !isDivAll && (activeDivision?.color || '#38BDF8')
+                    ? `linear-gradient(90deg, ${activeDivision?.color || '#38BDF8'}, #448AFF)`
                     : 'linear-gradient(90deg, #10E5A0, #448AFF)',
                 }}
               />
@@ -871,13 +1004,15 @@ export default function TaskBoard({ onFlash, onAsk }) {
                 {tasks && (
                   <div className="division-filter-strip" role="group" aria-label="Filter berdasarkan divisi kerja">
                     {divisions.map((div) => {
-                      const isActive = division === div.key
+                      const isActive = div.key === 'all'
+                        ? isDivAll
+                        : (!isDivAll && activeDivList.includes(div.key))
                       return (
                         <button
                           key={div.key}
                           type="button"
                           className={'div-chip' + (isActive ? ' active' : '')}
-                          onClick={() => setDivision(div.key)}
+                          onClick={(e) => handleDivisionClick(div.key, e)}
                           aria-pressed={isActive}
                           aria-label={div.key === 'all' ? 'Tampilkan semua divisi' : `Filter divisi ${div.fullName || div.label}`}
                           title={div.key === 'all' ? 'Tampilkan semua divisi' : `Filter ${div.fullName || div.label}: ${div.count} task (${div.done || 0} selesai)`}
@@ -890,21 +1025,183 @@ export default function TaskBoard({ onFlash, onAsk }) {
                         </button>
                       )
                     })}
-                    {division !== 'all' && (
+                    {!isDivAll && (
                       <button
                         type="button"
                         className="div-chip-focus-btn"
                         onClick={() => {
-                          if (typeof window !== 'undefined' && window.__focusTeam) {
-                            window.__focusTeam(division)
+                          if (typeof window !== 'undefined') {
+                            if (activeDivList.length === 1 && window.__focusTeam) {
+                              window.__focusTeam(activeDivList[0])
+                            } else if (window.__resetFocus) {
+                              window.__resetFocus()
+                            } else if (window.__cam && window.__cam.reset) {
+                              window.__cam.reset()
+                            }
                           }
                         }}
-                        title={`Fokus kamera 3D ke pod ${activeDivision?.fullName || division}`}
-                        aria-label={`Fokus kamera 3D ke pod ${activeDivision?.fullName || division}`}
+                        title={activeDivList.length === 1 ? `Fokus kamera 3D ke pod ${activeDivision?.fullName || activeDivList[0]}` : 'Fokus kamera 3D ke gambaran kampus'}
+                        aria-label={activeDivList.length === 1 ? `Fokus kamera 3D ke pod ${activeDivision?.fullName || activeDivList[0]}` : 'Fokus kamera 3D ke gambaran kampus'}
                       >
-                        <span>Fokus Pod 3D ↗</span>
+                        <span>{activeDivList.length === 1 ? 'Fokus Pod 3D ↗' : 'Fokus Kampus 3D ↗'}</span>
                       </button>
                     )}
+                  </div>
+                )}
+                {/* Strip Preset Kombinasi Divisi */}
+                {tasks && (
+                  <div className="div-preset-strip" role="group" aria-label="Preset kombinasi divisi">
+                    <span className="div-preset-strip-label">Preset Divisi:</span>
+                    {allDivPresets.map((preset) => {
+                      const isPresetOn = isDivisionPresetActive(preset.key, division, customDivPresets)
+                      const stat = divPresetStats.find((s) => s.key === preset.key)
+                      const count = stat ? stat.count : 0
+                      return (
+                        <div
+                          key={preset.key}
+                          className={`div-preset-chip${isPresetOn ? ' active' : ''}${preset.isCustom ? ' is-custom' : ''}`}
+                          style={{ '--preset-color': preset.color }}
+                        >
+                          <button
+                            type="button"
+                            className="div-preset-chip-main"
+                            onClick={() => handleDivPresetClick(preset.key)}
+                            aria-pressed={isPresetOn}
+                            title={preset.desc || preset.label}
+                            aria-label={`Preset ${preset.label}: ${count} task`}
+                          >
+                            <span className="div-preset-icon">{preset.icon}</span>
+                            <span className="div-preset-label">{preset.label}</span>
+                            <span className="div-preset-count">{count}</span>
+                          </button>
+                          {preset.isCustom && (
+                            <button
+                              type="button"
+                              className="div-preset-del-btn"
+                              onClick={(e) => handleDeleteCustomDivPreset(preset.key, e)}
+                              title={`Hapus preset kustom ${preset.label}`}
+                              aria-label={`Hapus preset kustom ${preset.label}`}
+                            >
+                              ✕
+                            </button>
+                          )}
+                        </div>
+                      )
+                    })}
+                    <button
+                      type="button"
+                      className={`div-preset-add-btn${showDivPresetCreator ? ' active' : ''}`}
+                      onClick={handleOpenDivPresetCreator}
+                      title="Buat preset kombinasi divisi baru"
+                      aria-label="Buat preset divisi baru"
+                    >
+                      <span>+ {isMultiDiv ? `Simpan (${activeDivList.length} Divisi)` : 'Preset Baru'}</span>
+                    </button>
+                  </div>
+                )}
+
+                {/* Panel Pembuat Preset Divisi Kustom */}
+                {showDivPresetCreator && (
+                  <div
+                    className="div-preset-creator"
+                    role="form"
+                    aria-label="Form pembuatan preset divisi kustom"
+                  >
+                    <div className="div-preset-creator-header">
+                      <span>🏢 Buat Preset Divisi Kustom</span>
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        style={{ padding: '0 4px', height: 20, minWidth: 20 }}
+                        onClick={() => setShowDivPresetCreator(false)}
+                        aria-label="Tutup form preset divisi"
+                      >
+                        ✕
+                      </button>
+                    </div>
+
+                    <div className="div-preset-creator-row">
+                      <input
+                        type="text"
+                        className="div-preset-input"
+                        placeholder="Nama preset (mis. Mobile Squad, Core Stack…)"
+                        value={divPresetFormName}
+                        onChange={(e) => setDivPresetFormName(e.target.value)}
+                        maxLength={24}
+                        autoFocus
+                      />
+
+                      <div className="div-preset-icon-picker" role="radiogroup" aria-label="Pilih ikon preset divisi">
+                        {DIVISION_PRESET_ICONS.map((icon) => (
+                          <button
+                            key={icon}
+                            type="button"
+                            className={`div-preset-icon-btn${divPresetFormIcon === icon ? ' active' : ''}`}
+                            onClick={() => setDivPresetFormIcon(icon)}
+                            aria-label={`Ikon ${icon}`}
+                          >
+                            {icon}
+                          </button>
+                        ))}
+                      </div>
+
+                      <div className="div-preset-color-picker" role="radiogroup" aria-label="Pilih warna preset divisi">
+                        {TAG_PALETTE.map((c) => (
+                          <button
+                            key={c}
+                            type="button"
+                            className={`div-preset-color-btn${divPresetFormColor === c ? ' active' : ''}`}
+                            style={{ background: c, '--dot-color': c }}
+                            onClick={() => setDivPresetFormColor(c)}
+                            aria-label={`Warna ${c}`}
+                          />
+                        ))}
+                      </div>
+                    </div>
+
+                    <div className="div-preset-divisions-selector" role="group" aria-label="Pilih divisi untuk preset">
+                      {TEAMS.map((team) => {
+                        const isSelected = divPresetFormDivisions.includes(team.key)
+                        return (
+                          <button
+                            key={team.key}
+                            type="button"
+                            className={`div-preset-division-toggle${isSelected ? ' selected' : ''}`}
+                            onClick={() => {
+                              setDivPresetFormDivisions((prev) =>
+                                prev.includes(team.key) ? prev.filter((k) => k !== team.key) : [...prev, team.key]
+                              )
+                            }}
+                            aria-pressed={isSelected}
+                            aria-label={`Divisi ${team.shortName}`}
+                          >
+                            <span className="div-selector-dot" style={{ background: team.color }} aria-hidden="true" />
+                            <span>{team.shortName}</span>
+                            {isSelected && <span aria-hidden="true">✓</span>}
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    <div className="div-preset-creator-actions">
+                      <button
+                        type="button"
+                        className="btn-ghost"
+                        style={{ height: 24, padding: '0 8px', fontSize: 11 }}
+                        onClick={() => setShowDivPresetCreator(false)}
+                      >
+                        Batal
+                      </button>
+                      <button
+                        type="button"
+                        className="btn"
+                        style={{ height: 24, padding: '0 10px', fontSize: 11 }}
+                        disabled={!divPresetFormName.trim() || divPresetFormDivisions.length === 0}
+                        onClick={handleSaveCustomDivPreset}
+                      >
+                        Simpan Preset
+                      </button>
+                    </div>
                   </div>
                 )}
               {/* Strip Filter Tag Kustom */}

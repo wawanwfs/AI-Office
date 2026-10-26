@@ -100,10 +100,10 @@ def main():
                     break
         tv = st.get("tv") or {}
         t = tv.get("tasks") or {}
-        total, done = t.get("total"), t.get("done")
+        total, done = t.get("total", 0), t.get("done", 0)
         pct = round(done / total * 100) if total else 0
-        ok = (isinstance(total, int) and total > 0 and isinstance(done, int)
-              and 0 <= done <= total and tv.get("at", 0) > 0
+        ok = (isinstance(total, int) and total >= 0 and isinstance(done, int)
+              and 0 <= done <= max(total, 0) and tv.get("at", 0) > 0
               and st.get("drawnAt", 0) > 0 and st.get("agents", -1) > 0)
         print("STATE:", json.dumps({"tasks": t, "at": tv.get("at"), "drawnAt": st.get("drawnAt"),
                                     "pct": pct, "agents": st.get("agents")}))

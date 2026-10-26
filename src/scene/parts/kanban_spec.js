@@ -290,10 +290,10 @@ export function extractTaskTags(task, { includeInferred = true } = {}) {
   return Array.from(tagsSet);
 }
 
-export function computeTagCloud(tasks, { divisionFilter = 'all', minCount = 1, limit = 15 } = {}) {
+export function computeTagCloud(tasks, { divisionFilter = 'all', minCount = 1, limit = 15, customDivPresets = undefined } = {}) {
   if (!Array.isArray(tasks) || !tasks.length) return [];
-  const df = String(divisionFilter || 'all').toLowerCase().trim();
-  const filtered = df === 'all' ? tasks : tasks.filter((t) => matchTaskDivision(t, df));
+  const isAllDiv = !divisionFilter || divisionFilter === 'all' || (Array.isArray(divisionFilter) && divisionFilter.includes('all'));
+  const filtered = isAllDiv ? tasks : tasks.filter((t) => matchTaskDivision(t, divisionFilter, customDivPresets));
   const counts = new Map();
 
   filtered.forEach((t) => {
@@ -520,12 +520,12 @@ export function isPresetActive(presetKey, currentTagFilter, customPresets = []) 
   return preset.tags.every((t) => currentList.includes(normalizeTag(t)));
 }
 
-export function computePresetStats(tasks, presets = TAG_PRESETS, divisionFilter = 'all') {
+export function computePresetStats(tasks, presets = TAG_PRESETS, divisionFilter = 'all', customDivPresets = undefined) {
   if (!Array.isArray(tasks) || !tasks.length) {
     return (presets || []).map((p) => ({ ...p, count: 0 }));
   }
-  const df = String(divisionFilter || 'all').toLowerCase().trim();
-  const filtered = df === 'all' ? tasks : tasks.filter((t) => matchTaskDivision(t, df));
+  const isAllDiv = !divisionFilter || divisionFilter === 'all' || (Array.isArray(divisionFilter) && divisionFilter.includes('all'));
+  const filtered = isAllDiv ? tasks : tasks.filter((t) => matchTaskDivision(t, divisionFilter, customDivPresets));
   return (presets || []).map((p) => {
     const matchingCount = filtered.filter((t) => matchTaskTags(t, p.tags, 'any')).length;
     return {
@@ -582,11 +582,11 @@ export function matchTaskTags(task, selectedTags, mode = 'any') {
  * Menghitung rincian jumlah task per level prioritas (urgent, high, medium, low, normal).
  * Mendukung filter divisi opsional.
  */
-export function computePriorityBreakdown(tasks, divisionFilter = 'all') {
+export function computePriorityBreakdown(tasks, divisionFilter = 'all', customDivPresets = undefined) {
   const counts = { urgent: 0, high: 0, medium: 0, low: 0, normal: 0, total: 0 };
   if (!Array.isArray(tasks) || !tasks.length) return counts;
-  const df = String(divisionFilter || 'all').toLowerCase().trim();
-  const filtered = df === 'all' ? tasks : tasks.filter((t) => matchTaskDivision(t, df));
+  const isAllDiv = !divisionFilter || divisionFilter === 'all' || (Array.isArray(divisionFilter) && divisionFilter.includes('all'));
+  const filtered = isAllDiv ? tasks : tasks.filter((t) => matchTaskDivision(t, divisionFilter, customDivPresets));
   counts.total = filtered.length;
   filtered.forEach((t) => {
     if (!t) return;
@@ -744,14 +744,285 @@ export function getKanbanColumnKey(status) {
   return 'pending';
 }
 
-/**
- * Mencocokkan task dengan filter divisi / role.
- * Mendukung division key (core-be, fe-design, dll), nama pendek (Backend), maupun role (be, fe, ops).
- */
-export function matchTaskDivision(task, divisionKey) {
-  if (!divisionKey || divisionKey === 'all') return true;
+export const DIVISION_PRESETS = [
+  {
+    key: 'engineering',
+    label: 'Engineering Core',
+    icon: '⚡',
+    color: '#38BDF8',
+    divisions: ['core-be', 'fe-design', 'ops-sec', 'qa-gov'],
+    desc: 'Backend, Frontend, DevOps & QA',
+  },
+  {
+    key: 'fullstack',
+    label: 'Fullstack Dev',
+    icon: '🚀',
+    color: '#818CF8',
+    divisions: ['core-be', 'fe-design'],
+    desc: 'Backend & Frontend',
+  },
+  {
+    key: 'platform-sec',
+    label: 'Platform & QA',
+    icon: '🛡️',
+    color: '#34D399',
+    divisions: ['ops-sec', 'qa-gov'],
+    desc: 'DevOps, Infra, QA & Sec',
+  },
+  {
+    key: 'product-cs',
+    label: 'Product & Support',
+    icon: '✨',
+    color: '#F59E0B',
+    divisions: ['prod-growth', 'ai-cs'],
+    desc: 'Product, Growth, AI & Support',
+  },
+  {
+    key: 'frontend-product',
+    label: 'Experience & UX',
+    icon: '🎨',
+    color: '#F472B6',
+    divisions: ['fe-design', 'prod-growth'],
+    desc: 'Frontend, UI/UX & Product',
+  },
+];
+
+export const CUSTOM_DIV_PRESET_STORAGE_KEY = 'wfs_custom_division_presets';
+
+export const DIVISION_PRESET_ICONS = [
+  '⚡', '🚀', '🛡️', '✨', '🎨', '⚙️', '🏢', '🧪', '🔒', '📦', '🎯', '💡',
+];
+
+export function slugifyDivisionPresetKey(name) {
+  if (!name || typeof name !== 'string') {
+    return `div-custom-${Date.now().toString(36)}`;
+  }
+  const clean = name
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return clean ? `div-custom-${clean}` : `div-custom-${Date.now().toString(36)}`;
+}
+
+export function normalizeDivisionList(input, customPresets = []) {
+  if (!input || input === 'all') return ['all'];
+
+  if (typeof input === 'string') {
+    const clean = input.trim();
+    if (!clean || clean.toLowerCase() === 'all') return ['all'];
+    const preset = getDivisionPreset(clean, customPresets);
+    if (preset && Array.isArray(preset.divisions)) {
+      return [...preset.divisions];
+    }
+  }
+
+  const rawList = Array.isArray(input)
+    ? input
+    : String(input || '')
+        .split(',')
+        .map((s) => s.trim())
+        .filter(Boolean);
+
+  const set = new Set();
+  for (const item of rawList) {
+    const s = String(item || '').toLowerCase().trim();
+    if (!s) continue;
+    if (s === 'all') return ['all'];
+    const preset = getDivisionPreset(s, customPresets);
+    if (preset && Array.isArray(preset.divisions)) {
+      preset.divisions.forEach((d) => set.add(d.toLowerCase()));
+    } else {
+      set.add(s);
+    }
+  }
+
+  const res = Array.from(set);
+  return res.length > 0 ? res : ['all'];
+}
+
+export function normalizeCustomDivPreset(rawPreset) {
+  if (!rawPreset || typeof rawPreset !== 'object') return null;
+  const label = String(rawPreset.label || rawPreset.name || '').trim();
+  if (!label) return null;
+
+  const rawDivs = rawPreset.divisions || rawPreset.divisionKeys || rawPreset.keys;
+  const divisions = normalizeDivisionList(rawDivs).filter((d) => d !== 'all');
+  if (!divisions.length) return null;
+
+  let key = rawPreset.key ? String(rawPreset.key).toLowerCase().trim() : '';
+  if (!key) {
+    key = slugifyDivisionPresetKey(label);
+  } else if (!key.startsWith('div-') && !DIVISION_PRESETS.some((p) => p.key === key)) {
+    key = `div-${key}`;
+  }
+
+  const icon = typeof rawPreset.icon === 'string' && rawPreset.icon.trim() ? rawPreset.icon.trim() : '🏢';
+  const color = typeof rawPreset.color === 'string' && /^#[0-9a-fA-F]{6}$/i.test(rawPreset.color.trim())
+    ? rawPreset.color.trim()
+    : '#38BDF8';
+  const textColor = getContrastingTextColor(color);
+
+  const desc = String(rawPreset.desc || rawPreset.description || '').trim() ||
+    `Kombinasi: ${divisions.map((d) => {
+      const team = TEAMS.find((t) => t.key.toLowerCase() === d.toLowerCase());
+      return team ? team.shortName : d;
+    }).join(', ')}`;
+
+  return {
+    key,
+    label,
+    icon,
+    color,
+    textColor,
+    divisions,
+    desc,
+    isCustom: true,
+  };
+}
+
+export function loadCustomDivPresets(storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
+  if (!storage || typeof storage.getItem !== 'function') return [];
+  try {
+    const raw = storage.getItem(CUSTOM_DIV_PRESET_STORAGE_KEY);
+    if (!raw) return [];
+    const parsed = JSON.parse(raw);
+    if (!Array.isArray(parsed)) return [];
+    return parsed.map(normalizeCustomDivPreset).filter(Boolean);
+  } catch {
+    return [];
+  }
+}
+
+export function saveCustomDivPresets(storage = (typeof localStorage !== 'undefined' ? localStorage : null), presets = []) {
+  if (!storage || typeof storage.setItem !== 'function') return false;
+  try {
+    const valid = (presets || []).map(normalizeCustomDivPreset).filter(Boolean);
+    storage.setItem(CUSTOM_DIV_PRESET_STORAGE_KEY, JSON.stringify(valid));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+export function createCustomDivPreset(params, existingCustomPresets = []) {
+  const norm = normalizeCustomDivPreset(params);
+  if (!norm) return null;
+
+  let key = norm.key;
+  let counter = 1;
+  const existingKeys = new Set([
+    ...DIVISION_PRESETS.map((p) => p.key),
+    ...DIVISION_PRESETS.map((p) => `div-${p.key}`),
+    ...(existingCustomPresets || []).map((p) => p && p.key),
+  ]);
+
+  while (existingKeys.has(key)) {
+    counter += 1;
+    key = `${norm.key}-${counter}`;
+  }
+
+  return {
+    ...norm,
+    key,
+  };
+}
+
+export function deleteCustomDivPreset(presetKey, existingCustomPresets = []) {
+  if (!presetKey) return [...(existingCustomPresets || [])];
+  const k = String(presetKey).toLowerCase().trim();
+  return (existingCustomPresets || []).filter((p) => p && p.key !== k);
+}
+
+export function getAllDivisionPresets(customPresets = []) {
+  const custom = (customPresets || []).map(normalizeCustomDivPreset).filter(Boolean);
+  return [...DIVISION_PRESETS, ...custom];
+}
+
+export function getDivisionPreset(presetKey, customPresets = []) {
+  if (!presetKey) return null;
+  const k = String(presetKey).toLowerCase().trim();
+  const foundBuiltin = DIVISION_PRESETS.find((p) => p.key === k);
+  if (foundBuiltin) return foundBuiltin;
+  if (Array.isArray(customPresets) && customPresets.length > 0) {
+    const foundCustom = customPresets.find((p) => p && p.key === k);
+    if (foundCustom) return normalizeCustomDivPreset(foundCustom);
+  }
+  return null;
+}
+
+export function isDivisionPresetActive(presetKey, currentDivFilter, customPresets = []) {
+  const preset = getDivisionPreset(presetKey, customPresets);
+  if (!preset) return false;
+  if (typeof currentDivFilter === 'string' && currentDivFilter.toLowerCase().trim() === preset.key.toLowerCase()) {
+    return true;
+  }
+  const currentList = normalizeDivisionList(currentDivFilter, customPresets).filter((d) => d !== 'all');
+  if (currentList.length !== preset.divisions.length) return false;
+  const targetSet = new Set(preset.divisions.map((d) => d.toLowerCase()));
+  return currentList.every((d) => targetSet.has(d.toLowerCase()));
+}
+
+export function computeDivisionPresetStats(tasks, presets = DIVISION_PRESETS, customPresets = []) {
+  const all = Array.isArray(presets) && presets.length > 0 ? presets : getAllDivisionPresets(customPresets);
+  if (!Array.isArray(tasks) || !tasks.length) {
+    return all.map((p) => ({ ...p, count: 0, done: 0, running: 0 }));
+  }
+  return all.map((p) => {
+    const divList = normalizeDivisionList(p.divisions, customPresets);
+    const matchedTasks = tasks.filter((t) => matchTaskDivision(t, divList, customPresets));
+    const done = matchedTasks.filter((t) => t && (t.status === 'done' || t.status === 'completed')).length;
+    const running = matchedTasks.filter((t) => t && (t.status === 'running' || t.status === 'in_progress')).length;
+    return {
+      ...p,
+      count: matchedTasks.length,
+      done,
+      running,
+    };
+  });
+}
+
+export function toggleDivisionInFilter(divKey, currentFilter, { multi = false, customPresets = [] } = {}) {
+  const norm = String(divKey || '').toLowerCase().trim();
+  if (!norm || norm === 'all') return 'all';
+
+  const currentList = normalizeDivisionList(currentFilter, customPresets).filter((d) => d !== 'all');
+
+  if (multi) {
+    const exists = currentList.includes(norm);
+    const updated = exists ? currentList.filter((d) => d !== norm) : [...currentList, norm];
+    if (updated.length === 0) return 'all';
+    return updated;
+  }
+
+  if (currentList.length === 1 && currentList[0] === norm) {
+    return 'all';
+  }
+  return norm;
+}
+
+export function formatDivisionFilterSummary(divisionFilter, customPresets = []) {
+  if (!divisionFilter || divisionFilter === 'all') return 'Semua Divisi';
+  const preset = getDivisionPreset(divisionFilter, customPresets);
+  if (preset) {
+    return `${preset.icon} ${preset.label} (${preset.divisions.length} divisi)`;
+  }
+  const list = normalizeDivisionList(divisionFilter, customPresets);
+  if (list.length === 1) {
+    const team = TEAMS.find((t) => t.key.toLowerCase() === list[0].toLowerCase());
+    return team ? team.fullName || team.name : list[0];
+  }
+  const names = list.map((d) => {
+    const team = TEAMS.find((t) => t.key.toLowerCase() === d.toLowerCase());
+    return team ? team.shortName : d;
+  });
+  return `${list.length} divisi: ${names.join(', ')}`;
+}
+
+function matchSingleDivision(task, key) {
+  if (!key || key === 'all') return true;
   if (!task) return false;
-  const dk = String(divisionKey).toLowerCase().trim();
+  const dk = String(key).toLowerCase().trim();
 
   // 1. Direct role key match (misal 'be', 'fe')
   const tRole = String(task.role || '').toLowerCase().trim();
@@ -772,6 +1043,36 @@ export function matchTaskDivision(task, divisionKey) {
   }
 
   return false;
+}
+
+/**
+ * Mencocokkan task dengan filter divisi / role / preset multi-divisi.
+ * Mendukung single key, array multi-divisi, preset key, maupun format string terpisah koma.
+ */
+export function matchTaskDivision(task, divisionFilter, customPresets = []) {
+  if (!divisionFilter || divisionFilter === 'all') return true;
+  if (!task) return false;
+
+  if (Array.isArray(divisionFilter)) {
+    if (!divisionFilter.length || divisionFilter.includes('all')) return true;
+    return divisionFilter.some((d) => matchTaskDivision(task, d, customPresets));
+  }
+
+  const str = String(divisionFilter).trim();
+  if (!str || str.toLowerCase() === 'all') return true;
+
+  if (str.includes(',')) {
+    const parts = str.split(',').map((s) => s.trim()).filter(Boolean);
+    if (!parts.length || parts.includes('all')) return true;
+    return parts.some((p) => matchTaskDivision(task, p, customPresets));
+  }
+
+  const preset = getDivisionPreset(str, customPresets);
+  if (preset && Array.isArray(preset.divisions)) {
+    return preset.divisions.some((d) => matchSingleDivision(task, d));
+  }
+
+  return matchSingleDivision(task, str);
 }
 
 /**
@@ -818,7 +1119,7 @@ export function extractTaskDivisions(tasks) {
  * Mengelompokkan task ke dalam 4 kolom kanban dengan filter query, divisi & pengurutan opsional.
  * Mendukung filter tag tunggal, array multi-tag, atau preset dengan mode pencocokan 'any' (ATAU) / 'all' (DAN).
  */
-export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'all', sortBy = 'newest', tagFilter = 'all', tagMode = 'any', dateRange = 'all', now = undefined, customRange = undefined) {
+export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'all', sortBy = 'newest', tagFilter = 'all', tagMode = 'any', dateRange = 'all', now = undefined, customRange = undefined, customDivPresets = undefined) {
   const groups = {
     pending: [],
     running: [],
@@ -828,11 +1129,11 @@ export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'al
   if (!Array.isArray(tasks)) return groups;
 
   const q = String(query || '').toLowerCase().trim();
-  const df = String(divisionFilter || 'all').toLowerCase().trim();
+  const isAllDiv = !divisionFilter || divisionFilter === 'all' || (Array.isArray(divisionFilter) && divisionFilter.includes('all'));
 
   tasks.forEach((t) => {
     if (!t) return;
-    if (df !== 'all' && !matchTaskDivision(t, df)) return;
+    if (!isAllDiv && !matchTaskDivision(t, divisionFilter, customDivPresets)) return;
     if (tagFilter && tagFilter !== 'all' && !matchTaskTags(t, tagFilter, tagMode)) return;
     if (dateRange && dateRange !== 'all' && !isTaskInDateRange(t, dateRange, { now, customRange })) return;
     if (q && !matchTaskSearch(t, q)) return;
@@ -855,12 +1156,12 @@ export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'al
  * Menghitung metrik agregat sprint (total, done, running, review, failed, pending, pct).
  * Mendukung filter divisi opsional.
  */
-export function computeSprintMetrics(tasks, divisionFilter = 'all') {
+export function computeSprintMetrics(tasks, divisionFilter = 'all', customDivPresets = undefined) {
   if (!Array.isArray(tasks) || !tasks.length) {
     return { total: 0, done: 0, running: 0, pending: 0, review: 0, failed: 0, pct: 0 };
   }
-  const df = String(divisionFilter || 'all').toLowerCase().trim();
-  const filtered = df === 'all' ? tasks : tasks.filter((t) => matchTaskDivision(t, df));
+  const isAllDiv = !divisionFilter || divisionFilter === 'all' || (Array.isArray(divisionFilter) && divisionFilter.includes('all'));
+  const filtered = isAllDiv ? tasks : tasks.filter((t) => matchTaskDivision(t, divisionFilter, customDivPresets));
   if (!filtered.length) {
     return { total: 0, done: 0, running: 0, pending: 0, review: 0, failed: 0, pct: 0 };
   }
@@ -882,15 +1183,16 @@ export function computeSprintMetrics(tasks, divisionFilter = 'all') {
 /**
  * Filter task untuk mode daftar dengan dukungan status, query, divisi, role, pengurutan, tag kustom, dan rentang tanggal.
  */
-export function filterTasks(tasks, { filter = 'all', q = '', division = 'all', role = 'all', sortBy = 'newest', tag = 'all', tagMode = 'any', dateRange = 'all', now = undefined, customRange = undefined } = {}) {
+export function filterTasks(tasks, { filter = 'all', q = '', division = 'all', role = 'all', sortBy = 'newest', tag = 'all', tagMode = 'any', dateRange = 'all', now = undefined, customRange = undefined, customDivPresets = undefined } = {}) {
   if (!Array.isArray(tasks)) return [];
   const qStr = String(q || '').toLowerCase().trim();
-  const divStr = String(division !== 'all' ? division : role || 'all').toLowerCase().trim();
+  const effectiveDiv = division !== 'all' ? division : (role || 'all');
+  const isAllDiv = !effectiveDiv || effectiveDiv === 'all' || (Array.isArray(effectiveDiv) && effectiveDiv.includes('all'));
   const filtered = tasks.filter((t) => {
     if (!t) return false;
     const statusMatch = filter === 'all' || t.status === filter;
     if (!statusMatch) return false;
-    if (divStr !== 'all' && !matchTaskDivision(t, divStr)) return false;
+    if (!isAllDiv && !matchTaskDivision(t, effectiveDiv, customDivPresets)) return false;
     if (tag && tag !== 'all' && !matchTaskTags(t, tag, tagMode)) return false;
     if (dateRange && dateRange !== 'all' && !isTaskInDateRange(t, dateRange, { now, customRange })) return false;
     if (!qStr) return true;

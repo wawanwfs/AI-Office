@@ -180,7 +180,8 @@ export function generateTaskExportFilename(format = 'csv', options = {}) {
   const parts = ['wfs-tasks'];
 
   if (options.division && options.division !== 'all') {
-    const cleanDiv = String(options.division).toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    const rawDiv = Array.isArray(options.division) ? options.division.join('-') : String(options.division);
+    const cleanDiv = rawDiv.toLowerCase().replace(/[^a-z0-9_-]/g, '');
     if (cleanDiv) parts.push(cleanDiv);
   }
 

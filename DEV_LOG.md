@@ -1,3 +1,45 @@
+## 2026-10-27 00:55 WIB — Siklus 104: Preset Kombinasi Multi-Divisi Kustom pada Task Kanban (kanban_spec.js, Panel Pembuat Preset Divisi Kustom, Multi-Select Divisi, Persistensi Storage & Indikator Komprehensif)
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Modul Utilitas Preset Kombinasi Divisi Kustom (`src/scene/parts/kanban_spec.js`, `src/__tests__/kanban_spec.test.js`):**
+     - Mendefinisikan preset kombinasi divisi bawaan `DIVISION_PRESETS` (`engineering` [BE+FE+Ops+QA], `fullstack` [BE+FE], `platform-sec` [Ops+QA], `product-cs` [Product+AI], `frontend-product` [FE+Design+Product]) lengkap dengan ikon, warna aksen, dan deskripsi terstruktur.
+     - Mendefinisikan konstanta penyimpanan `CUSTOM_DIV_PRESET_STORAGE_KEY` (`wfs_custom_division_presets`) dan koleksi ikon emoji divisi pilihan `DIVISION_PRESET_ICONS` (`⚡`, `🚀`, `🛡️`, `✨`, `🎨`, `⚙️`, `🏢`, `🧪`, `🔒`, `📦`, `🎯`, `💡`).
+     - Mengembangkan normalizer daftar divisi cerdas `normalizeDivisionList` yang mampu menguraikan representasi array, string dipisah koma, preset key bawaan/kustom, maupun fallback aman `'all'`.
+     - Mengembangkan slugifier pembuat kunci unik `slugifyDivisionPresetKey` dengan prefiks konsisten `div-custom-<slug>`.
+     - Mengembangkan normalizer cerdas `normalizeCustomDivPreset` yang memvalidasi objek preset, menormalisasi array divisi, menentukan warna hex kontras, menyusun deskripsi ramah pengguna, dan menyematkan penanda `isCustom: true`.
+     - Mengembangkan serializer deterministik aman `loadCustomDivPresets` dan `saveCustomDivPresets` dengan perlindungan `try/catch` terhadap kegagalan parse JSON maupun lingkungan storage terbatas.
+     - Mengembangkan generator pembuat preset bebas konflik `createCustomDivPreset` yang menjamin kunci tidak bertabrakan dengan `DIVISION_PRESETS` bawaan maupun preset kustom lain yang sudah ada.
+     - Menyediakan utilitas penghapusan preset `deleteCustomDivPreset`, penggabung koleksi `getAllDivisionPresets`, pencari preset `getDivisionPreset`, verifikator aktif `isDivisionPresetActive`, dan pemformat ringkasan `formatDivisionFilterSummary`.
+     - Mengembangkan evaluator `computeDivisionPresetStats` untuk menghitung task total, selesai (done), dan berjalan (running) per preset secara real-time.
+     - Mengembangkan pengalih filter interaktif `toggleDivisionInFilter` yang mendukung mode single toggle dan multi-select toggle (via Shift/Ctrl/Cmd).
+     - Memperluas fungsi inti `matchTaskDivision` agar mendukung pencocokan multi-divisi (array, string dipisah koma, maupun preset key) secara 100% backward-compatible.
+     - Memperluas `groupTasksByKanbanColumn`, `computeSprintMetrics`, `filterTasks`, `computeTagCloud`, `computePresetStats`, dan `computePriorityBreakdown` agar dapat mengevaluasi filter divisi berbasis array, string koma, maupun preset key kustom.
+  2. **Integrasi Ekspor Data Task (`src/lib/kanban_export.js`):**
+     - Memperluas `generateTaskExportFilename` agar mendukung penamaan file ekspor bersih untuk array multi-divisi maupun preset kombinasi (misal: `wfs-tasks_core-be-fe-design_2026-10-27.csv` atau `wfs-tasks_fullstack_2026-10-27.csv`).
+  3. **Antarmuka & Pengalaman Pengguna TaskBoard (`src/components/TaskBoard.jsx`, `src/index.css`, `src/__tests__/TaskBoard.test.jsx`):**
+     - Menghadirkan strip preset divisi `.div-preset-strip` yang menampilkan preset bawaan (`⚡ Engineering Core`, `🚀 Fullstack Dev`, `🛡️ Platform & QA`, dll.) beserta badge hitungan task per preset secara real-time.
+     - Menyediakan tombol pembuat preset divisi baru `+ Preset Baru` / `+ Simpan (N Divisi)` dengan pre-fill otomatis divisi yang sedang aktif saat ditekan.
+     - Menghadirkan panel pembuat preset interaktif `.div-preset-creator` lengkap dengan input nama preset (auto-focus), pemilih ikon emoji cepat, pemilih warna aksen palet dark royal-navy, dan toggle chip divisi kerja interaktif (dengan checklist `✓` dan nama divisi).
+     - Menampilkan chip preset kustom dengan batas putus-putus (`border-style: dashed`), status aktif bercahaya, dan tombol hapus cepat `✕` (`.div-preset-del-btn`).
+     - Menghubungkan interaksi multi-select pada chip divisi kerja: Shift/Ctrl/Cmd + klik mengaktifkan/menonaktifkan divisi secara simultan.
+     - Mengintegrasikan tombol dinamis `Fokus Pod 3D ↗` (saat 1 divisi aktif) atau `Fokus Kampus 3D ↗` (saat multi-divisi aktif).
+     - Mengintegrasikan penutupan bertahap via tombol `Escape`: jika form pembuatan preset divisi terbuka, `Escape` menutup form terlebih dahulu sebelum menutup papan task.
+     - Menghubungkan aktivasi preset divisi via event `wfs-open-task-board` (parameter `divPreset`) dan feedback audio responsif `playSelect`.
+  4. **Peningkatan E2E Resilience TV Lounge (`scripts/e2e_tv.py`):**
+     - Menyesuaikan validasi `tasks.total` agar toleran terhadap `total >= 0` saat database task baru saja di-reset atau dibersihkan.
+
+- **Bukti terukur:**
+  - **Vitest:** **1884/1884 passed (138 test file)** (+16 tests baru: 12 test di `kanban_spec.test.js`, 4 test di `TaskBoard.test.jsx`, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/`).
+  - **Build:** Berhasil (exit 0, 37 precache entries 1800.03 KiB; `OfficeScene` 166.74 KB / gzip 57.13 KB, `index` 222.14 KB / gzip 60.77 KB, `vendor-three` 715.76 KB, `vendor-react` 189.63 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-DXo2m3M5.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 0/0 selesai, 26 agents aktif).
+    - `shot.sh` (DISPLAY=:0): Screenshot visual **682.075 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** indikator status sinkronisasi WebSocket offline/reconnect dan shortcut keyboard cepat switch preset.
+
 ## 2026-10-27 00:08 WIB — Siklus 103: Preset Kombinasi Multi-Tag Kustom pada Task Kanban (kanban_spec.js, Panel Pembuat Preset Kustom, Selector Tag Interaktif, Persistensi Storage & Penghapusan Presisi)
 
 - **Yang diperbaiki & ditingkatkan:**

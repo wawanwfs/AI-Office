@@ -55,6 +55,22 @@ import {
   getContrastingTextColor,
   auditBadgeContrast,
   matchTaskSearch,
+  DIVISION_PRESETS,
+  CUSTOM_DIV_PRESET_STORAGE_KEY,
+  DIVISION_PRESET_ICONS,
+  slugifyDivisionPresetKey,
+  normalizeDivisionList,
+  normalizeCustomDivPreset,
+  loadCustomDivPresets,
+  saveCustomDivPresets,
+  createCustomDivPreset,
+  deleteCustomDivPreset,
+  getAllDivisionPresets,
+  getDivisionPreset,
+  isDivisionPresetActive,
+  computeDivisionPresetStats,
+  toggleDivisionInFilter,
+  formatDivisionFilterSummary,
 } from '../scene/parts/kanban_spec.js';
 
 describe('kanban_spec — KANBAN_COLUMNS & role badges', () => {
@@ -1146,6 +1162,192 @@ describe('kanban_spec — Audit Kontras Warna & Aksesibilitas WCAG (Badge & Tag)
       const customStat = stats.find(p => p.key === 'custom-cloud');
       expect(customStat).toBeDefined();
       expect(customStat.count).toBe(2);
+    });
+  });
+
+  describe('kanban_spec — preset kombinasi multi-divisi kustom & filter divisi', () => {
+    it('DIVISION_PRESETS mengekspor daftar preset bawaan dengan divisi yang valid', () => {
+      expect(DIVISION_PRESETS.length).toBeGreaterThanOrEqual(4);
+      const keys = DIVISION_PRESETS.map((p) => p.key);
+      expect(keys).toContain('engineering');
+      expect(keys).toContain('fullstack');
+      expect(keys).toContain('platform-sec');
+      expect(keys).toContain('product-cs');
+
+      DIVISION_PRESETS.forEach((p) => {
+        expect(p.key).toBeTruthy();
+        expect(p.label).toBeTruthy();
+        expect(p.icon).toBeTruthy();
+        expect(p.color).toMatch(/^#[0-9a-fA-F]{6}$/);
+        expect(Array.isArray(p.divisions)).toBe(true);
+        expect(p.divisions.length).toBeGreaterThan(0);
+      });
+    });
+
+    it('normalizeDivisionList menormalisasi berbagai format input divisi', () => {
+      expect(normalizeDivisionList('all')).toEqual(['all']);
+      expect(normalizeDivisionList(null)).toEqual(['all']);
+      expect(normalizeDivisionList('')).toEqual(['all']);
+      expect(normalizeDivisionList('core-be')).toEqual(['core-be']);
+      expect(normalizeDivisionList(['core-be', 'fe-design'])).toEqual(['core-be', 'fe-design']);
+      expect(normalizeDivisionList('core-be, fe-design')).toEqual(['core-be', 'fe-design']);
+      expect(normalizeDivisionList('core-be, fe-design, core-be')).toEqual(['core-be', 'fe-design']);
+      // Menguraikan preset key bawaan
+      expect(normalizeDivisionList('fullstack')).toEqual(['core-be', 'fe-design']);
+      // Mengembalikan 'all' jika list mengandung 'all'
+      expect(normalizeDivisionList(['core-be', 'all'])).toEqual(['all']);
+    });
+
+    it('slugifyDivisionPresetKey menghasilkan slug aman dengan prefiks div-custom-', () => {
+      expect(slugifyDivisionPresetKey('Core Stack')).toBe('div-custom-core-stack');
+      expect(slugifyDivisionPresetKey('Dev & QA Squad!')).toBe('div-custom-dev-qa-squad');
+      expect(slugifyDivisionPresetKey('')).toMatch(/^div-custom-[a-z0-9]+$/);
+    });
+
+    it('normalizeCustomDivPreset memvalidasi dan menormalisasi preset kustom divisi', () => {
+      expect(normalizeCustomDivPreset(null)).toBeNull();
+      expect(normalizeCustomDivPreset({})).toBeNull();
+      expect(normalizeCustomDivPreset({ label: 'Kosong', divisions: [] })).toBeNull();
+
+      const valid = normalizeCustomDivPreset({
+        label: 'Squad Mobile',
+        divisions: ['fe-design', 'prod-growth'],
+        icon: '📱',
+        color: '#F472B6',
+      });
+      expect(valid).not.toBeNull();
+      expect(valid.key).toBe('div-custom-squad-mobile');
+      expect(valid.label).toBe('Squad Mobile');
+      expect(valid.icon).toBe('📱');
+      expect(valid.color).toBe('#F472B6');
+      expect(valid.textColor).toBeTruthy();
+      expect(valid.divisions).toEqual(['fe-design', 'prod-growth']);
+      expect(valid.isCustom).toBe(true);
+    });
+
+    it('loadCustomDivPresets dan saveCustomDivPresets menyimpan dan memuat preset ke storage', () => {
+      const memoryStore = {};
+      const fakeStorage = {
+        getItem: (k) => memoryStore[k] || null,
+        setItem: (k, v) => { memoryStore[k] = String(v); },
+      };
+
+      expect(loadCustomDivPresets(fakeStorage)).toEqual([]);
+
+      const sample = [{
+        label: 'Squad Ops',
+        divisions: ['ops-sec', 'qa-gov'],
+        icon: '🛡️',
+      }];
+
+      const saved = saveCustomDivPresets(fakeStorage, sample);
+      expect(saved).toBe(true);
+
+      const loaded = loadCustomDivPresets(fakeStorage);
+      expect(loaded).toHaveLength(1);
+      expect(loaded[0].label).toBe('Squad Ops');
+      expect(loaded[0].divisions).toEqual(['ops-sec', 'qa-gov']);
+      expect(loaded[0].isCustom).toBe(true);
+    });
+
+    it('createCustomDivPreset dan deleteCustomDivPreset mengelola preset tanpa konflik key', () => {
+      const existing = [{
+        key: 'div-custom-core',
+        label: 'Core',
+        divisions: ['core-be'],
+      }];
+
+      const created1 = createCustomDivPreset({ label: 'Core', divisions: ['fe-design'] }, existing);
+      expect(created1.key).toBe('div-custom-core-2');
+
+      const updated = deleteCustomDivPreset('div-custom-core', [existing[0], created1]);
+      expect(updated).toHaveLength(1);
+      expect(updated[0].key).toBe('div-custom-core-2');
+    });
+
+    it('getAllDivisionPresets dan getDivisionPreset mengambil preset bawaan dan kustom', () => {
+      const custom = [{
+        key: 'div-custom-special',
+        label: 'Special Squad',
+        divisions: ['core-be', 'ai-cs'],
+      }];
+
+      const all = getAllDivisionPresets(custom);
+      expect(all.length).toBe(DIVISION_PRESETS.length + 1);
+
+      expect(getDivisionPreset('engineering')).toEqual(expect.objectContaining({ key: 'engineering' }));
+      expect(getDivisionPreset('div-custom-special', custom)).toEqual(expect.objectContaining({ key: 'div-custom-special' }));
+      expect(getDivisionPreset('unknown')).toBeNull();
+    });
+
+    it('isDivisionPresetActive mendeteksi kecocokan preset divisi secara akurat', () => {
+      expect(isDivisionPresetActive('fullstack', 'fullstack')).toBe(true);
+      expect(isDivisionPresetActive('fullstack', ['core-be', 'fe-design'])).toBe(true);
+      expect(isDivisionPresetActive('fullstack', ['core-be'])).toBe(false);
+      expect(isDivisionPresetActive('fullstack', 'core-be, fe-design')).toBe(true);
+      expect(isDivisionPresetActive('fullstack', 'all')).toBe(false);
+    });
+
+    it('toggleDivisionInFilter mendukung mode single select dan multi select', () => {
+      // Single select
+      expect(toggleDivisionInFilter('core-be', 'all')).toBe('core-be');
+      expect(toggleDivisionInFilter('core-be', 'core-be')).toBe('all');
+      expect(toggleDivisionInFilter('fe-design', 'core-be')).toBe('fe-design');
+
+      // Multi select (shift/ctrl click)
+      expect(toggleDivisionInFilter('fe-design', 'core-be', { multi: true })).toEqual(['core-be', 'fe-design']);
+      expect(toggleDivisionInFilter('fe-design', ['core-be', 'fe-design'], { multi: true })).toEqual(['core-be']);
+      expect(toggleDivisionInFilter('core-be', ['core-be'], { multi: true })).toBe('all');
+    });
+
+    it('formatDivisionFilterSummary merender ringkasan ramah pengguna', () => {
+      expect(formatDivisionFilterSummary('all')).toBe('Semua Divisi');
+      expect(formatDivisionFilterSummary('fullstack')).toContain('Fullstack Dev');
+      expect(formatDivisionFilterSummary('core-be')).toContain('Backend');
+      expect(formatDivisionFilterSummary(['core-be', 'fe-design'])).toContain('2 divisi');
+    });
+
+    it('matchTaskDivision mencocokkan task dengan array divisi dan preset key', () => {
+      const beTask = { id: 1, role: 'backend', status: 'done' };
+      const feTask = { id: 2, role: 'fe', status: 'running' };
+      const qaTask = { id: 3, role: 'qa', status: 'pending' };
+
+      // Array multi divisi
+      expect(matchTaskDivision(beTask, ['core-be', 'fe-design'])).toBe(true);
+      expect(matchTaskDivision(feTask, ['core-be', 'fe-design'])).toBe(true);
+      expect(matchTaskDivision(qaTask, ['core-be', 'fe-design'])).toBe(false);
+
+      // Preset key
+      expect(matchTaskDivision(beTask, 'fullstack')).toBe(true);
+      expect(matchTaskDivision(feTask, 'fullstack')).toBe(true);
+      expect(matchTaskDivision(qaTask, 'fullstack')).toBe(false);
+      expect(matchTaskDivision(qaTask, 'engineering')).toBe(true);
+
+      // Comma-separated string
+      expect(matchTaskDivision(qaTask, 'core-be, qa-gov')).toBe(true);
+      expect(matchTaskDivision(qaTask, 'core-be, fe-design')).toBe(false);
+    });
+
+    it('computeDivisionPresetStats menghitung jumlah task, done, dan running per preset', () => {
+      const sampleTasks = [
+        { id: 1, role: 'backend', status: 'done' },
+        { id: 2, role: 'frontend', status: 'running' },
+        { id: 3, role: 'qa', status: 'pending' },
+        { id: 4, role: 'devops', status: 'done' },
+      ];
+
+      const stats = computeDivisionPresetStats(sampleTasks);
+      const fs = stats.find((p) => p.key === 'fullstack');
+      expect(fs).toBeDefined();
+      expect(fs.count).toBe(2);
+      expect(fs.done).toBe(1);
+      expect(fs.running).toBe(1);
+
+      const eng = stats.find((p) => p.key === 'engineering');
+      expect(eng).toBeDefined();
+      expect(eng.count).toBe(4);
+      expect(eng.done).toBe(2);
+      expect(eng.running).toBe(1);
     });
   });
 });

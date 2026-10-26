@@ -995,4 +995,110 @@ describe('TaskBoard', () => {
       expect(screen.queryByRole('button', { name: /Preset Dev Infra:/ })).toBeNull();
     });
   });
+
+  describe('Preset Kombinasi Multi-Divisi Kustom & Filter Divisi', () => {
+    const multiDivTasks = [
+      { id: 201, title: 'Backend REST API', status: 'running', role: 'backend' },
+      { id: 202, title: 'Frontend React UI', status: 'done', role: 'fe' },
+      { id: 203, title: 'Infra Helm K8s', status: 'pending', role: 'devops' },
+      { id: 204, title: 'QA Automated Testing', status: 'review', role: 'qa' },
+    ];
+
+    it('menampilkan strip preset divisi dengan preset bawaan dan tombol pembuat preset', async () => {
+      vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: multiDivTasks }) })));
+      render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />);
+      fireEvent.click(screen.getByText('Papan'));
+      await waitFor(() => screen.getByText(/Backend REST API/));
+
+      // Preset strip divisi terlihat
+      const divPresetStrip = screen.getByRole('group', { name: 'Preset kombinasi divisi' });
+      expect(divPresetStrip).toBeTruthy();
+
+      // Preset Fullstack Dev dan Engineering Core hadir
+      expect(screen.getByRole('button', { name: /Preset Fullstack Dev:/ })).toBeTruthy();
+      expect(screen.getByRole('button', { name: /Preset Engineering Core:/ })).toBeTruthy();
+
+      // Tombol tambah preset hadir
+      const addDivPresetBtn = screen.getByRole('button', { name: 'Buat preset divisi baru' });
+      expect(addDivPresetBtn).toBeTruthy();
+    });
+
+    it('mengklik preset divisi menyaring task kanban ke divisi terkait dan dapat di-toggle off', async () => {
+      vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: multiDivTasks }) })));
+      render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />);
+      fireEvent.click(screen.getByText('Papan'));
+      await waitFor(() => screen.getByText(/Backend REST API/));
+
+      // Klik preset Fullstack (core-be + fe-design)
+      const fsBtn = screen.getByRole('button', { name: /Preset Fullstack Dev:/ });
+      fireEvent.click(fsBtn);
+
+      // Backend & Frontend tampil, DevOps & QA terfilter keluar
+      expect(screen.getByText(/Backend REST API/)).toBeTruthy();
+      expect(screen.getByText(/Frontend React UI/)).toBeTruthy();
+      expect(screen.queryByText(/Infra Helm K8s/)).toBeNull();
+      expect(screen.queryByText(/QA Automated Testing/)).toBeNull();
+
+      // Klik lagi untuk toggle off kembali ke Semua
+      fireEvent.click(fsBtn);
+      expect(screen.getByText(/Infra Helm K8s/)).toBeTruthy();
+      expect(screen.getByText(/QA Automated Testing/)).toBeTruthy();
+    });
+
+    it('dapat membuat, menyimpan, dan menghapus preset divisi kustom', async () => {
+      const onFlash = vi.fn();
+      vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: multiDivTasks }) })));
+      render(<TaskBoard onFlash={onFlash} onAsk={() => {}} />);
+      fireEvent.click(screen.getByText('Papan'));
+      await waitFor(() => screen.getByText(/Backend REST API/));
+
+      // Buka creator preset divisi
+      const addBtn = screen.getByRole('button', { name: 'Buat preset divisi baru' });
+      fireEvent.click(addBtn);
+
+      expect(screen.getByRole('form', { name: 'Form pembuatan preset divisi kustom' })).toBeTruthy();
+
+      // Isi nama preset
+      const nameInput = screen.getByPlaceholderText(/Nama preset/);
+      fireEvent.change(nameInput, { target: { value: 'Dev & Ops Squad' } });
+
+      // Pilih divisi Backend dan DevOps di selektor
+      const beToggle = screen.getByRole('button', { name: 'Divisi Backend' });
+      const devopsToggle = screen.getByRole('button', { name: 'Divisi DevOps' });
+      fireEvent.click(beToggle);
+      fireEvent.click(devopsToggle);
+
+      // Simpan
+      const saveBtn = screen.getByRole('button', { name: 'Simpan Preset' });
+      expect(saveBtn.disabled).toBe(false);
+      fireEvent.click(saveBtn);
+
+      // Form tertutup, toast muncul
+      expect(screen.queryByRole('form', { name: 'Form pembuatan preset divisi kustom' })).toBeNull();
+      expect(onFlash).toHaveBeenCalledWith(expect.stringContaining('Preset divisi kustom "Dev & Ops Squad" berhasil disimpan'));
+
+      // Chip preset kustom hadir
+      const customChip = await screen.findByRole('button', { name: /Preset Dev & Ops Squad:/ });
+      expect(customChip).toBeTruthy();
+
+      // Hapus preset kustom
+      const delBtn = screen.getByRole('button', { name: 'Hapus preset kustom Dev & Ops Squad' });
+      fireEvent.click(delBtn);
+
+      expect(onFlash).toHaveBeenCalledWith(expect.stringContaining('Preset divisi "Dev & Ops Squad" dihapus'));
+      expect(screen.queryByRole('button', { name: /Preset Dev & Ops Squad:/ })).toBeNull();
+    });
+
+    it('event wfs-open-task-board dengan parameter divPreset membuka papan langsung dengan preset divisi tersebut', async () => {
+      vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: multiDivTasks }) })));
+      render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />);
+
+      window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { divPreset: 'fullstack' } }));
+
+      await waitFor(() => screen.getByText(/Backend REST API/));
+      expect(screen.getByText(/Backend REST API/)).toBeTruthy();
+      expect(screen.getByText(/Frontend React UI/)).toBeTruthy();
+      expect(screen.queryByText(/Infra Helm K8s/)).toBeNull();
+    });
+  });
 });
