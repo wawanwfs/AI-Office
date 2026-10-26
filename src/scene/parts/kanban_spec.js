@@ -39,6 +39,101 @@ export const KANBAN_COLUMNS = [
   },
 ];
 
+export const PRIORITY_CONFIG = {
+  urgent: { key: 'urgent', label: 'Urgent', color: '#EF4444', bg: 'rgba(239, 68, 68, 0.16)', icon: '🔥', order: 1 },
+  high: { key: 'high', label: 'Tinggi', color: '#F97316', bg: 'rgba(249, 115, 22, 0.16)', icon: '🔺', order: 2 },
+  medium: { key: 'medium', label: 'Sedang', color: '#EAB308', bg: 'rgba(234, 179, 8, 0.16)', icon: '▫️', order: 3 },
+  low: { key: 'low', label: 'Rendah', color: '#94A3B8', bg: 'rgba(148, 163, 184, 0.14)', icon: '🔽', order: 4 },
+};
+
+export const SORT_OPTIONS = [
+  { key: 'newest', label: 'Terbaru', icon: '🕒' },
+  { key: 'oldest', label: 'Terlama', icon: '⏳' },
+  { key: 'priority', label: 'Prioritas', icon: '🔥' },
+  { key: 'title', label: 'Judul (A-Z)', icon: '🔤' },
+  { key: 'agent', label: 'Agen (A-Z)', icon: '👤' },
+];
+
+export function getTaskPriorityInfo(priority) {
+  const p = String(priority || '').toLowerCase().trim();
+  return PRIORITY_CONFIG[p] || { key: 'normal', label: 'Normal', color: '#64748B', bg: 'rgba(100, 116, 139, 0.12)', icon: '•', order: 5 };
+}
+
+export function extractTaskSortValue(task) {
+  if (!task || typeof task !== 'object') return 0;
+  if (task.created_at != null && !isNaN(Number(task.created_at))) {
+    return Number(task.created_at);
+  }
+  const idStr = String(task.id ?? '');
+  const num = Number(idStr);
+  if (!isNaN(num)) return num;
+  const match = idStr.match(/\d+/);
+  if (match) return Number(match[0]);
+  return idStr;
+}
+
+export function sortTasks(tasks, sortBy = 'newest') {
+  if (!Array.isArray(tasks)) return [];
+  const sb = String(sortBy || 'newest').toLowerCase().trim();
+  const copy = [...tasks];
+
+  switch (sb) {
+    case 'oldest':
+      return copy.sort((a, b) => {
+        const valA = extractTaskSortValue(a);
+        const valB = extractTaskSortValue(b);
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return valA - valB;
+        }
+        return String(a?.id ?? '').localeCompare(String(b?.id ?? ''));
+      });
+
+    case 'priority':
+      return copy.sort((a, b) => {
+        const prioA = getTaskPriorityInfo(a?.priority).order;
+        const prioB = getTaskPriorityInfo(b?.priority).order;
+        if (prioA !== prioB) return prioA - prioB;
+        const valA = extractTaskSortValue(a);
+        const valB = extractTaskSortValue(b);
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return valB - valA;
+        }
+        return String(b?.id ?? '').localeCompare(String(a?.id ?? ''));
+      });
+
+    case 'title':
+      return copy.sort((a, b) => {
+        const titleA = String(a?.title ?? '').toLowerCase();
+        const titleB = String(b?.title ?? '').toLowerCase();
+        return titleA.localeCompare(titleB);
+      });
+
+    case 'agent':
+      return copy.sort((a, b) => {
+        const agA = String(a?.agent_id ?? '').toLowerCase();
+        const agB = String(b?.agent_id ?? '').toLowerCase();
+        if (agA !== agB) return agA.localeCompare(agB);
+        const valA = extractTaskSortValue(a);
+        const valB = extractTaskSortValue(b);
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return valB - valA;
+        }
+        return String(b?.id ?? '').localeCompare(String(a?.id ?? ''));
+      });
+
+    case 'newest':
+    default:
+      return copy.sort((a, b) => {
+        const valA = extractTaskSortValue(a);
+        const valB = extractTaskSortValue(b);
+        if (typeof valA === 'number' && typeof valB === 'number') {
+          return valB - valA;
+        }
+        return String(b?.id ?? '').localeCompare(String(a?.id ?? ''));
+      });
+  }
+}
+
 export const ROLE_COLORS = {
   be: '#3B82F6',
   fe: '#10B981',
@@ -179,9 +274,9 @@ export function extractTaskDivisions(tasks) {
 }
 
 /**
- * Mengelompokkan task ke dalam 4 kolom kanban dengan filter query & divisi opsional.
+ * Mengelompokkan task ke dalam 4 kolom kanban dengan filter query, divisi & pengurutan opsional.
  */
-export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'all') {
+export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'all', sortBy = 'newest') {
   const groups = {
     pending: [],
     running: [],
@@ -197,7 +292,7 @@ export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'al
     if (!t) return;
     if (df !== 'all' && !matchTaskDivision(t, df)) return;
     if (q) {
-      const matchText = [t.id, t.title, t.agent_id, t.role, t.status].filter(Boolean).join(' ').toLowerCase();
+      const matchText = [t.id, t.title, t.agent_id, t.role, t.status, t.priority].filter(Boolean).join(' ').toLowerCase();
       if (!matchText.includes(q)) return;
     }
     const colKey = getKanbanColumnKey(t.status);
@@ -209,7 +304,7 @@ export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'al
   });
 
   Object.keys(groups).forEach((k) => {
-    groups[k].sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+    groups[k] = sortTasks(groups[k], sortBy);
   });
 
   return groups;
@@ -244,41 +339,48 @@ export function computeSprintMetrics(tasks, divisionFilter = 'all') {
 }
 
 /**
- * Filter task untuk mode daftar dengan dukungan status, query, divisi, dan role.
+ * Filter task untuk mode daftar dengan dukungan status, query, divisi, role, dan pengurutan.
  */
-export function filterTasks(tasks, { filter = 'all', q = '', division = 'all', role = 'all' } = {}) {
+export function filterTasks(tasks, { filter = 'all', q = '', division = 'all', role = 'all', sortBy = 'newest' } = {}) {
   if (!Array.isArray(tasks)) return [];
   const qStr = String(q || '').toLowerCase().trim();
   const divStr = String(division !== 'all' ? division : role || 'all').toLowerCase().trim();
-  return tasks
-    .filter((t) => {
-      if (!t) return false;
-      const statusMatch = filter === 'all' || t.status === filter;
-      if (!statusMatch) return false;
-      if (divStr !== 'all' && !matchTaskDivision(t, divStr)) return false;
-      if (!qStr) return true;
-      const text = [t.id, t.title, t.agent_id, t.role].filter(Boolean).join(' ').toLowerCase();
-      return text.includes(qStr);
-    })
-    .sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+  const filtered = tasks.filter((t) => {
+    if (!t) return false;
+    const statusMatch = filter === 'all' || t.status === filter;
+    if (!statusMatch) return false;
+    if (divStr !== 'all' && !matchTaskDivision(t, divStr)) return false;
+    if (!qStr) return true;
+    const text = [t.id, t.title, t.agent_id, t.role, t.status, t.priority].filter(Boolean).join(' ').toLowerCase();
+    return text.includes(qStr);
+  });
+  return sortTasks(filtered, sortBy);
 }
 
 /**
- * Ekstraksi metadata visual kartu kanban (jumlah file, indikator review QA, badge peran).
+ * Ekstraksi metadata visual kartu kanban (jumlah file, indikator review QA, badge peran, badge prioritas).
  */
 export function getTaskCardBadges(task) {
   if (!task || typeof task !== 'object') {
-    return { fileCount: 0, hasReview: false, roleLabel: 'General', roleColor: '#64748B' };
+    return {
+      fileCount: 0,
+      hasReview: false,
+      roleLabel: 'General',
+      roleColor: '#64748B',
+      priority: getTaskPriorityInfo(null),
+    };
   }
   const fileCount = parseFileList(task.files).length;
   const hasReview = Boolean(task.review && String(task.review).trim().length > 0);
   const roleLabel = getTaskRoleLabel(task.role);
   const roleColor = getTaskRoleBadgeColor(task.role);
+  const priority = getTaskPriorityInfo(task.priority);
   return {
     fileCount,
     hasReview,
     roleLabel,
     roleColor,
+    priority,
   };
 }
 

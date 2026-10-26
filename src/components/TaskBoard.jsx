@@ -15,6 +15,8 @@ import {
   filterTasks,
   computeColumnDistribution,
   getKanbanColumnEmptyState,
+  getTaskPriorityInfo,
+  SORT_OPTIONS,
 } from '../scene/parts/kanban_spec'
 import { findTeamByRole, findTeamByAgent } from '../scene/parts/team_spec'
 
@@ -29,6 +31,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const [filter, setFilter] = useState('all')
   const [division, setDivision] = useState('all')
   const [viewMode, setViewMode] = useState('list') // 'list' | 'kanban'
+  const [sortBy, setSortBy] = useState('newest') // 'newest' | 'oldest' | 'priority' | 'title' | 'agent'
   const [q, setQ] = useState('')
   const [sel, setSel] = useState(null)
   const board = useRef(null)
@@ -56,6 +59,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
       if (e?.detail?.filter) setFilter(e.detail.filter)
       if (e?.detail?.division) setDivision(e.detail.division)
       else if (e?.detail?.role) setDivision(e.detail.role)
+      if (e?.detail?.sortBy) setSortBy(e.detail.sortBy)
       if (e?.detail?.taskId && tasks) {
         const found = tasks.find(t => String(t.id) === String(e.detail.taskId))
         if (found) setSel(found)
@@ -97,11 +101,11 @@ export default function TaskBoard({ onFlash, onAsk }) {
 
   const divisions = useMemo(() => extractTaskDivisions(tasks), [tasks])
   const activeDivision = useMemo(() => divisions.find(d => d.key === division) || null, [divisions, division])
-  const kanbanGroups = useMemo(() => groupTasksByKanbanColumn(tasks, q, division), [tasks, q, division])
+  const kanbanGroups = useMemo(() => groupTasksByKanbanColumn(tasks, q, division, sortBy), [tasks, q, division, sortBy])
   const metrics = useMemo(() => computeSprintMetrics(tasks, division), [tasks, division])
   const overallMetrics = useMemo(() => computeSprintMetrics(tasks), [tasks])
 
-  const list = useMemo(() => filterTasks(tasks, { filter, q, division }), [tasks, filter, q, division])
+  const list = useMemo(() => filterTasks(tasks, { filter, q, division, sortBy }), [tasks, filter, q, division, sortBy])
   const count = s => (tasks || []).filter(t => (s === 'all' || t.status === s) && (division === 'all' || matchTaskDivision(t, division))).length
 
   return (
@@ -183,7 +187,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
               <button className="btn" onClick={() => setSel(null)} style={{ marginBottom: 10 }}>← Kembali</button>
               <h3 style={{ fontSize: 15, marginBottom: 6 }}>#{sel.id} {sel.title}</h3>
               <p className="note" style={{ marginBottom: 8 }}>
-                Agent: {sel.agent_id} · Role: {sel.role} ({getTaskRoleLabel(sel.role)}) · <b style={{ color: ST[sel.status]?.[1] }}>{ST[sel.status]?.[0] || sel.status}</b>
+                Agent: {sel.agent_id || '—'} · Role: {sel.role || '—'} ({getTaskRoleLabel(sel.role)}) · Prioritas: <b style={{ color: getTaskPriorityInfo(sel.priority).color }}>{getTaskPriorityInfo(sel.priority).icon} {getTaskPriorityInfo(sel.priority).label}</b> · <b style={{ color: ST[sel.status]?.[1] }}>{ST[sel.status]?.[0] || sel.status}</b>
               </p>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
                 <button
@@ -249,7 +253,26 @@ export default function TaskBoard({ onFlash, onAsk }) {
           ) : (
             <>
               <div style={{ padding: '10px 12px 0' }}>
-                <input className="fld" aria-label="Cari task" placeholder="Cari judul, agent, atau role…" value={q} onChange={e => setQ(e.target.value)} />
+                <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
+                  <input className="fld" style={{ flex: 1, margin: 0 }} aria-label="Cari task" placeholder="Cari judul, agent, role, prioritas…" value={q} onChange={e => setQ(e.target.value)} />
+                  <div className="task-sort-container">
+                    <label htmlFor="task-sort-select" className="sr-only">Urutkan task:</label>
+                    <select
+                      id="task-sort-select"
+                      className="task-sort-select"
+                      value={sortBy}
+                      onChange={e => setSortBy(e.target.value)}
+                      aria-label="Urutkan task"
+                      title="Urutan task"
+                    >
+                      {SORT_OPTIONS.map(opt => (
+                        <option key={opt.key} value={opt.key}>
+                          {opt.icon} {opt.label}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
                 {/* Strip Filter Divisi / Tim Kampus */}
                 {tasks && (
                   <div className="division-filter-strip" role="group" aria-label="Filter berdasarkan divisi kerja">
@@ -351,7 +374,19 @@ export default function TaskBoard({ onFlash, onAsk }) {
                                   title={`Buka task #${t.id}: ${t.title}`}
                                 >
                                   <div className="kanban-card-top">
-                                    <span className="kanban-card-id">#{t.id}</span>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+                                      <span className="kanban-card-id">#{t.id}</span>
+                                      {t.priority && badges.priority.key !== 'normal' && (
+                                        <span
+                                          className="kanban-priority-badge"
+                                          style={{ color: badges.priority.color, background: badges.priority.bg }}
+                                          title={`Prioritas: ${badges.priority.label}`}
+                                        >
+                                          <span aria-hidden="true">{badges.priority.icon}</span>
+                                          <span>{badges.priority.label}</span>
+                                        </span>
+                                      )}
+                                    </div>
                                     {t.agent_id && (
                                       <span
                                         role="button"
@@ -414,12 +449,26 @@ export default function TaskBoard({ onFlash, onAsk }) {
 
               {viewMode === 'list' && tasks && (
                 <div style={{ overflowY: 'auto', padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {list.map(t => (
-                    <button key={t.id} className="taskrow" onClick={() => setSel(t)} style={{ borderLeft: `4px solid ${ST[t.status]?.[1] || '#888'}` }}>
-                      <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.35 }}>#{t.id} {t.title}</div>
-                      <div className="note">{t.agent_id} · {ST[t.status]?.[0] || t.status}</div>
-                    </button>
-                  ))}
+                  {list.map(t => {
+                    const prio = getTaskPriorityInfo(t.priority)
+                    return (
+                      <button key={t.id} className="taskrow" onClick={() => setSel(t)} style={{ borderLeft: `4px solid ${ST[t.status]?.[1] || '#888'}` }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
+                          <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.35 }}>#{t.id} {t.title}</div>
+                          {t.priority && prio.key !== 'normal' && (
+                            <span
+                              className="kanban-priority-badge"
+                              style={{ color: prio.color, background: prio.bg, flexShrink: 0 }}
+                              title={`Prioritas: ${prio.label}`}
+                            >
+                              <span aria-hidden="true">{prio.icon}</span> {prio.label}
+                            </span>
+                          )}
+                        </div>
+                        <div className="note">{t.agent_id || 'unassigned'} · {ST[t.status]?.[0] || t.status}</div>
+                      </button>
+                    )
+                  })}
                 </div>
               )}
             </>

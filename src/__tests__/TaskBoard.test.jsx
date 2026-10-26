@@ -176,4 +176,32 @@ describe('TaskBoard', () => {
       expect(feChip.getAttribute('aria-pressed')).toBe('true')
     })
   })
+
+  it('menyediakan pengurutan interaktif (sort select) dan menampilkan badge prioritas', async () => {
+    const customTasks = [
+      { id: 1, title: 'Zebra Service', agent_id: 'fe1', status: 'pending', role: 'fe', priority: 'low' },
+      { id: 2, title: 'Alpha Cache', agent_id: 'be1', status: 'done', role: 'be', priority: 'urgent' },
+    ]
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: customTasks }) })))
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />)
+    fireEvent.click(screen.getByText('Papan'))
+    await waitFor(() => screen.getByText(/Zebra Service/))
+
+    // Periksa kontrol pengurutan task
+    const sortSelect = screen.getByRole('combobox', { name: 'Urutkan task' })
+    expect(sortSelect).toBeTruthy()
+    expect(sortSelect.value).toBe('newest')
+
+    // Tampilkan badge prioritas urgent di list view
+    expect(screen.getByTitle('Prioritas: Urgent')).toBeTruthy()
+
+    // Beralih ke pengurutan Judul (A-Z)
+    fireEvent.change(sortSelect, { target: { value: 'title' } })
+    expect(sortSelect.value).toBe('title')
+
+    // Buka detail task untuk melihat informasi prioritas
+    fireEvent.click(screen.getByText(/Alpha Cache/))
+    expect(screen.getByText(/Prioritas:/)).toBeTruthy()
+    expect(screen.getByText(/Urgent/)).toBeTruthy()
+  })
 })

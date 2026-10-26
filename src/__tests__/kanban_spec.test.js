@@ -16,6 +16,11 @@ import {
   getKanbanColumnEmptyState,
   computeColumnDistribution,
   getTaskAgentFocusInfo,
+  PRIORITY_CONFIG,
+  getTaskPriorityInfo,
+  SORT_OPTIONS,
+  extractTaskSortValue,
+  sortTasks,
 } from '../scene/parts/kanban_spec.js';
 
 describe('kanban_spec — KANBAN_COLUMNS & role badges', () => {
@@ -380,5 +385,96 @@ describe('kanban_spec — getTaskAgentFocusInfo', () => {
   it('toleran terhadap task null, undefined, atau tanpa agen', () => {
     expect(getTaskAgentFocusInfo(null)).toEqual({ agentId: '', agentName: '', teamKey: null, teamName: null, floor: null });
     expect(getTaskAgentFocusInfo({})).toEqual({ agentId: '', agentName: '', teamKey: null, teamName: null, floor: null });
+  });
+});
+
+describe('kanban_spec — PRIORITY_CONFIG & getTaskPriorityInfo', () => {
+  it('mendefinisikan prioritas task baku secara konsisten', () => {
+    expect(PRIORITY_CONFIG.urgent.label).toBe('Urgent');
+    expect(PRIORITY_CONFIG.urgent.order).toBe(1);
+    expect(PRIORITY_CONFIG.urgent.color).toBe('#EF4444');
+
+    expect(PRIORITY_CONFIG.high.label).toBe('Tinggi');
+    expect(PRIORITY_CONFIG.high.order).toBe(2);
+
+    expect(PRIORITY_CONFIG.medium.label).toBe('Sedang');
+    expect(PRIORITY_CONFIG.medium.order).toBe(3);
+
+    expect(PRIORITY_CONFIG.low.label).toBe('Rendah');
+    expect(PRIORITY_CONFIG.low.order).toBe(4);
+  });
+
+  it('getTaskPriorityInfo memetakan nilai prioritas dan toleran terhadap variasi case/null', () => {
+    expect(getTaskPriorityInfo('urgent').key).toBe('urgent');
+    expect(getTaskPriorityInfo(' URGENT ').key).toBe('urgent');
+    expect(getTaskPriorityInfo('high').key).toBe('high');
+    expect(getTaskPriorityInfo('medium').key).toBe('medium');
+    expect(getTaskPriorityInfo('low').key).toBe('low');
+
+    const fallback = getTaskPriorityInfo(null);
+    expect(fallback.key).toBe('normal');
+    expect(fallback.label).toBe('Normal');
+
+    expect(getTaskPriorityInfo('unknown_prio').key).toBe('normal');
+  });
+});
+
+describe('kanban_spec — extractTaskSortValue & sortTasks', () => {
+  const sampleTasks = [
+    { id: 10, title: 'Zebra Service', priority: 'low', agent_id: 'fe1', created_at: 100 },
+    { id: 20, title: 'Alpha Cache', priority: 'urgent', agent_id: 'be1', created_at: 300 },
+    { id: 30, title: 'Beta DB', priority: 'high', agent_id: 'ops1', created_at: 200 },
+    { id: 40, title: 'Gamma API', priority: 'medium', agent_id: 'be2', created_at: 150 },
+  ];
+
+  it('extractTaskSortValue mengekstrak timestamp atau numeric ID secara cerdas', () => {
+    expect(extractTaskSortValue({ id: 99, created_at: 1700 })).toBe(1700);
+    expect(extractTaskSortValue({ id: 55 })).toBe(55);
+    expect(extractTaskSortValue({ id: 'task-123' })).toBe(123);
+    expect(extractTaskSortValue({ id: 'custom-task' })).toBe('custom-task');
+    expect(extractTaskSortValue(null)).toBe(0);
+  });
+
+  it('sortTasks mengurutkan berdasarkan terbaru (newest) & terlama (oldest)', () => {
+    const newest = sortTasks(sampleTasks, 'newest');
+    expect(newest.map(t => t.id)).toEqual([20, 30, 40, 10]); // created_at 300, 200, 150, 100
+
+    const oldest = sortTasks(sampleTasks, 'oldest');
+    expect(oldest.map(t => t.id)).toEqual([10, 40, 30, 20]); // created_at 100, 150, 200, 300
+  });
+
+  it('sortTasks mengurutkan berdasarkan tingkat prioritas (urgent -> high -> medium -> low)', () => {
+    const byPrio = sortTasks(sampleTasks, 'priority');
+    expect(byPrio.map(t => t.id)).toEqual([20, 30, 40, 10]); // urgent (20), high (30), medium (40), low (10)
+  });
+
+  it('sortTasks mengurutkan berdasarkan judul (A-Z) dan agen (A-Z)', () => {
+    const byTitle = sortTasks(sampleTasks, 'title');
+    expect(byTitle.map(t => t.title)).toEqual(['Alpha Cache', 'Beta DB', 'Gamma API', 'Zebra Service']);
+
+    const byAgent = sortTasks(sampleTasks, 'agent');
+    expect(byAgent.map(t => t.agent_id)).toEqual(['be1', 'be2', 'fe1', 'ops1']);
+  });
+
+  it('groupTasksByKanbanColumn dan filterTasks menerapkan sorting yang dipilih', () => {
+    const grouped = groupTasksByKanbanColumn([
+      { id: 1, title: 'B Task', status: 'pending', priority: 'low' },
+      { id: 2, title: 'A Task', status: 'pending', priority: 'urgent' },
+    ], '', 'all', 'priority');
+    expect(grouped.pending[0].id).toBe(2); // urgent first
+
+    const filtered = filterTasks([
+      { id: 1, title: 'Delta', status: 'done' },
+      { id: 2, title: 'Alpha', status: 'done' },
+    ], { filter: 'done', sortBy: 'title' });
+    expect(filtered[0].title).toBe('Alpha');
+  });
+
+  it('getTaskCardBadges menyertakan informasi prioritas', () => {
+    const task = { id: 1, title: 'T', role: 'be', priority: 'urgent' };
+    const badges = getTaskCardBadges(task);
+    expect(badges.priority.key).toBe('urgent');
+    expect(badges.priority.label).toBe('Urgent');
+    expect(badges.priority.icon).toBe('🔥');
   });
 });

@@ -1,3 +1,35 @@
+## 2026-10-26 12:54 WIB — Siklus 87: Pengurutan Interaktif Sprint Kanban (SORT_OPTIONS & sortTasks), Spesifikasi & Badge Prioritas (Urgent/High/Medium/Low) di TaskBoard & Detail Task
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Spesifikasi Prioritas & Pengurutan Kanban (`src/scene/parts/kanban_spec.js`, `src/__tests__/kanban_spec.test.js`):**
+     - Membangun `PRIORITY_CONFIG` dan `getTaskPriorityInfo(priority)` yang memetakan tingkatan urgensi task secara baku (`urgent`: 🔥 Kritis/Merah `#EF4444`, `high`: 🔺 Tinggi/Oranye `#F97316`, `medium`: ▫️ Sedang/Kuning `#EAB308`, `low`: 🔽 Rendah/Abu-abu `#94A3B8`, fallback `normal`: • Normal `#64748B`).
+     - Membangun `SORT_OPTIONS` dengan 5 mode pengurutan: `newest` (Terbaru 🕒), `oldest` (Terlama ⏳), `priority` (Prioritas 🔥), `title` (Judul A-Z 🔤), dan `agent` (Agen A-Z 👤).
+     - Membangun `extractTaskSortValue(task)` untuk ekstraksi cerdas nilai timestamp (`created_at`) maupun ID numerik/alfanumerik.
+     - Membangun `sortTasks(tasks, sortBy)` yang mendukung 5 mode pengurutan di atas secara stabil dengan fallback ke ID/timestamp terbaru.
+     - Mengintegrasikan `sortBy` ke dalam `groupTasksByKanbanColumn(tasks, query, divisionFilter, sortBy)` dan `filterTasks(tasks, { filter, q, division, role, sortBy })`.
+     - Mengikutsertakan prioritas task (`t.priority`) ke dalam pencarian real-time dan mengekspos `priority` di dalam `getTaskCardBadges(task)`.
+  2. **Kontrol Pengurutan Interaktif & Visualisasi Prioritas di TaskBoard (`src/components/TaskBoard.jsx`, `src/index.css`, `src/__tests__/TaskBoard.test.jsx`):**
+     - Menambahkan dropdown pengurutan interaktif terpadu (`.task-sort-container` & `.task-sort-select`) di samping kolom pencarian task dengan opsi Terbaru, Terlama, Prioritas, Judul (A-Z), dan Agen (A-Z).
+     - Menampilkan badge prioritas visual (`.kanban-priority-badge`) dengan warna aksen dan ikon dinamis pada header kartu kanban (di samping nomor `#ID`) saat task memiliki level prioritas non-normal.
+     - Menampilkan badge prioritas visual pada baris task mode daftar (`.taskrow`).
+     - Menampilkan indikator prioritas lengkap dengan ikon dan teks berwarna pada panel modal detail task (`Prioritas: 🔥 Urgent`).
+     - Mendukung parameter event kustom `wfs-open-task-board` dengan properti `sortBy` untuk membuka papan kanban langsung dalam urutan yang ditentukan.
+  3. **Penyempurnaan Styling & Aksesibilitas (`src/index.css`):**
+     - Menambahkan styling kontras tinggi dan adaptif untuk `.task-sort-container`, `.task-sort-select`, dan `.kanban-priority-badge`.
+     - Menyediakan teks tersembunyi berstandar aksesibilitas (`sr-only`) untuk label pengurutan guna kompatibilitas screen reader penuh.
+
+- **Bukti terukur:**
+  - **Vitest:** **1581/1581 passed (130 test file)** (+9 tests baru terintegrasi, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/scene/parts/kanban_spec.js src/components/TaskBoard.jsx src/__tests__/kanban_spec.test.js src/__tests__/TaskBoard.test.jsx`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1696.86 KiB; chunk `OfficeScene-87fiahCW.js` 875.82 KB / gzip 237.64 KB, `index-C0uBAiCS.js` 336.77 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-C0uBAiCS.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **519.757 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** evaluasi optimasi chunking dinamis vendor Three.js / OfficeScene.
+
 ## 2026-10-26 12:24 WIB — Siklus 86: Animasi Visual Kanban, Distribusi Progres Kolom, Sprint Progress Bar & Integrasi 1-Klik Fokus Meja Agen 3D (focusAgent)
 
 - **Yang diperbaiki & ditingkatkan:**
