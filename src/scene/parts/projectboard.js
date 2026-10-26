@@ -19,10 +19,7 @@ export function createProjectBoard(office, THREE) {
   const g = cv.getContext('2d')
 
   const tex = uiTexture(new THREE.CanvasTexture(cv))
-  const mesh = uiMaterial(new THREE.Mesh(
-    new THREE.PlaneGeometry(7.4, 4.04),
-    new THREE.MeshBasicMaterial({ map: tex, fog: false })
-  ))
+  const mesh = new THREE.Mesh(new THREE.PlaneGeometry(7.4, 4.04), uiMaterial(new THREE.MeshBasicMaterial({ map: tex, fog: false })))
   mesh.position.set(-8.35, 2.6, 13.3)
   mesh.rotation.y = Math.PI
   mesh.renderOrder = 5

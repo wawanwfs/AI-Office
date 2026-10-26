@@ -45,4 +45,26 @@ describe('uiMaterial', () => {
     expect(uiMaterial(stub)).toBe(stub)
     expect(stub.toneMapped).toBe(false)
   })
+
+  it('menerima MESH/SPRITE: toneMapped=false dipasang di .material, bukan di mesh', () => {
+    // Pola pemakaian uiMaterial(new THREE.Mesh(geom, mat)) — bug siklus 111:
+    // toneMapped dulu tertempel di objek Mesh (tanpa efek) → warna UI tetap shifted.
+    const mat = { toneMapped: true }
+    const mesh = { isMesh: true, material: mat }
+    const out = uiMaterial(mesh)
+    expect(out).toBe(mesh)
+    expect(out.toneMapped).toBeUndefined() // mesh sendiri TIDAK diberi properti
+    expect(mat.toneMapped).toBe(false)
+    const smat = { toneMapped: true }
+    const sprite = { isSprite: true, material: smat }
+    uiMaterial(sprite)
+    expect(sprite.toneMapped).toBeUndefined()
+    expect(smat.toneMapped).toBe(false)
+  })
+
+  it('mesh tanpa material → no-op aman, objek dikembalikan tanpa properti baru', () => {
+    const mesh = { isMesh: true }
+    expect(uiMaterial(mesh)).toBe(mesh)
+    expect(mesh.toneMapped).toBeUndefined()
+  })
 })

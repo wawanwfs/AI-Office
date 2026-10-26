@@ -24,9 +24,15 @@ export function uiTexture(tex) {
 }
 
 // Matikan tone mapping pada material unlit layar/teks (mutasi in-place, chainable).
-export function uiMaterial(mat) {
-  if (mat) {
-    try { mat.toneMapped = false; } catch { /* stub — abaikan */ }
-  }
-  return mat;
+// Pola kontrak: bungkus MATERIAL-nya langsung — new THREE.Mesh(geom, uiMaterial(mat)).
+// Kompatibilitas: bila diberi Mesh/Sprite, toneMapped=false dipasang di .material
+// (bukan di objek mesh yang tidak dibaca renderer). BUG siklus 111: 15 situs memakai
+// uiMaterial(new THREE.Mesh(...)) → toneMapped tertempel di Mesh, material tetap kena
+// ACESFilmic → warna UI tetap shifted meski tekstur sudah srgb.
+export function uiMaterial(target) {
+  if (!target) return target;
+  const mat = (target.isMesh || target.isSprite) ? target.material : target;
+  if (!mat) return target;
+  try { mat.toneMapped = false; } catch { /* stub — abaikan */ }
+  return target;
 }

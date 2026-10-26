@@ -93,7 +93,7 @@ export function createLounge(ctx) {
     window.__lastTvDrawAt = Date.now();
   }
   drawTv();
-  const tvScr = uiMaterial(new THREE.Mesh(new THREE.PlaneGeometry(1.2, .68), new THREE.MeshBasicMaterial({ map: tvTex })));
+  const tvScr = new THREE.Mesh(new THREE.PlaneGeometry(1.2, .68), uiMaterial(new THREE.MeshBasicMaterial({ map: tvTex })));
   async function tvPull(force = false) {
     if (!force && document.visibilityState === 'hidden') return;
     try {

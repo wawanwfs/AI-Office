@@ -36,10 +36,7 @@ export function createReception({ THREE, office, M, MB, drawResepsiLogo, makeLab
     drawResepsiLogo(x);
     const t = new THREE.CanvasTexture(c); t.minFilter = THREE.LinearFilter; uiTexture(t); return t;
   })();
-  const rcLogoMesh = uiMaterial(new THREE.Mesh(
-    new THREE.PlaneGeometry(1.8, .5625),
-    new THREE.MeshBasicMaterial({ map: wfsLogoTex, transparent: true })
-  ));
+  const rcLogoMesh = new THREE.Mesh(new THREE.PlaneGeometry(1.8, .5625), uiMaterial(new THREE.MeshBasicMaterial({ map: wfsLogoTex, transparent: true })));
   rcLogoMesh.position.set(RCX, .5, RCZ + .31); reception.add(rcLogoMesh);
   const rcLogoFront = rcLogoMesh.clone(); rcLogoFront.position.set(RCX, .5, RCZ - .31); rcLogoFront.rotation.y = Math.PI; reception.add(rcLogoFront);
 

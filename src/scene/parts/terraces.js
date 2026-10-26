@@ -46,10 +46,7 @@ export function createTerraces({ THREE, office, M, MB }) {
       ctx.fillText(text, 28, 82);
     }
     const tex = uiTexture(new THREE.CanvasTexture(cv));
-    const m = uiMaterial(new THREE.Mesh(
-      new THREE.PlaneGeometry(4.2, 0.74),
-      new THREE.MeshBasicMaterial({ map: tex, transparent: true })
-    ));
+    const m = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 0.74), uiMaterial(new THREE.MeshBasicMaterial({ map: tex, transparent: true })));
     m.rotation.x = -Math.PI / 2;
     return m;
   };

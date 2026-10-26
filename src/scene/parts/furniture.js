@@ -98,7 +98,7 @@ export function createFurniture(ctx /* hooks disiapkan utk ekstensi */) {
     cv.width = CANVAS_W; cv.height = CANVAS_H;
     const g = cv.getContext('2d');
     drawPoster(g, p.c, p.t);
-    const plane = uiMaterial(new THREE.Mesh(new THREE.PlaneGeometry(POSTER_W, POSTER_H), new THREE.MeshBasicMaterial({ map: uiTexture(new THREE.CanvasTexture(cv)) })));
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(POSTER_W, POSTER_H), uiMaterial(new THREE.MeshBasicMaterial({ map: uiTexture(new THREE.CanvasTexture(cv)) })));
     plane.position.set(p.x + posterOffsetFor(p), POSTER_Y, p.z);
     plane.rotation.y = posterFacingFor(p);
     office.add(plane);

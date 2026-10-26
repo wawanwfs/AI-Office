@@ -834,7 +834,7 @@ function buildDesk(agent,dp){
   const sc=document.createElement('canvas');sc.width=128;sc.height=76;
   const sctx=sc.getContext('2d');
   const stx=uiTexture(new THREE.CanvasTexture(sc));stx.minFilter=THREE.LinearFilter;
-  const screen=uiMaterial(new THREE.Mesh(new THREE.PlaneGeometry(.66,.36),new THREE.MeshBasicMaterial({map:stx})));
+  const screen=new THREE.Mesh(new THREE.PlaneGeometry(.66,.36), uiMaterial(new THREE.MeshBasicMaterial({map:stx})));
   screen.position.set(.32,1.08,-.22);g.add(screen);
   screenData.push({ctx:sctx,canvas:sc,tex:stx,type:agent.screen||'terminal',hex:agent.hex});
   // Screen light — warna agent
@@ -862,7 +862,7 @@ function buildDesk(agent,dp){
     const c = document.createElement('canvas');
     drawNameplate(c.getContext('2d'), agent.name, agent.role, agent.hex);
     const tex = uiTexture(new THREE.CanvasTexture(c)); tex.minFilter = THREE.LinearFilter;
-    const plate = uiMaterial(new THREE.Mesh(new THREE.PlaneGeometry(PLATE.w, PLATE.h), new THREE.MeshBasicMaterial({ map: tex, transparent: true })));
+    const plate = new THREE.Mesh(new THREE.PlaneGeometry(PLATE.w, PLATE.h), uiMaterial(new THREE.MeshBasicMaterial({ map: tex, transparent: true })));
     plate.position.set(0, PLATE.y, PLATE.z); g.add(plate);
     const stand = new THREE.Mesh(new THREE.BoxGeometry(PLATE.w, .02, .05), M(0x2E3642));
     stand.position.set(0, PLATE.standY, PLATE.standZ); g.add(stand);
@@ -1090,7 +1090,7 @@ const wtc=document.createElement('canvas');wtc.width=1024;wtc.height=200;
 const wtx=wtc.getContext('2d');
 drawWallTitle(wtx);
 const wtt=uiTexture(new THREE.CanvasTexture(wtc));
-const wallTitle=uiMaterial(new THREE.Mesh(new THREE.PlaneGeometry(4.6,0.9),new THREE.MeshBasicMaterial({map:wtt,transparent:true})));
+const wallTitle=new THREE.Mesh(new THREE.PlaneGeometry(4.6,0.9), uiMaterial(new THREE.MeshBasicMaterial({map:wtt,transparent:true})));
 // Dipasang di dinding KIRI (x=-16.8, menghadap +X) — spot kosong antara pilar dinding kampus
 // dan jendela z=-3.4 (lebar 4.6 → z -8.8..-4.2, aman dari keduanya). Sebelumnya mesh
 // ini dibuat tapi TIDAK PERNAH di-add ke scene (kode mati).

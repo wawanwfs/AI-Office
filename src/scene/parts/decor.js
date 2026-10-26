@@ -12,7 +12,7 @@ export function createDecor(ctx) {
   const posterMeshes = [['SHIP IT', '#F59E0B', 3.0], ['CODE\nCOFFEE', '#F472B6', 5.2]].map(([txt, col, x]) => {
     const pc = document.createElement('canvas'); pc.width = 256; pc.height = 340;
     drawPoster(pc.getContext('2d'), txt, col);
-    const pm = uiMaterial(new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.45), new THREE.MeshBasicMaterial({ map: uiTexture(new THREE.CanvasTexture(pc)) })));
+    const pm = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.45), uiMaterial(new THREE.MeshBasicMaterial({ map: uiTexture(new THREE.CanvasTexture(pc)) })));
     pm.position.set(x + 5.0, 2.4, 9.2); pm.rotation.y = Math.PI;
     add(pm); return pm;
   });

@@ -145,7 +145,7 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   const lc=document.createElement('canvas');lc.width=2048;lc.height=640;const l=lc.getContext('2d');
   drawWallLogo(l);
   const lt=new THREE.CanvasTexture(lc);lt.anisotropy=4;uiTexture(lt);
-  const logo=uiMaterial(new THREE.Mesh(new THREE.PlaneGeometry(8.6,2.69),new THREE.MeshBasicMaterial({map:lt})));
+  const logo=new THREE.Mesh(new THREE.PlaneGeometry(8.6,2.69), uiMaterial(new THREE.MeshBasicMaterial({map:lt})));
   logo.position.set(1.0,2.55,13.24);logo.rotation.y=Math.PI;logo.renderOrder=5;office.add(logo);__wallObjs.push(logo);
   W(B(8.8,2.9,.1),new THREE.MeshBasicMaterial({color:0x14243D}),1.0,2.55,13.36);
   // lampu sorot di atas logo
@@ -170,7 +170,7 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   // ---- Papan sambutan di dinding kiri ----
   const nc=document.createElement('canvas');nc.width=1024;nc.height=320;const n=nc.getContext('2d');
   drawWelcomeSign(n);
-  const sign=uiMaterial(new THREE.Mesh(new THREE.PlaneGeometry(3.6,1.125),new THREE.MeshBasicMaterial({map:uiTexture(new THREE.CanvasTexture(nc))})));
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(3.6,1.125), uiMaterial(new THREE.MeshBasicMaterial({map:uiTexture(new THREE.CanvasTexture(nc))})));
   sign.position.set(-16.8,2.6,5.4);sign.renderOrder=5;sign.rotation.y=Math.PI/2;office.add(sign);__wallObjs.push(sign);
 
   // ---- Jendela di dinding kiri ----

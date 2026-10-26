@@ -51,7 +51,7 @@ export function createMeetingRoom(ctx, glassMat) {
 
   const cv = document.createElement('canvas'); cv.width = 320; cv.height = 128;
   const g = cv.getContext('2d');
-  const board = uiMaterial(new THREE.Mesh(new THREE.PlaneGeometry(WB_BOARD_W, WB_BOARD_H), new THREE.MeshBasicMaterial({ map: uiTexture(new THREE.CanvasTexture(cv)) })));
+  const board = new THREE.Mesh(new THREE.PlaneGeometry(WB_BOARD_W, WB_BOARD_H), uiMaterial(new THREE.MeshBasicMaterial({ map: uiTexture(new THREE.CanvasTexture(cv)) })));
   board.position.set(CX, WB_POS_Y, CZ + WB_DZ_BOARD);
   board.userData.isWhiteboard = true;
   board.userData.__keep = 1;
@@ -103,7 +103,7 @@ export function createWallClock(ctx, x, y, z, faceRotY = Math.PI) {
   const tex = uiTexture(new THREE.CanvasTexture(cv)); tex.minFilter = THREE.LinearFilter;
   const rim = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.04, 24), M(0x2a2f36));
   rim.rotation.x = Math.PI / 2; rim.position.set(x, y, z + (faceRotY ? 0.03 : -0.03)); office.add(rim);
-  const face = uiMaterial(new THREE.Mesh(new THREE.CircleGeometry(0.27, 28), new THREE.MeshBasicMaterial({ map: tex })));
+  const face = new THREE.Mesh(new THREE.CircleGeometry(0.27, 28), uiMaterial(new THREE.MeshBasicMaterial({ map: tex })));
   face.position.set(x, y, z); face.rotation.y = faceRotY; office.add(face);
 
   const draw = (nowSeconds, dateMs = Date.now()) => {
