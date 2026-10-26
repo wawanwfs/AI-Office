@@ -46,18 +46,33 @@ export function isEditableTarget(target) {
   return false;
 }
 
+export function getActiveModalType(flags = {}) {
+  if (!flags) return null;
+  if (flags.showSettings) return 'settings';
+  if (flags.showHelp) return 'help';
+  if (flags.showLog) return 'log';
+  if (flags.isTaskBoardOpen) return 'task_board';
+  if (flags.isProjectPanelOpen) return 'project_panel';
+  return null;
+}
+
 export function resolveShortcutAction(event, context = {}) {
   if (!event || !event.key) return null;
   if (isEditableTarget(event.target)) return null;
   if (event.ctrlKey || event.metaKey || event.altKey) return null;
 
-  const { modalOpen = false } = context;
+  const { modalOpen = false, activeModal = null } = context;
   const rawKey = event.key;
   const k = rawKey.toLowerCase();
 
-  // Jika modal/dialog sedang terbuka: hanya tangani Escape
+  // Jika modal/dialog sedang terbuka: prioritaskan Escape dan toggle penutup modal aktif yang sesuai
   if (modalOpen) {
     if (k === 'escape') return { type: 'ESCAPE' };
+    if (activeModal === 'task_board' && k === 't') return { type: 'TOGGLE_TASK_BOARD' };
+    if (activeModal === 'project_panel' && k === 'p') return { type: 'TOGGLE_PROJECT_PANEL' };
+    if (activeModal === 'help' && (k === 'h' || k === '?')) return { type: 'TOGGLE_HELP' };
+    if (activeModal === 'settings' && k === 'o') return { type: 'TOGGLE_SETTINGS' };
+    if (activeModal === 'log' && k === 'l') return { type: 'TOGGLE_LOG' };
     return null;
   }
 

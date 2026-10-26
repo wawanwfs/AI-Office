@@ -11,7 +11,7 @@ import {
   SELECT_FREQ, SELECT_GAIN, SELECT_END_GAIN, SELECT_SEC, DEFAULT_VOLUME,
   DEFAULT_AMBIENCE_ENABLED, DEFAULT_AMBIENCE_VOLUME, AMBIENCE_BASE_FREQ, AMBIENCE_OVERTONE_FREQ,
   AMBIENCE_FILTER_FREQ, AMBIENCE_FILTER_Q, AMBIENCE_RAMP_SEC, AMBIENCE_PREVIEW_SEC,
-  clampAmbienceVolume, calcAmbienceGain, generatePinkNoiseData,
+  clampAmbienceVolume, calcAmbienceGain, calcAmbienceFilterFreq, generatePinkNoiseData,
 } from './sound_spec.js';
 
 const noop = () => {};

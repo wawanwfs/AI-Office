@@ -102,8 +102,10 @@ export const DEFAULT_AMBIENCE_ENABLED = false;
 export const DEFAULT_AMBIENCE_VOLUME = 0.35;
 export const AMBIENCE_BASE_FREQ = 55.0; // nada fundamental A1 (hum server / listrik kantor)
 export const AMBIENCE_OVERTONE_FREQ = 110.0; // harmonik A2 lembut
-export const AMBIENCE_FILTER_FREQ = 180; // filter lowpass Hz (desir pendingin HVAC)
+export const AMBIENCE_FILTER_FREQ = 180; // filter lowpass default Hz (desir pendingin HVAC)
 export const AMBIENCE_FILTER_Q = 1.0; // resonansi filter
+export const AMBIENCE_FILTER_FREQ_MIN = 120; // batas bawah cutoff filter saat volume rendah
+export const AMBIENCE_FILTER_FREQ_MAX = 255; // batas atas cutoff filter saat volume penuh
 export const AMBIENCE_BASE_GAIN = 0.015; // gain plafon master ambience
 export const AMBIENCE_RAMP_SEC = 0.4; // durasi crossfade transisi halus
 export const AMBIENCE_PREVIEW_SEC = 2.5; // durasi preview uji sampel audio
@@ -114,6 +116,12 @@ export const AMBIENCE_PRESET_LABELS = {
   0.70: '70% Jelas',
   1.00: '100% Penuh',
 };
+
+export function calcAmbienceFilterFreq(ambienceVol = DEFAULT_AMBIENCE_VOLUME) {
+  const vol = clampAmbienceVolume(ambienceVol);
+  // Volume default 0.35 menghasilkan tepat 180 Hz (140 + 0.35 * 115 = 180.25 -> round 180)
+  return Math.round(140 + vol * 115);
+}
 
 export function clampAmbienceVolume(v) {
   if (!Number.isFinite(v)) return DEFAULT_AMBIENCE_VOLUME;
