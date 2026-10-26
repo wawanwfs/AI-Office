@@ -43,6 +43,13 @@ describe('computePct', () => {
     expect(computePct({})).toBe(0)
     expect(computePct(null)).toBe(0)
   })
+  it('dijepit ke 0–100 (done>total / negatif) & aman terhadap NaN', () => {
+    expect(computePct({ total: 5, done: 12 })).toBe(100)
+    expect(computePct({ total: 5, done: -3 })).toBe(0)
+    expect(computePct({ total: 5, done: undefined })).toBe(0)
+    expect(computePct({ total: 5, done: NaN })).toBe(0)
+    expect(computePct({ total: 2, done: 1 })).toBe(50)
+  })
 })
 
 describe('subtitle', () => {

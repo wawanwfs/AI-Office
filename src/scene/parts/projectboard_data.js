@@ -11,9 +11,14 @@ export function cardY(i) { return CARD_TOP + i * CARD_STEP }
 import { clip } from '../../lib/clip.js'
 export { clip }
 
-// persen selesai; 0 bila tak ada task total
+// persen selesai; 0 bila tak ada task total. Dijepit ke rentang 0–100 dan aman
+// terhadap nilai non-finite (data glitch: done>total atau NaN) agar progress bar
+// di papan tak pernah menggambar lebar/angka yang mustahil.
 export function computePct(T) {
-  return T && T.total ? Math.round((T.done / T.total) * 100) : 0
+  if (!T || !T.total) return 0
+  const pct = Math.round((T.done / T.total) * 100)
+  if (!Number.isFinite(pct)) return 0
+  return Math.min(100, Math.max(0, pct))
 }
 
 // subjudul di bawah judul papan
