@@ -1,4 +1,3 @@
-import os
 #!/usr/bin/env python3
 """
 WFS Project — Virtual Office Agent Gateway
@@ -60,6 +59,19 @@ def agent_cfg(agent_id: str) -> dict:
     d["model"] = c.get("model") or DEFAULT_AI["model"]
     d["base"] = c.get("base") or DEFAULT_AI["base"]
     return d
+
+
+def _clamp_int(v, default, lo=None, hi=None):
+    """Parse int toleran: invalid → default, lalu clamp ke rentang [lo, hi]."""
+    try:
+        n = int(v)
+    except (TypeError, ValueError):
+        return default
+    if lo is not None and n < lo:
+        return lo
+    if hi is not None and n > hi:
+        return hi
+    return n
 
 # ---------- models ----------
 class ChatIn(BaseModel):
@@ -372,7 +384,7 @@ def api_project_logs(pid: int, lines: int = 100):
     cname = proj.get("container_name")
     if not cname:
         raise HTTPException(404, "container belum ada")
-    lines = max(10, min(int(lines), 500))
+    lines = _clamp_int(lines, 100, 10, 500)
     out = subprocess.run(
         ["docker", "logs", "--tail", str(lines), cname],
         capture_output=True, text=True, timeout=30)
@@ -635,7 +647,8 @@ async def api_sandboxes():
 async def sandbox_exec(agent_id: str, body: dict):
     """Jalankan kode Python di sandbox agent (executor mandiri)."""
     import sandbox_exec
-    return sandbox_exec.run_in_sandbox(agent_id, body.get("code",""), int(body.get("timeout",60)))
+    timeout = _clamp_int(body.get("timeout"), 60, 1, 600)
+    return sandbox_exec.run_in_sandbox(agent_id, body.get("code", ""), timeout)
 
 
 @app.post("/api/sandbox/{agent_id}/test")
