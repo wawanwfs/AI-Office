@@ -1,3 +1,33 @@
+## 2026-10-26 14:25 WIB — Siklus 89: Normalisasi Status Task Proyek (ready & completed), Integrasi Kartu Kanban 3D Papan Proyek (normalizeTaskStatus, formatTaskId, cardMeta) & Sinkronisasi Test Terrazzo
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Normalisasi Status Task Proyek & Integrasi Kartu Kanban 3D (`src/scene/parts/projectboard_data.js`, `src/scene/parts/projectboard.js`, `src/__tests__/projectboard_data.test.js`, `src/__tests__/projectboard_runtime.test.js`):**
+     - Mengidentifikasi dan memecahkan celah kritis di mana papan proyek 3D pada kantor AI selalu kosong ("kosong" / "semua beres"): task dari endpoint `/wfs-project` berstatus `'ready'` dan `'completed'`, sedangkan modul kanban 3D sebelumnya hanya memeriksa kesamaan string kaku `=== 'pending'` dan `=== 'done'`.
+     - Membangun `normalizeTaskStatus(status)` yang memetakan variasi status task secara baku (`ready`/`queued`/`todo`/`pending` → `'pending'`; `completed`/`finished`/`resolved`/`done` → `'done'`; `in_progress`/`active`/`working`/`running` → `'running'`; `failed`/`error` → `'failed'`; `review`/`qa` → `'review'`).
+     - Membangun `formatTaskId(id)` yang memformat ID berprefix `task-` (misal `task-9da32873` → `#9da32873`) secara elegan tanpa memakan ruang kartu.
+     - Membangun `formatCardStatus(status)`, `formatCardTitle(task, maxLen)`, dan `cardMeta(task)` untuk penyediaan metadata lengkap kartu kanban 3D (judul ber-ID rapi, label status ramah pembaca `✓ selesai` / `⏳ antri`, dan warna aksen dinamis).
+     - Mengintegrasikan `columnItems(T, i)` dengan `normalizeTaskStatus`: di server produksi nyata, 2 task siap/antri dan 4 task selesai WFS Project kini langsung tampil sebagai kartu kanban fisik di Lantai 3 gedung kantor 3D.
+     - Memperbaiki tipografi dan posisi vertikal judul kolom kanban 3D (`ANTRI`, `JALAN`, `SELESAI`) agar tidak terpotong tepi atas kotak kolom.
+  2. **Penyempurnaan Tampilan Task di Modal Proyek (`src/components/ProjectPanel.jsx`, `src/__tests__/project_panel.test.jsx`):**
+     - Mengintegrasikan `normalizeTaskStatus` dan `formatTaskId` ke daftar task terakhir pada modal `ProjectPanel`.
+     - Task dengan status `'completed'` kini menampilkan centang hijau `✓` dengan warna aksen `#10E5A0`, menggantikan fallback abu-abu `•` `#888`.
+  3. **Stabilisasi & Sinkronisasi Test Suite (`src/__tests__/floor_canvas.test.js`, `src/__tests__/label_sweep.test.js`):**
+     - Memperbaiki assertion radius pada `src/__tests__/floor_canvas.test.js` yang gagal akibat penambahan 10 lempeng marmer besar (`rr = 70 + rnd() * 110`) dan 420 chip terazzo (`r = 6 + rnd() * 15`).
+     - Menyinkronkan assertion `SWEEP_GAP` (44) dan offset pergeseran vertikal (89 & 94) di `src/__tests__/label_sweep.test.js` dengan konstanta breathing room label anti-overlap terbaru.
+     - Menjamin seluruh 131 test file lolos 100% (1602/1602 tests passed).
+
+- **Bukti terukur:**
+  - **Vitest:** **1602/1602 passed (131 test file)** (+14 tests baru terintegrasi, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/scene/parts/projectboard_data.js src/scene/parts/projectboard.js src/components/ProjectPanel.jsx src/__tests__/projectboard_data.test.js src/__tests__/projectboard_runtime.test.js src/__tests__/project_panel.test.jsx src/__tests__/label_sweep.test.js src/__tests__/floor_canvas.test.js`).
+  - **Build:** Berhasil (exit 0, 37 precache entries 1702.29 KiB; `OfficeScene` 159.99 KB / gzip 55.28 KB, `index` 152.16 KB / gzip 41.52 KB, `vendor-three` 715.76 KB, `vendor-react` 189.63 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-hZGL7T6z.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **645.777 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** evaluasi transisi visual drag-and-drop antar kolom kanban atau sound effect prioritas.
+
 ## 2026-10-26 13:45 WIB — Siklus 88: Optimasi Code Splitting Vendor Three.js/React, Rincian Prioritas Task (computePriorityBreakdown) & Quick Button Urgent di TaskBoard
 
 - **Yang diperbaiki & ditingkatkan:**
