@@ -218,13 +218,13 @@ export function isTaskInDateRange(task, rangeKey = 'all', options = {}) {
 
   switch (key) {
     case 'today':
-      return taskTime >= startOfToday && taskTime <= endOfToday + 3600000;
+      return taskTime >= startOfToday && taskTime <= endOfToday;
     case 'yesterday':
       return taskTime >= startOfYesterday && taskTime < startOfToday;
     case 'week':
-      return taskTime >= startOfToday - (6 * 86400000) && taskTime <= endOfToday + 3600000;
+      return taskTime >= startOfToday - (6 * 86400000) && taskTime <= endOfToday;
     case 'month':
-      return taskTime >= startOfToday - (29 * 86400000) && taskTime <= endOfToday + 3600000;
+      return taskTime >= startOfToday - (29 * 86400000) && taskTime <= endOfToday;
     default:
       return true;
   }

@@ -151,6 +151,20 @@ describe('kanban_date.js', () => {
     it('mendukung opsi includeUndated', () => {
       expect(isTaskInDateRange(taskUndated, 'today', { now: FIXED_NOW, includeUndated: true })).toBe(true);
     });
+
+    it('preset "today"/"week"/"month" menutup tepat di akhir hari (tanpa bocor ke besok)', () => {
+      const END_TODAY = START_TODAY + 86400000 - 1; // 23:59:59.999 hari ini
+      const START_TOMORROW = START_TODAY + 86400000; // 00:00:00.000 besok
+      const taskEndToday = { id: 7, title: 'Task akhir hari ini', created_at: END_TODAY };
+      const taskTomorrowStart = { id: 8, title: 'Task tepat besok', created_at: START_TOMORROW };
+
+      for (const key of ['today', 'week', 'month']) {
+        expect(isTaskInDateRange(taskEndToday, key, { now: FIXED_NOW })).toBe(true);
+        expect(isTaskInDateRange(taskTomorrowStart, key, { now: FIXED_NOW })).toBe(false);
+      }
+
+      expect(filterTasksByDate([taskEndToday, taskTomorrowStart], 'today', { now: FIXED_NOW }).map((t) => t.id)).toEqual([7]);
+    });
   });
 
   describe('computeDateRangeStats', () => {
