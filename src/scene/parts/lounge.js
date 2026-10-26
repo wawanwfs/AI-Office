@@ -74,17 +74,25 @@ export function createLounge(ctx) {
   const tvC = document.createElement('canvas'); tvC.width = 256; tvC.height = 144;
   window.__tvCanvas = tvC; // hook debug/uji: baca pixel badge koneksi via CDP (paritas __tvData)
   const tvx = tvC.getContext('2d');
+  // Tekstur 3D dibuat SEBELUM drawTv pertama: drawTv kini menandai
+  // tvTex.needsUpdate di SEMUA jalur gambar (sukses, gagal, detak umur).
+  const tvTex = new THREE.CanvasTexture(tvC); tvTex.minFilter = THREE.LinearFilter;
   // Tracker kesehatan koneksi (paritas papan 3D & chip HUD) — down sejak awal.
   let tvConn = applyPollResult(null, { ok: false, error: 'init' }, 0);
   // Badge koneksi gateway (LIVE/TERPUTUS/SINKRON N LALU) digambar di sudut kanan
   // atas TV setiap drawTv — ditarik dari tracker tvConn (state + umur data).
+  // tvTex.needsUpdate WAJIB tiap gambar: drawTv juga dipanggil dari jalur gagal
+  // (catch) & ticker detak umur — kanvas 2D berubah tapi tekstur 3D tidak akan
+  // ikut segar bila lupa flag ini (bug siklus 109: badge TERPUTUS/SINKRON tak
+  // pernah tampak di TV 3D nyata, hanya di kanvas 2D yang dibaca e2e).
   function drawTv() {
     const ageSec = tvConn.lastOkAt != null ? Math.max(0, Math.floor((Date.now() - tvConn.lastOkAt) / 1000)) : 0;
     drawTvDashboard(tvx, window.__tvData, { conn: { state: tvConn.state, ageSec } });
+    tvTex.needsUpdate = true;
     window.__lastTvDrawAt = Date.now();
   }
   drawTv();
-  const tvTex = new THREE.CanvasTexture(tvC); tvTex.minFilter = THREE.LinearFilter;
+  const tvScr = new THREE.Mesh(new THREE.PlaneGeometry(1.2, .68), new THREE.MeshBasicMaterial({ map: tvTex }));
   async function tvPull(force = false) {
     if (!force && document.visibilityState === 'hidden') return;
     try {
@@ -93,7 +101,7 @@ export function createLounge(ctx) {
       const d = await r.json();
       window.__tvData = { ...d, at: Date.now() };
       tvConn = applyPollResult(tvConn, { ok: true });
-      drawTv(); tvTex.needsUpdate = true;
+      drawTv();
     } catch (e) {
       tvConn = applyPollResult(tvConn, { ok: false, error: 'offline' });
       drawTv(); // badge koneksi langsung berubah (TERPUTUS/SINKRON) tanpa menunggu tick
@@ -106,6 +114,10 @@ export function createLounge(ctx) {
   const TV_POLL_HEALTHY_MS = 60000;
   let tvPollTimer = null;
   let tvStopped = false;
+  // Detak umur data: saat state non-live (stale/down), label "SINKRON N dtk/mnt
+  // LALU" harus berdetak tiap 30 dtk — paritas papan 3D (connIv). Bila live,
+  // drawTv sudah dipanggil tiap pull sukses; tick di-skip agar hemat.
+  const connTick = setInterval(() => { if (tvConn.state !== 'live') drawTv(); }, 30000);
   function tvSchedule() {
     tvPollTimer = setTimeout(async () => {
       await tvPull();
@@ -118,14 +130,14 @@ export function createLounge(ctx) {
   function tvDestroy() {
     tvStopped = true; // hentikan rantai poll adaptif
     if (tvPollTimer !== null) clearTimeout(tvPollTimer);
+    clearInterval(connTick); // detak umur badge ikut berhenti
     document.removeEventListener('visibilitychange', tvOnVis);
   }
-  const tvScr = new THREE.Mesh(new THREE.PlaneGeometry(1.2, .68), new THREE.MeshBasicMaterial({ map: tvTex }));
   tvScr.position.set(12.31, 2.0, 6.4); tvScr.rotation.y = -Math.PI / 2; lounge.add(tvScr);
   office.add(lounge);
   return {
     lounge, rug: lgRug, rugInner: lgRugIn, coffeeBase: ctB, coffeeTop: ctTop, magazine: mag, mug,
     chairs: [chair1, chair2], lampPole: flPole, lampShade: flShade, lampBulb: flBulb,
-    magRack, mags, tvFrame, tvScreen: tvScr, tvTex, tvCanvas: tvC, tvPull, tvIv: tvPollTimer, tvSchedule, tvDestroy, tvOnVis,
+    magRack, mags, tvFrame, tvScreen: tvScr, tvTex, tvCanvas: tvC, tvPull, tvIv: tvPollTimer, tvSchedule, tvDestroy, tvOnVis, connTick,
   };
 }

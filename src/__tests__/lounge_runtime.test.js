@@ -179,7 +179,9 @@ describe('createLounge — welcome & lounge kantor 3D', () => {
     expect(refs.tvCanvas.width).toBe(256)
     expect(refs.tvCanvas.height).toBe(144)
     expect(refs.tvCanvas.getContext().fillStyle).toBe('tv:WFS PROJECT') // drawTvDashboard dipanggil dgn __tvData
-    expect(refs.tvTex.needsUpdate).toBe(false) // belum ada refresh pasca-initial draw
+    // Perbaikan siklus 110: needsUpdate kini TRUE setelah initial draw (paritas
+    // jalur sukses/gagal) — tekstur 3D selalu segar, badge koneksi tak basi.
+    expect(refs.tvTex.needsUpdate).toBe(true)
     expect(refs.tvScreen.geometry.args).toEqual([1.2, .68])
     expect(refs.tvScreen.rotation.y).toBe(-Math.PI / 2)
     expect(refs.tvScreen.position).toMatchObject({ x: 12.31, y: 2.0, z: 6.4 })

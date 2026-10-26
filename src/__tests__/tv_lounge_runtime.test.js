@@ -82,7 +82,7 @@ function runTvCode(opts) {
   const fn = new Function('window', 'THREE', 'document', 'lounge', 'fetch', 'drawTvDashboard',
     'applyPollResult', 'nextPollDelay', code + `
     ;return tvPull(true).then(() =>
-      ({ drawTv, tvPull, tvC, tvTex, tvIv: tvPollTimer, tvSchedule, tvDestroy, tvOnVis, tvScr }))`)
+      ({ drawTv, tvPull, tvC, tvTex, tvIv: tvPollTimer, tvSchedule, tvDestroy, tvOnVis, tvScr, connTick }))`)
   const lounge = { add() {}, children: [] }
   return fn(win, THREE, document, lounge, fetchMock, drawTvDashboard, applyPollResult, nextPollDelay)
 }
@@ -208,6 +208,48 @@ describe('TV lounge — fetch & siklus hidup (tvPull)', () => {
     r.tvDestroy()
     await vi.advanceTimersByTimeAsync(300_000)
     expect(fetchMock.mock.calls.length).toBe(base)
+  })
+
+  it('REGRESI siklus 110: drawTv menandai tvTex.needsUpdate di SEMUA jalur — badge koneksi benar-benar tampak di tekstur 3D', async () => {
+    // Bug siklus 109: jalur sukses meng-set tvTex.needsUpdate, tapi jalur gagal
+    // (catch) hanya memanggil drawTv() → kanvas 2D berubah (TERPUTUS/SINKRON)
+    // namun tekstur 3D TV tetap menampilkan frame lama: badge tak pernah tampak
+    // di scene sungguhan. Kini needsUpdate di-set DI DALAM drawTv.
+    const r = await runTvCode()
+    // mount sukses → needsUpdate true
+    expect(r.tvTex.needsUpdate).toBe(true)
+    r.tvTex.needsUpdate = false
+    // jalur gagal: catch memanggil drawTv → needsUpdate harus kembali true
+    fetchMock.mockImplementation(async () => { throw new Error('HTTP 500') })
+    await r.tvPull()
+    expect(r.tvTex.needsUpdate).toBe(true)
+    r.tvTex.needsUpdate = false
+    // drawTv manual (ticker detak umur) juga menandai tekstur
+    r.drawTv()
+    expect(r.tvTex.needsUpdate).toBe(true)
+    r.tvDestroy()
+  })
+
+  it('ticker detak umur badge: interval 30 dtk menggambar ulang saat non-live, skip saat live; tvDestroy membersihkannya', async () => {
+    // Paritas papan 3D (connIv 30 dtk): label "SINKRON N dtk LALU" berdetak
+    // saat data basi — bukan membeku di angka poll terakhir.
+    const r = await runTvCode() // mount sukses → state live
+    texts.length = 0
+    // state live → tick di-skip (tidak ada gambar ulang); tick pertama poll
+    // adaptif baru di 60 dtk sehingga tidak mengganggu rentang 30 dtk ini.
+    await vi.advanceTimersByTimeAsync(30_000)
+    expect(texts.length).toBe(0)
+    // paksa non-live (stale): failStreak naik tanpa mengubah lastOkAt
+    fetchMock.mockImplementation(async () => { throw new Error('HTTP 500') })
+    await r.tvPull()
+    texts.length = 0
+    await vi.advanceTimersByTimeAsync(31_000) // tick 30 dtk → drawTv ulang (badge berdetak)
+    expect(texts.length).toBeGreaterThan(0)
+    // tvDestroy membersihkan ticker: tidak ada gambar ulang lagi
+    r.tvDestroy()
+    texts.length = 0
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(texts.length).toBe(0)
   })
 
   it('tab hidden → tvPull tidak fetch; fetch gagal → tidak throw, data lama dipertahankan', async () => {
