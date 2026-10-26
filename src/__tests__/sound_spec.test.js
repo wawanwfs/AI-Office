@@ -8,6 +8,9 @@ import {
   TASK_FAIL_FREQS, TASK_FAIL_DELAY_SEC, TASK_FAIL_GAIN, TASK_FAIL_END_GAIN, TASK_FAIL_TONE_SEC,
   TASK_URGENT_FREQS, TASK_URGENT_DELAY_SEC, TASK_URGENT_GAIN, TASK_URGENT_END_GAIN, TASK_URGENT_TONE_SEC,
   SELECT_FREQ, SELECT_GAIN, SELECT_END_GAIN, SELECT_SEC,
+  CARD_PICKUP_FREQ_START, CARD_PICKUP_FREQ_END, CARD_PICKUP_GAIN, CARD_PICKUP_END_GAIN, CARD_PICKUP_SEC,
+  CARD_DROP_FREQ_START, CARD_DROP_FREQ_END, CARD_DROP_GAIN, CARD_DROP_END_GAIN, CARD_DROP_SEC,
+  calcCardSweepFreq,
   VOLUME_KEY, DEFAULT_VOLUME, VOLUME_PRESETS, VOLUME_PRESET_LABELS,
   clampVolume, loadAudioVolume, saveAudioVolume, formatVolumePercent,
   AMBIENCE_KEY, AMBIENCE_VOL_KEY, DEFAULT_AMBIENCE_ENABLED, DEFAULT_AMBIENCE_VOLUME,
@@ -347,5 +350,42 @@ describe('sound_spec — ambience ruangan kantor (Web Audio HVAC / room hum)', (
     expect(calcAmbienceFilterFreq(-0.5)).toBe(140);
     expect(calcAmbienceFilterFreq(2.0)).toBe(255);
     expect(calcAmbienceFilterFreq('invalid')).toBe(180);
+  });
+});
+
+describe('sound_spec — kartu kanban tactile feedback', () => {
+  it('konstanta suara pickup & drop kartu kanban terdefinisi dengan tepat', () => {
+    expect(CARD_PICKUP_FREQ_START).toBe(340);
+    expect(CARD_PICKUP_FREQ_END).toBe(520);
+    expect(CARD_PICKUP_GAIN).toBe(0.018);
+    expect(CARD_PICKUP_END_GAIN).toBe(0.0005);
+    expect(CARD_PICKUP_SEC).toBe(0.045);
+
+    expect(CARD_DROP_FREQ_START).toBe(420);
+    expect(CARD_DROP_FREQ_END).toBe(210);
+    expect(CARD_DROP_GAIN).toBe(0.022);
+    expect(CARD_DROP_END_GAIN).toBe(0.0005);
+    expect(CARD_DROP_SEC).toBe(0.055);
+  });
+
+  it('calcCardSweepFreq menghitung frekuensi glide logaritmik secara akurat', () => {
+    // Awal dan akhir sweep
+    expect(calcCardSweepFreq(340, 520, 0)).toBe(340);
+    expect(calcCardSweepFreq(340, 520, 1)).toBe(520);
+    // Nilai tengah logaritmik sqrt(340 * 520) ≈ 420.47 -> 420
+    expect(calcCardSweepFreq(340, 520, 0.5)).toBe(420);
+
+    // Drop sweep (menurun)
+    expect(calcCardSweepFreq(420, 210, 0)).toBe(420);
+    expect(calcCardSweepFreq(420, 210, 1)).toBe(210);
+    // sqrt(420 * 210) ≈ 296.98 -> 297
+    expect(calcCardSweepFreq(420, 210, 0.5)).toBe(297);
+
+    // Batasan aman boundary
+    expect(calcCardSweepFreq(340, 520, -0.5)).toBe(340);
+    expect(calcCardSweepFreq(340, 520, 1.5)).toBe(520);
+    expect(calcCardSweepFreq(340, 520, NaN)).toBe(340);
+    expect(calcCardSweepFreq(0, 520, 0.5)).toBe(400);
+    expect(calcCardSweepFreq(340, 0, 0.5)).toBe(340);
   });
 });

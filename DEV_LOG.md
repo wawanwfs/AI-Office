@@ -1,3 +1,38 @@
+## 2026-10-26 19:50 WIB — Siklus 97: Sound Effect Interaksi Kartu Kanban (Drag Pickup & Drop Snap, calcCardSweepFreq), Uji Audio Kartu di SettingsModal & Animasi Transisi Halus Modal/Panel (Scrim Fade-In, Pop Scale & Slide)
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Sound Effect Interaksi Kartu Kanban & Kalkulasi Frekuensi Sweep (`sound_spec.js`, `sound_engine.js`, `OfficeScene.js`, `sound_spec.test.js`, `sound_engine.test.js`):**
+     - Mendefinisikan konstanta audio murni untuk interaksi kartu kanban: nada pickup/drag start (`CARD_PICKUP_*`, sweep sine naik 340 Hz → 520 Hz, gain 0.018 → 0.0005, durasi 0.045s) dan nada drop/snap slot (`CARD_DROP_*`, sweep triangle turun 420 Hz → 210 Hz, gain 0.022 → 0.0005, durasi 0.055s).
+     - Mengembangkan rumus murni `calcCardSweepFreq(startFreq, endFreq, ratio)` untuk interpolasi pitch logaritmik halus dengan penanganan toleran terhadap boundary/nilai non-finite.
+     - Mengimplementasikan `playCardPickup()` dan `playCardDrop()` pada `sound_engine.js` lengkap dengan pelacak counter `calls.cardPickup` dan `calls.cardDrop`.
+     - Mengekspose `playCardPickup`, `playCardDrop`, serta penanganan sampel audio `'card'` / `'card_pickup'` / `'card_drop'` pada instance `OfficeScene.js`.
+  2. **Integrasi Feedback Haptic Audio pada Papan Task Kanban (`TaskBoard.jsx`, `TaskBoard.test.jsx`):**
+     - Menghubungkan audio feedback `playCardPickup()` saat kartu mulai diangkat/di-drag (`handleDragStart`).
+     - Menghubungkan audio feedback `playCardDrop()` saat kartu berhasil dipindahkan ke kolom baru yang bukan done/urgent (`handleMoveTask`).
+     - Menambahkan feedback audio klik responsif `playSelect()` saat kartu diklik untuk membuka modal detail serta tombol kembali `← Kembali`.
+  3. **Uji Sampel Audio Kartu Kanban di Pengaturan (`SettingsModal.jsx`, `settings_modal.test.jsx`):**
+     - Menambahkan tombol kontrol uji audio "Kartu Kanban" dengan badge warna amber `#f59e0b` pada bagian Uji Sampel Audio di `SettingsModal`.
+     - Menghubungkan handler `handleTestAudio('card')` untuk memicu pratinjau audio efek interaksi fisik kartu kanban.
+  4. **Animasi Transisi Modern Halus Modal, Panel & Scrim (`index.css`):**
+     - Menghadirkan animasi transisi scrim latar belakang `@keyframes modalScrimFadeIn` (fade-in halus opacity & blur 0 → 8px) pada `.modal-scrim`.
+     - Memperbarui entrance dialog `@keyframes modalScaleIn` (skala 0.96 → 1.0 dengan translateY 8px → 0) pada `.modal` untuk tampilan pop-in modern dan elegan.
+     - Menghadirkan animasi orientasi panel terarah `@keyframes panelSlideLeft` untuk panel kiri (TaskBoard & ProjectPanel) dan `@keyframes panelSlideRight` untuk panel kanan (WfsPanel/Chat).
+     - Menambahkan `@keyframes mobileSheetSlideUp` untuk mode responsif layar sempit/mobile saat panel berubah menjadi bottom-sheet.
+     - Menyediakan aturan aksesibilitas `@media (prefers-reduced-motion: reduce)` yang mematikan durasi animasi secara otomatis bagi pengguna dengan preferensi reduced motion.
+
+- **Bukti terukur:**
+  - **Vitest:** **1699/1699 passed (133 test file)** (+4 tests baru: konstanta suara pickup/drop kanban, sweep logaritmik calcCardSweepFreq, playCardPickup & playCardDrop engine, assertion playCardDrop pada quick move taskboard, assertion test audio kartu di settings modal; 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/scene/parts/sound_spec.js src/scene/parts/sound_engine.js src/scene/OfficeScene.js src/components/TaskBoard.jsx src/components/SettingsModal.jsx src/components/ConfirmModal.jsx src/__tests__/sound_spec.test.js src/__tests__/sound_engine.test.js src/__tests__/TaskBoard.test.jsx src/__tests__/settings_modal.test.jsx src/__tests__/remaining_components.test.jsx`).
+  - **Build:** Berhasil (exit 0, 37 precache entries 1746.02 KiB; `OfficeScene` 166.69 KB / gzip 57.10 KB, `index` 180.36 KB / gzip 49.53 KB, `vendor-three` 715.76 KB, `vendor-react` 189.63 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-CCEVqtxr.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **648.700 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `shot.sh` (DISPLAY=:0): Screenshot **648.121 bytes** (>500 KB).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** evaluasi transisi visual drag preview kustom dan penyempurnaan responsivitas drawer mobile.
+
 ## 2026-10-26 18:12 WIB — Siklus 96: Indikator Visual Shortcut Footer Panel & Tooltip, Grid Interaktif OverlayHelp, Toggle Penutup Modal Aktif & Dynamic Filter Ambience Hum (calcAmbienceFilterFreq)
 
 - **Yang diperbaiki & ditingkatkan:**

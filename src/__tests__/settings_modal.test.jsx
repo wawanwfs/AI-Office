@@ -193,6 +193,10 @@ describe('SettingsModal component', () => {
     const btnAmbience = screen.getByRole('button', { name: /Hum Ruang/i })
     fireEvent.click(btnAmbience)
     expect(mockScene.testAudio).toHaveBeenCalledWith('ambience')
+
+    const btnCard = screen.getByRole('button', { name: /Kartu Kanban/i })
+    fireEvent.click(btnCard)
+    expect(mockScene.testAudio).toHaveBeenCalledWith('card')
   })
 
   it('toggle ambience ruangan kantor mengaktifkan ambience dan memunculkan slider volume', () => {

@@ -45,6 +45,7 @@ describe('ConfirmModal', () => {
     const container = document
     const dlg = screen.getByRole('alertdialog')
     expect(dlg.getAttribute('aria-modal')).toBe('true')
+    expect(container.querySelector('.modal-scrim > .modal')).toBeTruthy()
     fireEvent.click(screen.getByRole('button', { name: 'Hapus' }))
     expect(onConfirm).toHaveBeenCalledTimes(1)
     fireEvent.click(screen.getByRole('button', { name: 'Batal' }))

@@ -62,6 +62,31 @@ button { font-family: inherit; }
 }
 @keyframes tickerScroll { 0% { transform: translateX(0); } 100% { transform: translateX(-50%); } }
 
+@keyframes modalScrimFadeIn {
+  from { opacity: 0; backdrop-filter: blur(0px); }
+  to { opacity: 1; backdrop-filter: blur(8px); }
+}
+
+@keyframes modalScaleIn {
+  from { opacity: 0; transform: scale(0.96) translateY(8px); }
+  to { opacity: 1; transform: scale(1) translateY(0); }
+}
+
+@keyframes panelSlideRight {
+  from { opacity: 0; transform: translateX(16px) translateY(4px); }
+  to { opacity: 1; transform: translateX(0) translateY(0); }
+}
+
+@keyframes panelSlideLeft {
+  from { opacity: 0; transform: translateX(-16px) translateY(4px); }
+  to { opacity: 1; transform: translateX(0) translateY(0); }
+}
+
+@keyframes mobileSheetSlideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* ===== Cinematic Vignette Overlay ===== */
 .vignette {
   position: fixed; inset: 0; pointer-events: none; z-index: var(--z-vignette);
@@ -327,9 +352,9 @@ button { font-family: inherit; }
   border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 20px;
   backdrop-filter: blur(28px); display: flex; flex-direction: column; overflow: hidden;
   color: #fff; box-shadow: 0 24px 60px rgba(0, 0, 0, 0.75), inset 0 1px 0 rgba(255, 255, 255, 0.15);
-  font-family: 'DM Sans', sans-serif; animation: fadeUp .25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  font-family: 'DM Sans', sans-serif; animation: panelSlideRight 0.25s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-.panel.left { right: auto; left: 14px; }
+.panel.left { right: auto; left: 14px; animation: panelSlideLeft 0.25s cubic-bezier(0.16, 1, 0.3, 1) both; }
 .panel .ph {
   display: flex; align-items: center; padding: 0 0 0 18px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08); min-height: 52px;
@@ -394,6 +419,7 @@ button { font-family: inherit; }
 .modal-scrim {
   position: fixed; inset: 0; z-index: var(--z-modal); background: rgba(0, 0, 0, .72);
   backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; padding: 12px;
+  animation: modalScrimFadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .modal {
   position: relative;
@@ -401,7 +427,7 @@ button { font-family: inherit; }
   border: 1px solid rgba(255, 255, 255, .14); border-radius: 20px; padding: 24px;
   width: min(430px, 100%); max-height: 90dvh; overflow-y: auto; color: #fff;
   font-family: 'DM Sans', sans-serif; box-shadow: 0 28px 80px rgba(0, 0, 0, .8), inset 0 1px 0 rgba(255, 255, 255, .18);
-  animation: fadeUp .25s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation: modalScaleIn 0.22s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 .modal .x {
   position: absolute; top: 16px; right: 16px;
@@ -568,7 +594,7 @@ button { font-family: inherit; }
   .ticker { top: 52px; width: min(920px, calc(100vw - 20px)); }
   .floor-nav { top: 122px; left: 0; right: 0; margin: 0 auto; width: max-content; }
   .meeting-badge { top: 160px; }
-  .panel, .panel.left { left: 0; right: 0; bottom: 0; width: 100%; max-height: 82dvh; border-radius: 20px 20px 0 0; padding-bottom: var(--safe-b); }
+  .panel, .panel.left { left: 0; right: 0; bottom: 0; width: 100%; max-height: 82dvh; border-radius: 20px 20px 0 0; padding-bottom: var(--safe-b); animation: mobileSheetSlideUp 0.28s cubic-bezier(0.16, 1, 0.3, 1) both; }
   .toast { bottom: calc(76px + var(--safe-b)); top: auto; }
   .pop { left: 0; }
   input, select, textarea { font-size: 16px !important; }

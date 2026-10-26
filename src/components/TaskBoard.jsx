@@ -184,6 +184,8 @@ export default function TaskBoard({ onFlash, onAsk }) {
         window.__officeSound.playTaskDone?.()
       } else if (task.priority === 'urgent') {
         window.__officeSound.playTaskUrgent?.()
+      } else if (window.__officeSound.playCardDrop) {
+        window.__officeSound.playCardDrop()
       } else {
         window.__officeSound.playSelect?.()
       }
@@ -196,6 +198,9 @@ export default function TaskBoard({ onFlash, onAsk }) {
     if (e.dataTransfer) {
       e.dataTransfer.setData('text/plain', String(t.id))
       e.dataTransfer.effectAllowed = 'move'
+    }
+    if (typeof window !== 'undefined' && window.__officeSound) {
+      window.__officeSound.playCardPickup?.()
     }
   }, [])
 
@@ -327,7 +332,12 @@ export default function TaskBoard({ onFlash, onAsk }) {
           )}
           {sel ? (
             <div style={{ padding: 14, overflowY: 'auto' }}>
-              <button className="btn" onClick={() => setSel(null)} style={{ marginBottom: 10 }}>← Kembali</button>
+              <button className="btn" onClick={() => {
+                if (typeof window !== 'undefined' && window.__officeSound) {
+                  window.__officeSound.playSelect?.()
+                }
+                setSel(null)
+              }} style={{ marginBottom: 10 }}>← Kembali</button>
               <h3 style={{ fontSize: 15, marginBottom: 6 }}>#{sel.id} {sel.title}</h3>
               <p className="note" style={{ marginBottom: 8 }}>
                 Agent: {sel.agent_id || '—'} · Role: {sel.role || '—'} ({getTaskRoleLabel(sel.role)}) · Prioritas: <b style={{ color: getTaskPriorityInfo(sel.priority).color }}>{getTaskPriorityInfo(sel.priority).icon} {getTaskPriorityInfo(sel.priority).label}</b> · <b style={{ color: ST[sel.status]?.[1] }}>{ST[sel.status]?.[0] || sel.status}</b>
@@ -679,6 +689,8 @@ export default function TaskBoard({ onFlash, onAsk }) {
                                   onClick={() => {
                                     if (t.priority === 'urgent' && typeof window !== 'undefined' && window.__officeSound) {
                                       window.__officeSound.playTaskUrgent?.()
+                                    } else if (typeof window !== 'undefined' && window.__officeSound) {
+                                      window.__officeSound.playSelect?.()
                                     }
                                     setSel(t)
                                   }}
@@ -814,6 +826,8 @@ export default function TaskBoard({ onFlash, onAsk }) {
                         onClick={() => {
                           if (t.priority === 'urgent' && typeof window !== 'undefined' && window.__officeSound) {
                             window.__officeSound.playTaskUrgent?.()
+                          } else if (typeof window !== 'undefined' && window.__officeSound) {
+                            window.__officeSound.playSelect?.()
                           }
                           setSel(t)
                         }}

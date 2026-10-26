@@ -172,7 +172,9 @@ export default function SettingsModal({
             ? 'Prioritas Urgent'
             : sampleType === 'ambience'
               ? 'Hum Ruang (HVAC)'
-              : 'Peringatan'
+              : sampleType === 'card'
+                ? 'Kartu Kanban'
+                : 'Peringatan'
       setTestTip(`Memainkan sampel suara: ${label}`)
     } else if (sampleType === 'done' && s.playTaskDone) {
       s.playTaskDone()
@@ -180,6 +182,9 @@ export default function SettingsModal({
     } else if (sampleType === 'urgent' && s.playTaskUrgent) {
       s.playTaskUrgent()
       setTestTip('Memainkan nada Prioritas Urgent')
+    } else if (sampleType === 'card' && s.playCardDrop) {
+      s.playCardDrop()
+      setTestTip('Memainkan nada Kartu Kanban')
     }
   }
 
@@ -386,6 +391,17 @@ export default function SettingsModal({
               >
                 <IconPlay size={14} style={{ color: '#38bdf8' }} />
                 Hum Ruang
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => handleTestAudio('card')}
+                disabled={muted}
+                style={{ fontSize: 12, padding: '4px 10px', height: 'auto', minHeight: 28, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                title="Dengarkan efek tactile kartu Kanban (drag & drop)"
+              >
+                <IconPlay size={14} style={{ color: '#f59e0b' }} />
+                Kartu Kanban
               </button>
             </div>
             {testTip && (

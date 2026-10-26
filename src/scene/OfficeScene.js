@@ -1861,6 +1861,8 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
     playTaskFail: () => __sound.playTaskFail(),
     playTaskUrgent: () => __sound.playTaskUrgent(),
     playSelect: () => __sound.playSelect(),
+    playCardPickup: () => __sound.playCardPickup(),
+    playCardDrop: () => __sound.playCardDrop(),
     testAudio: (sample = 'done') => {
       if (audioMuted) return false;
       if (sample === 'fail') __sound.playTaskFail();
@@ -1868,6 +1870,8 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       else if (sample === 'chime') __sound.playMeetingChime();
       else if (sample === 'urgent') __sound.playTaskUrgent();
       else if (sample === 'ambience') __sound.previewAmbience();
+      else if (sample === 'card_pickup') __sound.playCardPickup();
+      else if (sample === 'card_drop' || sample === 'card') __sound.playCardDrop();
       else __sound.playTaskDone();
       return true;
     },

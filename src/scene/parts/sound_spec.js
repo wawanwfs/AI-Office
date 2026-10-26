@@ -52,6 +52,28 @@ export const SELECT_GAIN = 0.015;
 export const SELECT_END_GAIN = 0.0005;
 export const SELECT_SEC = 0.04;
 
+// nada interaksi kartu kanban (drag & drop tactile feedback)
+// pickup / drag start: nada meluncur naik (chirp) lembut
+export const CARD_PICKUP_FREQ_START = 340;
+export const CARD_PICKUP_FREQ_END = 520;
+export const CARD_PICKUP_GAIN = 0.018;
+export const CARD_PICKUP_END_GAIN = 0.0005;
+export const CARD_PICKUP_SEC = 0.045;
+
+// drop / drop slot snap: nada meluncur turun (snap thud) lembut
+export const CARD_DROP_FREQ_START = 420;
+export const CARD_DROP_FREQ_END = 210;
+export const CARD_DROP_GAIN = 0.022;
+export const CARD_DROP_END_GAIN = 0.0005;
+export const CARD_DROP_SEC = 0.055;
+
+export function calcCardSweepFreq(startFreq, endFreq, ratio = 0) {
+  if (!Number.isFinite(startFreq) || startFreq <= 0) return 400;
+  if (!Number.isFinite(endFreq) || endFreq <= 0) return startFreq;
+  const r = Math.max(0, Math.min(1, Number.isFinite(ratio) ? ratio : 0));
+  return Math.round(startFreq * Math.pow(endFreq / startFreq, r));
+}
+
 // volume master: persist di localStorage 'wfs_audio_volume' (default 1.0)
 export const VOLUME_KEY = 'wfs_audio_volume';
 export const DEFAULT_VOLUME = 1.0;

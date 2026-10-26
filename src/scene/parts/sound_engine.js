@@ -9,6 +9,8 @@ import {
   TASK_FAIL_FREQS, TASK_FAIL_GAIN, TASK_FAIL_END_GAIN, TASK_FAIL_TONE_SEC,
   TASK_URGENT_FREQS, TASK_URGENT_GAIN, TASK_URGENT_END_GAIN, TASK_URGENT_TONE_SEC,
   SELECT_FREQ, SELECT_GAIN, SELECT_END_GAIN, SELECT_SEC, DEFAULT_VOLUME,
+  CARD_PICKUP_FREQ_START, CARD_PICKUP_FREQ_END, CARD_PICKUP_GAIN, CARD_PICKUP_END_GAIN, CARD_PICKUP_SEC,
+  CARD_DROP_FREQ_START, CARD_DROP_FREQ_END, CARD_DROP_GAIN, CARD_DROP_END_GAIN, CARD_DROP_SEC,
   DEFAULT_AMBIENCE_ENABLED, DEFAULT_AMBIENCE_VOLUME, AMBIENCE_BASE_FREQ, AMBIENCE_OVERTONE_FREQ,
   AMBIENCE_FILTER_FREQ, AMBIENCE_FILTER_Q, AMBIENCE_RAMP_SEC, AMBIENCE_PREVIEW_SEC,
   clampAmbienceVolume, calcAmbienceGain, calcAmbienceFilterFreq, generatePinkNoiseData,
@@ -34,7 +36,7 @@ export function createSoundEngine({
   let ambienceVolume = clampAmbienceVolume(initialAmbienceVolume);
   let ambienceNodes = null;
   const pending = [];
-  const calls = { key: 0, step: 0, chime: 0, taskDone: 0, taskFail: 0, select: 0, taskUrgent: 0, ambience: 0 };
+  const calls = { key: 0, step: 0, chime: 0, taskDone: 0, taskFail: 0, select: 0, taskUrgent: 0, cardPickup: 0, cardDrop: 0, ambience: 0 };
 
   const dbg = (sink) => {
     const snap = {
@@ -425,6 +427,48 @@ export function createSoundEngine({
     });
   }
 
+  function playCardPickup() {
+    ensure(); calls.cardPickup++; dbg();
+    if (!ensureLive()) return;
+    const curTime = ctx.currentTime || 0;
+    const osc = ctx.createOscillator();
+    osc.type = 'sine';
+    if (osc.frequency && osc.frequency.setValueAtTime && osc.frequency.exponentialRampToValueAtTime) {
+      osc.frequency.setValueAtTime(CARD_PICKUP_FREQ_START, curTime);
+      osc.frequency.exponentialRampToValueAtTime(CARD_PICKUP_FREQ_END, curTime + CARD_PICKUP_SEC);
+    } else if (osc.frequency) {
+      osc.frequency.value = CARD_PICKUP_FREQ_START;
+    }
+    const g = ctx.createGain();
+    g.gain.value = CARD_PICKUP_GAIN;
+    if (g.gain && g.gain.exponentialRampToValueAtTime) {
+      g.gain.exponentialRampToValueAtTime(CARD_PICKUP_END_GAIN, curTime + CARD_PICKUP_SEC);
+    }
+    osc.connect(g); g.connect(masterGain);
+    osc.start(); osc.stop(curTime + CARD_PICKUP_SEC);
+  }
+
+  function playCardDrop() {
+    ensure(); calls.cardDrop++; dbg();
+    if (!ensureLive()) return;
+    const curTime = ctx.currentTime || 0;
+    const osc = ctx.createOscillator();
+    osc.type = 'triangle';
+    if (osc.frequency && osc.frequency.setValueAtTime && osc.frequency.exponentialRampToValueAtTime) {
+      osc.frequency.setValueAtTime(CARD_DROP_FREQ_START, curTime);
+      osc.frequency.exponentialRampToValueAtTime(CARD_DROP_FREQ_END, curTime + CARD_DROP_SEC);
+    } else if (osc.frequency) {
+      osc.frequency.value = CARD_DROP_FREQ_START;
+    }
+    const g = ctx.createGain();
+    g.gain.value = CARD_DROP_GAIN;
+    if (g.gain && g.gain.exponentialRampToValueAtTime) {
+      g.gain.exponentialRampToValueAtTime(CARD_DROP_END_GAIN, curTime + CARD_DROP_SEC);
+    }
+    osc.connect(g); g.connect(masterGain);
+    osc.start(); osc.stop(curTime + CARD_DROP_SEC);
+  }
+
   function setMuted(v) {
     muted = !!v;
     if (masterGain) masterGain.gain.value = masterGainValue(muted, volume);
@@ -457,6 +501,7 @@ export function createSoundEngine({
 
   return {
     ensure, playKeyClick, playStep, playMeetingChime, playTaskDone, playTaskFail, playTaskUrgent, playSelect,
+    playCardPickup, playCardDrop,
     previewAmbience, startAmbience: () => setAmbienceEnabled(true), stopAmbience: () => setAmbienceEnabled(false),
     setAmbienceEnabled, isAmbienceEnabled: () => ambienceEnabled,
     setAmbienceVolume, getAmbienceVolume: () => ambienceVolume,

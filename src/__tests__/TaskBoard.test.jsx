@@ -235,6 +235,8 @@ describe('TaskBoard', () => {
       playTaskDone: vi.fn(),
       playTaskUrgent: vi.fn(),
       playSelect: vi.fn(),
+      playCardPickup: vi.fn(),
+      playCardDrop: vi.fn(),
     }
     window.__officeSound = soundMock
 
@@ -263,6 +265,7 @@ describe('TaskBoard', () => {
     }
     fireEvent.dragStart(card, { dataTransfer })
     expect(dataTransfer.getData('text/plain')).toBe('2')
+    expect(soundMock.playCardPickup).toHaveBeenCalled()
 
     // Simulasikan dragover pada kolom Selesai
     fireEvent.dragOver(doneCol, { dataTransfer })
@@ -279,8 +282,14 @@ describe('TaskBoard', () => {
     delete window.__officeSound
   })
 
-  it('tombol quick move di dalam modal detail memindahkan kolom task secara instan', async () => {
+  it('tombol quick move di dalam modal detail memindahkan kolom task secara instan & audio playCardDrop', async () => {
     const onFlash = vi.fn()
+    const soundMock = {
+      playTaskDone: vi.fn(),
+      playCardDrop: vi.fn(),
+      playSelect: vi.fn(),
+    }
+    window.__officeSound = soundMock
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks }) })))
     render(<TaskBoard onFlash={onFlash} onAsk={() => {}} />)
     fireEvent.click(screen.getByText('Papan'))
@@ -302,6 +311,8 @@ describe('TaskBoard', () => {
     fireEvent.click(moveRunningBtn)
 
     expect(onFlash).toHaveBeenCalledWith(expect.stringContaining('Task #2 dipindahkan ke kolom Sedang Jalan'))
+    expect(soundMock.playCardDrop).toHaveBeenCalled()
+    delete window.__officeSound
   })
 
   it('mengklik tombol urgent quick filter memicu audio playTaskUrgent', async () => {

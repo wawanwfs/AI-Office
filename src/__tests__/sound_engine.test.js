@@ -10,6 +10,8 @@ import {
   TASK_FAIL_FREQS, TASK_FAIL_DELAY_SEC, TASK_FAIL_GAIN, TASK_FAIL_END_GAIN, TASK_FAIL_TONE_SEC,
   TASK_URGENT_FREQS, TASK_URGENT_GAIN, TASK_URGENT_END_GAIN, TASK_URGENT_TONE_SEC,
   SELECT_FREQ, SELECT_GAIN, SELECT_END_GAIN, SELECT_SEC, DEFAULT_VOLUME,
+  CARD_PICKUP_FREQ_START, CARD_PICKUP_FREQ_END, CARD_PICKUP_GAIN, CARD_PICKUP_END_GAIN, CARD_PICKUP_SEC,
+  CARD_DROP_FREQ_START, CARD_DROP_FREQ_END, CARD_DROP_GAIN, CARD_DROP_END_GAIN, CARD_DROP_SEC,
   keyclickFreq, stepEnvelope,
 } from '../scene/parts/sound_spec.js';
 
@@ -44,7 +46,12 @@ function makeCtx(state = 'running') {
     createOscillator: () => {
       const o = {
         type: '',
-        frequency: { value: 0 },
+        frequency: {
+          value: 0,
+          ramps: [],
+          setValueAtTime: vi.fn(function(v) { this.value = v; }),
+          exponentialRampToValueAtTime: vi.fn(function(v, t) { this.ramps.push([v, t]); this.value = v; }),
+        },
         connectedTo: null,
         started: false,
         stoppedAt: null,
@@ -118,7 +125,7 @@ describe('sound engine runtime', () => {
     const snap = eng.dbg();
     expect(snap.started).toBe(false);
     expect(snap.state).toBe('none');
-    expect(snap.calls).toEqual({ key: 0, step: 0, chime: 0, taskDone: 0, taskFail: 0, select: 0, taskUrgent: 0, ambience: 0 });
+    expect(snap.calls).toEqual({ key: 0, step: 0, chime: 0, taskDone: 0, taskFail: 0, select: 0, taskUrgent: 0, cardPickup: 0, cardDrop: 0, ambience: 0 });
     expect(snap.volume).toBe(DEFAULT_VOLUME);
     expect(eng.isMuted()).toBe(false);
   });
@@ -206,7 +213,7 @@ describe('sound engine runtime', () => {
     expect(() => eng.playKeyClick(Math.random)).not.toThrow();
     expect(() => eng.playStep()).not.toThrow();
     expect(() => eng.playMeetingChime()).not.toThrow();
-    expect(eng.dbg().calls).toEqual({ key: 1, step: 1, chime: 1, taskDone: 0, taskFail: 0, select: 0, taskUrgent: 0, ambience: 0 });
+    expect(eng.dbg().calls).toEqual({ key: 1, step: 1, chime: 1, taskDone: 0, taskFail: 0, select: 0, taskUrgent: 0, cardPickup: 0, cardDrop: 0, ambience: 0 });
     expect(eng.isStarted()).toBe(true);
     const osc = ctx.__log.osc[0];
     expect(gainChain(osc).g.connectedTo.connectedTo).toBe(ctx.destination);
@@ -276,6 +283,36 @@ describe('sound engine runtime', () => {
     expect(g.gain.value).toBe(SELECT_GAIN);
     expect(osc.stoppedAt).toBeCloseTo(SELECT_SEC, 10);
     expect(eng.dbg().calls.select).toBe(1);
+  });
+
+  it('playCardPickup: sine chirp naik 340->520 Hz, gain 0.018->0.0005, durasi 0.045s', () => {
+    const { eng, ctx } = makeEngine();
+    eng.playCardPickup();
+    expect(ctx.__log.osc).toHaveLength(1);
+    const osc = ctx.__log.osc[0];
+    expect(osc.type).toBe('sine');
+    expect(osc.frequency.setValueAtTime).toHaveBeenCalledWith(CARD_PICKUP_FREQ_START, ctx.currentTime);
+    expect(osc.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(CARD_PICKUP_FREQ_END, ctx.currentTime + CARD_PICKUP_SEC);
+    const { g } = gainChain(osc);
+    expect(g.gain.value).toBe(CARD_PICKUP_GAIN);
+    expect(g.gain.ramps[0]).toEqual([CARD_PICKUP_END_GAIN, ctx.currentTime + CARD_PICKUP_SEC]);
+    expect(osc.stoppedAt).toBeCloseTo(CARD_PICKUP_SEC, 10);
+    expect(eng.dbg().calls.cardPickup).toBe(1);
+  });
+
+  it('playCardDrop: triangle thud turun 420->210 Hz, gain 0.022->0.0005, durasi 0.055s', () => {
+    const { eng, ctx } = makeEngine();
+    eng.playCardDrop();
+    expect(ctx.__log.osc).toHaveLength(1);
+    const osc = ctx.__log.osc[0];
+    expect(osc.type).toBe('triangle');
+    expect(osc.frequency.setValueAtTime).toHaveBeenCalledWith(CARD_DROP_FREQ_START, ctx.currentTime);
+    expect(osc.frequency.exponentialRampToValueAtTime).toHaveBeenCalledWith(CARD_DROP_FREQ_END, ctx.currentTime + CARD_DROP_SEC);
+    const { g } = gainChain(osc);
+    expect(g.gain.value).toBe(CARD_DROP_GAIN);
+    expect(g.gain.ramps[0]).toEqual([CARD_DROP_END_GAIN, ctx.currentTime + CARD_DROP_SEC]);
+    expect(osc.stoppedAt).toBeCloseTo(CARD_DROP_SEC, 10);
+    expect(eng.dbg().calls.cardDrop).toBe(1);
   });
 
   it('setVolume: mengubah gain master saat unmuted, tetap 0 saat muted', () => {
