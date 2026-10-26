@@ -32,6 +32,7 @@ import {
   getNextAmbiencePreset,
   formatAmbiencePercent,
 } from './scene/parts/sound_spec.js'
+import { resolveShortcutAction } from './scene/parts/shortcut_spec.js'
 
 const CsWidget = lazy(() => import('./components/CsWidget'))
 
@@ -364,29 +365,43 @@ export default function App() {
   // ---- shortcut keyboard (abaikan saat fokus di input/textarea/modal) ----
   useEffect(() => {
     const onKey = (e) => {
-      const t = e.target
-      if (t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.tagName === 'SELECT' || t.isContentEditable)) return
-      if (e.ctrlKey || e.metaKey || e.altKey) return
-      if (showTask || confirm || ask || showHelp || showSettings || showLog || selectedAgent || anyModalOpen()) return
-      const k = e.key.toLowerCase()
-      if (k === 'm') { e.preventDefault(); toggleMuteRef.current() }
-      else if (k === 'o') { e.preventDefault(); setShowSettings(v => !v) }
-      else if (k === 'l') { e.preventDefault(); setShowLog(v => !v) }
-      else if (k === 'h' || k === '?') { e.preventDefault(); setShowHelp(v => !v) }
-      else if (k === 'n') { e.preventDefault(); handleCyberpunk() }
-      else if (e.shiftKey && (e.code === 'Digit1' || k === '!' || k === '1')) {
+      const modalOpen = Boolean(showTask || confirm || ask || showHelp || showSettings || showLog || selectedAgent || anyModalOpen())
+      const action = resolveShortcutAction(e, { modalOpen })
+      if (!action) return
+
+      const actType = typeof action === 'string' ? action : action.type
+
+      if (actType === 'TOGGLE_MUTE') {
         e.preventDefault()
-        handleFloorSelect(1, 'l1')
-      }
-      else if (e.shiftKey && (e.code === 'Digit2' || k === '@' || k === '2')) {
+        toggleMuteRef.current()
+      } else if (actType === 'TOGGLE_SETTINGS') {
         e.preventDefault()
-        handleFloorSelect(2, 'l2')
-      }
-      else if (e.shiftKey && (e.code === 'Digit3' || k === '#' || k === '3')) {
+        setShowSettings(v => !v)
+      } else if (actType === 'TOGGLE_LOG') {
         e.preventDefault()
-        handleFloorSelect(3, 'l3')
-      }
-      else if (k === '[' || k === '{') {
+        setShowLog(v => !v)
+      } else if (actType === 'TOGGLE_HELP') {
+        e.preventDefault()
+        setShowHelp(v => !v)
+      } else if (actType === 'TOGGLE_NEON') {
+        e.preventDefault()
+        handleCyberpunk()
+      } else if (actType === 'TOGGLE_TASK_BOARD') {
+        e.preventDefault()
+        window.dispatchEvent(new CustomEvent('wfs-toggle-task-board'))
+      } else if (actType === 'TOGGLE_PROJECT_PANEL') {
+        e.preventDefault()
+        window.dispatchEvent(new CustomEvent('wfs-toggle-project-panel'))
+      } else if (actType === 'TOGGLE_AMBIENCE') {
+        e.preventDefault()
+        toggleAmbience(e)
+      } else if (actType === 'CYCLE_AMBIENCE_VOLUME') {
+        e.preventDefault()
+        cycleAmbienceVolume()
+      } else if (actType === 'FOCUS_FLOOR') {
+        e.preventDefault()
+        handleFloorSelect(action.floor, `l${action.floor}`)
+      } else if (actType === 'CYCLE_FLOOR_PREV') {
         e.preventDefault()
         setCurrentFloor(prev => {
           const next = prev <= 1 ? 3 : prev - 1
@@ -396,8 +411,7 @@ export default function App() {
           flash(`Fokus ke Lantai ${next}`)
           return next
         })
-      }
-      else if (k === ']' || k === '}') {
+      } else if (actType === 'CYCLE_FLOOR_NEXT') {
         e.preventDefault()
         setCurrentFloor(prev => {
           const next = prev >= 3 ? 1 : prev + 1
@@ -407,32 +421,38 @@ export default function App() {
           flash(`Fokus ke Lantai ${next}`)
           return next
         })
-      }
-      else if (k === '1' || k === '2' || k === '3') {
+      } else if (actType === 'SET_VIEW') {
         e.preventDefault()
         const s = sceneRef.current
-        if (s && s.setView) s.setView(k === '1' ? 'iso' : k === '2' ? 'front' : 'top')
-      }
-      else if (k === '0') {
+        if (s && s.setView) s.setView(action.view)
+      } else if (actType === 'RESET_CAMERA') {
         e.preventDefault()
         setCurrentFloor(1)
         const s = sceneRef.current
         if (s && s.setView) { s.setView('iso'); if (s.resetFocus) s.resetFocus() }
-      }
-      else if (k === 'k') { e.preventDefault(); amRef.current?.toggleNames() }
-      else if (k === 'r') { e.preventDefault(); amRef.current?.toggleRotate() }
-      else if (k === 'f') {
+      } else if (actType === 'TOGGLE_NAMES') {
+        e.preventDefault()
+        amRef.current?.toggleNames()
+      } else if (actType === 'TOGGLE_ROTATE') {
+        e.preventDefault()
+        amRef.current?.toggleRotate()
+      } else if (actType === 'TOGGLE_FULLSCREEN') {
         e.preventDefault()
         const d = document
         if (d.fullscreenElement) { d.exitFullscreen?.() } else { d.documentElement.requestFullscreen?.().catch(() => flash('Fullscreen ditolak browser', true)) }
+      } else if (actType === 'ZOOM_IN') {
+        zoom(1)
+      } else if (actType === 'ZOOM_OUT') {
+        zoom(-1)
+      } else if (actType === 'ESCAPE') {
+        setShowLog(false)
+        setShowHelp(false)
+        setShowSettings(false)
       }
-      else if (k === '+' || k === '=') zoom(1)
-      else if (k === '-') zoom(-1)
-      else if (k === 'escape') { setShowLog(false); setShowHelp(false); setShowSettings(false) }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [showTask, confirm, ask, showHelp, showSettings, showLog, selectedAgent, handleCyberpunk, handleFloorSelect, zoom, flash, amRef])
+  }, [showTask, confirm, ask, showHelp, showSettings, showLog, selectedAgent, handleCyberpunk, handleFloorSelect, zoom, flash, amRef, toggleAmbience, cycleAmbienceVolume])
 
   // ---- Pause / Resume nyata (konfirmasi dulu) ----
   const doConfirm = async () => {

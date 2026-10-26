@@ -1,6 +1,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react'
 import { useDialogA11y } from '../lib/dialogA11y'
 import { IconClose } from './Icons'
+import { formatShortcutHelpSummary } from '../scene/parts/shortcut_spec'
 
 const STEPS = [
   { title: 'Navigasi 3D', text: 'Tarik untuk memutar, scroll / cubit untuk zoom, atau pakai tombol 🔍＋ / 🔍－. Geser slider untuk mengubah waktu.' },
@@ -8,7 +9,7 @@ const STEPS = [
   { title: 'Aksi Tim', text: 'Tombol ⚡ Aksi Tim: kumpulkan meeting, coffee break, kembali kerja, atau office tour.' },
   { title: 'Task', text: '＋ Task membuat task baru, ⏸ Jeda menghentikan semua task yang berjalan, ▶ Lanjut menjalankan ulang task yang menunggu.' },
   { title: 'Warna Badge', text: 'Warna dada karakter = status task: hijau selesai, kuning berjalan, merah gagal, biru review.' },
-  { title: 'Shortcut Keyboard', text: 'M = mute suara · O = pengaturan kantor · N = mode neon · K = nama agent · R = putar otomatis · L = log aktivitas · H = bantuan ini · 1 / 2 / 3 = kamera Iso/Depan/Atas · Shift+1/2/3 atau [ / ] = navigasi Lantai 1-3 · 0 = reset kamera · + / − = zoom · F = fullscreen · Esc = tutup panel.' },
+  { title: 'Shortcut Keyboard', text: formatShortcutHelpSummary() },
 ]
 
 export default function OverlayHelp({ show, onClose }) {

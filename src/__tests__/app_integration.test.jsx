@@ -158,6 +158,45 @@ describe('App — integrasi UI', () => {
     expect(screen.getByRole('button', { name: 'Nyalakan suara' })).toBeTruthy()
   })
 
+  it('shortcut "t" toggle Papan Task (TaskBoard) membuka dan menutup panel', async () => {
+    stubFetch([])
+    render(<App />)
+    expect(screen.queryByRole('dialog', { name: 'Papan task' })).toBeNull()
+    fireEvent.keyDown(window, { key: 't' })
+    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Papan task' })).toBeTruthy())
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Papan task' })).toBeNull())
+  })
+
+  it('shortcut "p" toggle Papan Proyek (ProjectPanel) membuka dan menutup panel', async () => {
+    stubFetch([])
+    render(<App />)
+    expect(screen.queryByRole('dialog', { name: 'Proyek dibantuin.com' })).toBeNull()
+    fireEvent.keyDown(window, { key: 'p' })
+    await waitFor(() => expect(screen.getByRole('dialog', { name: 'Proyek dibantuin.com' })).toBeTruthy())
+    fireEvent.keyDown(document, { key: 'Escape' })
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Proyek dibantuin.com' })).toBeNull())
+  })
+
+  it('shortcut "a" toggle Ambience hum kantor dan Shift+"A" siklus volume preset', async () => {
+    stubFetch([])
+    render(<App />)
+    const ambBtn = screen.getByRole('button', { name: /Ambience hum kantor/i })
+    expect(ambBtn.getAttribute('aria-pressed')).toBe('false')
+
+    // Tekan 'a' -> nyala
+    fireEvent.keyDown(window, { key: 'a' })
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: /Ambience hum kantor aktif/i })).toBeTruthy()
+    })
+
+    // Tekan Shift+'A' -> ganti volume preset
+    fireEvent.keyDown(window, { key: 'A', shiftKey: true })
+    await waitFor(() => {
+      expect(screen.getByText(/Volume ambience kantor:/)).toBeTruthy()
+    })
+  })
+
   it('judul tab dinamis mengikuti status gateway', async () => {
     stubFetch([])
     render(<App />)

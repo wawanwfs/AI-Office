@@ -31,8 +31,13 @@ export default function ProjectPanel() {
 
   useEffect(() => {
     const handleOpen = () => setOpen(true)
+    const handleToggle = () => setOpen(v => !v)
     window.addEventListener('wfs-open-project-panel', handleOpen)
-    return () => window.removeEventListener('wfs-open-project-panel', handleOpen)
+    window.addEventListener('wfs-toggle-project-panel', handleToggle)
+    return () => {
+      window.removeEventListener('wfs-open-project-panel', handleOpen)
+      window.removeEventListener('wfs-toggle-project-panel', handleToggle)
+    }
   }, [])
 
   useEffect(() => {
@@ -51,7 +56,7 @@ export default function ProjectPanel() {
 
   return (
     <>
-      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="project-panel" aria-label="Proyek dibantuin.com" title="Ringkasan proyek live dibantuin.com">
+      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="project-panel" aria-label="Proyek dibantuin.com" title="Ringkasan proyek live dibantuin.com — shortcut P">
         <span className="ic"><IconRocket size={19} /><span className="sr-only">🚀</span></span><span className="lb">Proyek</span>
       </button>
       {open && (

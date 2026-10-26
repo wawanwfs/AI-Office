@@ -569,4 +569,24 @@ describe('TaskBoard', () => {
     expect(screen.getByText(/Frontend UI/)).toBeTruthy();
     expect(screen.queryByText(/Auth Service/)).toBeNull();
   });
+
+  it('event kustom wfs-toggle-task-board melakukan toggle buka dan tutup papan task', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: [] }) })));
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />);
+
+    expect(screen.queryByRole('dialog', { name: 'Papan task' })).toBeNull();
+
+    // Toggle buka
+    act(() => {
+      window.dispatchEvent(new CustomEvent('wfs-toggle-task-board'));
+    });
+    await waitFor(() => screen.getByRole('dialog', { name: 'Papan task' }));
+    expect(screen.getByRole('dialog', { name: 'Papan task' })).toBeTruthy();
+
+    // Toggle tutup
+    act(() => {
+      window.dispatchEvent(new CustomEvent('wfs-toggle-task-board'));
+    });
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Papan task' })).toBeNull());
+  });
 });

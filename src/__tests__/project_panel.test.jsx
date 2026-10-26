@@ -4,7 +4,7 @@
 // TIDAK diubah; fetch di-stub penuh lewat vi.stubGlobal.
 import React from 'react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react'
 import ProjectPanel from '../components/ProjectPanel'
 
 const DATA = {
@@ -134,5 +134,24 @@ describe('ProjectPanel', () => {
     await waitFor(() => expect(screen.getByText(/#e8e731a4 Develop: WFS Project 31A4/)).toBeTruthy())
     const row = screen.getByText(/#e8e731a4 Develop: WFS Project 31A4/).closest('button')
     expect(row.textContent).toContain('✓')
+  })
+
+  it('event kustom wfs-toggle-project-panel melakukan toggle buka dan tutup panel', async () => {
+    mockOk()
+    render(<ProjectPanel />)
+    expect(screen.queryByRole('dialog', { name: 'Proyek dibantuin.com' })).toBeNull()
+
+    // Toggle buka
+    act(() => {
+      window.dispatchEvent(new CustomEvent('wfs-toggle-project-panel'))
+    })
+    await waitFor(() => screen.getByRole('dialog', { name: 'Proyek dibantuin.com' }))
+    expect(screen.getByRole('dialog', { name: 'Proyek dibantuin.com' })).toBeTruthy()
+
+    // Toggle tutup
+    act(() => {
+      window.dispatchEvent(new CustomEvent('wfs-toggle-project-panel'))
+    })
+    await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Proyek dibantuin.com' })).toBeNull())
   })
 })

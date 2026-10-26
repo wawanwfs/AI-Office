@@ -188,12 +188,12 @@ export function getAmbienceStatusLabel({ enabled = false, muted = false, volume 
 
 export function getAmbienceTooltip({ enabled = false, muted = false, volume = DEFAULT_AMBIENCE_VOLUME } = {}) {
   if (muted) {
-    return 'Suara kantor dibisukan — Klik untuk aktifkan/unmute, Klik kanan untuk pengaturan audio';
+    return 'Suara kantor dibisukan — Klik atau tekan A untuk aktifkan/unmute, Klik kanan untuk pengaturan audio';
   }
   if (!enabled) {
-    return 'Ambience Hum Kantor Nonaktif — Klik untuk nyalakan desir AC/server kantor, Klik kanan untuk atur';
+    return 'Ambience Hum Kantor Nonaktif (Shortcut A) — Klik untuk nyalakan desir AC/server kantor, Klik kanan untuk atur';
   }
-  return `Ambience Hum Kantor Aktif (${formatAmbiencePercent(volume)}) — Klik untuk matikan, Shift+Klik untuk siklus volume, Klik kanan untuk atur`;
+  return `Ambience Hum Kantor Aktif (${formatAmbiencePercent(volume)}) (Shortcut A / Shift+A) — Klik untuk matikan, Shift+Klik untuk siklus volume, Klik kanan untuk atur`;
 }
 
 export function getAmbienceAriaLabel({ enabled = false, muted = false, volume = DEFAULT_AMBIENCE_VOLUME } = {}) {

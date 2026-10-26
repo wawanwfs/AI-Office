@@ -123,6 +123,20 @@ export default function TaskBoard({ onFlash, onAsk }) {
   }, [tasks])
 
   useEffect(() => {
+    const handleToggle = () => {
+      setOpen(prev => {
+        if (prev) {
+          setSel(null)
+          return false
+        }
+        return true
+      })
+    }
+    window.addEventListener('wfs-toggle-task-board', handleToggle)
+    return () => window.removeEventListener('wfs-toggle-task-board', handleToggle)
+  }, [])
+
+  useEffect(() => {
     if (!open) return
     const ac = new AbortController()
     const t0 = setTimeout(() => load(ac.signal), 0)
@@ -239,7 +253,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
 
   return (
     <>
-      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="task-board" aria-label="Papan task" title="Papan task (Kanban)">
+      <button className="ibtn" onClick={() => setOpen(v => !v)} aria-expanded={open} aria-controls="task-board" aria-label="Papan task" title="Papan task (Kanban) — shortcut T">
         <span className="ic"><IconBoard size={19} /><span className="sr-only">📋</span></span>
         <span className="lb">Papan</span>
       </button>
