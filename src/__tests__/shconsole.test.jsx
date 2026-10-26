@@ -182,4 +182,25 @@ describe('ShConsole — konsol software house', () => {
     fireEvent.keyDown(document, { key: 'Escape' })
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it('a11y: tab aktif menyatakan state tertekan (aria-pressed)', async () => {
+    stubFetch({ '/wfs-api/sh/overview': OV, '/wfs-api/projects': PROJ_RESP })
+    render(<ShConsole show onClose={() => {}} />)
+    const overviewTab = screen.getByRole('button', { name: 'Tab Overview' })
+    const projectsTab = screen.getByRole('button', { name: 'Tab Projects' })
+    expect(overviewTab.getAttribute('aria-pressed')).toBe('true')
+    expect(projectsTab.getAttribute('aria-pressed')).toBe('false')
+    clickTab('Projects')
+    expect(projectsTab.getAttribute('aria-pressed')).toBe('true')
+    expect(overviewTab.getAttribute('aria-pressed')).toBe('false')
+  })
+
+  it('Overview tahan response tanpa recent_logs (guard null-safe)', async () => {
+    const partial = { ...OV }
+    delete partial.recent_logs
+    stubFetch({ '/wfs-api/sh/overview': partial })
+    render(<ShConsole show onClose={() => {}} />)
+    expect(await screen.findByText('Belum ada log.')).toBeTruthy()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
 })

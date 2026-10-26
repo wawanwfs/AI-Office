@@ -175,7 +175,7 @@ export default function ShConsole({ show, onClose }) {
         </div>
         <div style={STYLE.tabbar}>
           {[['overview', 'Overview'], ['projects', 'Projects'], ['tasks', 'Tasks'], ['agents', 'Agents'], ['ws', 'Workspace'], ['approvals', 'Approvals'], ['new', 'Project Baru']].map(([k, label]) => (
-            <button key={k} aria-label={'Tab ' + label} style={{ ...STYLE.tab, ...(tab === k ? STYLE.tabActive : {}) }} onClick={() => setTab(k)}>{label}</button>
+            <button key={k} aria-label={'Tab ' + label} aria-pressed={tab === k} style={{ ...STYLE.tab, ...(tab === k ? STYLE.tabActive : {}) }} onClick={() => setTab(k)}>{label}</button>
           ))}
         </div>
         <div style={STYLE.body}>
@@ -384,8 +384,8 @@ function Overview({ ov }) {
       </div>
       <div style={STYLE.card}>
         <div style={{ fontWeight: 700, marginBottom: 8 }}>Log terbaru</div>
-        {ov.recent_logs.length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>Belum ada log.</div>}
-        {ov.recent_logs.map((l, i) => (
+        {(ov.recent_logs || []).length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>Belum ada log.</div>}
+        {(ov.recent_logs || []).map((l, i) => (
           <div key={i} style={STYLE.logLine}><b>{l.level}</b> · {l.message} <span style={{ color: '#5f6f90' }}>({l.source})</span></div>
         ))}
       </div>
