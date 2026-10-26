@@ -9,7 +9,7 @@ from typing import Optional
 import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import Response
+from fastapi.responses import Response, StreamingResponse
 from pydantic import BaseModel
 
 BASE = pathlib.Path(__file__).parent
@@ -144,6 +144,43 @@ def health():
 def software_house_overview():
     """Ringkasan dashboard owner — angka nyata dari state SQLite."""
     return sh_db.get_overview()
+
+
+async def _event_stream():
+    """Server-Sent Events: stream log eksekusi baru secara real-time."""
+    last_id = 0
+    try:
+        conn = sh_db.get_db()
+        cur = conn.execute("SELECT COALESCE(MAX(id),0) FROM execution_logs")
+        last_id = cur.fetchone()[0] or 0
+        conn.close()
+    except Exception:
+        pass
+    yield "data: " + json.dumps({"type": "connected", "software_house": "WFS PROJECT"}) + "\n\n"
+    while True:
+        try:
+            conn = sh_db.get_db()
+            rows = conn.execute(
+                "SELECT id, message, level, source, project_id, created_at FROM execution_logs "
+                "WHERE id > ? ORDER BY id ASC LIMIT 20", (last_id,)).fetchall()
+            conn.close()
+            for r in rows:
+                last_id = r[0]
+                evt = {"type": "log", "data": {
+                    "id": r[0], "message": r[1], "level": r[2],
+                    "source": r[3], "project_id": r[4], "created_at": r[5]}}
+                yield "data: " + json.dumps(evt) + "\n\n"
+            await asyncio.sleep(1)
+        except asyncio.CancelledError:
+            break
+        except Exception:
+            await asyncio.sleep(1)
+
+
+@app.get("/api/events")
+async def api_events():
+    return StreamingResponse(_event_stream(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "Connection": "keep-alive"})
 
 
 @app.api_route("/preview/{slug}/{path:path}", methods=["GET", "POST", "PUT", "DELETE"])

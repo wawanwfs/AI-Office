@@ -59,6 +59,7 @@ export default function ShConsole({ show, onClose }) {
   const [approvals, setApprovals] = useState([])
   const [gitMsg, setGitMsg] = useState('')
   const [tFilter, setTFilter] = useState('')
+  const [liveLogs, setLiveLogs] = useState([])
   const drawerRef = useRef(null)
 
   const loadOverview = useCallback(async () => {
@@ -111,7 +112,19 @@ export default function ShConsole({ show, onClose }) {
     if (tab === 'overview') {
       loadOverview()
       const iv = setInterval(loadOverview, 10000)
-      return () => clearInterval(iv)
+      let es = null
+      if (typeof EventSource !== 'undefined') {
+        try {
+          es = new EventSource('/wfs-api/events')
+          es.onmessage = (ev) => {
+            try {
+              const j = JSON.parse(ev.data)
+              if (j.type === 'log' && j.data) setLiveLogs((p) => [j.data, ...p].slice(0, 30))
+            } catch { /* abaikan */ }
+          }
+        } catch { /* EventSource tidak tersedia */ }
+      }
+      return () => { clearInterval(iv); if (es) es.close() }
     }
     if (tab === 'projects') loadProjects()
     else if (tab === 'tasks') { loadTasks(tFilter); if (projects.length === 0) loadProjects() }
@@ -205,7 +218,7 @@ export default function ShConsole({ show, onClose }) {
         </div>
         <div style={STYLE.body}>
           {err && <div style={STYLE.err} role="alert">⚠ {err}</div>}
-          {tab === 'overview' && <Overview ov={ov} />}
+          {tab === 'overview' && <Overview ov={ov} liveLogs={liveLogs} />}
           {tab === 'projects' && <Projects projects={projects} onRefresh={loadProjects} onOpenWorkspace={(pid) => { setTab('ws'); selectWsProject(pid) }} />}
           {tab === 'tasks' && (
             <div>
@@ -392,7 +405,7 @@ export default function ShConsole({ show, onClose }) {
   )
 }
 
-function Overview({ ov }) {
+function Overview({ ov, liveLogs }) {
   if (!ov) return <p style={{ color: '#8fa2c4' }}>Memuat statistik…</p>
   const stats = [
     ['Projects', ov.projects], ['Task total', ov.tasks],
@@ -421,10 +434,10 @@ function Overview({ ov }) {
         ))}
       </div>
       <div style={STYLE.card}>
-        <div style={{ fontWeight: 700, marginBottom: 8 }}>Log terbaru</div>
-        {(ov.recent_logs || []).length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>Belum ada log.</div>}
-        {(ov.recent_logs || []).map((l, i) => (
-          <div key={i} style={STYLE.logLine}><b>{l.level}</b> · {l.message} <span style={{ color: '#5f6f90' }}>({l.source})</span></div>
+        <div style={{ fontWeight: 700, marginBottom: 8 }}>Log terbaru <span style={{ color: '#5f6f90', fontWeight: 400, fontSize: 11 }}>(realtime)</span></div>
+        {(liveLogs && liveLogs.length) ? null : (ov.recent_logs || []).length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>Belum ada log.</div>}
+        {(liveLogs && liveLogs.length ? liveLogs : (ov.recent_logs || [])).map((l, i) => (
+          <div key={i} style={STYLE.logLine}><b>{l.level || 'INFO'}</b> · {l.message} <span style={{ color: '#5f6f90' }}>({l.source || 'system'})</span></div>
         ))}
       </div>
     </div>

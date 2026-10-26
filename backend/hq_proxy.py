@@ -132,10 +132,38 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(msg)
 
+    def _proxy_stream(self):
+        """Streaming passthrough untuk SSE /wfs-api/events (jangan buffering)."""
+        import urllib.request
+        try:
+            r = urllib.request.urlopen(urllib.request.Request("http://127.0.0.1:8787/api/events"), timeout=10)
+            self.send_response(r.status)
+            self.send_header("Content-Type", r.headers.get("Content-Type") or "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.end_headers()
+            while True:
+                chunk = r.read(4096)
+                if not chunk:
+                    break
+                self.wfile.write(chunk)
+                self.wfile.flush()
+        except Exception:
+            try:
+                msg = json.dumps({"error": "stream failed"}).encode()
+                self.send_response(502)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(msg)))
+                self.end_headers()
+                self.wfile.write(msg)
+            except Exception:
+                pass
+
     def do_GET(self):
         if project_api and self.path.split("?")[0] == "/wfs-project":
             return project_api.handle_project(self)
         if self.path.startswith("/wfs-api/"):
+            if self.path == "/wfs-api/events":
+                return self._proxy_stream()
             return self._proxy()
         if self.path.startswith("/preview/"):
             return self._proxy_preview()
