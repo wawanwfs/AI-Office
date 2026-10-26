@@ -13,6 +13,12 @@ describe('agentIdMap (murni, diekstrak pollRunning)', () => {
   it('list kosong → kosong', () => {
     expect(agentIdMap([])).toEqual({});
   });
+  it('entri null/undefined atau tanpa nama diabaikan (guard anti-throw)', () => {
+    expect(agentIdMap([null, undefined, { id: 'be1' }])).toEqual({});
+  });
+  it('entri nama tanpa id dipetakan ke undefined (tidak melempar)', () => {
+    expect(agentIdMap([{ name: 'Budi' }])).toEqual({ Budi: undefined });
+  });
 });
 
 describe('buildRunningByAgent (murni, diekstrak pollRunning)', () => {
@@ -119,5 +125,25 @@ describe('resolveAgentId (resolusi identitas agen & gateway ID)', () => {
   it('null/kosong mengembalikan null', () => {
     expect(resolveAgentId(null, null)).toBeNull();
     expect(resolveAgentId('', null)).toBeNull();
+  });
+
+  it('cabang object-map: lookup kunci tepat (clean)', () => {
+    expect(resolveAgentId('Budi', { 'Budi': 'be1' })).toBe('be1');
+  });
+
+  it('cabang object-map: lookup case-insensitive (uppercase)', () => {
+    expect(resolveAgentId('budi', { 'BUDI': 'be1' })).toBe('be1');
+  });
+
+  it('cabang object-map: lookup kata pertama (first)', () => {
+    expect(resolveAgentId('Budi Santoso', { 'BUDI': 'be1' })).toBe('be1');
+  });
+
+  it('cabang object-map: menang atas fallback SCENE_NAME_TO_ID', () => {
+    expect(resolveAgentId('BUDI', { 'BUDI': 'custom-01' })).toBe('custom-01');
+  });
+
+  it('cabang object-map: tanpa kecocokan → fallback SCENE_NAME_TO_ID', () => {
+    expect(resolveAgentId('BUDI', { 'nope': 'z' })).toBe('be1');
   });
 });
