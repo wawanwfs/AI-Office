@@ -5,7 +5,7 @@ import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-libra
 import TaskBoard from '../components/TaskBoard'
 
 const tasks = [
-  { id: 1, title: 'Buat login', agent_id: 'be1', status: 'done', role: 'be' },
+  { id: 1, title: 'Buat login', agent_id: 'be1', status: 'done', role: 'be', files: "['auth.js']", review: 'Pass review' },
   { id: 2, title: 'Halaman admin', agent_id: 'fe1', status: 'pending', role: 'fe' },
 ]
 
@@ -79,6 +79,10 @@ describe('TaskBoard', () => {
     expect(screen.getByRole('region', { name: 'Kolom Sedang Jalan' })).toBeTruthy()
     expect(screen.getByRole('region', { name: 'Kolom Review / Isu' })).toBeTruthy()
     expect(screen.getByRole('region', { name: 'Kolom Selesai' })).toBeTruthy()
+
+    // Kartu dengan file & review memiliki badge khusus
+    expect(screen.getByTitle('1 file dihasilkan')).toBeTruthy()
+    expect(screen.getByTitle('Ada ulasan QA')).toBeTruthy()
 
     // Klik kartu di kanban membuka detail task
     const card = screen.getByRole('button', { name: /Task #2: Halaman admin/ })

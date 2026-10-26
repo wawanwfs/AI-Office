@@ -91,11 +91,45 @@ export default function ProjectPanel() {
                 <label className="note">Task terakhir dikerjakan</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: '6px 0 14px' }}>
                   {(T.recent || []).map(x => (
-                    <div key={x.id} className="note" style={{ display: 'flex', gap: 8, alignItems: 'baseline', color: '#cfd8e3' }}>
+                    <button
+                      key={x.id}
+                      type="button"
+                      className="taskrow"
+                      style={{
+                        display: 'flex',
+                        gap: 8,
+                        alignItems: 'baseline',
+                        color: '#cfd8e3',
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                        borderRadius: 6,
+                        padding: '6px 8px',
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        fontFamily: 'inherit',
+                      }}
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { taskId: x.id, view: 'kanban' } }))
+                      }}
+                      title={`Buka task #${x.id} di papan sprint kanban`}
+                      aria-label={`Task #${x.id}: ${x.title}`}
+                    >
                       <span style={{ color: ST[x.status]?.[1] || '#888', fontWeight: 700 }}>{x.status === 'done' ? '✓' : '•'}</span>
-                      <span style={{ fontSize: 12.5 }}>#{x.id} {x.title}</span>
-                    </div>
+                      <span style={{ fontSize: 12.5, flex: 1 }}>#{x.id} {x.title}</span>
+                    </button>
                   ))}
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12 }}
+                    onClick={() => {
+                      window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { view: 'kanban' } }))
+                    }}
+                    title="Buka seluruh task di Papan Kanban Sprint"
+                    aria-label="Buka seluruh task di Papan Kanban Sprint"
+                  >
+                    <span>📋 Buka Papan Sprint Kanban ↗</span>
+                  </button>
                 </div>
 
                 {/* SaaS live */}

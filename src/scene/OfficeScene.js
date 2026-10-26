@@ -48,7 +48,7 @@ import { looksOf } from './parts/character_looks.js';
 import { AGENTS, AGENTS_EXTRA, allAgents as allAgentsFn } from './parts/agents_spec.js';
 import { EXTENDED_SPECIALISTS } from './parts/extended_desks.js';
 import { DESKS } from './parts/desk_layout.js';
-import { teamPodFocusTarget } from './parts/team_spec.js';
+import { teamPodFocusTarget, findTeamByKey } from './parts/team_spec.js';
 import { meetingFocusTarget, getWhiteboardTooltipText, isWhiteboardHit } from './parts/whiteboard_spec.js';
 import { isLongHair, STANDING, SITTING, accessoryAnchor } from './parts/character_spec.js';
 import { nearbyPairs as nearbyPairsPure, tickCooldown as tickCooldownPure, CHAT_RADIUS, CHAT_COOLDOWN_SEC } from './parts/chat_check.js';
@@ -253,6 +253,17 @@ renderer.domElement&&renderer.domElement.addEventListener('dblclick',e=>{
     __sound.playSelect();
     focusMeetingRoom();
     try { window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { view: 'kanban', source: 'whiteboard' } })); } catch { /* ignore */ }
+    return;
+  }
+  if(hits.length&&((bm&&hits[0].object===bm)||(bf&&(hits[0].object===bf||(bf.getObjectById&&bf.getObjectById(hits[0].object.id)))))){
+    __sound.playSelect();
+    if(homeRadius===null)homeRadius=Math.max(24,Math.min(70,sph.radius));
+    if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
+    const bpos=bm?bm.position:new THREE.Vector3(-8.35,3.8,13.3);
+    focusGoal={t:new THREE.Vector3(bpos.x,bpos.y,13.2),r:8.5};
+    createBubble(bpos.x,bpos.y+2.15,7.8,'“WFS PROJECT Software House — membuka detail proyek…”','#10E5A0');
+    try { window.dispatchEvent(new CustomEvent('wfs-open-project-panel')); } catch { /* ignore */ }
+    selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null);
     return;
   }
   if(hits.length){focusGoal={t:hits[0].point.clone().setY(Math.max(1.5,(hits[0].point.y||0)+0.8)),r:Math.min(sph.radius,18)}}
@@ -1734,6 +1745,11 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       delete sph.__saved;
       const ft = teamPodFocusTarget(teamKey);
       focusGoal = { t: new THREE.Vector3(ft.x, ft.y, ft.z), r: ft.r, phi: ft.phi };
+      const teamObj = findTeamByKey(teamKey);
+      if (teamObj) {
+        __sound.playSelect();
+        createBubble(ft.x, ft.y + 1.8, ft.z, '“Pod ' + teamObj.name + ' (Lt. ' + teamObj.floor + ')”', teamObj.hex || teamObj.color || '#10E5A0');
+      }
       return true;
     },
     focusMeetingRoom: () => {

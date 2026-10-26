@@ -125,15 +125,29 @@ export default function TeamStats() {
                               <span className="team-card-tag">Lt. {team.floor}</span>
                               {team.running > 0 && <span style={{ fontSize: 9.5, padding: '1px 5px', borderRadius: 4, background: 'rgba(245,158,11,.2)', color: '#F59E0B', fontWeight: 700 }}>● {team.running} jalan</span>}
                             </div>
-                            <button
-                              type="button"
-                              className="team-focus-btn"
-                              onClick={(e) => { e.stopPropagation(); if (typeof window !== 'undefined' && window.__focusTeam) window.__focusTeam(team.key) }}
-                              aria-label={`Fokus kamera ke pod ${team.name}`}
-                              title={`Fokus kamera 3D ke pod ${team.name}`}
-                            >
-                              Fokus 3D
-                            </button>
+                            <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                              <button
+                                type="button"
+                                className="team-kanban-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation()
+                                  window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { division: team.key, view: 'kanban' } }))
+                                }}
+                                aria-label={`Buka kanban divisi ${team.name}`}
+                                title={`Buka papan kanban sprint untuk divisi ${team.name}`}
+                              >
+                                Kanban
+                              </button>
+                              <button
+                                type="button"
+                                className="team-focus-btn"
+                                onClick={(e) => { e.stopPropagation(); if (typeof window !== 'undefined' && window.__focusTeam) window.__focusTeam(team.key) }}
+                                aria-label={`Fokus kamera ke pod ${team.name}`}
+                                title={`Fokus kamera 3D ke pod ${team.name}`}
+                              >
+                                Fokus 3D
+                              </button>
+                            </div>
                           </div>
                           <div className="team-progress-bar">
                             <div
@@ -154,12 +168,34 @@ export default function TeamStats() {
                   </div>
                 )}
                 <label className="note" style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}>Task Terkini</label>
-                <div style={{ maxHeight: 150, overflowY: 'auto' }}>
+                <div style={{ maxHeight: 150, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 4 }}>
                   {data.slice(-8).reverse().map(t => (
-                    <div key={t.id} style={{ padding: '6px 0', borderTop: '1px solid var(--border)', fontSize: 13 }}>
-                      <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', marginRight: 6, background: dot(t.status) }} />
-                      #{t.id} {clip(t.title, 34)}
-                    </div>
+                    <button
+                      key={t.id}
+                      type="button"
+                      className="taskrow"
+                      style={{
+                        padding: '6px 8px',
+                        borderLeft: `3px solid ${dot(t.status)}`,
+                        textAlign: 'left',
+                        cursor: 'pointer',
+                        background: 'rgba(255,255,255,0.03)',
+                        border: '1px solid rgba(255,255,255,0.06)',
+                        borderRadius: 6,
+                        color: '#fff',
+                        fontFamily: 'inherit',
+                      }}
+                      onClick={() => {
+                        window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { taskId: t.id, view: 'kanban' } }))
+                      }}
+                      title={`Buka detail task #${t.id} di papan kanban`}
+                      aria-label={`Task #${t.id}: ${t.title}`}
+                    >
+                      <div style={{ fontSize: 12.5, fontWeight: 600, color: '#e2e8f0' }}>#{t.id} {clip(t.title, 32)}</div>
+                      <div className="note" style={{ fontSize: 11, marginTop: 2 }}>
+                        {t.agent_id} · <span style={{ color: dot(t.status), fontWeight: 600 }}>{t.status}</span>
+                      </div>
+                    </button>
                   ))}
                 </div>
               </>

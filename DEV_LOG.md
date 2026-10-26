@@ -1,3 +1,35 @@
+## 2026-10-26 10:48 WIB — Siklus 85: Interkoneksi Ekosistem Sprint Kanban & 3D Pod (ProjectPanel, TeamStats, OfficeScene & Badges Kartu Kanban)
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Badges Visual & Metadata Kartu Kanban (`src/scene/parts/kanban_spec.js`, `src/components/TaskBoard.jsx`, `src/index.css`, `src/__tests__/kanban_spec.test.js`, `src/__tests__/TaskBoard.test.jsx`):**
+     - Membangun helper murni `getTaskCardBadges(task)` yang mengekstrak informasi kartu kanban secara aman (jumlah file hasil pengerjaan via `parseFileList`, indikator keberadaan review QA, label peran, dan warna aksen peran).
+     - Menampilkan badge visual baru pada kartu kanban:
+       - Badge jumlah file: `📁 N` (`.kanban-file-badge`) saat task telah menghasilkan artefak/file.
+       - Badge ulasan QA: `💬 QA` (`.kanban-qa-badge`) saat task memiliki review atau catatan QA.
+     - Penambahan styling CSS dengan kontras tinggi dan aksen warna elegan di `src/index.css`.
+  2. **Aksi Kanban Cepat di TeamStats (`src/components/TeamStats.jsx`, `src/index.css`, `src/__tests__/team_stats_a11y.test.jsx`):**
+     - Menambahkan tombol aksi `Kanban` (`.team-kanban-btn`) pada setiap kartu divisi kerja di panel statistik tim, memicu pembukaan TaskBoard langsung difilter ke divisi tersebut (`wfs-open-task-board` dengan `{ division: team.key, view: 'kanban' }`).
+     - Mengubah daftar "Task Terkini" di `TeamStats` dari teks statis menjadi tombol interaktif (`.taskrow`) yang dapat diklik untuk membuka task terkait di kanban (`wfs-open-task-board` dengan `{ taskId: t.id, view: 'kanban' }`).
+  3. **Aksi Terhubung di ProjectPanel (`src/components/ProjectPanel.jsx`, `src/__tests__/remaining_components.test.jsx`):**
+     - Mengubah item "Task terakhir dikerjakan" menjadi tombol interaktif beranimasi yang dapat diklik untuk membuka detail task di kanban (`wfs-open-task-board` dengan `{ taskId: x.id, view: 'kanban' }`).
+     - Menambahkan tombol aksi cepat `📋 Buka Papan Sprint Kanban ↗` di bawah daftar task untuk membuka papan kanban secara instan.
+  4. **Feedback 3D Interaktif & Double-Click ProjectBoard (`src/scene/OfficeScene.js`):**
+     - Navigasi `focusTeam(teamKey)` kini otomatis memainkan efek suara seleksi (`__sound.playSelect()`) dan menampilkan speech bubble 3D informatif di atas pod meja kerja tim (`“Pod {team.name} (Lt. {team.floor})”`) menggunakan warna aksen divisi.
+     - Deteksi klik ganda (`dblclick`) pada kanvas 3D kini menangani klik pada mesh dan bingkai `projectBoard`, memberikan audio feedback, zoom kamera halus ke papan proyek, speech bubble, dan memicu event pembukaan `wfs-open-project-panel`.
+
+- **Bukti terukur:**
+  - **Vitest:** **1566/1566 passed (130 test file)** (+3 tests baru terintegrasi, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/scene/parts/kanban_spec.js src/components/TaskBoard.jsx src/components/TeamStats.jsx src/components/ProjectPanel.jsx src/scene/OfficeScene.js src/__tests__/kanban_spec.test.js src/__tests__/TaskBoard.test.jsx src/__tests__/team_stats_a11y.test.jsx src/__tests__/remaining_components.test.jsx`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1687.10 KiB; chunk `OfficeScene-DI-czE6a.js` 874.02 KB / gzip 237.00 KB, `index-DseRrLj1.js` 330.40 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-DseRrLj1.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **523.123 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `shot.sh`: Screenshot ck.png **587.471 bytes** (>500 KB).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** evaluasi optimasi chunking dinamis OfficeScene atau visualisasi animasi perpindahan kartu kanban.
+
 ## 2026-10-26 10:08 WIB — Siklus 84: Penyaringan Divisi Kampus (kanban_spec.js), Strip Chip Tim Interaktif di TaskBoard, Integrasi Fokus 3D Pod & Aksi Kanban dari AgentInspector
 
 - **Yang diperbaiki & ditingkatkan:**

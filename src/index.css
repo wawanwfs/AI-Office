@@ -581,6 +581,25 @@ button { font-family: inherit; }
   background: rgba(255, 255, 255, 0.14);
   color: #fff;
 }
+.team-kanban-btn {
+  background: rgba(16, 229, 160, 0.08);
+  border: 1px solid rgba(16, 229, 160, 0.22);
+  border-radius: 6px;
+  color: #10E5A0;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 2px 8px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  transition: all 0.15s ease;
+}
+.team-kanban-btn:hover {
+  background: rgba(16, 229, 160, 0.18);
+  border-color: rgba(16, 229, 160, 0.45);
+  color: #fff;
+}
 .team-progress-bar {
   height: 6px;
   background: rgba(255, 255, 255, 0.08);
@@ -874,5 +893,30 @@ button { font-family: inherit; }
 
 .kanban-status-badge {
   font-size: 10px;
+}
+
+.kanban-file-badge {
+  font-size: 9px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  padding: 1px 4px;
+  color: #cfd8e3;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.kanban-qa-badge {
+  font-size: 9px;
+  background: rgba(68, 138, 255, 0.15);
+  border: 1px solid rgba(68, 138, 255, 0.3);
+  border-radius: 4px;
+  padding: 1px 4px;
+  color: #93c5fd;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
 }
 

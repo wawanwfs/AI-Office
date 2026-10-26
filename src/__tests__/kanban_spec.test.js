@@ -11,6 +11,7 @@ import {
   groupTasksByKanbanColumn,
   computeSprintMetrics,
   filterTasks,
+  getTaskCardBadges,
 } from '../scene/parts/kanban_spec.js';
 
 describe('kanban_spec — KANBAN_COLUMNS & role badges', () => {
@@ -274,5 +275,47 @@ describe('kanban_spec — matchTaskDivision & extractTaskDivisions', () => {
     const feTasks = filterTasks(tasks, { role: 'frontend' });
     expect(feTasks).toHaveLength(1);
     expect(feTasks[0].id).toBe(11);
+  });
+});
+
+describe('kanban_spec — getTaskCardBadges', () => {
+  it('mengekstrak metadata kartu task secara akurat (file count, QA review, role)', () => {
+    const taskWithFiles = {
+      id: 1,
+      title: 'Auth Controller',
+      role: 'be',
+      files: "['auth.py', 'test_auth.py']",
+      review: 'All endpoints pass tests',
+    };
+    const b1 = getTaskCardBadges(taskWithFiles);
+    expect(b1.fileCount).toBe(2);
+    expect(b1.hasReview).toBe(true);
+    expect(b1.roleLabel).toBe('Backend');
+    expect(b1.roleColor).toBe('#3B82F6');
+
+    const simpleTask = {
+      id: 2,
+      title: 'Deploy K8s',
+      role: 'ops',
+      files: [],
+      review: '',
+    };
+    const b2 = getTaskCardBadges(simpleTask);
+    expect(b2.fileCount).toBe(0);
+    expect(b2.hasReview).toBe(false);
+    expect(b2.roleLabel).toBe('DevOps');
+    expect(b2.roleColor).toBe('#EC4899');
+  });
+
+  it('toleran terhadap task kosong / null / undefined', () => {
+    const bNull = getTaskCardBadges(null);
+    expect(bNull.fileCount).toBe(0);
+    expect(bNull.hasReview).toBe(false);
+    expect(bNull.roleLabel).toBe('General');
+    expect(bNull.roleColor).toBe('#64748B');
+
+    const bUndef = getTaskCardBadges(undefined);
+    expect(bUndef.fileCount).toBe(0);
+    expect(bUndef.hasReview).toBe(false);
   });
 });

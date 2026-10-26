@@ -2,6 +2,7 @@
 // Digunakan oleh TaskBoard, AgentInspector, dan OfficeScene whiteboard interaksi.
 
 import { TEAMS, findTeamByRole, findTeamByAgent, computeTeamStats } from './team_spec.js';
+import { parseFileList } from '../../lib/files.js';
 
 export const KANBAN_COLUMNS = [
   {
@@ -231,4 +232,23 @@ export function filterTasks(tasks, { filter = 'all', q = '', division = 'all', r
       return text.includes(qStr);
     })
     .sort((a, b) => Number(b.id || 0) - Number(a.id || 0));
+}
+
+/**
+ * Ekstraksi metadata visual kartu kanban (jumlah file, indikator review QA, badge peran).
+ */
+export function getTaskCardBadges(task) {
+  if (!task || typeof task !== 'object') {
+    return { fileCount: 0, hasReview: false, roleLabel: 'General', roleColor: '#64748B' };
+  }
+  const fileCount = parseFileList(task.files).length;
+  const hasReview = Boolean(task.review && String(task.review).trim().length > 0);
+  const roleLabel = getTaskRoleLabel(task.role);
+  const roleColor = getTaskRoleBadgeColor(task.role);
+  return {
+    fileCount,
+    hasReview,
+    roleLabel,
+    roleColor,
+  };
 }

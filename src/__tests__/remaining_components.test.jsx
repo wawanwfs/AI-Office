@@ -221,6 +221,33 @@ describe('ProjectPanel', () => {
     expect(screen.getByText(/TokoA/)).toBeTruthy()
     expect(screen.getByText(/be1/)).toBeTruthy()
     expect(screen.getByText(/qa1/)).toBeTruthy()
+
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+
+    // Klik tombol kanban sprint di bawah task
+    const sprintBtn = screen.getByRole('button', { name: 'Buka seluruh task di Papan Kanban Sprint' })
+    expect(sprintBtn).toBeTruthy()
+    fireEvent.click(sprintBtn)
+    expect(dispatchSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'wfs-open-task-board',
+        detail: { view: 'kanban' },
+      })
+    )
+
+    // Klik task recent #23
+    const recentTaskBtn = screen.getByRole('button', { name: 'Task #23: Fix UI' })
+    expect(recentTaskBtn).toBeTruthy()
+    fireEvent.click(recentTaskBtn)
+    expect(dispatchSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'wfs-open-task-board',
+        detail: { taskId: 23, view: 'kanban' },
+      })
+    )
+
+    dispatchSpy.mockRestore()
+
     const closeBtn = screen.getByRole('button', { name: 'Tutup panel proyek' })
     expect(closeBtn.getAttribute('title')).toBe('Tutup panel proyek (Esc)')
     expect(closeBtn.querySelector('svg')).toBeTruthy()

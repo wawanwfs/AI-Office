@@ -6,8 +6,8 @@ import { parseFileList } from '../lib/files'
 import { IconBoard, IconClose, IconPlay, IconRotate, IconList, IconKanban } from './Icons'
 import {
   KANBAN_COLUMNS,
-  getTaskRoleBadgeColor,
   getTaskRoleLabel,
+  getTaskCardBadges,
   matchTaskDivision,
   groupTasksByKanbanColumn,
   computeSprintMetrics,
@@ -275,27 +275,42 @@ export default function TaskBoard({ onFlash, onAsk }) {
                           {colTasks.length === 0 ? (
                             <div className="kanban-col-empty">Kosong</div>
                           ) : (
-                            colTasks.map(t => (
-                              <button
-                                key={t.id}
-                                type="button"
-                                className="kanban-card"
-                                onClick={() => setSel(t)}
-                                style={{ borderLeft: `3px solid ${ST[t.status]?.[1] || col.color}` }}
-                                aria-label={`Task #${t.id}: ${t.title}`}
-                                title={`Buka task #${t.id}: ${t.title}`}
-                              >
-                                <div className="kanban-card-top">
-                                  <span className="kanban-card-id">#{t.id}</span>
-                                  <span className="kanban-card-agent">{t.agent_id}</span>
-                                </div>
-                                <div className="kanban-card-title">{t.title}</div>
-                                <div className="kanban-card-meta">
-                                  <span className="kanban-role-badge" style={{ color: getTaskRoleBadgeColor(t.role) }}>{t.role || 'task'}</span>
-                                  <span className="kanban-status-badge" style={{ color: ST[t.status]?.[1] || col.color }}>{ST[t.status]?.[0] || t.status}</span>
-                                </div>
-                              </button>
-                            ))
+                            colTasks.map(t => {
+                              const badges = getTaskCardBadges(t)
+                              return (
+                                <button
+                                  key={t.id}
+                                  type="button"
+                                  className="kanban-card"
+                                  onClick={() => setSel(t)}
+                                  style={{ borderLeft: `3px solid ${ST[t.status]?.[1] || col.color}` }}
+                                  aria-label={`Task #${t.id}: ${t.title}`}
+                                  title={`Buka task #${t.id}: ${t.title}`}
+                                >
+                                  <div className="kanban-card-top">
+                                    <span className="kanban-card-id">#{t.id}</span>
+                                    <span className="kanban-card-agent">{t.agent_id}</span>
+                                  </div>
+                                  <div className="kanban-card-title">{t.title}</div>
+                                  <div className="kanban-card-meta">
+                                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                      <span className="kanban-role-badge" style={{ color: badges.roleColor }}>{badges.roleLabel}</span>
+                                      {badges.fileCount > 0 && (
+                                        <span className="kanban-file-badge" title={`${badges.fileCount} file dihasilkan`}>
+                                          📁 {badges.fileCount}
+                                        </span>
+                                      )}
+                                      {badges.hasReview && (
+                                        <span className="kanban-qa-badge" title="Ada ulasan QA">
+                                          💬 QA
+                                        </span>
+                                      )}
+                                    </div>
+                                    <span className="kanban-status-badge" style={{ color: ST[t.status]?.[1] || col.color }}>{ST[t.status]?.[0] || t.status}</span>
+                                  </div>
+                                </button>
+                              )
+                            })
                           )}
                         </div>
                       </div>

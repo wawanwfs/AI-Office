@@ -178,4 +178,39 @@ describe('TeamStats', () => {
     expect(focusMock).toHaveBeenCalledWith('core-be')
     delete window.__focusTeam
   })
+
+  it('tombol Kanban divisi dan item task terkini memicu event wfs-open-task-board', async () => {
+    mockFetchOk()
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+    render(<TeamStats />)
+    fireEvent.click(screen.getByRole('button', { name: 'Statistik tim' }))
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Progres per divisi kerja' })).toBeTruthy())
+
+    // Klik tombol Kanban pada kartu Backend
+    const kanbanBtn = screen.getByRole('button', { name: 'Buka kanban divisi Backend & Data' })
+    expect(kanbanBtn).toBeTruthy()
+    fireEvent.click(kanbanBtn)
+
+    expect(dispatchSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'wfs-open-task-board',
+        detail: { division: 'core-be', view: 'kanban' },
+      })
+    )
+
+    // Klik salah satu task terkini
+    await waitFor(() => expect(screen.getByText(/Task Terkini/)).toBeTruthy())
+    const recentTasks = screen.getAllByRole('button', { name: /Task #/i })
+    expect(recentTasks.length).toBeGreaterThan(0)
+    fireEvent.click(recentTasks[0])
+
+    expect(dispatchSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'wfs-open-task-board',
+        detail: expect.objectContaining({ view: 'kanban' }),
+      })
+    )
+
+    dispatchSpy.mockRestore()
+  })
 })
