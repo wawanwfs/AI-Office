@@ -3951,3 +3951,18 @@
   - **E2E pixel badge TV (baru, `scratch/e2e_tvconn.py`):** `getImageData` kanvas TV via CDP → RGB(16,229,160) = `#10E5A0` **LIVE (hijau)** di browser nyata dengan data `/wfs-project` sungguhan.
 - Commit: `b105ffe` — push sukses ke origin/main (rebase 1x di atas auto-dev `09df451` fitZoneLabel; vitest pasca-rebase 1928/1928).
 - Sisa backlog: verifikasi subjektif audio web-audio (butuh pendengaran manusia); tidak ada item wajib lain.
+## 2026-10-27 06:43 WIB — Siklus 112: Bugfix kritis WYSIWYG — uiMaterial salah tempel di Mesh (15 situs warna UI tetap shifted meski tekstur srgb)
+
+- **Bug ditemukan (verifikasi probe siklus 111):** probe `e2e_tvwysiwyg.py` warisan melaporkan SHIFTED. Diagnosa: (a) probe lama salah theta kamera (0.85 = sisi +X, TV menghadap -X → memotret backface) DAN salah tanda proyeksi Z (TV di z=6.4 ≠ -6.4); (b) setelah probe v2 menemukan mesh via scene graph: material TV melaporkan **toneMapped=True** di browser nyata. Akar: `uiMaterial(new THREE.Mesh(...))` menempel `toneMapped=false` pada **objek Mesh** (tidak dibaca renderer) — bukan pada materialnya. 15 dari 17 situs UI memakai pola salah ini; hanya 2 Sprite yang benar. Efek: seluruh layar/teks/badge 3D tetap kena ACESFilmic meski tekstur sudah `srgb` (siklus 111).
+- **Perbaikan:**
+  - `src/scene/parts/ui_colorspace.js`: `uiMaterial(target)` kini menerima Mesh/Sprite (unwrap ke `.material`) DAN material langsung — semua 17 situs efektif tanpa perubahan panggilan; komentar mendokumentasikan bug.
+  - Transformasi sumber 15 situs ke pola kontrak bersih `new THREE.Mesh(geom, uiMaterial(MAT))`: OfficeScene (monitor agen, nameplate, judul dinding), lounge TV, papan proyek, whiteboard, jam dinding, poster dinding, poster motivasi, menu board kafe, logo resepsionis, logo dinding, papan sambutan, sign lantai terrace.
+  - Kontrak anti-regresi diperkuat: test baru melarang pola `uiMaterial(new THREE.Mesh/Sprite` di 11 file sumber (offender list → fail).
+- **Bukti terukur (browser nyata, CDP + Xvfb):**
+  - **Fill-test magenta (255,0,255):** piksel eksak ±10, bbox 358×191 px, fill 97.5% → `toneMapped=false` aktif di renderer.
+  - **Fill-test warna painter badge (16,229,160):** 66.240 px eksak ±12, NEAREST (16,229,160) **jarak 0.0** — sebelum patch (111,177,186) jarak ~121. WYSIWYG 1:1 terbukti untuk colorSpace srgb + unlit sekaligus.
+  - Vitest **2002/2002 (148 file)** (+3 dari 1999), 0 fail; ESLint 0/0; build sukses (37 precache 1806.68 KiB) → deploy `~/wfs-hq/`; `wfs-hq` & `wfs-office` active.
+  - `scripts/e2e_shot.py` **673.612 bytes** (26 agen, ws true, E2E_VISUAL OK); `e2e_tv.py` OK; `e2e_zone_multi.py` OK.
+  - Probe permanen baru di repo: `scripts/e2e_tvwysiwyg.py` (fill magenta) + `scripts/e2e_tvwysiwyg_painter.py` (fill painter).
+- Sisa backlog: verifikasi subjektif audio web-audio (butuh pendengaran manusia).
+
