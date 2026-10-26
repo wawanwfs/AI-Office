@@ -92,6 +92,34 @@ describe('motion_math: stepMove', () => {
     expect(s.arrived).toBe(true);
     expect(s.rot).toBe(1.23);
   });
+  it('target NaN/±Infinity → TIDAK menulari posisi (anti-poisoning)', () => {
+    const safe = { x: 1, z: 2, rot: 0.5 };
+    const badTargets = [
+      { x: NaN, z: 0 },
+      { x: 0, z: NaN },
+      { x: Infinity, z: 0 },
+      { x: 0, z: -Infinity },
+      { x: NaN, z: NaN },
+    ];
+    for (const tgt of badTargets) {
+      const s = stepMove(safe, tgt, 2, 0.5);
+      expect(Number.isFinite(s.x)).toBe(true);
+      expect(Number.isFinite(s.z)).toBe(true);
+      expect(s.x).toBe(1);
+      expect(s.z).toBe(2);
+      expect(s.rot).toBe(0.5);
+      expect(s.arrived).toBe(true); // berhenti aman, bukan melangkah ke NaN
+      expect(s.clamped).toBe(false);
+    }
+  });
+  it('target NaN tetap menghasilkan posisi & rotasi finite bahkan saat pos awal sehat', () => {
+    const s = stepMove({ x: -3, z: 4, rot: -0.25 }, { x: NaN, z: -9 }, 3, 1);
+    expect(Number.isFinite(s.x)).toBe(true);
+    expect(Number.isFinite(s.z)).toBe(true);
+    expect(s.x).toBe(-3);
+    expect(s.z).toBe(4);
+    expect(s.rot).toBe(-0.25);
+  });
 });
 
 describe('motion_math: angleDelta (selisih sudut terpendek)', () => {

@@ -25,7 +25,11 @@ export function dist2(a, b) {
 // rot = arah hadap (atan2(dx, dz)) ATAU posisi sebelumnya bila sudah tiba/clamp-total.
 export function stepMove(pos, target, speed, delta) {
   const { dx, dz, d } = dist2(pos, target);
-  if (d < ARRIVE) return { x: pos.x, z: pos.z, rot: pos.rot ?? 0, arrived: true, clamped: false };
+  // Guard degenerat: jarak non-finite (NaN/±Infinity, mis. target korup) TIDAK
+  // boleh menulari posisi walker (nx = dx/d → NaN → posisi jadi NaN & agent hilang).
+  if (!Number.isFinite(d) || d < ARRIVE) {
+    return { x: pos.x, z: pos.z, rot: pos.rot ?? 0, arrived: true, clamped: false };
+  }
   const nx = dx / d, nz = dz / d;
   let x = pos.x + nx * speed * delta;
   let z = pos.z + nz * speed * delta;
