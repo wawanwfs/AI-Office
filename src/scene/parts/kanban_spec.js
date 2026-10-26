@@ -474,6 +474,7 @@ export function createCustomPreset(params, existingCustomPresets = []) {
   let counter = 1;
   const existingKeys = new Set([
     ...TAG_PRESETS.map((p) => p.key),
+    ...TAG_PRESETS.map((p) => `custom-${p.key}`),
     ...(existingCustomPresets || []).map((p) => p && p.key),
   ]);
 

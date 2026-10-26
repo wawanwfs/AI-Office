@@ -922,4 +922,77 @@ describe('TaskBoard', () => {
       expect(screen.getByText(/Hari ini/)).toBeTruthy();
     });
   });
+
+  describe('TaskBoard — Preset Kombinasi Multi-Tag Kustom', () => {
+    const multiTagTasks = [
+      { id: 101, title: 'App API & DB #api #sql', status: 'done', role: 'be' },
+      { id: 102, title: 'Cloud Deploy #docker #ci/cd', status: 'running', role: 'devops' },
+      { id: 103, title: 'Mobile UI #react #ui/ux', status: 'pending', role: 'fe' },
+    ];
+
+    it('menampilkan tombol + Preset Baru di strip preset dan membuka form creator saat diklik', async () => {
+      vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: multiTagTasks }) })));
+      render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />);
+      fireEvent.click(screen.getByText('Papan'));
+      await waitFor(() => screen.getByText(/App API & DB/));
+
+      const addBtn = screen.getByRole('button', { name: 'Buat preset tag baru' });
+      expect(addBtn).toBeTruthy();
+      expect(addBtn.textContent).toContain('+ Preset Baru');
+
+      fireEvent.click(addBtn);
+      expect(screen.getByRole('form', { name: 'Form pembuatan preset tag kustom' })).toBeTruthy();
+      expect(screen.getByPlaceholderText(/Nama preset/)).toBeTruthy();
+
+      // Escape menutup form creator tanpa menutup TaskBoard
+      fireEvent.keyDown(document, { key: 'Escape' });
+      expect(screen.queryByRole('form', { name: 'Form pembuatan preset tag kustom' })).toBeNull();
+      expect(screen.getByRole('dialog', { name: 'Papan task' })).toBeTruthy();
+    });
+
+    it('dapat membuat, menyimpan, mengaktifkan, dan menghapus preset kustom', async () => {
+      const onFlash = vi.fn();
+      vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: multiTagTasks }) })));
+      render(<TaskBoard onFlash={onFlash} onAsk={() => {}} />);
+      fireEvent.click(screen.getByText('Papan'));
+      await waitFor(() => screen.getByText(/App API & DB/));
+
+      // Buka creator preset
+      const addBtn = screen.getByRole('button', { name: 'Buat preset tag baru' });
+      fireEvent.click(addBtn);
+
+      const nameInput = screen.getByPlaceholderText(/Nama preset/);
+      fireEvent.change(nameInput, { target: { value: 'Dev Infra' } });
+
+      // Pilih tag #docker dan #ci/cd di selector
+      const dockerToggle = screen.getByRole('button', { name: 'Tag #Docker' });
+      const cicdToggle = screen.getByRole('button', { name: 'Tag #CI/CD' });
+      fireEvent.click(dockerToggle);
+      fireEvent.click(cicdToggle);
+
+      // Submit simpan preset
+      const saveBtn = screen.getByRole('button', { name: 'Simpan Preset' });
+      expect(saveBtn.disabled).toBe(false);
+      fireEvent.click(saveBtn);
+
+      // Form tertutup, toast muncul
+      expect(screen.queryByRole('form', { name: 'Form pembuatan preset tag kustom' })).toBeNull();
+      expect(onFlash).toHaveBeenCalledWith(expect.stringContaining('Preset kustom "Dev Infra" berhasil disimpan'));
+
+      // Chip preset kustom muncul di strip preset
+      const customChip = await screen.findByRole('button', { name: /Preset Dev Infra:/ });
+      expect(customChip).toBeTruthy();
+      expect(customChip.textContent).toContain('Dev Infra');
+
+      // Task terfilter ke task yang memiliki tag #docker atau #ci/cd
+      expect(screen.getByText(/Cloud Deploy/)).toBeTruthy();
+
+      // Hapus preset kustom via tombol ✕
+      const delBtn = screen.getByRole('button', { name: 'Hapus preset kustom Dev Infra' });
+      fireEvent.click(delBtn);
+
+      expect(onFlash).toHaveBeenCalledWith(expect.stringContaining('Preset "Dev Infra" dihapus'));
+      expect(screen.queryByRole('button', { name: /Preset Dev Infra:/ })).toBeNull();
+    });
+  });
 });

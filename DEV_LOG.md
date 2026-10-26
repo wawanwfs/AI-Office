@@ -1,3 +1,34 @@
+## 2026-10-27 00:08 WIB — Siklus 103: Preset Kombinasi Multi-Tag Kustom pada Task Kanban (kanban_spec.js, Panel Pembuat Preset Kustom, Selector Tag Interaktif, Persistensi Storage & Penghapusan Presisi)
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Modul Utilitas Preset Kombinasi Tag Kustom (`src/scene/parts/kanban_spec.js`, `src/__tests__/kanban_spec.test.js`):**
+     - Mendefinisikan konstanta penyimpanan `CUSTOM_PRESET_STORAGE_KEY` (`wfs_custom_tag_presets`) dan koleksi ikon emoji pilihan `PRESET_ICONS` (`⚡`, `🚀`, `🛡`, `🎨`, `🐳`, `🛠`, dll.).
+     - Mengembangkan slugifier pembuat kunci unik `slugifyPresetKey` untuk menghasilkan identifikasi slug ramah URL dan konsisten (`custom-<nama>`).
+     - Mengembangkan normalizer cerdas `normalizeCustomPreset` yang memvalidasi objek preset, menormalisasi array tag dengan `normalizeTagList`, memvalidasi warna hex dengan fallback ke `TAG_PALETTE`, menghitung warna teks kontras tinggi `textColor`, menyusun deskripsi ramah pengguna, dan menyematkan penanda `isCustom: true`.
+     - Mengembangkan serializer deterministik aman `loadCustomPresets` dan `saveCustomPresets` dengan perlindungan `try/catch` terhadap kegagalan parse JSON maupun lingkungan storage terbatas.
+     - Mengembangkan generator pembuat preset bebas konflik `createCustomPreset` yang menjamin kunci tidak bertabrakan dengan `TAG_PRESETS` bawaan maupun preset kustom lain yang sudah ada.
+     - Menyediakan utilitas penghapusan preset `deleteCustomPreset` dan penggabung koleksi `getAllPresets`.
+     - Memperluas `getTagPreset`, `isPresetActive`, dan `computePresetStats` agar mendukung pencarian, verifikasi kecocokan aktif, dan agregasi jumlah task untuk preset kustom secara backward-compatible.
+  2. **Antarmuka & Pengalaman Pengguna TaskBoard (`src/components/TaskBoard.jsx`, `src/index.css`, `src/__tests__/TaskBoard.test.jsx`):**
+     - Menyediakan tombol pembuat preset baru `+ Preset Baru` / `+ Simpan (N tag)` pada strip preset kanban.
+     - Menghadirkan panel pembuat preset interaktif `.task-preset-creator` lengkap dengan input nama preset (auto-focus), pemilih ikon emoji cepat, pemilih warna palet tema dark royal-navy, dan selektor chip tag interaktif (dengan penanda checklist `✓` dan hitungan tag aktif).
+     - Menghubungkan pre-fill otomatis: saat user memilih 1 atau lebih tag di filter, menekan tombol `+ Simpan` langsung menginjeksi tag tersebut ke dalam form pembuatan preset.
+     - Menampilkan chip preset kustom dengan batas putus-putus (`border-style: dashed`), status aktif bercahaya, dan tombol hapus cepat `✕` (`.task-preset-del-btn`) yang aman dari tabrakan event bubbling tanpa melanggar semantik HTML.
+     - Mengintegrasikan penutupan bertahap via tombol `Escape`: jika form pembuatan preset terbuka, `Escape` menutup form terlebih dahulu sebelum menutup papan task.
+     - Menghubungkan aktivasi preset kustom via event `wfs-open-task-board` dan feedback audio responsif `playSelect`.
+
+- **Bukti terukur:**
+  - **Vitest:** **1863/1863 passed (138 test file)** (+11 tests baru: 9 test di `kanban_spec.test.js`, 2 test di `TaskBoard.test.jsx`, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/scene/parts/kanban_spec.js src/components/TaskBoard.jsx src/__tests__/kanban_spec.test.js src/__tests__/TaskBoard.test.jsx`).
+  - **Build:** Berhasil (exit 0, 37 precache entries 1784.15 KiB; `OfficeScene` 166.74 KB / gzip 57.13 KB, `index` 210.45 KB / gzip 58.45 KB, `vendor-three` 715.76 KB, `vendor-react` 189.63 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-PA2AuoV0.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 23/23 selesai, 100%, 26 agents aktif).
+    - `shot.sh` (DISPLAY=:0): Screenshot visual **681.251 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** indikator status sinkronisasi WebSocket offline/reconnect dan preset kombinasi multi-divisi kustom.
+
 ## 2026-10-26 23:15 WIB — Siklus 102: Filter Preset Rentang Tanggal Kustom (Custom Date Picker) Task Kanban (kanban_date.js, Panel Tanggal Kustom, Validasi Tanggal Terbalik, Integrasi kanban_spec & kanban_export, Fallback Resilience project_api)
 
 - **Yang diperbaiki & ditingkatkan:**

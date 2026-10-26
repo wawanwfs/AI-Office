@@ -963,4 +963,137 @@ describe('kanban_spec — Audit Kontras Warna & Aksesibilitas WCAG (Badge & Tag)
       expect(groupsCustom.done.map((t) => t.id)).toEqual([12]);
     });
   });
+
+  describe('kanban_spec — Custom Multi-Tag Presets', () => {
+    it('mengekspor CUSTOM_PRESET_STORAGE_KEY dan PRESET_ICONS valid', () => {
+      expect(CUSTOM_PRESET_STORAGE_KEY).toBe('wfs_custom_tag_presets');
+      expect(Array.isArray(PRESET_ICONS)).toBe(true);
+      expect(PRESET_ICONS.length).toBeGreaterThanOrEqual(8);
+      expect(PRESET_ICONS).toContain('⚡');
+      expect(PRESET_ICONS).toContain('🐳');
+    });
+
+    it('slugifyPresetKey menghasilkan key slug valid dan konsisten', () => {
+      expect(slugifyPresetKey('Cloud & Infra')).toBe('custom-cloud-infra');
+      expect(slugifyPresetKey('  AI / Machine Learning!  ')).toBe('custom-ai-machine-learning');
+      expect(slugifyPresetKey('')).toMatch(/^custom-[a-z0-9]+$/);
+      expect(slugifyPresetKey(null)).toMatch(/^custom-[a-z0-9]+$/);
+    });
+
+    it('normalizeCustomPreset menolak input invalid dan menormalkan properti lengkap', () => {
+      expect(normalizeCustomPreset(null)).toBeNull();
+      expect(normalizeCustomPreset({})).toBeNull();
+      expect(normalizeCustomPreset({ label: 'Tanpa Tag', tags: [] })).toBeNull();
+      expect(normalizeCustomPreset({ label: '', tags: ['react'] })).toBeNull();
+
+      const normalized = normalizeCustomPreset({
+        label: 'Testing & QA',
+        tags: ['#react', 'api', 'react'],
+        icon: '🧪',
+        color: '#34D399',
+      });
+      expect(normalized).not.toBeNull();
+      expect(normalized.label).toBe('Testing & QA');
+      expect(normalized.key).toBe('custom-testing-qa');
+      expect(normalized.tags).toEqual(['react', 'api']);
+      expect(normalized.icon).toBe('🧪');
+      expect(normalized.color).toBe('#34D399');
+      expect(normalized.textColor).toBe('#0b1320');
+      expect(normalized.isCustom).toBe(true);
+      expect(normalized.desc).toContain('#react, #api');
+    });
+
+    it('loadCustomPresets dan saveCustomPresets bekerja mulus dengan storage', () => {
+      const mockStorage = {
+        store: {},
+        getItem(k) { return this.store[k] || null; },
+        setItem(k, v) { this.store[k] = String(v); },
+      };
+
+      expect(loadCustomPresets(null)).toEqual([]);
+      expect(loadCustomPresets(mockStorage)).toEqual([]);
+
+      const sample = [
+        { label: 'ML Ops', tags: ['python', 'docker'], icon: '🤖', color: '#60A5FA' },
+      ];
+      const saved = saveCustomPresets(mockStorage, sample);
+      expect(saved).toBe(true);
+
+      const loaded = loadCustomPresets(mockStorage);
+      expect(loaded).toHaveLength(1);
+      expect(loaded[0].label).toBe('ML Ops');
+      expect(loaded[0].tags).toEqual(['python', 'docker']);
+
+      // Guard parsing JSON rusak
+      mockStorage.setItem(CUSTOM_PRESET_STORAGE_KEY, '{invalid json');
+      expect(loadCustomPresets(mockStorage)).toEqual([]);
+    });
+
+    it('createCustomPreset mencegah konflik key dengan preset bawaan dan preset kustom lain', () => {
+      const p1 = createCustomPreset({ label: 'Fullstack', tags: ['react', 'python'] });
+      expect(p1.key).toBe('custom-fullstack-2'); // 'fullstack' ada di TAG_PRESETS
+
+      const existing = [p1];
+      const p2 = createCustomPreset({ label: 'Fullstack', tags: ['react', 'node'] }, existing);
+      expect(p2.key).toBe('custom-fullstack-3');
+    });
+
+    it('deleteCustomPreset menghapus preset berdasarkan key dengan aman', () => {
+      const presets = [
+        { key: 'custom-a', label: 'A', tags: ['a'] },
+        { key: 'custom-b', label: 'B', tags: ['b'] },
+      ];
+      const filtered = deleteCustomPreset('custom-a', presets);
+      expect(filtered).toHaveLength(1);
+      expect(filtered[0].key).toBe('custom-b');
+
+      expect(deleteCustomPreset('nonexistent', presets)).toHaveLength(2);
+      expect(deleteCustomPreset(null, presets)).toEqual(presets);
+    });
+
+    it('getAllPresets menggabungkan preset bawaan dan customPresets', () => {
+      const custom = [{ label: 'Mobile App', tags: ['react', 'ui/ux'], icon: '📱' }];
+      const all = getAllPresets(custom);
+      expect(all.length).toBe(TAG_PRESETS.length + 1);
+      expect(all[all.length - 1].label).toBe('Mobile App');
+      expect(all[all.length - 1].isCustom).toBe(true);
+    });
+
+    it('getTagPreset dan isPresetActive mendukung pencarian customPresets', () => {
+      const custom = [{
+        key: 'custom-web3',
+        label: 'Web3',
+        tags: ['solidity', 'api'],
+        icon: '⛓️',
+      }];
+
+      expect(getTagPreset('custom-web3', custom)?.label).toBe('Web3');
+      expect(getTagPreset('CUSTOM-WEB3', custom)?.key).toBe('custom-web3');
+      expect(getTagPreset('unknown', custom)).toBeNull();
+
+      expect(isPresetActive('custom-web3', ['api', 'solidity'], custom)).toBe(true);
+      expect(isPresetActive('custom-web3', ['api'], custom)).toBe(false);
+      expect(isPresetActive('custom-web3', 'all', custom)).toBe(false);
+    });
+
+    it('computePresetStats menghitung jumlah task untuk custom presets bersama preset bawaan', () => {
+      const custom = [{
+        key: 'custom-cloud',
+        label: 'Cloud Native',
+        tags: ['docker', 'ci/cd'],
+        icon: '☁️',
+      }];
+      const all = getAllPresets(custom);
+      const sampleTasks = [
+        { id: 1, title: 'Build Docker Container #docker', status: 'running', role: 'devops' },
+        { id: 2, title: 'CI Pipeline setup #ci/cd', status: 'done', role: 'devops' },
+        { id: 3, title: 'Simple task without tags', status: 'pending', role: 'fe' },
+      ];
+
+      const stats = computePresetStats(sampleTasks, all);
+      const customStat = stats.find(p => p.key === 'custom-cloud');
+      expect(customStat).toBeDefined();
+      expect(customStat.count).toBe(2);
+    });
+  });
 });
