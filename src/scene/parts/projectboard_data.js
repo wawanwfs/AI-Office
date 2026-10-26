@@ -11,6 +11,77 @@ export function cardY(i) { return CARD_TOP + i * CARD_STEP }
 import { clip } from '../../lib/clip.js'
 export { clip }
 
+/**
+ * Normalisasi status task dari berbagai format (task engine, server WFS, kanban).
+ * Memetakan:
+ * - 'done', 'completed', 'finished', 'resolved', 'success' -> 'done'
+ * - 'running', 'in_progress', 'active', 'working' -> 'running'
+ * - 'failed', 'error' -> 'failed'
+ * - 'review', 'qa' -> 'review'
+ * - 'pending', 'ready', 'queued', 'waiting', 'todo', 'backlog' -> 'pending'
+ */
+export function normalizeTaskStatus(status) {
+  const s = String(status || '').toLowerCase().trim()
+  if (s === 'done' || s === 'completed' || s === 'finished' || s === 'resolved' || s === 'success') return 'done'
+  if (s === 'running' || s === 'in_progress' || s === 'active' || s === 'working') return 'running'
+  if (s === 'failed' || s === 'error') return 'failed'
+  if (s === 'review' || s === 'qa') return 'review'
+  return 'pending'
+}
+
+/**
+ * Format ID task secara rapi (misal 'task-9da32873' -> '#9da32873', 21 -> '#21').
+ */
+export function formatTaskId(id) {
+  if (id == null) return ''
+  const str = String(id).trim()
+  if (!str) return ''
+  if (str.startsWith('task-')) {
+    return '#' + str.slice(5)
+  }
+  return str.startsWith('#') ? str : '#' + str
+}
+
+/**
+ * Label teks status kartu kanban 3D.
+ */
+export function formatCardStatus(status) {
+  const st = normalizeTaskStatus(status)
+  if (st === 'done') return '✓ selesai'
+  if (st === 'running') return '⚡ berjalan'
+  if (st === 'failed') return '✕ gagal'
+  if (st === 'review') return '🔍 review'
+  return '⏳ antri'
+}
+
+/**
+ * Format judul kartu kanban 3D dengan ID dan pemotongan rapi.
+ */
+export function formatCardTitle(task, maxLen = 30) {
+  if (!task) return ''
+  const idStr = formatTaskId(task.id)
+  const title = clip(task.title || '', maxLen)
+  return idStr ? `${idStr} ${title}` : title
+}
+
+/**
+ * Metadata lengkap kartu kanban 3D (murni untuk canvas & rendering).
+ */
+export function cardMeta(task) {
+  if (!task) return null
+  const statusKey = normalizeTaskStatus(task.status)
+  const colors = { done: '#10E5A0', running: '#F59E0B', review: '#448AFF', failed: '#ef4444', pending: '#9aa7b8' }
+  return {
+    id: task.id,
+    formattedId: formatTaskId(task.id),
+    title: task.title || '',
+    formattedTitle: formatCardTitle(task, 30),
+    statusKey,
+    statusText: formatCardStatus(task.status),
+    statusColor: colors[statusKey] || '#9aa7b8',
+  }
+}
+
 // persen selesai; 0 bila tak ada task total. Dijepit ke rentang 0–100 dan aman
 // terhadap nilai non-finite (data glitch: done>total atau NaN) agar progress bar
 // di papan tak pernah menggambar lebar/angka yang mustahil.
@@ -42,10 +113,13 @@ export function bannerParts(T) {
 export function bannerNames(T) {
   if (!T) return null
   const parts = bannerParts(T)
-  const has = (st) => (T.recent || []).some(r => r.status === st)
+  const has = (st) => (T.recent || []).some(r => normalizeTaskStatus(r.status) === st)
   if (!parts.length || !(has('failed') || has('review'))) return null
-  const items = (T.recent || []).filter(r => r.status === 'failed' || r.status === 'review').slice(0, 3)
-  return parts.map(p => p[0]).join(' · ') + ' — ' + items.map(r => '#' + r.id + ' ' + (r.title || '')).join('  ·  ')
+  const items = (T.recent || []).filter(r => {
+    const s = normalizeTaskStatus(r.status)
+    return s === 'failed' || s === 'review'
+  }).slice(0, 3)
+  return parts.map(p => p[0]).join(' · ') + ' — ' + items.map(r => formatTaskId(r.id) + ' ' + (r.title || '')).join('  ·  ')
 }
 
 // layout banner sadar-lebar: ukur lebar dengan font sungguhan; bila melebihi budget,
@@ -56,8 +130,11 @@ export function bannerLayout(T, measure) {
   if (!full) return null
   const prefix = parts => parts.map(p => p[0]).join(' · ')
   const parts = bannerParts(T)
-  const items = (T.recent || []).filter(r => r.status === 'failed' || r.status === 'review').slice(0, 3)
-  const itemText = r => '#' + r.id + ' ' + (r.title || '')
+  const items = (T.recent || []).filter(r => {
+    const s = normalizeTaskStatus(r.status)
+    return s === 'failed' || s === 'review'
+  }).slice(0, 3)
+  const itemText = r => formatTaskId(r.id) + ' ' + (r.title || '')
   const budget = measure.budget
   const sepW = measure.text('—  ·  ')
   const fits = (n) => measure.text(prefix(parts) + ' — ') + sepW + n.reduce((a, t) => a + measure.text(t) + sepW, 0) <= budget
@@ -77,7 +154,7 @@ export function bannerLayout(T, measure) {
 // item kartu per kolom kanban (0 antri, 1 jalan, 2 selesai) — maks 6
 export function columnItems(T, i) {
   const want = i === 0 ? 'pending' : i === 1 ? 'running' : 'done'
-  return ((T && T.recent) || []).filter(r => r.status === want).slice(0, 6)
+  return ((T && T.recent) || []).filter(r => normalizeTaskStatus(r.status) === want).slice(0, 6)
 }
 
 // segmen strip bawah [{txt, col}] dari snapshot penuh (saas + agents + omniroute)

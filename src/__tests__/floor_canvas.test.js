@@ -124,11 +124,11 @@ describe('drawTerrazzo (512×512)', () => {
     expect(a.ops).toEqual(b.ops);
   });
 
-  it('190 chip ellipse ditarik dengan radius & pusat wajar, alpha kembali ke 1', () => {
+  it('420 chip ellipse ditarik dengan radius & pusat wajar, alpha kembali ke 1', () => {
     const c = recFull();
     drawTerrazzo(c);
     const ellipses = c.ops.filter(o => o[0] === 'ellipse');
-    expect(ellipses).toHaveLength(190);
+    expect(ellipses).toHaveLength(420);
     for (const e of ellipses) {
       const [, cx, cy, rx, ry] = e;
       expect(cx).toBeGreaterThanOrEqual(0); expect(cx).toBeLessThanOrEqual(512);

@@ -117,4 +117,22 @@ describe('ProjectPanel', () => {
     openPanel()
     await waitFor(() => expect(screen.getByText(/#23 perbaiki label/)).toBeTruthy())
   })
+
+  it('task terbaru dengan status completed dan ID task- prefix ditampilkan dengan ✓ dan format ID rapi', async () => {
+    const customData = {
+      ...DATA,
+      tasks: {
+        total: 10, done: 8,
+        recent: [
+          { id: 'task-e8e731a4', title: 'Develop: WFS Project 31A4', status: 'completed' },
+        ],
+      },
+    }
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => customData })))
+    render(<ProjectPanel />)
+    openPanel()
+    await waitFor(() => expect(screen.getByText(/#e8e731a4 Develop: WFS Project 31A4/)).toBeTruthy())
+    const row = screen.getByText(/#e8e731a4 Develop: WFS Project 31A4/).closest('button')
+    expect(row.textContent).toContain('✓')
+  })
 })

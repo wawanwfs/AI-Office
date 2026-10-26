@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
 import { IconRocket, IconClose } from './Icons'
+import { normalizeTaskStatus, formatTaskId } from '../scene/parts/projectboard_data'
 
 // Panel Proyek Nyata: data live dibantuin.com dari endpoint /wfs-project (server 9503).
 // Semua data diambil server-side — tidak ada kredensial di frontend.
@@ -90,34 +91,40 @@ export default function ProjectPanel() {
                 {/* Task terbaru */}
                 <label className="note">Task terakhir dikerjakan</label>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 4, margin: '6px 0 14px' }}>
-                  {(T.recent || []).map(x => (
-                    <button
-                      key={x.id}
-                      type="button"
-                      className="taskrow"
-                      style={{
-                        display: 'flex',
-                        gap: 8,
-                        alignItems: 'baseline',
-                        color: '#cfd8e3',
-                        background: 'rgba(255,255,255,0.03)',
-                        border: '1px solid rgba(255,255,255,0.06)',
-                        borderRadius: 6,
-                        padding: '6px 8px',
-                        textAlign: 'left',
-                        cursor: 'pointer',
-                        fontFamily: 'inherit',
-                      }}
-                      onClick={() => {
-                        window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { taskId: x.id, view: 'kanban' } }))
-                      }}
-                      title={`Buka task #${x.id} di papan sprint kanban`}
-                      aria-label={`Task #${x.id}: ${x.title}`}
-                    >
-                      <span style={{ color: ST[x.status]?.[1] || '#888', fontWeight: 700 }}>{x.status === 'done' ? '✓' : '•'}</span>
-                      <span style={{ fontSize: 12.5, flex: 1 }}>#{x.id} {x.title}</span>
-                    </button>
-                  ))}
+                  {(T.recent || []).map(x => {
+                    const normSt = normalizeTaskStatus(x.status)
+                    const isDone = normSt === 'done'
+                    const stColor = ST[normSt]?.[1] || (isDone ? '#10E5A0' : '#888')
+                    const displayId = formatTaskId(x.id)
+                    return (
+                      <button
+                        key={x.id}
+                        type="button"
+                        className="taskrow"
+                        style={{
+                          display: 'flex',
+                          gap: 8,
+                          alignItems: 'baseline',
+                          color: '#cfd8e3',
+                          background: 'rgba(255,255,255,0.03)',
+                          border: '1px solid rgba(255,255,255,0.06)',
+                          borderRadius: 6,
+                          padding: '6px 8px',
+                          textAlign: 'left',
+                          cursor: 'pointer',
+                          fontFamily: 'inherit',
+                        }}
+                        onClick={() => {
+                          window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { taskId: x.id, view: 'kanban' } }))
+                        }}
+                        title={`Buka task ${displayId} di papan sprint kanban`}
+                        aria-label={`Task ${displayId}: ${x.title}`}
+                      >
+                        <span style={{ color: stColor, fontWeight: 700 }}>{isDone ? '✓' : '•'}</span>
+                        <span style={{ fontSize: 12.5, flex: 1 }}>{displayId} {x.title}</span>
+                      </button>
+                    )
+                  })}
                   <button
                     type="button"
                     className="btn"

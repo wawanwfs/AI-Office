@@ -1,5 +1,9 @@
 import { describe, it, expect } from 'vitest'
-import { computePct, clip, cardY, CARD_H, COLUMN_BOTTOM, subtitle, bannerParts, bannerNames, bannerLayout, columnItems, stripSegments, clampStripTenant, stripLayout, BASE_DROP_ORDER, OMNI_DROP_ORDER, STRIP_GAP } from '../scene/parts/projectboard_data.js'
+import {
+  computePct, clip, cardY, CARD_H, COLUMN_BOTTOM, subtitle, bannerParts, bannerNames, bannerLayout,
+  columnItems, stripSegments, clampStripTenant, stripLayout, BASE_DROP_ORDER, OMNI_DROP_ORDER, STRIP_GAP,
+  normalizeTaskStatus, formatTaskId, formatCardStatus, formatCardTitle, cardMeta,
+} from '../scene/parts/projectboard_data.js'
 
 describe('cardY (tata letak kartu tidak menabrak strip bawah)', () => {
   it('6 kartu terakhir masih di dalam kolom', () => {
@@ -266,5 +270,89 @@ describe('drop order — prioritas buang segmen strip', () => {
   })
   it('STRIP_GAP default 26px', () => {
     expect(STRIP_GAP).toBe(26)
+  })
+})
+
+describe('normalizeTaskStatus & format helper kartu kanban 3D', () => {
+  it('normalizeTaskStatus: memetakan alias status ke 4 kelompok baku', () => {
+    expect(normalizeTaskStatus('completed')).toBe('done')
+    expect(normalizeTaskStatus('finished')).toBe('done')
+    expect(normalizeTaskStatus('resolved')).toBe('done')
+    expect(normalizeTaskStatus('success')).toBe('done')
+    expect(normalizeTaskStatus('DONE')).toBe('done')
+
+    expect(normalizeTaskStatus('in_progress')).toBe('running')
+    expect(normalizeTaskStatus('active')).toBe('running')
+    expect(normalizeTaskStatus('working')).toBe('running')
+    expect(normalizeTaskStatus('running')).toBe('running')
+
+    expect(normalizeTaskStatus('ready')).toBe('pending')
+    expect(normalizeTaskStatus('queued')).toBe('pending')
+    expect(normalizeTaskStatus('waiting')).toBe('pending')
+    expect(normalizeTaskStatus('todo')).toBe('pending')
+    expect(normalizeTaskStatus('backlog')).toBe('pending')
+    expect(normalizeTaskStatus('pending')).toBe('pending')
+    expect(normalizeTaskStatus(null)).toBe('pending')
+    expect(normalizeTaskStatus('')).toBe('pending')
+
+    expect(normalizeTaskStatus('failed')).toBe('failed')
+    expect(normalizeTaskStatus('error')).toBe('failed')
+    expect(normalizeTaskStatus('review')).toBe('review')
+    expect(normalizeTaskStatus('qa')).toBe('review')
+  })
+
+  it('formatTaskId: memformat ID berprefix task- maupun ID angka', () => {
+    expect(formatTaskId('task-9da32873')).toBe('#9da32873')
+    expect(formatTaskId('task-e8e731a4')).toBe('#e8e731a4')
+    expect(formatTaskId(21)).toBe('#21')
+    expect(formatTaskId('#42')).toBe('#42')
+    expect(formatTaskId(null)).toBe('')
+    expect(formatTaskId('')).toBe('')
+  })
+
+  it('formatCardStatus: teks status kartu kanban 3D', () => {
+    expect(formatCardStatus('completed')).toBe('✓ selesai')
+    expect(formatCardStatus('done')).toBe('✓ selesai')
+    expect(formatCardStatus('running')).toBe('⚡ berjalan')
+    expect(formatCardStatus('in_progress')).toBe('⚡ berjalan')
+    expect(formatCardStatus('failed')).toBe('✕ gagal')
+    expect(formatCardStatus('review')).toBe('🔍 review')
+    expect(formatCardStatus('ready')).toBe('⏳ antri')
+    expect(formatCardStatus('pending')).toBe('⏳ antri')
+  })
+
+  it('formatCardTitle: judul kartu dengan ID dan kliping rapi', () => {
+    expect(formatCardTitle({ id: 'task-123', title: 'Belajar Tiga Dimensi' })).toBe('#123 Belajar Tiga Dimensi')
+    expect(formatCardTitle({ id: 5, title: 'Short' })).toBe('#5 Short')
+    expect(formatCardTitle(null)).toBe('')
+  })
+
+  it('cardMeta: menghasilkan metadata lengkap untuk render kanvas', () => {
+    const metaDone = cardMeta({ id: 'task-abc', title: 'Fitur Utama', status: 'completed' })
+    expect(metaDone.formattedId).toBe('#abc')
+    expect(metaDone.statusKey).toBe('done')
+    expect(metaDone.statusText).toBe('✓ selesai')
+    expect(metaDone.statusColor).toBe('#10E5A0')
+
+    const metaReady = cardMeta({ id: 'task-xyz', title: 'API Gateway', status: 'ready' })
+    expect(metaReady.statusKey).toBe('pending')
+    expect(metaReady.statusText).toBe('⏳ antri')
+    expect(metaReady.statusColor).toBe('#9aa7b8')
+    expect(cardMeta(null)).toBeNull()
+  })
+
+  it('columnItems mengelompokkan task server WFS yang berstatus ready dan completed', () => {
+    const wfsSnapshot = {
+      recent: [
+        { id: 'task-9da32873', title: 'Develop: E-Commerce API', status: 'ready' },
+        { id: 'task-e8e731a4', title: 'Develop: WFS Project 31A4', status: 'completed' },
+        { id: 'task-67386a35', title: 'Develop: WFS TaskFlow SaaS', status: 'completed' },
+        { id: 'task-9a927f44', title: 'Develop: E-Commerce API', status: 'ready' },
+      ],
+    }
+    const antri = columnItems(wfsSnapshot, 0)
+    const selesai = columnItems(wfsSnapshot, 2)
+    expect(antri.map(t => t.id)).toEqual(['task-9da32873', 'task-9a927f44'])
+    expect(selesai.map(t => t.id)).toEqual(['task-e8e731a4', 'task-67386a35'])
   })
 })

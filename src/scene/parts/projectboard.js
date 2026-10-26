@@ -3,7 +3,7 @@
 // diperbarui otomatis setiap 60 detik. Jika fetch gagal → fallback ke data terakhir.
 // Modul murni-canvas; dipasang di OfficeScene dengan satu pemanggilan.
 
-import { computePct, clip, cardY, CARD_H, subtitle as subLine, bannerParts, bannerLayout, columnItems, stripLayout, STRIP_GAP, STRIP_LEFT, STRIP_RIGHT } from './projectboard_data.js'
+import { computePct, clip, cardY, CARD_H, subtitle as subLine, bannerParts, bannerLayout, columnItems, cardMeta, stripLayout, STRIP_GAP, STRIP_LEFT, STRIP_RIGHT } from './projectboard_data.js'
 
 export function createProjectBoard(office, THREE) {
   // --- kanvas papan ---
@@ -111,22 +111,25 @@ export function createProjectBoard(office, THREE) {
     cols.forEach(([t, c, n], i) => {
       const x = 34 + i * 496
       g.fillStyle = '#17233a'; roundRect(x, 210, 470, 578, 12); g.fill()
-      g.fillStyle = c; g.font = 'bold 38px sans-serif'; g.textAlign = 'center'
-      g.fillText(t + ' (' + n + ')', x + 235, 226)
+      g.fillStyle = c; g.font = 'bold 36px sans-serif'; g.textAlign = 'center'
+      g.fillText(t + ' (' + n + ')', x + 235, 238)
 
       // kartu task nyata per status (dari recent) — 6 kartu pas di dalam kolom (tanpa ketiban strip bawah)
       const items = columnItems(T, i)
       items.forEach((r, ri) => {
         const y = cardY(ri)
+        const meta = cardMeta(r)
+        const cardCol = meta ? meta.statusColor : c
         // kartu: latar gelap solid + border warna status + teks putih terang (kontras tinggi)
         g.fillStyle = '#0d1524'; roundRect(x + 22, y, 426, CARD_H, 10); g.fill()
-        g.strokeStyle = c; g.lineWidth = 4; roundRect(x + 22, y, 426, CARD_H, 10); g.stroke()
+        g.strokeStyle = cardCol; g.lineWidth = 4; roundRect(x + 22, y, 426, CARD_H, 10); g.stroke()
         g.fillStyle = '#ffffff'
         g.font = '600 26px sans-serif'; g.textAlign = 'left'
-        const title = '#' + r.id + ' ' + clip((r.title || ''), 30)
+        const title = meta ? meta.formattedTitle : ('#' + r.id + ' ' + clip((r.title || ''), 30))
         g.fillText(title, x + 44, y + 33, 392)
-        g.fillStyle = c; g.font = '600 22px sans-serif'
-        g.fillText((r.status === 'done' ? '✓ selesai' : r.status), x + 44, y + 63)
+        g.fillStyle = cardCol; g.font = '600 22px sans-serif'
+        const stText = meta ? meta.statusText : (r.status === 'done' ? '✓ selesai' : r.status)
+        g.fillText(stText, x + 44, y + 63)
       })
       if (!items.length) {
         g.fillStyle = 'rgba(255,255,255,.25)'; g.font = '26px sans-serif'; g.textAlign = 'center'

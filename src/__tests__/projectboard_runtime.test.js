@@ -163,6 +163,27 @@ describe('createProjectBoard — render konten', () => {
     expect(texts.some(t => t === ':20128 ●')).toBe(true)
   })
 
+  it('menggambar kartu kanban 3D dari task server WFS riil berstatus ready dan completed', async () => {
+    const wfsSnap = {
+      tasks: {
+        total: 6, done: 4, pending: 2, running: 0,
+        recent: [
+          { id: 'task-9da32873', title: 'Develop: E-Commerce API', status: 'ready' },
+          { id: 'task-e8e731a4', title: 'Develop: WFS Project 31A4', status: 'completed' },
+        ],
+      },
+      saas: { online: true },
+      agents: [],
+    }
+    await mount(wfsSnap)
+    // Task ready tampil dengan ID terformat dan label antri
+    expect(texts.some(t => t.includes('#9da32873 Develop: E-Commerce API'))).toBe(true)
+    expect(texts.some(t => t === '⏳ antri')).toBe(true)
+    // Task completed tampil dengan ID terformat dan label selesai
+    expect(texts.some(t => t.includes('#e8e731a4 Develop: WFS Project 31A4'))).toBe(true)
+    expect(texts.some(t => t === '✓ selesai')).toBe(true)
+  })
+
   it('payload null / fetch gagal → tidak throw, papan tidak menggambar data', async () => {
     // mount() menimpa stub fetch — injeksikan payload null (sama seperti catch: snap tetap null)
     await mount(null)
