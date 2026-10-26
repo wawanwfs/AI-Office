@@ -181,7 +181,7 @@ export default function ShConsole({ show, onClose }) {
         <div style={STYLE.body}>
           {err && <div style={STYLE.err} role="alert">⚠ {err}</div>}
           {tab === 'overview' && <Overview ov={ov} />}
-          {tab === 'projects' && <Projects projects={projects} onRefresh={loadProjects} />}
+          {tab === 'projects' && <Projects projects={projects} onRefresh={loadProjects} onOpenWorkspace={(pid) => { setTab('ws'); selectWsProject(pid) }} />}
           {tab === 'tasks' && (
             <div>
               <div style={STYLE.card}>
@@ -393,7 +393,7 @@ function Overview({ ov }) {
   )
 }
 
-function Projects({ projects, onRefresh }) {
+function Projects({ projects, onRefresh, onOpenWorkspace }) {
   if (!projects) return <p style={{ color: '#8fa2c4' }}>Memuat daftar project…</p>
   if (projects.length === 0) {
     return <div style={STYLE.card}><div style={{ color: '#8fa2c4' }}>Belum ada project. Buat lewat tab "Project Baru".</div></div>
@@ -407,7 +407,8 @@ function Projects({ projects, onRefresh }) {
             <span style={STYLE.tag}>{p.status || '—'}</span>
           </div>
           <div style={{ fontSize: 12, color: '#8fa2c4', margin: '6px 0' }}>{p.description || ''}</div>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+            <button style={STYLE.btnGhost} onClick={() => onOpenWorkspace?.(p.id)} title="Buka workspace project ini">Workspace</button>
             {(p.preview_url || p.direct_url) && (
               <button style={STYLE.btn} onClick={() => window.open(p.preview_url || p.direct_url, '_blank')}>Buka Preview ↗</button>
             )}

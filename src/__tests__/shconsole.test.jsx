@@ -229,4 +229,20 @@ describe('ShConsole — konsol software house', () => {
     // draf commit tidak boleh bocor ke project lain (tunggu git info project baru dimuat)
     await waitFor(() => expect(screen.getByLabelText('Pesan commit').value).toBe(''))
   })
+
+  it('tab Projects: tombol Workspace melompat ke tab workspace dengan project terpilih', async () => {
+    stubFetch({
+      '/wfs-api/sh/overview': OV,
+      '/wfs-api/projects': PROJ_RESP,
+      '/wfs-api/projects/1/files': { path: '', entries: [{ name: 'src', type: 'dir' }] },
+      '/wfs-api/projects/1/logs?lines=100': { logs: [] },
+      '/wfs-api/projects/1/git': { repo: false },
+    })
+    render(<ShConsole show onClose={() => {}} />)
+    clickTab('Projects')
+    fireEvent.click(await screen.findByRole('button', { name: 'Workspace' }))
+    expect(screen.getByRole('button', { name: 'Tab Workspace' }).getAttribute('aria-pressed')).toBe('true')
+    await waitFor(() => expect(screen.getByLabelText('Pilih project').value).toBe('1'))
+    expect(await screen.findByText(/src/)).toBeTruthy()
+  })
 })
