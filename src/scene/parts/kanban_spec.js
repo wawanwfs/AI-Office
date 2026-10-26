@@ -97,18 +97,124 @@ export function formatTagLabel(tag) {
 }
 
 export const TAG_PALETTE = [
-  '#06B6D4', // cyan/teal
-  '#6366F1', // indigo
-  '#10B981', // emerald
-  '#F59E0B', // amber
-  '#EC4899', // pink
-  '#8B5CF6', // purple
-  '#3B82F6', // blue
-  '#F97316', // orange
-  '#14B8A6', // teal
-  '#84CC16', // lime
-  '#E11D48', // rose
+  '#38BDF8', // sky-400 (lum: 0.440, contrast on dark: 7.86)
+  '#818CF8', // indigo-400 (lum: 0.302, contrast on dark: 5.65)
+  '#34D399', // emerald-400 (lum: 0.496, contrast on dark: 8.76)
+  '#FBBF24', // amber-400 (lum: 0.579, contrast on dark: 10.09)
+  '#F472B6', // pink-400 (lum: 0.346, contrast on dark: 6.36)
+  '#A78BFA', // purple/violet-400 (lum: 0.336, contrast on dark: 6.19)
+  '#60A5FA', // blue-400 (lum: 0.363, contrast on dark: 6.62)
+  '#FB923C', // orange-400 (lum: 0.414, contrast on dark: 7.44)
+  '#2DD4BF', // teal-400 (lum: 0.514, contrast on dark: 9.05)
+  '#A3E635', // lime-400 (lum: 0.646, contrast on dark: 11.17)
+  '#FB7185', // rose-400 (lum: 0.340, contrast on dark: 6.26)
 ];
+
+export function parseHexColor(hex) {
+  if (!hex || typeof hex !== 'string') return [0, 0, 0];
+  let clean = hex.replace('#', '').trim();
+  if (clean.length === 3) {
+    clean = clean.split('').map((c) => c + c).join('');
+  }
+  if (clean.length !== 6) return [0, 0, 0];
+  const num = parseInt(clean, 16);
+  if (Number.isNaN(num)) return [0, 0, 0];
+  return [(num >> 16) & 255, (num >> 8) & 255, num & 255];
+}
+
+export function calcRelativeLuminance(hex) {
+  const [r, g, b] = parseHexColor(hex);
+  const srgb = [r, g, b].map((c) => {
+    const v = c / 255;
+    return v <= 0.04045 ? v / 12.92 : Math.pow((v + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * srgb[0] + 0.7152 * srgb[1] + 0.0722 * srgb[2];
+}
+
+export function calcContrastRatio(colorA, colorB) {
+  const l1 = calcRelativeLuminance(colorA);
+  const l2 = calcRelativeLuminance(colorB);
+  const max = Math.max(l1, l2);
+  const min = Math.min(l1, l2);
+  return Number(((max + 0.05) / (min + 0.05)).toFixed(2));
+}
+
+export function getContrastingTextColor(bgHex, darkColor = '#0b1320', lightColor = '#ffffff') {
+  const cDark = calcContrastRatio(darkColor, bgHex);
+  const cLight = calcContrastRatio(lightColor, bgHex);
+  return cDark >= cLight ? darkColor : lightColor;
+}
+
+export function auditBadgeContrast(badgeColor, bgSurface = '#151d2e') {
+  const lum = Number(calcRelativeLuminance(badgeColor).toFixed(3));
+  const contrastOnSurface = calcContrastRatio(badgeColor, bgSurface);
+  const contrastWithDarkText = calcContrastRatio('#0b1320', badgeColor);
+  const contrastWithLightText = calcContrastRatio('#ffffff', badgeColor);
+  const bestTextColor = contrastWithDarkText >= contrastWithLightText ? '#0b1320' : '#ffffff';
+  const activeContrast = Math.max(contrastWithDarkText, contrastWithLightText);
+  return {
+    color: badgeColor,
+    luminance: lum,
+    contrastOnSurface,
+    contrastWithDarkText,
+    contrastWithLightText,
+    bestTextColor,
+    activeContrast,
+    passesSurfaceAA: contrastOnSurface >= 4.5,
+    passesActiveAA: activeContrast >= 4.5,
+  };
+}
+
+export const INDONESIAN_STATUS_KEYWORDS = Object.freeze({
+  pending: 'antri antrean todo antrian',
+  running: 'jalan berjalan running proses aktif',
+  review: 'review ulasan qa testing kendala issue',
+  done: 'selesai done tuntas rampung',
+  failed: 'gagal failed error',
+});
+
+export function matchTaskSearch(task, query) {
+  if (!query) return true;
+  if (!task || typeof task !== 'object') return false;
+
+  const qStr = String(query).toLowerCase().trim();
+  if (!qStr) return true;
+
+  const tokens = qStr.split(/\s+/).filter(Boolean);
+  if (!tokens.length) return true;
+
+  const taskTags = extractTaskTags(task);
+  const roleLabel = getTaskRoleLabel(task.role);
+  const prio = getTaskPriorityInfo(task.priority);
+  const statusIndo = INDONESIAN_STATUS_KEYWORDS[String(task.status || '').toLowerCase()] || '';
+
+  const idStr = task.id != null ? String(task.id) : '';
+  const searchBag = [
+    idStr ? `#${idStr}` : '',
+    idStr,
+    task.title || '',
+    task.desc || '',
+    task.description || '',
+    task.agent_id || '',
+    task.role || '',
+    roleLabel,
+    task.status || '',
+    statusIndo,
+    task.priority || '',
+    prio.label || '',
+    ...taskTags,
+    ...taskTags.map((tg) => `#${tg}`),
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .toLowerCase();
+
+  return tokens.every((tok) => {
+    const cleanTok = tok.startsWith('#') ? tok.slice(1) : tok;
+    return searchBag.includes(tok) || (cleanTok && searchBag.includes(cleanTok));
+  });
+}
+
 
 export function getTagColor(tag) {
   const norm = normalizeTag(tag);
@@ -198,11 +304,13 @@ export function computeTagCloud(tasks, { divisionFilter = 'all', minCount = 1, l
   const result = [];
   counts.forEach((count, tag) => {
     if (count >= minCount) {
+      const color = getTagColor(tag);
       result.push({
         tag,
         label: formatTagLabel(tag),
         count,
-        color: getTagColor(tag),
+        color,
+        textColor: getContrastingTextColor(color),
       });
     }
   });
@@ -235,7 +343,8 @@ export const TAG_PRESETS = [
     key: 'fullstack',
     label: 'Fullstack',
     icon: '⚡',
-    color: '#3B82F6',
+    color: '#60A5FA',
+    textColor: '#0b1320',
     tags: ['react', 'api', 'sql', 'python'],
     desc: 'Antarmuka web & endpoint API',
   },
@@ -243,7 +352,8 @@ export const TAG_PRESETS = [
     key: 'devops',
     label: 'DevOps & Infra',
     icon: '🐳',
-    color: '#06B6D4',
+    color: '#38BDF8',
+    textColor: '#0b1320',
     tags: ['docker', 'ci/cd'],
     desc: 'Kontainer & pipeline otomasi',
   },
@@ -251,7 +361,8 @@ export const TAG_PRESETS = [
     key: 'frontend',
     label: 'Frontend & UI',
     icon: '🎨',
-    color: '#EC4899',
+    color: '#F472B6',
+    textColor: '#0b1320',
     tags: ['react', 'ui/ux', 'css', 'vue'],
     desc: 'Desain antarmuka, komponen & gaya',
   },
@@ -259,7 +370,8 @@ export const TAG_PRESETS = [
     key: 'backend',
     label: 'Backend & DB',
     icon: '🛠',
-    color: '#10B981',
+    color: '#34D399',
+    textColor: '#0b1320',
     tags: ['api', 'sql', 'db', 'python', 'golang', 'prisma'],
     desc: 'Layanan data, server, & arsitektur sistem',
   },
@@ -267,7 +379,8 @@ export const TAG_PRESETS = [
     key: 'quality',
     label: 'QA & Security',
     icon: '🛡',
-    color: '#F59E0B',
+    color: '#FBBF24',
+    textColor: '#0b1320',
     tags: ['qa', 'security', 'review'],
     desc: 'Ulasan kualitas, audit & keamanan',
   },
@@ -446,10 +559,10 @@ export const ROLE_COLORS = {
   be: '#3B82F6',
   fe: '#10B981',
   ops: '#EC4899',
-  qa: '#8B5CF6',
+  qa: '#A78BFA',
   pm: '#F59E0B',
   ai: '#06B6D4',
-  sec: '#EF4444',
+  sec: '#FB7185',
   sre: '#F97316',
 };
 
@@ -601,11 +714,7 @@ export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'al
     if (!t) return;
     if (df !== 'all' && !matchTaskDivision(t, df)) return;
     if (tagFilter && tagFilter !== 'all' && !matchTaskTags(t, tagFilter, tagMode)) return;
-    if (q) {
-      const taskTags = extractTaskTags(t);
-      const matchText = [t.id, t.title, t.agent_id, t.role, t.status, t.priority, ...taskTags].filter(Boolean).join(' ').toLowerCase();
-      if (!matchText.includes(q)) return;
-    }
+    if (q && !matchTaskSearch(t, q)) return;
     const colKey = getKanbanColumnKey(t.status);
     if (groups[colKey]) {
       groups[colKey].push(t);
@@ -663,9 +772,7 @@ export function filterTasks(tasks, { filter = 'all', q = '', division = 'all', r
     if (divStr !== 'all' && !matchTaskDivision(t, divStr)) return false;
     if (tag && tag !== 'all' && !matchTaskTags(t, tag, tagMode)) return false;
     if (!qStr) return true;
-    const taskTags = extractTaskTags(t);
-    const text = [t.id, t.title, t.agent_id, t.role, t.status, t.priority, ...taskTags].filter(Boolean).join(' ').toLowerCase();
-    return text.includes(qStr);
+    return matchTaskSearch(t, qStr);
   });
   return sortTasks(filtered, sortBy);
 }
@@ -680,6 +787,7 @@ export function getTaskCardBadges(task) {
       hasReview: false,
       roleLabel: 'General',
       roleColor: '#64748B',
+      roleTextColor: '#ffffff',
       priority: getTaskPriorityInfo(null),
       tags: [],
     };
@@ -688,17 +796,23 @@ export function getTaskCardBadges(task) {
   const hasReview = Boolean(task.review && String(task.review).trim().length > 0);
   const roleLabel = getTaskRoleLabel(task.role);
   const roleColor = getTaskRoleBadgeColor(task.role);
+  const roleTextColor = getContrastingTextColor(roleColor);
   const priority = getTaskPriorityInfo(task.priority);
-  const tags = extractTaskTags(task).map((tg) => ({
-    tag: tg,
-    label: formatTagLabel(tg),
-    color: getTagColor(tg),
-  }));
+  const tags = extractTaskTags(task).map((tg) => {
+    const color = getTagColor(tg);
+    return {
+      tag: tg,
+      label: formatTagLabel(tg),
+      color,
+      textColor: getContrastingTextColor(color),
+    };
+  });
   return {
     fileCount,
     hasReview,
     roleLabel,
     roleColor,
+    roleTextColor,
     priority,
     tags,
   };

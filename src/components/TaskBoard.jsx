@@ -4,7 +4,8 @@ import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
 import { parseFileList } from '../lib/files'
 import { setupCardDragData, canDropTaskInColumn, formatDragDropNotification } from '../lib/kanban_drag'
-import { IconBoard, IconClose, IconPlay, IconRotate, IconList, IconKanban } from './Icons'
+import { calcSearchStats, getSearchMatchSegments, getKanbanColumnSearchEmptyState } from '../lib/kanban_search'
+import { IconBoard, IconClose, IconPlay, IconRotate, IconList, IconKanban, IconSearch } from './Icons'
 import {
   KANBAN_COLUMNS,
   getTaskRoleLabel,
@@ -15,7 +16,6 @@ import {
   extractTaskDivisions,
   filterTasks,
   computeColumnDistribution,
-  getKanbanColumnEmptyState,
   getTaskPriorityInfo,
   computePriorityBreakdown,
   SORT_OPTIONS,
@@ -52,11 +52,28 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const [draggedTaskId, setDraggedTaskId] = useState(null)
   const [dragOverCol, setDragOverCol] = useState(null)
   const board = useRef(null)
+  const searchInputRef = useRef(null)
   useModalFlag(open || !!sel)
   const onEscRef = useRef(() => {})
   useEffect(() => { onEscRef.current = () => { sel ? setSel(null) : setOpen(false) } })
   const closeBoard = useCallback(() => onEscRef.current(), [])
   useDialogA11y({ open: open || !!sel, onClose: closeBoard, ref: board })
+
+  // Pintasan keyboard: '/' untuk fokus cepat ke input pencarian
+  useEffect(() => {
+    if (!open) return
+    const onKey = (e) => {
+      if (e.key === '/' && !sel) {
+        const tag = e.target?.tagName?.toLowerCase()
+        if (tag !== 'input' && tag !== 'textarea' && !e.target?.isContentEditable) {
+          e.preventDefault()
+          searchInputRef.current?.focus()
+        }
+      }
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [open, sel])
 
   const activeTags = useMemo(() => normalizeTagList(selectedTag), [selectedTag])
 
@@ -246,9 +263,16 @@ export default function TaskBoard({ onFlash, onAsk }) {
     () => groupTasksByKanbanColumn(tasks, q, division, sortBy, selectedTag, tagMode),
     [tasks, q, division, sortBy, selectedTag, tagMode]
   )
+  const totalKanbanTasks = useMemo(() => {
+    return Object.values(kanbanGroups).reduce((acc, grp) => acc + grp.length, 0)
+  }, [kanbanGroups])
   const metrics = useMemo(() => computeSprintMetrics(tasks, division), [tasks, division])
   const overallMetrics = useMemo(() => computeSprintMetrics(tasks), [tasks])
   const priorityBreakdown = useMemo(() => computePriorityBreakdown(tasks, division), [tasks, division])
+  const searchStats = useMemo(
+    () => calcSearchStats(tasks, q, { division, tag: selectedTag, tagMode }),
+    [tasks, q, division, selectedTag, tagMode]
+  )
 
   const list = useMemo(
     () => filterTasks(tasks, { filter, q, division, sortBy, tag: selectedTag, tagMode }),
@@ -458,7 +482,52 @@ export default function TaskBoard({ onFlash, onAsk }) {
             <>
               <div style={{ padding: '10px 12px 0' }}>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginBottom: 8 }}>
-                  <input className="fld" style={{ flex: 1, margin: 0 }} aria-label="Cari task" placeholder="Cari judul, agent, role, prioritas…" value={q} onChange={e => setQ(e.target.value)} />
+                  <div className="task-search-bar" style={{ flex: 1, position: 'relative' }}>
+                    <span className="task-search-icon" aria-hidden="true">
+                      <IconSearch size={14} />
+                    </span>
+                    <input
+                      ref={searchInputRef}
+                      className="fld task-search-input"
+                      style={{ width: '100%', margin: 0, paddingRight: q ? 74 : 10 }}
+                      aria-label="Cari task"
+                      placeholder="Cari judul, agent, role, prioritas, #tag… (/)"
+                      value={q}
+                      onChange={e => setQ(e.target.value)}
+                      onKeyDown={e => {
+                        if (e.key === 'Escape' && q) {
+                          e.stopPropagation()
+                          setQ('')
+                        }
+                      }}
+                    />
+                    {q && (
+                      <div style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: 6, zIndex: 2 }}>
+                        <span
+                          className="task-search-count-badge"
+                          aria-live="polite"
+                          title={`Ditemukan ${searchStats.matched} task dari total ${searchStats.total} task`}
+                        >
+                          {searchStats.matched}/{searchStats.total}
+                        </span>
+                        <button
+                          type="button"
+                          className="task-search-clear-btn"
+                          onClick={() => {
+                            setQ('')
+                            searchInputRef.current?.focus()
+                            if (typeof window !== 'undefined' && window.__officeSound) {
+                              window.__officeSound.playSelect?.()
+                            }
+                          }}
+                          aria-label="Hapus kata kunci pencarian"
+                          title="Hapus pencarian (Esc)"
+                        >
+                          ✕
+                        </button>
+                      </div>
+                    )}
+                  </div>
                   <div className="task-sort-container">
                     <label htmlFor="task-sort-select" className="sr-only">Urutkan task:</label>
                     <select
@@ -560,7 +629,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
                         key={item.tag}
                         type="button"
                         className={`task-tag-chip${isAct ? ' active' : ''}`}
-                        style={{ '--chip-accent': item.color }}
+                        style={{ '--chip-accent': item.color, '--chip-text-color': item.textColor || '#0b1320' }}
                         onClick={(e) => handleTagClick(item.tag, e)}
                         aria-pressed={isAct}
                         title={`Filter task #${item.label} (${item.count} task) — Shift+Klik untuk multi-pilih`}
@@ -633,12 +702,40 @@ export default function TaskBoard({ onFlash, onAsk }) {
               {tasks && list.length === 0 && <div style={{ padding: '0 12px 12px' }}><div className="skeleton">Tidak ada task yang cocok.</div></div>}
 
               {viewMode === 'kanban' && tasks && (
-                <div className="kanban-board-container" role="region" aria-label="Papan kanban sprint">
-                  {KANBAN_COLUMNS.map(col => {
-                    const colTasks = kanbanGroups[col.key] || []
-                    const dist = computeColumnDistribution(colTasks.length, metrics.total)
-                    const emptyState = getKanbanColumnEmptyState(col.key)
-                    return (
+                totalKanbanTasks === 0 && q.trim() ? (
+                  <div className="kanban-empty-board-banner" role="status">
+                    <span className="kanban-empty-board-icon" aria-hidden="true">🔍</span>
+                    <div className="kanban-empty-board-title">
+                      Tidak ada task yang cocok dengan &ldquo;{q}&rdquo;
+                    </div>
+                    <div className="kanban-empty-board-sub">
+                      Periksa kata kunci pencarian atau sesuaikan filter divisi dan tag aktif.
+                    </div>
+                    <button
+                      type="button"
+                      className="btn primary"
+                      style={{ marginTop: 10, fontSize: 12, minHeight: 30 }}
+                      onClick={() => {
+                        setQ('')
+                        searchInputRef.current?.focus()
+                        if (typeof window !== 'undefined' && window.__officeSound) {
+                          window.__officeSound.playSelect?.()
+                        }
+                      }}
+                    >
+                      ✕ Bersihkan Pencarian
+                    </button>
+                  </div>
+                ) : (
+                  <div className="kanban-board-container" role="region" aria-label="Papan kanban sprint">
+                    {KANBAN_COLUMNS.map(col => {
+                      const colTasks = kanbanGroups[col.key] || []
+                      const dist = computeColumnDistribution(colTasks.length, metrics.total)
+                      const emptyState = getKanbanColumnSearchEmptyState(col.key, {
+                        isSearching: Boolean(q.trim()),
+                        columnLabel: col.label,
+                      })
+                      return (
                       <div
                         key={col.key}
                         className={`kanban-col${dragOverCol === col.key ? ' drag-over' : ''}`}
@@ -748,7 +845,17 @@ export default function TaskBoard({ onFlash, onAsk }) {
                                       </span>
                                     )}
                                   </div>
-                                  <div className="kanban-card-title">{t.title}</div>
+                                  <div className="kanban-card-title">
+                                    {getSearchMatchSegments(t.title, q).map((seg, i) =>
+                                      seg.match ? (
+                                        <mark key={i} className="kanban-search-highlight">
+                                          {seg.text}
+                                        </mark>
+                                      ) : (
+                                        seg.text
+                                      )
+                                    )}
+                                  </div>
                                   <div className="kanban-card-meta">
                                     <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
                                       <span className="kanban-role-badge" style={{ color: badges.roleColor }}>{badges.roleLabel}</span>
@@ -758,7 +865,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
                                           <span
                                             key={tg.tag}
                                             className={`kanban-tag-badge${isTagAct ? ' active' : ''}`}
-                                            style={{ '--tag-color': tg.color }}
+                                            style={{ '--tag-color': tg.color, '--tag-text-color': tg.textColor || '#0b1320' }}
                                             title={`Filter berdasarkan tag #${tg.label}`}
                                             role="button"
                                             tabIndex={0}
@@ -814,7 +921,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
                     )
                   })}
                 </div>
-              )}
+              ))}
 
               {viewMode === 'list' && tasks && (
                 <div style={{ overflowY: 'auto', padding: '0 12px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
@@ -835,7 +942,18 @@ export default function TaskBoard({ onFlash, onAsk }) {
                         style={{ borderLeft: `4px solid ${ST[t.status]?.[1] || '#888'}` }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
-                          <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.35 }}>#{t.id} {t.title}</div>
+                          <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.35 }}>
+                            #{t.id}{' '}
+                            {getSearchMatchSegments(t.title, q).map((seg, i) =>
+                              seg.match ? (
+                                <mark key={i} className="kanban-search-highlight">
+                                  {seg.text}
+                                </mark>
+                              ) : (
+                                seg.text
+                              )
+                            )}
+                          </div>
                           {t.priority && prio.key !== 'normal' && (
                             <span
                               className="kanban-priority-badge"
@@ -857,7 +975,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
                                   <span
                                     key={tg.tag}
                                     className={`kanban-tag-badge${isTagAct ? ' active' : ''}`}
-                                    style={{ '--tag-color': tg.color }}
+                                    style={{ '--tag-color': tg.color, '--tag-text-color': tg.textColor || '#0b1320' }}
                                     title={`Filter berdasarkan tag #${tg.label}`}
                                     role="button"
                                     tabIndex={0}
@@ -891,6 +1009,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
           <footer className="panel-footer-hints" role="note" aria-label="Petunjuk pintasan keyboard">
             <span className="hint-item"><kbd className="hint-kbd">Esc</kbd> {sel ? 'Kembali' : 'Tutup'}</span>
             <span className="hint-item"><kbd className="hint-kbd">T</kbd> Toggle Papan</span>
+            <span className="hint-item"><kbd className="hint-kbd">/</kbd> Cari</span>
             {!sel && <span className="hint-item"><kbd className="hint-kbd">Shift+Klik</kbd> Multi-Tag</span>}
           </footer>
         </section>

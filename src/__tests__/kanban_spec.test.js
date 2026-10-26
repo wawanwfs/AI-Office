@@ -40,6 +40,12 @@ import {
   computePresetStats,
   toggleTagInFilter,
   formatTagFilterSummary,
+  parseHexColor,
+  calcRelativeLuminance,
+  calcContrastRatio,
+  getContrastingTextColor,
+  auditBadgeContrast,
+  matchTaskSearch,
 } from '../scene/parts/kanban_spec.js';
 
 describe('kanban_spec — KANBAN_COLUMNS & role badges', () => {
@@ -816,5 +822,76 @@ describe('kanban_spec — TAG_PRESETS & multi-tag helpers', () => {
     const filteredAll = filterTasks(tasks, { tag: ['react', 'api'], tagMode: 'all' });
     expect(filteredAll).toHaveLength(1);
     expect(filteredAll[0].id).toBe(30);
+  });
+});
+
+describe('kanban_spec — Audit Kontras Warna & Aksesibilitas WCAG (Badge & Tag)', () => {
+  it('parseHexColor menguraikan hex 3 & 6 digit secara akurat', () => {
+    expect(parseHexColor('#ffffff')).toEqual([255, 255, 255]);
+    expect(parseHexColor('#000000')).toEqual([0, 0, 0]);
+    expect(parseHexColor('#f00')).toEqual([255, 0, 0]);
+    expect(parseHexColor('38bdf8')).toEqual([56, 189, 248]);
+    expect(parseHexColor(null)).toEqual([0, 0, 0]);
+    expect(parseHexColor('invalid')).toEqual([0, 0, 0]);
+  });
+
+  it('calcRelativeLuminance menghitung luminansi sRGB yang valid (0 s.d. 1)', () => {
+    expect(calcRelativeLuminance('#000000')).toBe(0);
+    expect(calcRelativeLuminance('#ffffff')).toBeCloseTo(1.0, 2);
+    const lumTeal = calcRelativeLuminance('#10E5A0');
+    expect(lumTeal).toBeGreaterThan(0.4);
+    expect(lumTeal).toBeLessThan(0.8);
+  });
+
+  it('calcContrastRatio menghitung rasio kontras standar (1.0 s.d. 21.0)', () => {
+    const maxContrast = calcContrastRatio('#ffffff', '#000000');
+    expect(maxContrast).toBe(21.0);
+    const minContrast = calcContrastRatio('#ffffff', '#ffffff');
+    expect(minContrast).toBe(1.0);
+  });
+
+  it('getContrastingTextColor memilih warna teks kontras terbaik', () => {
+    // Pada latar belakang terang (kuning/amber/lime), teks gelap harus dipilih
+    expect(getContrastingTextColor('#FBBF24')).toBe('#0b1320');
+    expect(getContrastingTextColor('#A3E635')).toBe('#0b1320');
+    // Pada latar belakang gelap, teks terang harus dipilih
+    expect(getContrastingTextColor('#000000')).toBe('#ffffff');
+    expect(getContrastingTextColor('#151d2e')).toBe('#ffffff');
+  });
+
+  it('seluruh warna dalam TAG_PALETTE lolos audit kontras WCAG AA pada latar kartu (#151d2e)', () => {
+    TAG_PALETTE.forEach((color) => {
+      const audit = auditBadgeContrast(color, '#151d2e');
+      expect(audit.passesSurfaceAA).toBe(true);
+      expect(audit.contrastOnSurface).toBeGreaterThanOrEqual(4.5);
+      expect(audit.passesActiveAA).toBe(true);
+      expect(audit.activeContrast).toBeGreaterThanOrEqual(4.5);
+    });
+  });
+
+  it('seluruh ROLE_COLORS lolos audit kontras WCAG AA pada latar permukaan gelap', () => {
+    Object.entries(ROLE_COLORS).forEach(([, color]) => {
+      const audit = auditBadgeContrast(color, '#151d2e');
+      expect(audit.passesSurfaceAA).toBe(true);
+      expect(audit.contrastOnSurface).toBeGreaterThanOrEqual(4.5);
+    });
+  });
+
+  it('getTaskCardBadges mengembalikan textColor dan roleTextColor dengan kontras valid', () => {
+    const task = {
+      id: 55,
+      title: 'Audit Keamanan & Kontras #security',
+      role: 'sec',
+      priority: 'urgent',
+      tags: ['security', 'audit'],
+    };
+    const badges = getTaskCardBadges(task);
+    expect(badges.roleTextColor).toMatch(/^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/);
+    expect(Array.isArray(badges.tags)).toBe(true);
+    badges.tags.forEach((tg) => {
+      expect(tg.textColor).toMatch(/^#(?:[0-9a-fA-F]{6}|[0-9a-fA-F]{3})$/);
+      const ratio = calcContrastRatio(tg.textColor, tg.color);
+      expect(ratio).toBeGreaterThanOrEqual(4.5);
+    });
   });
 });
