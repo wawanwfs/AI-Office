@@ -60,7 +60,12 @@ export function connectionBadge(tr, now = Date.now()) {
   return { state: 'down', label: 'Terputus', detail: t.lastError ? `Gateway tak terjangkau (${t.lastError})` : 'Gateway tak terjangkau', tone: 'err' }
 }
 
-// Delay poll berikutnya (ms) — fallback POLL_HEALTHY_MS bila tracker belum ada.
-export function nextPollDelay(tr) {
-  return (tr && tr.nextDelayMs) || POLL_HEALTHY_MS
+// Delay poll berikutnya (ms). healthyMs: cadence sehat kustom per-pemanggil —
+// App memakai default POLL_HEALTHY_MS, sedangkan papan 3D & TV lounge tetap
+// 60 dtk saat sehat (perilaku lama dipertahankan). Tracker yang sedang gagal
+// selalu mengembalikan delay backoff eksponensialnya, apa pun cadence sehat.
+export function nextPollDelay(tr, healthyMs = POLL_HEALTHY_MS) {
+  if (!tr) return healthyMs
+  if (tr.state !== 'live' && tr.nextDelayMs != null) return tr.nextDelayMs
+  return healthyMs
 }

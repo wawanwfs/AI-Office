@@ -8,6 +8,7 @@ import { readFileSync } from 'node:fs'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { drawTvDashboard } from '../scene/parts/tv_canvas.js'
+import { applyPollResult, nextPollDelay } from '../lib/connection_spec.js'
 
 const texts = []
 function makeCtx() {
@@ -76,12 +77,14 @@ function runTvCode(opts) {
   stubCreateElement()
   const { THREE } = buildSandbox(opts)
   const code = extractTvSource()
-  // fungsi + const dievaluasi via new Function; window.__tvData diakses via win
-  const fn = new Function('window', 'THREE', 'document', 'lounge', 'fetch', 'drawTvDashboard', code + `
-    ;return tvPull().then(() =>
-      ({ drawTv, tvPull, tvC, tvTex, tvIv, tvOnVis, tvScr }))`)
+  // fungsi + const dievaluasi via new Function; window.__tvData diakses via win.
+  // Helper tracker koneksi di-inject (import ES modul tidak terlihat new Function).
+  const fn = new Function('window', 'THREE', 'document', 'lounge', 'fetch', 'drawTvDashboard',
+    'applyPollResult', 'nextPollDelay', code + `
+    ;return tvPull(true).then(() =>
+      ({ drawTv, tvPull, tvC, tvTex, tvIv: tvPollTimer, tvSchedule, tvDestroy, tvOnVis, tvScr }))`)
   const lounge = { add() {}, children: [] }
-  return fn(win, THREE, document, lounge, fetchMock, drawTvDashboard)
+  return fn(win, THREE, document, lounge, fetchMock, drawTvDashboard, applyPollResult, nextPollDelay)
 }
 
 beforeEach(() => {

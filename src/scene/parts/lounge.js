@@ -2,6 +2,8 @@
 // coffee table kaca+kayu + majalah & cangkir, 2 kursi santai, lampu berdiri,
 // meja majalah, TV info dgn dashboard live dari /wfs-project.
 // Builder berbasis konteks (THREE, office, M, MB, drawTvDashboard) — pola sama dgn cafe.js.
+import { applyPollResult, nextPollDelay } from '../../lib/connection_spec.js'
+
 export function createLounge(ctx) {
   const { THREE, office, M, MB, drawTvDashboard, blobMat } = ctx;
   const lounge = new THREE.Group();
@@ -66,11 +68,13 @@ export function createLounge(ctx) {
   });
   const tvFrame = new THREE.Mesh(new THREE.BoxGeometry(.06, .75, 1.3), M(0x101418));
   tvFrame.position.set(12.35, 2.0, 6.4); lounge.add(tvFrame);
-  // TV lounge: dashboard live dari /wfs-project (data nyata, refresh 60 dtk + saat tab visible).
-  // Statis lama ("uptime: 99.98%", "agents: 14 online") = angka hardcode menyesatkan → dihapus.
+  // TV lounge: dashboard live dari /wfs-project (data nyata). Statis lama
+  // ("uptime: 99.98%", "agents: 14 online") = angka hardcode menyesatkan → dihapus.
   // drawTv diekstrak murni ke parts/tv_canvas.js (diuji unit); di sini cukup injek ctx.
   const tvC = document.createElement('canvas'); tvC.width = 256; tvC.height = 144;
   const tvx = tvC.getContext('2d');
+  // Tracker kesehatan koneksi (paritas papan 3D & chip HUD) — down sejak awal.
+  let tvConn = applyPollResult(null, { ok: false, error: 'init' }, 0);
   function drawTv() { drawTvDashboard(tvx, window.__tvData); window.__lastTvDrawAt = Date.now() }
   drawTv();
   const tvTex = new THREE.CanvasTexture(tvC); tvTex.minFilter = THREE.LinearFilter;
@@ -81,19 +85,39 @@ export function createLounge(ctx) {
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const d = await r.json();
       window.__tvData = { ...d, at: Date.now() };
+      tvConn = applyPollResult(tvConn, { ok: true });
       drawTv(); tvTex.needsUpdate = true;
-    } catch (e) { window.__tvPullErr = String(e && e.stack || e); }
+    } catch (e) {
+      tvConn = applyPollResult(tvConn, { ok: false, error: 'offline' });
+      window.__tvPullErr = String(e && e.stack || e);
+    }
   }
-  tvPull(true);
-  const tvIv = setInterval(tvPull, 60000);
+  // Polling adaptif: rantai setTimeout (60 dtk sehat, backoff 5→80s saat gagal,
+  // pulih → 60 dtk) — TV tak lagi menghantam gateway mati tiap 60 dtk.
+  // Jadwal pertama menyusul pull awal selesai, agar delay dihitung dari tracker segar.
+  const TV_POLL_HEALTHY_MS = 60000;
+  let tvPollTimer = null;
+  let tvStopped = false;
+  function tvSchedule() {
+    tvPollTimer = setTimeout(async () => {
+      await tvPull();
+      if (!tvStopped) tvSchedule();
+    }, nextPollDelay(tvConn, TV_POLL_HEALTHY_MS));
+  }
+  tvPull(true).then(() => { if (!tvStopped) tvSchedule(); });
   const tvOnVis = () => { if (document.visibilityState === 'visible') tvPull() };
   document.addEventListener('visibilitychange', tvOnVis);
+  function tvDestroy() {
+    tvStopped = true; // hentikan rantai poll adaptif
+    if (tvPollTimer !== null) clearTimeout(tvPollTimer);
+    document.removeEventListener('visibilitychange', tvOnVis);
+  }
   const tvScr = new THREE.Mesh(new THREE.PlaneGeometry(1.2, .68), new THREE.MeshBasicMaterial({ map: tvTex }));
   tvScr.position.set(12.31, 2.0, 6.4); tvScr.rotation.y = -Math.PI / 2; lounge.add(tvScr);
   office.add(lounge);
   return {
     lounge, rug: lgRug, rugInner: lgRugIn, coffeeBase: ctB, coffeeTop: ctTop, magazine: mag, mug,
     chairs: [chair1, chair2], lampPole: flPole, lampShade: flShade, lampBulb: flBulb,
-    magRack, mags, tvFrame, tvScreen: tvScr, tvTex, tvCanvas: tvC, tvPull, tvIv, tvOnVis,
+    magRack, mags, tvFrame, tvScreen: tvScr, tvTex, tvCanvas: tvC, tvPull, tvIv: tvPollTimer, tvSchedule, tvDestroy, tvOnVis,
   };
 }

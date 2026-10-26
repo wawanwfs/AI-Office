@@ -102,4 +102,16 @@ describe('connection_spec — connectionBadge & nextPollDelay', () => {
     expect(nextPollDelay(t)).toBe(POLL_BASE_MS)
     expect(STALE_AFTER_MS).toBeGreaterThan(POLL_HEALTHY_MS)
   })
+
+  it('nextPollDelay(tr, healthyMs): cadence sehat kustom (papan 3D & TV lounge 60 dtk), gagal tetap backoff', () => {
+    const H = 60000
+    expect(nextPollDelay(null, H)).toBe(H) // tracker kosong → cadence sehat pemanggil
+    const live = applyPollResult(null, { ok: true }, 0)
+    expect(nextPollDelay(live, H)).toBe(H) // sehat → cadence pemanggil (bukan 15s)
+    let t = applyPollResult(null, { ok: true }, 0)
+    t = applyPollResult(t, { ok: false }, 1000)
+    expect(nextPollDelay(t, H)).toBe(POLL_BASE_MS) // gagal → backoff menang atas cadence sehat
+    t = applyPollResult(t, { ok: false }, 2000)
+    expect(nextPollDelay(t, H)).toBe(POLL_BASE_MS * 2)
+  })
 })

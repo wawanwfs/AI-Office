@@ -4,7 +4,12 @@
 // Modul murni-canvas; dipasang di OfficeScene dengan satu pemanggilan.
 
 import { computePct, clip, cardY, CARD_H, subtitle as subLine, bannerParts, bannerLayout, columnItems, cardMeta, stripLayout, STRIP_GAP, STRIP_LEFT, STRIP_RIGHT } from './projectboard_data.js'
-import { applyPollResult, connectionBadge } from '../../lib/connection_spec.js'
+import { applyPollResult, connectionBadge, nextPollDelay } from '../../lib/connection_spec.js'
+
+// Polling adaptif papan 3D: cadence sehat tetap 60 dtk (perilaku lama), tapi
+// saat fetch gagal jeda mengikuti backoff eksponensial 5→10→20→40→80s (cap 80s)
+// dari connection_spec — browser tak lagi menghantam gateway mati tiap 60 dtk.
+const BOARD_POLL_HEALTHY_MS = 60000
 
 export function createProjectBoard(office, THREE) {
   // --- kanvas papan ---
@@ -173,8 +178,18 @@ export function createProjectBoard(office, THREE) {
   }
 
   // SaaS line: gambar ringkasan SaaS di strip bawah frame? (opsional di scene: cukup papan task)
-  pull()
-  const iv = setInterval(pull, 60000)
+  // Polling adaptif: rantai setTimeout — delay dari tracker (60 dtk sehat,
+  // backoff eksponensial 5→80s saat gateway mati, pulih → 60 dtk lagi).
+  // Jadwal pertama menyusul pull awal selesai, agar delay dihitung dari tracker segar.
+  let pollTimer = null
+  let pollStopped = false
+  function schedulePoll() {
+    pollTimer = setTimeout(async () => {
+      await pull()
+      if (!pollStopped) schedulePoll()
+    }, nextPollDelay(conn, BOARD_POLL_HEALTHY_MS))
+  }
+  pull().then(() => { if (!pollStopped) schedulePoll() })
   // Umur data pada badge koneksi (label "Sinkron N dtk/mnt lalu" saat stale)
   // harus berdetak: segarkan strip tiap 30s. draw() menggambar hanya bila snap ada,
   // jadi aman sebelum fetch pertama berhasil.
@@ -199,6 +214,10 @@ export function createProjectBoard(office, THREE) {
     }
   }, 500)
 
-  function destroy() { clearInterval(iv); clearInterval(connIv); clearInterval(forceVisible); document.removeEventListener('visibilitychange', onVis) }
+  function destroy() {
+    pollStopped = true // hentikan rantai poll adaptif
+    if (pollTimer !== null) clearTimeout(pollTimer)
+    clearInterval(connIv); clearInterval(forceVisible); document.removeEventListener('visibilitychange', onVis)
+  }
   return { destroy, refresh: pull, mesh, frame }
 }

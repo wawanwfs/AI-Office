@@ -1932,8 +1932,8 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       // (tanpa ini, tiap remount meninggalkan papan lama yang terus fetch selamanya).
       try { window.__projectBoard && window.__projectBoard.destroy() } catch{/* abaikan */}
       delete window.__projectBoard;
-      // TV lounge: hentikan interval fetch + listener visibility-nya
-      clearInterval(__loungeObj.tvIv); document.removeEventListener('visibilitychange', __loungeObj.tvOnVis);
+      // TV lounge: hentikan rantai poll adaptif + listener visibility-nya
+      try { __loungeObj && __loungeObj.tvDestroy && __loungeObj.tvDestroy() } catch{/* abaikan */}
       // Ruang meeting & whiteboard: bersihkan interval & listener
       try { __mr && __mr.destroy && __mr.destroy(); } catch{/* abaikan */}
       // Shift (daycycle): clear semua setTimeout pending (arrive/depart berantai per 800ms)
