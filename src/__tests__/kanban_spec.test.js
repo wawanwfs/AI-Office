@@ -12,6 +12,10 @@ import {
   computeSprintMetrics,
   filterTasks,
   getTaskCardBadges,
+  KANBAN_EMPTY_STATES,
+  getKanbanColumnEmptyState,
+  computeColumnDistribution,
+  getTaskAgentFocusInfo,
 } from '../scene/parts/kanban_spec.js';
 
 describe('kanban_spec — KANBAN_COLUMNS & role badges', () => {
@@ -317,5 +321,64 @@ describe('kanban_spec — getTaskCardBadges', () => {
     const bUndef = getTaskCardBadges(undefined);
     expect(bUndef.fileCount).toBe(0);
     expect(bUndef.hasReview).toBe(false);
+  });
+});
+
+describe('kanban_spec — getKanbanColumnEmptyState', () => {
+  it('mengembalikan icon dan teks kontekstual per kolom kanban', () => {
+    expect(getKanbanColumnEmptyState('pending')).toEqual(KANBAN_EMPTY_STATES.pending);
+    expect(getKanbanColumnEmptyState('running')).toEqual(KANBAN_EMPTY_STATES.running);
+    expect(getKanbanColumnEmptyState('review')).toEqual(KANBAN_EMPTY_STATES.review);
+    expect(getKanbanColumnEmptyState('done')).toEqual(KANBAN_EMPTY_STATES.done);
+  });
+
+  it('toleran terhadap huruf besar, spasi, dan nilai kosong/null', () => {
+    expect(getKanbanColumnEmptyState(' PENDING ')).toEqual(KANBAN_EMPTY_STATES.pending);
+    expect(getKanbanColumnEmptyState('RUNNING')).toEqual(KANBAN_EMPTY_STATES.running);
+    expect(getKanbanColumnEmptyState('unknown')).toEqual({ icon: '📋', text: 'Tidak ada task' });
+    expect(getKanbanColumnEmptyState('')).toEqual({ icon: '📋', text: 'Tidak ada task' });
+    expect(getKanbanColumnEmptyState(null)).toEqual({ icon: '📋', text: 'Tidak ada task' });
+  });
+});
+
+describe('kanban_spec — computeColumnDistribution', () => {
+  it('menghitung persentase dan lebar distribusi kolom secara akurat', () => {
+    const d1 = computeColumnDistribution(2, 6);
+    expect(d1.count).toBe(2);
+    expect(d1.total).toBe(6);
+    expect(d1.pct).toBe(33);
+    expect(d1.widthPct).toBe(33);
+    expect(d1.ratio).toBe('2/6');
+
+    const d2 = computeColumnDistribution(5, 5);
+    expect(d2.pct).toBe(100);
+    expect(d2.widthPct).toBe(100);
+    expect(d2.ratio).toBe('5/5');
+  });
+
+  it('menghadapi total 0 atau negatif tanpa division by zero / NaN', () => {
+    expect(computeColumnDistribution(3, 0)).toEqual({ count: 0, total: 0, pct: 0, widthPct: 0, ratio: '0/0' });
+    expect(computeColumnDistribution(0, 0)).toEqual({ count: 0, total: 0, pct: 0, widthPct: 0, ratio: '0/0' });
+    expect(computeColumnDistribution(-1, -5)).toEqual({ count: 0, total: 0, pct: 0, widthPct: 0, ratio: '0/0' });
+  });
+});
+
+describe('kanban_spec — getTaskAgentFocusInfo', () => {
+  it('menghubungkan agen task ke tim dan lantai kampus yang tepat', () => {
+    const infoBe = getTaskAgentFocusInfo({ id: 10, agent_id: 'be1', role: 'be' });
+    expect(infoBe.agentId).toBe('be1');
+    expect(infoBe.agentName).toBe('BE1');
+    expect(infoBe.teamKey).toBe('core-be');
+    expect(infoBe.floor).toBe(2);
+
+    const infoQa = getTaskAgentFocusInfo({ id: 20, agent_id: 'qa1', role: 'qa' });
+    expect(infoQa.agentId).toBe('qa1');
+    expect(infoQa.teamKey).toBe('qa-gov');
+    expect(infoQa.floor).toBe(3);
+  });
+
+  it('toleran terhadap task null, undefined, atau tanpa agen', () => {
+    expect(getTaskAgentFocusInfo(null)).toEqual({ agentId: '', agentName: '', teamKey: null, teamName: null, floor: null });
+    expect(getTaskAgentFocusInfo({})).toEqual({ agentId: '', agentName: '', teamKey: null, teamName: null, floor: null });
   });
 });

@@ -80,14 +80,35 @@ describe('TaskBoard', () => {
     expect(screen.getByRole('region', { name: 'Kolom Review / Isu' })).toBeTruthy()
     expect(screen.getByRole('region', { name: 'Kolom Selesai' })).toBeTruthy()
 
+    // Progress bar sprint visual & bar distribusi kolom
+    expect(screen.getByRole('progressbar', { name: /Progres sprint kampus: 50% selesai/i })).toBeTruthy()
+    expect(screen.getByRole('progressbar', { name: /Distribusi kolom Selesai: 50%/i })).toBeTruthy()
+    expect(screen.getByRole('progressbar', { name: /Distribusi kolom Antri: 50%/i })).toBeTruthy()
+
+    // Kolom Sedang Jalan kosong menampilkan empty state cerdas
+    expect(screen.getByText('Tidak ada eksekusi aktif')).toBeTruthy()
+
     // Kartu dengan file & review memiliki badge khusus
     expect(screen.getByTitle('1 file dihasilkan')).toBeTruthy()
     expect(screen.getByTitle('Ada ulasan QA')).toBeTruthy()
+
+    // Tombol agen pada kartu memicu fokus 3D agen
+    const focusAgentMock = vi.fn()
+    window.__focusAgent = focusAgentMock
+    const agentFocusBtn = screen.getByRole('button', { name: 'Fokus kamera 3D ke agen fe1' })
+    expect(agentFocusBtn).toBeTruthy()
+    fireEvent.click(agentFocusBtn)
+    expect(focusAgentMock).toHaveBeenCalledWith('fe1')
+    delete window.__focusAgent
 
     // Klik kartu di kanban membuka detail task
     const card = screen.getByRole('button', { name: /Task #2: Halaman admin/ })
     fireEvent.click(card)
     expect(screen.getByText(/Agent: fe1 · Role: fe/)).toBeTruthy()
+
+    // Tombol fokus agen di dalam modal detail
+    const modalAgentFocusBtn = screen.getByRole('button', { name: /Fokus Agen \(fe1\)/i })
+    expect(modalAgentFocusBtn).toBeTruthy()
   })
 
   it('terbuka secara otomatis saat menerima event kustom wfs-open-task-board', async () => {

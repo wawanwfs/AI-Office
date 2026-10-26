@@ -13,6 +13,8 @@ import {
   computeSprintMetrics,
   extractTaskDivisions,
   filterTasks,
+  computeColumnDistribution,
+  getKanbanColumnEmptyState,
 } from '../scene/parts/kanban_spec'
 import { findTeamByRole, findTeamByAgent } from '../scene/parts/team_spec'
 
@@ -154,6 +156,28 @@ export default function TaskBoard({ onFlash, onAsk }) {
               <span className="sr-only">✕</span>
             </button>
           </div>
+          {/* Sprint Progress Bar (Visual Progress) */}
+          {tasks && (
+            <div
+              className="sprint-progress-container"
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={100}
+              aria-valuenow={metrics.pct}
+              aria-label={`Progres sprint ${division !== 'all' ? (activeDivision?.fullName || division) : 'kampus'}: ${metrics.pct}% selesai`}
+              title={`Progres sprint: ${metrics.done}/${metrics.total} task (${metrics.pct}%) selesai`}
+            >
+              <div
+                className="sprint-progress-fill"
+                style={{
+                  width: `${metrics.pct}%`,
+                  background: division !== 'all' && activeDivision?.color
+                    ? `linear-gradient(90deg, ${activeDivision.color}, #448AFF)`
+                    : 'linear-gradient(90deg, #10E5A0, #448AFF)',
+                }}
+              />
+            </div>
+          )}
           {sel ? (
             <div style={{ padding: 14, overflowY: 'auto' }}>
               <button className="btn" onClick={() => setSel(null)} style={{ marginBottom: 10 }}>← Kembali</button>
@@ -189,6 +213,23 @@ export default function TaskBoard({ onFlash, onAsk }) {
                 >
                   🎯 Fokus Pod Tim 3D ↗
                 </button>
+                {sel.agent_id && (
+                  <button
+                    type="button"
+                    className="btn"
+                    style={{ minHeight: 28, padding: '0 8px', fontSize: 11 }}
+                    onClick={() => {
+                      if (typeof window !== 'undefined' && window.__focusAgent) {
+                        window.__focusAgent(sel.agent_id)
+                      } else if (typeof window !== 'undefined' && window.__wfsSceneSelect) {
+                        window.__wfsSceneSelect(sel.agent_id)
+                      }
+                    }}
+                    title={`Fokus kamera 3D langsung ke meja agen ${sel.agent_id}`}
+                  >
+                    🎯 Fokus Agen ({sel.agent_id}) ↗
+                  </button>
+                )}
               </div>
               {(() => { const fl = parseFileList(sel.files); return fl.length > 0 && <><label className="note">File dihasilkan</label><pre className="note" style={{ whiteSpace: 'pre-wrap', margin: '4px 0 10px', color: '#cfd8e3' }}>{fl.join('\n')}</pre></> })()}
               {sel.review && <><label className="note">Ulasan QA</label><div className="msg" style={{ maxWidth: '100%', marginTop: 4, fontSize: 13 }}>{sel.review}</div></>}
@@ -264,6 +305,8 @@ export default function TaskBoard({ onFlash, onAsk }) {
                 <div className="kanban-board-container" role="region" aria-label="Papan kanban sprint">
                   {KANBAN_COLUMNS.map(col => {
                     const colTasks = kanbanGroups[col.key] || []
+                    const dist = computeColumnDistribution(colTasks.length, metrics.total)
+                    const emptyState = getKanbanColumnEmptyState(col.key)
                     return (
                       <div key={col.key} className="kanban-col" role="region" aria-label={`Kolom ${col.label}`}>
                         <div className="kanban-col-head" style={{ borderTop: `3px solid ${col.color}` }}>
@@ -271,11 +314,28 @@ export default function TaskBoard({ onFlash, onAsk }) {
                           <span className="kanban-col-title">{col.label}</span>
                           <span className="kanban-col-count" style={{ background: col.bg, color: col.color }}>{colTasks.length}</span>
                         </div>
+                        <div
+                          className="kanban-col-dist-bar"
+                          role="progressbar"
+                          aria-label={`Distribusi kolom ${col.label}: ${dist.pct}%`}
+                          aria-valuenow={dist.pct}
+                          aria-valuemin={0}
+                          aria-valuemax={100}
+                          title={`${dist.count}/${dist.total} task (${dist.pct}%) di kolom ${col.label}`}
+                        >
+                          <div
+                            className="kanban-col-dist-fill"
+                            style={{ width: `${dist.widthPct}%`, background: col.color }}
+                          />
+                        </div>
                         <div className="kanban-col-body">
                           {colTasks.length === 0 ? (
-                            <div className="kanban-col-empty">Kosong</div>
+                            <div className="kanban-col-empty">
+                              <span className="kanban-col-empty-icon" aria-hidden="true">{emptyState.icon}</span>
+                              <span>{emptyState.text}</span>
+                            </div>
                           ) : (
-                            colTasks.map(t => {
+                            colTasks.map((t, idx) => {
                               const badges = getTaskCardBadges(t)
                               return (
                                 <button
@@ -283,13 +343,46 @@ export default function TaskBoard({ onFlash, onAsk }) {
                                   type="button"
                                   className="kanban-card"
                                   onClick={() => setSel(t)}
-                                  style={{ borderLeft: `3px solid ${ST[t.status]?.[1] || col.color}` }}
+                                  style={{
+                                    borderLeft: `3px solid ${ST[t.status]?.[1] || col.color}`,
+                                    animationDelay: `${Math.min(idx * 30, 240)}ms`,
+                                  }}
                                   aria-label={`Task #${t.id}: ${t.title}`}
                                   title={`Buka task #${t.id}: ${t.title}`}
                                 >
                                   <div className="kanban-card-top">
                                     <span className="kanban-card-id">#{t.id}</span>
-                                    <span className="kanban-card-agent">{t.agent_id}</span>
+                                    {t.agent_id && (
+                                      <span
+                                        role="button"
+                                        tabIndex={0}
+                                        className="kanban-card-agent-btn"
+                                        onClick={(e) => {
+                                          e.stopPropagation()
+                                          if (typeof window !== 'undefined' && window.__focusAgent) {
+                                            window.__focusAgent(t.agent_id)
+                                          } else if (typeof window !== 'undefined' && window.__wfsSceneSelect) {
+                                            window.__wfsSceneSelect(t.agent_id)
+                                          }
+                                        }}
+                                        onKeyDown={(e) => {
+                                          if (e.key === 'Enter' || e.key === ' ') {
+                                            e.stopPropagation()
+                                            e.preventDefault()
+                                            if (typeof window !== 'undefined' && window.__focusAgent) {
+                                              window.__focusAgent(t.agent_id)
+                                            } else if (typeof window !== 'undefined' && window.__wfsSceneSelect) {
+                                              window.__wfsSceneSelect(t.agent_id)
+                                            }
+                                          }
+                                        }}
+                                        title={`Fokus kamera 3D ke meja agen ${t.agent_id}`}
+                                        aria-label={`Fokus kamera 3D ke agen ${t.agent_id}`}
+                                      >
+                                        <span aria-hidden="true">🎯</span>
+                                        <span>{t.agent_id}</span>
+                                      </span>
+                                    )}
                                   </div>
                                   <div className="kanban-card-title">{t.title}</div>
                                   <div className="kanban-card-meta">

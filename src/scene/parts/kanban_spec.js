@@ -61,6 +61,35 @@ export const ROLE_LABELS = {
   sre: 'SRE',
 };
 
+export const KANBAN_EMPTY_STATES = {
+  pending: { icon: '✨', text: 'Semua antrean terambil' },
+  running: { icon: '☕', text: 'Tidak ada eksekusi aktif' },
+  review: { icon: '🎉', text: 'Bebas kendala & review QA' },
+  done: { icon: '⏳', text: 'Belum ada task selesai' },
+};
+
+export function getKanbanColumnEmptyState(columnKey) {
+  const k = String(columnKey || '').toLowerCase().trim();
+  return KANBAN_EMPTY_STATES[k] || { icon: '📋', text: 'Tidak ada task' };
+}
+
+export function computeColumnDistribution(columnCount, totalCount) {
+  const count = Math.max(0, Number(columnCount) || 0);
+  const total = Math.max(0, Number(totalCount) || 0);
+  if (total <= 0) {
+    return { count: 0, total: 0, pct: 0, widthPct: 0, ratio: '0/0' };
+  }
+  const pct = Math.round((count / total) * 100);
+  const widthPct = Math.min(100, Math.max(0, pct));
+  return {
+    count,
+    total,
+    pct,
+    widthPct,
+    ratio: `${count}/${total}`,
+  };
+}
+
 export function getTaskRoleBadgeColor(role) {
   const r = String(role || '').toLowerCase().trim();
   return ROLE_COLORS[r] || '#64748B';
@@ -250,5 +279,25 @@ export function getTaskCardBadges(task) {
     hasReview,
     roleLabel,
     roleColor,
+  };
+}
+
+/**
+ * Mendapatkan informasi fokus agen & tim dari task untuk navigasi 3D.
+ */
+export function getTaskAgentFocusInfo(task) {
+  if (!task || typeof task !== 'object') {
+    return { agentId: '', agentName: '', teamKey: null, teamName: null, floor: null };
+  }
+  const agentId = String(task.agent_id || '').trim();
+  const teamByAg = findTeamByAgent(agentId);
+  const teamByRl = findTeamByRole(task.role);
+  const team = teamByAg || teamByRl;
+  return {
+    agentId,
+    agentName: agentId.toUpperCase(),
+    teamKey: team ? team.key : null,
+    teamName: team ? team.name : null,
+    floor: team ? team.floor : null,
   };
 }

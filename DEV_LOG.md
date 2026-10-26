@@ -1,3 +1,35 @@
+## 2026-10-26 12:24 WIB — Siklus 86: Animasi Visual Kanban, Distribusi Progres Kolom, Sprint Progress Bar & Integrasi 1-Klik Fokus Meja Agen 3D (focusAgent)
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Spesifikasi Kanban & Distribusi Sprint (`src/scene/parts/kanban_spec.js`, `src/__tests__/kanban_spec.test.js`):**
+     - Membangun `getKanbanColumnEmptyState(columnKey)` untuk memberikan status kosong yang kontekstual dan komunikatif pada setiap kolom Kanban (`pending`: 'Semua antrean terambil ✨', `running`: 'Tidak ada eksekusi aktif ☕', `review`: 'Bebas kendala & review QA 🎉', `done`: 'Belum ada task selesai ⏳').
+     - Membangun `computeColumnDistribution(columnCount, totalCount)` untuk menghitung proporsi beban task per kolom terhadap total sprint aktif secara aman (anti divide-by-zero).
+     - Membangun `getTaskAgentFocusInfo(task)` yang memetakan agen dan peran task ke divisi tim serta lantai kampus 3D.
+  2. **Interaktivitas Visual & Progres Sprint di TaskBoard (`src/components/TaskBoard.jsx`, `src/index.css`, `src/__tests__/TaskBoard.test.jsx`):**
+     - Menambahkan bilah progres visual sprint (`.sprint-progress-container` & `.sprint-progress-fill`) di bawah header papan task yang menampilkan persentase penyelesaian secara mulus (`metrics.pct`%) dengan gradien warna adaptif sesuai divisi aktif.
+     - Menambahkan mini distribusi bar di bawah header setiap kolom Kanban (`.kanban-col-dist-bar`) untuk visualisasi instan kepadatan task antar status.
+     - Menambahkan animasi transisi kartu kanban (`@keyframes kanbanCardFadeIn`) dengan staggered animation delay (`animationDelay: `${Math.min(idx * 30, 240)}ms``) agar kartu mengalir turun secara halus saat dibuka atau difilter.
+     - Menambahkan tombol aksi cepat mini `🎯 {agent_id}` (`.kanban-card-agent-btn`) pada setiap kartu Kanban yang dapat diklik langsung tanpa membuka modal untuk memfokuskan kamera 3D ke meja kerja agen pelaksana task.
+     - Menambahkan tombol aksi `🎯 Fokus Agen ({sel.agent_id}) ↗` pada modal detail task.
+  3. **Navigasi Fokus Agen 3D Terpadu (`src/scene/OfficeScene.js`):**
+     - Menambahkan fungsi kontrol scene `focusAgent(idOrName)` dan mengekspos hook global `window.__focusAgent(idOrName)` yang mendukung identifikasi agen via ID gateway (`be1`, `fe1`, `devops1`, dll) maupun nama agen kampus 3D (`BUDI`, `DEWI`, `TONI`, `WAHYU FS`).
+     - Saat dipicu, kamera 3D bergerak halus (lerp) membingkai meja agen dengan sudut optimal, memicu feedback audio seleksi (`__sound.playSelect()`), memunculkan speech bubble informasi agen (`“Halo! Aku {agent}”`), dan menyinkronkan status seleksi.
+     - Membersihkan hook global `window.__focusAgent` secara tuntas pada `destroy()`.
+
+- **Bukti terukur:**
+  - **Vitest:** **1572/1572 passed (130 test file)** (+6 tests baru terintegrasi, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/scene/parts/kanban_spec.js src/components/TaskBoard.jsx src/scene/OfficeScene.js src/__tests__/kanban_spec.test.js src/__tests__/TaskBoard.test.jsx`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1692.54 KiB; chunk `OfficeScene-pKxjqkvm.js` 875.82 KB / gzip 237.64 KB, `index-DQZQhgoo.js` 333.07 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-DQZQhgoo.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **518.383 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `shot.sh`: Screenshot ck.png **587.471 bytes** (>500 KB).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+    - Runtime probe: `window.__focusAgent("be1")` terverifikasi True dan mengarahkan kamera 3D ke agen Budi.
+- **Sisa backlog:** evaluasi optimasi chunking dinamis OfficeScene atau pengurutan/prioritisasi interaktif kolom kanban.
+
 ## 2026-10-26 10:48 WIB — Siklus 85: Interkoneksi Ekosistem Sprint Kanban & 3D Pod (ProjectPanel, TeamStats, OfficeScene & Badges Kartu Kanban)
 
 - **Yang diperbaiki & ditingkatkan:**

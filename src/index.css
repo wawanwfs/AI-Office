@@ -757,6 +757,19 @@ button { font-family: inherit; }
   border-color: var(--teal);
 }
 
+.sprint-progress-container {
+  height: 4px;
+  background: rgba(255, 255, 255, 0.08);
+  position: relative;
+  overflow: hidden;
+}
+
+.sprint-progress-fill {
+  height: 100%;
+  transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: 0 2px 2px 0;
+}
+
 .kanban-board-container {
   display: flex;
   gap: 10px;
@@ -785,6 +798,18 @@ button { font-family: inherit; }
   border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   font-size: 12px;
   font-weight: 700;
+}
+
+.kanban-col-dist-bar {
+  height: 3px;
+  background: rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  position: relative;
+}
+
+.kanban-col-dist-fill {
+  height: 100%;
+  transition: width 0.35s ease-out;
 }
 
 .kanban-col-icon {
@@ -816,11 +841,20 @@ button { font-family: inherit; }
 }
 
 .kanban-col-empty {
-  padding: 18px 8px;
+  padding: 22px 8px;
   text-align: center;
   font-size: 11px;
   color: var(--text-tertiary);
-  font-style: italic;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.kanban-col-empty-icon {
+  font-size: 18px;
+  line-height: 1;
+  opacity: 0.85;
 }
 
 .kanban-card {
@@ -836,6 +870,18 @@ button { font-family: inherit; }
   display: flex;
   flex-direction: column;
   gap: 4px;
+  animation: kanbanCardFadeIn 0.22s ease-out backwards;
+}
+
+@keyframes kanbanCardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .kanban-card:hover {
@@ -858,6 +904,33 @@ button { font-family: inherit; }
 .kanban-card-id {
   font-weight: 700;
   color: #fff;
+}
+
+.kanban-card-agent-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 4px;
+  padding: 1px 5px;
+  font-size: 10px;
+  color: #94a3b8;
+  cursor: pointer;
+  font-family: inherit;
+  user-select: none;
+  transition: background 0.15s, color 0.15s, border-color 0.15s, transform 0.1s;
+}
+
+.kanban-card-agent-btn:hover {
+  background: rgba(16, 229, 160, 0.15);
+  border-color: rgba(16, 229, 160, 0.4);
+  color: #10E5A0;
+  transform: scale(1.04);
+}
+
+.kanban-card-agent-btn:active {
+  transform: scale(0.96);
 }
 
 .kanban-card-agent {

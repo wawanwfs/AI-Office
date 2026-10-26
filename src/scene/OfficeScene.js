@@ -1752,6 +1752,62 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       }
       return true;
     },
+    focusAgent: (idOrName) => {
+      if (!idOrName) return false;
+      const q = String(idOrName).toLowerCase().trim();
+      if (q === 'ceo' || q === 'wahyu fs' || q === 'wahyu' || q === 'founder') {
+        __sound.playSelect();
+        if(homeRadius===null)homeRadius=Math.max(24,Math.min(70,sph.radius));
+        if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
+        const np=new THREE.Vector3(7.6,1.20+0.8,6.1);
+        focusGoal={t:np,r:16};
+        createBubble(7.6,1.20+1.3,6.1,'“Halo! Selamat datang di WFS PROJECT Autonomous Software House!”','#F59E0B');
+        selectedIdx=-2;
+        applySelected();
+        if(onSelectAgent){
+          const ag=nxAgent?{...nxAgent,name:'Wahyu FS',floor:3}:{name:'Wahyu FS',color:0xF59E0B,hex:'#F59E0B',role:'Founder / CEO',hair:0x1a1a1a,shirt:0xB45309,pants:0x292524,floor:3};
+          onSelectAgent(ag);
+        }
+        return true;
+      }
+      const SCENE_BY_ID = {
+        'be1': 'BUDI', 'be2': 'RIZKY', 'fe1': 'DEWI', 'fe2': 'ANDI',
+        'mob1': 'YOGA', 'ux1': 'MAYA', 'devops1': 'TONI', 'qa1': 'RINA',
+        'ai-cs': 'BANTUIN AI', 'ai-train': 'TRAINER AI', 'integ': 'INTEGRATOR BOT',
+        'mkt1': 'LINA', 'cs-h': 'SUPPORT', 'pm1': 'SARI',
+      };
+      const mapped = SCENE_BY_ID[q] || q;
+      const targetName = String(mapped).toUpperCase();
+      let root = agentData.find(ad => ad.agent && (
+        String(ad.agent.name || '').toUpperCase() === targetName ||
+        String(ad.agent.id || '').toLowerCase() === q
+      ));
+      if (!root && window.__wfsAgentIdList) {
+        const item = window.__wfsAgentIdList.find(x => String(x.id).toLowerCase() === q || String(x.name).toLowerCase() === q);
+        if (item) {
+          const nm = String(item.name).toUpperCase();
+          root = agentData.find(ad => ad.agent && String(ad.agent.name || '').toUpperCase() === nm);
+        }
+      }
+      if (root) {
+        __sound.playSelect();
+        if (window.__wfsSelectAgent) {
+          const idMap = {};
+          if (window.__wfsAgentIdList) window.__wfsAgentIdList.forEach(x => { idMap[x.name] = x.id; });
+          window.__wfsSelectAgent(idMap[root.agent.name] || root.agent.name);
+        }
+        const wp = root.walker && root.walker.visible ? root.walker.position : { x: root.home.x, y: root.home.y || 0, z: root.home.z };
+        if (homeRadius === null) homeRadius = Math.max(24, Math.min(70, sph.radius));
+        focusGoal = { t: new THREE.Vector3(wp.x, (wp.y || 0) + 1.5, wp.z), r: Math.min(sph.radius, 20), follow: root };
+        if (!sph.__saved) sph.__saved = { theta: sph.theta, phi: sph.phi, radius: sph.radius };
+        createBubble(wp.x, (wp.y || 0) + 1.3, wp.z, '“Halo! Aku ' + root.agent.name + '”', root.agent.hex || '#10E5A0');
+        selectedIdx = agentData.indexOf(root);
+        applySelected();
+        if (onSelectAgent) onSelectAgent(root.agent);
+        return true;
+      }
+      return false;
+    },
     focusMeetingRoom: () => {
       return focusMeetingRoom();
     },
@@ -1834,6 +1890,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       delete window.__toggleNeon;
       delete window.__sceneSelRing;
       delete window.__focusTeam;
+      delete window.__focusAgent;
       delete window.__focusMeetingRoom;
       delete window.__whiteboard;
       delete window.__openTaskBoard;
@@ -1841,6 +1898,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
     }
   };
   window.__focusTeam = (k) => sceneControls.focusTeam(k);
+  window.__focusAgent = (k) => sceneControls.focusAgent(k);
   window.__focusMeetingRoom = () => sceneControls.focusMeetingRoom();
   return sceneControls;
 }
