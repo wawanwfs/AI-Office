@@ -190,6 +190,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
     focusMeetingRoom();
     const tip=getWhiteboardTooltipText(typeof window !== 'undefined' ? window.__tvData?.tasks : undefined, typeof __meet !== 'undefined' && __meet.active);
     createBubble(MRX, 2.2 + 0.75, MRZ - 2.52, '“' + tip + '”', '#F59E0B');
+    try { window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { view: 'kanban', source: 'whiteboard' } })); } catch { /* ignore */ }
     selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null);
     return;
   }
@@ -251,6 +252,7 @@ renderer.domElement&&renderer.domElement.addEventListener('dblclick',e=>{
   if(hits.length&&isWhiteboardHit(hits[0].object,wbm,wbf)){
     __sound.playSelect();
     focusMeetingRoom();
+    try { window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { view: 'kanban', source: 'whiteboard' } })); } catch { /* ignore */ }
     return;
   }
   if(hits.length){focusGoal={t:hits[0].point.clone().setY(Math.max(1.5,(hits[0].point.y||0)+0.8)),r:Math.min(sph.radius,18)}}
@@ -419,6 +421,17 @@ window.__whiteboard = {
   frame: __mr.boardFrame,
   redraw: __mr.boardRedraw,
   focus: () => focusMeetingRoom(),
+  openSprintBoard: () => {
+    try { window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { view: 'kanban', source: 'whiteboard' } })); return true; } catch { return false; }
+  },
+};
+window.__openTaskBoard = (opts) => {
+  try {
+    window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: opts || { view: 'kanban' } }));
+    return true;
+  } catch {
+    return false;
+  }
 };
 function focusMeetingRoom() {
   if (homeRadius === null) homeRadius = Math.max(24, Math.min(70, sph.radius));
@@ -1807,6 +1820,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       delete window.__focusTeam;
       delete window.__focusMeetingRoom;
       delete window.__whiteboard;
+      delete window.__openTaskBoard;
       if(renderer){renderer.dispose();container.removeChild(renderer.domElement);}
     }
   };
