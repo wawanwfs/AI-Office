@@ -143,6 +143,26 @@ class TestHQProxy(unittest.TestCase):
         self.assertEqual(rec["method"], "GET")
         self.assertEqual(rec["path"], "/api/agents")
 
+    # --- header keamanan ---
+    def test_security_headers_baseline(self):
+        sec = dict(hq_proxy._security_headers())
+        self.assertEqual(sec.get("X-Content-Type-Options"), "nosniff")
+        self.assertEqual(sec.get("Referrer-Policy"), "same-origin")
+
+    def test_end_headers_emits_cache_and_security_headers(self):
+        import http.server as hs
+        from unittest import mock
+        with mock.patch.object(hs.BaseHTTPRequestHandler, "send_header") as m_send, \
+                mock.patch.object(hs.BaseHTTPRequestHandler, "end_headers") as m_end:
+            h = H.__new__(H)
+            h._wfs_cc = "no-store"
+            h.end_headers()
+        self.assertEqual(m_send.call_args_list, [
+            mock.call("Cache-Control", "no-store"),
+            mock.call("X-Content-Type-Options", "nosniff"),
+            mock.call("Referrer-Policy", "same-origin"),
+        ])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

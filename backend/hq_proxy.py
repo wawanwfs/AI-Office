@@ -19,11 +19,22 @@ def get_token():
 
 UI_TOKEN = get_token()
 
+
+def _security_headers():
+    """Header keamanan dasar untuk semua respons UI (anti MIME-sniff + referrer leak)."""
+    return (
+        ("X-Content-Type-Options", "nosniff"),
+        ("Referrer-Policy", "same-origin"),
+    )
+
+
 class H(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         if not hasattr(self, "_wfs_cc"):
             self._wfs_cc = "no-store"
         self.send_header('Cache-Control', self._wfs_cc)
+        for name, value in _security_headers():
+            self.send_header(name, value)
         super().end_headers()
 
     def _serve_static(self):
