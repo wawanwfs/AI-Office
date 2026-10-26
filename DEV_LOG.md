@@ -1,3 +1,17 @@
+## 2026-10-27 05:35 WIB — Siklus 110: Bugfix tekstur 3D TV lounge — tvTex.needsUpdate di SEMUA jalur drawTv + ticker detak umur badge koneksi (paritas papan 3D)
+
+- **Bug ditemukan dari audit lanjutan siklus 109 (badge koneksi TV):**
+  1. **`src/scene/parts/lounge.js` — `tvTex.needsUpdate` tidak pernah di-set di jalur gagal/awal:** `tvPull` catch memanggil `drawTv()` sehingga KANVAS 2D berubah (TERPUTUS/SINKRON N LALU) tapi tekstur 3D tidak diberi tahu → badge koneksi tak pernah tampak di TV 3D sungguhan saat gateway mati; e2e siklus 109 membaca pixel kanvas 2D (`__tvCanvas`) sehingga lolos uji padahal layar 3D membeku di frame lama. Perbaikan: `tvTex.needsUpdate = true` dipindah KE DALAM `drawTv()` (satu titik, semua jalur: initial draw, sukses, gagal, ticker); deklarasi `tvTex` dimajukan sebelum `drawTv()` pertama (hindari TDZ ReferenceError); `drawTv(); tvTex.needsUpdate=true` redundan di jalur sukses dirapikan.
+  2. **Ticker detak umur badge (paritas `connIv` 30 dtk papan 3D):** label `SINKRON N dtk/mnt LALU` sebelumnya membeku di angka poll terakhir — backoff hingga 80 dtk berarti umur bisa meleset 80 dtk. Kini `connTick = setInterval(..., 30000)` menggambar ulang TV saat `tvConn.state !== 'live'`; tick di-skip saat live (hemat redraw); dibersihkan di `tvDestroy()`; diekspos sebagai `connTick` untuk uji.
+  3. **E2E baru `scripts/e2e_tvtexture.py` (verifikasi tekstur sungguhan, bukan hanya kanvas):** baseline LIVE (RGB 16,229,160) → `fetch` dioverride reject di browser nyata via CDP → tunggu tick backoff → badge di kanvas berubah **amber RGB(245,158,11) SINKRON** dalam ~60 dtk (dulu: kanvas berubah tapi tekstur 3D diam). CDP-level proof jalur gagal kini benar-benar sampai ke permukaan yang terlihat.
+- **Perubahan:** `src/scene/parts/lounge.js` (needsUpdate dalam drawTv, reorder tvTex, connTick 30 dtk, tvDestroy clearInterval, return +connTick), `src/__tests__/tv_lounge_runtime.test.js` (+2: REGRESI needsUpdate semua jalur sukses/gagal/manual; ticker detak umur skip saat live → gambar saat stale → bersih di destroy), `src/__tests__/lounge_runtime.test.js` (koreksi ekspektasi: needsUpdate kini TRUE pasca initial draw — semantik baru yang benar), `scripts/e2e_tvtexture.py` (baru).
+- **Bukti terukur:**
+  - **Vitest:** **1937/1937 passed (143 file)** (+2 test baru dari 1935; 1 ekspektasi lama dikoreksi), 0 fail.
+  - **ESLint:** 0 warning, 0 error (`npx eslint .` exit 0).
+  - **Build:** sukses (37 precache 1806.31 KiB) → deploy `dist/*` → `~/wfs-hq/` OK; `wfs-hq` & `wfs-office` `active`.
+  - **E2E:** `e2e_shot.py` **683.628 bytes** (>500 KB, WebGL hidup, 26 agen); `e2e_tv.py` OK; `e2e_zone_multi.py` OK; `shot.sh` :0 **685.891 bytes**; `e2e_tvconn.py` LIVE hijau RGB(16,229,160); **`e2e_tvtexture.py` OK** (badge → amber SINKRON di kanvas saat fetch diblokir, proof tekstur ikut segar via needsUpdate).
+- **Sisa backlog:** verifikasi subjektif audio web-audio (butuh pendengaran manusia); tidak ada item wajib lain.
+
 ## 2026-10-27 04:07 WIB — Siklus 108: Polling Adaptif Backoff Eksponensial untuk Papan Proyek 3D & TV Lounge (penuntas backlog siklus 107)
 
 - **Yang diperbaiki (backlog siklus 107: "adaptasi backoff eksponensial untuk pull papan 3D & TV lounge — masih 60 dtk fix"):**
