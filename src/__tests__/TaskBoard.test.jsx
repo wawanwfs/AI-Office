@@ -204,4 +204,28 @@ describe('TaskBoard', () => {
     expect(screen.getByText(/Prioritas:/)).toBeTruthy()
     expect(screen.getByText(/Urgent/)).toBeTruthy()
   })
+
+  it('menampilkan quick button urgent saat ada task prioritas kritis dan toggle ke sort priority', async () => {
+    const urgentTasks = [
+      { id: 10, title: 'Fix Auth Exploit', agent_id: 'be1', status: 'running', role: 'be', priority: 'urgent' },
+      { id: 11, title: 'Update Docs', agent_id: 'pm1', status: 'pending', role: 'pm', priority: 'normal' },
+    ]
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: urgentTasks }) })))
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />)
+    fireEvent.click(screen.getByText('Papan'))
+    await waitFor(() => screen.getByText(/Fix Auth Exploit/))
+
+    const urgentBtn = screen.getByRole('button', { name: /Filter prioritas urgent/i })
+    expect(urgentBtn).toBeTruthy()
+    expect(urgentBtn.textContent).toContain('🔥 1')
+
+    // Klik tombol cepat urgent -> beralih ke sorting priority
+    fireEvent.click(urgentBtn)
+    const sortSelect = screen.getByRole('combobox', { name: 'Urutkan task' })
+    expect(sortSelect.value).toBe('priority')
+
+    // Klik lagi -> kembali ke newest
+    fireEvent.click(urgentBtn)
+    expect(sortSelect.value).toBe('newest')
+  })
 })

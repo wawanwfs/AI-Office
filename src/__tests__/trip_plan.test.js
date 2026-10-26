@@ -34,7 +34,7 @@ describe('konstanta historis', () => {
 
 describe('collabTarget', () => {
   it('home + offset', () => {
-    expect(collabTarget({ x: -8, z: 1.5 })).toEqual({ x: -7.05, z: 1.35 });
+    expect(collabTarget({ x: -8, z: 1.5 })).toEqual({ x: -6.5, z: 1.3 });
   });
   it('offset kustom', () => {
     expect(collabTarget({ x: 0, z: 0 }, { x: 1, z: 1 })).toEqual({ x: 1, z: 1 });

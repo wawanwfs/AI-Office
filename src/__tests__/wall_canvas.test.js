@@ -104,8 +104,11 @@ describe('drawWallTex', () => {
     // blok nat: 9× (beginPath, moveTo, lineTo, stroke)
     const natBlock = kinds.slice(4, 4 + 36);
     expect(natBlock.join(',')).toBe('beginPath,moveTo,lineTo,stroke,'.repeat(9).replace(/,$/, '').split(',').join(','));
+    // blok seam horizontal: lineWidth + 3× (beginPath, moveTo, lineTo, stroke) = 13 op
+    expect(kinds.slice(40, 41)).toEqual(['lineWidth']);
+    expect(kinds.slice(41, 53).join(',')).toBe('beginPath,moveTo,lineTo,stroke,'.repeat(3).replace(/,$/, '').split(',').join(','));
     // kemudian 4× (createLinearGradient, fillStyle, fillRect): satin, AO-L, AO-R, final
-    expect(kinds.slice(40)).toEqual(
+    expect(kinds.slice(53)).toEqual(
       ['createLinearGradient', 'fillStyle', 'fillRect',
        'createLinearGradient', 'fillStyle', 'fillRect',
        'createLinearGradient', 'fillStyle', 'fillRect',
@@ -118,9 +121,9 @@ describe('drawWallTex', () => {
     const a = makeCtx(); const b = makeCtx();
     drawWallTex(a, '#E6EAF1', 'rgba(130,145,170,.30)');
     drawWallTex(b, '#8A6244', 'rgba(40,25,10,.40)', 512, 256, 32);
-    expect(a._grads.length).toBe(1);
-    expect(b._grads.length).toBe(1);
+    expect(a._grads.length).toBe(4);
+    expect(b._grads.length).toBe(4);
     expect(a._grads[0]).not.toBe(b._grads[0]);
-    expect(b._grads[0].stops[0][1]).toBe('rgba(255,255,255,.12)');
+    expect(b._grads[3].stops[0][1]).toBe('rgba(255,255,255,.12)');
   });
 });

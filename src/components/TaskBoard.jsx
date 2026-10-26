@@ -16,6 +16,7 @@ import {
   computeColumnDistribution,
   getKanbanColumnEmptyState,
   getTaskPriorityInfo,
+  computePriorityBreakdown,
   SORT_OPTIONS,
 } from '../scene/parts/kanban_spec'
 import { findTeamByRole, findTeamByAgent } from '../scene/parts/team_spec'
@@ -104,6 +105,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const kanbanGroups = useMemo(() => groupTasksByKanbanColumn(tasks, q, division, sortBy), [tasks, q, division, sortBy])
   const metrics = useMemo(() => computeSprintMetrics(tasks, division), [tasks, division])
   const overallMetrics = useMemo(() => computeSprintMetrics(tasks), [tasks])
+  const priorityBreakdown = useMemo(() => computePriorityBreakdown(tasks, division), [tasks, division])
 
   const list = useMemo(() => filterTasks(tasks, { filter, q, division, sortBy }), [tasks, filter, q, division, sortBy])
   const count = s => (tasks || []).filter(t => (s === 'all' || t.status === s) && (division === 'all' || matchTaskDivision(t, division))).length
@@ -272,6 +274,18 @@ export default function TaskBoard({ onFlash, onAsk }) {
                       ))}
                     </select>
                   </div>
+                  {priorityBreakdown.urgent > 0 && (
+                    <button
+                      type="button"
+                      className={`task-priority-quick-btn urgent${sortBy === 'priority' ? ' active' : ''}`}
+                      onClick={() => setSortBy(sortBy === 'priority' ? 'newest' : 'priority')}
+                      title={`Terdapat ${priorityBreakdown.urgent} task urgent — klik untuk ${sortBy === 'priority' ? 'kembalikan ke urutan terbaru' : 'urutkan prioritas ke atas'}`}
+                      aria-pressed={sortBy === 'priority'}
+                      aria-label={`Filter prioritas urgent (${priorityBreakdown.urgent} task)`}
+                    >
+                      🔥 {priorityBreakdown.urgent}
+                    </button>
+                  )}
                 </div>
                 {/* Strip Filter Divisi / Tim Kampus */}
                 {tasks && (

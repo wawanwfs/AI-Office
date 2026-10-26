@@ -34,7 +34,7 @@ class Mesh extends Obj {
 const THREE = {
   Mesh, Group: Obj, BoxGeometry: Geom, PlaneGeometry: Geom, CylinderGeometry: Geom, SphereGeometry: Geom, PointLight: Light,
   MeshBasicMaterial: Mat, MeshLambertMaterial: Mat, MeshPhysicalMaterial: Mat,
-  CanvasTexture: class { constructor(src) { this.src = src } },
+  CanvasTexture: class { constructor(src) { this.src = src; this.repeat = { set() {} } } },
 }
 
 const fakeCtx = () => ({

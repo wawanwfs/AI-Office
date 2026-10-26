@@ -59,6 +59,28 @@ export function getTaskPriorityInfo(priority) {
   return PRIORITY_CONFIG[p] || { key: 'normal', label: 'Normal', color: '#64748B', bg: 'rgba(100, 116, 139, 0.12)', icon: '•', order: 5 };
 }
 
+/**
+ * Menghitung rincian jumlah task per level prioritas (urgent, high, medium, low, normal).
+ * Mendukung filter divisi opsional.
+ */
+export function computePriorityBreakdown(tasks, divisionFilter = 'all') {
+  const counts = { urgent: 0, high: 0, medium: 0, low: 0, normal: 0, total: 0 };
+  if (!Array.isArray(tasks) || !tasks.length) return counts;
+  const df = String(divisionFilter || 'all').toLowerCase().trim();
+  const filtered = df === 'all' ? tasks : tasks.filter((t) => matchTaskDivision(t, df));
+  counts.total = filtered.length;
+  filtered.forEach((t) => {
+    if (!t) return;
+    const p = String(t.priority || '').toLowerCase().trim();
+    if (counts[p] !== undefined) {
+      counts[p]++;
+    } else {
+      counts.normal++;
+    }
+  });
+  return counts;
+}
+
 export function extractTaskSortValue(task) {
   if (!task || typeof task !== 'object') return 0;
   if (task.created_at != null && !isNaN(Number(task.created_at))) {

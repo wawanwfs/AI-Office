@@ -18,6 +18,7 @@ import {
   getTaskAgentFocusInfo,
   PRIORITY_CONFIG,
   getTaskPriorityInfo,
+  computePriorityBreakdown,
   SORT_OPTIONS,
   extractTaskSortValue,
   sortTasks,
@@ -476,5 +477,33 @@ describe('kanban_spec — extractTaskSortValue & sortTasks', () => {
     expect(badges.priority.key).toBe('urgent');
     expect(badges.priority.label).toBe('Urgent');
     expect(badges.priority.icon).toBe('🔥');
+  });
+
+  it('computePriorityBreakdown menghitung rincian task per prioritas & mendukung filter divisi', () => {
+    const tasks = [
+      { id: 1, priority: 'urgent', role: 'be' },
+      { id: 2, priority: 'high', role: 'be' },
+      { id: 3, priority: 'medium', role: 'fe' },
+      { id: 4, priority: 'low', role: 'ops' },
+      { id: 5, priority: 'normal', role: 'fe' },
+      { id: 6, priority: undefined, role: 'fe' }, // normal fallback
+    ];
+
+    const allBreakdown = computePriorityBreakdown(tasks, 'all');
+    expect(allBreakdown.urgent).toBe(1);
+    expect(allBreakdown.high).toBe(1);
+    expect(allBreakdown.medium).toBe(1);
+    expect(allBreakdown.low).toBe(1);
+    expect(allBreakdown.normal).toBe(2);
+    expect(allBreakdown.total).toBe(6);
+
+    const beBreakdown = computePriorityBreakdown(tasks, 'core-be');
+    expect(beBreakdown.urgent).toBe(1);
+    expect(beBreakdown.high).toBe(1);
+    expect(beBreakdown.medium).toBe(0);
+    expect(beBreakdown.total).toBe(2);
+
+    expect(computePriorityBreakdown(null)).toEqual({ urgent: 0, high: 0, medium: 0, low: 0, normal: 0, total: 0 });
+    expect(computePriorityBreakdown([])).toEqual({ urgent: 0, high: 0, medium: 0, low: 0, normal: 0, total: 0 });
   });
 });
