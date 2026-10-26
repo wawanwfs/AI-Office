@@ -4,6 +4,7 @@
 // Pola sama cafe/serverroom/lounge/bookshelf: konteks di-inject, tanpa dependensi global.
 // Footprint meja didaftarkan ke OBSTACLES agar agen tak berjalan menembus meja.
 import { OBSTACLES } from './obstacles.js';
+import { uiTexture, uiMaterial } from './ui_colorspace.js';
 
 export function createReception({ THREE, office, M, MB, drawResepsiLogo, makeLabel, buildChar, looksOf, blobMat }) {
   const reception = new THREE.Group();
@@ -33,12 +34,12 @@ export function createReception({ THREE, office, M, MB, drawResepsiLogo, makeLab
   const wfsLogoTex = (() => {
     const c = document.createElement('canvas'); c.width = 1024; c.height = 320; const x = c.getContext('2d');
     drawResepsiLogo(x);
-    const t = new THREE.CanvasTexture(c); t.minFilter = THREE.LinearFilter; return t;
+    const t = new THREE.CanvasTexture(c); t.minFilter = THREE.LinearFilter; uiTexture(t); return t;
   })();
-  const rcLogoMesh = new THREE.Mesh(
+  const rcLogoMesh = uiMaterial(new THREE.Mesh(
     new THREE.PlaneGeometry(1.8, .5625),
     new THREE.MeshBasicMaterial({ map: wfsLogoTex, transparent: true })
-  );
+  ));
   rcLogoMesh.position.set(RCX, .5, RCZ + .31); reception.add(rcLogoMesh);
   const rcLogoFront = rcLogoMesh.clone(); rcLogoFront.position.set(RCX, .5, RCZ - .31); rcLogoFront.rotation.y = Math.PI; reception.add(rcLogoFront);
 

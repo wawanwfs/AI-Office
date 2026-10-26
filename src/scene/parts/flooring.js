@@ -1,6 +1,7 @@
 // Lantai zona & label area — ditulis ulang dari data tabel.
 import { ZONES, zoneLabelY, zoneLabelScale } from './floor_zones.js';
 import { drawZoneLabel } from './zone_label_canvas.js';
+import { uiTexture, uiMaterial } from './ui_colorspace.js';
 
 // Auto-shrink font label zona: mulai 44px, turun 2px per langkah sampai teks
 // muat dalam 460px ATAU batas bawah 20px. Murni (ctx di-inject) agar bisa
@@ -33,8 +34,8 @@ export function createZones(ctx){
     zx.strokeStyle='#F59E0B';zx.lineWidth=3;zx.stroke();
     fitZoneLabel(zx,z.label);
     drawZoneLabel(zx,z.label);
-    const zt=new THREE.CanvasTexture(zc);zt.minFilter=THREE.LinearFilter;
-    const zl=new THREE.Sprite(new THREE.SpriteMaterial({map:zt,transparent:true,depthTest:false}));
+    const zt=uiTexture(new THREE.CanvasTexture(zc));zt.minFilter=THREE.LinearFilter;
+    const zl=new THREE.Sprite(uiMaterial(new THREE.SpriteMaterial({map:zt,transparent:true,depthTest:false})));
     zl.center.set(.5,1);
     // label zona ditempatkan di tepi DEPAN zona (bukan tengah) supaya tidak menumpuk
     // name tag agent yang duduk/berdiri di dalam area zona

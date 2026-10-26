@@ -3,6 +3,7 @@ import { drawTerrazzo } from './floor_canvas.js';
 // Posisi lantai bertingkat alami dari depan ke belakang (Lantai 1: Y=0, Lantai 2: Y=0.60, Lantai 3: Y=1.20),
 // tangga arsitektural naik, tekstur prosedural marmer Carrara & parket jati mewah tanpa z-fighting/flicker.
 import { L1_Y, L2_Y, L3_Y, floorElevationAt } from './floor_elevation.js';
+import { uiTexture, uiMaterial } from './ui_colorspace.js';
 export { L1_Y, L2_Y, L3_Y, floorElevationAt };
 
 export function createTerraces({ THREE, office, M, MB }) {
@@ -44,11 +45,11 @@ export function createTerraces({ THREE, office, M, MB }) {
       ctx.font = 'bold 26px "DM Sans", sans-serif';
       ctx.fillText(text, 28, 82);
     }
-    const tex = new THREE.CanvasTexture(cv);
-    const m = new THREE.Mesh(
+    const tex = uiTexture(new THREE.CanvasTexture(cv));
+    const m = uiMaterial(new THREE.Mesh(
       new THREE.PlaneGeometry(4.2, 0.74),
       new THREE.MeshBasicMaterial({ map: tex, transparent: true })
-    );
+    ));
     m.rotation.x = -Math.PI / 2;
     return m;
   };

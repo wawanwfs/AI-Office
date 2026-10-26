@@ -2,6 +2,7 @@
 // espresso machine, kettle + cangkir, menu board kanvas, 4 bar stool, snack fridge.
 // Builder berbasis konteks (THREE, office, M, MB, drawMenuBoard) — pola sama dgn decor.js.
 import { drawMenuBoard } from './sign_canvas.js';
+import { uiTexture, uiMaterial } from './ui_colorspace.js';
 
 export function createCafe(ctx) {
   const { THREE, office, M, MB, blobMat } = ctx;
@@ -49,7 +50,7 @@ export function createCafe(ctx) {
   // Menu board above counter
   const mbc = document.createElement('canvas'); mbc.width = 256; mbc.height = 140;
   drawMenuBoard(mbc.getContext('2d'));
-  const mb = new THREE.Mesh(new THREE.PlaneGeometry(1.7, .95), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(mbc) }));
+  const mb = uiMaterial(new THREE.Mesh(new THREE.PlaneGeometry(1.7, .95), new THREE.MeshBasicMaterial({ map: uiTexture(new THREE.CanvasTexture(mbc)) })));
   mb.position.set(CFX, 2.3, CFZ + .35); cafe.add(mb);
   const mbB = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.05, .04), M(0x2A2A2A));
   mbB.position.set(CFX, 2.3, CFZ + .32); cafe.add(mbB);

@@ -9,6 +9,7 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { drawTvDashboard } from '../scene/parts/tv_canvas.js'
 import { applyPollResult, nextPollDelay } from '../lib/connection_spec.js'
+import { uiTexture, uiMaterial } from '../scene/parts/ui_colorspace.js'
 
 const texts = []
 function makeCtx() {
@@ -80,11 +81,11 @@ function runTvCode(opts) {
   // fungsi + const dievaluasi via new Function; window.__tvData diakses via win.
   // Helper tracker koneksi di-inject (import ES modul tidak terlihat new Function).
   const fn = new Function('window', 'THREE', 'document', 'lounge', 'fetch', 'drawTvDashboard',
-    'applyPollResult', 'nextPollDelay', code + `
+    'applyPollResult', 'nextPollDelay', 'uiTexture', 'uiMaterial', code + `
     ;return tvPull(true).then(() =>
       ({ drawTv, tvPull, tvC, tvTex, tvIv: tvPollTimer, tvSchedule, tvDestroy, tvOnVis, tvScr, connTick }))`)
   const lounge = { add() {}, children: [] }
-  return fn(win, THREE, document, lounge, fetchMock, drawTvDashboard, applyPollResult, nextPollDelay)
+  return fn(win, THREE, document, lounge, fetchMock, drawTvDashboard, applyPollResult, nextPollDelay, uiTexture, uiMaterial)
 }
 
 beforeEach(() => {

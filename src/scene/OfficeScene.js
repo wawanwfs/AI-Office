@@ -7,6 +7,7 @@ import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles, charMotion, applyCharMotion } from './parts/effects.js';
+import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { perfStep } from './parts/perf_quality.js';
 import { updateFollowGoal, focusStep, autoRotateStep } from './parts/kamera_focus.js';
@@ -775,16 +776,16 @@ function makeLabel(agent){
     c.fill();
     c.restore();
 
-    const tex=new THREE.CanvasTexture(lc); tex.minFilter=THREE.LinearFilter;
+    const tex=uiTexture(new THREE.CanvasTexture(lc)); tex.minFilter=THREE.LinearFilter;
     return {tex, as: W / H};
   };
   const full=mk(true), short=mk(false);
-  const label=new THREE.Sprite(new THREE.SpriteMaterial({
+  const label=new THREE.Sprite(uiMaterial(new THREE.SpriteMaterial({
     map: short.tex,
     transparent: true,
     depthTest: false,
     sizeAttenuation: false
-  }));
+  })));
   label.scale.set(0.042 * short.as, 0.042, 1); // ±17px tinggi label di HP (dari 12.5px) — keterbacaan mobile
   label.userData={full,short,mode:'short'};
   label.renderOrder=35; // Selalu di depan agar tidak tertutup perabotan
@@ -832,8 +833,8 @@ function buildDesk(agent,dp){
   // Layar (canvas screen)
   const sc=document.createElement('canvas');sc.width=128;sc.height=76;
   const sctx=sc.getContext('2d');
-  const stx=new THREE.CanvasTexture(sc);stx.minFilter=THREE.LinearFilter;
-  const screen=new THREE.Mesh(new THREE.PlaneGeometry(.66,.36),new THREE.MeshBasicMaterial({map:stx}));
+  const stx=uiTexture(new THREE.CanvasTexture(sc));stx.minFilter=THREE.LinearFilter;
+  const screen=uiMaterial(new THREE.Mesh(new THREE.PlaneGeometry(.66,.36),new THREE.MeshBasicMaterial({map:stx})));
   screen.position.set(.32,1.08,-.22);g.add(screen);
   screenData.push({ctx:sctx,canvas:sc,tex:stx,type:agent.screen||'terminal',hex:agent.hex});
   // Screen light — warna agent
@@ -860,8 +861,8 @@ function buildDesk(agent,dp){
   (() => {
     const c = document.createElement('canvas');
     drawNameplate(c.getContext('2d'), agent.name, agent.role, agent.hex);
-    const tex = new THREE.CanvasTexture(c); tex.minFilter = THREE.LinearFilter;
-    const plate = new THREE.Mesh(new THREE.PlaneGeometry(PLATE.w, PLATE.h), new THREE.MeshBasicMaterial({ map: tex, transparent: true }));
+    const tex = uiTexture(new THREE.CanvasTexture(c)); tex.minFilter = THREE.LinearFilter;
+    const plate = uiMaterial(new THREE.Mesh(new THREE.PlaneGeometry(PLATE.w, PLATE.h), new THREE.MeshBasicMaterial({ map: tex, transparent: true })));
     plate.position.set(0, PLATE.y, PLATE.z); g.add(plate);
     const stand = new THREE.Mesh(new THREE.BoxGeometry(PLATE.w, .02, .05), M(0x2E3642));
     stand.position.set(0, PLATE.standY, PLATE.standZ); g.add(stand);
@@ -1088,8 +1089,8 @@ addPlant(-11.6,8.8,true);
 const wtc=document.createElement('canvas');wtc.width=1024;wtc.height=200;
 const wtx=wtc.getContext('2d');
 drawWallTitle(wtx);
-const wtt=new THREE.CanvasTexture(wtc);
-const wallTitle=new THREE.Mesh(new THREE.PlaneGeometry(4.6,0.9),new THREE.MeshBasicMaterial({map:wtt,transparent:true}));
+const wtt=uiTexture(new THREE.CanvasTexture(wtc));
+const wallTitle=uiMaterial(new THREE.Mesh(new THREE.PlaneGeometry(4.6,0.9),new THREE.MeshBasicMaterial({map:wtt,transparent:true})));
 // Dipasang di dinding KIRI (x=-16.8, menghadap +X) — spot kosong antara pilar dinding kampus
 // dan jendela z=-3.4 (lebar 4.6 → z -8.8..-4.2, aman dari keduanya). Sebelumnya mesh
 // ini dibuat tapi TIDAK PERNAH di-add ke scene (kode mati).
@@ -1313,8 +1314,8 @@ function createBubble(x,y,z,text,color,anchor){
   bc.width=BUBBLE_W;bc.height=BUBBLE_H;
   const bx=bc.getContext('2d');
   drawBubble(bx,text,color,{clampText:clampBubbleText});
-  const btex=new THREE.CanvasTexture(bc);btex.minFilter=THREE.LinearFilter;
-  const sprite=new THREE.Sprite(new THREE.SpriteMaterial({map:btex,transparent:true,depthTest:false,sizeAttenuation:false}));
+  const btex=uiTexture(new THREE.CanvasTexture(bc));btex.minFilter=THREE.LinearFilter;
+  const sprite=new THREE.Sprite(uiMaterial(new THREE.SpriteMaterial({map:btex,transparent:true,depthTest:false,sizeAttenuation:false})));
   sprite.userData.aspect=BUBBLE_W/BUBBLE_H; sprite.renderOrder=30;
   const {w:sW,h:hFrac}=bubbleScale();
   sprite.scale.set(sW,hFrac,1);
