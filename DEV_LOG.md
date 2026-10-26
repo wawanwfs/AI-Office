@@ -191,6 +191,13 @@
     - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
 - **Sisa backlog:** evaluasi optimasi chunking dinamis OfficeScene atau filtering per divisi pada tampilan Kanban.
 
+## 2026-10-26 14:10 WIB — Siklus 85: Estetika Kampus & Anti-Macet (laporan "macet + lantai polos + dinding polos + atap")
+- **Pemicu:** user — agen macet bergerombol, lantai & dinding polos, tampilan depan keliatan atap, tanya asal-usul bubble chat.
+- **Perbaikan:** (1) Anti-macet: 25 destinasi jalan (+9 baru lintas lantai), jitter 0.9, collab 30% (was 75%), jeda duduk 10–28 dtk, BOUNDS diperluas ±15.9/±12.4. (2) Lantai: painter drawTerrazzo (chip warm/rose/teal/navy 420 buah, vena marmer, kilap lempeng) di 3 deck terraces + repeat parket dasar 7×5.5. (3) Dinding: drawWallTex diperkaya (seam horizontal, satin band, AO tepi), pilaster kontras 0x8E9BB0 tiap 4m, repeat 16×, kotak bunga 4 warna di bawah jendela depan/kanan, backdrop logo navy. (4) Atap: plafon 26×20→34×27 + auto-hide saat kamera depan/atas (phi<1.15 || cam.y>5.2), panel cahaya 7×5, balok 5+5. (5) Bubble idle 7–15 dtk (was 4–10) + PAD label 38/44px.
+- **Jawaban bubble:** bubble = interaksi NYATA antar agen (kolaborasi rekan + status task nyata dari orchestrator); bukan demo. "Webhook Midtrans ✓" = roleTalk RIZKY saat idle.
+- **Verifikasi:** 1587→1597+ test lulus; Chrome :99 xdotool F5/ctrl+shift+r + import root; Vision iteratif 6.5→7→7.5/10 ("terazzo natural, tidak polos, tidak kamuflase; agen tersebar; interior penuh").
+- **Pelajaran:** (a) worker auto-dev melakukan reset/rebase — commit PENUH SEBELUM siklusnya (race menghapus patch yang belum dicommit 2×); (b) fallback "Scene 3D tidak aktif" di screenshot headless = normal (tanpa GPU), verifikasi render WAJIB lewat Chrome :99; (c) tekstur prosedural butuh 3 iterasi tuning (polos→kamuflase→natural): ukuran chip & repeat UV harus disesuaikan jarak kamera isometrik.
+
 ## 2026-10-26 10:20 WIB — Siklus 82: Perbaikan UI/UX Mobile & Koherensi Kampus (dari screenshot HP user)
 
 - **Pemicu:** screenshot HP 100.117.198.46:9503 — logo "WFS PR" terpotong chip, agen di luar dinding, pilar menembus ruangan, label 6px.

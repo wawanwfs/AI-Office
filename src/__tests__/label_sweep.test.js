@@ -13,7 +13,7 @@ const OPTS = { height: 800, width: 1200 };
 
 describe('konstanta historis sweep+clamp', () => {
   it('mempertahankan nilai historis', () => {
-    expect(SWEEP_GAP).toBe(36);
+    expect(SWEEP_GAP).toBe(44);
     expect(VIEW_TOP_MARGIN).toBe(140);
     expect(VIEW_BOT_MARGIN).toBe(110);
     expect(ZONE_TOP_EXTRA).toBe(130); // 48→130 siklus 47: ruang tarik-balik anti-overlap (terukur e2e_zone_multi)
@@ -27,9 +27,9 @@ describe('sweepVertical', () => {
   it('mendorong label bawah ke bawah dari label atas yang overlap', () => {
     const pts = [AG(300, 200), AG(300, 205)];
     sweepVertical(pts);
-    // byY: y=200 lalu y=205; need = 200+25+25+36 = 286 -> offY kedua = 286-205
+    // byY: y=200 lalu y=205; need = 200+25+25+44 = 294 -> offY kedua = 294-205 = 89
     const low = pts.find(p => p.y === 205);
-    expect(low.offY).toBeCloseTo(286 - 205);
+    expect(low.offY).toBeCloseTo(294 - 205);
     const top = pts.find(p => p.y === 200);
     expect(top.offY).toBe(0);
   });
@@ -50,8 +50,8 @@ describe('sweepVertical', () => {
     const pts = [AG(300, 100, 40), AG(300, 100)]; // sama y, pertama sudah digeser +40
     sweepVertical(pts);
     // byY urut y+offY: pts[1] (100) di atas, pts[0] (140) di bawah;
-    // need utk pts[0] = 100+25+25+36 = 186 -> offY = 186-100 = 86; pts[1] tetap 0
-    expect(pts[0].offY).toBeCloseTo(86);
+    // need utk pts[0] = 100+25+25+44 = 194 -> offY = 194-100 = 94; pts[1] tetap 0
+    expect(pts[0].offY).toBeCloseTo(94);
     expect(pts[1].offY).toBe(0);
   });
 
