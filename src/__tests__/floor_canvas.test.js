@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { drawWoodFloor, drawAoStrip } from '../scene/parts/floor_canvas.js';
+import { drawWoodFloor, drawAoStrip, drawTerrazzo } from '../scene/parts/floor_canvas.js';
 
 // recorder ctx + gradien palsu (pola sama dgn sky_canvas.test.js)
 const rec = () => {
@@ -87,5 +87,69 @@ describe('drawAoStrip (16×64)', () => {
     drawAoStrip(c);
     const kinds = new Set(c.ops.map(o => o[0]));
     expect([...kinds].sort()).toEqual(['addColorStop', 'createLinearGradient', 'fillRect', 'fillStyle']);
+  });
+});
+
+// ── drawTerrazzo (512×512) — painter lantai terazzo; murni, deterministik ──
+describe('drawTerrazzo (512×512)', () => {
+  // recorder diperluas untuk operasi path/ellipse/stroke/globalAlpha
+  const recFull = () => {
+    const c = rec();
+    c.globalAlpha = 1;
+    c.beginPath = () => c.ops.push(['beginPath']);
+    c.moveTo = (...a) => c.ops.push(['moveTo', ...a]);
+    c.lineTo = (...a) => c.ops.push(['lineTo', ...a]);
+    c.stroke = () => c.ops.push(['stroke']);
+    c.ellipse = (...a) => c.ops.push(['ellipse', ...a]);
+    c.fill = () => c.ops.push(['fill']);
+    return c;
+  };
+
+  it('latar default #E6E0D2; tint kustom dipakai apa adanya', () => {
+    const a = recFull();
+    drawTerrazzo(a);
+    expect(a.ops[0]).toEqual(['fillStyle', '#E6E0D2']);
+    expect(a.ops[1]).toEqual(['fillRect', 0, 0, 512, 512]);
+    const b = recFull();
+    drawTerrazzo(b, '#F2EDE3');
+    expect(b.ops[0]).toEqual(['fillStyle', '#F2EDE3']);
+    expect(b.ops[1]).toEqual(['fillRect', 0, 0, 512, 512]);
+  });
+
+  it('deterministik: dua pemanggilan menghasilkan urutan operasi identik', () => {
+    const a = recFull();
+    drawTerrazzo(a);
+    const b = recFull();
+    drawTerrazzo(b);
+    expect(a.ops).toEqual(b.ops);
+  });
+
+  it('190 chip ellipse ditarik dengan radius & pusat wajar, alpha kembali ke 1', () => {
+    const c = recFull();
+    drawTerrazzo(c);
+    const ellipses = c.ops.filter(o => o[0] === 'ellipse');
+    expect(ellipses).toHaveLength(190);
+    for (const e of ellipses) {
+      const [, cx, cy, rx, ry] = e;
+      expect(cx).toBeGreaterThanOrEqual(0); expect(cx).toBeLessThanOrEqual(512);
+      expect(cy).toBeGreaterThanOrEqual(0); expect(cy).toBeLessThanOrEqual(512);
+      expect(rx).toBeGreaterThanOrEqual(3.5); expect(rx).toBeLessThanOrEqual(12.5);
+      expect(ry).toBeGreaterThanOrEqual(0); expect(ry).toBeLessThanOrEqual(15);
+    }
+    expect(c.globalAlpha).toBe(1);
+  });
+
+  it('5 vena marmer + grid nat 5×5 = 15 stroke; garis grid di kelipatan 128', () => {
+    const c = recFull();
+    drawTerrazzo(c);
+    const strokes = c.ops.filter(o => o[0] === 'stroke');
+    expect(strokes).toHaveLength(15);
+    const ls = c.ops.filter(o => o[0] === 'lineTo');
+    // vertikal: moveTo(0,0)→lineTo(0,512), dst; horizontal: lineTo(512,0)
+    expect(ls.some(o => o[1] === 0 && o[2] === 512)).toBe(true);
+    expect(ls.some(o => o[1] === 512 && o[2] === 0)).toBe(true);
+    const gs = [0, 128, 256, 384, 512];
+    const moves = c.ops.filter(o => o[0] === 'moveTo');
+    gs.forEach(g => expect(moves.some(o => o[1] === g && o[2] === 0)).toBe(true));
   });
 });
