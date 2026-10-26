@@ -31,13 +31,13 @@ export function drawAoStrip(x) {
 export function drawTerrazzo(x, tint = '#FFFFFF') {
   x.fillStyle = tint === '#FFFFFF' ? '#E6E0D2' : tint;
   x.fillRect(0, 0, 512, 512);
-  const chips = ['#C4B69C', '#A99A7E', '#8C7F66', '#D9CDB4', '#B0A184'];
+  const chips = ['#CFC3AB', '#B9AB90', '#C9A9A6', '#9FB8AD', '#D9CDB4'];
   let seed = 7;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
-  for (let i = 0; i < 260; i++) {
+  for (let i = 0; i < 190; i++) {
     x.fillStyle = chips[i % chips.length];
     x.globalAlpha = 0.7 + rnd() * 0.3;
-    const cx = rnd() * 512, cy = rnd() * 512, r = 9 + rnd() * 22;
+    const cx = rnd() * 512, cy = rnd() * 512, r = 3.5 + rnd() * 9;
     x.beginPath(); x.ellipse(cx, cy, r, r * (0.6 + rnd() * 0.6), rnd() * 3.14, 0, 6.29); x.fill();
   }
   x.globalAlpha = 1;

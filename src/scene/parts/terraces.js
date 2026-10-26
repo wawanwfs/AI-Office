@@ -67,7 +67,7 @@ export function createTerraces({ THREE, office, M, MB }) {
   // ══════════════════════════════════════════════════════════
   const l1Deck = new THREE.Mesh(
     new THREE.BoxGeometry(34.0, 0.20, 13.0),
-    terrazzoMat('#FFFFFF', 3.2, 1.5) // Terazzo putih bervena
+    terrazzoMat('#FFFFFF', 5, 2.4) // Terazzo putih bervena
   );
   l1Deck.position.set(0, -0.10, -7.4);
   l1Deck.receiveShadow = true;
