@@ -4,6 +4,7 @@
 // Modul murni-canvas; dipasang di OfficeScene dengan satu pemanggilan.
 
 import { computePct, clip, cardY, CARD_H, subtitle as subLine, bannerParts, bannerLayout, columnItems, cardMeta, stripLayout, STRIP_GAP, STRIP_LEFT, STRIP_RIGHT } from './projectboard_data.js'
+import { applyPollResult, connectionBadge } from '../../lib/connection_spec.js'
 
 export function createProjectBoard(office, THREE) {
   // --- kanvas papan ---
@@ -29,6 +30,9 @@ export function createProjectBoard(office, THREE) {
   // --- data ---
   let snap = null
   let lastOk = 0
+  // Tracker kesehatan koneksi gateway — paritas dengan chip HUD (.conn-chip):
+  // live / stale (data basi tapi papan masih layak) / down (belum pernah sukses).
+  let conn = applyPollResult(null, { ok: false, error: 'init' }, 0)
 
   async function pull() {
     if (document.visibilityState === 'hidden') return
@@ -37,8 +41,12 @@ export function createProjectBoard(office, THREE) {
       if (!r.ok) throw new Error('HTTP ' + r.status)
       const d = await r.json()
       if (d && d.tasks) { snap = d; lastOk = Date.now() }
+      conn = applyPollResult(conn, { ok: true })
       draw()
-    } catch { /* biarkan data terakhir tampil */ }
+    } catch {
+      conn = applyPollResult(conn, { ok: false, error: 'offline' })
+      draw() // segarkan strip segera: badge koneksi berubah tanpa menunggu tick 60 dtk
+    }
   }
 
 
@@ -150,6 +158,16 @@ export function createProjectBoard(office, THREE) {
     })
     g.font = '22px sans-serif'; g.textAlign = 'left'
     let sx = STRIP_LEFT
+    // Badge koneksi gateway (paritas chip HUD .conn-chip): titik berwarna + label
+    // di awal strip, prioritas tertinggi (tak pernah ikut dibuang stripLayout).
+    const cb = connectionBadge(conn)
+    const dotCol = cb.tone === 'ok' ? '#10E5A0' : cb.tone === 'warn' ? '#F59E0B' : '#ef4444'
+    g.fillStyle = dotCol
+    g.beginPath(); g.arc(sx + 6, 810, 5, 0, Math.PI * 2); g.fill()
+    sx += 18
+    g.fillStyle = cb.tone === 'ok' ? '#8fa3bd' : dotCol
+    g.fillText(cb.label, sx, 817)
+    sx += g.measureText(cb.label).width + STRIP_GAP
     layout.kept.forEach(sg => { g.fillStyle = sg.col; g.fillText(sg.txt, sx, 817); sx += g.measureText(sg.txt).width + STRIP_GAP })
     tex.needsUpdate = true
   }
@@ -157,6 +175,10 @@ export function createProjectBoard(office, THREE) {
   // SaaS line: gambar ringkasan SaaS di strip bawah frame? (opsional di scene: cukup papan task)
   pull()
   const iv = setInterval(pull, 60000)
+  // Umur data pada badge koneksi (label "Sinkron N dtk/mnt lalu" saat stale)
+  // harus berdetak: segarkan strip tiap 30s. draw() menggambar hanya bila snap ada,
+  // jadi aman sebelum fetch pertama berhasil.
+  const connIv = setInterval(() => { if (conn.state !== 'live') draw() }, 30000)
   // Tab kembali terlihat → segarkan data segera (jangan tunggu tick 60 detik);
   // tab hidden → interval tick di-skip agar tidak fetch sia-sia.
   let pageHidden = document.visibilityState === 'hidden'
@@ -177,6 +199,6 @@ export function createProjectBoard(office, THREE) {
     }
   }, 500)
 
-  function destroy() { clearInterval(iv); clearInterval(forceVisible); document.removeEventListener('visibilitychange', onVis) }
+  function destroy() { clearInterval(iv); clearInterval(connIv); clearInterval(forceVisible); document.removeEventListener('visibilitychange', onVis) }
   return { destroy, refresh: pull, mesh, frame }
 }

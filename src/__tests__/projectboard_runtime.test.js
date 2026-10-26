@@ -14,6 +14,7 @@ function makeCtx() {
     closePath() {}, fill() {}, stroke() {},
     fillText(t) { texts.push(String(t)) },
     measureText(s) { return { width: String(s).length * 10 } },
+    arc() {},
     createLinearGradient: () => ({ addColorStop() {} }),
   }
 }
@@ -189,6 +190,51 @@ describe('createProjectBoard — render konten', () => {
     await mount(null)
     expect(fetchMock).toHaveBeenCalledTimes(1)
     expect(texts.some(t => t.includes('PROYEK'))).toBe(false) // snap tetap null
+  })
+})
+
+describe('createProjectBoard — badge koneksi gateway di strip bawah', () => {
+  it('fetch sukses → badge titik hijau + label Sinkron digambar di awal strip', async () => {
+    await mount()
+    expect(texts.some(t => t === 'Sinkron')).toBe(true)
+  })
+
+  it('fetch gagal setelah pernah sukses → badge stale "Sinkron … lalu" (amber, paritas chip HUD)', async () => {
+    await mount()
+    const drawsBefore = texts.length
+    fetchMock = vi.fn(async () => { throw new TypeError('network down') })
+    vi.stubGlobal('fetch', fetchMock)
+    await vi.advanceTimersByTimeAsync(60_000) // tick poll berikutnya gagal
+    // draw() dipanggil ulang saat catch (strip segar tanpa menunggu tick berikutnya)
+    expect(texts.length).toBeGreaterThan(drawsBefore)
+    const stale = texts.slice(drawsBefore).find(t => t.startsWith('Sinkron ') && t.includes('lalu'))
+    expect(stale).toBeTruthy()
+  })
+
+  it('fetch gagal sejak awal → badge down "Terputus" hingga pulih, lalu "Sinkron" + data tampil', async () => {
+    // fetch pertama gagal (down), pulih pada tick 60 dtk → badge live & papan tergambar
+    fetchMock = vi.fn(async () => { throw new TypeError('network down') })
+    vi.stubGlobal('fetch', fetchMock)
+    const { createProjectBoard } = await import('../scene/parts/projectboard.js')
+    const capt = makeMeshCaptor()
+    const b = createProjectBoard(capt.office, THREE)
+    mountedBoards.push(b)
+    await vi.advanceTimersByTimeAsync(1)
+    expect(texts.some(t => t.includes('WFS PROJECT'))).toBe(false) // snap masih null — draw no-op
+    fetchMock = vi.fn(async () => ({ ok: true, json: async () => SNAP }))
+    vi.stubGlobal('fetch', fetchMock)
+    await vi.advanceTimersByTimeAsync(60_000)
+    expect(texts.some(t => t === 'Sinkron')).toBe(true)
+    expect(texts.some(t => t === '65% selesai')).toBe(true)
+  })
+
+  it('destroy menghentikan seluruh interval — tidak ada fetch maupun refresh badge lagi', async () => {
+    await mount()
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    const { board } = { board: mountedBoards[mountedBoards.length - 1] }
+    board.destroy()
+    await vi.advanceTimersByTimeAsync(120_000)
+    expect(fetchMock).toHaveBeenCalledTimes(1)
   })
 })
 

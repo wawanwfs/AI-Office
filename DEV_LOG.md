@@ -1,3 +1,24 @@
+## 2026-10-27 03:12 WIB — Siklus 107: Badge Status Koneksi Gateway di Strip 3D ProjectBoard (paritas chip HUD .conn-chip)
+
+- **Yang diperbaiki & ditingkatkan (backlog opsional siklus 106 — badge chip koneksi di strip 3D):**
+  1. **Runtime papan proyek (`src/scene/parts/projectboard.js`):**
+     - Tracker kesehatan koneksi gateway kini dimiliki papan: `applyPollResult` dari `lib/connection_spec.js` (satu sumber kebenaran dengan chip HUD) — transisi `live` / `stale` (gagal setelah pernah sukses) / `down` (belum pernah sukses).
+     - Badge digambar di awal strip bawah papan 3D: titik berwarna (hijau `#10E5A0` live, amber `#F59E0B` stale, merah `#ef4444` down) + label `Sinkron` / `Sinkron N dtk/mnt lalu` / `Terputus` — prioritas tertinggi, TIDAK pernah ikut dibuang `stripLayout` (ditempatkan sebelum segmen hasil layout, aman di strip paling sempit).
+     - **Perbaikan silent-catch lama:** `pull()` yang gagal sebelumnya diam total (`catch { /* biarkan data terakhir tampil */ }`) — kini memanggil `draw()` saat gagal sehingga badge berubah ke stale/down segera, tanpa menunggu tick 60 dtk berikutnya; data papan terakhir tetap tampil (fallback perilaku lama dipertahankan).
+     - Refresh umur data tiap 30s saat state non-live (label "Sinkron N lalu" berdetak tanpa fetch tambahan); `connIv` ikut dibersihkan di `destroy()`.
+  2. **Unit test (`src/__tests__/projectboard_runtime.test.js`)** — describe baru "badge koneksi gateway di strip bawah" (+4 test, total file jadi 17):
+     - sukses → label `Sinkron` digambar; gagal pasca-sukses → `draw()` dipanggil ulang saat catch + label `Sinkron … lalu`; gagal sejak awal (snap null, draw no-op) → pulih → `Sinkron` + data papan tampil; `destroy()` menghentikan seluruh interval (tak ada fetch lagi).
+     - Stub context 2D dilengkapi `arc()` untuk titik badge.
+- **Klarifikasi backlog "sinkronisasi preset divisi ke ProjectPanel":** audit siklus 107 menunjukkan item ini **sudah tercakup** — strip preset divisi (`div-preset-chip` + stats + highlight aktif via `isDivisionPresetActive`) berada di TaskBoard yang membaca state `division` yang sama dengan siklus shortcut `D` (`wfs-cycle-div-preset` → `setDivision` → re-render strip otomatis); ProjectPanel (panel roket) memang tidak memuat strip preset. Backlog ditutup.
+- **Bukti terukur:**
+  - **Vitest:** **1911/1911 passed (142 file)** (+4 test baru `projectboard_runtime`, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint` pada file terubah).
+  - **Build:** sukses (exit 0, 37 precache entries 1804.10 KiB; chunk baru `index-CejGw5Ax.js` tersaji HTTP 200 di :9503).
+  - **Deploy:** `dist/*` → `~/wfs-hq/` OK (index & chunk 200; layanan `wfs-hq` + `wfs-office` tetap `active`).
+  - **E2E:** `e2e_tv.py` **E2E_TV: OK** (26 agents, ws true); `e2e_shot.py` **E2E_VISUAL: OK** — screenshot **682.097 bytes** (>500 KB, WebGL hidup); `e2e_zone_multi.py` **E2E_ZONE_MULTI: OK** (0 OFFSCREEN, label zona `vis=True` semua).
+- **Commit Hash:** tercatat setelah push (lihat git log).
+- **Sisa backlog:** tidak ada item wajib tersisa; kandidat lanjutan: adaptasi backoff eksponensial `connection_spec` untuk pull papan 3D & TV lounge (saat ini tetap 60 dtk fix), verifikasi subjektif audio web-audio.
+
 ## 2026-10-27 02:35 WIB — Siklus 106: Indikator Sinkronisasi Gateway HUD + Polling Adaptif Backoff Eksponensial (lib/connection_spec.js, chip live/stale/down)
 
 - **Yang diperbaiki & ditingkatkan (backlog siklus 105: indikator status sinkronisasi offline/reconnect):**
