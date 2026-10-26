@@ -808,4 +808,67 @@ describe('TaskBoard', () => {
 
     expect(onFlash).toHaveBeenCalledWith(expect.stringMatching(/1 task diekspor ke CSV/i));
   });
+
+  describe('Filter Preset Rentang Tanggal', () => {
+    const now = Date.now();
+    const datedTasks = [
+      { id: 101, title: 'Task Baru Hari Ini', agent_id: 'be1', status: 'pending', role: 'be', created_at: now },
+      { id: 102, title: 'Task Lama Bulan Lalu', agent_id: 'fe1', status: 'done', role: 'fe', created_at: now - 40 * 86400000 },
+    ];
+
+    it('menampilkan dropdown filter rentang tanggal dengan ikon kalender dan pilihan preset', async () => {
+      vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: datedTasks }) })));
+      render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />);
+      act(() => {
+        window.dispatchEvent(new CustomEvent('wfs-open-task-board'));
+      });
+      await waitFor(() => screen.getByRole('dialog', { name: 'Papan task' }));
+      await waitFor(() => screen.getByText(/Task Baru Hari Ini/));
+
+      const dateSelect = screen.getByLabelText('Rentang waktu task');
+      expect(dateSelect).toBeTruthy();
+      expect(dateSelect.querySelectorAll('option').length).toBe(5);
+      expect(screen.getByText(/Task Lama Bulan Lalu/)).toBeTruthy();
+    });
+
+    it('memilih preset rentang tanggal menyaring task dan tombol reset memulihkan', async () => {
+      vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: datedTasks }) })));
+      render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />);
+      act(() => {
+        window.dispatchEvent(new CustomEvent('wfs-open-task-board'));
+      });
+      await waitFor(() => screen.getByRole('dialog', { name: 'Papan task' }));
+      await waitFor(() => screen.getByText(/Task Baru Hari Ini/));
+
+      const dateSelect = screen.getByLabelText('Rentang waktu task');
+      fireEvent.change(dateSelect, { target: { value: 'today' } });
+
+      // Hanya task hari ini yang tampil
+      expect(screen.getByText(/Task Baru Hari Ini/)).toBeTruthy();
+      expect(screen.queryByText(/Task Lama Bulan Lalu/)).toBeNull();
+
+      // Tombol reset tanggal muncul dan dapat diklik
+      const clearBtn = screen.getByRole('button', { name: 'Reset rentang waktu ke semua' });
+      expect(clearBtn).toBeTruthy();
+      fireEvent.click(clearBtn);
+
+      // Kedua task tampil kembali
+      expect(screen.getByText(/Task Baru Hari Ini/)).toBeTruthy();
+      expect(screen.getByText(/Task Lama Bulan Lalu/)).toBeTruthy();
+    });
+
+    it('detail task menampilkan stempel waktu bila tersedia', async () => {
+      vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: datedTasks }) })));
+      render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />);
+      act(() => {
+        window.dispatchEvent(new CustomEvent('wfs-open-task-board'));
+      });
+      await waitFor(() => screen.getByRole('dialog', { name: 'Papan task' }));
+      await waitFor(() => screen.getByText(/Task Baru Hari Ini/));
+
+      fireEvent.click(screen.getByText(/Task Baru Hari Ini/));
+      expect(screen.getByText(/Waktu:/)).toBeTruthy();
+      expect(screen.getByText(/Hari ini/)).toBeTruthy();
+    });
+  });
 });

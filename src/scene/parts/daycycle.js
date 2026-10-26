@@ -42,7 +42,7 @@ export function mixHex(a, b, t) {
 
 export function createLighting(ctx) {
   const { THREE, scene, renderer, sun, ambient, agentData, onTimeUpdate, onStatusUpdate, onTick } = ctx;
-  const NAVY = 0x000c1e;
+  const NAVY = 0x010a28;
   let current = 660;
 
   function apply(min) {

@@ -6,7 +6,14 @@ import { parseFileList } from '../lib/files'
 import { setupCardDragData, canDropTaskInColumn, formatDragDropNotification } from '../lib/kanban_drag'
 import { calcSearchStats, getSearchMatchSegments, getKanbanColumnSearchEmptyState } from '../lib/kanban_search'
 import { exportTasks } from '../lib/kanban_export'
-import { IconBoard, IconClose, IconPlay, IconRotate, IconList, IconKanban, IconSearch, IconDownload } from './Icons'
+import {
+  DATE_RANGE_PRESETS,
+  computeDateRangeStats,
+  formatTaskDate,
+  formatDateRangeSummary,
+  parseTaskTimestamp,
+} from '../lib/kanban_date'
+import { IconBoard, IconClose, IconPlay, IconRotate, IconList, IconKanban, IconSearch, IconDownload, IconCalendar } from './Icons'
 import {
   KANBAN_COLUMNS,
   getTaskRoleLabel,
@@ -46,6 +53,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const [division, setDivision] = useState('all')
   const [selectedTag, setSelectedTag] = useState('all')
   const [tagMode, setTagMode] = useState('any') // 'any' (OR) | 'all' (AND)
+  const [dateRange, setDateRange] = useState('all') // 'all' | 'today' | 'yesterday' | 'week' | 'month'
   const [viewMode, setViewMode] = useState('list') // 'list' | 'kanban'
   const [sortBy, setSortBy] = useState('newest') // 'newest' | 'oldest' | 'priority' | 'title' | 'agent'
   const [q, setQ] = useState('')
@@ -141,6 +149,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
         setSelectedTag(e.detail.tag)
       }
       if (e?.detail?.tagMode) setTagMode(e.detail.tagMode)
+      if (e?.detail?.dateRange) setDateRange(e.detail.dateRange)
       if (e?.detail?.sortBy) setSortBy(e.detail.sortBy)
       if (e?.detail?.taskId && tasks) {
         const found = tasks.find(t => String(t.id) === String(e.detail.taskId))
@@ -280,9 +289,10 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const activeDivision = useMemo(() => divisions.find(d => d.key === division) || null, [divisions, division])
   const tagCloud = useMemo(() => computeTagCloud(tasks, { divisionFilter: division }), [tasks, division])
   const presetStats = useMemo(() => computePresetStats(tasks, TAG_PRESETS, division), [tasks, division])
+  const dateStats = useMemo(() => computeDateRangeStats(tasks), [tasks])
   const kanbanGroups = useMemo(
-    () => groupTasksByKanbanColumn(tasks, q, division, sortBy, selectedTag, tagMode),
-    [tasks, q, division, sortBy, selectedTag, tagMode]
+    () => groupTasksByKanbanColumn(tasks, q, division, sortBy, selectedTag, tagMode, dateRange),
+    [tasks, q, division, sortBy, selectedTag, tagMode, dateRange]
   )
   const totalKanbanTasks = useMemo(() => {
     return Object.values(kanbanGroups).reduce((acc, grp) => acc + grp.length, 0)
@@ -296,8 +306,8 @@ export default function TaskBoard({ onFlash, onAsk }) {
   )
 
   const list = useMemo(
-    () => filterTasks(tasks, { filter, q, division, sortBy, tag: selectedTag, tagMode }),
-    [tasks, filter, q, division, sortBy, selectedTag, tagMode]
+    () => filterTasks(tasks, { filter, q, division, sortBy, tag: selectedTag, tagMode, dateRange }),
+    [tasks, filter, q, division, sortBy, selectedTag, tagMode, dateRange]
   )
   const count = s => (tasks || []).filter(t => (s === 'all' || t.status === s) && (division === 'all' || matchTaskDivision(t, division))).length
 
@@ -313,8 +323,9 @@ export default function TaskBoard({ onFlash, onAsk }) {
       sortBy,
       tag: selectedTag,
       tagMode,
+      dateRange,
     })
-  }, [tasks, viewMode, list, q, division, sortBy, selectedTag, tagMode])
+  }, [tasks, viewMode, list, q, division, sortBy, selectedTag, tagMode, dateRange])
 
   const handleExport = useCallback((format) => {
     if (!tasks || exportableTasks.length === 0) {
@@ -327,6 +338,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
       filter: viewMode === 'list' ? filter : 'all',
       tag: selectedTag,
       tagMode,
+      dateRange,
       q,
       sortBy,
     })
@@ -336,7 +348,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
     if (typeof window !== 'undefined' && window.__officeSound) {
       window.__officeSound.playSelect?.()
     }
-  }, [tasks, exportableTasks, viewMode, division, filter, selectedTag, tagMode, q, sortBy, onFlash])
+  }, [tasks, exportableTasks, viewMode, division, filter, selectedTag, tagMode, dateRange, q, sortBy, onFlash])
 
   return (
     <>
@@ -446,7 +458,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
               }} style={{ marginBottom: 10 }}>← Kembali</button>
               <h3 style={{ fontSize: 15, marginBottom: 6 }}>#{sel.id} {sel.title}</h3>
               <p className="note" style={{ marginBottom: 8 }}>
-                Agent: {sel.agent_id || '—'} · Role: {sel.role || '—'} ({getTaskRoleLabel(sel.role)}) · Prioritas: <b style={{ color: getTaskPriorityInfo(sel.priority).color }}>{getTaskPriorityInfo(sel.priority).icon} {getTaskPriorityInfo(sel.priority).label}</b> · <b style={{ color: ST[sel.status]?.[1] }}>{ST[sel.status]?.[0] || sel.status}</b>
+                Agent: {sel.agent_id || '—'} · Role: {sel.role || '—'} ({getTaskRoleLabel(sel.role)}) · Prioritas: <b style={{ color: getTaskPriorityInfo(sel.priority).color }}>{getTaskPriorityInfo(sel.priority).icon} {getTaskPriorityInfo(sel.priority).label}</b> · <b style={{ color: ST[sel.status]?.[1] }}>{ST[sel.status]?.[0] || sel.status}</b>{parseTaskTimestamp(sel) ? <> · Waktu: <b>{formatTaskDate(sel)}</b></> : null}
               </p>
               <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
                 <button
@@ -609,6 +621,49 @@ export default function TaskBoard({ onFlash, onAsk }) {
                         </button>
                       </div>
                     )}
+                  </div>
+                  <div className="task-date-container">
+                    <label htmlFor="task-date-select" className="sr-only">Rentang waktu task:</label>
+                    <div className="task-date-wrapper">
+                      <span className="task-date-icon" aria-hidden="true">
+                        <IconCalendar size={13} />
+                      </span>
+                      <select
+                        id="task-date-select"
+                        className={`task-date-select${dateRange !== 'all' ? ' active' : ''}`}
+                        value={dateRange}
+                        onChange={e => {
+                          setDateRange(e.target.value)
+                          if (typeof window !== 'undefined' && window.__officeSound) {
+                            window.__officeSound.playSelect?.()
+                          }
+                        }}
+                        aria-label="Rentang waktu task"
+                        title={formatDateRangeSummary(dateRange, dateStats[dateRange] ?? 0)}
+                      >
+                        {DATE_RANGE_PRESETS.map(opt => (
+                          <option key={opt.key} value={opt.key}>
+                            {opt.icon} {opt.shortLabel} ({dateStats[opt.key] ?? 0})
+                          </option>
+                        ))}
+                      </select>
+                      {dateRange !== 'all' && (
+                        <button
+                          type="button"
+                          className="task-date-clear-btn"
+                          onClick={() => {
+                            setDateRange('all')
+                            if (typeof window !== 'undefined' && window.__officeSound) {
+                              window.__officeSound.playSelect?.()
+                            }
+                          }}
+                          aria-label="Reset rentang waktu ke semua"
+                          title="Reset filter tanggal"
+                        >
+                          ✕
+                        </button>
+                      )}
+                    </div>
                   </div>
                   <div className="task-sort-container">
                     <label htmlFor="task-sort-select" className="sr-only">Urutkan task:</label>

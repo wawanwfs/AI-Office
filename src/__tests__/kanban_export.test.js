@@ -258,4 +258,21 @@ describe('kanban_export: downloadExportFile & exportTasks', () => {
     expect(parsed.meta.generator).toBe('WFS AI Office Kanban Export');
     expect(parsed.tasks.length).toBe(3);
   });
+
+  it('mendukung opsi dateRange dalam metadata JSON, kolom CSV, dan nama berkas', () => {
+    const fixedNow = new Date(2026, 9, 26, 12, 0, 0).getTime();
+    const tasksWithDate = [
+      { id: 1, title: 'Task Tanggal', status: 'done', created_at: fixedNow },
+    ];
+
+    const json = buildTaskJson(tasksWithDate, { dateRange: 'today', now: fixedNow });
+    expect(json.meta.filters.date_range).toBe('today');
+
+    const csv = buildTaskCsv(tasksWithDate, { dateRange: 'today', now: fixedNow });
+    expect(csv).toContain('Tanggal');
+    expect(csv).toContain('Hari ini');
+
+    const filename = generateTaskExportFilename('csv', { dateRange: 'today', now: fixedNow });
+    expect(filename).toContain('_today_');
+  });
 });

@@ -5,6 +5,7 @@
  * serta penamaan berkas otomatis berbasis filter aktif.
  */
 import { parseFileList } from './files.js';
+import { formatTaskDate } from './kanban_date.js';
 import {
   getTaskRoleLabel,
   getTaskPriorityInfo,
@@ -27,6 +28,7 @@ export const CSV_HEADERS = [
   'Tag',
   'Jumlah_File',
   'Review_QA',
+  'Tanggal',
   'Deskripsi',
 ];
 
@@ -74,6 +76,7 @@ export function buildTaskCsv(tasks, options = {}) {
     const tags = extractTaskTags(t).join('; ');
     const fileCount = parseFileList(t.files).length;
     const statusLabel = STATUS_LABELS[t.status] || t.status || '';
+    const dateFormatted = formatTaskDate(t, options);
 
     const row = [
       t.id != null ? t.id : '',
@@ -89,6 +92,7 @@ export function buildTaskCsv(tasks, options = {}) {
       tags,
       fileCount,
       t.review || '',
+      dateFormatted !== '—' ? dateFormatted : '',
       t.description || t.desc || '',
     ];
     rows.push(formatCsvRow(row));
@@ -151,6 +155,7 @@ export function buildTaskJson(tasks, options = {}) {
         status: options.filter || 'all',
         tag: options.tag || 'all',
         tag_mode: options.tagMode || 'any',
+        date_range: options.dateRange || 'all',
         search_query: options.q || '',
         sort_by: options.sortBy || 'newest',
       },
@@ -181,6 +186,11 @@ export function generateTaskExportFilename(format = 'csv', options = {}) {
   if (options.filter && options.filter !== 'all') {
     const cleanFilter = String(options.filter).toLowerCase().replace(/[^a-z0-9_-]/g, '');
     if (cleanFilter) parts.push(cleanFilter);
+  }
+
+  if (options.dateRange && options.dateRange !== 'all') {
+    const cleanDate = String(options.dateRange).toLowerCase().replace(/[^a-z0-9_-]/g, '');
+    if (cleanDate) parts.push(cleanDate);
   }
 
   if (options.tag && options.tag !== 'all') {

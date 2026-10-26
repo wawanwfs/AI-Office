@@ -900,4 +900,40 @@ describe('kanban_spec — Audit Kontras Warna & Aksesibilitas WCAG (Badge & Tag)
     expect(matchTaskSearch({ id: 1, title: 'Halo Dunia' }, 'halo')).toBe(true);
     expect(matchTaskSearch({ id: 1, title: 'Halo Dunia' }, 'tidakada')).toBe(false);
   });
+
+  describe('kanban_spec — Integrasi Filter Rentang Tanggal', () => {
+    const fixedNow = new Date(2026, 9, 26, 12, 0, 0).getTime();
+    const tasksWithDates = [
+      { id: 10, title: 'Task hari ini', status: 'pending', created_at: fixedNow },
+      { id: 11, title: 'Task kemarin', status: 'running', created_at: fixedNow - 86400000 },
+      { id: 12, title: 'Task 3 hari lalu', status: 'done', created_at: fixedNow - 3 * 86400000 },
+      { id: 13, title: 'Task 15 hari lalu', status: 'done', created_at: fixedNow - 15 * 86400000 },
+    ];
+
+    it('filterTasks menyaring task berdasarkan parameter dateRange dan now', () => {
+      const todayOnly = filterTasks(tasksWithDates, { dateRange: 'today', now: fixedNow });
+      expect(todayOnly.map((t) => t.id)).toEqual([10]);
+
+      const yesterdayOnly = filterTasks(tasksWithDates, { dateRange: 'yesterday', now: fixedNow });
+      expect(yesterdayOnly.map((t) => t.id)).toEqual([11]);
+
+      const weekOnly = filterTasks(tasksWithDates, { dateRange: 'week', now: fixedNow });
+      expect(weekOnly.map((t) => t.id)).toEqual([10, 11, 12]);
+
+      const all = filterTasks(tasksWithDates, { dateRange: 'all', now: fixedNow });
+      expect(all.length).toBe(4);
+    });
+
+    it('groupTasksByKanbanColumn menyaring task kolom berdasarkan parameter dateRange dan now', () => {
+      const groupsToday = groupTasksByKanbanColumn(tasksWithDates, '', 'all', 'newest', 'all', 'any', 'today', fixedNow);
+      expect(groupsToday.pending.map((t) => t.id)).toEqual([10]);
+      expect(groupsToday.running).toEqual([]);
+      expect(groupsToday.done).toEqual([]);
+
+      const groupsWeek = groupTasksByKanbanColumn(tasksWithDates, '', 'all', 'newest', 'all', 'any', 'week', fixedNow);
+      expect(groupsWeek.pending.map((t) => t.id)).toEqual([10]);
+      expect(groupsWeek.running.map((t) => t.id)).toEqual([11]);
+      expect(groupsWeek.done.map((t) => t.id)).toEqual([12]);
+    });
+  });
 });
