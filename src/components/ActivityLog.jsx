@@ -13,7 +13,7 @@ export default function ActivityLog({ show, items, onClose, onClear }) {
   useDialogA11y({ open: show, onClose: closeLog, ref: box })
   if (!show) return null
   return (
-    <div className="modal-scrim" onClick={onClose}>
+    <div className="modal-scrim" role="presentation" onClick={onClose}>
       <div ref={box} className="modal" role="dialog" aria-label="Log aktivitas" aria-modal="true" onClick={e => e.stopPropagation()}>
         <button className="x" onClick={onClose} title="Tutup log aktivitas (Esc)" aria-label="Tutup log aktivitas">
           <IconClose size={16} />

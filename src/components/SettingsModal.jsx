@@ -213,7 +213,7 @@ export default function SettingsModal({
   }
 
   return (
-    <div className="modal-scrim" onClick={onClose}>
+    <div className="modal-scrim" role="presentation" onClick={onClose}>
       <div
         ref={box}
         className="modal settings-modal"

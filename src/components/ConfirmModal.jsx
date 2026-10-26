@@ -10,7 +10,7 @@ export default function ConfirmModal({ show, title, text, confirmLabel = 'Ya, la
   useDialogA11y({ open: show, onClose: cancelViaA11y, ref: box })
   if (!show) return null
   return (
-    <div className="modal-scrim" onClick={onCancel}>
+    <div className="modal-scrim" role="presentation" onClick={onCancel}>
       <div ref={box} className="modal" role="alertdialog" aria-modal="true" aria-labelledby="cf-t" onClick={e => e.stopPropagation()}>
         <button type="button" className="x" onClick={onCancel} title="Batal (Esc)" aria-label="Tutup dialog konfirmasi">
           <IconClose size={16} />

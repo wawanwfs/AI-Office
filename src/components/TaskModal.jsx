@@ -34,7 +34,7 @@ export default function TaskModal({ show, onClose, onDone }) {
     setBusy(false)
   }
   return (
-    <div className="modal-scrim" onClick={onClose}>
+    <div className="modal-scrim" role="presentation" onClick={onClose}>
       <form ref={box} className="modal" role="dialog" aria-modal="true" aria-labelledby="tm-t" onClick={e => e.stopPropagation()} onSubmit={e => { e.preventDefault(); submit(false) }}>
         <button type="button" className="x" onClick={onClose} title="Tutup form task (Esc)" aria-label="Tutup form task">
           <IconClose size={16} />
