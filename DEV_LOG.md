@@ -1,3 +1,33 @@
+## 2026-10-26 18:35 WIB — Siklus 95: Registri & Spesifikasi Shortcut Keyboard Global (shortcut_spec.js), Integrasi Shortcut T (TaskBoard), P (ProjectPanel), A & Shift+A (Ambience Hum), serta Sinkronisasi Panduan OverlayHelp
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Registri & Spesifikasi Shortcut Keyboard Murni (`src/scene/parts/shortcut_spec.js`, `src/__tests__/shortcut_spec.test.js`):**
+     - Mendefinisikan registri terstruktur `SHORTCUT_CATEGORIES` (panel, audio, navigasi, tampilan) dan `KEYBOARD_SHORTCUTS` untuk pemetaan aksi keyboard seluruh kantor AI.
+     - Mengembangkan parser aksi murni `resolveShortcutAction(event, context)` yang aman terhadap elemen editable (`input`, `textarea`, `select`, `contentEditable`), tombol modifier (`Ctrl`, `Meta`, `Alt`), dan memprioritaskan penutupan modal aktif via `Escape` sebelum aksi global diproses.
+     - Mengembangkan fungsi utilitas `getShortcutsByCategory(category)`, `findShortcutByAction(action)`, `isEditableTarget(target)`, dan generator ringkasan panduan bantuan `formatShortcutHelpSummary()`.
+  2. **Integrasi Shortcut Keyboard Global Kantor (`src/App.jsx`, `src/components/OverlayHelp.jsx`, `src/scene/parts/sound_spec.js`):**
+     - Menghubungkan shortcut `T` / `t` untuk membuka/menutup Papan Task Kanban secara instan via event kustom `wfs-toggle-task-board`.
+     - Menghubungkan shortcut `P` / `p` untuk membuka/menutup ringkasan proyek live dibantuin.com via event kustom `wfs-toggle-project-panel`.
+     - Menghubungkan shortcut `A` / `a` untuk toggle suara latar kantor (Ambience HVAC & server drone hum), otomatis unmute audio bila sedang dibisukan, serta `Shift+A` untuk siklus level volume preset (20% → 40% → 70% → 100% → 20%).
+     - Memperbarui panduan langkah bantuan pada `OverlayHelp.jsx` agar memuat daftar shortcut lengkap dengan format dinamis dari spesifikasi.
+     - Menambahkan hint shortcut pada tooltip tombol Papan Task (`shortcut T`), tombol Proyek (`shortcut P`), dan tombol Ambience (`shortcut A / Shift+A`).
+  3. **Event Listener Toggle pada Komponen Panel (`src/components/TaskBoard.jsx`, `src/components/ProjectPanel.jsx`):**
+     - Menambahkan listener `wfs-toggle-task-board` pada `TaskBoard.jsx` yang secara mulus membuka dan menutup modal task board serta me-reset seleksi kartu saat ditutup.
+     - Menambahkan listener `wfs-toggle-project-panel` pada `ProjectPanel.jsx` untuk kontrol pembukaan/penutupan panel via keyboard.
+
+- **Bukti terukur:**
+  - **Vitest:** **1685/1685 passed (133 test file)** (+17 tests baru: 12 unit test shortcut_spec, 3 test integrasi app keyboard shortcuts, 1 test event toggle TaskBoard, 1 test event toggle ProjectPanel; 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/scene/parts/shortcut_spec.js src/scene/parts/sound_spec.js src/components/TaskBoard.jsx src/components/ProjectPanel.jsx src/components/OverlayHelp.jsx src/App.jsx src/__tests__/shortcut_spec.test.js src/__tests__/app_integration.test.jsx src/__tests__/TaskBoard.test.jsx src/__tests__/project_panel.test.jsx`).
+  - **Build:** Berhasil (exit 0, 37 precache entries 1736.56 KiB; `OfficeScene` 165.08 KB / gzip 56.70 KB, `index` 174.79 KB / gzip 47.98 KB, `vendor-three` 715.76 KB, `vendor-react` 189.63 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-BaVViXLa.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **647.634 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `shot.sh` (DISPLAY=:0): Screenshot **646.272 bytes** (>500 KB).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** evaluasi indikator visual shortcut (misal badge <kbd> kecil di footer panel / tooltip) dan fine-tuning audio filter.
+
 ## 2026-10-26 17:53 WIB — Siklus 94: Preset Kombinasi Multi-Tag Filter Kanban TaskBoard (Pill Preset Cepat, Seleksi Shift+Klik, Switcher Mode ATAU/DAN & Event wfs-open-task-board)
 
 - **Yang diperbaiki & ditingkatkan:**
