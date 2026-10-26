@@ -1,3 +1,37 @@
+## 2026-10-26 09:00 WIB — Siklus 80: Spesifikasi Progres Per Divisi / Tim Kerja (team_spec.js), Breakdown Tim Live di Modal Statistik (TeamStats.jsx), Navigasi Interaktif Fokus Kamera 3D ke Pod Meja Divisi (focusTeam)
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Spesifikasi Pembagian Divisi / Tim Kerja Kampus WFS (`src/scene/parts/team_spec.js`, `src/__tests__/team_spec.test.js`):**
+     - Membangun spesifikasi modular terisolasi yang mengelompokkan 26 agen kantor dan peran task (role) ke dalam 6 divisi kerja strategis:
+       - `core-be` (Backend & Data, Lantai 2 Mezzanine, lead: GILANG, 4 agen: Gilang, Budi, Rizky, Ferry).
+       - `fe-design` (Frontend & Design, Lantai 1 Ground, lead: DEWI, 6 agen: Dewi, Andi, Yoga, Maya, Clara, Tari).
+       - `ops-sec` (DevOps & Security, Lantai 3 Penthouse, lead: TONI, 5 agen: Toni, Hendra, Doni, Secbot, Bagas).
+       - `qa-gov` (QA & Governance, Lantai 3 Penthouse, lead: RINA, 3 agen: Rina, Nina, Citra).
+       - `prod-growth` (Product & Growth, Lantai 1 Ground, lead: SARI, 5 agen: Sari, Lina, Aris, Rian, Integrator Bot).
+       - `ai-cs` (AI & Customer Success, Lantai 1 Ground, lead: BANTUIN AI, 3 agen: Bantuin AI, Trainer AI, Support).
+     - Menyediakan fungsi murni `findTeamByRole(role)`, `findTeamByAgent(agentIdOrName)`, `findTeamByKey(key)`, `computeTeamStats(rawTasks)`, dan `teamPodFocusTarget(teamKey)` yang kebal terhadap input null/kosong.
+     - Mengagregasi metrik pengerjaan task per tim: total task, jumlah selesai (`done`), sedang jalan (`running`), review, gagal, antri, serta kalkulasi persentase penyelesaian (`pct`) otomatis.
+  2. **Integrasi Navigasi Fokus Kamera 3D ke Pod Meja Divisi (`src/scene/OfficeScene.js`):**
+     - Menambahkan method `focusTeam(teamKey)` pada kontrol scene dan mengekspos hook global `window.__focusTeam(teamKey)` yang memandu kamera 3D bergeser secara halus (lerp) langsung menuju pod meja kerja divisi terkait.
+     - Membersihkan hook `window.__focusTeam` secara tuntas pada `destroy()`.
+  3. **Visualisasi Kartu Progres Tim di Modal Statistik (`src/components/TeamStats.jsx`, `src/index.css`):**
+     - Menampilkan kontainer region berstandar aksesibilitas `aria-label="Progres per divisi kerja"` di dalam modal Statistik Tim.
+     - Setiap divisi disajikan dengan kartu interaktif: nama tim, dot warna aksen, badge lantai (`Lt. 1`, `Lt. 2`, `Lt. 3`), badge animasi task berjalan (`● N jalan`), bilah progres gradient persentase pengerjaan, lead divisi, jumlah anggota, serta rasio task (`done/total (pct%)`).
+     - Tombol aksi `Fokus 3D` dan klik kartu langsung mengarahkan kamera kanvas 3D ke pod meja tim terkait.
+
+- **Bukti terukur:**
+  - **Vitest:** **1516/1516 passed (128 test file)** (+9 tests baru terintegrasi, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint .`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1665.16 KiB; chunk `OfficeScene-DTjuMLLY.js` 869.62 KB / gzip 235.84 KB, `index-0L-4iSgn.js` 317.11 kB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, 4 asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-0L-4iSgn.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **551.729 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `shot.sh`: Screenshot ck.png **587.471 bytes** (>500 KB).
+    - Runtime probe: `window.__focusTeam('core-be')` sukses beralih ke pod lantai 2 dengan radius 16.
+- **Sisa backlog:** evaluasi fine-tuning whiteboard ruang meeting atau optimasi chunking dinamis OfficeScene.
+
 ## 2026-10-26 07:17 WIB — Siklus 79: Responsivitas Adaptif Kanvas 3D Multi-Window / Layar Split (viewport_spec.js), Dynamic FOV & Radius, NDC Pointer Raycast Presisi & Observer Wadah
 
 - **Yang diperbaiki & ditingkatkan:**
