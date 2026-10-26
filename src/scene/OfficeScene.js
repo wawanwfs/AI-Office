@@ -48,6 +48,7 @@ import { looksOf } from './parts/character_looks.js';
 import { AGENTS, AGENTS_EXTRA, allAgents as allAgentsFn } from './parts/agents_spec.js';
 import { EXTENDED_SPECIALISTS } from './parts/extended_desks.js';
 import { DESKS } from './parts/desk_layout.js';
+import { teamPodFocusTarget } from './parts/team_spec.js';
 import { isLongHair, STANDING, SITTING, accessoryAnchor } from './parts/character_spec.js';
 import { nearbyPairs as nearbyPairsPure, tickCooldown as tickCooldownPure, CHAT_RADIUS, CHAT_COOLDOWN_SEC } from './parts/chat_check.js';
 
@@ -1646,7 +1647,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       return true;
     }
   }
-  return {
+  const sceneControls = {
     teamAction,
     toggleNames: () => { namesVisible=!namesVisible; try{localStorage.setItem('wfs_names',namesVisible?'1':'0')}catch{/* abaikan */};
       agentData.forEach(ad=>{ad.label.visible=namesVisible && ad.state !== 'offsite';ad.label.userData.antiY=0;ad.label.userData.antiX=0});
@@ -1677,6 +1678,13 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
         return true;
       }
       return false;
+    },
+    focusTeam: (teamKey) => {
+      if (selectedIdx !== -1) { selectedIdx = -1; applySelected(); if (onSelectAgent) onSelectAgent(null); }
+      delete sph.__saved;
+      const ft = teamPodFocusTarget(teamKey);
+      focusGoal = { t: new THREE.Vector3(ft.x, ft.y, ft.z), r: ft.r, phi: ft.phi };
+      return true;
     },
     setView: (name) => {
       const targetPhi = (sph.phi < 0.7 || sph.phi > 1.35) ? 1.05 : undefined;
@@ -1754,7 +1762,10 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       delete window.__officeSound;
       delete window.__toggleNeon;
       delete window.__sceneSelRing;
+      delete window.__focusTeam;
       if(renderer){renderer.dispose();container.removeChild(renderer.domElement);}
     }
   };
+  window.__focusTeam = (k) => sceneControls.focusTeam(k);
+  return sceneControls;
 }

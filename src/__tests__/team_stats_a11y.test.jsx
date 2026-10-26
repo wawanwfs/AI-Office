@@ -160,4 +160,22 @@ describe('TeamStats', () => {
     expect(screen.getByRole('img', { name: '1 task review' })).toBeTruthy()
     expect(screen.getByRole('img', { name: '1 task antri' })).toBeTruthy()
   })
+
+  it('menampilkan kartu progres per divisi dan tombol Fokus 3D memicu window.__focusTeam', async () => {
+    const focusMock = vi.fn()
+    window.__focusTeam = focusMock
+    mockFetchOk()
+    render(<TeamStats />)
+    fireEvent.click(screen.getByRole('button', { name: 'Statistik tim' }))
+    await waitFor(() => expect(screen.getByRole('region', { name: 'Progres per divisi kerja' })).toBeTruthy())
+    expect(screen.getByText('Backend & Data')).toBeTruthy()
+    expect(screen.getByText('Frontend & Design')).toBeTruthy()
+    expect(screen.getByText('DevOps & Security')).toBeTruthy()
+
+    const focusBtn = screen.getByRole('button', { name: 'Fokus kamera ke pod Backend & Data' })
+    expect(focusBtn).toBeTruthy()
+    fireEvent.click(focusBtn)
+    expect(focusMock).toHaveBeenCalledWith('core-be')
+    delete window.__focusTeam
+  })
 })

@@ -5,6 +5,7 @@ import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
 import { fileCount } from '../lib/files'
 import { IconStats, IconClose } from './Icons'
+import { computeTeamStats } from '../scene/parts/team_spec.js'
 
 // Animasi angka: lerp dengan easing untuk feedback visual yang hidup (tanpa lib tambahan).
 function useTween(target, ms = 550) {
@@ -62,6 +63,7 @@ export default function TeamStats() {
   const byStatus = {}
   let totalFiles = 0
   ;(data || []).forEach(t => { byStatus[t.status] = (byStatus[t.status] || 0) + 1; totalFiles += fileCount(t.files) })
+  const teamStats = data && data.length > 0 ? computeTeamStats(data) : []
   const dot = s => s === 'done' ? '#10E5A0' : s === 'failed' ? '#f66' : s === 'running' ? '#f59e0b' : s === 'review' ? '#60A5FA' : '#9aa3b5'
   // Hook tween DIPANGGIL tanpa syarat (5 baris tetap) agar urutan hook stabil antar render.
   const nDone = useTween(byStatus.done || 0)
@@ -97,7 +99,62 @@ export default function TeamStats() {
                   ))}
                 </div>
                 <div className="note" style={{ marginBottom: 6 }}>Total file dihasilkan: <b style={{ color: '#fff' }}>{totalFiles}</b></div>
-                <div style={{ maxHeight: 180, overflowY: 'auto' }}>
+                {/* Progres Per Divisi / Tim Kerja & Pod Meja 3D */}
+                {teamStats.length > 0 && (
+                  <div style={{ marginTop: 8, marginBottom: 12 }}>
+                    <div className="note" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, fontWeight: 700, color: '#cfd8e3' }}>
+                      <span>Progres Divisi & Pod 3D</span>
+                      <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>klik kartu untuk fokus 3D</span>
+                    </div>
+                    <div className="team-progress-list" role="region" aria-label="Progres per divisi kerja">
+                      {teamStats.map((team) => (
+                        <div
+                          key={team.key}
+                          className="team-card"
+                          role="button"
+                          tabIndex={0}
+                          onClick={() => { if (typeof window !== 'undefined' && window.__focusTeam) window.__focusTeam(team.key) }}
+                          onKeyDown={(e) => { if ((e.key === 'Enter' || e.key === ' ') && typeof window !== 'undefined' && window.__focusTeam) { e.preventDefault(); window.__focusTeam(team.key) } }}
+                          aria-label={`${team.name}: ${team.done}/${team.total} task selesai (${team.pct}%)`}
+                          title={`Klik untuk fokus kamera 3D ke pod ${team.name} (Lantai ${team.floor})`}
+                        >
+                          <div className="team-card-header">
+                            <div className="team-card-title">
+                              <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: team.color }} />
+                              <span>{team.name}</span>
+                              <span className="team-card-tag">Lt. {team.floor}</span>
+                              {team.running > 0 && <span style={{ fontSize: 9.5, padding: '1px 5px', borderRadius: 4, background: 'rgba(245,158,11,.2)', color: '#F59E0B', fontWeight: 700 }}>● {team.running} jalan</span>}
+                            </div>
+                            <button
+                              type="button"
+                              className="team-focus-btn"
+                              onClick={(e) => { e.stopPropagation(); if (typeof window !== 'undefined' && window.__focusTeam) window.__focusTeam(team.key) }}
+                              aria-label={`Fokus kamera ke pod ${team.name}`}
+                              title={`Fokus kamera 3D ke pod ${team.name}`}
+                            >
+                              Fokus 3D
+                            </button>
+                          </div>
+                          <div className="team-progress-bar">
+                            <div
+                              className="team-progress-fill"
+                              style={{
+                                width: `${team.pct}%`,
+                                background: `linear-gradient(90deg, ${team.color}, #448AFF)`,
+                              }}
+                            />
+                          </div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
+                            <span className="team-members-sub">Lead: {team.lead} · {(team.members || []).length} agen</span>
+                            <b style={{ color: team.pct === 100 ? '#10E5A0' : team.color }}>{team.done}/{team.total} ({team.pct}%)</b>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+                <label className="note" style={{ display: 'block', marginBottom: 4, fontWeight: 600 }}>Task Terkini</label>
+                <div style={{ maxHeight: 150, overflowY: 'auto' }}>
                   {data.slice(-8).reverse().map(t => (
                     <div key={t.id} style={{ padding: '6px 0', borderTop: '1px solid var(--border)', fontSize: 13 }}>
                       <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', marginRight: 6, background: dot(t.status) }} />
