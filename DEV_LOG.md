@@ -1,3 +1,38 @@
+## 2026-10-26 09:45 WIB — Siklus 81: Spesifikasi & Interaktivitas Whiteboard Ruang Meeting (whiteboard_spec.js), Baki Spidol & Aksesoris 3D, Navigasi Fokus Kamera Ruang Meeting (focusMeetingRoom) & Pencegahan Memory Leak Scene
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Spesifikasi Whiteboard & Geometri Aksesoris Ruang Meeting (`src/scene/parts/whiteboard_spec.js`, `src/__tests__/whiteboard_spec.test.js`):**
+     - Membangun modul spesifikasi terisolasi tanpa dependensi Three/DOM untuk tata letak whiteboard, baki aluminium, dan aksesoris spidol:
+       - Dimensi papan baku (`WB_FRAME_W = 2.7`, `WB_FRAME_H = 1.15`, `WB_BOARD_W = 2.5`, `WB_BOARD_H = 1.0`, `WB_POS_Y = 2.2`).
+       - Spesifikasi baki spidol aluminium (`WB_TRAY`: lebar 2.4m, tinggi 0.02m, kedalaman 0.08m pada y = 1.625).
+       - Koleksi spidol dry-erase 4 warna dan penghapus papan ergonomis (`markerItems`: hitam, biru, merah, hijau, eraser).
+       - Target kamera ideal ruang rapat (`meetingFocusTarget`: x=8, y=1.85, z=-3, radius=12.0) yang membingkai meja rapat oval, 6 kursi, dan papan tulis secara harmonis.
+       - Helper teks status dinamis `getWhiteboardTooltipText(tasks, isMeetingActive)` yang otomatis membedakan rapat sedang berlangsung, progres pengerjaan task sprint live (`done/total (pct%)`), dan fallback agenda umum.
+       - Helper deteksi raycast murni `isWhiteboardHit(obj, boardMesh, boardFrame)` untuk menangani interaksi pointer secara tangguh.
+  2. **Detail Visual 3D Ruang Rapat & Pencegahan Kebocoran Memori (`src/scene/parts/room.js`, `src/__tests__/room_runtime.test.js`):**
+     - Menambahkan baki spidol aluminium dan 5 aksesoris (spidol hitam, biru, merah, hijau, serta penghapus) di bawah papan whiteboard ruang rapat.
+     - Melabeli mesh whiteboard dan frame dengan metadata `userData.isWhiteboard`, `userData.isWhiteboardFrame`, dan `userData.__keep = 1` agar tidak terpotong efek fading dinding kamera.
+     - Menyediakan metode pembersihan `destroy()` yang mematikan interval refresh timer dan event listener `visibilitychange` secara tuntas saat scene di-unmount.
+  3. **Interaktivitas Klik/Hover 3D & Fokus Kamera Ruang Rapat (`src/scene/OfficeScene.js`):**
+     - Mengintegrasikan mesh whiteboard dan framenya ke dalam sistem raycaster kanvas 3D (hover pointer, single click, dan double click).
+     - Menampilkan kursor `pointer` saat mouse berada di atas whiteboard ruang meeting.
+     - Klik atau double-click pada whiteboard otomatis membunyikan blip seleksi audio, menggeser fokus kamera 3D ke ruang rapat (`focusMeetingRoom`), dan memunculkan speech bubble status agenda sprint live.
+     - Aksi menu tim "Meeting sekarang" kini otomatis mengarahkan fokus kamera ke ruang rapat bersamaan dengan agen berkumpul.
+     - Mengekspos hook kontrol global `window.__focusMeetingRoom()` dan `window.__whiteboard`.
+
+- **Bukti terukur:**
+  - **Vitest:** **1532/1532 passed (129 test file)** (+14 tests baru terintegrasi, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/scene/OfficeScene.js src/scene/parts/room.js src/scene/parts/whiteboard_spec.js`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1668.72 KiB; chunk `OfficeScene-BT15mneq.js` 872.82 KB / gzip 236.81 KB, `index-DngkL_7d.js` 317.31 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-DngkL_7d.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **525.059 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `shot.sh`: Screenshot ck.png **587.471 bytes** (>500 KB).
+    - Runtime probe CDP: `hasWb: true`, `hasFocusMr: true`, `mrFocusRes: true`.
+- **Sisa backlog:** evaluasi optimasi chunking dinamis OfficeScene atau interaktivitas papan kanban sprint detail.
+
 ## 2026-10-26 09:00 WIB — Siklus 80: Spesifikasi Progres Per Divisi / Tim Kerja (team_spec.js), Breakdown Tim Live di Modal Statistik (TeamStats.jsx), Navigasi Interaktif Fokus Kamera 3D ke Pod Meja Divisi (focusTeam)
 
 - **Yang diperbaiki & ditingkatkan:**

@@ -105,6 +105,17 @@ describe('createMeetingRoom — ruang rapat', () => {
     expect(refs.MRX).toBe(ROOM_CX)
     expect(refs.MRZ).toBe(ROOM_CZ)
     expect(refs.meetSeats.length).toBe(6)
+    expect(refs.boardMesh).toBeTruthy()
+    expect(refs.boardFrame).toBeTruthy()
+    expect(typeof refs.destroy).toBe('function')
+    expect(() => refs.destroy()).not.toThrow()
+  })
+  it('whiteboard & frame memiliki tag userData identifikasi dan keep', async () => {
+    const { refs } = await buildMeeting()
+    expect(refs.boardMesh.userData.isWhiteboard).toBe(true)
+    expect(refs.boardMesh.userData.__keep).toBe(1)
+    expect(refs.boardFrame.userData.isWhiteboardFrame).toBe(true)
+    expect(refs.boardFrame.userData.__keep).toBe(1)
   })
 })
 

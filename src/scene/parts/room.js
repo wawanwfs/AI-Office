@@ -1,4 +1,10 @@
 import { ROOM_CX, ROOM_CZ, meetingSeats, glassPanels, framePosts } from './meeting_room_spec.js';
+import {
+  WB_FRAME_W, WB_FRAME_H, WB_FRAME_D,
+  WB_BOARD_W, WB_BOARD_H,
+  WB_POS_Y, WB_DZ_FRAME, WB_DZ_BOARD,
+  WB_TRAY, markerItems,
+} from './whiteboard_spec.js';
 import { drawSprintBoard } from './whiteboard_canvas.js';
 import { drawClockFace } from './clock_canvas.js';
 
@@ -38,12 +44,29 @@ export function createMeetingRoom(ctx, glassMat) {
   // Whiteboard dengan agenda sprint — LIVE: data task nyata dari window.__tvData
   // (refresh bersama tvPull, 60 dtk + saat tab visible). Tanpa data → fallback
   // ke agenda statis (drawSprintBoard tanpa T).
-  put(B(2.7, 1.15, 0.035), M(0xbfc5ca), CX, 2.2, CZ - 2.55);
+  const frame = put(B(WB_FRAME_W, WB_FRAME_H, WB_FRAME_D), M(0xbfc5ca), CX, WB_POS_Y, CZ + WB_DZ_FRAME);
+  frame.userData.isWhiteboardFrame = true;
+  frame.userData.__keep = 1;
+
   const cv = document.createElement('canvas'); cv.width = 320; cv.height = 128;
   const g = cv.getContext('2d');
-  const board = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.0), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv) }));
-  board.position.set(CX, 2.2, CZ - 2.52);
+  const board = new THREE.Mesh(new THREE.PlaneGeometry(WB_BOARD_W, WB_BOARD_H), new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(cv) }));
+  board.position.set(CX, WB_POS_Y, CZ + WB_DZ_BOARD);
+  board.userData.isWhiteboard = true;
+  board.userData.__keep = 1;
   office.add(board);
+
+  // Baki spidol & aksesoris di bawah papan tulis rapat
+  const tray = put(B(WB_TRAY.w, WB_TRAY.h, WB_TRAY.d), M(WB_TRAY.color), CX, WB_TRAY.y, CZ + WB_TRAY.dz);
+  tray.userData.isWhiteboardAccessory = true;
+  tray.userData.__keep = 1;
+
+  markerItems(CX, CZ).forEach((m) => {
+    const item = put(B(m.w, m.h, m.d), M(m.color), m.x, m.y, m.z);
+    item.userData.isWhiteboardAccessory = true;
+    item.userData.__keep = 1;
+  });
+
   const redraw = () => {
     drawSprintBoard(g, typeof window !== 'undefined' ? window.__tvData?.tasks : undefined);
     board.material.map.needsUpdate = true;
@@ -54,7 +77,22 @@ export function createMeetingRoom(ctx, glassMat) {
   const wbOnVis = () => { if (document.visibilityState === 'visible') redraw() };
   document.addEventListener('visibilitychange', wbOnVis);
 
-  return { MRX: CX, MRZ: CZ, meetSeats: seats, boardRedraw: redraw, boardIv: wbIv, boardOnVis: wbOnVis };
+  const destroy = () => {
+    clearInterval(wbIv);
+    document.removeEventListener('visibilitychange', wbOnVis);
+  };
+
+  return {
+    MRX: CX,
+    MRZ: CZ,
+    meetSeats: seats,
+    boardRedraw: redraw,
+    boardIv: wbIv,
+    boardOnVis: wbOnVis,
+    boardMesh: board,
+    boardFrame: frame,
+    destroy,
+  };
 }
 
 export function createWallClock(ctx, x, y, z, faceRotY = Math.PI) {

@@ -28,8 +28,8 @@ const FLOORS = [
     shortName: 'L3',
     roleLabel: 'Executive Penthouse, Security & Delivery Suite',
     color: '#10E5A0',
-    desc: 'SecBot, Bagas, Nina, Citra, Wahyu FS, Maya, Toni, Sari, Support',
-    agents: ['SecBot', 'Bagas', 'Nina', 'Citra', 'Wahyu FS', 'Maya', 'Toni', 'Sari', 'Support']
+    desc: 'SecBot, Citra, Bagas, Nina, Wahyu FS, Maya, Toni, Sari, Support',
+    agents: ['SecBot', 'Citra', 'Bagas', 'Nina', 'Wahyu FS', 'Maya', 'Toni', 'Sari', 'Support']
   }
 ]
 

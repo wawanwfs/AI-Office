@@ -49,6 +49,7 @@ import { AGENTS, AGENTS_EXTRA, allAgents as allAgentsFn } from './parts/agents_s
 import { EXTENDED_SPECIALISTS } from './parts/extended_desks.js';
 import { DESKS } from './parts/desk_layout.js';
 import { teamPodFocusTarget } from './parts/team_spec.js';
+import { meetingFocusTarget, getWhiteboardTooltipText, isWhiteboardHit } from './parts/whiteboard_spec.js';
 import { isLongHair, STANDING, SITTING, accessoryAnchor } from './parts/character_spec.js';
 import { nearbyPairs as nearbyPairsPure, tickCooldown as tickCooldownPure, CHAT_RADIUS, CHAT_COOLDOWN_SEC } from './parts/chat_check.js';
 
@@ -166,8 +167,12 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   const boardMesh=window.__projectBoard&&window.__projectBoard.mesh;
   const boardFrame=window.__projectBoard&&window.__projectBoard.frame;
   const boardTargets=[ ...(boardMesh?[boardMesh]:[]), ...(boardFrame?[boardFrame]:[]) ];
+  // whiteboard ruang meeting juga bisa diklik → fokus ruang meeting
+  const wbMesh=window.__whiteboard&&window.__whiteboard.mesh;
+  const wbFrame=window.__whiteboard&&window.__whiteboard.frame;
+  const wbTargets=[ ...(wbMesh?[wbMesh]:[]), ...(wbFrame?[wbFrame]:[]) ];
   const nexusTarget=(nxChar&&nxChar.visible!==false)?[nxChar]:[];
-  const hits=ray.intersectObjects([...targets,...boardTargets,...nexusTarget],true);
+  const hits=ray.intersectObjects([...targets,...boardTargets,...wbTargets,...nexusTarget],true);
   if(!hits.length){ if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius,reset:true}} selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null); return; }
   if((boardMesh&&hits[0].object===boardMesh)||(boardFrame&&(hits[0].object===boardFrame||(boardFrame.getObjectById&&boardFrame.getObjectById(hits[0].object.id))))) {
     __sound.playSelect();
@@ -177,6 +182,14 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
     focusGoal={t:new THREE.Vector3(bpos.x,bpos.y,13.2),r:8.5};
     createBubble(bpos.x,bpos.y+2.15,7.8,'“WFS PROJECT Software House — membuka detail proyek…”','#10E5A0');
     try { window.dispatchEvent(new CustomEvent('wfs-open-project-panel')); } catch { /* panel listener opsional, abaikan error */ }
+    selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null);
+    return;
+  }
+  if(isWhiteboardHit(hits[0].object, wbMesh, wbFrame)) {
+    __sound.playSelect();
+    focusMeetingRoom();
+    const tip=getWhiteboardTooltipText(typeof window !== 'undefined' ? window.__tvData?.tasks : undefined, typeof __meet !== 'undefined' && __meet.active);
+    createBubble(MRX, 2.2 + 0.75, MRZ - 2.52, '“' + tip + '”', '#F59E0B');
     selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null);
     return;
   }
@@ -230,8 +243,16 @@ renderer.domElement&&renderer.domElement.addEventListener('dblclick',e=>{
   const bm=window.__projectBoard&&window.__projectBoard.mesh;
   const bf=window.__projectBoard&&window.__projectBoard.frame;
   const bt=[...(bm?[bm]:[]),...(bf?[bf]:[])];
+  const wbm=window.__whiteboard&&window.__whiteboard.mesh;
+  const wbf=window.__whiteboard&&window.__whiteboard.frame;
+  const wbt=[...(wbm?[wbm]:[]),...(wbf?[wbf]:[])];
   const nt=(nxChar&&nxChar.visible!==false)?[nxChar]:[];
-  const hits=ray.intersectObjects([...targets,...bt,...nt],true);
+  const hits=ray.intersectObjects([...targets,...bt,...wbt,...nt],true);
+  if(hits.length&&isWhiteboardHit(hits[0].object,wbm,wbf)){
+    __sound.playSelect();
+    focusMeetingRoom();
+    return;
+  }
   if(hits.length){focusGoal={t:hits[0].point.clone().setY(Math.max(1.5,(hits[0].point.y||0)+0.8)),r:Math.min(sph.radius,18)}}
   else{focusGoal={t:tgt.clone(),r:Math.max(14,sph.radius*0.7)}}
 });
@@ -283,8 +304,11 @@ renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
     const bm=window.__projectBoard&&window.__projectBoard.mesh;
     const bf=window.__projectBoard&&window.__projectBoard.frame;
     const bt=[...(bm?[bm]:[]),...(bf?[bf]:[])];
+    const wbm=window.__whiteboard&&window.__whiteboard.mesh;
+    const wbf=window.__whiteboard&&window.__whiteboard.frame;
+    const wbt=[...(wbm?[wbm]:[]),...(wbf?[wbf]:[])];
     const nt=(nxChar&&nxChar.visible!==false)?[nxChar]:[];
-    const hh=hoverRay.intersectObjects([...targets,...bt,...nt],true);
+    const hh=hoverRay.intersectObjects([...targets,...bt,...wbt,...nt],true);
     renderer.domElement.style.cursor=hh.length?'pointer':'';
     // highlight visual agent saat hover
     let ha=null;
@@ -390,6 +414,20 @@ for(let i=-2;i<=2;i++){for(let j=-1;j<=1;j++){
 // ═══ RUANG MEETING (modul parts/room.js) ═══
 const __mr=createMeetingRoom({THREE,office,M,blobMat:__blobMat},Glass());
 const MRX=__mr.MRX,MRZ=__mr.MRZ,meetSeats=__mr.meetSeats;
+window.__whiteboard = {
+  mesh: __mr.boardMesh,
+  frame: __mr.boardFrame,
+  redraw: __mr.boardRedraw,
+  focus: () => focusMeetingRoom(),
+};
+function focusMeetingRoom() {
+  if (homeRadius === null) homeRadius = Math.max(24, Math.min(70, sph.radius));
+  if (!sph.__saved) sph.__saved = { theta: sph.theta, phi: sph.phi, radius: sph.radius };
+  if (selectedIdx !== -1) { selectedIdx = -1; applySelected(); if (onSelectAgent) onSelectAgent(null); }
+  const ft = meetingFocusTarget(MRX, MRZ);
+  focusGoal = { t: new THREE.Vector3(ft.x, ft.y, ft.z), r: ft.radius };
+  return true;
+}
 
 // ═══════════════════════════════════════════════════
 // DESK POSITIONS — agents face NEGATIVE Z (toward monitor)
@@ -1618,6 +1656,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
   function teamAction(action){
     if(action==='meeting'){
       updateTime(615); // stand-up window
+      focusMeetingRoom();
     } else if(action==='break'){
       agentData.forEach(ad=>{
         if(ad.state!=='sitting')return;
@@ -1685,6 +1724,9 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       const ft = teamPodFocusTarget(teamKey);
       focusGoal = { t: new THREE.Vector3(ft.x, ft.y, ft.z), r: ft.r, phi: ft.phi };
       return true;
+    },
+    focusMeetingRoom: () => {
+      return focusMeetingRoom();
     },
     setView: (name) => {
       const targetPhi = (sph.phi < 0.7 || sph.phi > 1.35) ? 1.05 : undefined;
@@ -1755,6 +1797,8 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       delete window.__projectBoard;
       // TV lounge: hentikan interval fetch + listener visibility-nya
       clearInterval(__loungeObj.tvIv); document.removeEventListener('visibilitychange', __loungeObj.tvOnVis);
+      // Ruang meeting & whiteboard: bersihkan interval & listener
+      try { __mr && __mr.destroy && __mr.destroy(); } catch{/* abaikan */}
       // Shift (daycycle): clear semua setTimeout pending (arrive/depart berantai per 800ms)
       try { __shift && __shift.dispose && __shift.dispose() } catch{/* abaikan */}
       // Audio: engine menutup AudioContext scene lama (mencegah MaxAudioContextsExceeded)
@@ -1763,9 +1807,12 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       delete window.__toggleNeon;
       delete window.__sceneSelRing;
       delete window.__focusTeam;
+      delete window.__focusMeetingRoom;
+      delete window.__whiteboard;
       if(renderer){renderer.dispose();container.removeChild(renderer.domElement);}
     }
   };
   window.__focusTeam = (k) => sceneControls.focusTeam(k);
+  window.__focusMeetingRoom = () => sceneControls.focusMeetingRoom();
   return sceneControls;
 }

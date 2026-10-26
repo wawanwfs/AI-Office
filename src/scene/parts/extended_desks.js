@@ -126,7 +126,7 @@ export const EXTENDED_SPECIALISTS = [
     hair: 0x450A0A,
     shirt: 0x991B1B,
     pants: 0x18181B,
-    desk: { x: -10.5, z: 7 }
+    desk: { x: -6.0, z: 8.8 }
   },
   {
     name: 'NINA',
@@ -138,7 +138,7 @@ export const EXTENDED_SPECIALISTS = [
     hair: 0x3E2723,
     shirt: 0xD97706,
     pants: 0x292524,
-    desk: { x: 10.5, z: 7 }
+    desk: { x: 6.0, z: 8.8 }
   },
   {
     name: 'CITRA',
