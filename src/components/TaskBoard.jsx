@@ -21,6 +21,7 @@ import {
   canMoveTaskToColumn,
   moveTaskToColumn,
   getKanbanColumnKey,
+  computeTagCloud,
 } from '../scene/parts/kanban_spec'
 import { findTeamByRole, findTeamByAgent } from '../scene/parts/team_spec'
 
@@ -34,6 +35,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const [err, setErr] = useState(false)
   const [filter, setFilter] = useState('all')
   const [division, setDivision] = useState('all')
+  const [selectedTag, setSelectedTag] = useState('all')
   const [viewMode, setViewMode] = useState('list') // 'list' | 'kanban'
   const [sortBy, setSortBy] = useState('newest') // 'newest' | 'oldest' | 'priority' | 'title' | 'agent'
   const [q, setQ] = useState('')
@@ -46,6 +48,13 @@ export default function TaskBoard({ onFlash, onAsk }) {
   useEffect(() => { onEscRef.current = () => { sel ? setSel(null) : setOpen(false) } })
   const closeBoard = useCallback(() => onEscRef.current(), [])
   useDialogA11y({ open: open || !!sel, onClose: closeBoard, ref: board })
+
+  const handleTagClick = useCallback((tagKey) => {
+    setSelectedTag((prev) => (prev === tagKey ? 'all' : tagKey))
+    if (typeof window !== 'undefined' && window.__officeSound) {
+      window.__officeSound.playSelect?.()
+    }
+  }, [])
 
   const load = useCallback(async (signal) => {
     try {
@@ -65,6 +74,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
       if (e?.detail?.filter) setFilter(e.detail.filter)
       if (e?.detail?.division) setDivision(e.detail.division)
       else if (e?.detail?.role) setDivision(e.detail.role)
+      if (e?.detail?.tag) setSelectedTag(e.detail.tag)
       if (e?.detail?.sortBy) setSortBy(e.detail.sortBy)
       if (e?.detail?.taskId && tasks) {
         const found = tasks.find(t => String(t.id) === String(e.detail.taskId))
@@ -174,12 +184,13 @@ export default function TaskBoard({ onFlash, onAsk }) {
 
   const divisions = useMemo(() => extractTaskDivisions(tasks), [tasks])
   const activeDivision = useMemo(() => divisions.find(d => d.key === division) || null, [divisions, division])
-  const kanbanGroups = useMemo(() => groupTasksByKanbanColumn(tasks, q, division, sortBy), [tasks, q, division, sortBy])
+  const tagCloud = useMemo(() => computeTagCloud(tasks, { divisionFilter: division }), [tasks, division])
+  const kanbanGroups = useMemo(() => groupTasksByKanbanColumn(tasks, q, division, sortBy, selectedTag), [tasks, q, division, sortBy, selectedTag])
   const metrics = useMemo(() => computeSprintMetrics(tasks, division), [tasks, division])
   const overallMetrics = useMemo(() => computeSprintMetrics(tasks), [tasks])
   const priorityBreakdown = useMemo(() => computePriorityBreakdown(tasks, division), [tasks, division])
 
-  const list = useMemo(() => filterTasks(tasks, { filter, q, division, sortBy }), [tasks, filter, q, division, sortBy])
+  const list = useMemo(() => filterTasks(tasks, { filter, q, division, sortBy, tag: selectedTag }), [tasks, filter, q, division, sortBy, selectedTag])
   const count = s => (tasks || []).filter(t => (s === 'all' || t.status === s) && (division === 'all' || matchTaskDivision(t, division))).length
 
   return (
@@ -311,6 +322,32 @@ export default function TaskBoard({ onFlash, onAsk }) {
               </div>
               {(() => { const fl = parseFileList(sel.files); return fl.length > 0 && <><label className="note">File dihasilkan</label><pre className="note" style={{ whiteSpace: 'pre-wrap', margin: '4px 0 10px', color: '#cfd8e3' }}>{fl.join('\n')}</pre></> })()}
               {sel.review && <><label className="note">Ulasan QA</label><div className="msg" style={{ maxWidth: '100%', marginTop: 4, fontSize: 13 }}>{sel.review}</div></>}
+              {(() => {
+                const selBadges = getTaskCardBadges(sel)
+                return selBadges.tags.length > 0 ? (
+                  <div style={{ margin: '8px 0 10px' }}>
+                    <label className="note" style={{ display: 'block', marginBottom: 4 }}>Tag & Kategori</label>
+                    <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                      {selBadges.tags.map((tg) => (
+                        <button
+                          key={tg.tag}
+                          type="button"
+                          className={`task-detail-tag-chip${selectedTag === tg.tag ? ' active' : ''}`}
+                          style={{ '--tag-color': tg.color }}
+                          onClick={() => {
+                            handleTagClick(tg.tag)
+                            setSel(null)
+                          }}
+                          title={`Lihat semua task dengan tag #${tg.label}`}
+                          aria-label={`Filter tag #${tg.label}`}
+                        >
+                          #{tg.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                ) : null
+              })()}
               <div className="kanban-quick-move-strip" role="group" aria-label="Pindahkan kolom task">
                 <span className="kanban-quick-move-label">Pindah Kolom:</span>
                 {KANBAN_COLUMNS.map(col => {
@@ -423,6 +460,51 @@ export default function TaskBoard({ onFlash, onAsk }) {
                         aria-label={`Fokus kamera 3D ke pod ${activeDivision?.fullName || division}`}
                       >
                         <span>Fokus Pod 3D ↗</span>
+                      </button>
+                    )}
+                  </div>
+                )}
+                {/* Strip Filter Tag Kustom */}
+                {tasks && tagCloud.length > 0 && (
+                  <div className="task-tag-strip" role="group" aria-label="Filter berdasarkan tag task">
+                    <span className="task-tag-strip-label">Tag:</span>
+                    <button
+                      type="button"
+                      className={`task-tag-chip${selectedTag === 'all' ? ' active' : ''}`}
+                      onClick={() => handleTagClick('all')}
+                      aria-pressed={selectedTag === 'all'}
+                      aria-label="Tampilkan semua tag"
+                    >
+                      Semua
+                    </button>
+                    {tagCloud.map((item) => {
+                      const isAct = selectedTag === item.tag
+                      return (
+                        <button
+                          key={item.tag}
+                          type="button"
+                          className={`task-tag-chip${isAct ? ' active' : ''}`}
+                          style={{ '--chip-accent': item.color }}
+                          onClick={() => handleTagClick(item.tag)}
+                          aria-pressed={isAct}
+                          title={`Filter task #${item.label} (${item.count} task)`}
+                          aria-label={`Filter tag ${item.label}: ${item.count} task`}
+                        >
+                          <span className="task-tag-chip-hash" aria-hidden="true">#</span>
+                          <span className="task-tag-chip-name">{item.label}</span>
+                          <span className="task-tag-chip-count">{item.count}</span>
+                        </button>
+                      )
+                    })}
+                    {selectedTag !== 'all' && (
+                      <button
+                        type="button"
+                        className="task-tag-clear-btn"
+                        onClick={() => handleTagClick('all')}
+                        title="Reset filter tag"
+                        aria-label="Reset filter tag"
+                      >
+                        ✕ Reset
                       </button>
                     )}
                   </div>
@@ -553,8 +635,30 @@ export default function TaskBoard({ onFlash, onAsk }) {
                                   </div>
                                   <div className="kanban-card-title">{t.title}</div>
                                   <div className="kanban-card-meta">
-                                    <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+                                    <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
                                       <span className="kanban-role-badge" style={{ color: badges.roleColor }}>{badges.roleLabel}</span>
+                                      {badges.tags.slice(0, 2).map((tg) => (
+                                        <span
+                                          key={tg.tag}
+                                          className={`kanban-tag-badge${selectedTag === tg.tag ? ' active' : ''}`}
+                                          style={{ '--tag-color': tg.color }}
+                                          title={`Filter berdasarkan tag #${tg.label}`}
+                                          onClick={(e) => {
+                                            e.stopPropagation()
+                                            handleTagClick(tg.tag)
+                                          }}
+                                        >
+                                          #{tg.label}
+                                        </span>
+                                      ))}
+                                      {badges.tags.length > 2 && (
+                                        <span
+                                          className="kanban-tag-badge-more"
+                                          title={badges.tags.slice(2).map((tg) => `#${tg.label}`).join(', ')}
+                                        >
+                                          +{badges.tags.length - 2}
+                                        </span>
+                                      )}
                                       {badges.fileCount > 0 && (
                                         <span className="kanban-file-badge" title={`${badges.fileCount} file dihasilkan`}>
                                           📁 {badges.fileCount}
@@ -613,6 +717,27 @@ export default function TaskBoard({ onFlash, onAsk }) {
                           )}
                         </div>
                         <div className="note">{t.agent_id || 'unassigned'} · {ST[t.status]?.[0] || t.status}</div>
+                        {(() => {
+                          const rowBadges = getTaskCardBadges(t)
+                          return rowBadges.tags.length > 0 ? (
+                            <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 3, flexWrap: 'wrap' }}>
+                              {rowBadges.tags.slice(0, 3).map((tg) => (
+                                <span
+                                  key={tg.tag}
+                                  className={`kanban-tag-badge${selectedTag === tg.tag ? ' active' : ''}`}
+                                  style={{ '--tag-color': tg.color }}
+                                  onClick={(e) => {
+                                    e.stopPropagation()
+                                    handleTagClick(tg.tag)
+                                  }}
+                                  title={`Filter berdasarkan tag #${tg.label}`}
+                                >
+                                  #{tg.label}
+                                </span>
+                              ))}
+                            </div>
+                          ) : null
+                        })()}
                       </button>
                     )
                   })}

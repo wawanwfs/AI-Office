@@ -1,3 +1,34 @@
+## 2026-10-26 15:45 WIB — Siklus 91: Filter Multi-Tag Kustom Task Kanban (extractTaskTags, computeTagCloud, matchTaskTags, getTagColor), Strip Filter Tag Interaktif & Mini Tag Badges pada Papan TaskBoard
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Sistem Ekstraksi & Spesifikasi Tag Kustom Task (`src/scene/parts/kanban_spec.js`, `src/__tests__/kanban_spec.test.js`):**
+     - Membangun `normalizeTag(tag)` dan `formatTagLabel(tag)` dengan pembersihan prefix `#`, karakter khusus, serta pemformatan khusus untuk tag teknologi (`CI/CD`, `UI/UX`, `API`, `QA`, `SQL`, `React-Native`, dll.).
+     - Menghadirkan palet warna dinamis `TAG_PALETTE` dan `getTagColor(tag)` berbasis hashing deterministik untuk badge tag berkontras tinggi dan harmonis.
+     - Mengembangkan fungsi murni `extractTaskTags(task, { includeInferred = true })` yang mengekstrak tag secara cerdas dari properti `task.tags` (array / CSV), `task.labels`, hashtag `#tag` pada judul/deskripsi, bracket `[tag]`, serta inferensi otomatis dari jenis file ekstensi artefak (`.prisma` → `prisma`, `.tsx`/`.jsx` → `react`, `.py` → `python`, `.sql` → `sql`, `.yml`/workflows → `ci/cd`, `dockerfile` → `docker`).
+     - Membangun `computeTagCloud(tasks, { divisionFilter, minCount, limit })` untuk agregasi frekuensi sebaran tag dengan dukungan filter divisi kerja.
+     - Membangun `matchTaskTags(task, selectedTags, mode)` untuk pencocokan multi-tag (`any` atau `all`).
+     - Mengintegrasikan tag ke dalam `groupTasksByKanbanColumn(..., tagFilter)` dan `filterTasks(..., { tag })` serta memperkaya pencarian teks bebas agar otomatis mencakup tag.
+     - Mengintegrasikan tag ke dalam `getTaskCardBadges(task).tags` dengan metadata `{ tag, label, color }`.
+  2. **Strip Filter Tag Interaktif & Visualisasi Tag di TaskBoard (`src/components/TaskBoard.jsx`, `src/index.css`, `src/__tests__/TaskBoard.test.jsx`):**
+     - Menambahkan strip filter tag interaktif (`.task-tag-strip`) di bawah strip divisi: menampilkan tombol `#Semua`, chip tag berkode warna `#React (4)` dengan dot aksen dan counter task, serta tombol `✕ Reset` saat filter aktif.
+     - Menghadirkan mini tag badge (`.kanban-tag-badge`) pada footer kartu kanban (`kanban-card-meta`) dan baris daftar task (`taskrow`): dapat diklik langsung untuk menyaring papan ke tag tersebut dengan feedback audio blip lembut (`playSelect()`).
+     - Menambahkan badge indikator `+N` (`.kanban-tag-badge-more`) bila kartu memiliki lebih dari 2 tag dengan tooltip daftar lengkap.
+     - Menampilkan bagian khusus "Tag & Kategori" pada modal detail task (`sel`) dengan chip tag interaktif yang dapat diklik untuk kembali ke papan terfilter secara instan.
+     - Mengintegrasikan parameter event `wfs-open-task-board` dengan dukungan `e.detail.tag`.
+
+- **Bukti terukur:**
+  - **Vitest:** **1624/1624 passed (131 test file)** (+11 tests baru terintegrasi: normalizeTag, formatTagLabel, getTagColor, extractTaskTags, computeTagCloud, matchTaskTags, group/filter tag, render strip tag, klik badge kanban, modal detail tag; 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/scene/parts/kanban_spec.js src/components/TaskBoard.jsx src/__tests__/kanban_spec.test.js src/__tests__/TaskBoard.test.jsx`).
+  - **Build:** Berhasil (exit 0, 37 precache entries 1715.44 KiB; `OfficeScene` 160.46 KB / gzip 55.40 KB, `index` 161.10 KB / gzip 44.12 KB, `vendor-three` 715.76 KB, `vendor-react` 189.63 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-Cwr9PWqb.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **636.659 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `shot.sh` (DISPLAY=:0): Screenshot **636.910 bytes** (>500 KB).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** evaluasi sound ambience latar ruangan kantor (Web Audio ambient room hum) atau preset filter kombinasi tag.
+
 ## 2026-10-26 15:05 WIB — Siklus 90: Transisi Visual Drag & Drop Antar Kolom Kanban (moveTaskToColumn), Strip Tombol Pindah Kolom & Sound Engine Nada Alert Prioritas Urgent (TASK_URGENT_FREQS)
 
 - **Yang diperbaiki & ditingkatkan:**

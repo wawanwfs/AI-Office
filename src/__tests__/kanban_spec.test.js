@@ -25,6 +25,13 @@ import {
   canMoveTaskToColumn,
   getAvailableColumnMoves,
   moveTaskToColumn,
+  normalizeTag,
+  formatTagLabel,
+  TAG_PALETTE,
+  getTagColor,
+  extractTaskTags,
+  computeTagCloud,
+  matchTaskTags,
 } from '../scene/parts/kanban_spec.js';
 
 describe('kanban_spec — KANBAN_COLUMNS & role badges', () => {
@@ -553,5 +560,125 @@ describe('kanban_spec — canMoveTaskToColumn, getAvailableColumnMoves, moveTask
     expect(moveTaskToColumn(list, 1, 'unknown')).toEqual(list);
     expect(moveTaskToColumn(list, 999, 'done')).toEqual(list);
     expect(moveTaskToColumn(null, 1, 'done')).toEqual([]);
+  });
+});
+
+describe('kanban_spec — Tag extraction, color, cloud & multi-tag filter', () => {
+  it('normalizeTag membersihkan prefix # dan karakter invalid', () => {
+    expect(normalizeTag('#react')).toBe('react');
+    expect(normalizeTag('##API/v1!')).toBe('api/v1');
+    expect(normalizeTag('  [Frontend]  ')).toBe('frontend');
+    expect(normalizeTag('')).toBe('');
+    expect(normalizeTag(null)).toBe('');
+  });
+
+  it('formatTagLabel memformat label tag secara profesional', () => {
+    expect(formatTagLabel('ci/cd')).toBe('CI/CD');
+    expect(formatTagLabel('ui/ux')).toBe('UI/UX');
+    expect(formatTagLabel('api')).toBe('API');
+    expect(formatTagLabel('react-native')).toBe('React-Native');
+    expect(formatTagLabel('frontend')).toBe('Frontend');
+    expect(formatTagLabel('')).toBe('');
+  });
+
+  it('getTagColor menghasilkan warna palet deterministik dan valid hex', () => {
+    const col1 = getTagColor('react');
+    const col2 = getTagColor('react');
+    expect(col1).toBe(col2);
+    expect(TAG_PALETTE).toContain(col1);
+    expect(getTagColor(null)).toBe('#64748B');
+  });
+
+  it('extractTaskTags mengekstrak tags dari explicit tags, labels, hashtags, brackets, dan files', () => {
+    const task1 = {
+      id: 10,
+      title: 'Bangun endpoint auth #security [Backend]',
+      tags: ['oauth', 'jwt'],
+      labels: 'critical, auth',
+      files: ['prisma/schema.prisma', 'server.py'],
+    };
+    const tags1 = extractTaskTags(task1);
+    expect(tags1).toContain('oauth');
+    expect(tags1).toContain('jwt');
+    expect(tags1).toContain('critical');
+    expect(tags1).toContain('auth');
+    expect(tags1).toContain('security');
+    expect(tags1).toContain('backend');
+    expect(tags1).toContain('prisma');
+    expect(tags1).toContain('python');
+
+    // Kosong / null aman
+    expect(extractTaskTags(null)).toEqual([]);
+    expect(extractTaskTags({})).toEqual([]);
+  });
+
+  it('computeTagCloud menghitung frekuensi tag dan menyortir jumlah terbanyak', () => {
+    const tasks = [
+      { id: 1, title: 'T1 #react #frontend', role: 'fe' },
+      { id: 2, title: 'T2 #react #typescript', role: 'fe' },
+      { id: 3, title: 'T3 #react #backend', role: 'be' },
+      { id: 4, title: 'T4 #backend', role: 'be' },
+    ];
+    const cloud = computeTagCloud(tasks);
+    expect(cloud[0].tag).toBe('react');
+    expect(cloud[0].count).toBe(3);
+    expect(cloud[0].label).toBe('React');
+    expect(cloud[0].color).toMatch(/^#[0-9a-fA-F]{6}$/);
+
+    // Filter divisi
+    const beCloud = computeTagCloud(tasks, { divisionFilter: 'core-be' });
+    expect(beCloud.find(c => c.tag === 'backend')?.count).toBe(2);
+    expect(beCloud.find(c => c.tag === 'frontend')).toBeUndefined();
+  });
+
+  it('matchTaskTags mencocokkan task dengan tag tunggal atau array multi-tag', () => {
+    const task = { id: 1, title: 'API Gateway #gateway', tags: ['api', 'go'] };
+    expect(matchTaskTags(task, 'all')).toBe(true);
+    expect(matchTaskTags(task, 'api')).toBe(true);
+    expect(matchTaskTags(task, 'gateway')).toBe(true);
+    expect(matchTaskTags(task, 'python')).toBe(false);
+
+    // Multi-tag mode any vs all
+    expect(matchTaskTags(task, ['api', 'python'], 'any')).toBe(true);
+    expect(matchTaskTags(task, ['api', 'python'], 'all')).toBe(false);
+    expect(matchTaskTags(task, ['api', 'go'], 'all')).toBe(true);
+  });
+
+  it('groupTasksByKanbanColumn dan filterTasks mendukung filter tag kustom', () => {
+    const tasks = [
+      { id: 1, title: 'Task A #react', status: 'pending', role: 'fe' },
+      { id: 2, title: 'Task B #api', status: 'running', role: 'be' },
+      { id: 3, title: 'Task C #react #api', status: 'done', role: 'fe' },
+    ];
+
+    const groupedReact = groupTasksByKanbanColumn(tasks, '', 'all', 'newest', 'react');
+    expect(groupedReact.pending).toHaveLength(1);
+    expect(groupedReact.running).toHaveLength(0);
+    expect(groupedReact.done).toHaveLength(1);
+
+    const filteredApi = filterTasks(tasks, { tag: 'api' });
+    expect(filteredApi).toHaveLength(2);
+    expect(filteredApi.map(t => t.id)).toEqual([3, 2]);
+
+    // Query pencarian juga menemukan tag
+    const groupedQuery = groupTasksByKanbanColumn(tasks, 'react');
+    expect(groupedQuery.pending).toHaveLength(1);
+    expect(groupedQuery.done).toHaveLength(1);
+  });
+
+  it('getTaskCardBadges mengembalikan daftar tags dengan label dan warna aksen', () => {
+    const task = {
+      id: 99,
+      title: 'Integrasi CI/CD #ci/cd',
+      tags: ['github-actions'],
+      files: ['.github/workflows/ci.yml'],
+    };
+    const badges = getTaskCardBadges(task);
+    expect(Array.isArray(badges.tags)).toBe(true);
+    expect(badges.tags.length).toBeGreaterThanOrEqual(2);
+    const ciTag = badges.tags.find(t => t.tag === 'ci/cd');
+    expect(ciTag).toBeTruthy();
+    expect(ciTag.label).toBe('CI/CD');
+    expect(ciTag.color).toMatch(/^#[0-9a-fA-F]{6}$/);
   });
 });

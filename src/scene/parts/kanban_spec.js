@@ -59,6 +59,177 @@ export function getTaskPriorityInfo(priority) {
   return PRIORITY_CONFIG[p] || { key: 'normal', label: 'Normal', color: '#64748B', bg: 'rgba(100, 116, 139, 0.12)', icon: '•', order: 5 };
 }
 
+export const SPECIAL_TAG_LABELS = {
+  'ci/cd': 'CI/CD',
+  'ui/ux': 'UI/UX',
+  api: 'API',
+  qa: 'QA',
+  db: 'DB',
+  sql: 'SQL',
+  ai: 'AI',
+  seo: 'SEO',
+  mvp: 'MVP',
+  oss: 'OSS',
+  cli: 'CLI',
+  sdk: 'SDK',
+};
+
+export function normalizeTag(tag) {
+  if (!tag || typeof tag !== 'string') return '';
+  return tag
+    .trim()
+    .replace(/^#+/, '')
+    .replace(/[^\w\d\-_/]/g, '')
+    .toLowerCase();
+}
+
+export function formatTagLabel(tag) {
+  const norm = normalizeTag(tag);
+  if (!norm) return '';
+  if (SPECIAL_TAG_LABELS[norm]) return SPECIAL_TAG_LABELS[norm];
+  return norm
+    .split(/([-_/])/)
+    .map((part) => {
+      if (part === '-' || part === '_' || part === '/') return part;
+      return part.charAt(0).toUpperCase() + part.slice(1);
+    })
+    .join('');
+}
+
+export const TAG_PALETTE = [
+  '#06B6D4', // cyan/teal
+  '#6366F1', // indigo
+  '#10B981', // emerald
+  '#F59E0B', // amber
+  '#EC4899', // pink
+  '#8B5CF6', // purple
+  '#3B82F6', // blue
+  '#F97316', // orange
+  '#14B8A6', // teal
+  '#84CC16', // lime
+  '#E11D48', // rose
+];
+
+export function getTagColor(tag) {
+  const norm = normalizeTag(tag);
+  if (!norm) return '#64748B';
+  let hash = 0;
+  for (let i = 0; i < norm.length; i++) {
+    hash = (hash << 5) - hash + norm.charCodeAt(i);
+    hash |= 0;
+  }
+  const idx = Math.abs(hash) % TAG_PALETTE.length;
+  return TAG_PALETTE[idx];
+}
+
+export function extractTaskTags(task, { includeInferred = true } = {}) {
+  if (!task || typeof task !== 'object') return [];
+  const tagsSet = new Set();
+
+  const addTag = (raw) => {
+    const norm = normalizeTag(raw);
+    if (norm && norm.length >= 2 && norm.length <= 25) {
+      tagsSet.add(norm);
+    }
+  };
+
+  // 1. Explicit task.tags
+  if (Array.isArray(task.tags)) {
+    task.tags.forEach(addTag);
+  } else if (typeof task.tags === 'string') {
+    task.tags.split(/[,;\s]+/).forEach(addTag);
+  }
+
+  // 2. Explicit task.labels
+  if (Array.isArray(task.labels)) {
+    task.labels.forEach(addTag);
+  } else if (typeof task.labels === 'string') {
+    task.labels.split(/[,;\s]+/).forEach(addTag);
+  }
+
+  // 3. Hashtags in title & desc (#api, #frontend)
+  const textToScan = [task.title, task.desc, task.description].filter(Boolean).join(' ');
+  const hashMatches = textToScan.match(/#([\w\d\-_/]{2,25})/g);
+  if (hashMatches) {
+    hashMatches.forEach((m) => addTag(m.slice(1)));
+  }
+
+  // 4. Bracket tags in title, e.g. [FE], [Backend], [Bug]
+  const bracketMatches = textToScan.match(/\[([\w\d\-_/]{2,20})\]/g);
+  if (bracketMatches) {
+    bracketMatches.forEach((m) => addTag(m.slice(1, -1)));
+  }
+
+  // 5. Inferred tags from files & tech stack (if enabled)
+  if (includeInferred && task.files) {
+    const fl = parseFileList(task.files);
+    fl.forEach((f) => {
+      const lower = String(f || '').toLowerCase();
+      if (lower.includes('ci.yml') || lower.includes('.github/workflows')) addTag('ci/cd');
+      else if (lower.endsWith('.prisma') || lower.includes('schema.prisma')) addTag('prisma');
+      else if (lower.endsWith('.sql')) addTag('sql');
+      else if (lower.endsWith('.tsx') || lower.endsWith('.jsx')) addTag('react');
+      else if (lower.endsWith('.vue')) addTag('vue');
+      else if (lower.endsWith('.py')) addTag('python');
+      else if (lower.endsWith('.rs')) addTag('rust');
+      else if (lower.endsWith('.go')) addTag('golang');
+      else if (lower.endsWith('.css') || lower.endsWith('.scss')) addTag('css');
+      else if (lower.includes('docker') || lower.endsWith('dockerfile')) addTag('docker');
+    });
+  }
+
+  return Array.from(tagsSet);
+}
+
+export function computeTagCloud(tasks, { divisionFilter = 'all', minCount = 1, limit = 15 } = {}) {
+  if (!Array.isArray(tasks) || !tasks.length) return [];
+  const df = String(divisionFilter || 'all').toLowerCase().trim();
+  const filtered = df === 'all' ? tasks : tasks.filter((t) => matchTaskDivision(t, df));
+  const counts = new Map();
+
+  filtered.forEach((t) => {
+    if (!t) return;
+    const tags = extractTaskTags(t);
+    tags.forEach((tag) => {
+      counts.set(tag, (counts.get(tag) || 0) + 1);
+    });
+  });
+
+  const result = [];
+  counts.forEach((count, tag) => {
+    if (count >= minCount) {
+      result.push({
+        tag,
+        label: formatTagLabel(tag),
+        count,
+        color: getTagColor(tag),
+      });
+    }
+  });
+
+  return result
+    .sort((a, b) => b.count - a.count || a.tag.localeCompare(b.tag))
+    .slice(0, limit);
+}
+
+export function matchTaskTags(task, selectedTags, mode = 'any') {
+  if (!selectedTags || selectedTags === 'all') return true;
+  if (!task) return false;
+  const tags = extractTaskTags(task);
+  if (!tags.length) return false;
+
+  const targetTags = (Array.isArray(selectedTags) ? selectedTags : [selectedTags])
+    .map(normalizeTag)
+    .filter(Boolean);
+
+  if (!targetTags.length || targetTags.includes('all')) return true;
+
+  if (mode === 'all') {
+    return targetTags.every((tt) => tags.includes(tt));
+  }
+  return targetTags.some((tt) => tags.includes(tt));
+}
+
 /**
  * Menghitung rincian jumlah task per level prioritas (urgent, high, medium, low, normal).
  * Mendukung filter divisi opsional.
@@ -298,7 +469,7 @@ export function extractTaskDivisions(tasks) {
 /**
  * Mengelompokkan task ke dalam 4 kolom kanban dengan filter query, divisi & pengurutan opsional.
  */
-export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'all', sortBy = 'newest') {
+export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'all', sortBy = 'newest', tagFilter = 'all') {
   const groups = {
     pending: [],
     running: [],
@@ -313,8 +484,10 @@ export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'al
   tasks.forEach((t) => {
     if (!t) return;
     if (df !== 'all' && !matchTaskDivision(t, df)) return;
+    if (tagFilter && tagFilter !== 'all' && !matchTaskTags(t, tagFilter)) return;
     if (q) {
-      const matchText = [t.id, t.title, t.agent_id, t.role, t.status, t.priority].filter(Boolean).join(' ').toLowerCase();
+      const taskTags = extractTaskTags(t);
+      const matchText = [t.id, t.title, t.agent_id, t.role, t.status, t.priority, ...taskTags].filter(Boolean).join(' ').toLowerCase();
       if (!matchText.includes(q)) return;
     }
     const colKey = getKanbanColumnKey(t.status);
@@ -361,9 +534,9 @@ export function computeSprintMetrics(tasks, divisionFilter = 'all') {
 }
 
 /**
- * Filter task untuk mode daftar dengan dukungan status, query, divisi, role, dan pengurutan.
+ * Filter task untuk mode daftar dengan dukungan status, query, divisi, role, pengurutan, dan tag kustom.
  */
-export function filterTasks(tasks, { filter = 'all', q = '', division = 'all', role = 'all', sortBy = 'newest' } = {}) {
+export function filterTasks(tasks, { filter = 'all', q = '', division = 'all', role = 'all', sortBy = 'newest', tag = 'all' } = {}) {
   if (!Array.isArray(tasks)) return [];
   const qStr = String(q || '').toLowerCase().trim();
   const divStr = String(division !== 'all' ? division : role || 'all').toLowerCase().trim();
@@ -372,15 +545,17 @@ export function filterTasks(tasks, { filter = 'all', q = '', division = 'all', r
     const statusMatch = filter === 'all' || t.status === filter;
     if (!statusMatch) return false;
     if (divStr !== 'all' && !matchTaskDivision(t, divStr)) return false;
+    if (tag && tag !== 'all' && !matchTaskTags(t, tag)) return false;
     if (!qStr) return true;
-    const text = [t.id, t.title, t.agent_id, t.role, t.status, t.priority].filter(Boolean).join(' ').toLowerCase();
+    const taskTags = extractTaskTags(t);
+    const text = [t.id, t.title, t.agent_id, t.role, t.status, t.priority, ...taskTags].filter(Boolean).join(' ').toLowerCase();
     return text.includes(qStr);
   });
   return sortTasks(filtered, sortBy);
 }
 
 /**
- * Ekstraksi metadata visual kartu kanban (jumlah file, indikator review QA, badge peran, badge prioritas).
+ * Ekstraksi metadata visual kartu kanban (jumlah file, indikator review QA, badge peran, badge prioritas, dan tag kustom).
  */
 export function getTaskCardBadges(task) {
   if (!task || typeof task !== 'object') {
@@ -390,6 +565,7 @@ export function getTaskCardBadges(task) {
       roleLabel: 'General',
       roleColor: '#64748B',
       priority: getTaskPriorityInfo(null),
+      tags: [],
     };
   }
   const fileCount = parseFileList(task.files).length;
@@ -397,12 +573,18 @@ export function getTaskCardBadges(task) {
   const roleLabel = getTaskRoleLabel(task.role);
   const roleColor = getTaskRoleBadgeColor(task.role);
   const priority = getTaskPriorityInfo(task.priority);
+  const tags = extractTaskTags(task).map((tg) => ({
+    tag: tg,
+    label: formatTagLabel(tg),
+    color: getTagColor(tg),
+  }));
   return {
     fileCount,
     hasReview,
     roleLabel,
     roleColor,
     priority,
+    tags,
   };
 }
 

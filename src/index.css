@@ -1168,5 +1168,172 @@ button { font-family: inherit; }
   box-shadow: 0 0 12px rgba(239, 68, 68, 0.45);
 }
 
+/* Task Tag Filter Strip & Badges */
+.task-tag-strip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 4px 0 8px;
+  scrollbar-width: thin;
+  white-space: nowrap;
+}
+
+.task-tag-strip::-webkit-scrollbar {
+  height: 4px;
+}
+
+.task-tag-strip::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.task-tag-strip-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  margin-right: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.task-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 12px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: #cfd8e3;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  font-family: inherit;
+  outline: none;
+}
+
+.task-tag-chip:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.25);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.task-tag-chip.active {
+  background: rgba(16, 229, 160, 0.16);
+  border-color: var(--chip-accent, #10E5A0);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(16, 229, 160, 0.25);
+}
+
+.task-tag-chip-hash {
+  color: var(--chip-accent, var(--teal));
+  font-weight: 800;
+  font-size: 10px;
+}
+
+.task-tag-chip-count {
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  background: rgba(255, 255, 255, 0.1);
+  padding: 1px 4px;
+  border-radius: 6px;
+  color: #94a3b8;
+}
+
+.task-tag-chip.active .task-tag-chip-count {
+  background: var(--chip-accent, #10E5A0);
+  color: #0b1320;
+  font-weight: 700;
+}
+
+.task-tag-clear-btn {
+  background: transparent;
+  border: 1px dashed rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+  font-size: 10px;
+  font-weight: 600;
+  padding: 2px 7px;
+  border-radius: 10px;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: all 0.15s ease;
+}
+
+.task-tag-clear-btn:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: #ef4444;
+  color: #ffffff;
+}
+
+/* Kanban card mini tag badge */
+.kanban-tag-badge {
+  display: inline-flex;
+  align-items: center;
+  font-size: 9px;
+  font-weight: 700;
+  padding: 1px 5px;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--tag-color, #38bdf8);
+  cursor: pointer;
+  transition: all 0.12s ease;
+  line-height: 1.2;
+}
+
+.kanban-tag-badge:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--tag-color, #38bdf8);
+  transform: translateY(-1px);
+}
+
+.kanban-tag-badge.active {
+  background: var(--tag-color, #38bdf8);
+  color: #0b1320;
+  font-weight: 800;
+}
+
+.kanban-tag-badge-more {
+  font-size: 9px;
+  color: #94a3b8;
+  padding: 1px 3px;
+}
+
+/* Detail modal tag chip */
+.task-detail-tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  font-size: 11px;
+  font-weight: 600;
+  padding: 3px 8px;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--tag-color, #38bdf8);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  font-family: inherit;
+}
+
+.task-detail-tag-chip:hover {
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--tag-color, #38bdf8);
+  transform: translateY(-1px);
+}
+
+.task-detail-tag-chip.active {
+  background: var(--tag-color, #38bdf8);
+  color: #0b1320;
+  font-weight: 700;
+}
+
+
 
 

@@ -327,4 +327,87 @@ describe('TaskBoard', () => {
 
     delete window.__officeSound
   })
+
+  it('menampilkan strip tag filter dan menyaring task saat tag diklik', async () => {
+    const taggedTasks = [
+      { id: 10, title: 'Auth Service #api', agent_id: 'be1', status: 'done', role: 'be', tags: ['auth', 'api'] },
+      { id: 20, title: 'Dashboard Widget #react', agent_id: 'fe1', status: 'pending', role: 'fe', tags: ['react', 'ui'] },
+      { id: 30, title: 'Database Migration', agent_id: 'be1', status: 'done', role: 'be', files: ['prisma/schema.prisma'] },
+    ]
+    const soundMock = {
+      playSelect: vi.fn(),
+    }
+    window.__officeSound = soundMock
+
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: taggedTasks }) })))
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />)
+    fireEvent.click(screen.getByText('Papan'))
+    await waitFor(() => screen.getByText(/Auth Service/))
+
+    // Periksa strip filter tag
+    expect(screen.getByRole('group', { name: 'Filter berdasarkan tag task' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Filter tag API/i })).toBeTruthy()
+    expect(screen.getByRole('button', { name: /Filter tag React/i })).toBeTruthy()
+
+    // Klik tag API
+    fireEvent.click(screen.getByRole('button', { name: /Filter tag API/i }))
+    expect(soundMock.playSelect).toHaveBeenCalled()
+
+    // Task dengan tag API tampil, task React tersembunyi
+    expect(screen.getByText(/Auth Service/)).toBeTruthy()
+    expect(screen.queryByText(/Dashboard Widget/)).toBeNull()
+
+    // Reset filter tag
+    const resetBtn = screen.getByRole('button', { name: 'Reset filter tag' })
+    fireEvent.click(resetBtn)
+    expect(screen.getByText(/Dashboard Widget/)).toBeTruthy()
+
+    delete window.__officeSound
+  })
+
+  it('mengklik badge tag pada kartu kanban langsung menyaring papan ke tag tersebut', async () => {
+    const taggedTasks = [
+      { id: 10, title: 'Auth Service', agent_id: 'be1', status: 'done', role: 'be', tags: ['auth'] },
+      { id: 20, title: 'Dashboard UI', agent_id: 'fe1', status: 'pending', role: 'fe', tags: ['react'] },
+    ]
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: taggedTasks }) })))
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />)
+    fireEvent.click(screen.getByText('Papan'))
+    await waitFor(() => screen.getByText(/Auth Service/))
+
+    // Switch ke kanban
+    fireEvent.click(screen.getByRole('button', { name: 'Tampilan Papan Kolom' }))
+    await waitFor(() => screen.getByRole('region', { name: 'Papan kanban sprint' }))
+
+    // Klik badge tag #React pada kartu
+    const reactBadge = screen.getByTitle('Filter berdasarkan tag #React')
+    expect(reactBadge).toBeTruthy()
+    fireEvent.click(reactBadge)
+
+    // Kartu non-react kini tersaring
+    expect(screen.queryByText(/Auth Service/)).toBeNull()
+    expect(screen.getByText(/Dashboard UI/)).toBeTruthy()
+  })
+
+  it('di dalam modal detail, klik chip tag menutup modal dan menyaring papan ke tag tersebut', async () => {
+    const taggedTasks = [
+      { id: 10, title: 'Auth Service', agent_id: 'be1', status: 'done', role: 'be', tags: ['security'] },
+      { id: 20, title: 'Dashboard UI', agent_id: 'fe1', status: 'pending', role: 'fe', tags: ['react'] },
+    ]
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: taggedTasks }) })))
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />)
+    fireEvent.click(screen.getByText('Papan'))
+    await waitFor(() => screen.getByText(/Auth Service/))
+
+    // Buka detail task #10
+    fireEvent.click(screen.getByText(/Auth Service/))
+    await waitFor(() => screen.getByRole('button', { name: 'Filter tag #Security' }))
+
+    // Klik tag #Security di modal
+    fireEvent.click(screen.getByRole('button', { name: 'Filter tag #Security' }))
+
+    // Modal tertutup, papan tersaring hanya menampilkan task Security
+    expect(screen.getByText(/Auth Service/)).toBeTruthy()
+    expect(screen.queryByText(/Dashboard UI/)).toBeNull()
+  })
 })
