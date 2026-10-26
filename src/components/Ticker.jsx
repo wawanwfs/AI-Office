@@ -25,7 +25,7 @@ export default function Ticker() {
         tasks.forEach(x => { cnt[x.status] = (cnt[x.status] || 0) + 1 })
         out.push({ text: `${tasks.length} task · ${cnt.done || 0} done · ${cnt.running || 0} running · ${cnt.pending || 0} pending · ${cnt.failed || 0} failed`, color: '#4D9FFF' })
         tasks.slice(-8).reverse().forEach(x => out.push({
-          text: `${name[x.agent_id] || x.agent_id} — ${clip(x.title, 48)} [${x.status}]`,
+          text: `${x.agent_id ? (name[x.agent_id] || x.agent_id) : 'Tanpa agen'} — ${clip(x.title, 48)} [${x.status}]`,
           color: COL[x.status] || '#fff',
         }))
         if (s && s.mem_total_mb) out.push({ text: `Host RAM tersedia ${s.mem_available_mb}/${s.mem_total_mb} MB · disk ${s.disk_used_gb}/${s.disk_total_gb} GB`, color: '#A78BFA' })

@@ -1076,6 +1076,58 @@ describe('kanban_spec — Audit Kontras Warna & Aksesibilitas WCAG (Badge & Tag)
       expect(isPresetActive('custom-web3', 'all', custom)).toBe(false);
     });
 
+  describe('kanban_spec — matchTaskSearch & extractTaskTags cabang pencarian', () => {
+    const runningTask = { id: 7, title: 'Perbaiki API checkout', desc: 'Bugs di gateway', status: 'running', priority: 'urgent', role: 'be', agent_id: 'be1' };
+
+    it('matchTaskSearch mencocokkan kata kunci status Indonesia', () => {
+      expect(matchTaskSearch(runningTask, 'jalan')).toBe(true);
+      expect(matchTaskSearch(runningTask, 'berjalan')).toBe(true);
+      expect(matchTaskSearch({ ...runningTask, status: 'pending' }, 'antri')).toBe(true);
+      expect(matchTaskSearch({ ...runningTask, status: 'done' }, 'selesai')).toBe(true);
+      expect(matchTaskSearch({ ...runningTask, status: 'failed' }, 'gagal')).toBe(true);
+      expect(matchTaskSearch({ ...runningTask, status: 'review' }, 'review')).toBe(true);
+    });
+
+    it('matchTaskSearch mencocokkan label prioritas & role', () => {
+      expect(matchTaskSearch(runningTask, 'urgent')).toBe(true);
+      expect(matchTaskSearch(runningTask, 'Urgent')).toBe(true);
+      expect(matchTaskSearch(runningTask, 'backend')).toBe(true);
+      expect(matchTaskSearch(runningTask, 'Backend')).toBe(true);
+      expect(matchTaskSearch(runningTask, 'frontend')).toBe(false);
+    });
+
+    it('matchTaskSearch mencocokkan tag & id dengan/tanpa prefix #', () => {
+      const tagTask = { id: 42, title: 'Integrasi #api [Backend]', status: 'running', tags: ['jwt'] };
+      expect(matchTaskSearch(tagTask, 'api')).toBe(true);
+      expect(matchTaskSearch(tagTask, '#api')).toBe(true);
+      expect(matchTaskSearch(tagTask, '#jwt')).toBe(true);
+      expect(matchTaskSearch(tagTask, '42')).toBe(true);
+      expect(matchTaskSearch(tagTask, '#42')).toBe(true);
+      expect(matchTaskSearch(tagTask, 'golang')).toBe(false);
+    });
+
+    it('matchTaskSearch menerapkan AND antar token', () => {
+      expect(matchTaskSearch(runningTask, 'checkout urgent')).toBe(true);
+      expect(matchTaskSearch(runningTask, 'checkout frontend')).toBe(false);
+      expect(matchTaskSearch(runningTask, 'aaa bbb ccc')).toBe(false);
+    });
+
+    it('extractTaskTags tidak menyimpulkan tags dari files saat includeInferred=false', () => {
+      const task = { id: 55, title: 'Tulis skrip deploy', files: ['deploy.py', '.github/workflows/ci.yml', 'schema.prisma'] };
+      const withInferred = extractTaskTags(task);
+      expect(withInferred).toContain('python');
+      expect(withInferred).toContain('ci/cd');
+      expect(withInferred).toContain('prisma');
+
+      const withoutInferred = extractTaskTags(task, { includeInferred: false });
+      expect(withoutInferred).toEqual([]);
+
+      // tag eksplisit tetap diekstrak meski inferensi dimatikan
+      const explicitOnly = extractTaskTags({ id: 1, title: 'X', tags: ['react'], files: ['app.py'] }, { includeInferred: false });
+      expect(explicitOnly).toEqual(['react']);
+    });
+  });
+
     it('computePresetStats menghitung jumlah task untuk custom presets bersama preset bawaan', () => {
       const custom = [{
         key: 'custom-cloud',
