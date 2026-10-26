@@ -1,3 +1,31 @@
+## 2026-10-26 15:05 WIB — Siklus 90: Transisi Visual Drag & Drop Antar Kolom Kanban (moveTaskToColumn), Strip Tombol Pindah Kolom & Sound Engine Nada Alert Prioritas Urgent (TASK_URGENT_FREQS)
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Transisi Visual Drag & Drop & Quick Move Antar Kolom Kanban (`src/scene/parts/kanban_spec.js`, `src/components/TaskBoard.jsx`, `src/index.css`, `src/__tests__/kanban_spec.test.js`, `src/__tests__/TaskBoard.test.jsx`):**
+     - Membangun fungsi murni `canMoveTaskToColumn(task, targetColKey)`, `getAvailableColumnMoves(currentColKey)`, dan `moveTaskToColumn(tasks, taskId, targetColKey)` untuk perpindahan kolom kanban yang aman, immutabel, dan teruji secara komprehensif.
+     - Mengimplementasikan interaksi Drag & Drop HTML5 pada papan Kanban (`TaskBoard.jsx`): kartu dapat diseret (`draggable={true}`, cursor grab/grabbing, efek visual opacity & scale saat ditarik).
+     - Menghadirkan indikator visual drop zone (`.kanban-col.drag-over` & `.kanban-drop-slot` beranimasi pulse) dengan border warna aksen kolom tujuan saat kartu didekatkan ke kolom lain.
+     - Memberikan pembaruan status optimis instan, notifikasi flash (`Task #id dipindahkan ke kolom X`), dan umpan balik audio kontekstual (task done saat masuk ke kolom Selesai, sound urgent bila task prioritas tinggi).
+     - Membangun strip tombol quick move (`.kanban-quick-move-strip`) di dalam modal detail task (`⏳ Antri`, `⚡ Jalan`, `🔍 Review`, `✅ Selesai`), memastikan fleksibilitas navigasi dan aksesibilitas ramah layar sentuh / mobile tanpa harus mengandalkan mouse drag.
+  2. **Sound Engine Nada Alert Prioritas Urgent (`src/scene/parts/sound_spec.js`, `src/scene/parts/sound_engine.js`, `src/scene/OfficeScene.js`, `src/components/SettingsModal.jsx`, `src/__tests__/sound_spec.test.js`, `src/__tests__/sound_engine.test.js`, `src/__tests__/settings_modal.test.jsx`):**
+     - Merancang spesifikasi audio baru `TASK_URGENT_FREQS` [880.0 Hz (A5), 1174.66 Hz (D6)] dengan gelombang triangle tajam, interval naik energetik, gain 0.035 ramp ke 0.001, delay 0.08s, dan durasi 0.18s untuk notifikasi task kritis.
+     - Mengintegrasikan metode `playTaskUrgent()` ke dalam runtime sound engine, debug tracker (`calls.taskUrgent`), dan ekspose scene 3D (`OfficeScene.js`).
+     - Menambahkan tombol uji sampel `🔥 Task Urgent` pada panel `SettingsModal.jsx` sehingga pengguna dapat mendengarkan dan memverifikasi kualitas audio nada prioritas secara langsung.
+     - Menyinkronkan tombol cepat urgent TaskBoard (`🔥 {urgentCount}`) dan klik task urgent agar memicu audio cue `playTaskUrgent()`.
+
+- **Bukti terukur:**
+  - **Vitest:** **1613/1613 passed (131 test file)** (+11 tests baru terintegrasi: kanban move, drag-drop, urgent sound spec, sound engine runtime, dan settings modal; 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/scene/parts/sound_spec.js src/scene/parts/sound_engine.js src/scene/OfficeScene.js src/components/SettingsModal.jsx src/scene/parts/kanban_spec.js src/components/TaskBoard.jsx src/__tests__/sound_spec.test.js src/__tests__/sound_engine.test.js src/__tests__/kanban_spec.test.js src/__tests__/TaskBoard.test.jsx src/__tests__/settings_modal.test.jsx`).
+  - **Build:** Berhasil (exit 0, 37 precache entries 1707.73 KiB; `OfficeScene` 160.46 KB / gzip 55.40 KB, `index` 155.73 KB / gzip 42.50 KB, `vendor-three` 715.76 KB, `vendor-react` 189.63 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-DcFySKCC.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **635.530 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `shot.sh` (DISPLAY=:0): Screenshot **639.043 bytes** (>500 KB).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** evaluasi filter multi-tag / label task kustom atau sound ambience latar ruangan kantor.
+
 ## 2026-10-26 14:25 WIB — Siklus 89: Normalisasi Status Task Proyek (ready & completed), Integrasi Kartu Kanban 3D Papan Proyek (normalizeTaskStatus, formatTaskId, cardMeta) & Sinkronisasi Test Terrazzo
 
 - **Yang diperbaiki & ditingkatkan:**
