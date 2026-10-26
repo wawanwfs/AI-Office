@@ -40,3 +40,11 @@ describe('clip — pemangkasan', () => {
     expect(clip('hello world  ', 12)).toBe('hello world…')
   })
 })
+
+describe('clip — konsistensi antar-modul', () => {
+  it('projectboard_data memakai ulang clip yang sama (regresi papan proyek)', async () => {
+    const { clip: pb } = await import('../scene/parts/projectboard_data.js')
+    expect(pb).toBe(clip)
+    expect(pb('mengerjakan fitur upload gambar produk', 24)).toBe(clip('mengerjakan fitur upload gambar produk', 24))
+  })
+})

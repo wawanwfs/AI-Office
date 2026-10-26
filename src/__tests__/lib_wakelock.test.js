@@ -92,6 +92,14 @@ describe('acquire/release', () => {
     await expect(m.acquire()).resolves.toBe('released')
     expect(m.state()).toBe('released')
   })
+
+  it('lock tanpa addEventListener (browser lama) → tidak throw', async () => {
+    const lock = { released: false, release: async () => { lock.released = true } }
+    const nav = { wakeLock: { request: vi.fn(async () => lock) } }
+    const m = createWakeLockManager(nav)
+    await expect(m.acquire()).resolves.toBe('held')
+    expect(lock.released).toBe(false)
+  })
 })
 
 describe('onState', () => {

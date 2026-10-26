@@ -67,8 +67,27 @@ describe('fileCount', () => {
   it('string JSON → jumlah item', () => {
     expect(fileCount("['a.py', 'b.py', 'c.py']")).toBe(3)
   })
+  it('JSON standar kutip ganda → jumlah item', () => {
+    expect(fileCount('["x.go"]')).toBe(1)
+  })
+  it('string tunggal tanpa koma = 1 file', () => {
+    expect(fileCount('main.py')).toBe(1)
+  })
   it('CSV → jumlah item', () => {
     expect(fileCount('a.py,b.py')).toBe(2)
+  })
+  it('JSON rusak fallback ke CSV', () => {
+    expect(fileCount("['a.py', 'b.py")).toBe(2)
+  })
+  it('koma dalam kutip tidak salah pecah', () => {
+    expect(fileCount("['a, b.py','c.py']")).toBe(2)
+  })
+  it('array item berkutip dibersihkan', () => {
+    expect(fileCount(["'a.py'", '"b.js"'])).toBe(2)
+  })
+  it('bukan array/string (angka) → 0', () => {
+    expect(fileCount(42)).toBe(0)
+    expect(fileCount(true)).toBe(0)
   })
   it('kosong → 0', () => {
     expect(fileCount('')).toBe(0)
