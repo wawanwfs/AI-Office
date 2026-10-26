@@ -1058,6 +1058,10 @@ describe('TaskBoard', () => {
 
       expect(screen.getByRole('form', { name: 'Form pembuatan preset divisi kustom' })).toBeTruthy();
 
+      // Input nama preset divisi punya aksesibilitas nama (aria-label), tidak hanya placeholder
+      const divNameInput = screen.getByPlaceholderText(/Nama preset/);
+      expect(divNameInput.getAttribute('aria-label')).toBe('Nama preset divisi kustom');
+
       // Isi nama preset
       const nameInput = screen.getByPlaceholderText(/Nama preset/);
       fireEvent.change(nameInput, { target: { value: 'Dev & Ops Squad' } });

@@ -1146,6 +1146,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
                         type="text"
                         className="div-preset-input"
                         placeholder="Nama preset (mis. Mobile Squad, Core Stack…)"
+                        aria-label="Nama preset divisi kustom"
                         value={divPresetFormName}
                         onChange={(e) => setDivPresetFormName(e.target.value)}
                         maxLength={24}
