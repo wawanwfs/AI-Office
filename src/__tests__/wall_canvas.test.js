@@ -51,7 +51,7 @@ describe('drawWallTex', () => {
     expect(c._ops[2]).toEqual(['strokeStyle', 'rgba(130,145,170,.30)']);
     expect(c._ops[3]).toEqual(['lineWidth', 3]);
     // garis vertikal di x=0,64,...,512 → 9 garis (i<=wpx)
-    const mov = c._ops.map((o, i) => (o[0] === 'moveTo' ? o[1] : null)).filter(Boolean);
+    const mov = c._ops.map(o => (o[0] === 'moveTo' ? o[1] : null)).filter(Boolean);
     const vert = mov.slice(0, 9).map(([x]) => x);
     expect(vert).toEqual([0, 64, 128, 192, 256, 320, 384, 448, 512]);
     // tiap garis vertikal: moveTo(i,0) lalu lineTo(i,hpx)
