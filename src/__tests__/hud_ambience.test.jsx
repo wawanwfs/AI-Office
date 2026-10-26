@@ -140,3 +140,36 @@ describe('HUD Ambience Audio Widget', () => {
     expect(onSettings).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('HUD Chip Sinkronisasi Gateway', () => {
+  const base = { time: '08:00', timeValue: 480, status: '1 jalan', onTimeChange: () => {} }
+
+  it('tanpa prop conn → chip tidak dirender (backward-compatibility)', () => {
+    render(<HUD {...base} />)
+    expect(screen.queryByText('Sinkron')).toBeNull()
+    expect(document.querySelector('.conn-chip')).toBeNull()
+  })
+
+  it('live → chip hijau label Sinkron dengan tooltip detail', () => {
+    render(<HUD {...base} conn={{ state: 'live', label: 'Sinkron', detail: 'Gateway tersinkron', tone: 'ok' }} />)
+    const chip = document.querySelector('.conn-chip.live')
+    expect(chip).toBeTruthy()
+    expect(chip.textContent).toContain('Sinkron')
+    expect(chip.getAttribute('title')).toBe('Gateway tersinkron')
+    expect(chip.getAttribute('aria-label')).toContain('sinkronisasi')
+  })
+
+  it('stale → chip amber berdetak dengan umur data pada label', () => {
+    render(<HUD {...base} conn={{ state: 'stale', label: 'Sinkron 45 dtk lalu', detail: 'Polling gagal', tone: 'warn' }} />)
+    const chip = document.querySelector('.conn-chip.stale')
+    expect(chip).toBeTruthy()
+    expect(chip.textContent).toContain('45 dtk lalu')
+  })
+
+  it('down → chip merah label Terputus', () => {
+    render(<HUD {...base} conn={{ state: 'down', label: 'Terputus', detail: 'Gateway tak terjangkau', tone: 'err' }} />)
+    const chip = document.querySelector('.conn-chip.down')
+    expect(chip).toBeTruthy()
+    expect(chip.textContent).toContain('Terputus')
+  })
+})

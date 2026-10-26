@@ -247,6 +247,28 @@ button { font-family: inherit; }
 }
 .hud .stat.off i { background: #ef4444; box-shadow: 0 0 10px #ef4444; }
 .hud .stat.busy i { background: var(--amber); box-shadow: 0 0 10px var(--amber); animation: pulse 1.5s infinite; }
+/* Chip status sinkronisasi gateway: live (hijau) / stale (amber berdetak) / down (merah) */
+.hud .conn-chip {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
+  padding: 3px 10px; border-radius: 999px; letter-spacing: .4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05); color: var(--text-secondary);
+  cursor: help; white-space: nowrap;
+}
+.hud .conn-chip i {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+  box-shadow: 0 0 8px var(--green); flex: none;
+}
+.hud .conn-chip.stale {
+  border-color: rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.10);
+}
+.hud .conn-chip.stale i { background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: pulse 1.5s infinite; }
+.hud .conn-chip.down {
+  border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+}
+.hud .conn-chip.down i { background: #ef4444; box-shadow: 0 0 8px #ef4444; animation: pulse 1.5s infinite; }
 .hud input[type=range] {
   -webkit-appearance: none; appearance: none;
   width: 130px; height: 22px; background: transparent; cursor: pointer;

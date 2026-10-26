@@ -23,6 +23,7 @@ import { IconVolume, IconVolumeMute, IconScroll, IconHelp, IconGear } from './co
 import { api } from './lib/api'
 import { anyModalOpen } from './lib/modal'
 import { createWakeLockManager } from './lib/wakelock.js'
+import { applyPollResult, nextPollDelay, connectionBadge, STALE_AFTER_MS } from './lib/connection_spec.js'
 import {
   loadAmbienceEnabled,
   saveAmbienceEnabled,
@@ -45,6 +46,7 @@ export default function App() {
     const d = new Date(); return d.getHours() * 60 + d.getMinutes(); })
   const [status, setStatus] = useState('Memuat…')
   const [statusKind, setStatusKind] = useState('')
+  const [conn, setConn] = useState(() => applyPollResult(null, { ok: false, error: 'init' }, 0))
   const [cyberpunk, setCyberpunk] = useState(() => {
     try { return typeof localStorage !== 'undefined' && localStorage.getItem('wfs_neon') === '1' } catch { return false }
   })
@@ -59,6 +61,7 @@ export default function App() {
   const [paused, setPaused] = useState(false)
   const [pendingCount, setPendingCount] = useState(0)
   const [toast, setToast] = useState(null)          // {msg, err}
+  const connRef = useRef(conn); connRef.current = conn
   const [showLog, setShowLog] = useState(false)
   const [muted, setMuted] = useState(() => {
     try { return typeof localStorage !== 'undefined' && localStorage.getItem('wfs_audio_muted') === '1' } catch { return false }
@@ -171,7 +174,7 @@ export default function App() {
     try {
       const [p, t] = await Promise.all([api('tasks/paused'), api('tasks')])
       setPaused(!!p.paused)
-      const c = {}
+      setConn(c => applyPollResult({ ...c }, { ok: true }))
       const prev = prevStatus.current
       const cur = {}
       ;(t.tasks || []).forEach(x => {
@@ -189,28 +192,54 @@ export default function App() {
         }
       })
       prevStatus.current = cur
+      const c = {}
       ;(t.tasks || []).forEach(x => { c[x.status] = (c[x.status] || 0) + 1 })
       setPendingCount((c.pending || 0) + (c.review || 0) + (c.failed || 0))
       setStatus(p.paused ? 'Dijeda' : `${c.running || 0} jalan · ${c.pending || 0} antri`)
       setStatusKind(p.paused || (c.running || 0) > 0 ? 'busy' : '')
-    } catch { setStatus('Gateway offline'); setStatusKind('off') }
+    } catch {
+      setConn(c => applyPollResult({ ...c }, { ok: false, error: 'offline' }))
+      setStatus('Gateway offline'); setStatusKind('off')
+    }
   }, [flash, pushLog])
+  // Polling adaptif: interval dinamis dari tracker koneksi (15s sehat,
+  // backoff eksponensial 5→80s saat gagal) + penghitung ulang chip HUD agar
+  // label "Sinkron N dtk lalu" berdetak tanpa menunggu poll berikutnya.
   useEffect(() => {
+    let alive = true
+    let timer = null
     const tick = () => {
       // offline awareness: jangan buang request saat browser tahu jaringan mati
       if (typeof navigator !== 'undefined' && navigator.onLine === false) {
-        setStatus('Offline'); setStatusKind('off'); return
+        setStatus('Offline'); setStatusKind('off')
+      } else {
+        refreshStatus()
       }
-      refreshStatus()
+    }
+    const schedule = () => {
+      if (!alive) return
+      const delay = document.visibilityState === 'visible' ? nextPollDelay(connRef.current) : STALE_AFTER_MS
+      timer = setTimeout(() => { if (!alive) return; tick(); schedule() }, Math.max(1000, delay))
     }
     tick()
-    const iv = setInterval(() => { if (document.visibilityState === 'visible') tick() }, 15000)
+    schedule()
+    // segarkan label umur data tiap 5s saat koneksi bermasalah (state non-live)
+    // tanpa memicu fetch; saat sehat label statis → tidak perlu re-render.
+    const iv = setInterval(() => {
+      setConn(c => (c && c.state !== 'live' ? { ...c } : c))
+    }, 5000)
     // toast + status saat koneksi hilang / pulih
     const off = () => { setStatus('Offline'); setStatusKind('off'); flash('Koneksi terputus — menunggu jaringan', true) }
     const on = () => { flash('Koneksi kembali'); tick() }
     window.addEventListener('offline', off)
     window.addEventListener('online', on)
-    return () => { clearInterval(iv); window.removeEventListener('offline', off); window.removeEventListener('online', on) }
+    return () => {
+      alive = false
+      clearTimeout(timer)
+      clearInterval(iv)
+      window.removeEventListener('offline', off)
+      window.removeEventListener('online', on)
+    }
   }, [refreshStatus, flash])
 
   // ---- Wake Lock: layar kiosk kantor tidak boleh sleep saat tab terlihat ----
@@ -508,6 +537,7 @@ export default function App() {
         timeValue={time}
         status={status}
         statusKind={statusKind}
+        conn={connectionBadge(conn)}
         onTimeChange={handleTimeChange}
         ambienceEnabled={ambienceEnabled}
         ambienceVolume={ambienceVolume}

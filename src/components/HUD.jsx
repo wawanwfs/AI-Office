@@ -11,6 +11,7 @@ export default function HUD({
   timeValue,
   status,
   statusKind,
+  conn,
   onTimeChange,
   ambienceEnabled = false,
   ambienceVolume = 0.35,
@@ -52,6 +53,17 @@ export default function HUD({
         onChange={e => onTimeChange(parseInt(e.target.value, 10))}
       />
       <span className={'stat ' + (statusKind || '')} role="status"><i />{status}</span>
+
+      {conn && (
+        <span
+          className={`conn-chip ${conn.state}`}
+          role="status"
+          title={conn.detail}
+          aria-label={`Status sinkronisasi: ${conn.detail}`}
+        >
+          <i aria-hidden="true" />{conn.label}
+        </span>
+      )}
 
       {onToggleAmbience && (
         <>
