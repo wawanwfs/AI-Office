@@ -434,4 +434,33 @@ describe('TaskBoard', () => {
     expect(screen.getByText(/Auth Service/)).toBeTruthy()
     expect(screen.queryByText(/Dashboard UI/)).toBeNull()
   })
+
+  it('badge tag di baris daftar (list view) bisa diaktifkan lewat keyboard (Enter/Space) — a11y', async () => {
+    const taggedTasks = [
+      { id: 10, title: 'Auth Service', agent_id: 'be1', status: 'done', role: 'be', tags: ['auth'] },
+      { id: 20, title: 'Dashboard UI', agent_id: 'fe1', status: 'pending', role: 'fe', tags: ['react'] },
+    ]
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: taggedTasks }) })))
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />)
+    fireEvent.click(screen.getByText('Papan'))
+    await waitFor(() => screen.getByText(/Auth Service/))
+
+    // List view adalah default — badge tag punya semantik tombol keyboard-accessible
+    const reactBadge = screen.getByTitle('Filter berdasarkan tag #React')
+    expect(reactBadge.getAttribute('role')).toBe('button')
+    expect(reactBadge.getAttribute('tabindex')).toBe('0')
+    expect(reactBadge.getAttribute('aria-pressed')).toBe('false')
+
+    // Aktifkan via keyboard (Enter) — task non-react tersaring
+    fireEvent.keyDown(reactBadge, { key: 'Enter' })
+    expect(screen.queryByText(/Auth Service/)).toBeNull()
+    expect(screen.getByText(/Dashboard UI/)).toBeTruthy()
+
+    // Badge kini aktif; Spasi membalik filter kembali
+    const reactBadgeActive = screen.getByTitle('Filter berdasarkan tag #React')
+    expect(reactBadgeActive.getAttribute('aria-pressed')).toBe('true')
+    fireEvent.keyDown(reactBadgeActive, { key: ' ' })
+    expect(screen.getByText(/Auth Service/)).toBeTruthy()
+    expect(screen.getByText(/Dashboard UI/)).toBeTruthy()
+  })
 })

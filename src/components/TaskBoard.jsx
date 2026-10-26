@@ -736,11 +736,21 @@ export default function TaskBoard({ onFlash, onAsk }) {
                                   key={tg.tag}
                                   className={`kanban-tag-badge${selectedTag === tg.tag ? ' active' : ''}`}
                                   style={{ '--tag-color': tg.color }}
+                                  title={`Filter berdasarkan tag #${tg.label}`}
+                                  role="button"
+                                  tabIndex={0}
+                                  aria-pressed={selectedTag === tg.tag}
                                   onClick={(e) => {
                                     e.stopPropagation()
                                     handleTagClick(tg.tag)
                                   }}
-                                  title={`Filter berdasarkan tag #${tg.label}`}
+                                  onKeyDown={(e) => {
+                                    if (e.key === 'Enter' || e.key === ' ') {
+                                      e.stopPropagation()
+                                      e.preventDefault()
+                                      handleTagClick(tg.tag)
+                                    }
+                                  }}
                                 >
                                   #{tg.label}
                                 </span>
