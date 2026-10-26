@@ -602,6 +602,28 @@ button { font-family: inherit; }
   font-family: 'DM Sans', sans-serif; font-size: 12.5px; font-weight: 600; margin-right: 0;
   padding: 0 20px; text-shadow: 0 1px 6px rgba(0,0,0,.9); line-height: 26px;
 }
+/* Chip koneksi gateway di tepi kiri pita (paritas .hud .conn-chip): live/stale/down */
+.ticker .ticker-conn {
+  position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+  display: inline-flex; align-items: center; gap: 5px;
+  font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700;
+  letter-spacing: .4px; color: var(--text-secondary);
+  background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 999px; padding: 2px 9px; z-index: 3;
+  white-space: nowrap; cursor: help; pointer-events: auto;
+}
+.ticker .ticker-conn i {
+  width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+  box-shadow: 0 0 6px var(--green); flex: none;
+}
+.ticker .ticker-conn-warn {
+  border-color: rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.10);
+}
+.ticker .ticker-conn-warn i { background: var(--amber); box-shadow: 0 0 6px var(--amber); animation: pulse 1.5s infinite; }
+.ticker .ticker-conn-err {
+  border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.12); color: #fca5a5;
+}
+.ticker .ticker-conn-err i { background: #ef4444; box-shadow: 0 0 6px #ef4444; animation: pulse 1.5s infinite; }
 
 @media (max-width: 760px) {
   .hud { top: auto !important; bottom: calc(88px + var(--safe-b)); left: 0; right: 0; margin: 0 auto; width: max-content; padding: 5px 14px; }

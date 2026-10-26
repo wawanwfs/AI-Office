@@ -9,7 +9,10 @@ const COL = { done: '#10E5A0', running: '#F59E0B', failed: '#FB7185', review: '#
 // Ticker live: lemaribaca screen reader diperbarui via region aria-live polite
 // (TICKER_LIVE), sementara track animasi (marquee visual) aria-hidden penuh —
 // teks bergerak tidak dibacakan, status terbaru tetap diumumkan tiap refresh.
-export default function Ticker() {
+// Prop opsional `conn` = badge koneksi dari connection_spec (shape sama dgn chip
+// HUD: { state, label, detail, tone }) — dirender sebagai chip statis di tepi
+// kiri pita, sejajar info gateway yang sudah ada di HUD.
+export default function Ticker({ conn }) {
   const [msgs, setMsgs] = useState(FALLBACK)
 
   useEffect(() => {
@@ -40,11 +43,22 @@ export default function Ticker() {
   }, [])
 
   const list = [...msgs, ...msgs]
-  const liveText = msgs.map(m => m.text).join(' · ')
+  const liveText = [conn && conn.label, ...msgs.map(m => m.text)].filter(Boolean).join(' · ')
   return (
     <>
       <div id="ticker-live" role="status" aria-live="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', clipPath: 'inset(50%)', whiteSpace: 'nowrap' }}>{liveText}</div>
       <div className="ticker" role="presentation" aria-hidden="true">
+        {conn && (
+          <span
+            className={`ticker-conn ticker-conn-${conn.tone || 'ok'}`}
+            role="status"
+            title={conn.detail}
+            aria-label={conn.detail}
+          >
+            <i aria-hidden="true" />
+            <span>{conn.label}</span>
+          </span>
+        )}
         <div className="track">
           {list.map((m, i) => {
             // Dua salinan track (efek marquee); key harus unik antar salinan

@@ -517,6 +517,8 @@ export default function App() {
     return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
   }
 
+  const connBadge = connectionBadge(conn)
+
   return (
     <>
       <div ref={canvasRef} style={{ position: 'fixed', inset: 0, zIndex: 0 }} aria-hidden="true" />
@@ -527,7 +529,7 @@ export default function App() {
       <SkipLink />
       <Header />
       <SysMeter />
-      <Ticker />
+      <Ticker conn={connBadge} />
       <FloorNavigator currentFloor={currentFloor} onSelectFloor={handleFloorSelect} />
 
       {inMeeting && <div className="meeting-badge" role="status"><div><i />Rapat berlangsung</div></div>}
@@ -537,7 +539,7 @@ export default function App() {
         timeValue={time}
         status={status}
         statusKind={statusKind}
-        conn={connectionBadge(conn)}
+        conn={connBadge}
         onTimeChange={handleTimeChange}
         ambienceEnabled={ambienceEnabled}
         ambienceVolume={ambienceVolume}

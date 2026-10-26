@@ -77,3 +77,43 @@ describe('Ticker', () => {
     expect(liveRegionText()).toContain('Tanpa agen')
   })
 })
+
+describe('Ticker — chip koneksi gateway (prop conn)', () => {
+  const chip = () => document.querySelector('.ticker-conn')
+  const chipLabel = () => { const c = chip(); return c ? c.textContent : '' }
+
+  it('tidak merender chip bila prop conn tidak diberikan (backward-compatible)', () => {
+    render(<Ticker />)
+    expect(chip()).toBeNull()
+  })
+
+  it('live: merender chip hijau dengan label & detail, diumumkan di region live', () => {
+    render(<Ticker conn={{ state: 'live', label: 'Sinkron', detail: 'Gateway tersinkron', tone: 'ok' }} />)
+    const c = chip()
+    expect(c).toBeTruthy()
+    expect(c.className).toContain('ticker-conn-ok')
+    expect(chipLabel()).toContain('Sinkron')
+    expect(c.getAttribute('aria-label')).toBe('Gateway tersinkron')
+    expect(liveRegionText()).toContain('Sinkron')
+  })
+
+  it('stale: chip amber berlabel umur data + detail polling gagal', () => {
+    render(<Ticker conn={{ state: 'stale', label: 'Sinkron 5 dtk lalu', detail: 'Polling gagal — data terakhir 5 dtk lalu', tone: 'warn' }} />)
+    const c = chip()
+    expect(c).toBeTruthy()
+    expect(c.className).toContain('ticker-conn-warn')
+    expect(chipLabel()).toContain('Sinkron 5 dtk lalu')
+    expect(c.getAttribute('aria-label')).toContain('Polling gagal')
+    expect(liveRegionText()).toContain('Sinkron 5 dtk lalu')
+  })
+
+  it('down: chip merah berlabel Terputus', () => {
+    render(<Ticker conn={{ state: 'down', label: 'Terputus', detail: 'Gateway tak terjangkau (jeti)', tone: 'err' }} />)
+    const c = chip()
+    expect(c).toBeTruthy()
+    expect(c.className).toContain('ticker-conn-err')
+    expect(chipLabel()).toContain('Terputus')
+    expect(c.getAttribute('aria-label')).toContain('Gateway tak terjangkau')
+    expect(liveRegionText()).toContain('Terputus')
+  })
+})
