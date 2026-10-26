@@ -1,3 +1,11 @@
+## 2026-10-26 10:20 WIB — Siklus 82: Perbaikan UI/UX Mobile & Koherensi Kampus (dari screenshot HP user)
+
+- **Pemicu:** screenshot HP 100.117.198.46:9503 — logo "WFS PR" terpotong chip, agen di luar dinding, pilar menembus ruangan, label 6px.
+- **Root cause:** dinding 26×20m tidak mengikuti deck kampus 34×27m; 12 meja spesialis (x=±12–13, z=9.5) jatuh di luar dinding; HUD hitungan agen dari gateway (15) bukan scene (26).
+- **Perbaikan:** walls/structure/bookshelf/projectboard/clock diperluas ke ±17/±13.5; 12 spesialis dipindah ke baris terasering dalam dinding (L1 z=-5, L2 z=1, L3 z=7/8.8); SysMeter membaca `window.__agentData`; viewport `maximum-scale=5`; portrait radius 48/FOV 64; HUD mobile pindah ke bawah; label 0.032→0.042.
+- **Bukti:** 1537/1537 test (129 file); CDP 26 agen ERR:None; verify_desks ALL_DESKS_OK (26 meja, 0 collision); pixel-stat mobile simetris (kiri 6.0/tengah 12.4/kanan 6.1); deploy ROOT 200; ter-push origin/main.
+- **Pelajaran:** perluasan kampus wajib atomik (walls+structure+decor+routing+bounds bersamaan); replace kata pendek di test merusak angka lain ("68"→"64" mengenai "768").
+
 ## 2026-10-26 09:45 WIB — Siklus 81: Spesifikasi & Interaktivitas Whiteboard Ruang Meeting (whiteboard_spec.js), Baki Spidol & Aksesoris 3D, Navigasi Fokus Kamera Ruang Meeting (focusMeetingRoom) & Pencegahan Memory Leak Scene
 
 - **Yang diperbaiki & ditingkatkan:**
