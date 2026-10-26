@@ -265,7 +265,17 @@ describe('TaskBoard', () => {
     }
     fireEvent.dragStart(card, { dataTransfer })
     expect(dataTransfer.getData('text/plain')).toBe('2')
+    expect(JSON.parse(dataTransfer.getData('application/json'))).toMatchObject({ id: 2, title: 'Halaman admin' })
+    expect(card.getAttribute('data-dragging')).toBe('true')
     expect(soundMock.playCardPickup).toHaveBeenCalled()
+
+    // Coba drop di kolom asalnya (Kolom Antri) -> diabaikan karena kartu sudah di sana
+    const todoCol = screen.getByRole('region', { name: 'Kolom Antri' })
+    fireEvent.drop(todoCol, { dataTransfer })
+    expect(onFlash).not.toHaveBeenCalled()
+
+    // Buka drag lagi untuk memindahkan ke Selesai
+    fireEvent.dragStart(card, { dataTransfer })
 
     // Simulasikan dragover pada kolom Selesai
     fireEvent.dragOver(doneCol, { dataTransfer })

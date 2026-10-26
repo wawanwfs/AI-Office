@@ -1,3 +1,37 @@
+## 2026-10-26 20:25 WIB — Siklus 98: Drag-and-Drop Kustom & Feedback Visual Kartu Kanban (kanban_drag.js), Indikator Status Target Drop, Scroll Snapping & Drawer Bottom-Sheet Responsif Mobile
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Modul Utilitas Murni Interaksi Drag Kanban (`src/lib/kanban_drag.js`, `src/__tests__/kanban_drag.test.js`):**
+     - Mengembangkan fungsi murni `setupCardDragData(dataTransfer, task)` untuk mengonfigurasi `text/plain`, metadata JSON `application/json` (id, title, status, priority), dan `effectAllowed = 'move'`.
+     - Menyediakan validasi `canDropTaskInColumn(task, targetColKey)` untuk mencegah redundant drop pada kolom asalnya.
+     - Menyediakan resolusi `resolveNewStatusForColumn(targetColKey)` dan format pesan notifikasi `formatDragDropNotification(task, targetColKey, colLabel)`.
+     - Mengembangkan kalkulasi adaptif `calcMobileColumnWidth(containerWidth, columnCount)` untuk perhitungan lebar kolom kanban responsif pada berbagai ukuran layar.
+  2. **Integrasi Drag-and-Drop & Visual Attribute pada Papan Task Kanban (`src/components/TaskBoard.jsx`, `src/__tests__/TaskBoard.test.jsx`):**
+     - Menghubungkan `setupCardDragData` pada `handleDragStart` dan `canDropTaskInColumn` pada `handleDrop`.
+     - Menambahkan atribut visual `data-dragging="true"` pada tombol kartu saat di-drag.
+     - Memastikan drop pada kolom yang sama diabaikan secara elegan tanpa memicu re-render atau notifikasi flash redundant.
+  3. **Visual Feedback Drag Preview & Drop Target Highlight (`src/index.css`):**
+     - Menyempurnakan styling `.kanban-card.is-dragging` dan `.kanban-card[data-dragging="true"]` dengan border putus-putus teal aksen (#10E5A0), background tinted halus, dan elevasi bayangan tactile.
+     - Menghadirkan efek glow dan elevasi transform pada `.kanban-col.drag-over` (`transform: translateY(-2px)`, ring halo ganda dan inset glow).
+     - Menambahkan styling grabbing cursor dan pelindung seleksi teks (`user-select: none; -webkit-user-drag: element;`).
+  4. **Penyempurnaan Responsivitas Drawer Bottom-Sheet & Papan Kanban Mobile (`src/index.css`):**
+     - Menambahkan visual drawer pull pill handle (`.panel::before`) pada mode layar sempit (<=760px) untuk semua panel bottom-sheet.
+     - Mengatasi masalah spesifisitas CSS `.panel.wide-kanban` di mobile agar memenuhi lebar layar penuh (`width: 100% !important; left: 0 !important; right: 0 !important; max-height: 85dvh;`).
+     - Menerapkan CSS scroll snap (`scroll-snap-type: x mandatory; scroll-snap-align: start;`) pada kontainer kanban agar navigasi antar kolom di perangkat mobile / touch menjadi sangat mulus seperti carousel native app.
+     - Mengatur lebar kolom mobile responsif (`78vw` dengan batas min 240px & max 320px pada <=560px) serta perataan tombol switch tampilan.
+
+- **Bukti terukur:**
+  - **Vitest:** **1724/1724 passed (134 test file)** (+16 tests baru pada `kanban_drag.test.js`, pengujian data-dragging dan drop no-op pada `TaskBoard.test.jsx`; 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/lib/kanban_drag.js src/__tests__/kanban_drag.test.js src/components/TaskBoard.jsx src/__tests__/TaskBoard.test.jsx`).
+  - **Build:** Berhasil (exit 0, 37 precache entries 1747.36 KiB; `OfficeScene` 166.70 KB / gzip 57.11 KB, `index` 181.03 KB / gzip 49.80 KB, `vendor-three` 715.76 KB, `vendor-react` 189.63 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-Ca4m-ldM.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `shot.sh` (DISPLAY=:0): Screenshot visual **648.813 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** filter pencarian real-time pada Kanban dan audit kontras warna badge tags.
+
 ## 2026-10-26 19:50 WIB — Siklus 97: Sound Effect Interaksi Kartu Kanban (Drag Pickup & Drop Snap, calcCardSweepFreq), Uji Audio Kartu di SettingsModal & Animasi Transisi Halus Modal/Panel (Scrim Fade-In, Pop Scale & Slide)
 
 - **Yang diperbaiki & ditingkatkan:**

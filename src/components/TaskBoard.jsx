@@ -3,6 +3,7 @@ import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
 import { parseFileList } from '../lib/files'
+import { setupCardDragData, canDropTaskInColumn, formatDragDropNotification } from '../lib/kanban_drag'
 import { IconBoard, IconClose, IconPlay, IconRotate, IconList, IconKanban } from './Icons'
 import {
   KANBAN_COLUMNS,
@@ -176,7 +177,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
     setTasks(prev => moveTaskToColumn(prev, task.id, targetColKey))
     setSel(s => (s && String(s.id) === String(task.id) ? { ...s, status: targetColKey } : s))
 
-    if (onFlash) onFlash(`Task #${task.id} dipindahkan ke kolom ${targetLabel}`)
+    if (onFlash) onFlash(formatDragDropNotification(task, targetColKey, targetLabel))
 
     // Audio feedback interaktif
     if (typeof window !== 'undefined' && window.__officeSound) {
@@ -196,8 +197,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
     if (!t) return
     setDraggedTaskId(t.id)
     if (e.dataTransfer) {
-      e.dataTransfer.setData('text/plain', String(t.id))
-      e.dataTransfer.effectAllowed = 'move'
+      setupCardDragData(e.dataTransfer, t)
     }
     if (typeof window !== 'undefined' && window.__officeSound) {
       window.__officeSound.playCardPickup?.()
@@ -233,7 +233,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
     setDragOverCol(null)
     if (!taskId || !tasks) return
     const task = tasks.find(t => String(t.id) === String(taskId))
-    if (task) {
+    if (task && canDropTaskInColumn(task, targetColKey)) {
       handleMoveTask(task, targetColKey)
     }
   }, [draggedTaskId, tasks, handleMoveTask])
@@ -683,6 +683,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
                                   key={t.id}
                                   type="button"
                                   className={`kanban-card${isDragging ? ' is-dragging' : ''}`}
+                                  data-dragging={isDragging ? 'true' : undefined}
                                   draggable={true}
                                   onDragStart={(e) => handleDragStart(e, t)}
                                   onDragEnd={handleDragEnd}
