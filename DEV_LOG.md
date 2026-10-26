@@ -8,7 +8,7 @@
   2. **Polling adaptif App (`src/App.jsx`):** `setInterval` fixed 15s diganti rantai `setTimeout` yang membaca delay dari tracker — saat gateway mati browser tak lagi menghantam endpoint tiap 15s (hemat trafik & log), saat pulih langsung kembali ke ritme sehat; tab `hidden` diturunkan ke 30s. RefRESH label umur data tiap 5s hanya saat state non-live (tanpa re-render sia-sia saat sehat, tanpa fetch tambahan).
   3. **Chip HUD sinkronisasi (`src/components/HUD.jsx`, `src/index.css`, `src/__tests__/hud_ambience.test.jsx`):** chip `.conn-chip` di samping status task — titik status + label, tooltip `title` berisi detail ("Gateway tersinkron" / "Polling gagal — data terakhir N lalu" / "Gateway tak terjangkau"), `role="status"` + `aria-label`, animasi `pulse` untuk stale/down, backward-compatible (tanpa prop `conn` chip tak dirender).
 - **Bukti terukur:**
-  - **Vitest:** **1913/1913 passed (142 test file)** (+14 test baru: 10 `connection_spec.test.js`, 4 chip HUD di `hud_ambience.test.jsx`; 11 test lain dari worker auto-dev).
+  - **Vitest:** **1913/1913 passed (142 test file)** saat build (+14 test baru: 10 `connection_spec.test.js`, 4 chip HUD di `hud_ambience.test.jsx`; 11 test lain dari worker auto-dev). Pasca-rebase di atas konsolidasi test worker `159647e` (hapus test file duplikat clip/files/wakelock): **1894/1894 passed (139 file)**, 0 fail — perubahan src non-test nihil, dist tetap valid.
   - **ESLint:** 0 warning, 0 error (`npx eslint src/`, exit 0).
   - **Build:** sukses (37 precache entries 1803.67 KiB; chunk `index-BWUUzqjs.js` tersaji HTTP 200).
   - **Deploy:** `dist/*` → `~/wfs-hq/` OK.
