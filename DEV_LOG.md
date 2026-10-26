@@ -21,7 +21,7 @@
     - `scripts/e2e_tv.py`: **E2E_TV OK** (26 agents aktif, ws true, fase night).
     - `shot.sh` (DISPLAY=:0): Screenshot visual **679.240 bytes** (>500 KB, WebGL hidup, E2E_VISUAL: OK).
     - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja: L1=9, L2=9, L3=8, 0 collision).
-- **Commit Hash:** `(lihat git log)`
+- **Commit Hash:** `ca8b3b7` (rebase di atas `6462ae1` dari worker auto-dev — test-only, push sukses ke `origin/main`)
 - **Sisa backlog:** indikator status sinkronisasi WebSocket offline/reconnect; sinkronisasi siklus preset divisi ke strip preset ProjectPanel.
 
 ## 2026-10-27 00:55 WIB — Siklus 104: Preset Kombinasi Multi-Divisi Kustom pada Task Kanban (kanban_spec.js, Panel Pembuat Preset Divisi Kustom, Multi-Select Divisi, Persistensi Storage & Indikator Komprehensif)
