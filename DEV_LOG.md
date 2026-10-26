@@ -1,3 +1,33 @@
+## 2026-10-26 13:45 WIB — Siklus 88: Optimasi Code Splitting Vendor Three.js/React, Rincian Prioritas Task (computePriorityBreakdown) & Quick Button Urgent di TaskBoard
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Optimasi Vendor Chunking & Code Splitting (`src/lib/chunk_strategy.js`, `vite.config.js`, `src/__tests__/chunk_strategy.test.js`):**
+     - Membangun strategi pemisahan vendor chunk modular (`configureManualChunks`) yang memetakan dependensi berat Three.js (`vendor-three`) dan ekosistem React (`vendor-react`) secara terpisah dari chunk aplikasi.
+     - Menyelesaikan item backlog yang tertunda selama 3 siklus: ukuran bundle `OfficeScene` turun drastis dari **878.46 KB** menjadi **162.83 KB** (-81.5%!), dan `index` turun dari **336.77 KB** menjadi **147.79 KB** (-56.1%!).
+     - Menghilangkan sepenuhnya warning Vite `(!) Some chunks are larger than 500 kB after minification`.
+     - Memaksimalkan efisiensi caching PWA & Service Worker (precache 37 entries): library Three.js (715 KB) dan React (189 KB) kini di-cache permanen dan tidak perlu diunduh ulang saat kode kantor 3D atau scene diupdate.
+  2. **Rincian Prioritas Task & Quick Button Urgent (`src/scene/parts/kanban_spec.js`, `src/components/TaskBoard.jsx`, `src/index.css`, `src/__tests__/kanban_spec.test.js`, `src/__tests__/TaskBoard.test.jsx`):**
+     - Membangun helper murni `computePriorityBreakdown(tasks, divisionFilter)` untuk menghitung sebaran task per level prioritas (`urgent`, `high`, `medium`, `low`, `normal`) dengan dukungan isolasi filter divisi.
+     - Menambahkan tombol aksi cepat urgent (`.task-priority-quick-btn.urgent`) di samping dropdown sort pada TaskBoard (`🔥 {urgentCount}`) saat ada task dengan urgensi kritis.
+     - Mengklik tombol cepat urgent langsung beralih ke mode sorting prioritas (`priority`), menampilkan task kritis di baris paling atas kolom kanban/daftar task, dan mengklik kembali mengembalikan urutan ke terbaru (`newest`).
+     - Melengkapi styling kontras tinggi dengan aksen merah cerah `#EF4444`, ring fokus, status aktif teriluminasi, dan label aksesibilitas aria.
+  3. **Penyempurnaan Estetika Visual Kampus 3D & Gerak Agen (`src/scene/OfficeScene.js`, `src/scene/parts/floor_canvas.js`, `src/scene/parts/terraces.js`, `src/scene/parts/walls.js`, `src/scene/parts/walk_destinations.js`, `src/scene/parts/trip_plan.js`, `src/scene/parts/dialog.js`):**
+     - Menyesuaikan geometri plafon dan balok struktur ke dimensi penuh kampus 34×27 m dengan aturan auto-hide pintar saat sudut kamera tinggi.
+     - Menambahkan finishing lantai terazzo bervena halus, seam paneling dinding, tiang sudut struktural, serta kotak bunga dekoratif di tepi jendela.
+     - Memperluas destinasi jalan kaki multi-lantai dari 16 menjadi 25 titik destinasi realistis di 3 lantai kampus, jitter gerak 0.9, dan menyeimbangkan ritme percakapan otomatis agen (7–15 dtk).
+
+- **Bukti terukur:**
+  - **Vitest:** **1588/1588 passed (131 test file)** (+6 tests baru terintegrasi: `chunk_strategy.test.js`, `computePriorityBreakdown`, dan quick button urgent TaskBoard; 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/lib/chunk_strategy.js src/scene/parts/kanban_spec.js src/components/TaskBoard.jsx src/__tests__/chunk_strategy.test.js src/__tests__/kanban_spec.test.js src/__tests__/TaskBoard.test.jsx`).
+  - **Build:** Berhasil (exit 0, 37 precache entries 1700.79 KiB; `OfficeScene` 162.83 KB / gzip 56.40 KB, `index` 147.79 KB / gzip 39.96 KB, `vendor-three` 715.76 KB, `vendor-react` 189.63 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-DO7wx6BT.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **572.460 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** evaluasi transisi visual drag-and-drop antar kolom kanban atau sound effect prioritas.
+
 ## 2026-10-26 12:54 WIB — Siklus 87: Pengurutan Interaktif Sprint Kanban (SORT_OPTIONS & sortTasks), Spesifikasi & Badge Prioritas (Urgent/High/Medium/Low) di TaskBoard & Detail Task
 
 - **Yang diperbaiki & ditingkatkan:**
