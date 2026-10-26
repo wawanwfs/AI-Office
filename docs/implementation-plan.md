@@ -37,7 +37,7 @@ Status: Fase 1 (Audit) → Fase 2 (Fondasi). Dokumen hidup.
 - [ ] Project workspace (sebagian: preview URL + status container ada di daftar project & /preview reverse-proxy; file explorer/terminal/git belum).
 - [x] Agents dashboard (tab Agents di Konsol — daftar role/lantai/model/status).
 - [ ] Visualisasi 3 lantai fungsional (F1 product, F2 engineering, F3 QA/security/delivery) — seed agent 12 role @3 lantai sudah ada di database; korelasi visual scene 3D belum penuh.
-- [ ] Activity feed + notifikasi (sebagian: log terbaru di Overview).
+- [x] Activity feed + notifikasi (Konsol Overview: log realtime via SSE /api/events + polling 10 dtk).
 - [x] Approval system (tab Approvals di Konsol + GET /api/approvals & POST decide; create project otomatis membikin approval pending).
 
 ## Fase 5 — Docker Sandbox (REQUIREMENT INTI)
