@@ -95,6 +95,16 @@ export default function ShConsole({ show, onClose }) {
     try { await api('projects/' + pid + '/sandbox/' + action, { method: 'POST', body: {} }); await loadProjects(); setErr('') }
     catch (e) { setErr(e.message) }
   }
+  const runPreset = async (pid, kind) => {
+    const cmd = kind === 'py'
+      ? 'cd /app && python3 -m pytest -q 2>&1 || true'
+      : 'cd /app && { [ -f package.json ] && npm test -- --run 2>&1 || echo "tidak ada package.json"; }'
+    setTermOut('menjalankan ' + kind + '…')
+    try {
+      const d = await api('projects/' + pid + '/exec', { method: 'POST', body: { cmd } })
+      setTermOut((d.stderr || '') + (d.stdout || ''))
+    } catch (e) { setTermOut('ERROR: ' + e.message) }
+  }
 
   useEffect(() => {
     if (!show) return
@@ -329,6 +339,10 @@ export default function ShConsole({ show, onClose }) {
                   </div>
                   <div style={STYLE.card}>
                     <div style={{ fontWeight: 700, marginBottom: 8 }}>💻 Terminal (di dalam container)</div>
+                    <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                      <button style={STYLE.btnGhost} onClick={() => runPreset(wsId, 'py')} title="Jalankan test Python di container">▶ Test Python</button>
+                      <button style={STYLE.btnGhost} onClick={() => runPreset(wsId, 'node')} title="Jalankan test Node di container">▶ Test Node</button>
+                    </div>
                     <div style={{ display: 'flex', gap: 8 }}>
                       <input style={{ ...STYLE.input, marginBottom: 0, flex: 1 }} placeholder="mis. ls / python3 test_app.py" aria-label="Command"
                         value={termCmd} onChange={(e) => setTermCmd(e.target.value)}

@@ -275,4 +275,23 @@ describe('ShConsole — konsol software house', () => {
     await waitFor(() => expect(resumeBodies.some((b) => b && JSON.parse(b).project === '1')).toBe(true))
     expect(fn.mock.calls.length).toBeGreaterThanOrEqual(2)
   })
+
+  it('tab Workspace: pintasan Test Python memanggil exec dengan cmd pytest', async () => {
+    const cmds = []
+    stubFetch({
+      '/wfs-api/sh/overview': OV,
+      '/wfs-api/projects': PROJ_RESP,
+      '/wfs-api/projects/1/files': { path: '', entries: [{ name: 'Dockerfile', type: 'file' }] },
+      '/wfs-api/projects/1/logs?lines=100': { logs: [] },
+      '/wfs-api/projects/1/git': { repo: false },
+      '/wfs-api/projects/1/exec': (u, opts) => { cmds.push(JSON.parse(opts.body).cmd); return { exit: 0, stdout: 'OK', stderr: '' } },
+    })
+    render(<ShConsole show onClose={() => {}} />)
+    clickTab('Workspace')
+    await screen.findByLabelText('Pilih project')
+    fireEvent.change(screen.getByLabelText('Pilih project'), { target: { value: '1' } })
+    await screen.findByText(/Dockerfile/)
+    fireEvent.click(screen.getByText(/Test Python/))
+    await waitFor(() => expect(cmds.some((c) => c.includes('pytest'))).toBe(true))
+  })
 })
