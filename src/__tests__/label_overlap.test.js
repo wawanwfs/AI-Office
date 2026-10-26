@@ -11,7 +11,7 @@ const zone = (x, y, zw, zh, extra = {}) => ({ x, y, offX: 0, offY: 0, zone: true
 
 describe('overlapPass — konstanta', () => {
   it('PAD agent 30 & zona 46 (zona lebih besar)', () => {
-    expect(PAD_AGENT).toBe(30);
+    expect(PAD_AGENT).toBe(38);
     expect(PAD_ZONE).toBeGreaterThan(PAD_AGENT);
   });
 });

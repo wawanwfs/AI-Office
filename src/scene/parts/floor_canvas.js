@@ -41,6 +41,14 @@ export function drawTerrazzo(x, tint = '#FFFFFF') {
     x.beginPath(); x.ellipse(cx, cy, r, r * (0.6 + rnd() * 0.6), rnd() * 3.14, 0, 6.29); x.fill();
   }
   x.globalAlpha = 1;
+  // lapisan kilap lempeng marmer: patch tone besar lembut (berkedalaman dari jarak kamera)
+  const tones = ['rgba(216,207,188,0.09)', 'rgba(201,194,178,0.07)', 'rgba(190,182,166,0.06)'];
+  for (let t = 0; t < 10; t++) {
+    x.fillStyle = tones[t % tones.length];
+    x.globalAlpha = 1;
+    const cx = rnd() * 512, cy = rnd() * 512, rr = 70 + rnd() * 110;
+    x.beginPath(); x.ellipse(cx, cy, rr, rr * (0.55 + rnd() * 0.5), rnd() * 3.14, 0, 6.29); x.fill();
+  }
   x.strokeStyle = 'rgba(105,95,78,0.30)'; x.lineWidth = 2.2;
   for (let v = 0; v < 5; v++) {
     x.beginPath(); let vx = rnd() * 512, vy = 0; x.moveTo(vx, vy);

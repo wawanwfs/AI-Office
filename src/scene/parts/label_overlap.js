@@ -3,7 +3,7 @@
 // Murni: mutasi offX/offY saja, tanpa THREE/canvas — unit-testable.
 
 // PAD = breathing room: box diperluas per sisi supaya label tak "menempel" (<5px gap)
-export const PAD_AGENT = 30;
+export const PAD_AGENT = 38;
 export const PAD_ZONE = 46; // zona lebih sensitif: breathing room lebih besar
 
 export const K_AGENT_AGENT = 1.2;   // dorongan dua arah agent↔agent
@@ -15,7 +15,7 @@ export const K_ZONE_TAG_X = 1.1;
 
 // ── Sweep+clamp siklikal (diekstrak dari OfficeScene.js) ──
 // GAP = breathing room vertikal antar label dalam sweep (px)
-export const SWEEP_GAP = 36;
+export const SWEEP_GAP = 44;
 // Margin viewport: atas 140px cadangan lane header+ticker (HUD HTML, di luar canvas),
 // bawah 110px toolbar (Rina pernah terpotong @90)
 export const VIEW_TOP_MARGIN = 140;
