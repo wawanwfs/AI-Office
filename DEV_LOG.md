@@ -594,6 +594,13 @@
     - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
 - **Sisa backlog:** evaluasi optimasi chunking dinamis OfficeScene atau filtering per divisi pada tampilan Kanban.
 
+## 2026-10-26 22:40 WIB — Siklus 86: Rebranding tema royal-blue ala reel code.xr
+- **Pemicu:** user kirim reel IG code.xr "3D Dashboard + AI — Futuristic & Premium UI" — "sepertinya UI-nya bagus daripada punya kita".
+- **Analisis reel** (web_extract caption + PIL pixel-stat thumbnail 360×640): 100% keluarga biru — bg deep navy #010A28/#101B37/#152353, glow royal #0A3A9C/#4D7ECC (40% area sat>80), teks ice-blue #ADDBF2; 3D typography + glassy cards + Framer Motion.
+- **Diterapkan:** (1) CSS vars --bg #020713→#010722, --surface→#071230, --teal #0DEEF3→#4D9FFF + semua hardcode rgba(13,238,243)/#0DEEF3 di 1850-baris index.css & 6 komponen (AgentInspector, Ticker, SettingsModal, ProjectPanel). (2) Scene: bg/fog init 0x000C1E→0x010A28, visor/ring/pulse agen & reception glow →0x4D9FFF. (3) daycycle.js NAVY 0x000c1e→0x010a28 (apply() menimpa bg tiap frame — ini yang membuat patch pertama "tidak tampak").
+- **Verifikasi:** 1818/1818 test; BUILD 0; deploy 200; Chrome :99 reload + pixel-stat: 1545 piksel navy #010A28 di zona atas, aksen #4D9FFF hadir di bundle (22× CSS, 3× JS). Vision 429 sepanjang siklus (quota exhausted) — skor estetika visual belum bisa diberikan; lanjutkan saat kuota pulih.
+- **Pelajaran:** daycycle.createLighting MENIMPA scene.background tiap frame — ganti warna langit wajib lewat konstanta NAVY daycycle.js, bukan hanya init OfficeScene.
+
 ## 2026-10-26 14:10 WIB — Siklus 85: Estetika Kampus & Anti-Macet (laporan "macet + lantai polos + dinding polos + atap")
 - **Pemicu:** user — agen macet bergerombol, lantai & dinding polos, tampilan depan keliatan atap, tanya asal-usul bubble chat.
 - **Perbaikan:** (1) Anti-macet: 25 destinasi jalan (+9 baru lintas lantai), jitter 0.9, collab 30% (was 75%), jeda duduk 10–28 dtk, BOUNDS diperluas ±15.9/±12.4. (2) Lantai: painter drawTerrazzo (chip warm/rose/teal/navy 420 buah, vena marmer, kilap lempeng) di 3 deck terraces + repeat parket dasar 7×5.5. (3) Dinding: drawWallTex diperkaya (seam horizontal, satin band, AO tepi), pilaster kontras 0x8E9BB0 tiap 4m, repeat 16×, kotak bunga 4 warna di bawah jendela depan/kanan, backdrop logo navy. (4) Atap: plafon 26×20→34×27 + auto-hide saat kamera depan/atas (phi<1.15 || cam.y>5.2), panel cahaya 7×5, balok 5+5. (5) Bubble idle 7–15 dtk (was 4–10) + PAD label 38/44px.
