@@ -1354,6 +1354,119 @@ button { font-family: inherit; }
   color: #ffffff;
 }
 
+.task-tag-mode-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 7px;
+  border-radius: 12px;
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  background: rgba(245, 158, 11, 0.12);
+  border: 1px solid rgba(245, 158, 11, 0.35);
+  color: #fbbf24;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  font-family: inherit;
+  outline: none;
+  letter-spacing: 0.4px;
+}
+
+.task-tag-mode-btn:hover {
+  background: rgba(245, 158, 11, 0.22);
+  border-color: #f59e0b;
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+/* Strip Preset Kombinasi Tag */
+.task-preset-strip {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  overflow-x: auto;
+  padding: 0 0 8px;
+  scrollbar-width: thin;
+  white-space: nowrap;
+}
+
+.task-preset-strip::-webkit-scrollbar {
+  height: 4px;
+}
+
+.task-preset-strip::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.task-preset-strip-label {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--text-tertiary);
+  margin-right: 2px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  flex-shrink: 0;
+}
+
+.task-preset-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #cbd5e1;
+  transition: all 0.15s ease;
+  flex-shrink: 0;
+  font-family: inherit;
+  outline: none;
+}
+
+.task-preset-chip:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.22);
+  color: #ffffff;
+  transform: translateY(-1px);
+}
+
+.task-preset-chip.active {
+  background: rgba(59, 130, 246, 0.16);
+  border-color: var(--preset-color, #3b82f6);
+  color: #ffffff;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
+}
+
+.task-preset-icon {
+  font-size: 11px;
+  line-height: 1;
+}
+
+.task-preset-label {
+  letter-spacing: 0.2px;
+}
+
+.task-preset-count {
+  font-size: 10px;
+  font-family: 'DM Mono', monospace;
+  background: rgba(255, 255, 255, 0.12);
+  padding: 1px 4px;
+  border-radius: 4px;
+  color: #94a3b8;
+}
+
+.task-preset-chip.active .task-preset-count {
+  background: var(--preset-color, #3b82f6);
+  color: #0b1320;
+  font-weight: 700;
+}
+
 /* Kanban card mini tag badge */
 .kanban-tag-badge {
   display: inline-flex;

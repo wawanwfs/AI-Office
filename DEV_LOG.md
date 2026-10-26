@@ -1,3 +1,37 @@
+## 2026-10-26 17:53 WIB — Siklus 94: Preset Kombinasi Multi-Tag Filter Kanban TaskBoard (Pill Preset Cepat, Seleksi Shift+Klik, Switcher Mode ATAU/DAN & Event wfs-open-task-board)
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Spesifikasi & Utilitas Murni Tag Preset (`src/scene/parts/kanban_spec.js`, `src/__tests__/kanban_spec.test.js`):**
+     - Mendefinisikan registri `TAG_PRESETS` untuk stack umum pengembangan: `fullstack` (`['react', 'api', 'sql', 'python']`), `devops` (`['docker', 'ci/cd']`), `frontend` (`['react', 'ui/ux', 'css', 'vue']`), `backend` (`['api', 'sql', 'db', 'python', 'golang', 'prisma']`), dan `quality` (`['qa', 'security', 'review']`) lengkap dengan icon, warna aksen, dan deskripsi.
+     - Mengembangkan fungsi murni `normalizeTagList(input)` yang toleran terhadap string `'all'`, string tunggal, string comma-separated (`'react, api'`), maupun array.
+     - Mengembangkan `getTagPreset(key)`, `isPresetActive(presetKey, currentTags)`, dan `computePresetStats(tasks, presets, divisionFilter)` untuk menghitung ketersediaan task per preset secara akurat.
+     - Mengembangkan `toggleTagInFilter(tagKey, currentFilter, { multi })` yang mendukung single toggle maupun multi-select toggle (Shift+klik).
+     - Mengembangkan `formatTagFilterSummary(selectedTags, mode)` untuk visualisasi ringkasan status filter yang ramah screen reader.
+     - Memperluas `groupTasksByKanbanColumn` dan `filterTasks` agar mendukung parameter mode logika `tagMode` (`'any'` [ATAU] vs `'all'` [DAN]).
+  2. **Interaktivitas Multi-Tag & Preset pada UI Papan Task (`src/components/TaskBoard.jsx`, `src/index.css`, `src/__tests__/TaskBoard.test.jsx`):**
+     - Menghadirkan strip preset kombinasi tag (`.task-preset-strip`, `.task-preset-chip`) dengan status aktif, glow warna aksen, ikon penanda, dan badge jumlah task yang cocok.
+     - Menghadirkan seleksi multi-tag: klik biasa melakukan toggle tunggal, sedangkan Shift+Klik / Ctrl+Klik menambah/mengurangi tag secara dinamis.
+     - Menghadirkan tombol switcher mode pencocokan (`.task-tag-mode-btn`) otomatis saat 2+ tag aktif (`Mode: ATAU` ↔ `Mode: DAN`) dengan tooltip penjelasan.
+     - Menghadirkan tombol reset cerdas (`.task-tag-clear-btn`) dengan indikator jumlah tag terpilih (`✕ Reset (2)`).
+     - Mendukung parameter event kustom `wfs-open-task-board`: properti `preset` (`e.detail.preset`) untuk aktivasi instan dari komponen luar/3D whiteboard, serta properti `tagMode`.
+     - Menyinkronkan status aktif multi-tag pada badge kartu kanban, daftar list, dan chip tag modal detail.
+  3. **Aksesibilitas & Styling (`src/index.css`):**
+     - Menambahkan styling responsif untuk `.task-preset-strip`, `.task-preset-chip`, `.task-preset-chip.active`, dan `.task-tag-mode-btn`.
+     - Mengintegrasikan atribut `aria-pressed`, `aria-label`, tooltip ringkas, dan navigasi keyboard yang konsisten.
+
+- **Bukti terukur:**
+  - **Vitest:** **1667/1667 passed (132 test file)** (+11 tests baru: TAG_PRESETS spec, getTagPreset, normalizeTagList, isPresetActive, computePresetStats, toggleTagInFilter, formatTagFilterSummary, groupTasksByKanbanColumn/filterTasks mode DAN, UI preset click toggle, UI Shift+Click multi-tag & switcher mode ATAU/DAN, event wfs-open-task-board preset; 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/scene/parts/kanban_spec.js src/components/TaskBoard.jsx src/__tests__/kanban_spec.test.js src/__tests__/TaskBoard.test.jsx`).
+  - **Build:** Berhasil (exit 0, 37 precache entries 1734.52 KiB; `OfficeScene` 165.08 KB / gzip 56.70 KB, `index` 172.70 KB / gzip 47.25 KB, `vendor-three` 715.76 KB, `vendor-react` 189.63 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-BO40Dsdr.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **648.297 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `shot.sh` (DISPLAY=:0): Screenshot **643.326 bytes** (>500 KB).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** evaluasi shortcut keyboard global (misal 'T' untuk toggle TaskBoard, 'A' untuk toggle Ambience hum).
+
 ## 2026-10-26 17:07 WIB — Siklus 93: Widget Kontrol Cepat Ambience Hum Kantor di HUD (Animasi Gelombang 3-Bar, Siklus Volume Shift+Klik, Sinkronisasi Event wfs-ambience-changed)
 
 - **Yang diperbaiki & ditingkatkan:**

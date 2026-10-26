@@ -212,17 +212,132 @@ export function computeTagCloud(tasks, { divisionFilter = 'all', minCount = 1, l
     .slice(0, limit);
 }
 
+export function normalizeTagList(input) {
+  if (!input || input === 'all') return [];
+  if (Array.isArray(input)) {
+    return Array.from(new Set(input.map(normalizeTag).filter(Boolean)));
+  }
+  if (typeof input === 'string') {
+    return Array.from(
+      new Set(
+        input
+          .split(/[,;|\s]+/)
+          .map(normalizeTag)
+          .filter(Boolean)
+      )
+    );
+  }
+  return [];
+}
+
+export const TAG_PRESETS = [
+  {
+    key: 'fullstack',
+    label: 'Fullstack',
+    icon: '⚡',
+    color: '#3B82F6',
+    tags: ['react', 'api', 'sql', 'python'],
+    desc: 'Antarmuka web & endpoint API',
+  },
+  {
+    key: 'devops',
+    label: 'DevOps & Infra',
+    icon: '🐳',
+    color: '#06B6D4',
+    tags: ['docker', 'ci/cd'],
+    desc: 'Kontainer & pipeline otomasi',
+  },
+  {
+    key: 'frontend',
+    label: 'Frontend & UI',
+    icon: '🎨',
+    color: '#EC4899',
+    tags: ['react', 'ui/ux', 'css', 'vue'],
+    desc: 'Desain antarmuka, komponen & gaya',
+  },
+  {
+    key: 'backend',
+    label: 'Backend & DB',
+    icon: '🛠',
+    color: '#10B981',
+    tags: ['api', 'sql', 'db', 'python', 'golang', 'prisma'],
+    desc: 'Layanan data, server, & arsitektur sistem',
+  },
+  {
+    key: 'quality',
+    label: 'QA & Security',
+    icon: '🛡',
+    color: '#F59E0B',
+    tags: ['qa', 'security', 'review'],
+    desc: 'Ulasan kualitas, audit & keamanan',
+  },
+];
+
+export function getTagPreset(presetKey) {
+  if (!presetKey) return null;
+  const k = String(presetKey).toLowerCase().trim();
+  return TAG_PRESETS.find((p) => p.key === k) || null;
+}
+
+export function isPresetActive(presetKey, currentTagFilter) {
+  const preset = getTagPreset(presetKey);
+  if (!preset) return false;
+  const currentList = normalizeTagList(currentTagFilter);
+  if (currentList.length !== preset.tags.length) return false;
+  return preset.tags.every((t) => currentList.includes(normalizeTag(t)));
+}
+
+export function computePresetStats(tasks, presets = TAG_PRESETS, divisionFilter = 'all') {
+  if (!Array.isArray(tasks) || !tasks.length) {
+    return (presets || []).map((p) => ({ ...p, count: 0 }));
+  }
+  const df = String(divisionFilter || 'all').toLowerCase().trim();
+  const filtered = df === 'all' ? tasks : tasks.filter((t) => matchTaskDivision(t, df));
+  return (presets || []).map((p) => {
+    const matchingCount = filtered.filter((t) => matchTaskTags(t, p.tags, 'any')).length;
+    return {
+      ...p,
+      count: matchingCount,
+    };
+  });
+}
+
+export function toggleTagInFilter(tagKey, currentFilter, { multi = false } = {}) {
+  const norm = normalizeTag(tagKey);
+  if (!norm || norm === 'all') return 'all';
+
+  const currentList = normalizeTagList(currentFilter);
+
+  if (multi) {
+    const exists = currentList.includes(norm);
+    const updated = exists ? currentList.filter((t) => t !== norm) : [...currentList, norm];
+    if (updated.length === 0) return 'all';
+    return updated;
+  }
+
+  // Single select: toggle off if already the sole tag
+  if (currentList.length === 1 && currentList[0] === norm) {
+    return 'all';
+  }
+  return norm;
+}
+
+export function formatTagFilterSummary(selectedTags, mode = 'any') {
+  const list = normalizeTagList(selectedTags);
+  if (!list.length) return 'Semua Tag';
+  if (list.length === 1) return `#${formatTagLabel(list[0])}`;
+  const labels = list.map((t) => `#${formatTagLabel(t)}`);
+  const modeLabel = mode === 'all' ? 'DAN' : 'ATAU';
+  return `${labels.join(', ')} (${list.length} tag · ${modeLabel})`;
+}
+
 export function matchTaskTags(task, selectedTags, mode = 'any') {
   if (!selectedTags || selectedTags === 'all') return true;
   if (!task) return false;
+  const targetTags = normalizeTagList(selectedTags);
+  if (!targetTags.length) return true;
   const tags = extractTaskTags(task);
   if (!tags.length) return false;
-
-  const targetTags = (Array.isArray(selectedTags) ? selectedTags : [selectedTags])
-    .map(normalizeTag)
-    .filter(Boolean);
-
-  if (!targetTags.length || targetTags.includes('all')) return true;
 
   if (mode === 'all') {
     return targetTags.every((tt) => tags.includes(tt));
@@ -468,8 +583,9 @@ export function extractTaskDivisions(tasks) {
 
 /**
  * Mengelompokkan task ke dalam 4 kolom kanban dengan filter query, divisi & pengurutan opsional.
+ * Mendukung filter tag tunggal, array multi-tag, atau preset dengan mode pencocokan 'any' (ATAU) / 'all' (DAN).
  */
-export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'all', sortBy = 'newest', tagFilter = 'all') {
+export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'all', sortBy = 'newest', tagFilter = 'all', tagMode = 'any') {
   const groups = {
     pending: [],
     running: [],
@@ -484,7 +600,7 @@ export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'al
   tasks.forEach((t) => {
     if (!t) return;
     if (df !== 'all' && !matchTaskDivision(t, df)) return;
-    if (tagFilter && tagFilter !== 'all' && !matchTaskTags(t, tagFilter)) return;
+    if (tagFilter && tagFilter !== 'all' && !matchTaskTags(t, tagFilter, tagMode)) return;
     if (q) {
       const taskTags = extractTaskTags(t);
       const matchText = [t.id, t.title, t.agent_id, t.role, t.status, t.priority, ...taskTags].filter(Boolean).join(' ').toLowerCase();
@@ -534,9 +650,9 @@ export function computeSprintMetrics(tasks, divisionFilter = 'all') {
 }
 
 /**
- * Filter task untuk mode daftar dengan dukungan status, query, divisi, role, pengurutan, dan tag kustom.
+ * Filter task untuk mode daftar dengan dukungan status, query, divisi, role, pengurutan, dan tag kustom (tunggal/multi/preset & mode any/all).
  */
-export function filterTasks(tasks, { filter = 'all', q = '', division = 'all', role = 'all', sortBy = 'newest', tag = 'all' } = {}) {
+export function filterTasks(tasks, { filter = 'all', q = '', division = 'all', role = 'all', sortBy = 'newest', tag = 'all', tagMode = 'any' } = {}) {
   if (!Array.isArray(tasks)) return [];
   const qStr = String(q || '').toLowerCase().trim();
   const divStr = String(division !== 'all' ? division : role || 'all').toLowerCase().trim();
@@ -545,7 +661,7 @@ export function filterTasks(tasks, { filter = 'all', q = '', division = 'all', r
     const statusMatch = filter === 'all' || t.status === filter;
     if (!statusMatch) return false;
     if (divStr !== 'all' && !matchTaskDivision(t, divStr)) return false;
-    if (tag && tag !== 'all' && !matchTaskTags(t, tag)) return false;
+    if (tag && tag !== 'all' && !matchTaskTags(t, tag, tagMode)) return false;
     if (!qStr) return true;
     const taskTags = extractTaskTags(t);
     const text = [t.id, t.title, t.agent_id, t.role, t.status, t.priority, ...taskTags].filter(Boolean).join(' ').toLowerCase();

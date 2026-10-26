@@ -22,6 +22,13 @@ import {
   moveTaskToColumn,
   getKanbanColumnKey,
   computeTagCloud,
+  normalizeTagList,
+  TAG_PRESETS,
+  getTagPreset,
+  isPresetActive,
+  computePresetStats,
+  toggleTagInFilter,
+  formatTagFilterSummary,
 } from '../scene/parts/kanban_spec'
 import { findTeamByRole, findTeamByAgent } from '../scene/parts/team_spec'
 
@@ -36,6 +43,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const [filter, setFilter] = useState('all')
   const [division, setDivision] = useState('all')
   const [selectedTag, setSelectedTag] = useState('all')
+  const [tagMode, setTagMode] = useState('any') // 'any' (OR) | 'all' (AND)
   const [viewMode, setViewMode] = useState('list') // 'list' | 'kanban'
   const [sortBy, setSortBy] = useState('newest') // 'newest' | 'oldest' | 'priority' | 'title' | 'agent'
   const [q, setQ] = useState('')
@@ -49,8 +57,31 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const closeBoard = useCallback(() => onEscRef.current(), [])
   useDialogA11y({ open: open || !!sel, onClose: closeBoard, ref: board })
 
-  const handleTagClick = useCallback((tagKey) => {
-    setSelectedTag((prev) => (prev === tagKey ? 'all' : tagKey))
+  const activeTags = useMemo(() => normalizeTagList(selectedTag), [selectedTag])
+
+  const handleTagClick = useCallback((tagKey, e) => {
+    const isMulti = Boolean(e && (e.shiftKey || e.ctrlKey || e.metaKey))
+    setSelectedTag((prev) => toggleTagInFilter(tagKey, prev, { multi: isMulti }))
+    if (typeof window !== 'undefined' && window.__officeSound) {
+      window.__officeSound.playSelect?.()
+    }
+  }, [])
+
+  const handlePresetClick = useCallback((presetKey) => {
+    setSelectedTag((prev) => {
+      if (isPresetActive(presetKey, prev)) {
+        return 'all'
+      }
+      const p = getTagPreset(presetKey)
+      return p ? p.tags : 'all'
+    })
+    if (typeof window !== 'undefined' && window.__officeSound) {
+      window.__officeSound.playSelect?.()
+    }
+  }, [])
+
+  const toggleTagMode = useCallback(() => {
+    setTagMode((prev) => (prev === 'any' ? 'all' : 'any'))
     if (typeof window !== 'undefined' && window.__officeSound) {
       window.__officeSound.playSelect?.()
     }
@@ -74,7 +105,13 @@ export default function TaskBoard({ onFlash, onAsk }) {
       if (e?.detail?.filter) setFilter(e.detail.filter)
       if (e?.detail?.division) setDivision(e.detail.division)
       else if (e?.detail?.role) setDivision(e.detail.role)
-      if (e?.detail?.tag) setSelectedTag(e.detail.tag)
+      if (e?.detail?.preset) {
+        const p = getTagPreset(e.detail.preset)
+        if (p) setSelectedTag(p.tags)
+      } else if (e?.detail?.tag) {
+        setSelectedTag(e.detail.tag)
+      }
+      if (e?.detail?.tagMode) setTagMode(e.detail.tagMode)
       if (e?.detail?.sortBy) setSortBy(e.detail.sortBy)
       if (e?.detail?.taskId && tasks) {
         const found = tasks.find(t => String(t.id) === String(e.detail.taskId))
@@ -185,12 +222,19 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const divisions = useMemo(() => extractTaskDivisions(tasks), [tasks])
   const activeDivision = useMemo(() => divisions.find(d => d.key === division) || null, [divisions, division])
   const tagCloud = useMemo(() => computeTagCloud(tasks, { divisionFilter: division }), [tasks, division])
-  const kanbanGroups = useMemo(() => groupTasksByKanbanColumn(tasks, q, division, sortBy, selectedTag), [tasks, q, division, sortBy, selectedTag])
+  const presetStats = useMemo(() => computePresetStats(tasks, TAG_PRESETS, division), [tasks, division])
+  const kanbanGroups = useMemo(
+    () => groupTasksByKanbanColumn(tasks, q, division, sortBy, selectedTag, tagMode),
+    [tasks, q, division, sortBy, selectedTag, tagMode]
+  )
   const metrics = useMemo(() => computeSprintMetrics(tasks, division), [tasks, division])
   const overallMetrics = useMemo(() => computeSprintMetrics(tasks), [tasks])
   const priorityBreakdown = useMemo(() => computePriorityBreakdown(tasks, division), [tasks, division])
 
-  const list = useMemo(() => filterTasks(tasks, { filter, q, division, sortBy, tag: selectedTag }), [tasks, filter, q, division, sortBy, selectedTag])
+  const list = useMemo(
+    () => filterTasks(tasks, { filter, q, division, sortBy, tag: selectedTag, tagMode }),
+    [tasks, filter, q, division, sortBy, selectedTag, tagMode]
+  )
   const count = s => (tasks || []).filter(t => (s === 'all' || t.status === s) && (division === 'all' || matchTaskDivision(t, division))).length
 
   return (
@@ -328,22 +372,25 @@ export default function TaskBoard({ onFlash, onAsk }) {
                   <div style={{ margin: '8px 0 10px' }}>
                     <label className="note" style={{ display: 'block', marginBottom: 4 }}>Tag & Kategori</label>
                     <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                      {selBadges.tags.map((tg) => (
-                        <button
-                          key={tg.tag}
-                          type="button"
-                          className={`task-detail-tag-chip${selectedTag === tg.tag ? ' active' : ''}`}
-                          style={{ '--tag-color': tg.color }}
-                          onClick={() => {
-                            handleTagClick(tg.tag)
-                            setSel(null)
-                          }}
-                          title={`Lihat semua task dengan tag #${tg.label}`}
-                          aria-label={`Filter tag #${tg.label}`}
-                        >
-                          #{tg.label}
-                        </button>
-                      ))}
+                      {selBadges.tags.map((tg) => {
+                        const isChipAct = activeTags.includes(tg.tag)
+                        return (
+                          <button
+                            key={tg.tag}
+                            type="button"
+                            className={`task-detail-tag-chip${isChipAct ? ' active' : ''}`}
+                            style={{ '--tag-color': tg.color }}
+                            onClick={(e) => {
+                              handleTagClick(tg.tag, e)
+                              setSel(null)
+                            }}
+                            title={`Lihat semua task dengan tag #${tg.label}`}
+                            aria-label={`Filter tag #${tg.label}`}
+                          >
+                            #{tg.label}
+                          </button>
+                        )
+                      })}
                     </div>
                   </div>
                 ) : null
@@ -464,51 +511,92 @@ export default function TaskBoard({ onFlash, onAsk }) {
                     )}
                   </div>
                 )}
-                {/* Strip Filter Tag Kustom */}
-                {tasks && tagCloud.length > 0 && (
-                  <div className="task-tag-strip" role="group" aria-label="Filter berdasarkan tag task">
-                    <span className="task-tag-strip-label">Tag:</span>
+              {/* Strip Filter Tag Kustom */}
+              {tasks && tagCloud.length > 0 && (
+                <div
+                  className="task-tag-strip"
+                  role="group"
+                  aria-label="Filter berdasarkan tag task"
+                  title={activeTags.length > 0 ? formatTagFilterSummary(selectedTag, tagMode) : undefined}
+                >
+                  <span className="task-tag-strip-label">Tag:</span>
+                  <button
+                    type="button"
+                    className={`task-tag-chip${activeTags.length === 0 ? ' active' : ''}`}
+                    onClick={(e) => handleTagClick('all', e)}
+                    aria-pressed={activeTags.length === 0}
+                    aria-label="Tampilkan semua tag"
+                  >
+                    Semua
+                  </button>
+                  {tagCloud.map((item) => {
+                    const isAct = activeTags.includes(item.tag)
+                    return (
+                      <button
+                        key={item.tag}
+                        type="button"
+                        className={`task-tag-chip${isAct ? ' active' : ''}`}
+                        style={{ '--chip-accent': item.color }}
+                        onClick={(e) => handleTagClick(item.tag, e)}
+                        aria-pressed={isAct}
+                        title={`Filter task #${item.label} (${item.count} task) — Shift+Klik untuk multi-pilih`}
+                        aria-label={`Filter tag ${item.label}: ${item.count} task`}
+                      >
+                        <span className="task-tag-chip-hash" aria-hidden="true">#</span>
+                        <span className="task-tag-chip-name">{item.label}</span>
+                        <span className="task-tag-chip-count">{item.count}</span>
+                      </button>
+                    )
+                  })}
+                  {activeTags.length > 1 && (
                     <button
                       type="button"
-                      className={`task-tag-chip${selectedTag === 'all' ? ' active' : ''}`}
-                      onClick={() => handleTagClick('all')}
-                      aria-pressed={selectedTag === 'all'}
-                      aria-label="Tampilkan semua tag"
+                      className="task-tag-mode-btn"
+                      onClick={toggleTagMode}
+                      title={tagMode === 'all' ? 'Mode pencocokan: DAN (harus cocok semua tag). Klik untuk ganti ke ATAU' : 'Mode pencocokan: ATAU (cocok salah satu tag). Klik untuk ganti ke DAN'}
+                      aria-label={`Ganti mode filter tag (saat ini ${tagMode === 'all' ? 'DAN' : 'ATAU'})`}
                     >
-                      Semua
+                      {tagMode === 'all' ? 'Mode: DAN' : 'Mode: ATAU'}
                     </button>
-                    {tagCloud.map((item) => {
-                      const isAct = selectedTag === item.tag
-                      return (
-                        <button
-                          key={item.tag}
-                          type="button"
-                          className={`task-tag-chip${isAct ? ' active' : ''}`}
-                          style={{ '--chip-accent': item.color }}
-                          onClick={() => handleTagClick(item.tag)}
-                          aria-pressed={isAct}
-                          title={`Filter task #${item.label} (${item.count} task)`}
-                          aria-label={`Filter tag ${item.label}: ${item.count} task`}
-                        >
-                          <span className="task-tag-chip-hash" aria-hidden="true">#</span>
-                          <span className="task-tag-chip-name">{item.label}</span>
-                          <span className="task-tag-chip-count">{item.count}</span>
-                        </button>
-                      )
-                    })}
-                    {selectedTag !== 'all' && (
+                  )}
+                  {activeTags.length > 0 && (
+                    <button
+                      type="button"
+                      className="task-tag-clear-btn"
+                      onClick={(e) => handleTagClick('all', e)}
+                      title="Reset filter tag"
+                      aria-label="Reset filter tag"
+                    >
+                      ✕ Reset{activeTags.length > 1 ? ` (${activeTags.length})` : ''}
+                    </button>
+                  )}
+                </div>
+              )}
+              {/* Strip Preset Kombinasi Tag */}
+              {tasks && (
+                <div className="task-preset-strip" role="group" aria-label="Preset kombinasi tag">
+                  <span className="task-preset-strip-label">Preset:</span>
+                  {presetStats.map((p) => {
+                    const isAct = isPresetActive(p.key, selectedTag)
+                    return (
                       <button
+                        key={p.key}
                         type="button"
-                        className="task-tag-clear-btn"
-                        onClick={() => handleTagClick('all')}
-                        title="Reset filter tag"
-                        aria-label="Reset filter tag"
+                        className={`task-preset-chip${isAct ? ' active' : ''}`}
+                        style={{ '--preset-color': p.color }}
+                        onClick={() => handlePresetClick(p.key)}
+                        aria-pressed={isAct}
+                        title={`${p.label}: [${p.tags.map(t => '#' + t).join(', ')}] — ${p.desc} (${p.count} task)`}
+                        aria-label={`Preset ${p.label}: ${p.count} task`}
                       >
-                        ✕ Reset
+                        <span className="task-preset-icon" aria-hidden="true">{p.icon}</span>
+                        <span className="task-preset-label">{p.label}</span>
+                        {p.count > 0 && <span className="task-preset-count">{p.count}</span>}
                       </button>
-                    )}
-                  </div>
-                )}
+                    )
+                  })}
+                </div>
+              )}
                 {viewMode === 'list' && (
                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
                     {FILTERS.map(([k, l]) => <button key={k} className={'btn' + (filter === k ? ' primary' : '')} style={{ minHeight: 34, padding: '0 10px', fontSize: 12 }} aria-pressed={filter === k} onClick={() => setFilter(k)}>{l} {count(k)}</button>)}
@@ -637,30 +725,33 @@ export default function TaskBoard({ onFlash, onAsk }) {
                                   <div className="kanban-card-meta">
                                     <div style={{ display: 'flex', gap: 4, alignItems: 'center', flexWrap: 'wrap' }}>
                                       <span className="kanban-role-badge" style={{ color: badges.roleColor }}>{badges.roleLabel}</span>
-                                      {badges.tags.slice(0, 2).map((tg) => (
-                                        <span
-                                          key={tg.tag}
-                                          className={`kanban-tag-badge${selectedTag === tg.tag ? ' active' : ''}`}
-                                          style={{ '--tag-color': tg.color }}
-                                          title={`Filter berdasarkan tag #${tg.label}`}
-                                          role="button"
-                                          tabIndex={0}
-                                          aria-pressed={selectedTag === tg.tag}
-                                          onClick={(e) => {
-                                            e.stopPropagation()
-                                            handleTagClick(tg.tag)
-                                          }}
-                                          onKeyDown={(e) => {
-                                            if (e.key === 'Enter' || e.key === ' ') {
+                                      {badges.tags.slice(0, 2).map((tg) => {
+                                        const isTagAct = activeTags.includes(tg.tag)
+                                        return (
+                                          <span
+                                            key={tg.tag}
+                                            className={`kanban-tag-badge${isTagAct ? ' active' : ''}`}
+                                            style={{ '--tag-color': tg.color }}
+                                            title={`Filter berdasarkan tag #${tg.label}`}
+                                            role="button"
+                                            tabIndex={0}
+                                            aria-pressed={isTagAct}
+                                            onClick={(e) => {
                                               e.stopPropagation()
-                                              e.preventDefault()
-                                              handleTagClick(tg.tag)
-                                            }
-                                          }}
-                                        >
-                                          #{tg.label}
-                                        </span>
-                                      ))}
+                                              handleTagClick(tg.tag, e)
+                                            }}
+                                            onKeyDown={(e) => {
+                                              if (e.key === 'Enter' || e.key === ' ') {
+                                                e.stopPropagation()
+                                                e.preventDefault()
+                                                handleTagClick(tg.tag, e)
+                                              }
+                                            }}
+                                          >
+                                            #{tg.label}
+                                          </span>
+                                        )
+                                      })}
                                       {badges.tags.length > 2 && (
                                         <span
                                           className="kanban-tag-badge-more"
@@ -731,30 +822,33 @@ export default function TaskBoard({ onFlash, onAsk }) {
                           const rowBadges = getTaskCardBadges(t)
                           return rowBadges.tags.length > 0 ? (
                             <div style={{ display: 'flex', gap: 4, alignItems: 'center', marginTop: 3, flexWrap: 'wrap' }}>
-                              {rowBadges.tags.slice(0, 3).map((tg) => (
-                                <span
-                                  key={tg.tag}
-                                  className={`kanban-tag-badge${selectedTag === tg.tag ? ' active' : ''}`}
-                                  style={{ '--tag-color': tg.color }}
-                                  title={`Filter berdasarkan tag #${tg.label}`}
-                                  role="button"
-                                  tabIndex={0}
-                                  aria-pressed={selectedTag === tg.tag}
-                                  onClick={(e) => {
-                                    e.stopPropagation()
-                                    handleTagClick(tg.tag)
-                                  }}
-                                  onKeyDown={(e) => {
-                                    if (e.key === 'Enter' || e.key === ' ') {
+                              {rowBadges.tags.slice(0, 3).map((tg) => {
+                                const isTagAct = activeTags.includes(tg.tag)
+                                return (
+                                  <span
+                                    key={tg.tag}
+                                    className={`kanban-tag-badge${isTagAct ? ' active' : ''}`}
+                                    style={{ '--tag-color': tg.color }}
+                                    title={`Filter berdasarkan tag #${tg.label}`}
+                                    role="button"
+                                    tabIndex={0}
+                                    aria-pressed={isTagAct}
+                                    onClick={(e) => {
                                       e.stopPropagation()
-                                      e.preventDefault()
-                                      handleTagClick(tg.tag)
-                                    }
-                                  }}
-                                >
-                                  #{tg.label}
-                                </span>
-                              ))}
+                                      handleTagClick(tg.tag, e)
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === 'Enter' || e.key === ' ') {
+                                        e.stopPropagation()
+                                        e.preventDefault()
+                                        handleTagClick(tg.tag, e)
+                                      }
+                                    }}
+                                  >
+                                    #{tg.label}
+                                  </span>
+                                )
+                              })}
                             </div>
                           ) : null
                         })()}

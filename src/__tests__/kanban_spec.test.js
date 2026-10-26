@@ -33,6 +33,13 @@ import {
   computeTagCloud,
   matchTaskTags,
   SPECIAL_TAG_LABELS,
+  normalizeTagList,
+  TAG_PRESETS,
+  getTagPreset,
+  isPresetActive,
+  computePresetStats,
+  toggleTagInFilter,
+  formatTagFilterSummary,
 } from '../scene/parts/kanban_spec.js';
 
 describe('kanban_spec — KANBAN_COLUMNS & role badges', () => {
@@ -697,5 +704,117 @@ describe('kanban_spec — SPECIAL_TAG_LABELS', () => {
     // Tidak ada label duplikat untuk kunci berbeda
     const vals = labels.map(([, label]) => label);
     expect(new Set(vals).size).toBe(vals.length);
+  });
+});
+
+describe('kanban_spec — TAG_PRESETS & multi-tag helpers', () => {
+  it('mengekspor TAG_PRESETS dengan properti lengkap dan tags valid', () => {
+    expect(Array.isArray(TAG_PRESETS)).toBe(true);
+    expect(TAG_PRESETS.length).toBeGreaterThanOrEqual(4);
+    const keys = new Set();
+    TAG_PRESETS.forEach((p) => {
+      expect(p.key).toBeTruthy();
+      expect(p.label).toBeTruthy();
+      expect(p.icon).toBeTruthy();
+      expect(p.color).toMatch(/^#[0-9a-fA-F]{6}$/);
+      expect(Array.isArray(p.tags)).toBe(true);
+      expect(p.tags.length).toBeGreaterThan(0);
+      expect(keys.has(p.key)).toBe(false);
+      keys.add(p.key);
+      p.tags.forEach((t) => {
+        expect(t).toBe(normalizeTag(t));
+      });
+    });
+  });
+
+  it('getTagPreset mengembalikan konfigurasi preset atau null jika tidak ditemukan', () => {
+    expect(getTagPreset('fullstack')?.label).toBe('Fullstack');
+    expect(getTagPreset('DEVOPS')?.key).toBe('devops');
+    expect(getTagPreset('unknown_preset')).toBeNull();
+    expect(getTagPreset(null)).toBeNull();
+  });
+
+  it('normalizeTagList mengubah berbagai format input menjadi array unik ternormalisasi', () => {
+    expect(normalizeTagList('all')).toEqual([]);
+    expect(normalizeTagList(null)).toEqual([]);
+    expect(normalizeTagList('react')).toEqual(['react']);
+    expect(normalizeTagList('react, api; docker')).toEqual(['react', 'api', 'docker']);
+    expect(normalizeTagList(['#React', 'react', 'api'])).toEqual(['react', 'api']);
+  });
+
+  it('isPresetActive mendeteksi apakah filter saat ini persis cocok dengan preset', () => {
+    const fullstackTags = ['python', 'sql', 'api', 'react']; // susunan acak
+    expect(isPresetActive('fullstack', fullstackTags)).toBe(true);
+    expect(isPresetActive('fullstack', ['react', 'api'])).toBe(false);
+    expect(isPresetActive('fullstack', 'all')).toBe(false);
+    expect(isPresetActive('nonexistent', fullstackTags)).toBe(false);
+  });
+
+  it('computePresetStats menghitung jumlah task yang cocok dengan setiap preset', () => {
+    const sampleTasks = [
+      { id: 1, title: 'Web App #react', status: 'done', role: 'fe' },
+      { id: 2, title: 'Docker Infra #docker', status: 'running', role: 'devops' },
+      { id: 3, title: 'Fullstack task #react #api', status: 'pending', role: 'fe' },
+    ];
+    const stats = computePresetStats(sampleTasks);
+    const fullstackStat = stats.find(p => p.key === 'fullstack');
+    const devopsStat = stats.find(p => p.key === 'devops');
+
+    expect(fullstackStat?.count).toBe(2); // task 1 dan 3
+    expect(devopsStat?.count).toBe(1);    // task 2
+
+    // Mendukung filter divisi (ops-sec)
+    const opsStats = computePresetStats(sampleTasks, TAG_PRESETS, 'ops-sec');
+    const opsDevops = opsStats.find(p => p.key === 'devops');
+    expect(opsDevops?.count).toBe(1);
+  });
+
+  it('toggleTagInFilter mendukung mode seleksi tunggal dan multi-tag (Shift+klik)', () => {
+    // Single mode: pilih tag baru
+    expect(toggleTagInFilter('api', 'all')).toBe('api');
+    // Single mode: klik tag yang sedang aktif -> reset ke 'all'
+    expect(toggleTagInFilter('api', 'api')).toBe('all');
+    // Single mode: klik tag berbeda -> ganti tag
+    expect(toggleTagInFilter('docker', 'api')).toBe('docker');
+
+    // Multi mode: tambahkan tag baru ke list
+    expect(toggleTagInFilter('docker', 'api', { multi: true })).toEqual(['api', 'docker']);
+    // Multi mode: hapus salah satu tag yang sudah ada
+    expect(toggleTagInFilter('api', ['api', 'docker'], { multi: true })).toEqual(['docker']);
+    // Multi mode: hapus tag terakhir -> kembali ke 'all'
+    expect(toggleTagInFilter('docker', ['docker'], { multi: true })).toBe('all');
+  });
+
+  it('formatTagFilterSummary menghasilkan ringkasan filter manusiawi', () => {
+    expect(formatTagFilterSummary('all')).toBe('Semua Tag');
+    expect(formatTagFilterSummary([])).toBe('Semua Tag');
+    expect(formatTagFilterSummary('react')).toBe('#React');
+    expect(formatTagFilterSummary(['react', 'api'], 'any')).toBe('#React, #API (2 tag · ATAU)');
+    expect(formatTagFilterSummary(['react', 'api'], 'all')).toBe('#React, #API (2 tag · DAN)');
+  });
+
+  it('groupTasksByKanbanColumn dan filterTasks mendukung mode DAN (all) untuk multi-tag', () => {
+    const tasks = [
+      { id: 10, title: 'Frontend UI #react', status: 'pending', role: 'fe' },
+      { id: 20, title: 'Backend Service #api', status: 'running', role: 'be' },
+      { id: 30, title: 'Fullstack App #react #api', status: 'done', role: 'fe' },
+    ];
+
+    // Mode ATAU (any) mencakup task 10, 20, 30
+    const groupedAny = groupTasksByKanbanColumn(tasks, '', 'all', 'newest', ['react', 'api'], 'any');
+    expect(groupedAny.pending).toHaveLength(1);
+    expect(groupedAny.running).toHaveLength(1);
+    expect(groupedAny.done).toHaveLength(1);
+
+    // Mode DAN (all) hanya task 30 yang memiliki KEDUA tag
+    const groupedAll = groupTasksByKanbanColumn(tasks, '', 'all', 'newest', ['react', 'api'], 'all');
+    expect(groupedAll.pending).toHaveLength(0);
+    expect(groupedAll.running).toHaveLength(0);
+    expect(groupedAll.done).toHaveLength(1);
+    expect(groupedAll.done[0].id).toBe(30);
+
+    const filteredAll = filterTasks(tasks, { tag: ['react', 'api'], tagMode: 'all' });
+    expect(filteredAll).toHaveLength(1);
+    expect(filteredAll[0].id).toBe(30);
   });
 });
