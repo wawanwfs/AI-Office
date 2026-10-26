@@ -90,7 +90,7 @@ export default function WfsPanel() {
     const t0 = setTimeout(ld, 0); const iv = setInterval(() => { if (document.visibilityState === 'visible') ld() }, 15000)
     return () => { dead = true; clearTimeout(t0); clearInterval(iv) }
   }, [open])
-  useEffect(() => { if (sel) loadCfg(sel) }, [sel && sel.id])   // eslint-disable-line
+  useEffect(() => { if (sel) loadCfg(sel) }, [sel, loadCfg])   // eslint-disable-line react-hooks/set-state-in-effect
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight }, [logs, chatBusy])
   useEffect(() => {
     if (!open) return

@@ -2,7 +2,7 @@
 import * as THREE from 'three';window.THREE=THREE;
 import { createFurniture } from './parts/furniture.js';
 import { buildRobot } from './parts/robot.js';
-import { createLighting, createNeonMode, createShift, mixHex } from './parts/daycycle.js';
+import { createLighting, createNeonMode, createShift } from './parts/daycycle.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
@@ -1115,7 +1115,6 @@ const drawScreen=(s,i)=>{ if(shouldRedrawScreenAt(frame,i)) drawScreenFrame(s,fr
 let timeOfDay=(()=>{ // mulai dari jam NYATA saat load (biar jam dinding & HUD terasa hidup),
   // dibulatkan ke menit; disinkronkan dgn sim clock (1 hari kerja ≈ 12 mnt nyata)
   const d=new Date();return d.getHours()*60+d.getMinutes();})();
-const lC=mixHex; // eslint-disable-line no-unused-vars -- kompatibilitas nama lama
 const __light=createLighting({THREE,scene,renderer,sun,ambient,agentData,onTimeUpdate,onStatusUpdate,onTick:m=>updateMeeting(m)});
 let __sim={acc:0,last:null,manual:false,lastManualSet:0,time:timeOfDay};
 function updateTime(min,manual=true){timeOfDay=min;__light.apply(min);__sim.time=min;if(manual){__sim=setSimManual(min,performance.now())}}
@@ -1295,7 +1294,6 @@ function createBubble(x,y,z,text,color,anchor){
 
 // Auto talk: agent cerita sendiri tiap beberapa detik (per role)
 
-let talkTimer=4; // eslint-disable-line no-unused-vars -- reset loop obrolan
 let lastTalkRT=performance.now();
 function autoTalk(){
   const now=performance.now();
