@@ -156,6 +156,7 @@ export function buildTaskJson(tasks, options = {}) {
         tag: options.tag || 'all',
         tag_mode: options.tagMode || 'any',
         date_range: options.dateRange || 'all',
+        custom_range: options.customRange || null,
         search_query: options.q || '',
         sort_by: options.sortBy || 'newest',
       },
@@ -189,8 +190,23 @@ export function generateTaskExportFilename(format = 'csv', options = {}) {
   }
 
   if (options.dateRange && options.dateRange !== 'all') {
-    const cleanDate = String(options.dateRange).toLowerCase().replace(/[^a-z0-9_-]/g, '');
-    if (cleanDate) parts.push(cleanDate);
+    if (options.dateRange === 'custom' && options.customRange) {
+      const cr = options.customRange;
+      const s = String(cr.start || cr.startDate || '').trim().replace(/[^a-z0-9_-]/gi, '');
+      const e = String(cr.end || cr.endDate || '').trim().replace(/[^a-z0-9_-]/gi, '');
+      if (s && e) {
+        parts.push(`custom_${s}_to_${e}`);
+      } else if (s) {
+        parts.push(`custom_from_${s}`);
+      } else if (e) {
+        parts.push(`custom_until_${e}`);
+      } else {
+        parts.push('custom');
+      }
+    } else {
+      const cleanDate = String(options.dateRange).toLowerCase().replace(/[^a-z0-9_-]/g, '');
+      if (cleanDate) parts.push(cleanDate);
+    }
   }
 
   if (options.tag && options.tag !== 'all') {

@@ -701,7 +701,7 @@ export function extractTaskDivisions(tasks) {
  * Mengelompokkan task ke dalam 4 kolom kanban dengan filter query, divisi & pengurutan opsional.
  * Mendukung filter tag tunggal, array multi-tag, atau preset dengan mode pencocokan 'any' (ATAU) / 'all' (DAN).
  */
-export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'all', sortBy = 'newest', tagFilter = 'all', tagMode = 'any', dateRange = 'all', now = undefined) {
+export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'all', sortBy = 'newest', tagFilter = 'all', tagMode = 'any', dateRange = 'all', now = undefined, customRange = undefined) {
   const groups = {
     pending: [],
     running: [],
@@ -717,7 +717,7 @@ export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'al
     if (!t) return;
     if (df !== 'all' && !matchTaskDivision(t, df)) return;
     if (tagFilter && tagFilter !== 'all' && !matchTaskTags(t, tagFilter, tagMode)) return;
-    if (dateRange && dateRange !== 'all' && !isTaskInDateRange(t, dateRange, { now })) return;
+    if (dateRange && dateRange !== 'all' && !isTaskInDateRange(t, dateRange, { now, customRange })) return;
     if (q && !matchTaskSearch(t, q)) return;
     const colKey = getKanbanColumnKey(t.status);
     if (groups[colKey]) {
@@ -765,7 +765,7 @@ export function computeSprintMetrics(tasks, divisionFilter = 'all') {
 /**
  * Filter task untuk mode daftar dengan dukungan status, query, divisi, role, pengurutan, tag kustom, dan rentang tanggal.
  */
-export function filterTasks(tasks, { filter = 'all', q = '', division = 'all', role = 'all', sortBy = 'newest', tag = 'all', tagMode = 'any', dateRange = 'all', now = undefined } = {}) {
+export function filterTasks(tasks, { filter = 'all', q = '', division = 'all', role = 'all', sortBy = 'newest', tag = 'all', tagMode = 'any', dateRange = 'all', now = undefined, customRange = undefined } = {}) {
   if (!Array.isArray(tasks)) return [];
   const qStr = String(q || '').toLowerCase().trim();
   const divStr = String(division !== 'all' ? division : role || 'all').toLowerCase().trim();
@@ -775,7 +775,7 @@ export function filterTasks(tasks, { filter = 'all', q = '', division = 'all', r
     if (!statusMatch) return false;
     if (divStr !== 'all' && !matchTaskDivision(t, divStr)) return false;
     if (tag && tag !== 'all' && !matchTaskTags(t, tag, tagMode)) return false;
-    if (dateRange && dateRange !== 'all' && !isTaskInDateRange(t, dateRange, { now })) return false;
+    if (dateRange && dateRange !== 'all' && !isTaskInDateRange(t, dateRange, { now, customRange })) return false;
     if (!qStr) return true;
     return matchTaskSearch(t, qStr);
   });

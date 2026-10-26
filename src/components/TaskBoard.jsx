@@ -12,6 +12,8 @@ import {
   formatTaskDate,
   formatDateRangeSummary,
   parseTaskTimestamp,
+  normalizeCustomDateRange,
+  formatCustomDateRange,
 } from '../lib/kanban_date'
 import { IconBoard, IconClose, IconPlay, IconRotate, IconList, IconKanban, IconSearch, IconDownload, IconCalendar } from './Icons'
 import {
@@ -53,7 +55,9 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const [division, setDivision] = useState('all')
   const [selectedTag, setSelectedTag] = useState('all')
   const [tagMode, setTagMode] = useState('any') // 'any' (OR) | 'all' (AND)
-  const [dateRange, setDateRange] = useState('all') // 'all' | 'today' | 'yesterday' | 'week' | 'month'
+  const [dateRange, setDateRange] = useState('all') // 'all' | 'today' | 'yesterday' | 'week' | 'month' | 'custom'
+  const [customStartDate, setCustomStartDate] = useState('')
+  const [customEndDate, setCustomEndDate] = useState('')
   const [viewMode, setViewMode] = useState('list') // 'list' | 'kanban'
   const [sortBy, setSortBy] = useState('newest') // 'newest' | 'oldest' | 'priority' | 'title' | 'agent'
   const [q, setQ] = useState('')
@@ -150,6 +154,13 @@ export default function TaskBoard({ onFlash, onAsk }) {
       }
       if (e?.detail?.tagMode) setTagMode(e.detail.tagMode)
       if (e?.detail?.dateRange) setDateRange(e.detail.dateRange)
+      if (e?.detail?.customStartDate) setCustomStartDate(e.detail.customStartDate)
+      if (e?.detail?.customEndDate) setCustomEndDate(e.detail.customEndDate)
+      if (e?.detail?.customRange) {
+        const cr = e.detail.customRange
+        if (cr.start || cr.startDate) setCustomStartDate(cr.start || cr.startDate)
+        if (cr.end || cr.endDate) setCustomEndDate(cr.end || cr.endDate)
+      }
       if (e?.detail?.sortBy) setSortBy(e.detail.sortBy)
       if (e?.detail?.taskId && tasks) {
         const found = tasks.find(t => String(t.id) === String(e.detail.taskId))
@@ -289,10 +300,19 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const activeDivision = useMemo(() => divisions.find(d => d.key === division) || null, [divisions, division])
   const tagCloud = useMemo(() => computeTagCloud(tasks, { divisionFilter: division }), [tasks, division])
   const presetStats = useMemo(() => computePresetStats(tasks, TAG_PRESETS, division), [tasks, division])
-  const dateStats = useMemo(() => computeDateRangeStats(tasks), [tasks])
+  const customRange = useMemo(() => {
+    if (dateRange !== 'custom') return null
+    return { start: customStartDate || null, end: customEndDate || null }
+  }, [dateRange, customStartDate, customEndDate])
+
+  const customRangeNorm = useMemo(() => {
+    return normalizeCustomDateRange(customRange)
+  }, [customRange])
+
+  const dateStats = useMemo(() => computeDateRangeStats(tasks, { customRange }), [tasks, customRange])
   const kanbanGroups = useMemo(
-    () => groupTasksByKanbanColumn(tasks, q, division, sortBy, selectedTag, tagMode, dateRange),
-    [tasks, q, division, sortBy, selectedTag, tagMode, dateRange]
+    () => groupTasksByKanbanColumn(tasks, q, division, sortBy, selectedTag, tagMode, dateRange, undefined, customRange),
+    [tasks, q, division, sortBy, selectedTag, tagMode, dateRange, customRange]
   )
   const totalKanbanTasks = useMemo(() => {
     return Object.values(kanbanGroups).reduce((acc, grp) => acc + grp.length, 0)
@@ -306,8 +326,8 @@ export default function TaskBoard({ onFlash, onAsk }) {
   )
 
   const list = useMemo(
-    () => filterTasks(tasks, { filter, q, division, sortBy, tag: selectedTag, tagMode, dateRange }),
-    [tasks, filter, q, division, sortBy, selectedTag, tagMode, dateRange]
+    () => filterTasks(tasks, { filter, q, division, sortBy, tag: selectedTag, tagMode, dateRange, customRange }),
+    [tasks, filter, q, division, sortBy, selectedTag, tagMode, dateRange, customRange]
   )
   const count = s => (tasks || []).filter(t => (s === 'all' || t.status === s) && (division === 'all' || matchTaskDivision(t, division))).length
 
@@ -324,8 +344,9 @@ export default function TaskBoard({ onFlash, onAsk }) {
       tag: selectedTag,
       tagMode,
       dateRange,
+      customRange,
     })
-  }, [tasks, viewMode, list, q, division, sortBy, selectedTag, tagMode, dateRange])
+  }, [tasks, viewMode, list, q, division, sortBy, selectedTag, tagMode, dateRange, customRange])
 
   const handleExport = useCallback((format) => {
     if (!tasks || exportableTasks.length === 0) {
@@ -339,6 +360,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
       tag: selectedTag,
       tagMode,
       dateRange,
+      customRange,
       q,
       sortBy,
     })
@@ -348,7 +370,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
     if (typeof window !== 'undefined' && window.__officeSound) {
       window.__officeSound.playSelect?.()
     }
-  }, [tasks, exportableTasks, viewMode, division, filter, selectedTag, tagMode, dateRange, q, sortBy, onFlash])
+  }, [tasks, exportableTasks, viewMode, division, filter, selectedTag, tagMode, dateRange, customRange, q, sortBy, onFlash])
 
   return (
     <>

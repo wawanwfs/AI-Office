@@ -1,9 +1,10 @@
 /**
  * Utilitas Murni Filter Preset Rentang Tanggal Task Kanban
- * Menyediakan definisi preset rentang waktu (hari ini, kemarin, 7 hari, 30 hari, semua),
+ * Menyediakan definisi preset rentang waktu (hari ini, kemarin, 7 hari, 30 hari, kustom, semua),
  * parser fleksibel berbagai format timestamp/created_at,
- * evaluator rentang waktu deterministik (sadar referensi waktu 'now'),
+ * evaluator rentang waktu deterministik (sadar referensi waktu 'now' & rentang kustom),
  * penghitung metrik statistik rentang tanggal,
+ * normalisasi & validasi rentang tanggal kustom,
  * dan pemformat tanggal ramah pengguna.
  */
 
@@ -13,6 +14,7 @@ export const DATE_RANGE_PRESETS = [
   { key: 'yesterday', label: 'Kemarin', shortLabel: 'Kemarin', icon: '⏮️', days: 2, description: 'Task dari hari kemarin' },
   { key: 'week', label: '7 Hari Terakhir', shortLabel: '7 Hari', icon: '🗓️', days: 7, description: 'Task dalam 7 hari terakhir' },
   { key: 'month', label: '30 Hari Terakhir', shortLabel: '30 Hari', icon: '📆', days: 30, description: 'Task dalam 30 hari terakhir' },
+  { key: 'custom', label: 'Rentang Kustom…', shortLabel: 'Kustom…', icon: '⚙️', days: null, description: 'Pilih rentang tanggal awal dan akhir secara manual' },
 ];
 
 export function getDateRangePreset(key) {
@@ -56,6 +58,140 @@ export function getStartOfDay(timestamp) {
   return d.getTime();
 }
 
+/**
+ * Mengonversi input string tanggal (YYYY-MM-DD), Date, atau timestamp ke milidetik.
+ * Bila isEndOfDay = true, waktu disetel ke batas akhir hari (23:59:59.999).
+ */
+export function parseDateInputToTimestamp(input, isEndOfDay = false) {
+  if (input == null || input === '') return null;
+
+  if (typeof input === 'number') {
+    if (isNaN(input) || !isFinite(input)) return null;
+    const ms = input < 10000000000 ? Math.round(input * 1000) : Math.round(input);
+    const d = new Date(ms);
+    if (isNaN(d.getTime())) return null;
+    if (isEndOfDay) {
+      d.setHours(23, 59, 59, 999);
+    } else {
+      d.setHours(0, 0, 0, 0);
+    }
+    return d.getTime();
+  }
+
+  if (input instanceof Date) {
+    if (isNaN(input.getTime())) return null;
+    const d = new Date(input.getTime());
+    if (isEndOfDay) {
+      d.setHours(23, 59, 59, 999);
+    } else {
+      d.setHours(0, 0, 0, 0);
+    }
+    return d.getTime();
+  }
+
+  if (typeof input === 'string') {
+    const s = input.trim();
+    if (!s) return null;
+    const ymdMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);
+    if (ymdMatch) {
+      const y = parseInt(ymdMatch[1], 10);
+      const m = parseInt(ymdMatch[2], 10) - 1;
+      const day = parseInt(ymdMatch[3], 10);
+      const d = new Date(y, m, day);
+      if (isNaN(d.getTime())) return null;
+      if (isEndOfDay) {
+        d.setHours(23, 59, 59, 999);
+      } else {
+        d.setHours(0, 0, 0, 0);
+      }
+      return d.getTime();
+    }
+    const parsed = Date.parse(s);
+    if (!isNaN(parsed)) {
+      const d = new Date(parsed);
+      if (isEndOfDay) {
+        d.setHours(23, 59, 59, 999);
+      } else {
+        d.setHours(0, 0, 0, 0);
+      }
+      return d.getTime();
+    }
+  }
+
+  return null;
+}
+
+/**
+ * Normalisasi objek rentang tanggal kustom { start, end } atau { startDate, endDate }.
+ */
+export function normalizeCustomDateRange(range) {
+  if (!range || typeof range !== 'object') {
+    return { start: null, end: null, startTs: null, endTs: null, isValid: true, isEmpty: true, isReversed: false };
+  }
+
+  const rawStart = range.start ?? range.startDate ?? (Array.isArray(range) ? range[0] : null);
+  const rawEnd = range.end ?? range.endDate ?? (Array.isArray(range) ? range[1] : null);
+
+  const startTs = parseDateInputToTimestamp(rawStart, false);
+  const endTs = parseDateInputToTimestamp(rawEnd, true);
+
+  const isEmpty = startTs == null && endTs == null;
+  const isReversed = startTs != null && endTs != null && startTs > endTs;
+  const isValid = !isReversed;
+
+  return {
+    start: rawStart ? String(rawStart) : null,
+    end: rawEnd ? String(rawEnd) : null,
+    startTs,
+    endTs,
+    isValid,
+    isEmpty,
+    isReversed,
+  };
+}
+
+/**
+ * Format string tanggal singkat ramah pengguna (contoh: "26 Okt 2026").
+ */
+export function formatSimpleDate(timestamp) {
+  if (timestamp == null) return '';
+  const d = new Date(timestamp);
+  if (isNaN(d.getTime())) return '';
+  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+}
+
+/**
+ * Format deskripsi rentang tanggal kustom (contoh: "20 Okt – 26 Okt 2026", "Dari 20 Okt 2026", "Hingga 26 Okt 2026").
+ */
+export function formatCustomDateRange(range) {
+  const norm = normalizeCustomDateRange(range);
+  if (norm.isEmpty) return 'Semua Tanggal';
+  if (norm.isReversed) return 'Rentang Tidak Valid (Awal > Akhir)';
+
+  if (norm.startTs != null && norm.endTs != null) {
+    const sDate = new Date(norm.startTs);
+    const eDate = new Date(norm.endTs);
+    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    if (sDate.getFullYear() === eDate.getFullYear()) {
+      if (sDate.getMonth() === eDate.getMonth()) {
+        if (sDate.getDate() === eDate.getDate()) {
+          return `${sDate.getDate()} ${months[sDate.getMonth()]} ${sDate.getFullYear()}`;
+        }
+        return `${sDate.getDate()} – ${eDate.getDate()} ${months[sDate.getMonth()]} ${sDate.getFullYear()}`;
+      }
+      return `${sDate.getDate()} ${months[sDate.getMonth()]} – ${eDate.getDate()} ${months[eDate.getMonth()]} ${sDate.getFullYear()}`;
+    }
+    return `${formatSimpleDate(norm.startTs)} – ${formatSimpleDate(norm.endTs)}`;
+  }
+
+  if (norm.startTs != null) {
+    return `Dari ${formatSimpleDate(norm.startTs)}`;
+  }
+
+  return `Hingga ${formatSimpleDate(norm.endTs)}`;
+}
+
 export function isTaskInDateRange(task, rangeKey = 'all', options = {}) {
   if (!task || typeof task !== 'object') return false;
   const key = String(rangeKey || 'all').toLowerCase().trim();
@@ -64,6 +200,15 @@ export function isTaskInDateRange(task, rangeKey = 'all', options = {}) {
   const taskTime = parseTaskTimestamp(task);
   if (taskTime == null) {
     return Boolean(options.includeUndated);
+  }
+
+  if (key === 'custom') {
+    const custom = normalizeCustomDateRange(options.customRange || options);
+    if (custom.isEmpty) return true;
+    if (!custom.isValid) return false;
+    if (custom.startTs != null && taskTime < custom.startTs) return false;
+    if (custom.endTs != null && taskTime > custom.endTs) return false;
+    return true;
   }
 
   const now = options.now != null ? (typeof options.now === 'number' ? options.now : new Date(options.now).getTime()) : Date.now();
@@ -99,11 +244,13 @@ export function computeDateRangeStats(tasks, options = {}) {
     yesterday: 0,
     week: 0,
     month: 0,
+    custom: 0,
     undated: 0,
   };
   if (!Array.isArray(tasks)) return stats;
 
   const now = options.now != null ? (typeof options.now === 'number' ? options.now : new Date(options.now).getTime()) : Date.now();
+  const customOpts = { ...options, now };
 
   for (const t of tasks) {
     if (!t || typeof t !== 'object') continue;
@@ -117,6 +264,7 @@ export function computeDateRangeStats(tasks, options = {}) {
     if (isTaskInDateRange(t, 'yesterday', { now })) stats.yesterday++;
     if (isTaskInDateRange(t, 'week', { now })) stats.week++;
     if (isTaskInDateRange(t, 'month', { now })) stats.month++;
+    if (isTaskInDateRange(t, 'custom', customOpts)) stats.custom++;
   }
 
   return stats;
@@ -154,10 +302,14 @@ export function formatTaskDate(task, options = {}) {
   return `${day} ${monthName} ${year}, ${timeStr}`;
 }
 
-export function formatDateRangeSummary(rangeKey, count) {
+export function formatDateRangeSummary(rangeKey, count, options = {}) {
   const preset = getDateRangePreset(rangeKey) || DATE_RANGE_PRESETS[0];
   if (preset.key === 'all') {
     return count != null ? `Semua Waktu (${count} task)` : 'Semua Waktu';
+  }
+  if (preset.key === 'custom') {
+    const rangeText = formatCustomDateRange(options.customRange || options);
+    return count != null ? `Rentang: ${rangeText} (${count} task)` : `Rentang: ${rangeText}`;
   }
   return count != null ? `Rentang: ${preset.label} (${count} task)` : `Rentang: ${preset.label}`;
 }
