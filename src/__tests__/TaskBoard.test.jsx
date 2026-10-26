@@ -118,7 +118,7 @@ describe('TaskBoard', () => {
 
     // Periksa strip filter divisi
     expect(screen.getByRole('group', { name: 'Filter berdasarkan divisi kerja' })).toBeTruthy()
-    const backendChip = screen.getByRole('button', { name: /Filter Backend & Data/i })
+    const backendChip = screen.getByRole('button', { name: /Filter.*Backend & Data/i })
     expect(backendChip).toBeTruthy()
 
     // Klik filter divisi Backend
@@ -147,7 +147,7 @@ describe('TaskBoard', () => {
 
     await waitFor(() => {
       expect(screen.getByRole('dialog', { name: 'Papan task' })).toBeTruthy()
-      const feChip = screen.getByRole('button', { name: /Filter Frontend & Design/i })
+      const feChip = screen.getByRole('button', { name: /Filter.*Frontend & Design/i })
       expect(feChip.getAttribute('aria-pressed')).toBe('true')
     })
   })

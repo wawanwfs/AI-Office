@@ -1,3 +1,37 @@
+## 2026-10-26 10:08 WIB — Siklus 84: Penyaringan Divisi Kampus (kanban_spec.js), Strip Chip Tim Interaktif di TaskBoard, Integrasi Fokus 3D Pod & Aksi Kanban dari AgentInspector
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Spesifikasi Filter Divisi & Metrik Tim (`src/scene/parts/kanban_spec.js`, `src/__tests__/kanban_spec.test.js`):**
+     - Mengintegrasikan pembagian divisi kampus 26 agen (`team_spec.js`: `core-be`, `fe-design`, `ops-sec`, `qa-gov`, `prod-growth`, `ai-cs`) ke dalam mesin kanban sprint:
+       - `ROLE_LABELS` & `getTaskRoleLabel(role)`: konversi role teknis (`be`, `fe`, `ops`, `qa`, `pm`, `ai`) ke label human-readable ('Backend', 'Frontend', 'DevOps', 'QA', 'Product', 'AI Engine').
+       - `matchTaskDivision(task, divisionKey)`: pencocokan cerdas multi-dimensi (mencocokkan role langsung, pemetaan role tim via `findTeamByRole`, pemetaan gateway ID / nama agen via `findTeamByAgent`, dan pencocokan nama tim `shortName`).
+       - `extractTaskDivisions(tasks)`: mengekstrak opsi 'Semua' serta 6 divisi kampus lengkap dengan statistik agregat (`count`, `done`, `running`, `review`, `failed`, `pending`, `pct`, dan warna aksen divisi).
+       - `groupTasksByKanbanColumn(tasks, query, divisionFilter)`: menyaring 4 kolom kanban secara real-time berdasarkan divisi terpilih.
+       - `computeSprintMetrics(tasks, divisionFilter)`: kalkulasi metrik sprint terisolasi per divisi terpilih.
+       - `filterTasks(tasks, { filter, q, division, role })`: mendukung filter terpadu untuk tampilan daftar maupun kanban.
+  2. **Strip Chip Filter Divisi & Tombol Fokus 3D di TaskBoard (`src/components/TaskBoard.jsx`, `src/index.css`, `src/__tests__/TaskBoard.test.jsx`):**
+     - Menambahkan strip filter divisi scrollable horizontal (`.division-filter-strip`) dengan indikator warna dot divisi, judul divisi, badge counter jumlah task, dan `aria-label`/`aria-pressed` berstandar aksesibilitas.
+     - Subtitle header papan task kini mencerminkan metrik divisi aktif secara kontekstual: `{total_divisi}/{total_semua} task ({divisi}) · {done}/{total} ({pct}%) selesai`.
+     - Tombol cepat interaktif `Fokus Pod 3D ↗` muncul otomatis saat divisi dipilih, memicu pergerakan kamera 3D `window.__focusTeam(division)` langsung ke pod meja kerja tim di lantai masing-masing (Lt. 1, 2, atau 3).
+     - Pada modal detail task, menambahkan tombol `🔍 Filter Divisi Terkait` dan `🎯 Fokus Pod Tim 3D ↗` untuk navigasi kilat antar divisi.
+     - Penanganan event `wfs-open-task-board` kini mendukung parameter `division` dan `role` untuk auto-filter saat dibuka dari luar.
+  3. **Aksi Interaktif Terhubung di AgentInspector (`src/components/AgentInspector.jsx`, `src/__tests__/agent_inspector.test.jsx`):**
+     - Kartu task aktif yang sedang dikerjakan agen kini menjadi tombol interaktif beranimasi yang dapat diklik untuk langsung membuka detail task tersebut di papan kanban (`wfs-open-task-board` dengan `{ taskId, view: 'kanban' }`).
+     - Menambahkan tombol aksi cepat `📋 Papan Kanban (Divisi)` di bawah profil agen untuk membuka papan sprint kanban divisi tim agen secara instan.
+
+- **Bukti terukur:**
+  - **Vitest:** **1561/1561 passed (130 test file)** (+9 tests baru terintegrasi, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/components/TaskBoard.jsx src/components/AgentInspector.jsx src/scene/parts/kanban_spec.js src/__tests__/TaskBoard.test.jsx src/__tests__/agent_inspector.test.jsx src/__tests__/kanban_spec.test.js`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1683.49 KiB; chunk `OfficeScene-JPNPIG-7.js` 873.39 KB / gzip 236.92 KB, `index-DyzH0snz.js` 328.01 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-DyzH0snz.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **521.351 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `shot.sh`: Screenshot ck.png **587.471 bytes** (>500 KB).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** evaluasi optimasi chunking dinamis OfficeScene atau visualisasi animasi perpindahan kartu kanban.
+
 ## 2026-10-26 10:35 WIB — Siklus 83: Tampilan Kanban Berkolom Interaktif (kanban_spec.js), Switcher Mode Daftar ↔ Kanban di TaskBoard, Integrasi Event Kustom 3D Whiteboard (wfs-open-task-board) & Metrik Agregat Sprint
 
 - **Yang diperbaiki & ditingkatkan:**
