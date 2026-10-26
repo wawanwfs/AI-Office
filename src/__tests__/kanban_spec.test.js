@@ -2,8 +2,12 @@ import { describe, it, expect } from 'vitest';
 import {
   KANBAN_COLUMNS,
   ROLE_COLORS,
+  ROLE_LABELS,
   getTaskRoleBadgeColor,
+  getTaskRoleLabel,
   getKanbanColumnKey,
+  matchTaskDivision,
+  extractTaskDivisions,
   groupTasksByKanbanColumn,
   computeSprintMetrics,
   filterTasks,
@@ -166,5 +170,109 @@ describe('kanban_spec — normalisasi huruf besar/kecil & spasi', () => {
     expect(getKanbanColumnKey('QA')).toBe('review');
     expect(getKanbanColumnKey('Pending')).toBe('pending');
     expect(getKanbanColumnKey(' ERROR ')).toBe('review');
+  });
+});
+
+describe('kanban_spec — ROLE_LABELS & getTaskRoleLabel', () => {
+  it('memberikan label teks human-readable untuk setiap role teknis', () => {
+    expect(ROLE_LABELS.be).toBe('Backend');
+    expect(ROLE_LABELS.fe).toBe('Frontend');
+    expect(ROLE_LABELS.ops).toBe('DevOps');
+    expect(ROLE_LABELS.qa).toBe('QA');
+    expect(ROLE_LABELS.pm).toBe('Product');
+    expect(ROLE_LABELS.ai).toBe('AI Engine');
+
+    expect(getTaskRoleLabel('be')).toBe('Backend');
+    expect(getTaskRoleLabel('fe')).toBe('Frontend');
+    expect(getTaskRoleLabel('unknown')).toBe('UNKNOWN');
+    expect(getTaskRoleLabel('')).toBe('General');
+    expect(getTaskRoleLabel(null)).toBe('General');
+  });
+});
+
+describe('kanban_spec — matchTaskDivision & extractTaskDivisions', () => {
+  const tasks = [
+    { id: 10, title: 'Optimasi Postgres', role: 'backend', agent_id: 'be1', status: 'done' },
+    { id: 11, title: 'UI Dashboard', role: 'frontend', agent_id: 'fe1', status: 'running' },
+    { id: 12, title: 'CI/CD Pipeline', role: 'devops', agent_id: 'devops1', status: 'review' },
+    { id: 13, title: 'E2E Testing', role: 'qa', agent_id: 'qa1', status: 'failed' },
+    { id: 14, title: 'PRD Sprint 84', role: 'pm', agent_id: 'pm1', status: 'pending' },
+    { id: 15, title: 'OmniRoute LLM fine-tune', role: 'ai', agent_id: 'ai-cs', status: 'done' },
+  ];
+
+  it('matchTaskDivision mencocokkan task dengan berbagai variasi identifier divisi', () => {
+    expect(matchTaskDivision(tasks[0], 'all')).toBe(true);
+    expect(matchTaskDivision(tasks[0], 'core-be')).toBe(true);
+    expect(matchTaskDivision(tasks[0], 'Backend')).toBe(true);
+    expect(matchTaskDivision(tasks[0], 'backend')).toBe(true);
+    expect(matchTaskDivision(tasks[0], 'fe-design')).toBe(false);
+
+    expect(matchTaskDivision(tasks[1], 'fe-design')).toBe(true);
+    expect(matchTaskDivision(tasks[1], 'Frontend')).toBe(true);
+
+    expect(matchTaskDivision(tasks[2], 'ops-sec')).toBe(true);
+    expect(matchTaskDivision(tasks[3], 'qa-gov')).toBe(true);
+    expect(matchTaskDivision(tasks[4], 'prod-growth')).toBe(true);
+    expect(matchTaskDivision(tasks[5], 'ai-cs')).toBe(true);
+
+    expect(matchTaskDivision(null, 'core-be')).toBe(false);
+    expect(matchTaskDivision(tasks[0], null)).toBe(true);
+  });
+
+  it('extractTaskDivisions menghasilkan opsi Semua + 6 divisi dengan statistik lengkap', () => {
+    const divs = extractTaskDivisions(tasks);
+    expect(divs).toHaveLength(7);
+    expect(divs[0].key).toBe('all');
+    expect(divs[0].count).toBe(6);
+    expect(divs[0].done).toBe(2);
+    expect(divs[0].running).toBe(1);
+
+    const beDiv = divs.find(d => d.key === 'core-be');
+    expect(beDiv).toBeTruthy();
+    expect(beDiv.count).toBe(1);
+    expect(beDiv.done).toBe(1);
+    expect(beDiv.pct).toBe(100);
+
+    const feDiv = divs.find(d => d.key === 'fe-design');
+    expect(feDiv.count).toBe(1);
+    expect(feDiv.running).toBe(1);
+  });
+
+  it('groupTasksByKanbanColumn menyaring task hanya untuk divisi yang dipilih', () => {
+    const groupedAll = groupTasksByKanbanColumn(tasks, '', 'all');
+    expect(groupedAll.done).toHaveLength(2); // id 10 & 15
+
+    const groupedBe = groupTasksByKanbanColumn(tasks, '', 'core-be');
+    expect(groupedBe.done).toHaveLength(1);
+    expect(groupedBe.done[0].id).toBe(10);
+    expect(groupedBe.running).toHaveLength(0);
+    expect(groupedBe.review).toHaveLength(0);
+
+    const groupedFe = groupTasksByKanbanColumn(tasks, '', 'fe-design');
+    expect(groupedFe.running).toHaveLength(1);
+    expect(groupedFe.running[0].id).toBe(11);
+  });
+
+  it('computeSprintMetrics menghitung metrik terisolasi per divisi', () => {
+    const beMetrics = computeSprintMetrics(tasks, 'core-be');
+    expect(beMetrics.total).toBe(1);
+    expect(beMetrics.done).toBe(1);
+    expect(beMetrics.pct).toBe(100);
+
+    const feMetrics = computeSprintMetrics(tasks, 'fe-design');
+    expect(feMetrics.total).toBe(1);
+    expect(feMetrics.running).toBe(1);
+    expect(feMetrics.done).toBe(0);
+    expect(feMetrics.pct).toBe(0);
+  });
+
+  it('filterTasks menyaring berdasarkan division/role', () => {
+    const beTasks = filterTasks(tasks, { division: 'core-be' });
+    expect(beTasks).toHaveLength(1);
+    expect(beTasks[0].id).toBe(10);
+
+    const feTasks = filterTasks(tasks, { role: 'frontend' });
+    expect(feTasks).toHaveLength(1);
+    expect(feTasks[0].id).toBe(11);
   });
 });

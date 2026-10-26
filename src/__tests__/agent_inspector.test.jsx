@@ -124,4 +124,49 @@ describe('AgentInspector — kartu profil agen 3D', () => {
     expect(onOpenConsole).toHaveBeenCalledTimes(1)
     expect(onClose).toHaveBeenCalledTimes(1)
   })
+
+  it('mengklik kartu task aktif atau tombol papan kanban memicu event wfs-open-task-board', () => {
+    window.__wfsRunningTasks = {
+      byAgent: {
+        be1: { id: 88, title: 'Optimasi Cache Redis' }
+      }
+    }
+    const onClose = vi.fn()
+    const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+    const budiAgent = { name: 'BUDI', role: 'Backend Dev', floor: 1 }
+
+    render(
+      <AgentInspector
+        agent={budiAgent}
+        onClose={onClose}
+        onChatWith={vi.fn()}
+      />
+    )
+
+    // Klik tombol task aktif
+    const activeBtn = screen.getByRole('button', { name: /Mengerjakan Task #88/i })
+    expect(activeBtn).toBeTruthy()
+    fireEvent.click(activeBtn)
+    expect(dispatchSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'wfs-open-task-board',
+        detail: { taskId: 88, view: 'kanban' }
+      })
+    )
+    expect(onClose).toHaveBeenCalledTimes(1)
+
+    // Klik tombol Papan Kanban Divisi
+    const kanbanBtn = screen.getByRole('button', { name: /Papan Kanban \(Backend\)/i })
+    expect(kanbanBtn).toBeTruthy()
+    fireEvent.click(kanbanBtn)
+    expect(dispatchSpy).toHaveBeenCalledWith(
+      expect.objectContaining({
+        type: 'wfs-open-task-board',
+        detail: { view: 'kanban', division: 'core-be' }
+      })
+    )
+
+    delete window.__wfsRunningTasks
+    dispatchSpy.mockRestore()
+  })
 })

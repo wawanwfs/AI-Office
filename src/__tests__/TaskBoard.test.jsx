@@ -103,4 +103,52 @@ describe('TaskBoard', () => {
       expect(screen.getByRole('region', { name: 'Papan kanban sprint' })).toBeTruthy()
     })
   })
+
+  it('mendukung penyaringan per divisi kampus dan tombol fokus 3D pod', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks }) })))
+    const focusTeamMock = vi.fn()
+    window.__focusTeam = focusTeamMock
+
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />)
+    fireEvent.click(screen.getByText('Papan'))
+    await waitFor(() => screen.getByText(/Buat login/))
+
+    // Switch ke Kanban
+    fireEvent.click(screen.getByRole('button', { name: 'Tampilan Papan Kolom' }))
+
+    // Periksa strip filter divisi
+    expect(screen.getByRole('group', { name: 'Filter berdasarkan divisi kerja' })).toBeTruthy()
+    const backendChip = screen.getByRole('button', { name: /Filter Backend & Data/i })
+    expect(backendChip).toBeTruthy()
+
+    // Klik filter divisi Backend
+    fireEvent.click(backendChip)
+    expect(backendChip.getAttribute('aria-pressed')).toBe('true')
+
+    // Subtitle terbarui dengan metrik divisi Backend
+    expect(screen.getByText(/1\/2 task \(Backend\)/i)).toBeTruthy()
+
+    // Tombol Fokus Pod 3D tampil dan dapat diklik
+    const focusBtn = screen.getByRole('button', { name: /Fokus kamera 3D ke pod/i })
+    expect(focusBtn).toBeTruthy()
+    fireEvent.click(focusBtn)
+    expect(focusTeamMock).toHaveBeenCalledWith('core-be')
+
+    delete window.__focusTeam
+  })
+
+  it('menerima event wfs-open-task-board dengan parameter division dan membuka filter langsung', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks }) })))
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />)
+
+    act(() => {
+      window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { view: 'kanban', division: 'fe-design' } }))
+    })
+
+    await waitFor(() => {
+      expect(screen.getByRole('dialog', { name: 'Papan task' })).toBeTruthy()
+      const feChip = screen.getByRole('button', { name: /Filter Frontend & Design/i })
+      expect(feChip.getAttribute('aria-pressed')).toBe('true')
+    })
+  })
 })

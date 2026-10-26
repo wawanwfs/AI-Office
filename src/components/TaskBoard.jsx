@@ -7,19 +7,25 @@ import { IconBoard, IconClose, IconPlay, IconRotate, IconList, IconKanban } from
 import {
   KANBAN_COLUMNS,
   getTaskRoleBadgeColor,
+  getTaskRoleLabel,
+  matchTaskDivision,
   groupTasksByKanbanColumn,
   computeSprintMetrics,
+  extractTaskDivisions,
+  filterTasks,
 } from '../scene/parts/kanban_spec'
+import { findTeamByRole, findTeamByAgent } from '../scene/parts/team_spec'
 
 const ST = { done: ['Selesai', '#10E5A0'], running: ['Jalan', '#F59E0B'], review: ['Review', '#448AFF'], failed: ['Gagal', '#ef4444'], pending: ['Antri', '#9aa7b8'] }
 const FILTERS = [['all', 'Semua'], ['pending', 'Antri'], ['running', 'Jalan'], ['done', 'Selesai'], ['failed', 'Gagal']]
 
-// Papan Task: daftar nyata dari task engine, filter, kanban view, detail, jalankan per task.
+// Papan Task: daftar nyata dari task engine, filter divisi/status, kanban view, detail, jalankan per task.
 export default function TaskBoard({ onFlash, onAsk }) {
   const [open, setOpen] = useState(false)
   const [tasks, setTasks] = useState(null)
   const [err, setErr] = useState(false)
   const [filter, setFilter] = useState('all')
+  const [division, setDivision] = useState('all')
   const [viewMode, setViewMode] = useState('list') // 'list' | 'kanban'
   const [q, setQ] = useState('')
   const [sel, setSel] = useState(null)
@@ -46,6 +52,8 @@ export default function TaskBoard({ onFlash, onAsk }) {
       setOpen(true)
       if (e?.detail?.view) setViewMode(e.detail.view)
       if (e?.detail?.filter) setFilter(e.detail.filter)
+      if (e?.detail?.division) setDivision(e.detail.division)
+      else if (e?.detail?.role) setDivision(e.detail.role)
       if (e?.detail?.taskId && tasks) {
         const found = tasks.find(t => String(t.id) === String(e.detail.taskId))
         if (found) setSel(found)
@@ -85,11 +93,14 @@ export default function TaskBoard({ onFlash, onAsk }) {
   }
   const ask = (t) => onAsk({ title: `Jalankan task #${t.id}?`, body: `"${t.title}" akan dikerjakan oleh ${t.agent_id} dan memanggil model AI (memakai kuota API).`, ok: 'Jalankan', onOk: () => run(t) })
 
-  const list = (tasks || []).filter(t => (filter === 'all' || t.status === filter) && (!q || (t.title + t.agent_id).toLowerCase().includes(q.toLowerCase())))
-    .sort((a, b) => Number(b.id) - Number(a.id))
-  const count = s => (tasks || []).filter(t => s === 'all' || t.status === s).length
-  const kanbanGroups = useMemo(() => groupTasksByKanbanColumn(tasks, q), [tasks, q])
-  const metrics = useMemo(() => computeSprintMetrics(tasks), [tasks])
+  const divisions = useMemo(() => extractTaskDivisions(tasks), [tasks])
+  const activeDivision = useMemo(() => divisions.find(d => d.key === division) || null, [divisions, division])
+  const kanbanGroups = useMemo(() => groupTasksByKanbanColumn(tasks, q, division), [tasks, q, division])
+  const metrics = useMemo(() => computeSprintMetrics(tasks, division), [tasks, division])
+  const overallMetrics = useMemo(() => computeSprintMetrics(tasks), [tasks])
+
+  const list = useMemo(() => filterTasks(tasks, { filter, q, division }), [tasks, filter, q, division])
+  const count = s => (tasks || []).filter(t => (s === 'all' || t.status === s) && (division === 'all' || matchTaskDivision(t, division))).length
 
   return (
     <>
@@ -103,7 +114,13 @@ export default function TaskBoard({ onFlash, onAsk }) {
             <div className="t">
               Papan Task
               <small>
-                {tasks ? `${tasks.length} task · ${metrics.done}/${metrics.total} (${metrics.pct}%) selesai${metrics.running ? ` · ● ${metrics.running} jalan` : ''}` : 'memuat…'}
+                {tasks ? (
+                  division !== 'all' ? (
+                    `${metrics.total}/${overallMetrics.total} task (${activeDivision?.label || division}) · ${metrics.done}/${metrics.total} (${metrics.pct}%) selesai${metrics.running ? ` · ● ${metrics.running} jalan` : ''}`
+                  ) : (
+                    `${tasks.length} task · ${metrics.done}/${metrics.total} (${metrics.pct}%) selesai${metrics.running ? ` · ● ${metrics.running} jalan` : ''}`
+                  )
+                ) : 'memuat…'}
               </small>
             </div>
             {!sel && (
@@ -141,7 +158,38 @@ export default function TaskBoard({ onFlash, onAsk }) {
             <div style={{ padding: 14, overflowY: 'auto' }}>
               <button className="btn" onClick={() => setSel(null)} style={{ marginBottom: 10 }}>← Kembali</button>
               <h3 style={{ fontSize: 15, marginBottom: 6 }}>#{sel.id} {sel.title}</h3>
-              <p className="note" style={{ marginBottom: 8 }}>Agent: {sel.agent_id} · Role: {sel.role} · <b style={{ color: ST[sel.status]?.[1] }}>{ST[sel.status]?.[0] || sel.status}</b></p>
+              <p className="note" style={{ marginBottom: 8 }}>
+                Agent: {sel.agent_id} · Role: {sel.role} ({getTaskRoleLabel(sel.role)}) · <b style={{ color: ST[sel.status]?.[1] }}>{ST[sel.status]?.[0] || sel.status}</b>
+              </p>
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                <button
+                  type="button"
+                  className="btn"
+                  style={{ minHeight: 28, padding: '0 8px', fontSize: 11 }}
+                  onClick={() => {
+                    const team = findTeamByRole(sel.role) || findTeamByAgent(sel.agent_id)
+                    if (team) setDivision(team.key)
+                    setSel(null)
+                  }}
+                  title="Filter Kanban berdasarkan divisi task ini"
+                >
+                  🔍 Filter Divisi {(findTeamByRole(sel.role) || findTeamByAgent(sel.agent_id))?.shortName || 'Terkait'}
+                </button>
+                <button
+                  type="button"
+                  className="btn"
+                  style={{ minHeight: 28, padding: '0 8px', fontSize: 11 }}
+                  onClick={() => {
+                    const team = findTeamByRole(sel.role) || findTeamByAgent(sel.agent_id)
+                    if (team && typeof window !== 'undefined' && window.__focusTeam) {
+                      window.__focusTeam(team.key)
+                    }
+                  }}
+                  title="Fokus kamera 3D ke pod tim pelaksana task ini"
+                >
+                  🎯 Fokus Pod Tim 3D ↗
+                </button>
+              </div>
               {(() => { const fl = parseFileList(sel.files); return fl.length > 0 && <><label className="note">File dihasilkan</label><pre className="note" style={{ whiteSpace: 'pre-wrap', margin: '4px 0 10px', color: '#cfd8e3' }}>{fl.join('\n')}</pre></> })()}
               {sel.review && <><label className="note">Ulasan QA</label><div className="msg" style={{ maxWidth: '100%', marginTop: 4, fontSize: 13 }}>{sel.review}</div></>}
               {sel.status !== 'running' && sel.status !== 'done' && (
@@ -160,7 +208,47 @@ export default function TaskBoard({ onFlash, onAsk }) {
           ) : (
             <>
               <div style={{ padding: '10px 12px 0' }}>
-                <input className="fld" aria-label="Cari task" placeholder="Cari judul atau agent…" value={q} onChange={e => setQ(e.target.value)} />
+                <input className="fld" aria-label="Cari task" placeholder="Cari judul, agent, atau role…" value={q} onChange={e => setQ(e.target.value)} />
+                {/* Strip Filter Divisi / Tim Kampus */}
+                {tasks && (
+                  <div className="division-filter-strip" role="group" aria-label="Filter berdasarkan divisi kerja">
+                    {divisions.map((div) => {
+                      const isActive = division === div.key
+                      return (
+                        <button
+                          key={div.key}
+                          type="button"
+                          className={'div-chip' + (isActive ? ' active' : '')}
+                          onClick={() => setDivision(div.key)}
+                          aria-pressed={isActive}
+                          aria-label={div.key === 'all' ? 'Tampilkan semua divisi' : `Filter divisi ${div.fullName || div.label}`}
+                          title={div.key === 'all' ? 'Tampilkan semua divisi' : `Filter ${div.fullName || div.label}: ${div.count} task (${div.done || 0} selesai)`}
+                        >
+                          <span className="div-chip-dot" style={{ background: div.color }} aria-hidden="true" />
+                          <span className="div-chip-label">{div.label}</span>
+                          <span className="div-chip-count">
+                            {div.count}
+                          </span>
+                        </button>
+                      )
+                    })}
+                    {division !== 'all' && (
+                      <button
+                        type="button"
+                        className="div-chip-focus-btn"
+                        onClick={() => {
+                          if (typeof window !== 'undefined' && window.__focusTeam) {
+                            window.__focusTeam(division)
+                          }
+                        }}
+                        title={`Fokus kamera 3D ke pod ${activeDivision?.fullName || division}`}
+                        aria-label={`Fokus kamera 3D ke pod ${activeDivision?.fullName || division}`}
+                      >
+                        <span>Fokus Pod 3D ↗</span>
+                      </button>
+                    )}
+                  </div>
+                )}
                 {viewMode === 'list' && (
                   <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap', marginBottom: 8 }}>
                     {FILTERS.map(([k, l]) => <button key={k} className={'btn' + (filter === k ? ' primary' : '')} style={{ minHeight: 34, padding: '0 10px', fontSize: 12 }} aria-pressed={filter === k} onClick={() => setFilter(k)}>{l} {count(k)}</button>)}

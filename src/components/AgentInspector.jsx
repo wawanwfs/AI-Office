@@ -2,6 +2,7 @@ import React, { useEffect } from 'react'
 import { IconClose, IconChat, IconUser } from './Icons'
 import { getAgentCompetency } from '../scene/parts/agent_competencies.js'
 import { resolveAgentId } from '../scene/parts/running_tasks.js'
+import { findTeamByAgent } from '../scene/parts/team_spec.js'
 
 // Kartu Inspektur Agen Interaktif — Tampil saat agen 3D diklik di ruangan
 export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloor, onOpenConsole }) {
@@ -131,15 +132,43 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
 
         {/* Live Active Task (bila ada task aktif yang dikerjakan) */}
         {activeTask && activeTask.id && activeTask.id !== '?' ? (
-          <div style={{ background: 'rgba(16,229,160,0.08)', border: '1px solid rgba(16,229,160,0.25)', borderRadius: 12, padding: '10px 12px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: 'var(--green)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
-              <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 8px var(--green)' }} />
-              Mengerjakan Task #{activeTask.id}
+          <button
+            type="button"
+            className="agent-active-task-btn"
+            onClick={() => {
+              try {
+                window.dispatchEvent(new CustomEvent('wfs-open-task-board', {
+                  detail: { taskId: activeTask.id, view: 'kanban' }
+                }))
+              } catch { /* ignore */ }
+              onClose()
+            }}
+            title={`Buka task #${activeTask.id} di Papan Kanban`}
+            aria-label={`Mengerjakan Task #${activeTask.id}: ${activeTask.title}. Klik untuk buka detail di Papan Kanban.`}
+            style={{
+              textAlign: 'left',
+              width: '100%',
+              background: 'rgba(16,229,160,0.08)',
+              border: '1px solid rgba(16,229,160,0.25)',
+              borderRadius: 12,
+              padding: '10px 12px',
+              cursor: 'pointer',
+              color: 'inherit',
+              font: 'inherit',
+              transition: 'background .15s, border-color .15s',
+            }}
+          >
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 10, color: 'var(--green)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                <span style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 8px var(--green)' }} />
+                Mengerjakan Task #{activeTask.id}
+              </div>
+              <span style={{ fontSize: 9.5, color: 'var(--teal)', fontWeight: 700 }}>KANBAN ↗</span>
             </div>
             <div style={{ fontSize: 12, color: '#fff', fontWeight: 600, lineHeight: 1.35 }}>
               {activeTask.title}
             </div>
-          </div>
+          </button>
         ) : null}
 
         {/* Profil Kompetensi & Stack Teknologi */}
@@ -216,6 +245,34 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
             🖥️ Buka Konsol Software House
           </button>
         )}
+
+        <button
+          type="button"
+          className="btn"
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            width: '100%',
+            fontWeight: 600,
+            background: 'rgba(255,255,255,0.05)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            color: '#cbd5e1',
+          }}
+          onClick={() => {
+            const team = findTeamByAgent(agent.name)
+            try {
+              window.dispatchEvent(new CustomEvent('wfs-open-task-board', {
+                detail: { view: 'kanban', division: team?.key || 'all' }
+              }))
+            } catch { /* ignore */ }
+            onClose()
+          }}
+          title={`Buka papan sprint kanban untuk divisi ${findTeamByAgent(agent.name)?.name || agent.name}`}
+        >
+          📋 Papan Kanban {findTeamByAgent(agent.name)?.shortName ? `(${findTeamByAgent(agent.name).shortName})` : ''}
+        </button>
 
         <button
           className="btn primary"
