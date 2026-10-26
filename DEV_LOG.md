@@ -1,3 +1,33 @@
+## 2026-10-26 22:30 WIB — Siklus 101: Filter Preset Rentang Tanggal Task Kanban (kanban_date.js, Preset Hari Ini / Kemarin / 7 Hari / 30 Hari, IconCalendar, Integrasi filterTasks/kanbanGroups, Stempel Waktu & Ekspor)
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Modul Utilitas Murni Rentang Tanggal (`src/lib/kanban_date.js`, `src/__tests__/kanban_date.test.js`):**
+     - Mengembangkan spesifikasi preset rentang waktu terstruktur (`DATE_RANGE_PRESETS`): `all` (Semua Waktu), `today` (Hari Ini), `yesterday` (Kemarin), `week` (7 Hari Terakhir), dan `month` (30 Hari Terakhir).
+     - Mengembangkan parser fleksibel multi-format stempel waktu task (`parseTaskTimestamp`), menangani epoch detik (UNIX), epoch milidetik, string numerik, ISO 8601 UTC date string, dan instans `Date`, dengan resolusi fallback ke `created_at`, `createdAt`, `updated_at`, `updatedAt`, `timestamp`, dan `date`.
+     - Mengembangkan evaluator rentang waktu deterministik (`isTaskInDateRange`) yang sadar batas harian (`getStartOfDay`) dan referensi waktu eksplisit (`options.now`) untuk pengujian bebas flake.
+     - Menyediakan utilitas penyaring array murni (`filterTasksByDate`), agregator metrik sebaran tanggal real-time (`computeDateRangeStats`), pemformat tanggal lokal ramah pengguna (`formatTaskDate`: "Hari ini, HH:MM", "Kemarin, HH:MM", atau "DD MMM, HH:MM"), serta generator ringkasan deskriptif (`formatDateRangeSummary`).
+  2. **Integrasi Spesifikasi Kanban & Ekspor Data (`src/scene/parts/kanban_spec.js`, `src/lib/kanban_export.js`, `src/__tests__/kanban_spec.test.js`, `src/__tests__/kanban_export.test.js`):**
+     - Mengintegrasikan filter `dateRange` dan parameter waktu `now` ke dalam fungsi inti `groupTasksByKanbanColumn` dan `filterTasks` secara backward-compatible.
+     - Menyematkan kolom `Tanggal` pada berkas CSV hasil ekspor RFC 4180 dan metadata `filters.date_range` pada berkas JSON.
+     - Menambahkan penanda rentang tanggal ke dalam nama berkas ekspor otomatis (misal: `wfs-tasks_today_2026-10-26.csv`).
+  3. **Antarmuka & Pengalaman Pengguna Papan Task (`src/components/Icons.jsx`, `src/components/TaskBoard.jsx`, `src/index.css`, `src/__tests__/TaskBoard.test.jsx`):**
+     - Menghadirkan ikon SVG vektor presisi baru `IconCalendar` di `Icons.jsx`.
+     - Menyediakan kontrol selektor rentang tanggal `.task-date-container` di toolbar papan task lengkap dengan ikon kalender, badge hitungan task per rentang real-time, tooltip deskriptif, dan tombol reset instan `✕` saat filter aktif.
+     - Menampilkan indikator stempel waktu pada panel detail task (`Waktu: Hari ini, HH:MM`) jika task memiliki atribut tanggal.
+     - Menghubungkan state `dateRange` dengan ekspor CSV/JSON adaptif dan event `wfs-open-task-board`.
+
+- **Bukti terukur:**
+  - **Vitest:** **1818/1818 passed (137 test file)** (+31 tests baru: 23 test di `kanban_date.test.js`, 2 test di `kanban_spec.test.js`, 1 test di `kanban_export.test.js`, 3 test di `TaskBoard.test.jsx`, dan 2 test pendukung; 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/lib/kanban_date.js src/lib/kanban_export.js src/scene/parts/kanban_spec.js src/components/Icons.jsx src/components/TaskBoard.jsx src/__tests__/kanban_date.test.js src/__tests__/kanban_spec.test.js src/__tests__/kanban_export.test.js src/__tests__/TaskBoard.test.jsx`).
+  - **Build:** Berhasil (exit 0, 37 precache entries 1766.37 KiB; `OfficeScene` 166.74 KB / gzip 57.13 KB, `index` 196.76 KB / gzip 54.58 kB, `vendor-three` 715.76 KB, `vendor-react` 189.63 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-_KK2ETbg.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `shot.sh` (DISPLAY=:0): Screenshot visual **680.358 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** indikator status sinkronisasi WebSocket offline/reconnect dan preset rentang tanggal kustom (custom date picker).
+
 ## 2026-10-26 21:50 WIB — Siklus 100: Ekspor Ringkasan Task Kanban (CSV/JSON), Utilitas RFC 4180 dengan UTF-8 BOM, Serialisasi Terstruktur & Akses Cepat Toolbar Header
 
 - **Yang diperbaiki & ditingkatkan:**
