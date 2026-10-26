@@ -161,8 +161,6 @@ class H(http.server.SimpleHTTPRequestHandler):
             return self._proxy()
         self.send_response(404); self.end_headers()
 
-    def do_GET_static_guard(self): pass
-
 _orig_send_head = http.server.SimpleHTTPRequestHandler.send_head
 def _send_head_with_token(self):
     f, code, headers = None, None, None
