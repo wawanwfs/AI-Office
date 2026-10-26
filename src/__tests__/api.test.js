@@ -7,6 +7,10 @@ const mock = (status, data) => vi.stubGlobal('fetch', vi.fn(async () => ({ ok: s
 
 describe('api', () => {
   it('membaca token dari meta', () => expect(uiToken()).toBe('tok'))
+  it('uiToken → kosong bila meta token tidak ada', () => {
+    document.head.innerHTML = ''
+    expect(uiToken()).toBe('')
+  })
   it('GET tanpa token', async () => {
     mock(200, { a: 1 })
     expect(await api('/tasks')).toEqual({ a: 1 })
@@ -35,5 +39,15 @@ describe('api', () => {
   it('detail objek di-stringify', async () => {
     mock(422, { detail: { f: 1 } })
     await expect(api('x')).rejects.toThrow('{"f":1}')
+  })
+  it('meneruskan signal abort ke fetch', async () => {
+    mock(200, {})
+    const ac = new AbortController()
+    await api('x', { signal: ac.signal })
+    expect(fetch.mock.calls[0][1].signal).toBe(ac.signal)
+  })
+  it('respons sukses non-JSON (mis. 204) → null, tanpa throw', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 204, json: async () => { throw new Error('no body') } })))
+    expect(await api('/ping')).toBeNull()
   })
 })
