@@ -7,6 +7,15 @@ export const BOUNDS = { xMin: -15.9, xMax: 15.9, zMin: -12.4, zMax: 12.4 };
 
 export const ARRIVE = 0.2;
 
+// Selisih sudut terpendek (wrap ke [-π, π]) — dipakai interpolasi rotasi halus
+// walker (slerp/lerp sudut terpendek) supaya tidak berputar memutar.
+export function angleDelta(target, current) {
+  let d = target - current;
+  while (d > Math.PI) d -= Math.PI * 2;
+  while (d < -Math.PI) d += Math.PI * 2;
+  return d;
+}
+
 export function dist2(a, b) {
   const dx = b.x - a.x, dz = b.z - a.z;
   return { dx, dz, d: Math.hypot(dx, dz) };

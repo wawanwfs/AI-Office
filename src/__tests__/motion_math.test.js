@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { BOUNDS, ARRIVE, dist2, stepMove } from '../scene/parts/motion_math.js';
+import { BOUNDS, ARRIVE, dist2, stepMove, angleDelta } from '../scene/parts/motion_math.js';
 
 describe('motion_math: BOUNDS & ARRIVE', () => {
   it('batas dunia lebih kecil dari lantai ±13/±10 (walker tak menembus dinding)', () => {
@@ -91,5 +91,43 @@ describe('motion_math: stepMove', () => {
     const s = stepMove({ x: 1, z: 1, rot: 1.23 }, { x: 1.01, z: 1.01 }, 2, 1);
     expect(s.arrived).toBe(true);
     expect(s.rot).toBe(1.23);
+  });
+});
+
+describe('motion_math: angleDelta (selisih sudut terpendek)', () => {
+  it('sudut sama → 0', () => {
+    expect(angleDelta(0.5, 0.5)).toBe(0);
+    expect(angleDelta(-2, -2)).toBe(0);
+  });
+  it('selisih kecil biasa tanpa wrap', () => {
+    expect(angleDelta(1.0, 0.5)).toBeCloseTo(0.5);
+    expect(angleDelta(0.2, 1.0)).toBeCloseTo(-0.8);
+  });
+  it('wrap: target +π, current -π → jalur terpendek lewat 0 (negatif kecil)', () => {
+    const d = angleDelta(Math.PI - 0.1, -Math.PI + 0.1);
+    expect(d).toBeCloseTo(-0.2); // 2π - 0.2 dibungkus ke -0.2
+  });
+  it('wrap arah berlawanan: target -π, current +π → positif kecil', () => {
+    const d = angleDelta(-Math.PI + 0.1, Math.PI - 0.1);
+    expect(d).toBeCloseTo(0.2);
+  });
+  it('+π dan -π mewakili arah sama → 0', () => {
+    expect(angleDelta(Math.PI, -Math.PI)).toBe(0);
+    expect(angleDelta(-Math.PI, Math.PI)).toBe(0);
+  });
+  it('selalu dalam [-π, π]', () => {
+    for (const a of [-9, -5, -3, -2, -1, 0, 1, 2, 3, 5, 9]) {
+      const d = angleDelta(a, 0);
+      expect(d).toBeGreaterThanOrEqual(-Math.PI);
+      expect(d).toBeLessThanOrEqual(Math.PI);
+    }
+  });
+  it('konsisten dengan interpolasi rotasi (arah terpendek tidak memutar)', () => {
+    const cur = -Math.PI + 0.1;
+    const tgt = Math.PI - 0.1;
+    const d = angleDelta(tgt, cur);
+    expect(d).toBeCloseTo(-0.2);         // arah terpendek: putar searah jarum jam 0.2 rad
+    const after = cur + d * 0.5;         // setengah langkah
+    expect(after).toBeCloseTo(-Math.PI); // bergerak menuju -π, bukan melompat lewat +π
   });
 });

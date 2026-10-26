@@ -1,6 +1,6 @@
 // Gerak karakter WFS Project: state machine berbasis tabel handler.
 // State: sitting → walking_out → (talking di tujuan) → walking_back → sitting. Ada juga leaving/offsite.
-import { BOUNDS as B, dist2 as dist2Pure, stepMove } from './motion_math.js';
+import { BOUNDS as B, dist2 as dist2Pure, stepMove, angleDelta } from './motion_math.js';
 import { routePath as routePathPure } from './routing.js';
 import { collabTarget } from './trip_plan.js';
 import { OBSTACLES, inObstacle, seatOccupied } from './obstacles.js';
@@ -23,10 +23,7 @@ export function createMotion(ctx) {
     ad.walker.position.z = s.z;
     if (!s.arrived) {
       // Rotasi halus menuju arah jalan (slerp/lerp sudut terpendek), bukan snap mendadak
-      let diff = s.rot - ad.walker.rotation.y;
-      while (diff > Math.PI) diff -= Math.PI * 2;
-      while (diff < -Math.PI) diff += Math.PI * 2;
-      ad.walker.rotation.y += diff * Math.min(1, 14 * delta);
+      ad.walker.rotation.y += angleDelta(s.rot, ad.walker.rotation.y) * Math.min(1, 14 * delta);
       stride(ad);
     } else {
       ad.walker.rotation.y = s.rot;
