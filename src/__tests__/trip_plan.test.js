@@ -72,6 +72,10 @@ describe('pickDest', () => {
   it('null setelah semua percobaan gagal (fallback koridor di pemanggil)', () => {
     expect(pickDest(dests, rngFixed(0.5, 0), () => false, 8)).toBeNull();
   });
+  it('dests kosong/undefined → null tanpa throw (fallback koridor di pemanggil)', () => {
+    expect(pickDest([], rmock(0.5), () => true)).toBeNull();
+    expect(pickDest(undefined, rmock(0.5), () => true)).toBeNull();
+  });
   it('tries kustom dihormati', () => {
     // freeSpot dipanggil 1x per percobaan + 1x re-cek terakhir setelah loop (spot terakhir tetap dipakai bila bebas)
     let calls = 0;

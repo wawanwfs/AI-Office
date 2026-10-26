@@ -42,6 +42,7 @@ export function jitterDest(dest, rng, jitter = DEST_JITTER) {
 // Pilih tujuan jalan-jalan bebas: maks `tries` percobaan; return null bila
 // semua gagal (pemanggil menentukan fallback koridor).
 export function pickDest(dests, rng, freeSpot, tries = 8) {
+  if (!Array.isArray(dests) || dests.length === 0) return null;
   let spot = null;
   for (let i = 0; i < tries; i++) {
     const dest = dests[rng.i(0, dests.length - 1)];
