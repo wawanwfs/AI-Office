@@ -228,4 +228,103 @@ describe('TaskBoard', () => {
     fireEvent.click(urgentBtn)
     expect(sortSelect.value).toBe('newest')
   })
+
+  it('drag & drop kartu kanban antar kolom memindahkan status task, flash & feedback audio', async () => {
+    const onFlash = vi.fn()
+    const soundMock = {
+      playTaskDone: vi.fn(),
+      playTaskUrgent: vi.fn(),
+      playSelect: vi.fn(),
+    }
+    window.__officeSound = soundMock
+
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks }) })))
+    render(<TaskBoard onFlash={onFlash} onAsk={() => {}} />)
+    fireEvent.click(screen.getByText('Papan'))
+    await waitFor(() => screen.getByText(/Buat login/))
+
+    // Beralih ke tampilan Kanban
+    fireEvent.click(screen.getByRole('button', { name: 'Tampilan Papan Kolom' }))
+
+    // Dapatkan kartu task #2 (pending: Halaman admin)
+    const card = screen.getByRole('button', { name: /Task #2: Halaman admin/ })
+    expect(card.getAttribute('draggable')).toBe('true')
+
+    // Dapatkan target kolom Selesai
+    const doneCol = screen.getByRole('region', { name: 'Kolom Selesai' })
+
+    // Simulasikan dragstart pada kartu
+    const dataTransfer = {
+      data: {},
+      setData(k, v) { this.data[k] = String(v) },
+      getData(k) { return this.data[k] },
+      effectAllowed: 'none',
+      dropEffect: 'none',
+    }
+    fireEvent.dragStart(card, { dataTransfer })
+    expect(dataTransfer.getData('text/plain')).toBe('2')
+
+    // Simulasikan dragover pada kolom Selesai
+    fireEvent.dragOver(doneCol, { dataTransfer })
+    expect(doneCol.className).toContain('drag-over')
+
+    // Drop kartu di kolom Selesai
+    fireEvent.drop(doneCol, { dataTransfer })
+
+    // Flash dipanggil dengan nama kolom tujuan
+    expect(onFlash).toHaveBeenCalledWith(expect.stringContaining('Task #2 dipindahkan ke kolom Selesai'))
+    // Audio task done dipanggil karena berpindah ke done
+    expect(soundMock.playTaskDone).toHaveBeenCalled()
+
+    delete window.__officeSound
+  })
+
+  it('tombol quick move di dalam modal detail memindahkan kolom task secara instan', async () => {
+    const onFlash = vi.fn()
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks }) })))
+    render(<TaskBoard onFlash={onFlash} onAsk={() => {}} />)
+    fireEvent.click(screen.getByText('Papan'))
+    await waitFor(() => screen.getByText(/Halaman admin/))
+
+    // Buka task #2 (pending)
+    fireEvent.click(screen.getByText(/Halaman admin/))
+
+    // Periksa strip Pindah Kolom
+    expect(screen.getByRole('group', { name: 'Pindahkan kolom task' })).toBeTruthy()
+
+    // Kolom saat ini (Antri) dalam keadaan disabled
+    const currentBtn = screen.getByRole('button', { name: 'Pindahkan task #2 ke kolom Antri' })
+    expect(currentBtn.disabled).toBe(true)
+
+    // Klik pindahkan ke Sedang Jalan
+    const moveRunningBtn = screen.getByRole('button', { name: 'Pindahkan task #2 ke kolom Sedang Jalan' })
+    expect(moveRunningBtn.disabled).toBe(false)
+    fireEvent.click(moveRunningBtn)
+
+    expect(onFlash).toHaveBeenCalledWith(expect.stringContaining('Task #2 dipindahkan ke kolom Sedang Jalan'))
+  })
+
+  it('mengklik tombol urgent quick filter memicu audio playTaskUrgent', async () => {
+    const urgentTasks = [
+      { id: 77, title: 'Server Memory Leak', agent_id: 'ops1', status: 'running', role: 'ops', priority: 'urgent' },
+    ]
+    const soundMock = {
+      playTaskDone: vi.fn(),
+      playTaskUrgent: vi.fn(),
+      playSelect: vi.fn(),
+    }
+    window.__officeSound = soundMock
+
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: urgentTasks }) })))
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />)
+    fireEvent.click(screen.getByText('Papan'))
+    await waitFor(() => screen.getByText(/Server Memory Leak/))
+
+    const urgentBtn = screen.getByRole('button', { name: /Filter prioritas urgent/i })
+    fireEvent.click(urgentBtn)
+
+    expect(soundMock.playTaskUrgent).toHaveBeenCalled()
+
+    delete window.__officeSound
+  })
 })

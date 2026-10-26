@@ -181,6 +181,10 @@ describe('SettingsModal component', () => {
     const btnFail = screen.getByRole('button', { name: /Task Fail/i })
     fireEvent.click(btnFail)
     expect(mockScene.testAudio).toHaveBeenCalledWith('fail')
+
+    const btnUrgent = screen.getByRole('button', { name: /Task Urgent/i })
+    fireEvent.click(btnUrgent)
+    expect(mockScene.testAudio).toHaveBeenCalledWith('urgent')
   })
 
   it('toggle visual: nama agen, auto-rotate, dan tema ruang', () => {

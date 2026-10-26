@@ -1,11 +1,12 @@
 import { describe, it, expect } from 'vitest';
 import {
-  keyclickFreq, stepEnvelope, chimeStart, taskDoneStart, taskFailStart, masterGainValue,
+  keyclickFreq, stepEnvelope, chimeStart, taskDoneStart, taskFailStart, taskUrgentStart, masterGainValue,
   CHIME_FREQS, KEYCLICK_BASE_FREQ, KEYCLICK_JITTER, KEYCLICK_GAIN,
   KEYCLICK_END_GAIN, KEYCLICK_SEC, STEP_GAIN, STEP_DECAY, STEP_SEC,
   CHIME_DELAY_SEC, CHIME_GAIN, CHIME_END_GAIN, CHIME_TONE_SEC, MUTED_KEY,
   TASK_DONE_FREQS, TASK_DONE_DELAY_SEC, TASK_DONE_GAIN, TASK_DONE_END_GAIN, TASK_DONE_TONE_SEC,
   TASK_FAIL_FREQS, TASK_FAIL_DELAY_SEC, TASK_FAIL_GAIN, TASK_FAIL_END_GAIN, TASK_FAIL_TONE_SEC,
+  TASK_URGENT_FREQS, TASK_URGENT_DELAY_SEC, TASK_URGENT_GAIN, TASK_URGENT_END_GAIN, TASK_URGENT_TONE_SEC,
   SELECT_FREQ, SELECT_GAIN, SELECT_END_GAIN, SELECT_SEC,
   VOLUME_KEY, DEFAULT_VOLUME, VOLUME_PRESETS, VOLUME_PRESET_LABELS,
   clampVolume, loadAudioVolume, saveAudioVolume, formatVolumePercent,
@@ -164,5 +165,23 @@ describe('sound_spec — task fail & select blip', () => {
     expect(SELECT_FREQ).toBe(1046.50);
     expect(SELECT_GAIN).toBe(0.015);
     expect(SELECT_SEC).toBe(0.04);
+  });
+});
+
+describe('sound_spec — task urgent alert (prioritas kritis)', () => {
+  it('task urgent 2 nada naik tajam & cerah A5-D6', () => {
+    expect(TASK_URGENT_FREQS).toEqual([880.0, 1174.66]);
+    expect(TASK_URGENT_FREQS[1]).toBeGreaterThan(TASK_URGENT_FREQS[0]);
+  });
+  it('konstanta timing & gain task urgent proporsional', () => {
+    expect(TASK_URGENT_DELAY_SEC).toBe(0.08);
+    expect(TASK_URGENT_GAIN).toBe(0.035);
+    expect(TASK_URGENT_END_GAIN).toBe(0.001);
+    expect(TASK_URGENT_TONE_SEC).toBe(0.18);
+  });
+  it('taskUrgentStart: jadwal nada ke-i delay 0.08s', () => {
+    expect(taskUrgentStart(0)).toBe(0);
+    expect(taskUrgentStart(1)).toBeCloseTo(0.08);
+    expect(taskUrgentStart(2)).toBeCloseTo(0.16);
   });
 });

@@ -18,6 +18,9 @@ import {
   getTaskPriorityInfo,
   computePriorityBreakdown,
   SORT_OPTIONS,
+  canMoveTaskToColumn,
+  moveTaskToColumn,
+  getKanbanColumnKey,
 } from '../scene/parts/kanban_spec'
 import { findTeamByRole, findTeamByAgent } from '../scene/parts/team_spec'
 
@@ -35,6 +38,8 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const [sortBy, setSortBy] = useState('newest') // 'newest' | 'oldest' | 'priority' | 'title' | 'agent'
   const [q, setQ] = useState('')
   const [sel, setSel] = useState(null)
+  const [draggedTaskId, setDraggedTaskId] = useState(null)
+  const [dragOverCol, setDragOverCol] = useState(null)
   const board = useRef(null)
   useModalFlag(open || !!sel)
   const onEscRef = useRef(() => {})
@@ -99,6 +104,73 @@ export default function TaskBoard({ onFlash, onAsk }) {
     } catch (e) { onFlash(e.message || 'Gagal menjalankan task', true) }
   }
   const ask = (t) => onAsk({ title: `Jalankan task #${t.id}?`, body: `"${t.title}" akan dikerjakan oleh ${t.agent_id} dan memanggil model AI (memakai kuota API).`, ok: 'Jalankan', onOk: () => run(t) })
+
+  const handleMoveTask = useCallback((task, targetColKey) => {
+    if (!task || !targetColKey) return
+    const curCol = getKanbanColumnKey(task.status)
+    if (curCol === targetColKey) return
+    const targetCol = KANBAN_COLUMNS.find(c => c.key === targetColKey)
+    const targetLabel = targetCol?.label || targetColKey
+
+    setTasks(prev => moveTaskToColumn(prev, task.id, targetColKey))
+    setSel(s => (s && String(s.id) === String(task.id) ? { ...s, status: targetColKey } : s))
+
+    if (onFlash) onFlash(`Task #${task.id} dipindahkan ke kolom ${targetLabel}`)
+
+    // Audio feedback interaktif
+    if (typeof window !== 'undefined' && window.__officeSound) {
+      if (targetColKey === 'done') {
+        window.__officeSound.playTaskDone?.()
+      } else if (task.priority === 'urgent') {
+        window.__officeSound.playTaskUrgent?.()
+      } else {
+        window.__officeSound.playSelect?.()
+      }
+    }
+  }, [onFlash])
+
+  const handleDragStart = useCallback((e, t) => {
+    if (!t) return
+    setDraggedTaskId(t.id)
+    if (e.dataTransfer) {
+      e.dataTransfer.setData('text/plain', String(t.id))
+      e.dataTransfer.effectAllowed = 'move'
+    }
+  }, [])
+
+  const handleDragEnd = useCallback(() => {
+    setDraggedTaskId(null)
+    setDragOverCol(null)
+  }, [])
+
+  const handleDragOver = useCallback((e, colKey) => {
+    e.preventDefault()
+    if (e.dataTransfer) {
+      e.dataTransfer.dropEffect = 'move'
+    }
+    setDragOverCol(prev => (prev === colKey ? prev : colKey))
+  }, [])
+
+  const handleDragLeave = useCallback((e, colKey) => {
+    if (e.currentTarget.contains(e.relatedTarget)) return
+    setDragOverCol(prev => (prev === colKey ? null : prev))
+  }, [])
+
+  const handleDrop = useCallback((e, targetColKey) => {
+    e.preventDefault()
+    let taskId = null
+    if (e.dataTransfer) {
+      taskId = e.dataTransfer.getData('text/plain')
+    }
+    if (!taskId) taskId = draggedTaskId
+    setDraggedTaskId(null)
+    setDragOverCol(null)
+    if (!taskId || !tasks) return
+    const task = tasks.find(t => String(t.id) === String(taskId))
+    if (task) {
+      handleMoveTask(task, targetColKey)
+    }
+  }, [draggedTaskId, tasks, handleMoveTask])
 
   const divisions = useMemo(() => extractTaskDivisions(tasks), [tasks])
   const activeDivision = useMemo(() => divisions.find(d => d.key === division) || null, [divisions, division])
@@ -239,6 +311,28 @@ export default function TaskBoard({ onFlash, onAsk }) {
               </div>
               {(() => { const fl = parseFileList(sel.files); return fl.length > 0 && <><label className="note">File dihasilkan</label><pre className="note" style={{ whiteSpace: 'pre-wrap', margin: '4px 0 10px', color: '#cfd8e3' }}>{fl.join('\n')}</pre></> })()}
               {sel.review && <><label className="note">Ulasan QA</label><div className="msg" style={{ maxWidth: '100%', marginTop: 4, fontSize: 13 }}>{sel.review}</div></>}
+              <div className="kanban-quick-move-strip" role="group" aria-label="Pindahkan kolom task">
+                <span className="kanban-quick-move-label">Pindah Kolom:</span>
+                {KANBAN_COLUMNS.map(col => {
+                  const isCurrent = getKanbanColumnKey(sel.status) === col.key
+                  const canMove = canMoveTaskToColumn(sel, col.key)
+                  return (
+                    <button
+                      key={col.key}
+                      type="button"
+                      className={'kanban-move-btn' + (isCurrent ? ' current' : '')}
+                      style={{ '--btn-accent': col.color }}
+                      disabled={!canMove}
+                      onClick={() => handleMoveTask(sel, col.key)}
+                      title={isCurrent ? `Saat ini di kolom ${col.label}` : `Pindahkan task ke kolom ${col.label}`}
+                      aria-label={`Pindahkan task #${sel.id} ke kolom ${col.label}`}
+                    >
+                      <span aria-hidden="true">{col.icon}</span>
+                      <span>{col.label}</span>
+                    </button>
+                  )
+                })}
+              </div>
               {sel.status !== 'running' && sel.status !== 'done' && (
                 <button className="btn primary" style={{ marginTop: 12, display: 'inline-flex', alignItems: 'center', gap: 6 }} onClick={() => ask(sel)}>
                   <IconPlay size={14} />
@@ -278,7 +372,13 @@ export default function TaskBoard({ onFlash, onAsk }) {
                     <button
                       type="button"
                       className={`task-priority-quick-btn urgent${sortBy === 'priority' ? ' active' : ''}`}
-                      onClick={() => setSortBy(sortBy === 'priority' ? 'newest' : 'priority')}
+                      onClick={() => {
+                        const nextSort = sortBy === 'priority' ? 'newest' : 'priority'
+                        setSortBy(nextSort)
+                        if (nextSort === 'priority' && typeof window !== 'undefined' && window.__officeSound) {
+                          window.__officeSound.playTaskUrgent?.()
+                        }
+                      }}
                       title={`Terdapat ${priorityBreakdown.urgent} task urgent — klik untuk ${sortBy === 'priority' ? 'kembalikan ke urutan terbaru' : 'urutkan prioritas ke atas'}`}
                       aria-pressed={sortBy === 'priority'}
                       aria-label={`Filter prioritas urgent (${priorityBreakdown.urgent} task)`}
@@ -345,7 +445,16 @@ export default function TaskBoard({ onFlash, onAsk }) {
                     const dist = computeColumnDistribution(colTasks.length, metrics.total)
                     const emptyState = getKanbanColumnEmptyState(col.key)
                     return (
-                      <div key={col.key} className="kanban-col" role="region" aria-label={`Kolom ${col.label}`}>
+                      <div
+                        key={col.key}
+                        className={`kanban-col${dragOverCol === col.key ? ' drag-over' : ''}`}
+                        role="region"
+                        aria-label={`Kolom ${col.label}`}
+                        style={{ '--col-color': col.color }}
+                        onDragOver={(e) => handleDragOver(e, col.key)}
+                        onDragLeave={(e) => handleDragLeave(e, col.key)}
+                        onDrop={(e) => handleDrop(e, col.key)}
+                      >
                         <div className="kanban-col-head" style={{ borderTop: `3px solid ${col.color}` }}>
                           <span className="kanban-col-icon" aria-hidden="true">{col.icon}</span>
                           <span className="kanban-col-title">{col.label}</span>
@@ -374,18 +483,27 @@ export default function TaskBoard({ onFlash, onAsk }) {
                           ) : (
                             colTasks.map((t, idx) => {
                               const badges = getTaskCardBadges(t)
+                              const isDragging = draggedTaskId === t.id
                               return (
                                 <button
                                   key={t.id}
                                   type="button"
-                                  className="kanban-card"
-                                  onClick={() => setSel(t)}
+                                  className={`kanban-card${isDragging ? ' is-dragging' : ''}`}
+                                  draggable={true}
+                                  onDragStart={(e) => handleDragStart(e, t)}
+                                  onDragEnd={handleDragEnd}
+                                  onClick={() => {
+                                    if (t.priority === 'urgent' && typeof window !== 'undefined' && window.__officeSound) {
+                                      window.__officeSound.playTaskUrgent?.()
+                                    }
+                                    setSel(t)
+                                  }}
                                   style={{
                                     borderLeft: `3px solid ${ST[t.status]?.[1] || col.color}`,
                                     animationDelay: `${Math.min(idx * 30, 240)}ms`,
                                   }}
                                   aria-label={`Task #${t.id}: ${t.title}`}
-                                  title={`Buka task #${t.id}: ${t.title}`}
+                                  title={`Buka task #${t.id}: ${t.title} (geser untuk pindah kolom)`}
                                 >
                                   <div className="kanban-card-top">
                                     <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
@@ -454,6 +572,11 @@ export default function TaskBoard({ onFlash, onAsk }) {
                               )
                             })
                           )}
+                          {dragOverCol === col.key && draggedTaskId && (
+                            <div className="kanban-drop-slot" role="status" aria-label={`Lepas di kolom ${col.label}`}>
+                              <span aria-hidden="true">{col.icon}</span> Lepas untuk pindah ke {col.label}
+                            </div>
+                          )}
                         </div>
                       </div>
                     )
@@ -466,7 +589,17 @@ export default function TaskBoard({ onFlash, onAsk }) {
                   {list.map(t => {
                     const prio = getTaskPriorityInfo(t.priority)
                     return (
-                      <button key={t.id} className="taskrow" onClick={() => setSel(t)} style={{ borderLeft: `4px solid ${ST[t.status]?.[1] || '#888'}` }}>
+                      <button
+                        key={t.id}
+                        className="taskrow"
+                        onClick={() => {
+                          if (t.priority === 'urgent' && typeof window !== 'undefined' && window.__officeSound) {
+                            window.__officeSound.playTaskUrgent?.()
+                          }
+                          setSel(t)
+                        }}
+                        style={{ borderLeft: `4px solid ${ST[t.status]?.[1] || '#888'}` }}
+                      >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
                           <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.35 }}>#{t.id} {t.title}</div>
                           {t.priority && prio.key !== 'normal' && (

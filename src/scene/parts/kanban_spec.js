@@ -425,3 +425,51 @@ export function getTaskAgentFocusInfo(task) {
     floor: team ? team.floor : null,
   };
 }
+
+/**
+ * Mengecek apakah task dapat dipindahkan ke kolom kanban tujuan.
+ */
+export function canMoveTaskToColumn(task, targetColKey) {
+  if (!task || typeof task !== 'object') return false;
+  const targetKey = String(targetColKey || '').toLowerCase().trim();
+  const validCols = KANBAN_COLUMNS.map((c) => c.key);
+  if (!validCols.includes(targetKey)) return false;
+  const currentKey = getKanbanColumnKey(task.status);
+  return currentKey !== targetKey;
+}
+
+/**
+ * Mendapatkan daftar kolom kanban tujuan yang valid untuk dipindahkan.
+ */
+export function getAvailableColumnMoves(currentColKey) {
+  const cur = String(currentColKey || '').toLowerCase().trim();
+  return KANBAN_COLUMNS.filter((c) => c.key !== cur);
+}
+
+/**
+ * Memindahkan task secara immutabel ke kolom kanban tujuan.
+ * Mengembalikan array baru dengan status task yang diperbarui.
+ */
+export function moveTaskToColumn(tasks, taskId, targetColKey) {
+  if (!Array.isArray(tasks) || taskId == null || !targetColKey) return Array.isArray(tasks) ? tasks : [];
+  const targetKey = String(targetColKey).toLowerCase().trim();
+  const validCols = KANBAN_COLUMNS.map((c) => c.key);
+  if (!validCols.includes(targetKey)) return tasks;
+
+  const statusMap = {
+    pending: 'pending',
+    running: 'running',
+    review: 'review',
+    done: 'done',
+  };
+  const newStatus = statusMap[targetKey] || targetKey;
+
+  return tasks.map((t) => {
+    if (!t || String(t.id) !== String(taskId)) return t;
+    return {
+      ...t,
+      status: newStatus,
+      updated_at: Date.now(),
+    };
+  });
+}

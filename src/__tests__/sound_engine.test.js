@@ -8,6 +8,7 @@ import {
   STEP_GAIN, STEP_SEC, CHIME_FREQS, CHIME_DELAY_SEC, CHIME_GAIN, CHIME_END_GAIN, CHIME_TONE_SEC,
   TASK_DONE_FREQS, TASK_DONE_DELAY_SEC, TASK_DONE_GAIN, TASK_DONE_END_GAIN, TASK_DONE_TONE_SEC,
   TASK_FAIL_FREQS, TASK_FAIL_DELAY_SEC, TASK_FAIL_GAIN, TASK_FAIL_END_GAIN, TASK_FAIL_TONE_SEC,
+  TASK_URGENT_FREQS, TASK_URGENT_GAIN, TASK_URGENT_END_GAIN, TASK_URGENT_TONE_SEC,
   SELECT_FREQ, SELECT_GAIN, SELECT_END_GAIN, SELECT_SEC, DEFAULT_VOLUME,
   keyclickFreq, stepEnvelope,
 } from '../scene/parts/sound_spec.js';
@@ -65,7 +66,7 @@ describe('sound engine runtime', () => {
     const snap = eng.dbg();
     expect(snap.started).toBe(false);
     expect(snap.state).toBe('none');
-    expect(snap.calls).toEqual({ key: 0, step: 0, chime: 0, taskDone: 0, taskFail: 0, select: 0 });
+    expect(snap.calls).toEqual({ key: 0, step: 0, chime: 0, taskDone: 0, taskFail: 0, select: 0, taskUrgent: 0 });
     expect(snap.volume).toBe(DEFAULT_VOLUME);
     expect(eng.isMuted()).toBe(false);
   });
@@ -153,7 +154,7 @@ describe('sound engine runtime', () => {
     expect(() => eng.playKeyClick(Math.random)).not.toThrow();
     expect(() => eng.playStep()).not.toThrow();
     expect(() => eng.playMeetingChime()).not.toThrow();
-    expect(eng.dbg().calls).toEqual({ key: 1, step: 1, chime: 1, taskDone: 0, taskFail: 0, select: 0 });
+    expect(eng.dbg().calls).toEqual({ key: 1, step: 1, chime: 1, taskDone: 0, taskFail: 0, select: 0, taskUrgent: 0 });
     expect(eng.isStarted()).toBe(true);
     const osc = ctx.__log.osc[0];
     expect(gainChain(osc).g.connectedTo.connectedTo).toBe(ctx.destination);
@@ -193,6 +194,23 @@ describe('sound engine runtime', () => {
       expect(g.connectedTo.connectedTo).toBe(ctx.destination);
     });
     expect(eng.dbg().calls.taskFail).toBe(1);
+  });
+
+  it('playTaskUrgent: 2 nada peringatan A5-D6, gain 0.035→0.001, triangle', () => {
+    const { eng, ctx, timeouts } = makeEngine();
+    eng.playTaskUrgent();
+    expect(timeouts).toHaveLength(TASK_URGENT_FREQS.length);
+    timeouts.forEach((t, i) => {
+      t.fn();
+      const osc = ctx.__log.osc[i];
+      expect(osc.type).toBe('triangle');
+      expect(osc.frequency.value).toBe(TASK_URGENT_FREQS[i]);
+      const { g } = gainChain(osc);
+      expect(g.gain.value).toBe(TASK_URGENT_GAIN);
+      expect(g.gain.ramps[0]).toEqual([TASK_URGENT_END_GAIN, ctx.currentTime + TASK_URGENT_TONE_SEC]);
+      expect(g.connectedTo.connectedTo).toBe(ctx.destination);
+    });
+    expect(eng.dbg().calls.taskUrgent).toBe(1);
   });
 
   it('playSelect: blip interaksi C6, sine, gain 0.015', () => {

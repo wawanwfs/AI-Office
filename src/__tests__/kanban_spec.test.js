@@ -22,6 +22,9 @@ import {
   SORT_OPTIONS,
   extractTaskSortValue,
   sortTasks,
+  canMoveTaskToColumn,
+  getAvailableColumnMoves,
+  moveTaskToColumn,
 } from '../scene/parts/kanban_spec.js';
 
 describe('kanban_spec — KANBAN_COLUMNS & role badges', () => {
@@ -505,5 +508,50 @@ describe('kanban_spec — extractTaskSortValue & sortTasks', () => {
 
     expect(computePriorityBreakdown(null)).toEqual({ urgent: 0, high: 0, medium: 0, low: 0, normal: 0, total: 0 });
     expect(computePriorityBreakdown([])).toEqual({ urgent: 0, high: 0, medium: 0, low: 0, normal: 0, total: 0 });
+  });
+});
+
+describe('kanban_spec — canMoveTaskToColumn, getAvailableColumnMoves, moveTaskToColumn', () => {
+  const task = { id: 42, title: 'Refactor DB pool', status: 'pending', role: 'be' };
+
+  it('canMoveTaskToColumn memvalidasi target kolom kanban', () => {
+    expect(canMoveTaskToColumn(task, 'running')).toBe(true);
+    expect(canMoveTaskToColumn(task, 'review')).toBe(true);
+    expect(canMoveTaskToColumn(task, 'done')).toBe(true);
+    // Kolom saat ini tidak dapat menjadi tujuan
+    expect(canMoveTaskToColumn(task, 'pending')).toBe(false);
+    // Kolom tidak valid
+    expect(canMoveTaskToColumn(task, 'invalid_col')).toBe(false);
+    expect(canMoveTaskToColumn(null, 'running')).toBe(false);
+  });
+
+  it('getAvailableColumnMoves mengembalikan 3 kolom tujuan selain kolom saat ini', () => {
+    const movesFromPending = getAvailableColumnMoves('pending');
+    expect(movesFromPending).toHaveLength(3);
+    expect(movesFromPending.map(m => m.key)).toEqual(['running', 'review', 'done']);
+
+    const movesFromRunning = getAvailableColumnMoves('running');
+    expect(movesFromRunning).toHaveLength(3);
+    expect(movesFromRunning.map(m => m.key)).toEqual(['pending', 'review', 'done']);
+  });
+
+  it('moveTaskToColumn memperbarui status task secara immutabel dengan timestamp', () => {
+    const list = [
+      { id: 1, title: 'A', status: 'pending' },
+      { id: 2, title: 'B', status: 'running' },
+    ];
+    const updated = moveTaskToColumn(list, 1, 'done');
+    expect(updated).not.toBe(list);
+    expect(updated[0].status).toBe('done');
+    expect(updated[0].updated_at).toBeTypeOf('number');
+    // Task lain tidak berubah
+    expect(updated[1]).toEqual(list[1]);
+  });
+
+  it('moveTaskToColumn menangani input invalid dengan aman', () => {
+    const list = [{ id: 1, status: 'pending' }];
+    expect(moveTaskToColumn(list, 1, 'unknown')).toEqual(list);
+    expect(moveTaskToColumn(list, 999, 'done')).toEqual(list);
+    expect(moveTaskToColumn(null, 1, 'done')).toEqual([]);
   });
 });

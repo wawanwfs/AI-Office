@@ -39,6 +39,13 @@ export const TASK_FAIL_GAIN = 0.035;
 export const TASK_FAIL_END_GAIN = 0.001;
 export const TASK_FAIL_TONE_SEC = 0.30;
 
+// notifikasi task prioritas / urgent alert: dua nada cerah & tajam A5 (880 Hz) - D6 (1174.66 Hz)
+export const TASK_URGENT_FREQS = [880.0, 1174.66];
+export const TASK_URGENT_DELAY_SEC = 0.08;
+export const TASK_URGENT_GAIN = 0.035;
+export const TASK_URGENT_END_GAIN = 0.001;
+export const TASK_URGENT_TONE_SEC = 0.18;
+
 // nada blip klik/seleksi agent (interaksi 3D): C6 singkat & lembut
 export const SELECT_FREQ = 1046.50;
 export const SELECT_GAIN = 0.015;
@@ -110,6 +117,11 @@ export function taskDoneStart(i) {
 // waktu mulai nada task fail ke-i (detik sejak trigger)
 export function taskFailStart(i) {
   return i * TASK_FAIL_DELAY_SEC;
+}
+
+// waktu mulai nada task urgent ke-i (detik sejak trigger)
+export function taskUrgentStart(i) {
+  return i * TASK_URGENT_DELAY_SEC;
 }
 
 // nilai gain master: 0 bila muted, sebanding volume bila tidak (clamp 0..1)

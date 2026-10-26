@@ -1838,12 +1838,14 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
     isAudioMuted: () => audioMuted,
     playTaskDone: () => __sound.playTaskDone(),
     playTaskFail: () => __sound.playTaskFail(),
+    playTaskUrgent: () => __sound.playTaskUrgent(),
     playSelect: () => __sound.playSelect(),
     testAudio: (sample = 'done') => {
       if (audioMuted) return false;
       if (sample === 'fail') __sound.playTaskFail();
       else if (sample === 'select') __sound.playSelect();
       else if (sample === 'chime') __sound.playMeetingChime();
+      else if (sample === 'urgent') __sound.playTaskUrgent();
       else __sound.playTaskDone();
       return true;
     },

@@ -108,10 +108,14 @@ export default function SettingsModal({
     }
     if (s.testAudio) {
       s.testAudio(sampleType)
-      setTestTip(`Memainkan sampel suara: ${sampleType === 'done' ? 'Task Selesai' : sampleType === 'select' ? 'Blip Seleksi' : 'Peringatan'}`)
+      const label = sampleType === 'done' ? 'Task Selesai' : sampleType === 'select' ? 'Blip Seleksi' : sampleType === 'urgent' ? 'Prioritas Urgent' : 'Peringatan'
+      setTestTip(`Memainkan sampel suara: ${label}`)
     } else if (sampleType === 'done' && s.playTaskDone) {
       s.playTaskDone()
       setTestTip('Memainkan nada Task Selesai')
+    } else if (sampleType === 'urgent' && s.playTaskUrgent) {
+      s.playTaskUrgent()
+      setTestTip('Memainkan nada Prioritas Urgent')
     }
   }
 
@@ -296,6 +300,17 @@ export default function SettingsModal({
               >
                 <IconPlay size={14} style={{ color: '#fb7185' }} />
                 Task Fail
+              </button>
+              <button
+                type="button"
+                className="btn"
+                onClick={() => handleTestAudio('urgent')}
+                disabled={muted}
+                style={{ fontSize: 12, padding: '4px 10px', height: 'auto', minHeight: 28, display: 'inline-flex', alignItems: 'center', gap: 5 }}
+                title="Dengarkan nada alert prioritas urgent"
+              >
+                <IconPlay size={14} style={{ color: '#EF4444' }} />
+                Task Urgent
               </button>
             </div>
             {testTip && (

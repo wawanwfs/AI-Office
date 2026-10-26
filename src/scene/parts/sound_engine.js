@@ -2,11 +2,12 @@
 // Tidak ada dependency THREE; Web Audio diakses lewat ctx yang di-inject
 // (di produksi: AudioContext asli; di test: stub tercatat).
 import {
-  keyclickFreq, stepEnvelope, chimeStart, taskDoneStart, taskFailStart, masterGainValue,
+  keyclickFreq, stepEnvelope, chimeStart, taskDoneStart, taskFailStart, taskUrgentStart, masterGainValue,
   KEYCLICK_BASE_FREQ, KEYCLICK_JITTER, KEYCLICK_GAIN, KEYCLICK_END_GAIN, KEYCLICK_SEC,
   STEP_GAIN, STEP_SEC, CHIME_FREQS, CHIME_DELAY_SEC, CHIME_GAIN, CHIME_END_GAIN, CHIME_TONE_SEC,
   TASK_DONE_FREQS, TASK_DONE_GAIN, TASK_DONE_END_GAIN, TASK_DONE_TONE_SEC,
   TASK_FAIL_FREQS, TASK_FAIL_GAIN, TASK_FAIL_END_GAIN, TASK_FAIL_TONE_SEC,
+  TASK_URGENT_FREQS, TASK_URGENT_GAIN, TASK_URGENT_END_GAIN, TASK_URGENT_TONE_SEC,
   SELECT_FREQ, SELECT_GAIN, SELECT_END_GAIN, SELECT_SEC, DEFAULT_VOLUME,
 } from './sound_spec.js';
 
@@ -20,7 +21,7 @@ export function createSoundEngine({ ctxFactory, setTimeoutFn = setTimeout, clear
   let muted = false;
   let volume = initialVolume;
   const pending = [];
-  const calls = { key: 0, step: 0, chime: 0, taskDone: 0, taskFail: 0, select: 0 };
+  const calls = { key: 0, step: 0, chime: 0, taskDone: 0, taskFail: 0, select: 0, taskUrgent: 0 };
 
   const dbg = (sink) => {
     const snap = { started, state: ctx === noCtx ? 'none' : ctx.state, calls: { ...calls }, muted, volume };
@@ -145,6 +146,25 @@ export function createSoundEngine({ ctxFactory, setTimeoutFn = setTimeout, clear
     osc.start(); osc.stop(ctx.currentTime + SELECT_SEC);
   }
 
+  function playTaskUrgent() {
+    ensure(); calls.taskUrgent++; dbg();
+    if (!ensureLive()) return;
+    TASK_URGENT_FREQS.forEach((freq, i) => {
+      const t = setTimeoutFn(() => {
+        const osc = ctx.createOscillator();
+        osc.type = 'triangle';
+        osc.frequency.value = freq;
+        const g = ctx.createGain();
+        g.gain.value = TASK_URGENT_GAIN;
+        g.gain.exponentialRampToValueAtTime(TASK_URGENT_END_GAIN, ctx.currentTime + TASK_URGENT_TONE_SEC);
+        osc.connect(g); g.connect(masterGain);
+        osc.start(); osc.stop(ctx.currentTime + TASK_URGENT_TONE_SEC);
+        const ix = pending.indexOf(t); if (ix >= 0) pending.splice(ix, 1);
+      }, taskUrgentStart(i));
+      pending.push(t);
+    });
+  }
+
   function setMuted(v) {
     muted = !!v;
     if (masterGain) masterGain.gain.value = masterGainValue(muted, volume);
@@ -173,7 +193,7 @@ export function createSoundEngine({ ctxFactory, setTimeoutFn = setTimeout, clear
   function resume() { if (ctx !== noCtx && ctx.state === 'suspended') ctx.resume(); }
 
   return {
-    ensure, playKeyClick, playStep, playMeetingChime, playTaskDone, playTaskFail, playSelect,
+    ensure, playKeyClick, playStep, playMeetingChime, playTaskDone, playTaskFail, playTaskUrgent, playSelect,
     setMuted, setVolume, getVolume: () => volume, dispose, dbg,
     rawCtx, state, suspend, resume,
     isMuted: () => muted,
