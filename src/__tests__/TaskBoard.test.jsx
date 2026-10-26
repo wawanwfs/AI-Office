@@ -827,7 +827,7 @@ describe('TaskBoard', () => {
 
       const dateSelect = screen.getByLabelText('Rentang waktu task');
       expect(dateSelect).toBeTruthy();
-      expect(dateSelect.querySelectorAll('option').length).toBe(5);
+      expect(dateSelect.querySelectorAll('option').length).toBe(6);
       expect(screen.getByText(/Task Lama Bulan Lalu/)).toBeTruthy();
     });
 
@@ -855,6 +855,57 @@ describe('TaskBoard', () => {
       // Kedua task tampil kembali
       expect(screen.getByText(/Task Baru Hari Ini/)).toBeTruthy();
       expect(screen.getByText(/Task Lama Bulan Lalu/)).toBeTruthy();
+    });
+
+    it('memilih preset kustom menampilkan panel tanggal kustom, input tanggal menyaring task & deteksi tanggal terbalik', async () => {
+      const customTasks = [
+        { id: 201, title: 'Task Tanggal 20 Okt', agent_id: 'be1', status: 'pending', role: 'be', created_at: new Date(2026, 9, 20, 10, 0).getTime() },
+        { id: 202, title: 'Task Tanggal 25 Okt', agent_id: 'fe1', status: 'done', role: 'fe', created_at: new Date(2026, 9, 25, 15, 0).getTime() },
+        { id: 203, title: 'Task Tanggal 28 Okt', agent_id: 'qa1', status: 'running', role: 'qa', created_at: new Date(2026, 9, 28, 9, 0).getTime() },
+      ];
+      vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: customTasks }) })));
+      render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />);
+      act(() => {
+        window.dispatchEvent(new CustomEvent('wfs-open-task-board'));
+      });
+      await waitFor(() => screen.getByRole('dialog', { name: 'Papan task' }));
+      await waitFor(() => screen.getByText(/Task Tanggal 20 Okt/));
+
+      const dateSelect = screen.getByLabelText('Rentang waktu task');
+      fireEvent.change(dateSelect, { target: { value: 'custom' } });
+
+      // Region panel kustom muncul
+      const customRegion = screen.getByRole('region', { name: 'Pengaturan rentang tanggal kustom' });
+      expect(customRegion).toBeTruthy();
+
+      const startInput = screen.getByLabelText('Tanggal awal kustom');
+      const endInput = screen.getByLabelText('Tanggal akhir kustom');
+
+      // Set tanggal mulai 2026-10-22 dan tanggal akhir 2026-10-26
+      fireEvent.change(startInput, { target: { value: '2026-10-22' } });
+      fireEvent.change(endInput, { target: { value: '2026-10-26' } });
+
+      // Hanya task 25 Okt yang tampil
+      expect(screen.queryByText(/Task Tanggal 20 Okt/)).toBeNull();
+      expect(screen.getByText(/Task Tanggal 25 Okt/)).toBeTruthy();
+      expect(screen.queryByText(/Task Tanggal 28 Okt/)).toBeNull();
+
+      // Ringkasan rentang kustom
+      expect(screen.getByText(/22 – 26 Okt 2026 · 1 task cocok/)).toBeTruthy();
+
+      // Uji tanggal terbalik (start > end)
+      fireEvent.change(startInput, { target: { value: '2026-10-29' } });
+      expect(screen.getByText(/Tanggal awal tidak boleh melebihi tanggal akhir/)).toBeTruthy();
+
+      // Tombol kosongkan tanggal kustom
+      const clearCustomBtn = screen.getByRole('button', { name: 'Kosongkan tanggal kustom' });
+      fireEvent.click(clearCustomBtn);
+      expect(startInput.value).toBe('');
+      expect(endInput.value).toBe('');
+      // Semua task tampil kembali
+      expect(screen.getByText(/Task Tanggal 20 Okt/)).toBeTruthy();
+      expect(screen.getByText(/Task Tanggal 25 Okt/)).toBeTruthy();
+      expect(screen.getByText(/Task Tanggal 28 Okt/)).toBeTruthy();
     });
 
     it('detail task menampilkan stempel waktu bila tersedia', async () => {

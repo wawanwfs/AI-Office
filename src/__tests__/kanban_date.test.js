@@ -4,6 +4,10 @@ import {
   getDateRangePreset,
   parseTaskTimestamp,
   getStartOfDay,
+  parseDateInputToTimestamp,
+  normalizeCustomDateRange,
+  formatSimpleDate,
+  formatCustomDateRange,
   isTaskInDateRange,
   filterTasksByDate,
   computeDateRangeStats,
@@ -21,10 +25,10 @@ describe('kanban_date.js', () => {
   const FORTY_DAYS_AGO = START_TODAY - 40 * 86400000;
 
   describe('DATE_RANGE_PRESETS & getDateRangePreset', () => {
-    it('memiliki 5 preset rentang tanggal lengkap', () => {
-      expect(DATE_RANGE_PRESETS.length).toBe(5);
+    it('memiliki 6 preset rentang tanggal lengkap', () => {
+      expect(DATE_RANGE_PRESETS.length).toBe(6);
       const keys = DATE_RANGE_PRESETS.map((p) => p.key);
-      expect(keys).toEqual(['all', 'today', 'yesterday', 'week', 'month']);
+      expect(keys).toEqual(['all', 'today', 'yesterday', 'week', 'month', 'custom']);
     });
 
     it('setiap preset memiliki label, icon, dan deskripsi', () => {
@@ -207,6 +211,161 @@ describe('kanban_date.js', () => {
       expect(formatDateRangeSummary('all', 12)).toBe('Semua Waktu (12 task)');
       expect(formatDateRangeSummary('today', 3)).toBe('Rentang: Hari Ini (3 task)');
       expect(formatDateRangeSummary('week')).toBe('Rentang: 7 Hari Terakhir');
+      expect(formatDateRangeSummary('custom', 5, { customRange: { start: '2026-10-20', end: '2026-10-25' } })).toBe('Rentang: 20 – 25 Okt 2026 (5 task)');
+    });
+  });
+
+  describe('Fitur Rentang Tanggal Kustom (Custom Date Range)', () => {
+    describe('parseDateInputToTimestamp', () => {
+      it('mengonversi YYYY-MM-DD ke awal hari dan akhir hari', () => {
+        const start = parseDateInputToTimestamp('2026-10-26', false);
+        const end = parseDateInputToTimestamp('2026-10-26', true);
+        expect(start).not.toBeNull();
+        expect(end).not.toBeNull();
+        expect(end - start).toBe(86399999); // 23:59:59.999 - 00:00:00.000
+
+        const dStart = new Date(start);
+        expect(dStart.getFullYear()).toBe(2026);
+        expect(dStart.getMonth()).toBe(9); // Oktober
+        expect(dStart.getDate()).toBe(26);
+        expect(dStart.getHours()).toBe(0);
+
+        const dEnd = new Date(end);
+        expect(dEnd.getHours()).toBe(23);
+        expect(dEnd.getMinutes()).toBe(59);
+      });
+
+      it('menangani timestamp numerik, Date object, dan string kosong', () => {
+        expect(parseDateInputToTimestamp(null)).toBeNull();
+        expect(parseDateInputToTimestamp('')).toBeNull();
+        expect(parseDateInputToTimestamp('bukan-tanggal')).toBeNull();
+
+        const now = Date.now();
+        expect(parseDateInputToTimestamp(now, false)).toBe(getStartOfDay(now));
+        const dateObj = new Date(2026, 9, 20, 15, 0);
+        expect(parseDateInputToTimestamp(dateObj, false)).toBe(new Date(2026, 9, 20, 0, 0, 0, 0).getTime());
+      });
+    });
+
+    describe('normalizeCustomDateRange', () => {
+      it('menormalkan objek rentang tanggal kustom yang valid', () => {
+        const norm = normalizeCustomDateRange({ start: '2026-10-20', end: '2026-10-26' });
+        expect(norm.isValid).toBe(true);
+        expect(norm.isEmpty).toBe(false);
+        expect(norm.isReversed).toBe(false);
+        expect(norm.startTs).toBeLessThan(norm.endTs);
+      });
+
+      it('mendeteksi jika tanggal awal lebih besar dari tanggal akhir (reversed)', () => {
+        const norm = normalizeCustomDateRange({ start: '2026-10-28', end: '2026-10-20' });
+        expect(norm.isValid).toBe(false);
+        expect(norm.isReversed).toBe(true);
+      });
+
+      it('menangani rentang hanya start atau hanya end', () => {
+        const onlyStart = normalizeCustomDateRange({ start: '2026-10-20' });
+        expect(onlyStart.isValid).toBe(true);
+        expect(onlyStart.startTs).not.toBeNull();
+        expect(onlyStart.endTs).toBeNull();
+
+        const onlyEnd = normalizeCustomDateRange({ end: '2026-10-26' });
+        expect(onlyEnd.isValid).toBe(true);
+        expect(onlyEnd.startTs).toBeNull();
+        expect(onlyEnd.endTs).not.toBeNull();
+      });
+
+      it('menangani input null/kosong', () => {
+        const empty = normalizeCustomDateRange(null);
+        expect(empty.isEmpty).toBe(true);
+        expect(empty.isValid).toBe(true);
+      });
+    });
+
+    describe('formatCustomDateRange & formatSimpleDate', () => {
+      it('memformat rentang tanggal dalam bulan yang sama', () => {
+        const str = formatCustomDateRange({ start: '2026-10-20', end: '2026-10-25' });
+        expect(str).toBe('20 – 25 Okt 2026');
+        expect(formatSimpleDate(new Date(2026, 9, 20).getTime())).toBe('20 Okt 2026');
+        expect(formatSimpleDate(null)).toBe('');
+      });
+
+      it('memformat tanggal tunggal jika start dan end sama', () => {
+        const str = formatCustomDateRange({ start: '2026-10-26', end: '2026-10-26' });
+        expect(str).toBe('26 Okt 2026');
+      });
+
+      it('memformat jika hanya start atau hanya end', () => {
+        expect(formatCustomDateRange({ start: '2026-10-20' })).toBe('Dari 20 Okt 2026');
+        expect(formatCustomDateRange({ end: '2026-10-26' })).toBe('Hingga 26 Okt 2026');
+      });
+
+      it('menangani rentang kosong dan invalid', () => {
+        expect(formatCustomDateRange(null)).toBe('Semua Tanggal');
+        expect(formatCustomDateRange({ start: '2026-10-28', end: '2026-10-20' })).toBe('Rentang Tidak Valid (Awal > Akhir)');
+      });
+    });
+
+    describe('isTaskInDateRange & filterTasksByDate dengan custom range', () => {
+      const taskA = { id: 1, title: 'Task 20 Okt', created_at: new Date(2026, 9, 20, 10, 0).getTime() };
+      const taskB = { id: 2, title: 'Task 23 Okt', created_at: new Date(2026, 9, 23, 14, 0).getTime() };
+      const taskC = { id: 3, title: 'Task 26 Okt', created_at: new Date(2026, 9, 26, 16, 0).getTime() };
+      const taskUndated = { id: 4, title: 'Task No Date' };
+      const taskList = [taskA, taskB, taskC, taskUndated];
+
+      it('menyaring task dalam rentang start dan end', () => {
+        const filtered = filterTasksByDate(taskList, 'custom', {
+          customRange: { start: '2026-10-21', end: '2026-10-25' },
+        });
+        expect(filtered.map((t) => t.id)).toEqual([2]);
+      });
+
+      it('menyaring task dengan hanya start (terbuka ke atas)', () => {
+        const filtered = filterTasksByDate(taskList, 'custom', {
+          customRange: { start: '2026-10-22' },
+        });
+        expect(filtered.map((t) => t.id)).toEqual([2, 3]);
+      });
+
+      it('menyaring task dengan hanya end (terbuka ke bawah)', () => {
+        const filtered = filterTasksByDate(taskList, 'custom', {
+          customRange: { end: '2026-10-22' },
+        });
+        expect(filtered.map((t) => t.id)).toEqual([1]);
+      });
+
+      it('menolak task jika rentang reversed (awal > akhir)', () => {
+        const filtered = filterTasksByDate(taskList, 'custom', {
+          customRange: { start: '2026-10-28', end: '2026-10-20' },
+        });
+        expect(filtered).toEqual([]);
+      });
+
+      it('meloloskan semua jika custom range kosong', () => {
+        const filtered = filterTasksByDate(taskList, 'custom', {
+          customRange: {},
+        });
+        expect(filtered.length).toBe(3);
+
+        const withUndated = filterTasksByDate(taskList, 'custom', {
+          customRange: {},
+          includeUndated: true,
+        });
+        expect(withUndated.length).toBe(4);
+      });
+    });
+
+    describe('computeDateRangeStats dengan custom range', () => {
+      it('menghitung stats.custom berdasarkan customRange yang diberikan', () => {
+        const taskA = { id: 1, created_at: new Date(2026, 9, 20, 10, 0).getTime() };
+        const taskB = { id: 2, created_at: new Date(2026, 9, 23, 14, 0).getTime() };
+        const taskC = { id: 3, created_at: new Date(2026, 9, 26, 16, 0).getTime() };
+        const tasks = [taskA, taskB, taskC];
+
+        const stats = computeDateRangeStats(tasks, {
+          customRange: { start: '2026-10-22', end: '2026-10-27' },
+        });
+        expect(stats.custom).toBe(2); // taskB dan taskC
+      });
     });
   });
 });

@@ -39,6 +39,16 @@ def project_snapshot():
             cur.execute("SELECT id, title, status FROM tasks ORDER BY created_at DESC LIMIT 8")
             snap["tasks"]["recent"] = [{"id": r[0], "title": r[1], "status": r[2]} for r in cur.fetchall()]
             c.close()
+        if snap["tasks"]["total"] == 0:
+            req = _ureq.Request("http://127.0.0.1:8787/api/tasks", headers={"User-Agent": "WFS-HQ"})
+            with _ureq.urlopen(req, timeout=3) as gr:
+                gdata = _json.loads(gr.read().decode())
+                gtasks = gdata.get("tasks") or []
+                if gtasks:
+                    snap["tasks"]["total"] = len(gtasks)
+                    snap["tasks"]["done"] = sum(1 for x in gtasks if x.get("status") in ("done", "completed"))
+                    snap["tasks"]["running"] = sum(1 for x in gtasks if x.get("status") in ("running", "in_progress"))
+                    snap["tasks"]["recent"] = [{"id": x.get("id"), "title": x.get("title"), "status": x.get("status")} for x in gtasks[:8]]
     except Exception:
         pass
 

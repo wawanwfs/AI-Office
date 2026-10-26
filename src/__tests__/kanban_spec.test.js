@@ -922,6 +922,17 @@ describe('kanban_spec — Audit Kontras Warna & Aksesibilitas WCAG (Badge & Tag)
 
       const all = filterTasks(tasksWithDates, { dateRange: 'all', now: fixedNow });
       expect(all.length).toBe(4);
+
+      // Rentang kustom
+      const customRangeFiltered = filterTasks(tasksWithDates, {
+        dateRange: 'custom',
+        now: fixedNow,
+        customRange: {
+          start: new Date(fixedNow - 4 * 86400000).toISOString().slice(0, 10),
+          end: new Date(fixedNow - 1 * 86400000).toISOString().slice(0, 10),
+        },
+      });
+      expect(customRangeFiltered.map((t) => t.id)).toEqual([11, 12]);
     });
 
     it('groupTasksByKanbanColumn menyaring task kolom berdasarkan parameter dateRange dan now', () => {
@@ -934,6 +945,13 @@ describe('kanban_spec — Audit Kontras Warna & Aksesibilitas WCAG (Badge & Tag)
       expect(groupsWeek.pending.map((t) => t.id)).toEqual([10]);
       expect(groupsWeek.running.map((t) => t.id)).toEqual([11]);
       expect(groupsWeek.done.map((t) => t.id)).toEqual([12]);
+
+      const groupsCustom = groupTasksByKanbanColumn(tasksWithDates, '', 'all', 'newest', 'all', 'any', 'custom', fixedNow, {
+        start: new Date(fixedNow - 4 * 86400000).toISOString().slice(0, 10),
+        end: new Date(fixedNow - 1 * 86400000).toISOString().slice(0, 10),
+      });
+      expect(groupsCustom.running.map((t) => t.id)).toEqual([11]);
+      expect(groupsCustom.done.map((t) => t.id)).toEqual([12]);
     });
   });
 });

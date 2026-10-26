@@ -274,5 +274,21 @@ describe('kanban_export: downloadExportFile & exportTasks', () => {
 
     const filename = generateTaskExportFilename('csv', { dateRange: 'today', now: fixedNow });
     expect(filename).toContain('_today_');
+
+    // Rentang kustom
+    const customJson = buildTaskJson(tasksWithDate, {
+      dateRange: 'custom',
+      customRange: { start: '2026-10-20', end: '2026-10-25' },
+      now: fixedNow,
+    });
+    expect(customJson.meta.filters.date_range).toBe('custom');
+    expect(customJson.meta.filters.custom_range).toEqual({ start: '2026-10-20', end: '2026-10-25' });
+
+    const customFilename = generateTaskExportFilename('csv', {
+      dateRange: 'custom',
+      customRange: { start: '2026-10-20', end: '2026-10-25' },
+      now: fixedNow,
+    });
+    expect(customFilename).toContain('_custom_2026-10-20_to_2026-10-25_');
   });
 });

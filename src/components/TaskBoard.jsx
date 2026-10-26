@@ -661,7 +661,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
                           }
                         }}
                         aria-label="Rentang waktu task"
-                        title={formatDateRangeSummary(dateRange, dateStats[dateRange] ?? 0)}
+                        title={formatDateRangeSummary(dateRange, dateStats[dateRange] ?? 0, { customRange })}
                       >
                         {DATE_RANGE_PRESETS.map(opt => (
                           <option key={opt.key} value={opt.key}>
@@ -675,6 +675,8 @@ export default function TaskBoard({ onFlash, onAsk }) {
                           className="task-date-clear-btn"
                           onClick={() => {
                             setDateRange('all')
+                            setCustomStartDate('')
+                            setCustomEndDate('')
                             if (typeof window !== 'undefined' && window.__officeSound) {
                               window.__officeSound.playSelect?.()
                             }
@@ -723,6 +725,66 @@ export default function TaskBoard({ onFlash, onAsk }) {
                     </button>
                   )}
                 </div>
+                {/* Panel Rentang Tanggal Kustom */}
+                {dateRange === 'custom' && (
+                  <div className="task-custom-date-bar" role="region" aria-label="Pengaturan rentang tanggal kustom">
+                    <div className="task-custom-date-inputs">
+                      <label htmlFor="task-custom-start" className="task-custom-date-label">Dari:</label>
+                      <input
+                        id="task-custom-start"
+                        type="date"
+                        className={`task-date-input${customRangeNorm.isReversed ? ' invalid' : ''}`}
+                        value={customStartDate}
+                        onChange={e => {
+                          setCustomStartDate(e.target.value)
+                          if (typeof window !== 'undefined' && window.__officeSound) window.__officeSound.playSelect?.()
+                        }}
+                        aria-label="Tanggal awal kustom"
+                        title="Pilih tanggal awal filter"
+                      />
+                      <label htmlFor="task-custom-end" className="task-custom-date-label">s/d:</label>
+                      <input
+                        id="task-custom-end"
+                        type="date"
+                        className={`task-date-input${customRangeNorm.isReversed ? ' invalid' : ''}`}
+                        value={customEndDate}
+                        onChange={e => {
+                          setCustomEndDate(e.target.value)
+                          if (typeof window !== 'undefined' && window.__officeSound) window.__officeSound.playSelect?.()
+                        }}
+                        aria-label="Tanggal akhir kustom"
+                        title="Pilih tanggal akhir filter"
+                      />
+                      {(customStartDate || customEndDate) && (
+                        <button
+                          type="button"
+                          className="task-custom-date-reset-btn"
+                          onClick={() => {
+                            setCustomStartDate('')
+                            setCustomEndDate('')
+                            if (typeof window !== 'undefined' && window.__officeSound) window.__officeSound.playSelect?.()
+                          }}
+                          title="Kosongkan tanggal kustom"
+                          aria-label="Kosongkan tanggal kustom"
+                        >
+                          ✕ Kosongkan
+                        </button>
+                      )}
+                    </div>
+                    <div className="task-custom-date-info">
+                      {customRangeNorm.isReversed ? (
+                        <span className="task-custom-date-error" role="alert">
+                          ⚠️ Tanggal awal tidak boleh melebihi tanggal akhir
+                        </span>
+                      ) : (
+                        <span className="task-custom-date-summary">
+                          {formatCustomDateRange(customRange)}
+                          {dateStats.custom != null ? ` · ${dateStats.custom} task cocok` : ''}
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
                 {/* Strip Filter Divisi / Tim Kampus */}
                 {tasks && (
                   <div className="division-filter-strip" role="group" aria-label="Filter berdasarkan divisi kerja">

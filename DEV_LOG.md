@@ -1,3 +1,38 @@
+## 2026-10-26 23:15 WIB — Siklus 102: Filter Preset Rentang Tanggal Kustom (Custom Date Picker) Task Kanban (kanban_date.js, Panel Tanggal Kustom, Validasi Tanggal Terbalik, Integrasi kanban_spec & kanban_export, Fallback Resilience project_api)
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Utilitas Rentang Tanggal Kustom (`src/lib/kanban_date.js`, `src/__tests__/kanban_date.test.js`):**
+     - Menambahkan opsi preset `custom` ('Rentang Kustom…', icon ⚙️) pada `DATE_RANGE_PRESETS`.
+     - Mengembangkan parser fleksibel input tanggal `parseDateInputToTimestamp` yang mendukung string format `YYYY-MM-DD`, Date objek, dan epoch timestamp, dengan penanganan batas akhir hari `isEndOfDay` (23:59:59.999).
+     - Mengembangkan normalizer cerdas `normalizeCustomDateRange` yang memvalidasi rentang tanggal, mendeteksi rentang terbalik (`start > end` / `isReversed`), dan menangani rentang terbuka satu sisi (`onlyStart` / `onlyEnd`).
+     - Mengembangkan pemformat tanggal ramah pengguna `formatCustomDateRange` (misal: "20 – 25 Okt 2026", "Dari 20 Okt 2026", "Hingga 26 Okt 2026") dan `formatSimpleDate`.
+     - Memperluas evaluator deterministik `isTaskInDateRange` dan filter array `filterTasksByDate` untuk mengevaluasi rentang kustom secara akurat.
+     - Mengintegrasikan penghitungan statistik `stats.custom` pada `computeDateRangeStats` serta pemformat ringkasan `formatDateRangeSummary` untuk mode kustom.
+  2. **Integrasi Spesifikasi Kanban & Ekspor Data (`src/scene/parts/kanban_spec.js`, `src/lib/kanban_export.js`, `src/__tests__/kanban_spec.test.js`, `src/__tests__/kanban_export.test.js`):**
+     - Meneruskan parameter `customRange` ke `groupTasksByKanbanColumn` dan `filterTasks` secara backward-compatible.
+     - Menyematkan `custom_range` pada metadata filter berkas JSON hasil ekspor.
+     - Mengembangkan penamaan berkas otomatis yang mencerminkan rentang kustom (misal: `wfs-tasks_custom_2026-10-20_to_2026-10-25_2026-10-26.csv`).
+  3. **Antarmuka & Pengalaman Pengguna TaskBoard (`src/components/TaskBoard.jsx`, `src/index.css`, `src/__tests__/TaskBoard.test.jsx`):**
+     - Menyediakan panel interaktif `.task-custom-date-bar` yang muncul mulus saat preset kustom dipilih.
+     - Menyediakan input tanggal awal (`Dari:`) dan akhir (`s/d:`) dengan styling tema dark royal-navy dan penanda visual error jika tanggal terbalik.
+     - Menyediakan tombol pembersihan instan `✕ Kosongkan` untuk mereset kedua tanggal input.
+     - Menyediakan pesan bantuan peringatan aksesibel `⚠️ Tanggal awal tidak boleh melebihi tanggal akhir` saat tanggal terbalik.
+     - Menghubungkan filter tanggal kustom dengan event `wfs-open-task-board` via parameter `customStartDate`, `customEndDate`, atau `customRange`.
+     - Menambahkan fallback resilience pada `backend/project_api.py` ke gateway `/api/tasks` saat snapshot SQLite kosong.
+
+- **Bukti terukur:**
+  - **Vitest:** **1849/1849 passed (138 test file)** (+17 tests baru: 16 test di `kanban_date.test.js`, 2 test di `kanban_spec.test.js`, 2 test di `kanban_export.test.js`, 1 test interaktif komprehensif di `TaskBoard.test.jsx`, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/lib/kanban_date.js src/scene/parts/kanban_spec.js src/lib/kanban_export.js src/components/TaskBoard.jsx src/__tests__/kanban_date.test.js src/__tests__/kanban_spec.test.js src/__tests__/kanban_export.test.js src/__tests__/TaskBoard.test.jsx`).
+  - **Build:** Berhasil (exit 0, 37 precache entries 1772.72 KiB; `OfficeScene` 166.74 KB / gzip 57.13 KB, `index` 202.02 KB / gzip 56.15 KB, `vendor-three` 715.76 KB, `vendor-react` 189.63 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-B0c9vkrM.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 23/23 selesai, 100%, 26 agents aktif).
+    - `shot.sh` (DISPLAY=:0): Screenshot visual **678.524 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+    - `scripts/e2e_zone_multi.py`: **E2E_ZONE_MULTI OK** (iso, front, top: 0 OFFSCREEN).
+- **Sisa backlog:** indikator status sinkronisasi WebSocket offline/reconnect dan preset kombinasi multi-tag kustom.
+
 ## 2026-10-26 22:30 WIB — Siklus 101: Filter Preset Rentang Tanggal Task Kanban (kanban_date.js, Preset Hari Ini / Kemarin / 7 Hari / 30 Hari, IconCalendar, Integrasi filterTasks/kanbanGroups, Stempel Waktu & Ekspor)
 
 - **Yang diperbaiki & ditingkatkan:**
