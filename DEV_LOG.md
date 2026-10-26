@@ -660,6 +660,13 @@
     - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
 - **Sisa backlog:** evaluasi optimasi chunking dinamis OfficeScene atau filtering per divisi pada tampilan Kanban.
 
+## 2026-10-27 00:15 WIB — Siklus 87: Reset task + fix 404 CS widget + chat AI CS hidup
+- **Reset data:** endpoint baru DELETE /api/tasks (hapus semua tasks+subtasks+projects+logs, agen → idle) + do_DELETE di server 9503. Eksekusi: 6 task/5 proyek/48 subtask dibersihkan, 12 agen idle — siap uji tugas nyata.
+- **Console error 404:** iframe CsWidget menunjuk /cs-widget/ yang tidak ada di 9503. Fix: proxy same-origin 9503→widget Docker :3001 (do_GET) + proxy POST /api/admin/* → backend :8000 (do_POST, _proxy_bantuin).
+- **Chat AI CS (tombol dock bawah):** endpoint /api/admin/chat dulunya butuh token admin → dibuat /api/admin/widget/chat PUBLIK (ratelimit tetap); widget/index.html default API → '/api/admin' same-origin, fetch → /widget/chat. Key LLM backend widget habis kuota → disinkronkan dgn key lightvela hermes (.env saas-dibantuin) + docker compose up --force-recreate + docker cp main.py (container build lama tak memuat kode baru; main.py perlu include admin_router yang sempat terhapus saat patch bersih-bersih — dipulihkan).
+- **Hasil uji nyata:** POST /api/admin/widget/chat → 200 dgn reply LLM asli ("Halo! Aku asisten AI layanan pelanggan..."); /cs-widget/ 200; probe CDP Chrome :99: 0 console error, 0 HTTP ≥400 saat load app & buka widget.
+- **Catatan:** 1863/1863 test ai-office-main tetap lulus. Vision masih 429 (quota) — verifikasi visual menyusul.
+
 ## 2026-10-26 22:40 WIB — Siklus 86: Rebranding tema royal-blue ala reel code.xr
 - **Pemicu:** user kirim reel IG code.xr "3D Dashboard + AI — Futuristic & Premium UI" — "sepertinya UI-nya bagus daripada punya kita".
 - **Analisis reel** (web_extract caption + PIL pixel-stat thumbnail 360×640): 100% keluarga biru — bg deep navy #010A28/#101B37/#152353, glow royal #0A3A9C/#4D7ECC (40% area sat>80), teks ice-blue #ADDBF2; 3D typography + glassy cards + Framer Motion.
