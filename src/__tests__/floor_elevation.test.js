@@ -30,6 +30,10 @@ describe('floor_elevation.js — konstanta arsitektur', () => {
     // Backward compatibility: x tidak disediakan (undefined/null) diasumsikan true
     expect(isNearStairX(undefined)).toBe(true);
     expect(isNearStairX(null)).toBe(true);
+    // Non-finite (NaN / ±Infinity) juga diasumsikan true — guard !Number.isFinite
+    expect(isNearStairX(NaN)).toBe(true);
+    expect(isNearStairX(Infinity)).toBe(true);
+    expect(isNearStairX(-Infinity)).toBe(true);
   });
 
   it('batas Z tangga arsitektural L1→L2 dan L2→L3 terdefinisi konsisten', () => {
@@ -63,6 +67,8 @@ describe('floorElevationAt(z) — perhitungan ketinggian lantai', () => {
     // Jika di luar tangga (misal di x = -8.0 pada deck Lantai 1) -> 0m
     expect(floorElevationAt(-1.2, -8.0)).toBe(0);
     expect(floorElevationAt(-1.2, 0)).toBe(0);
+    // x non-finite (NaN) di area tangga → diasumsikan di lintasan tangga → interpolasi
+    expect(floorElevationAt(-1.2, NaN)).toBeCloseTo(0.30, 4);
 
     // Pada koordinat Z tangga 2 (z = 4.4): jika di tangga -> 0.90m
     expect(floorElevationAt(4.4, -2.6)).toBeCloseTo(0.90, 4);
