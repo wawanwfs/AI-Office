@@ -4,13 +4,13 @@ try:
 except ImportError:  # pragma: no cover - dev/CI tanpa project_api
     project_api = None
 import static_serve
-os.chdir(os.path.dirname(os.path.abspath(__file__)))
 GATEWAY = "http://127.0.0.1:8787/api/"
 TOKEN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".wfs_ui_token")
 
 def get_token():
     if os.path.exists(TOKEN_FILE):
-        return open(TOKEN_FILE).read().strip()
+        with open(TOKEN_FILE) as f:  # tutup handle eksplisit
+            return f.read().strip()
     t = secrets.token_hex(16)
     with open(TOKEN_FILE, "w") as f:
         os.chmod(TOKEN_FILE, 0o600)
@@ -182,6 +182,8 @@ def _send_head_with_token(self):
 
 http.server.SimpleHTTPRequestHandler.send_head = _send_head_with_token
 
-socketserver.TCPServer.allow_reuse_address = True
-with socketserver.TCPServer(("0.0.0.0", 9503), H) as s:
-    s.serve_forever()
+if __name__ == "__main__":
+    os.chdir(os.path.dirname(os.path.abspath(__file__)))
+    socketserver.TCPServer.allow_reuse_address = True
+    with socketserver.TCPServer(("0.0.0.0", 9503), H) as s:
+        s.serve_forever()
