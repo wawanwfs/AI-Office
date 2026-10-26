@@ -81,7 +81,7 @@ export function resolveAgentId(name, idListOrMap) {
 export function buildRunningByAgent(agents, tasks) {
   const byAgent = {};
   Object.entries(agents || {}).forEach(([gid, v]) => {
-    if (v.running > 0) byAgent[gid] = { id: '?', title: 'mengerjakan', n: v.running };
+    if (v && v.running > 0) byAgent[gid] = { id: '?', title: 'mengerjakan', n: v.running };
   });
   const list = Array.isArray(tasks) ? tasks : ((tasks && tasks.tasks) || []);
   list.forEach((t) => {

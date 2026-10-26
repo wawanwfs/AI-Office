@@ -49,6 +49,13 @@ describe('buildRunningByAgent (murni, diekstrak pollRunning)', () => {
   it('semua running=0 & task kosong → kosong', () => {
     expect(buildRunningByAgent({ qa1: { running: 0 } }, [])).toEqual({});
   });
+  it('entri agents dgn data null/undefined tidak melempar (guard konsisten dgn wakeAgentIds/failedAlerts)', () => {
+    expect(() => buildRunningByAgent({ be1: null, qa1: undefined }, [])).not.toThrow();
+    expect(buildRunningByAgent({ be1: null, qa1: undefined }, [])).toEqual({});
+    const m = buildRunningByAgent({ be1: null, fe1: { running: 2 } }, []);
+    expect(m.fe1).toEqual({ id: '?', title: 'mengerjakan', n: 2 });
+    expect(m.be1).toBeUndefined();
+  });
 });
 
 describe('resolveAgentId (resolusi identitas agen & gateway ID)', () => {
