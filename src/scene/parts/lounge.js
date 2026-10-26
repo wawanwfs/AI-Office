@@ -3,6 +3,7 @@
 // meja majalah, TV info dgn dashboard live dari /wfs-project.
 // Builder berbasis konteks (THREE, office, M, MB, drawTvDashboard) — pola sama dgn cafe.js.
 import { applyPollResult, nextPollDelay } from '../../lib/connection_spec.js'
+import { uiTexture, uiMaterial } from './ui_colorspace.js'
 
 export function createLounge(ctx) {
   const { THREE, office, M, MB, drawTvDashboard, blobMat } = ctx;
@@ -76,7 +77,7 @@ export function createLounge(ctx) {
   const tvx = tvC.getContext('2d');
   // Tekstur 3D dibuat SEBELUM drawTv pertama: drawTv kini menandai
   // tvTex.needsUpdate di SEMUA jalur gambar (sukses, gagal, detak umur).
-  const tvTex = new THREE.CanvasTexture(tvC); tvTex.minFilter = THREE.LinearFilter;
+  const tvTex = uiTexture(new THREE.CanvasTexture(tvC)); tvTex.minFilter = THREE.LinearFilter;
   // Tracker kesehatan koneksi (paritas papan 3D & chip HUD) — down sejak awal.
   let tvConn = applyPollResult(null, { ok: false, error: 'init' }, 0);
   // Badge koneksi gateway (LIVE/TERPUTUS/SINKRON N LALU) digambar di sudut kanan
@@ -92,7 +93,7 @@ export function createLounge(ctx) {
     window.__lastTvDrawAt = Date.now();
   }
   drawTv();
-  const tvScr = new THREE.Mesh(new THREE.PlaneGeometry(1.2, .68), new THREE.MeshBasicMaterial({ map: tvTex }));
+  const tvScr = uiMaterial(new THREE.Mesh(new THREE.PlaneGeometry(1.2, .68), new THREE.MeshBasicMaterial({ map: tvTex })));
   async function tvPull(force = false) {
     if (!force && document.visibilityState === 'hidden') return;
     try {

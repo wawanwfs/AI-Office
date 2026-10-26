@@ -5,6 +5,7 @@
 
 import { computePct, clip, cardY, CARD_H, subtitle as subLine, bannerParts, bannerLayout, columnItems, cardMeta, stripLayout, STRIP_GAP, STRIP_LEFT, STRIP_RIGHT } from './projectboard_data.js'
 import { applyPollResult, connectionBadge, nextPollDelay } from '../../lib/connection_spec.js'
+import { uiTexture, uiMaterial } from './ui_colorspace.js'
 
 // Polling adaptif papan 3D: cadence sehat tetap 60 dtk (perilaku lama), tapi
 // saat fetch gagal jeda mengikuti backoff eksponensial 5→10→20→40→80s (cap 80s)
@@ -17,11 +18,11 @@ export function createProjectBoard(office, THREE) {
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H
   const g = cv.getContext('2d')
 
-  const tex = new THREE.CanvasTexture(cv)
-  const mesh = new THREE.Mesh(
+  const tex = uiTexture(new THREE.CanvasTexture(cv))
+  const mesh = uiMaterial(new THREE.Mesh(
     new THREE.PlaneGeometry(7.4, 4.04),
     new THREE.MeshBasicMaterial({ map: tex, fog: false })
-  )
+  ))
   mesh.position.set(-8.35, 2.6, 13.3)
   mesh.rotation.y = Math.PI
   mesh.renderOrder = 5

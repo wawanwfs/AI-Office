@@ -7,6 +7,7 @@ import {
 } from './whiteboard_spec.js';
 import { drawSprintBoard } from './whiteboard_canvas.js';
 import { drawClockFace } from './clock_canvas.js';
+import { uiTexture, uiMaterial } from './ui_colorspace.js';
 
 // Ruang meeting, jam dinding, dan pencahayaan gantung — ditulis ulang untuk WFS Project.
 export function createMeetingRoom(ctx, glassMat) {
