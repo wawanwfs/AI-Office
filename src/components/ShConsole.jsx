@@ -167,7 +167,7 @@ export default function ShConsole({ show, onClose }) {
   if (!show) return null
 
   return (
-    <div style={STYLE.overlay} onClick={onClose}>
+    <div style={STYLE.overlay} role="presentation" onClick={onClose}>
       <div ref={drawerRef} style={STYLE.drawer} onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Konsol Software House">
         <div style={STYLE.head}>
           <h2 style={STYLE.title}>WFS PROJECT · Konsol</h2>

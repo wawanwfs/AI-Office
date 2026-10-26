@@ -195,6 +195,16 @@ describe('ShConsole — konsol software house', () => {
     expect(overviewTab.getAttribute('aria-pressed')).toBe('false')
   })
 
+  it('a11y: backdrop scrim dekoratif memakai role=presentation (tersembunyi dari pembaca layar)', async () => {
+    stubFetch({ '/wfs-api/sh/overview': OV })
+    const { container } = render(<ShConsole show onClose={() => {}} />)
+    await screen.findByText('Agent total')
+    const scrim = container.querySelector('[role="presentation"]')
+    expect(scrim).toBeTruthy()
+    // dialog tetap terekspos dengan peran & nama yang benar
+    expect(screen.getByRole('dialog', { name: 'Konsol Software House' })).toBeTruthy()
+  })
+
   it('Overview tahan response tanpa recent_logs (guard null-safe)', async () => {
     const partial = { ...OV }
     delete partial.recent_logs
