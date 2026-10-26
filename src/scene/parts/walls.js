@@ -17,9 +17,9 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
     const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
   };
   const lit=(map)=>new THREE.MeshBasicMaterial({map}); // tidak bergantung pencahayaan -> selalu terang & terbaca
-  const upperA=tex('#E6EAF1','rgba(130,145,170,.30)');upperA.repeat.set(12,1);
+  const upperA=tex('#E6EAF1','rgba(120,138,165,.48)');upperA.repeat.set(12,1);
   const woodA=tex('#8A6244','rgba(40,25,10,.40)',512,256,32);woodA.repeat.set(12,1);
-  const upperB=tex('#E6EAF1','rgba(130,145,170,.30)');upperB.repeat.set(9,1);
+  const upperB=tex('#E6EAF1','rgba(120,138,165,.48)');upperB.repeat.set(9,1);
   const woodB=tex('#8A6244','rgba(40,25,10,.40)',512,256,32);woodB.repeat.set(9,1);
   const NAVY=0x24304A, GOLD=0xD4AF37, TRIM=0xF4F6FA;
   const WX=17, WZ=13.5;            // setengah dimensi kampus 34 x 27 m
@@ -32,7 +32,7 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   W(B(34,.08,.3),new THREE.MeshBasicMaterial({color:NAVY}),0,1.19,13.46);
   W(B(34,.2,.34),new THREE.MeshBasicMaterial({color:TRIM}),0,3.9,13.44);       // crown molding putih tebal
   W(B(34,.14,.28),new THREE.MeshBasicMaterial({color:NAVY}),0,.07,13.47);      // plint
-  [-16,-12,-8,-4,0,4,8,12,16].forEach(x=>W(B(.3,4,.32),new THREE.MeshBasicMaterial({color:0xD8DFE9}),x,2,13.45));
+  [-16,-12,-8,-4,0,4,8,12,16].forEach(x=>W(B(.3,4,.32),new THREE.MeshBasicMaterial({color:0xB9C4D4}),x,2,13.45));
 
   // ---- DINDING KIRI (x=-17), menghadap +X ----
   W(B(.2,4,27),lit(upperB),-17.1,2,0);
@@ -40,14 +40,14 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   W(B(.3,.08,27),new THREE.MeshBasicMaterial({color:NAVY}),-16.96,1.19,0);
   W(B(.34,.2,27),new THREE.MeshBasicMaterial({color:TRIM}),-16.94,3.9,0);
   W(B(.28,.14,27),new THREE.MeshBasicMaterial({color:NAVY}),-16.97,.07,0);
-  [-12,-7.5,-3,1.5,6,10.5].forEach(z=>W(B(.32,4,.3),new THREE.MeshBasicMaterial({color:0xD8DFE9}),-16.95,2,z));
+  [-12,-7.5,-3,1.5,6,10.5].forEach(z=>W(B(.32,4,.3),new THREE.MeshBasicMaterial({color:0xB9C4D4}),-16.95,2,z));
 
   // ---- DINDING DEPAN (z=-13.5) & KANAN (x=+17): solid, memudar otomatis bila kamera ada di sisinya ----
   const fadeMats=[];
   const FM=(map,color)=>{const m=new THREE.MeshBasicMaterial(map?{map,transparent:true}:{color,transparent:true});fadeMats.push(m);return m};
-  const upperF=tex('#E6EAF1','rgba(130,145,170,.30)');upperF.repeat.set(12,1);
+  const upperF=tex('#E6EAF1','rgba(120,138,165,.48)');upperF.repeat.set(12,1);
   const woodF=tex('#8A6244','rgba(40,25,10,.40)',512,256,32);woodF.repeat.set(12,1);
-  const upperR=tex('#E6EAF1','rgba(130,145,170,.30)');upperR.repeat.set(9,1);
+  const upperR=tex('#E6EAF1','rgba(120,138,165,.48)');upperR.repeat.set(9,1);
   const woodR=tex('#8A6244','rgba(40,25,10,.40)',512,256,32);woodR.repeat.set(9,1);
   const wallFront=[], wallRight=[];
   const F=(arr,geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);office.add(m);arr.push(m);return m};
@@ -57,7 +57,7 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   F(wallFront,B(34,.08,.3),FM(null,NAVY),0,1.19,-13.46);
   F(wallFront,B(34,.2,.34),FM(null,TRIM),0,3.9,-13.44);
   F(wallFront,B(34,.14,.28),FM(null,NAVY),0,.07,-13.47);
-  [-16,-12,-8,-4,0,4,8,12,16].forEach(x=>F(wallFront,B(.3,4,.32),FM(null,0xD8DFE9),x,2,-13.45));
+  [-16,-12,-8,-4,0,4,8,12,16].forEach(x=>F(wallFront,B(.3,4,.32),FM(null,0xB9C4D4),x,2,-13.45));
   // jendela di dinding depan
   [-12,-6,-0.5,5,10.5].forEach(x=>{
     const wm=new THREE.MeshBasicMaterial({map:skyTex,transparent:true});fadeMats.push(wm);
@@ -74,7 +74,7 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   F(wallRight,B(.3,.08,27),FM(null,NAVY),16.96,1.19,0);
   F(wallRight,B(.34,.2,27),FM(null,TRIM),16.94,3.9,0);
   F(wallRight,B(.28,.14,27),FM(null,NAVY),16.97,.07,0);
-  [-12,-7.5,-3,1.5,6,10.5].forEach(z=>F(wallRight,B(.32,4,.3),FM(null,0xD8DFE9),16.95,2,z));
+  [-12,-7.5,-3,1.5,6,10.5].forEach(z=>F(wallRight,B(.32,4,.3),FM(null,0xB9C4D4),16.95,2,z));
   [-10,-4.5,1,6.5].forEach(z=>{
     const wm=new THREE.MeshBasicMaterial({map:skyTex,transparent:true});fadeMats.push(wm);
     if(skyWinMats)skyWinMats.push(wm);
@@ -85,7 +85,7 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   });
   // ---- Tiang sudut struktural 4 kombinasi (±17, ±13.5) — menyatu dgn glass edge frame structure.js ----
   [[-17,-13.5],[-17,13.5],[17,-13.5],[17,13.5]].forEach(([cx,cz])=>{
-    W(B(.34,4,.34),new THREE.MeshBasicMaterial({color:0xD8DFE9}),cx,2,cz);
+    W(B(.34,4,.34),new THREE.MeshBasicMaterial({color:0xB9C4D4}),cx,2,cz);
   });
 
 

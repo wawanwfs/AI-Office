@@ -31,23 +31,23 @@ export function drawAoStrip(x) {
 export function drawTerrazzo(x, tint = '#FFFFFF') {
   x.fillStyle = tint === '#FFFFFF' ? '#EDEAE3' : tint;
   x.fillRect(0, 0, 512, 512);
-  const chips = ['#D9CFC0', '#C4B8A5', '#B0A48F'];
+  const chips = ['#CBBFA9', '#B7A88E', '#9C8F76', '#E4D9C4'];
   let seed = 7;
   const rnd = () => { seed = (seed * 16807) % 2147483647; return seed / 2147483647; };
   for (let i = 0; i < 260; i++) {
     x.fillStyle = chips[i % chips.length];
-    x.globalAlpha = 0.5 + rnd() * 0.4;
-    const cx = rnd() * 512, cy = rnd() * 512, r = 1.5 + rnd() * 4;
+    x.globalAlpha = 0.7 + rnd() * 0.3;
+    const cx = rnd() * 512, cy = rnd() * 512, r = 3 + rnd() * 8;
     x.beginPath(); x.ellipse(cx, cy, r, r * (0.6 + rnd() * 0.6), rnd() * 3.14, 0, 6.29); x.fill();
   }
   x.globalAlpha = 1;
-  x.strokeStyle = 'rgba(120,110,95,0.16)'; x.lineWidth = 1.4;
+  x.strokeStyle = 'rgba(105,95,78,0.30)'; x.lineWidth = 2.2;
   for (let v = 0; v < 5; v++) {
     x.beginPath(); let vx = rnd() * 512, vy = 0; x.moveTo(vx, vy);
     while (vy < 512) { vy += 30 + rnd() * 40; vx += (rnd() - 0.5) * 60; x.lineTo(vx, vy); }
     x.stroke();
   }
-  x.strokeStyle = 'rgba(90,85,75,0.10)'; x.lineWidth = 1;
+  x.strokeStyle = 'rgba(80,75,65,0.16)'; x.lineWidth = 1.5;
   for (let g = 0; g <= 512; g += 128) {
     x.beginPath(); x.moveTo(g, 0); x.lineTo(g, 512); x.stroke();
     x.beginPath(); x.moveTo(0, g); x.lineTo(512, g); x.stroke();

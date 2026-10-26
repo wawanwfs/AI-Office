@@ -67,7 +67,7 @@ export function createTerraces({ THREE, office, M, MB }) {
   // ══════════════════════════════════════════════════════════
   const l1Deck = new THREE.Mesh(
     new THREE.BoxGeometry(34.0, 0.20, 13.0),
-    terrazzoMat('#FFFFFF', 6, 3) // Terazzo putih bervena
+    terrazzoMat('#FFFFFF', 3.2, 1.5) // Terazzo putih bervena
   );
   l1Deck.position.set(0, -0.10, -7.4);
   l1Deck.receiveShadow = true;
@@ -207,7 +207,7 @@ export function createTerraces({ THREE, office, M, MB }) {
   // ══════════════════════════════════════════════════════════
   const l2Deck = new THREE.Mesh(
     new THREE.BoxGeometry(34.0, 0.20, 5.1),
-    terrazzoMat('#F7EFE0', 5, 1.6) // Oak blonde bervein lembut
+    terrazzoMat('#F7EFE0', 4, 1.2) // Oak blonde bervein lembut
   );
   l2Deck.position.set(0, L2_Y - 0.10, 1.95);
   l2Deck.receiveShadow = true;
@@ -264,7 +264,7 @@ export function createTerraces({ THREE, office, M, MB }) {
   // ══════════════════════════════════════════════════════════
   const l3Deck = new THREE.Mesh(
     new THREE.BoxGeometry(34.0, 0.20, 11.0),
-    terrazzoMat('#44576E', 5, 2.4) // Slate biru eksekutif
+    terrazzoMat('#44576E', 3.5, 1.6) // Slate biru eksekutif
   );
   l3Deck.position.set(0, L3_Y - 0.10, 10.5);
   l3Deck.receiveShadow = true;
