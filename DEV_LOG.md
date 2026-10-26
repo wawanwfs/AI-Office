@@ -16,7 +16,7 @@
   - **Build:** sukses (exit 0, 37 precache entries 1804.10 KiB; chunk baru `index-CejGw5Ax.js` tersaji HTTP 200 di :9503).
   - **Deploy:** `dist/*` → `~/wfs-hq/` OK (index & chunk 200; layanan `wfs-hq` + `wfs-office` tetap `active`).
   - **E2E:** `e2e_tv.py` **E2E_TV: OK** (26 agents, ws true); `e2e_shot.py` **E2E_VISUAL: OK** — screenshot **682.097 bytes** (>500 KB, WebGL hidup); `e2e_zone_multi.py` **E2E_ZONE_MULTI: OK** (0 OFFSCREEN, label zona `vis=True` semua).
-- **Commit Hash:** tercatat setelah push (lihat git log).
+- **Commit Hash:** `8ba90e3` (feat/board; pasca rebase di atas auto-dev `017f4d9` a11y ShConsole — vitest final **1912/1912, 142 file**, 0 fail), push sukses ke `origin/main`.
 - **Sisa backlog:** tidak ada item wajib tersisa; kandidat lanjutan: adaptasi backoff eksponensial `connection_spec` untuk pull papan 3D & TV lounge (saat ini tetap 60 dtk fix), verifikasi subjektif audio web-audio.
 
 ## 2026-10-27 02:35 WIB — Siklus 106: Indikator Sinkronisasi Gateway HUD + Polling Adaptif Backoff Eksponensial (lib/connection_spec.js, chip live/stale/down)
