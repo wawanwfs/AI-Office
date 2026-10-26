@@ -3,7 +3,8 @@
 // item per kolom kanban, dan segmen strip status bawah.
 
 // tata letak kartu kolom: y kartu ke-i (0..5) + tinggi, dijamin tidak menabrak strip bawah (y=794)
-export const CARD_TOP = 248, CARD_STEP = 88, CARD_H = 78, COLUMN_BOTTOM = 788
+const CARD_TOP = 248, CARD_STEP = 88
+export const CARD_H = 78, COLUMN_BOTTOM = 788
 export function cardY(i) { return CARD_TOP + i * CARD_STEP }
 
 // judul dipotong di batas kata, diberi '…' bila terpotong (jangan memotong di tengah kata)

@@ -6,12 +6,12 @@
 export const TV_W = 256;
 export const TV_H = 144;
 export const TV_BG = '#0A1628';
-export const TV_ACCENT = '#F59E0B';
+const TV_ACCENT = '#F59E0B';
 export const TV_MUTED = '#8fa3bd';
 export const TV_GREEN = '#10E5A0';
 export const TV_BLUE = '#448AFF';
 export const TV_RED = '#ef4444';
-export const TV_DIM = '#5b6b82';
+const TV_DIM = '#5b6b82';
 
 // Berapa baris status (GAGAL/REVIEW) yang tampil, dan X untuk kolom kedua.
 export function statusRows(T){

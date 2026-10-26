@@ -6,7 +6,7 @@
 // hanya baseline tinggi (anchor.y+1.35) yang dihaluskan — transisi duduk↔berdiri
 // jadi geser halus, bukan lompat. k=1 saat delta besar → tetap sampai tanpa lag
 // saat frame drop. Diekstrak murni agar bisa di-unit-test.
-export const BUBBLE_SMOOTH_RATE = 10; // 1/dtk — konvergensi ±0.3 dtk, tanpa snap
+const BUBBLE_SMOOTH_RATE = 10; // 1/dtk — konvergensi ±0.3 dtk, tanpa snap
 
 export function updateBubbles(bubbles, delta, { remove }){
   const k = 1 - Math.exp(-BUBBLE_SMOOTH_RATE * Math.max(0, delta));

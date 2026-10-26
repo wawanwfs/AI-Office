@@ -120,7 +120,7 @@ export const SCREEN_REDRAW_EVERY = 6;
 // Throttle halaman melayang: 22 mesh (posisi + 3 rotasi + sin) di-update tiap
 // frame padahal drift lambat → cukup ~20×/dtk; dt diakumulasi agar perpindahan
 // per detik tetap identik dengan update per-frame.
-export const PAGES_UPDATE_INTERVAL = 1 / 20;
+const PAGES_UPDATE_INTERVAL = 1 / 20;
 
 export function shouldRedrawScreen(frame, every = SCREEN_REDRAW_EVERY) {
   return Number.isFinite(frame) && frame % every === 0;
