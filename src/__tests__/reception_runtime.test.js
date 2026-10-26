@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 // Unit test runtime createReception (reception.js): meja resepsionis WFS —
 // desk 0x1A2A3A, top 0xDDE4EC, side panel, logo kanvas 1024×320 dua sisi,
-// glow teal + PointLight 0x0DEEF3, monitor + glow layar, keyboard+mouse,
+// glow teal + PointLight 0x4D9FFF, monitor + glow layar, keyboard+mouse,
 // kursi, karakter NEXUS "WAHYU FS" scale 1.7 menghadap +Z, label Founder,
 // footprint OBSTACLES didaftarkan.
 import { describe, it, expect, beforeEach } from 'vitest'
@@ -111,12 +111,12 @@ describe('createReception — meja resepsionis kantor 3D', () => {
     expect(front.length).toBe(2) // dua sisi
   })
 
-  it('glow strip MB 0x0DEEF3 di y=.05 + PointLight 0x0DEEF3 intensity .4 distance 3.5 decay 2 di (RCX,.1,RCZ+.5)', async () => {
+  it('glow strip MB 0x4D9FFF di y=.05 + PointLight 0x4D9FFF intensity .4 distance 3.5 decay 2 di (RCX,.1,RCZ+.5)', async () => {
     const { refs } = await build(makeCtx())
-    const glow = refs.reception.children.find((k) => k.material && k.material.color === 0x0DEEF3)
+    const glow = refs.reception.children.find((k) => k.material && k.material.color === 0x4D9FFF)
     expect(glow.geometry.args).toEqual([2.2, 0.02, 0.02])
     expect(glow.position.y).toBeCloseTo(0.05)
-    expect(refs.rcLight.lightArgs).toEqual([0x0DEEF3, 0.4, 3.5, 2])
+    expect(refs.rcLight.lightArgs).toEqual([0x4D9FFF, 0.4, 3.5, 2])
     expect(refs.rcLight.position).toMatchObject({ x: RCX, y: 0.1, z: RCZ + 0.5 })
   })
 

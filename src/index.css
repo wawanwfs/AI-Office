@@ -9,10 +9,10 @@
 }
 
 :root {
-  --bg: #020713;
-  --surface: #071224;
+  --bg: #010722;
+  --surface: #071230;
   --surface-card: rgba(12, 20, 38, 0.88);
-  --teal: #0DEEF3;
+  --teal: #4D9FFF;
   --amber: #F59E0B;
   --green: #10E5A0;
   --rose: #FB7185;
@@ -90,14 +90,14 @@ button { font-family: inherit; }
 /* ===== Cinematic Vignette Overlay ===== */
 .vignette {
   position: fixed; inset: 0; pointer-events: none; z-index: var(--z-vignette);
-  background: radial-gradient(ellipse at 50% 48%, transparent 56%, rgba(0, 8, 20, 0.48) 100%);
+  background: radial-gradient(ellipse at 50% 48%, transparent 56%, rgba(1, 8, 34, 0.5) 100%);
 }
 
 /* ===== SysMeter — status host live (kanan-atas) ===== */
 .sysmeter {
   position: fixed; top: 14px; right: 14px; z-index: var(--z-hud);
   display: flex; align-items: center; gap: 4px; padding: 6px 12px;
-  background: linear-gradient(180deg, rgba(14, 24, 46, 0.85) 0%, rgba(6, 12, 26, 0.92) 100%);
+  background: linear-gradient(180deg, rgba(12, 26, 64, 0.85) 0%, rgba(4, 12, 38, 0.92) 100%);
   backdrop-filter: blur(24px) saturate(1.5);
   border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 20px;
   box-shadow: 0 12px 36px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.15);
@@ -122,7 +122,7 @@ button { font-family: inherit; }
 .dock {
   position: fixed; left: 0; right: 0; margin: 0 auto; width: max-content; bottom: calc(14px + var(--safe-b));
   z-index: var(--z-dock); display: flex; align-items: center; gap: 6px; padding: 6px 8px;
-  background: linear-gradient(180deg, rgba(12, 20, 38, 0.82) 0%, rgba(6, 11, 22, 0.92) 100%);
+  background: linear-gradient(180deg, rgba(10, 24, 60, 0.82) 0%, rgba(4, 10, 34, 0.92) 100%);
   backdrop-filter: blur(28px) saturate(1.6);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 22px;
@@ -152,9 +152,9 @@ button { font-family: inherit; }
 .ibtn:hover .ic { transform: translateY(-1px) scale(1.08); }
 .ibtn:active { transform: scale(0.95); }
 .ibtn[aria-expanded=true], .ibtn.on {
-  background: linear-gradient(180deg, rgba(13, 238, 243, 0.18) 0%, rgba(13, 238, 243, 0.06) 100%);
-  color: var(--teal); border-color: rgba(13, 238, 243, 0.32);
-  box-shadow: 0 0 16px rgba(13, 238, 243, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: linear-gradient(180deg, rgba(77, 159, 255, 0.18) 0%, rgba(77, 159, 255, 0.06) 100%);
+  color: var(--teal); border-color: rgba(77, 159, 255, 0.32);
+  box-shadow: 0 0 16px rgba(77, 159, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 .ibtn:disabled { opacity: .38; cursor: not-allowed; }
 .ibtn.accent {
@@ -174,7 +174,7 @@ button { font-family: inherit; }
 .scene-loading {
   position: fixed; left: 50%; top: 45%; transform: translate(-50%, -50%);
   z-index: var(--z-hud); padding: 12px 26px; border-radius: var(--r-pill);
-  background: rgba(8, 16, 32, 0.88); border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(8, 18, 46, 0.88); border: 1px solid rgba(255, 255, 255, 0.15);
   box-shadow: 0 16px 40px rgba(0,0,0,0.6), inset 0 1px 0 rgba(255,255,255,0.15);
   backdrop-filter: blur(20px);
   color: var(--teal); font-size: 13px; font-weight: 600; letter-spacing: .5px;
@@ -184,7 +184,7 @@ button { font-family: inherit; }
 
 .error-boundary {
   position: fixed; inset: 0; z-index: 9999; overflow: auto;
-  background: rgba(4, 8, 18, 0.94); backdrop-filter: blur(24px); color: #E2E8F0;
+  background: rgba(3, 8, 28, 0.94); backdrop-filter: blur(24px); color: #E2E8F0;
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 14px; padding: 24px; text-align: center;
 }
@@ -198,7 +198,7 @@ button { font-family: inherit; }
 .error-boundary button {
   background: linear-gradient(135deg, var(--teal), #448AFF); color: #04121F; border: 0;
   border-radius: var(--r-pill); padding: 9px 24px; font-weight: 700; cursor: pointer; font-size: 13px;
-  box-shadow: 0 4px 16px rgba(13,238,243,0.3);
+  box-shadow: 0 4px 16px rgba(77,159,255,0.3);
 }
 
 /* popover di atas bilah */
@@ -224,7 +224,7 @@ button { font-family: inherit; }
 .hud {
   position: fixed; top: 14px; left: 14px; z-index: var(--z-hud);
   display: flex; align-items: center; gap: 10px; padding: 6px 16px 6px 14px;
-  background: linear-gradient(180deg, rgba(14, 24, 46, 0.85) 0%, rgba(6, 12, 26, 0.92) 100%);
+  background: linear-gradient(180deg, rgba(12, 26, 64, 0.85) 0%, rgba(4, 12, 38, 0.92) 100%);
   backdrop-filter: blur(24px) saturate(1.5);
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 20px;
@@ -235,7 +235,7 @@ button { font-family: inherit; }
   font-family: 'DM Mono', 'Space Mono', 'Orbitron', monospace;
   font-size: 15px; font-weight: 700; color: var(--teal); letter-spacing: 1.5px;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 12px rgba(13, 238, 243, 0.45);
+  text-shadow: 0 0 12px rgba(77, 159, 255, 0.45);
 }
 .hud .stat {
   font-family: 'DM Sans', sans-serif; font-size: 12px; color: var(--text-secondary);
@@ -292,14 +292,14 @@ button { font-family: inherit; }
   transform: translateY(-1px);
 }
 .hud-amb-btn:focus-visible {
-  outline: 2px solid var(--teal, #0deef3);
+  outline: 2px solid var(--teal, #4d9fff);
   outline-offset: 1px;
 }
 .hud-amb-btn.active {
-  background: rgba(13, 238, 243, 0.12);
-  border-color: rgba(13, 238, 243, 0.4);
-  color: var(--teal, #0deef3);
-  box-shadow: 0 0 10px rgba(13, 238, 243, 0.25);
+  background: rgba(77, 159, 255, 0.12);
+  border-color: rgba(77, 159, 255, 0.4);
+  color: var(--teal, #4d9fff);
+  box-shadow: 0 0 10px rgba(77, 159, 255, 0.25);
 }
 .hud-amb-btn.muted {
   opacity: 0.55;
@@ -385,7 +385,7 @@ button { font-family: inherit; }
   border-radius: 12px; font-size: 14px; font-family: inherit; transition: border-color .15s, box-shadow .15s;
 }
 .fld:focus, .sel:focus {
-  border-color: var(--teal); outline: none; box-shadow: 0 0 0 3px rgba(13, 238, 243, .22);
+  border-color: var(--teal); outline: none; box-shadow: 0 0 0 3px rgba(77, 159, 255, .22);
 }
 .msg {
   max-width: 88%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.5;
@@ -447,7 +447,7 @@ button { font-family: inherit; }
   transition: border-color .15s, box-shadow .15s;
 }
 .modal input:focus, .modal textarea:focus, .modal select:focus {
-  border-color: var(--teal); outline: none; box-shadow: 0 0 0 3px rgba(13, 238, 243, .22);
+  border-color: var(--teal); outline: none; box-shadow: 0 0 0 3px rgba(77, 159, 255, .22);
 }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
 .btn {
@@ -464,8 +464,8 @@ button { font-family: inherit; }
 .btn.danger { background: #ef4444; border-color: transparent; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 .btn-preset:hover:not(:disabled) {
-  background: rgba(13, 238, 243, 0.1) !important;
-  border-color: rgba(13, 238, 243, 0.4) !important;
+  background: rgba(77, 159, 255, 0.1) !important;
+  border-color: rgba(77, 159, 255, 0.4) !important;
   transform: translateY(-1px);
 }
 .btn-preset:active:not(:disabled) {
@@ -493,8 +493,8 @@ button { font-family: inherit; }
 .meeting-badge { position: fixed; top: 104px; left: 0; right: 0; display: flex; justify-content: center; z-index: var(--z-hud); pointer-events: none; }
 .meeting-badge div {
   font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700; color: #04121f;
-  background: linear-gradient(135deg, #0DEEF3, #448AFF); padding: 7px 16px; border-radius: 20px;
-  display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 20px rgba(13,238,243,0.35);
+  background: linear-gradient(135deg, #4D9FFF, #448AFF); padding: 7px 16px; border-radius: 20px;
+  display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 20px rgba(77,159,255,0.35);
 }
 .meeting-badge i { width: 7px; height: 7px; border-radius: 50%; background: #04121f; animation: pulse 1.5s ease infinite; }
 
@@ -507,7 +507,7 @@ button { font-family: inherit; }
   display: flex;
   align-items: center;
   gap: 6px;
-  background: linear-gradient(180deg, rgba(14, 24, 46, 0.85) 0%, rgba(6, 12, 26, 0.92) 100%);
+  background: linear-gradient(180deg, rgba(12, 26, 64, 0.85) 0%, rgba(4, 12, 38, 0.92) 100%);
   backdrop-filter: blur(24px) saturate(1.5);
   -webkit-backdrop-filter: blur(24px) saturate(1.5);
   border: 1px solid rgba(255, 255, 255, 0.12);
@@ -647,7 +647,7 @@ button { font-family: inherit; }
 .skip-link {
   position: fixed; top: -48px; left: 12px; z-index: 9999; padding: 8px 16px;
   background: var(--teal); color: #00121a; font-weight: 700; border-radius: 10px;
-  text-decoration: none; transition: top .15s ease; box-shadow: 0 4px 16px rgba(13,238,243,0.4);
+  text-decoration: none; transition: top .15s ease; box-shadow: 0 4px 16px rgba(77,159,255,0.4);
 }
 .skip-link.vis { top: 10px; }
 .skip-link:focus { outline: 2px solid #fff; outline-offset: 2px; }
@@ -1701,7 +1701,7 @@ button { font-family: inherit; }
 }
 .help-shortcut-card:hover {
   background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(13, 238, 243, 0.3);
+  border-color: rgba(77, 159, 255, 0.3);
 }
 .help-shortcut-kbd {
   display: inline-block;
@@ -1710,8 +1710,8 @@ button { font-family: inherit; }
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-weight: 700;
   color: var(--teal);
-  background: rgba(13, 238, 243, 0.08);
-  border: 1px solid rgba(13, 238, 243, 0.28);
+  background: rgba(77, 159, 255, 0.08);
+  border: 1px solid rgba(77, 159, 255, 0.28);
   border-radius: 5px;
   flex-shrink: 0;
   white-space: nowrap;

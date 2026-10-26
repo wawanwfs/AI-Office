@@ -76,8 +76,8 @@ const rng=new RNG(2026);
 // ─── SCENE ─────────────────────────────────────────
 const scene=new THREE.Scene();window.__scene=scene;
 scene.name = 'Office3D';
- scene.background=new THREE.Color(0x000C1E);
- scene.fog=new THREE.FogExp2(0x000C1E,0.005);
+ scene.background=new THREE.Color(0x010A28);
+ scene.fog=new THREE.FogExp2(0x010A28,0.0048);
  const __initAsp = computeAspect(container.clientWidth, container.clientHeight);
  const camera = new THREE.PerspectiveCamera(getResponsiveFov(__initAsp), __initAsp, 0.1, 500);
  let renderer=null;
@@ -1262,26 +1262,26 @@ helmetBase.position.set(leadDesk.x+.55,.79,leadDesk.z+.2);office.add(helmetBase)
 // Tiny helmet shape (V-visor)
 const helmetBody=new THREE.Mesh(new THREE.BoxGeometry(.12,.12,.1),M(0xDDDDDD));
 helmetBody.position.set(leadDesk.x+.55,.87,leadDesk.z+.2);office.add(helmetBody);
-const helmetVisor=new THREE.Mesh(new THREE.BoxGeometry(.1,.04,.02),MB(0x0DEEF3));
+const helmetVisor=new THREE.Mesh(new THREE.BoxGeometry(.1,.04,.02),MB(0x4D9FFF));
 helmetVisor.position.set(leadDesk.x+.55,.88,leadDesk.z+.15);office.add(helmetVisor);
 // Tiny helmet glow
-const helmetGlow=new THREE.PointLight(0x0DEEF3,0.15,1,2);
+const helmetGlow=new THREE.PointLight(0x4D9FFF,0.15,1,2);
 helmetGlow.position.set(leadDesk.x+.55,.9,leadDesk.z+.15);office.add(helmetGlow);
 
 // Cincin lantai di sekitar meja utama
 const ringGeo=new THREE.RingGeometry(1.2,1.25,32);
-const ringMat=new THREE.MeshBasicMaterial({color:0x0DEEF3,transparent:true,opacity:0.15,side:THREE.DoubleSide});
+const ringMat=new THREE.MeshBasicMaterial({color:0x4D9FFF,transparent:true,opacity:0.15,side:THREE.DoubleSide});
 const floorRing=new THREE.Mesh(ringGeo,ringMat);
 floorRing.rotation.x=-Math.PI/2;
 floorRing.position.set(leadDesk.x,.02,leadDesk.z+.2);
 office.add(floorRing);
 // Inner ring
-const ringInner=new THREE.Mesh(new THREE.RingGeometry(1.05,1.08,32),new THREE.MeshBasicMaterial({color:0x0DEEF3,transparent:true,opacity:0.08,side:THREE.DoubleSide}));
+const ringInner=new THREE.Mesh(new THREE.RingGeometry(1.05,1.08,32),new THREE.MeshBasicMaterial({color:0x4D9FFF,transparent:true,opacity:0.08,side:THREE.DoubleSide}));
 ringInner.rotation.x=-Math.PI/2;ringInner.position.set(leadDesk.x,.02,leadDesk.z+.2);
 office.add(ringInner);
 
 // Pulse ring (animated in render loop)
-const pulseRing=new THREE.Mesh(new THREE.RingGeometry(1.3,1.33,32),new THREE.MeshBasicMaterial({color:0x0DEEF3,transparent:true,opacity:0,side:THREE.DoubleSide}));
+const pulseRing=new THREE.Mesh(new THREE.RingGeometry(1.3,1.33,32),new THREE.MeshBasicMaterial({color:0x4D9FFF,transparent:true,opacity:0,side:THREE.DoubleSide}));
 pulseRing.rotation.x=-Math.PI/2;pulseRing.position.set(leadDesk.x,.02,leadDesk.z+.2);
 office.add(pulseRing);
 

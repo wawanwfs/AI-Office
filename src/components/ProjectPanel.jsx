@@ -179,8 +179,8 @@ export default function ProjectPanel() {
                   <div style={{ marginTop: 14 }}>
                     <label className="note">AI Router (OmniRoute)</label>
                     <div style={{
-                      background: d.omniroute.online ? 'rgba(13,238,243,.08)' : 'rgba(239,68,68,.12)',
-                      border: `1px solid ${d.omniroute.online ? 'rgba(13,238,243,.25)' : 'rgba(239,68,68,.3)'}`,
+                      background: d.omniroute.online ? 'rgba(77,159,255,.08)' : 'rgba(239,68,68,.12)',
+                      border: `1px solid ${d.omniroute.online ? 'rgba(77,159,255,.25)' : 'rgba(239,68,68,.3)'}`,
                       borderRadius: 10, padding: '8px 12px', marginTop: 6,
                     }}>
                       <div className="note" style={{ color: d.omniroute.online ? 'var(--teal)' : '#ef4444', fontWeight: 600 }}>

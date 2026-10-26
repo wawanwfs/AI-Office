@@ -48,14 +48,14 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
               width: 38,
               height: 38,
               borderRadius: 12,
-              background: `linear-gradient(135deg, ${agent.hex || '#0DEEF3'}, rgba(13,238,243,0.3))`,
+              background: `linear-gradient(135deg, ${agent.hex || '#4D9FFF'}, rgba(77,159,255,0.3))`,
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               color: '#020713',
               fontWeight: 800,
               fontSize: 16,
-              boxShadow: `0 0 16px ${agent.hex || '#0DEEF3'}44`,
+              boxShadow: `0 0 16px ${agent.hex || '#4D9FFF'}44`,
             }}
           >
             {agent.name ? agent.name.slice(0, 2).toUpperCase() : <IconUser size={18} />}

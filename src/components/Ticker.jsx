@@ -23,7 +23,7 @@ export default function Ticker() {
         const out = []
         const cnt = {}
         tasks.forEach(x => { cnt[x.status] = (cnt[x.status] || 0) + 1 })
-        out.push({ text: `${tasks.length} task · ${cnt.done || 0} done · ${cnt.running || 0} running · ${cnt.pending || 0} pending · ${cnt.failed || 0} failed`, color: '#0DEEF3' })
+        out.push({ text: `${tasks.length} task · ${cnt.done || 0} done · ${cnt.running || 0} running · ${cnt.pending || 0} pending · ${cnt.failed || 0} failed`, color: '#4D9FFF' })
         tasks.slice(-8).reverse().forEach(x => out.push({
           text: `${name[x.agent_id] || x.agent_id} — ${clip(x.title, 48)} [${x.status}]`,
           color: COL[x.status] || '#fff',

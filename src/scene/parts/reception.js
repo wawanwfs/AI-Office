@@ -43,9 +43,9 @@ export function createReception({ THREE, office, M, MB, drawResepsiLogo, makeLab
   const rcLogoFront = rcLogoMesh.clone(); rcLogoFront.position.set(RCX, .5, RCZ - .31); rcLogoFront.rotation.y = Math.PI; reception.add(rcLogoFront);
 
   // Teal glow strip under desk front
-  const rcGlow = new THREE.Mesh(new THREE.BoxGeometry(2.2, .02, .02), MB(0x0DEEF3));
+  const rcGlow = new THREE.Mesh(new THREE.BoxGeometry(2.2, .02, .02), MB(0x4D9FFF));
   rcGlow.position.set(RCX, .05, RCZ + .3); reception.add(rcGlow);
-  const rcLight = new THREE.PointLight(0x0DEEF3, 0.4, 3.5, 2);
+  const rcLight = new THREE.PointLight(0x4D9FFF, 0.4, 3.5, 2);
   rcLight.position.set(RCX, .1, RCZ + .5); reception.add(rcLight);
 
   // Reception monitor (behind desk, facing NEXUS)
