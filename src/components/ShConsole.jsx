@@ -302,6 +302,7 @@ export default function ShConsole({ show, onClose }) {
                       return (
                         <div key={en.name} style={{ ...STYLE.row, cursor: 'pointer' }}
                           role="button" tabIndex={0}
+                          aria-label={`${en.type === 'dir' ? 'Folder' : 'File'}: ${en.name}`}
                           onClick={openEntry}
                           onKeyDown={(e) => {
                             if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); openEntry(); }

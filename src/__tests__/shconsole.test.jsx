@@ -147,6 +147,23 @@ describe('ShConsole — konsol software house', () => {
     expect(await screen.findByText(/FROM python:3.12-slim/)).toBeTruthy()
   })
 
+  it('a11y: entri file mengekspos nama aksesibel eksplisit (Folder/File + nama)', async () => {
+    stubFetch({
+      '/wfs-api/sh/overview': OV,
+      '/wfs-api/projects': PROJ_RESP,
+      '/wfs-api/projects/1/files': { path: '', entries: [{ name: 'src', type: 'dir' }, { name: 'Dockerfile', type: 'file', size: 120 }] },
+      '/wfs-api/projects/1/file?path=Dockerfile': { path: 'Dockerfile', content: 'FROM python:3.12-slim' },
+      '/wfs-api/projects/1/logs?lines=100': { logs: ['INFO line'] },
+      '/wfs-api/projects/1/git': { repo: false },
+    })
+    render(<ShConsole show onClose={() => {}} />)
+    clickTab('Workspace')
+    expect(await screen.findByLabelText('Pilih project')).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Pilih project'), { target: { value: '1' } })
+    // nama aksesibel eksplisit (bukan cuma teks + emoji) untuk pembaca layar
+    expect(await screen.findByRole('button', { name: 'Folder: src' })).toBeTruthy()
+    expect(screen.getByRole('button', { name: 'File: Dockerfile' })).toBeTruthy()
+  })
   it('tab Approvals: list pending + putuskan', async () => {
     const calls = []
     stubFetch({
