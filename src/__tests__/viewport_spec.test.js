@@ -168,4 +168,55 @@ describe('viewport_spec', () => {
       expect(getMaxBubbles(null)).toBe(3);
     });
   });
+
+  describe('multi-window & split-screen simulation', () => {
+    it('mengadaptasi FOV dan radius saat beralih dari layar penuh ke mode split-screen 50%', () => {
+      // 1. Awalnya layar penuh desktop (1920x1080)
+      const fullW = 1920, fullH = 1080;
+      const fullAsp = computeAspect(fullW, fullH);
+      expect(isPortraitViewport(fullAsp)).toBe(false);
+      expect(getResponsiveFov(fullAsp)).toBe(54);
+      expect(getResponsiveRadius(fullAsp)).toBe(42.5);
+
+      // 2. User membagi layar menjadi split 50% (960x1080 -> asp = 0.888)
+      const splitW = 960, splitH = 1080;
+      const splitAsp = computeAspect(splitW, splitH);
+      expect(isPortraitViewport(splitAsp)).toBe(false);
+      expect(getResponsiveFov(splitAsp)).toBe(54);
+
+      // 3. User menyempitkan jendela menjadi 1/3 layar atau split sempit (600x1000 -> asp = 0.6)
+      const narrowW = 600, narrowH = 1000;
+      const narrowAsp = computeAspect(narrowW, narrowH);
+      expect(isPortraitViewport(narrowAsp)).toBe(true);
+      expect(getResponsiveFov(narrowAsp)).toBe(56);
+      expect(getResponsiveRadius(narrowAsp)).toBe(36);
+
+      // 4. Split sangat sempit / mode mobile (400x900 -> asp = 0.444)
+      const ultraNarrowW = 400, ultraNarrowH = 900;
+      const ultraAsp = computeAspect(ultraNarrowW, ultraNarrowH);
+      expect(isPortraitViewport(ultraAsp)).toBe(true);
+      expect(getResponsiveFov(ultraAsp)).toBe(68);
+      expect(getResponsiveRadius(ultraAsp)).toBe(34);
+    });
+
+    it('memastikan NDC pointer akurat pada layar terbelah dua (kiri vs kanan)', () => {
+      // Layar total 1920x1080, jendela split di paruh kanan: left: 960, width: 960, top: 0, height: 1080
+      const rightSplitCanvas = {
+        getBoundingClientRect: () => ({ left: 960, top: 0, width: 960, height: 1080 }),
+      };
+
+      // Klik tepat di tengah jendela split (clientX: 960 + 480 = 1440, clientY: 540)
+      const ndcCenter = getCanvasPointerNdc({ clientX: 1440, clientY: 540 }, rightSplitCanvas);
+      expect(ndcCenter.x).toBeCloseTo(0);
+      expect(ndcCenter.y).toBeCloseTo(0);
+
+      // Klik di batas kiri jendela split (clientX: 960)
+      const ndcLeft = getCanvasPointerNdc({ clientX: 960, clientY: 540 }, rightSplitCanvas);
+      expect(ndcLeft.x).toBeCloseTo(-1);
+
+      // Klik di batas kanan jendela split (clientX: 1920)
+      const ndcRight = getCanvasPointerNdc({ clientX: 1920, clientY: 540 }, rightSplitCanvas);
+      expect(ndcRight.x).toBeCloseTo(1);
+    });
+  });
 });

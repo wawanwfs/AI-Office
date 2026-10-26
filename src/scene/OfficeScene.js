@@ -33,6 +33,7 @@ import { createBookshelf } from './parts/bookshelf.js';
 import { createReception } from './parts/reception.js';
 import { createCafe } from './parts/cafe.js';
 import { createDecor } from './parts/decor.js';
+import { computeAspect, isPortraitViewport, getResponsiveFov, getResponsiveRadius, getViewOffsetConfig, getCanvasPointerNdc, getMaxBubbles } from './parts/viewport_spec.js';
 import { createServerRoom } from './parts/serverroom.js';
 import { createLounge } from './parts/lounge.js';
 import { createStructure } from './parts/structure.js';
@@ -71,7 +72,8 @@ const scene=new THREE.Scene();window.__scene=scene;
 scene.name = 'Office3D';
  scene.background=new THREE.Color(0x000C1E);
  scene.fog=new THREE.FogExp2(0x000C1E,0.005);
- const camera=new THREE.PerspectiveCamera(30,container.clientWidth/container.clientHeight,0.1,500);
+ const __initAsp = computeAspect(container.clientWidth, container.clientHeight);
+ const camera = new THREE.PerspectiveCamera(getResponsiveFov(__initAsp), __initAsp, 0.1, 500);
  let renderer=null;
   try{
     renderer=new THREE.WebGLRenderer({antialias:true,failIfMajorPerformanceCaveat:false});
@@ -82,7 +84,7 @@ scene.name = 'Office3D';
     throw e;
   }
   if(renderer){
-    renderer.setSize(container.clientWidth,container.clientHeight);
+    renderer.setSize(Math.max(1, container.clientWidth || 1), Math.max(1, container.clientHeight || 1));
     renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2.0));
     renderer.shadowMap.enabled=true;
     renderer.shadowMap.type=THREE.PCFSoftShadowMap;
@@ -94,10 +96,12 @@ scene.name = 'Office3D';
 // ─── ORBIT ─────────────────────────────────────────
 let isDrag=false,prev={x:0,y:0};
 let namesVisible=(function(){try{return localStorage.getItem('wfs_names')!=='0'}catch{return true}})();
-const __asp=container.clientWidth/Math.max(1,container.clientHeight);
-const __portrait=__asp<0.8;
-if(__portrait){camera.fov=__asp<0.6?68:56;camera.updateProjectionMatrix();}else{camera.fov=54;camera.updateProjectionMatrix();}
-let sph={theta:__portrait?2.35:Math.PI*0.78,phi:__portrait?0.62:0.92,radius:__asp<0.6?36:__asp<0.8?39:__asp<1.2?44:42.5};
+const __asp = computeAspect(container.clientWidth, container.clientHeight);
+const __portrait = isPortraitViewport(__asp);
+camera.fov = getResponsiveFov(__asp);
+camera.aspect = __asp;
+camera.updateProjectionMatrix();
+let sph = { theta: __portrait ? 2.35 : Math.PI * 0.78, phi: __portrait ? 0.62 : 0.92, radius: __asp < 0.6 ? 36 : __asp < 0.8 ? 39 : __asp < 1.2 ? 44 : 42.5 };
 const tgt=new THREE.Vector3(0,1.2,1.2);
 // Preferensi auto-rotate: hormati prefers-reduced-motion bila user belum set eksplisit (localStorage wfs_autorot 0/1)
 const __prm=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):null;
@@ -107,7 +111,7 @@ let autoRot=autoRotDefault(),autoTmr;
 __prm&&__prm.addEventListener&&__prm.addEventListener('change',e=>{if(__userRot===null)autoRot=!e.matches});
 let focusGoal=null;const HOME_TGT=new THREE.Vector3(0,1.4,0.3);let homeRadius=null;let nxChar=null,nxAgent=null;
 function updCam(){const p=Math.max(.18,Math.min(Math.PI/2.3,sph.phi));sph.phi=p;camera.position.set(sph.radius*Math.sin(p)*Math.sin(sph.theta)+tgt.x,sph.radius*Math.cos(p)+tgt.y,sph.radius*Math.sin(p)*Math.cos(sph.theta)+tgt.z);camera.lookAt(tgt)}
-const __vo=()=>{const w=container.clientWidth,h=container.clientHeight;if(w/h<0.6)camera.setViewOffset(w,h,-w*0.045,0,w,h);else camera.clearViewOffset()};__vo();
+const __vo=()=>{const w=Math.max(1,container.clientWidth||1),h=Math.max(1,container.clientHeight||1);const vo=getViewOffsetConfig(w,h);if(vo.enabled)camera.setViewOffset(vo.fullWidth,vo.fullHeight,vo.offsetX,vo.offsetY,vo.width,vo.height);else camera.clearViewOffset()};__vo();
 updCam();
 let downXY=null;
 // Touch pinch-zoom untuk mobile
@@ -151,7 +155,8 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   const moved=Math.hypot(e.clientX-downXY.x,e.clientY-downXY.y);
   downXY=null;
   if(moved>6)return; // drag, bukan click
-  const ndc=new THREE.Vector2((e.clientX/innerWidth)*2-1,-(e.clientY/innerHeight)*2+1);
+  const pt=getCanvasPointerNdc(e,renderer&&renderer.domElement);
+  const ndc=new THREE.Vector2(pt.x,pt.y);
   const ray=new THREE.Raycaster();
   ray.setFromCamera(ndc,camera);
   const targets=[];
@@ -217,7 +222,8 @@ addEventListener('pointerup',onDragUp);
 addEventListener('pointermove',onDragMove);
 // double-click: zoom ke titik (agent/papan = fokus, kosong = maju 30%)
 renderer.domElement&&renderer.domElement.addEventListener('dblclick',e=>{
-  const ndc=new THREE.Vector2((e.clientX/innerWidth)*2-1,-(e.clientY/innerHeight)*2+1);
+  const pt=getCanvasPointerNdc(e,renderer&&renderer.domElement);
+  const ndc=new THREE.Vector2(pt.x,pt.y);
   const ray=new THREE.Raycaster();ray.setFromCamera(ndc,camera);
   const targets=[];agentData.forEach(ad=>{if(ad.sittingChar.visible)targets.push(ad.sittingChar);if(ad.walker.visible)targets.push(ad.walker)});
   const bm=window.__projectBoard&&window.__projectBoard.mesh;
@@ -266,7 +272,7 @@ function ensureHoverRing(){if(hoverRing)return;const c=document.createElement('c
   hoverRing=new THREE.Mesh(new THREE.PlaneGeometry(HOVER_RING.PLANE,HOVER_RING.PLANE),new THREE.MeshBasicMaterial({map:t,transparent:true,opacity:HOVER_RING.OPACITY,depthWrite:false,color:HOVER_RING.COLOR}));
   hoverRing.rotation.x=-Math.PI/2;hoverRing.position.y=HOVER_RING.Y;hoverRing.renderOrder=3;hoverRing.visible=false;office.add(hoverRing);window.__sceneRing=hoverRing;}
 renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
-  hoverNdc={x:(e.clientX/innerWidth)*2-1,y:-(e.clientY/innerHeight)*2+1};
+  hoverNdc=getCanvasPointerNdc(e,renderer&&renderer.domElement);
   if(!hoverPend){hoverPend=true;setTimeout(()=>{
     hoverPend=false;
     if(!agentData.length)return;
@@ -1223,8 +1229,8 @@ function createBubble(x,y,z,text,color,anchor){
       chatBubbles.splice(i,1);
     }
   }
-  // ROTASI BUBBLE (UX fix): batasi bubble aktif (maks 3) agar kampus 3D luas tetap bersih dan terbaca
-  const MAX_BUBBLES = (()=>{ try{ return (window.innerWidth||1280) < 760 ? 2 : 3; }catch{ return 3; } })();
+  // ROTASI BUBBLE (UX fix): batasi bubble aktif (maks 3, sempit maks 2) agar kampus 3D luas tetap bersih dan terbaca
+  const MAX_BUBBLES = getMaxBubbles(container && container.clientWidth ? container.clientWidth : (typeof window !== 'undefined' ? window.innerWidth : 1280));
   while(chatBubbles.length >= MAX_BUBBLES){
     const old=chatBubbles.shift();
     office.remove(old.sprite);
@@ -1576,11 +1582,34 @@ const onVis=()=>{ pageHidden=document.visibilityState==='hidden';
   __sound.dbg(s=>{window.__audio=s;});
 };
 document.addEventListener('visibilitychange',onVis);
-const onResize=()=>{camera.aspect=container.clientWidth/container.clientHeight;camera.updateProjectionMatrix();__vo();renderer.setSize(container.clientWidth,container.clientHeight);
+const onResize = () => {
+  if (!container || !renderer || !camera) return;
+  const w = Math.max(1, container.clientWidth || 1);
+  const h = Math.max(1, container.clientHeight || 1);
+  const asp = w / h;
+  camera.aspect = asp;
+  const targetFov = getResponsiveFov(asp);
+  if (camera.fov !== targetFov) {
+    camera.fov = targetFov;
+  }
+  camera.updateProjectionMatrix();
+  __vo();
+  renderer.setSize(w, h);
   // Responsive radius: portrait butuh kamera lebih dekat agar kantor fit di layar.
-  const asp2=container.clientWidth/Math.max(1,container.clientHeight);
-  if(!focusGoal&&!sph.__saved){sph.radius=asp2<0.6?34:asp2<0.8?36:Math.min(sph.radius,56);updCam();}
-};window.addEventListener('resize',onResize);
+  if (!focusGoal && !sph.__saved) {
+    sph.radius = getResponsiveRadius(asp, null, homeRadius, sph.radius);
+    updCam();
+  }
+};
+let resizeObserver = null;
+if (typeof ResizeObserver !== 'undefined' && container) {
+  try {
+    resizeObserver = new ResizeObserver(() => { onResize(); });
+    resizeObserver.observe(container);
+  } catch { /* fallback window resize */ }
+}
+window.addEventListener('resize', onResize);
+window.__resizeScene = onResize;
 const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius||sph.radius,reset:true};selectedIdx=-1;applySelected();if(onSelectAgent)onSelectAgent(null);delete sph.__saved;} };window.addEventListener('keydown',onKey);
 
   // Return controls for React UI
@@ -1666,7 +1695,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       else return false;
       if(sph.__saved){sph.theta=sph.__saved.theta;sph.phi=sph.__saved.phi;sph.radius=Math.max(24,Math.min(60,sph.__saved.radius));}
       else{
-        const asp=container.clientWidth/Math.max(1,container.clientHeight);
+        const asp=computeAspect(container.clientWidth,container.clientHeight);
         const homeMobile=asp<0.6?34:asp<0.8?36:null;
         sph.radius=(name==='top')?(asp<1.2?60:56):(homeRadius||homeMobile||Math.max(24,Math.min(60,sph.radius)));
       }
@@ -1693,11 +1722,17 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
     },
     getAudioVolume: () => audioVolume,
     getAudioEngine: () => __sound,
+    resize: onResize,
     destroy: () => {
       window.__officeSceneDestroyed=true;
       __intervals.forEach(clearInterval);
       __timeouts.forEach(clearTimeout);
+      if (resizeObserver) {
+        try { resizeObserver.disconnect(); } catch { /* abaikan */ }
+        resizeObserver = null;
+      }
       window.removeEventListener('resize', onResize);
+      delete window.__resizeScene;
       document.removeEventListener('visibilitychange', onVis);
       if(rafId){cancelAnimationFrame(rafId);rafId=null;}
       window.removeEventListener('keydown', onKey);

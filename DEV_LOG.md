@@ -1,3 +1,29 @@
+## 2026-10-26 07:17 WIB — Siklus 79: Responsivitas Adaptif Kanvas 3D Multi-Window / Layar Split (viewport_spec.js), Dynamic FOV & Radius, NDC Pointer Raycast Presisi & Observer Wadah
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Spesifikasi Responsivitas Viewport & NDC Pointer Murni (`src/scene/parts/viewport_spec.js`, `src/__tests__/viewport_spec.test.js`):**
+     - Membangun modul spesifikasi terisolasi dengan fungsi murni `computeAspect(width, height)`, `isPortraitViewport(aspect)`, `getResponsiveFov(aspect)`, `getResponsiveRadius(aspect, savedRadius, homeRadius, currentRadius)`, `getViewOffsetConfig(width, height)`, `getCanvasPointerNdc(event, domElement)`, dan `getMaxBubbles(width)`.
+     - Menetapkan target FOV kamera dinamis: mobile/split sempit (< 0.6) 68° (mencegah sisi ruang kantor terpotong), tablet portrait (0.6 - 0.8) 56°, dan desktop landscape (>= 0.8) 54°.
+     - Mengatasi bug koordinat raycast pointer pada multi-window / layar split: menggantikan pembagian global `innerWidth/innerHeight` dengan `getCanvasPointerNdc` berbasis `domElement.getBoundingClientRect()`, sehingga interaksi klik agent, cincin hover seleksi, zoom double-click, papan proyek, dan CEO tetap akurat saat kanvas bergeser posisi atau memiliki rasio sempit.
+     - Menyediakan fungsi murni `getMaxBubbles(width)` yang secara adaptif membatasi bubble percakapan aktif maksimal 2 pada layar sempit (< 760px) agar ruang kerja 3D tetap bersih.
+  2. **Integrasi Runtime Viewport & ResizeObserver di OfficeScene (`src/scene/OfficeScene.js`):**
+     - Memperbarui inisialisasi awal kamera serta event listener `onResize()` agar dinamis menyinkronkan FOV kamera (`camera.fov = targetFov`) saat pengguna mengubah ukuran jendela atau membagi layar (split screen), tanpa mendistorsi ruang kerja.
+     - Mengganti pembagian aspek langsung dengan `computeAspect` yang kebal terhadap pembagian nol atau ukuran container sesaat nol.
+     - Mengintegrasikan `ResizeObserver` pada container kanvas dengan fallback anggun ke `window.resize`, memastikan respon instan pada perubahan layout container / flex tanpa menunggu event resize jendela global.
+     - Membersihkan `ResizeObserver` dan listener secara tuntas di `destroy()`, serta mengekspos `resize: onResize` dan `window.__resizeScene` untuk keperluan pengujian runtime.
+
+- **Bukti terukur:**
+  - **Vitest:** **1505/1505 passed (127 test file)** (+23 tests baru terintegrasi, 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint .`).
+  - **Build:** Berhasil (exit 0, 35 precache entries 1658.30 KiB; chunk `OfficeScene-DtuneYly.js` 869.34 KB / gzip 235.79 KB, `index-D-5-8-pv.js` 311.56 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, asset usang dibersihkan.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-D-5-8-pv.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **551.631 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `shot.sh`: Screenshot ck.png **587.471 bytes** (>500 KB), /tmp/ck.png **952.156 bytes**.
+- **Sisa backlog:** evaluasi fine-tuning tata ruang meja per tim atau optimasi chunking dinamis OfficeScene.
+
 ## 2026-10-26 06:33 WIB — Siklus 78: Modal Pengaturan Kantor 3D (SettingsModal), Preset Cepat Slider Volume (25%, 50%, 80%, 100%), Uji Sampel Audio Interaktif & Persistensi Volume Master
 
 - **Yang diperbaiki & ditingkatkan:**
