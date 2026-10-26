@@ -197,3 +197,42 @@ describe('kanban_search — getKanbanColumnSearchEmptyState', () => {
     expect(s.text).toBe('Semua antrean terambil');
   });
 });
+
+describe('kanban_search — getSearchMatchSegments edge: query non-string', () => {
+  it('query non-string (angka/objek) diperlakukan seperti tanpa query: segmen tunggal match=false', () => {
+    expect(getSearchMatchSegments('Judul Task', 123)).toEqual([
+      { text: 'Judul Task', match: false },
+    ]);
+    expect(getSearchMatchSegments('Judul Task', {})).toEqual([
+      { text: 'Judul Task', match: false },
+    ]);
+  });
+
+  it('text non-string tidak pernah dipecah: mengembalikan array kosong', () => {
+    expect(getSearchMatchSegments(42, 'test')).toEqual([]);
+    expect(getSearchMatchSegments(['arr'], 'test')).toEqual([]);
+    expect(getSearchMatchSegments(undefined, 'test')).toEqual([]);
+  });
+});
+
+describe('kanban_search — calcSearchStats edge: item null dalam array', () => {
+  const clean = [
+    { id: 1, title: 'Task 1', role: 'be', status: 'done', tags: ['sql'] },
+    { id: 2, title: 'Task 2', role: 'fe', status: 'pending' },
+  ];
+
+  it('item null/undefined dilewati tanpa crash dan tidak dihitung', () => {
+    const stats = calcSearchStats([null, ...clean, undefined], '');
+    expect(stats.total).toBe(2);
+    expect(stats.matched).toBe(2);
+    expect(stats.matchRatio).toBe('2/2');
+    expect(stats.pct).toBe(100);
+  });
+
+  it('filter divisi tetap bekerja saat ada item null di antara task', () => {
+    const stats = calcSearchStats([null, ...clean], '', { division: 'fe' });
+    expect(stats.total).toBe(1);
+    expect(stats.matched).toBe(1);
+    expect(stats.matchRatio).toBe('1/1');
+  });
+});
