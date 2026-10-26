@@ -35,6 +35,11 @@ describe('badgeAssignments', () => {
   it('aman terhadap agentData null', () => {
     expect(badgeAssignments(null, { wawan: { last: 'done' } }, im)).toEqual([]);
   });
+  it('aman terhadap im null/undefined → [] tanpa TypeError', () => {
+    const agents = { wawan: { last: 'done' } };
+    expect(badgeAssignments([mkAgentData('wawan')], agents, null)).toEqual([]);
+    expect(badgeAssignments([mkAgentData('wawan')], agents, undefined)).toEqual([]);
+  });
 });
 
 describe('wakeAgentIds', () => {
@@ -80,6 +85,12 @@ describe('failedAlerts', () => {
     expect(prev.ghost).toBe(0);
   });
   it('aman terhadap null', () => expect(failedAlerts(null, {}, findByGid)).toEqual([]));
+  it('aman terhadap prevFailed undefined → alert tetap terdeteksi tanpa TypeError', () => {
+    const agents = { wawan: { failed: 2 } };
+    // tanpa seed objek, tiap panggilan dianggap state segar → alert terdeteksi
+    expect(failedAlerts(agents, undefined, findByGid)).toEqual([{ gid: 'wawan', ad: 'AD-wawan' }]);
+    expect(failedAlerts(agents, null, findByGid)).toEqual([{ gid: 'wawan', ad: 'AD-wawan' }]);
+  });
 });
 
 describe('statusPollActions', () => {
@@ -95,5 +106,13 @@ describe('statusPollActions', () => {
     // tanpa failed baru kedua kalinya → hanya badge + wake
     const out2 = statusPollActions(agentData, agents, im, prev, findByGid);
     expect(out2.some((a) => a.type === 'alert')).toBe(false);
+  });
+  it('aman terhadap im & prevFailed null/undefined → tidak throw, aksi tetap muncul', () => {
+    const agentData = [mkAgentData('wawan')];
+    const agents = { wawan: { running: 1, failed: 1 } };
+    const out = statusPollActions(agentData, agents, null, undefined, findByGid);
+    expect(out.some((a) => a.type === 'wake')).toBe(true);
+    expect(out.some((a) => a.type === 'alert')).toBe(true);
+    expect(out.some((a) => a.type === 'badge')).toBe(false);
   });
 });

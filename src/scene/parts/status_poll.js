@@ -16,7 +16,7 @@ export const BADGE_COLORS = {
 export function badgeAssignments(agentData, agents, im) {
   const out = [];
   (agentData || []).forEach((ad) => {
-    const gid = im[ad?.agent?.name];
+    const gid = im?.[ad?.agent?.name];
     const st = gid && agents && agents[gid] && agents[gid].last;
     const badge = ad?.sittingChar?.userData?.badge;
     if (st && badge && BADGE_COLORS[st]) out.push({ ad, gid, status: st });
@@ -40,6 +40,7 @@ export function wakeAgentIds(agents) {
 // AD: fungsi pencari agent-by-gid dari pemanggil.
 export function failedAlerts(agents, prevFailed, findByGid) {
   const out = [];
+  prevFailed = prevFailed || {}; // guard anti-TypeError kalau pemanggil lupa seed objek
   Object.entries(agents || {}).forEach(([gid, v]) => {
     const failed = v && v.failed > 0 ? v.failed : 0;
     const prev = prevFailed[gid] || 0;
