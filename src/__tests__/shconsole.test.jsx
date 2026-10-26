@@ -255,4 +255,24 @@ describe('ShConsole — konsol software house', () => {
     await waitFor(() => expect(screen.getByLabelText('Pilih project').value).toBe('1'))
     expect(await screen.findByText(/src/)).toBeTruthy()
   })
+
+  it('tab Tasks: filter project memicu ?project dan Jalankan Semua Pending memanggil resume_all', async () => {
+    const urls = []
+    const resumeBodies = []
+    const fn = stubFetch({
+      '/wfs-api/sh/overview': OV,
+      '/wfs-api/projects': PROJ_RESP,
+      '/wfs-api/tasks': (u) => { urls.push(u); return { tasks: [{ id: 1, title: 'Buat Login', role: 'frontend', status: 'pending' }] } },
+      '/wfs-api/tasks?project=1': (u) => { urls.push(u); return { tasks: [{ id: 2, title: 'Task proyek 1', role: 'backend', status: 'review' }] } },
+      '/wfs-api/tasks/resume_all': (u, opts) => { resumeBodies.push(opts?.body); return { ok: true, started: [2] } },
+    })
+    render(<ShConsole show onClose={() => {}} />)
+    clickTab('Tasks')
+    await waitFor(() => expect(urls.some((x) => x.includes('/wfs-api/tasks'))).toBe(true))
+    fireEvent.change(screen.getByLabelText('Filter project'), { target: { value: '1' } })
+    await waitFor(() => expect(urls.some((x) => x.includes('project=1'))).toBe(true))
+    fireEvent.click(screen.getByText(/Jalankan Semua Pending/))
+    await waitFor(() => expect(resumeBodies.some((b) => b && JSON.parse(b).project === '1')).toBe(true))
+    expect(fn.mock.calls.length).toBeGreaterThanOrEqual(2)
+  })
 })

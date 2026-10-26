@@ -58,6 +58,7 @@ export default function ShConsole({ show, onClose }) {
   const [termOut, setTermOut] = useState('')
   const [approvals, setApprovals] = useState([])
   const [gitMsg, setGitMsg] = useState('')
+  const [tFilter, setTFilter] = useState('')
   const drawerRef = useRef(null)
 
   const loadOverview = useCallback(async () => {
@@ -66,8 +67,11 @@ export default function ShConsole({ show, onClose }) {
   const loadProjects = useCallback(async () => {
     try { const d = await api('projects'); setProjects(d.projects || d || []); setErr('') } catch (e) { setErr(e.message) }
   }, [])
-  const loadTasks = useCallback(async () => {
-    try { const d = await api('tasks'); setTasks(d.tasks || []); setErr('') } catch (e) { setErr(e.message) }
+  const loadTasks = useCallback(async (project) => {
+    try {
+      const q = project ? '?project=' + encodeURIComponent(project) : ''
+      const d = await api('tasks' + q); setTasks(d.tasks || []); setErr('')
+    } catch (e) { setErr(e.message) }
   }, [])
   const loadAgents = useCallback(async () => {
     try { const d = await api('agents'); setAgents(Array.isArray(d) ? d : []); setErr('') } catch (e) { setErr(e.message) }
@@ -94,13 +98,17 @@ export default function ShConsole({ show, onClose }) {
 
   useEffect(() => {
     if (!show) return
-    if (tab === 'overview') loadOverview()
-    else if (tab === 'projects') loadProjects()
-    else if (tab === 'tasks') loadTasks()
+    if (tab === 'overview') {
+      loadOverview()
+      const iv = setInterval(loadOverview, 10000)
+      return () => clearInterval(iv)
+    }
+    if (tab === 'projects') loadProjects()
+    else if (tab === 'tasks') { loadTasks(tFilter); if (projects.length === 0) loadProjects() }
     else if (tab === 'agents') loadAgents()
     else if (tab === 'ws' && projects.length === 0) loadProjects()
     else if (tab === 'approvals') loadApprovals()
-  }, [show, tab, loadOverview, loadProjects, loadTasks, loadAgents, projects.length, loadApprovals])
+  }, [show, tab, loadOverview, loadProjects, loadTasks, loadAgents, projects.length, loadApprovals, tFilter])
 
   const create = async () => {
     if (!name.trim() || !brief.trim()) { setErr('Nama dan brief wajib diisi'); return }
@@ -122,8 +130,15 @@ export default function ShConsole({ show, onClose }) {
 
   const runTask = async (tid) => {
     setErr('')
-    try { await api('tasks/' + tid + '/run', { method: 'POST', body: {} }); await loadTasks() }
+    try { await api('tasks/' + tid + '/run', { method: 'POST', body: {} }); await loadTasks(tFilter) }
     catch (e) { setErr(e.message) }
+  }
+  const runAllPending = async () => {
+    setErr('')
+    try {
+      await api('tasks/resume_all', { method: 'POST', body: { project: tFilter || null } })
+      await loadTasks(tFilter)
+    } catch (e) { setErr(e.message) }
   }
 
   const loadWsFiles = useCallback(async (pid, path) => {
@@ -194,7 +209,16 @@ export default function ShConsole({ show, onClose }) {
                 <button style={STYLE.btn} onClick={createTask} disabled={busy}>{busy ? 'Menyimpan…' : 'Tambah task'}</button>
               </div>
               <div style={STYLE.card}>
-                <div style={{ fontWeight: 700, marginBottom: 8 }}>Daftar task ({tasks.length})</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <div style={{ fontWeight: 700 }}>Daftar task ({tasks.length})</div>
+                  <button style={STYLE.btnGhost} onClick={runAllPending} title="Jalankan semua task pending/review/failed">▶ Jalankan Semua Pending</button>
+                </div>
+                <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                  <select style={STYLE.select} aria-label="Filter project" value={tFilter} onChange={(e) => setTFilter(e.target.value)}>
+                    <option value="">Semua project</option>
+                    {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                  </select>
+                </div>
                 {tasks.length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>Belum ada task.</div>}
                 {tasks.map((t) => (
                   <div key={t.id} style={STYLE.row}>
