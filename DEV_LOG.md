@@ -1,3 +1,21 @@
+## 2026-10-27 06:55 WIB — Siklus 111: WYSIWYG warna permukaan UI 3D — uiTexture(srgb) + uiMaterial(toneMapped:false) di seluruh layar/teks kanvas
+
+- **Bug visual ditemukan dari audit lanjutan siklus 109/110 (badge & tekstur TV):** tekstur kini segar (needsUpdate semua jalur), TETAPI warna yang dilukis painter dirender SHIFTED di 3D. Renderer memakai `ACESFilmicToneMapping` + `outputColorSpace sRGB`, sementara hampir semua `CanvasTexture` tidak pernah ditandai `SRGBColorSpace` → texel sRGB dibaca sebagai data LINEAR lalu di-tonemap ACES. Prediksi matematis utk badge hijau `#10E5A0` (16,229,160): ACES→sRGB = **(71,229,216)** teal-shifted; pengukuran piksel screenshot kamera-aim-ke-TV sebelum patch: area badge **(111,177,186)** — jauh dari painter (jarak euclid ~121). Badge LIVE hijau, bar gradien, teks amber, logo — semua pudar/bergeser di layar 3D.
+- **Perbaikan (modul baru `src/scene/parts/ui_colorspace.js`):**
+  1. `uiTexture(tex)` — tandai `tex.colorSpace = 'srgb'` (konstanta string `THREE.SRGBColorSpace` three r152+, tanpa import THREE agar stub test tetap jalan; try-guard).
+  2. `uiMaterial(mat)` — set `mat.toneMapped = false` untuk material unlit layar/teks (layar tak boleh kena ACES).
+  3. Tekstur dekoratif (terrazzo, langit jendela, pola dinding, AO strip, sheen kaca) SENGAJA tidak disentuh — pencahayaan artistik dipertahankan.
+- **Penerapan di 17 situs UI (texture + material):** TV lounge (`lounge.js` tvTex+tvScr), papan proyek 3D (`projectboard.js`), whiteboard rapat & jam dinding (`room.js`), label agen full/short, monitor agen, nameplate meja, judul dinding "WFS PROJECT", bubble chat (`OfficeScene.js`), poster dinding (`furniture.js`, `decor.js`), menu board kafe (`cafe.js`), logo resepsionis (`reception.js`), logo dinding + papan sambutan (`walls.js`), label zona (`flooring.js`), papan nama lantai terrace (`terraces.js`).
+- **Test baru (+41):** `ui_colorspace.test.js` (+6: helper srgb/toneMapped/chainable/null-safe), `ui_wysiwyg_contract.test.js` (+35: kontrak anti-regresi — setiap situs tekstur & material UI WAJIB memakai helper; test fail bila ada `new THREE.CanvasTexture` layar yang lolos tanpa `uiTexture`), adaptasi sandbox `tv_lounge_runtime.test.js` (injeksi uiTexture/uiMaterial ke `new Function`).
+- **Bukti terukur:**
+  - **Vitest:** **1999/1999 passed (148 file)** pasca-rebase di atas auto-dev `7a5d803` (+41 test dari 1942), 0 fail.
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/` exit 0).
+  - **Build:** sukses (37 precache, 1806.58 KiB) → deploy `dist/*` → `~/wfs-hq/` OK; `wfs-hq` & `wfs-office` `active`; chunk `index-KieIKoPP.js` HTTP 200.
+  - **E2E:** `e2e_shot.py` **679.970 bytes** (E2E_VISUAL OK, 26 agen, ws true); `e2e_tv.py` OK; `e2e_zone_multi.py` OK; `shot.sh` :0 **680.960 bytes** (>500 KB, WebGL hidup).
+  - **Catatan jujur:** probe pixel badge TV di layar (dot hanya ±2-3 px layar pada jarak kamera 6.5 m di SwiftShader) tidak bisa mengisolasi dot secara deterministik — bukti warna berlapis: prediksi matematis ACES (di atas) + unit test helper + kontrak anti-regresi 17 situs. Verifikasi visual final menyusul bila perlu (screenshot kamera dekat).
+- **Commit:** `35dc9e0` → rebase 1x di atas `71125d1` (auto) + `7a5d803` (auto-dev TaskModal/OverlayHelp tests) → final `9af86a8`, push sukses ke `origin/main` (vitest pasca-rebase 1999/1999).
+- **Sisa backlog:** verifikasi subjektif audio web-audio (butuh pendengaran manusia); verifikasi visual close-up warna TV (opsional, butuh mata manusia / screenshot close-up).
+
 ## 2026-10-27 05:35 WIB — Siklus 110: Bugfix tekstur 3D TV lounge — tvTex.needsUpdate di SEMUA jalur drawTv + ticker detak umur badge koneksi (paritas papan 3D)
 
 - **Bug ditemukan dari audit lanjutan siklus 109 (badge koneksi TV):**
