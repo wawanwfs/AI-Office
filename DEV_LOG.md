@@ -1,3 +1,31 @@
+## 2026-10-26 18:12 WIB — Siklus 96: Indikator Visual Shortcut Footer Panel & Tooltip, Grid Interaktif OverlayHelp, Toggle Penutup Modal Aktif & Dynamic Filter Ambience Hum (calcAmbienceFilterFreq)
+
+- **Yang diperbaiki & ditingkatkan:**
+  1. **Toggle Penutup Modal Aktif & Deteksi Jenis Modal (`shortcut_spec.js`, `App.jsx`, `shortcut_spec.test.js`, `app_integration.test.jsx`):**
+     - Mengembangkan `getActiveModalType(flags)` untuk mendeteksi modal yang aktif (`settings`, `help`, `log`, `task_board`, `project_panel`).
+     - Memperluas `resolveShortcutAction(event, { modalOpen, activeModal })`: saat modal terbuka, tombol shortcut toggle panel bersangkutan (misal `T` saat TaskBoard terbuka, `P` saat ProjectPanel terbuka, `H`/`?` saat Help terbuka, `O` saat Settings terbuka, `L` saat Log terbuka) kini diizinkan untuk menutup modal langsung, tanpa harus bergantung pada `Escape` saja, sembari tetap menolak shortcut lain yang tidak relevan.
+  2. **Indikator Visual Shortcut Footer Panel & Tooltip Dock (`TaskBoard.jsx`, `ProjectPanel.jsx`, `QuickToolbar.jsx`, `App.jsx`, `index.css`):**
+     - Menghadirkan footer bar petunjuk shortcut (`.panel-footer-hints`) pada bagian bawah `TaskBoard` (`<kbd>Esc</kbd> Tutup/Kembali`, `<kbd>T</kbd> Toggle Papan`, `<kbd>Shift+Klik</kbd> Multi-Tag`) dan `ProjectPanel` (`<kbd>Esc</kbd> Tutup`, `<kbd>P</kbd> Toggle Panel`).
+     - Memperbarui tooltip dock dan tombol QuickToolbar untuk menampilkan hint shortcut secara konsisten: Zoom In `(+)`, Zoom Out `(-)`, Kamera Iso `(1)`, Samping `(2)`, Atas `(3)`, Mode Gelap/Terang `(N)`, Suara `(M)`, Log `(L)`, Pengaturan `(O)`, Bantuan `(H atau ?)`.
+  3. **Visual Grid Shortcut Interaktif di OverlayHelp (`OverlayHelp.jsx`, `index.css`, `remaining_components.test.jsx`):**
+     - Mengubah langkah panduan 'Shortcut Keyboard' dari teks rata menjadi tata letak visual grid kartu responsif (`.help-shortcut-grid`, `.help-shortcut-card`) lengkap dengan badge tombol kustom `<kbd className="help-shortcut-kbd">`, judul label, dan deskripsi fungsi.
+  4. **Dynamic Cutoff Filter Ambience Hum (`sound_spec.js`, `sound_engine.js`, `sound_spec.test.js`):**
+     - Mengembangkan kalkulasi frekuensi filter dinamis `calcAmbienceFilterFreq(volume)` (rentang 140 Hz saat volume 0 hingga 255 Hz saat volume 1.0, dengan default volume 0.35 menghasilkan tepat 180 Hz).
+     - Menghubungkan modulasi frekuensi biquad lowpass filter pada `startAmbienceNodes` dan `syncAmbience` sehingga hembusan udara HVAC kantor beradaptasi secara akustik alami tanpa artefak.
+
+- **Bukti terukur:**
+  - **Vitest:** **1691/1691 passed (133 test file)** (+6 tests baru: kalkulasi calcAmbienceFilterFreq dinamis & toleransi boundary, deteksi getActiveModalType, toggle penutup modal aktif resolveShortcutAction, test integrasi toggle berulang T dan P di App, visual grid shortcut di OverlayHelp, footer hint di TaskBoard & ProjectPanel; 0 fail).
+  - **ESLint:** 0 warning, 0 error (`npx eslint src/scene/parts/shortcut_spec.js src/scene/parts/sound_spec.js src/scene/parts/sound_engine.js src/components/QuickToolbar.jsx src/components/TaskBoard.jsx src/components/ProjectPanel.jsx src/components/OverlayHelp.jsx src/App.jsx src/__tests__/sound_spec.test.js src/__tests__/shortcut_spec.test.js src/__tests__/app_integration.test.jsx src/__tests__/TaskBoard.test.jsx src/__tests__/project_panel.test.jsx src/__tests__/remaining_components.test.jsx`).
+  - **Build:** Berhasil (exit 0, 37 precache entries 1742.84 KiB; `OfficeScene` 165.41 KB / gzip 56.78 KB, `index` 179.24 KB / gzip 49.29 KB, `vendor-three` 715.76 KB, `vendor-react` 189.63 KB).
+  - **Deploy:** `dist/*` sukses terdeploy ke `~/wfs-hq/`, 4 asset usang dibersihkan dari server.
+  - **E2E & Visual:**
+    - `e2e_err.py`: HTTP 200 (index & `index-DiuIy9Sf.js`, 0 "Scene init failed").
+    - `scripts/e2e_tv.py`: **E2E_TV OK** (tasks 4/6 selesai, 67%, 26 agents aktif).
+    - `scripts/e2e_shot.py`: Screenshot visual **647.020 bytes** (>500 KB, WebGL hidup, agents: 26, E2E_VISUAL: OK).
+    - `shot.sh` (DISPLAY=:0): Screenshot **646.991 bytes** (>500 KB).
+    - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
+- **Sisa backlog:** evaluasi sound effect tambahan untuk interaksi kartu kanban (drag/filter/select) dan animasi transisi modal.
+
 ## 2026-10-26 18:35 WIB — Siklus 95: Registri & Spesifikasi Shortcut Keyboard Global (shortcut_spec.js), Integrasi Shortcut T (TaskBoard), P (ProjectPanel), A & Shift+A (Ambience Hum), serta Sinkronisasi Panduan OverlayHelp
 
 - **Yang diperbaiki & ditingkatkan:**

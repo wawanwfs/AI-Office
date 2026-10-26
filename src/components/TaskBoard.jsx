@@ -873,6 +873,11 @@ export default function TaskBoard({ onFlash, onAsk }) {
               )}
             </>
           )}
+          <footer className="panel-footer-hints" role="note" aria-label="Petunjuk pintasan keyboard">
+            <span className="hint-item"><kbd className="hint-kbd">Esc</kbd> {sel ? 'Kembali' : 'Tutup'}</span>
+            <span className="hint-item"><kbd className="hint-kbd">T</kbd> Toggle Papan</span>
+            {!sel && <span className="hint-item"><kbd className="hint-kbd">Shift+Klik</kbd> Multi-Tag</span>}
+          </footer>
         </section>
       )}
     </>

@@ -34,16 +34,16 @@ export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onTog
             <span className="lb">Jeda</span>
           </button>}
       <span className="sep" />
-      <button className="ibtn" onClick={onZoomOut} title="Zoom out — lihat lebih luas" aria-label="Perkecil">
+      <button className="ibtn" onClick={onZoomOut} title="Zoom out — lihat lebih luas (shortcut -)" aria-label="Perkecil">
         <span className="ic"><IconZoomOut size={19} /><span className="sr-only">🔍</span></span>
         <span className="lb">Jauh</span>
       </button>
-      <button className="ibtn" onClick={onZoomIn} title="Zoom in — perbesar ruangan" aria-label="Perbesar">
+      <button className="ibtn" onClick={onZoomIn} title="Zoom in — perbesar ruangan (shortcut +)" aria-label="Perbesar">
         <span className="ic"><IconZoomIn size={19} /><span className="sr-only">🔎</span></span>
         <span className="lb">Dekat</span>
       </button>
       {['iso', 'front', 'top'].map(v => (
-        <button key={v} className="ibtn" onClick={() => onSetView(v)} title={'Kamera ' + (v === 'iso' ? 'isometrik' : v === 'front' ? 'samping' : 'dari atas')} aria-label={'Kamera ' + v}>
+        <button key={v} className="ibtn" onClick={() => onSetView(v)} title={'Kamera ' + (v === 'iso' ? 'isometrik (shortcut 1)' : v === 'front' ? 'samping (shortcut 2)' : 'dari atas (shortcut 3)')} aria-label={'Kamera ' + v}>
           <span className="ic">
             {v === 'iso' ? <><IconIso size={19} /><span className="sr-only">🧊</span></> : v === 'front' ? <><IconFront size={19} /><span className="sr-only">↔</span></> : <><IconTop size={19} /><span className="sr-only">🗺️</span></>}
           </span>
@@ -54,7 +54,7 @@ export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onTog
         className={'ibtn' + (!theme ? ' on' : '')}
         onClick={onToggleTheme}
         aria-pressed={!theme}
-        title={!theme ? 'Mode Gelap aktif — Klik untuk ganti ke Mode Terang' : 'Mode Terang aktif — Klik untuk ganti ke Mode Gelap'}
+        title={!theme ? 'Mode Gelap aktif — Klik untuk ganti ke Mode Terang (shortcut N)' : 'Mode Terang aktif — Klik untuk ganti ke Mode Gelap (shortcut N)'}
         aria-label="Lampu neon"
       >
         <span className="ic">

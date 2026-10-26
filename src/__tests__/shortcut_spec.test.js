@@ -5,6 +5,7 @@ import {
   getShortcutsByCategory,
   findShortcutByAction,
   isEditableTarget,
+  getActiveModalType,
   resolveShortcutAction,
   formatShortcutHelpSummary,
 } from '../scene/parts/shortcut_spec';
@@ -74,6 +75,31 @@ describe('shortcut_spec — Spesifikasi Keyboard Shortcut Global', () => {
     expect(resolveShortcutAction({ key: 't' }, { modalOpen: true })).toBeNull();
     expect(resolveShortcutAction({ key: 'a' }, { modalOpen: true })).toBeNull();
     expect(resolveShortcutAction({ key: 'm' }, { modalOpen: true })).toBeNull();
+  });
+
+  it('getActiveModalType mendeteksi jenis modal yang sedang aktif', () => {
+    expect(getActiveModalType({ showSettings: true })).toBe('settings');
+    expect(getActiveModalType({ showHelp: true })).toBe('help');
+    expect(getActiveModalType({ showLog: true })).toBe('log');
+    expect(getActiveModalType({ isTaskBoardOpen: true })).toBe('task_board');
+    expect(getActiveModalType({ isProjectPanelOpen: true })).toBe('project_panel');
+    expect(getActiveModalType({})).toBeNull();
+    expect(getActiveModalType(null)).toBeNull();
+  });
+
+  it('resolveShortcutAction saat activeModal spesifik: mengizinkan shortcut toggle penutup modal bersangkutan', () => {
+    expect(resolveShortcutAction({ key: 't' }, { modalOpen: true, activeModal: 'task_board' })).toEqual({ type: 'TOGGLE_TASK_BOARD' });
+    expect(resolveShortcutAction({ key: 'T' }, { modalOpen: true, activeModal: 'task_board' })).toEqual({ type: 'TOGGLE_TASK_BOARD' });
+    expect(resolveShortcutAction({ key: 'p' }, { modalOpen: true, activeModal: 'project_panel' })).toEqual({ type: 'TOGGLE_PROJECT_PANEL' });
+    expect(resolveShortcutAction({ key: 'h' }, { modalOpen: true, activeModal: 'help' })).toEqual({ type: 'TOGGLE_HELP' });
+    expect(resolveShortcutAction({ key: '?' }, { modalOpen: true, activeModal: 'help' })).toEqual({ type: 'TOGGLE_HELP' });
+    expect(resolveShortcutAction({ key: 'o' }, { modalOpen: true, activeModal: 'settings' })).toEqual({ type: 'TOGGLE_SETTINGS' });
+    expect(resolveShortcutAction({ key: 'l' }, { modalOpen: true, activeModal: 'log' })).toEqual({ type: 'TOGGLE_LOG' });
+
+    // Shortcut tidak sesuai tetap ditolak
+    expect(resolveShortcutAction({ key: 'p' }, { modalOpen: true, activeModal: 'task_board' })).toBeNull();
+    expect(resolveShortcutAction({ key: 'a' }, { modalOpen: true, activeModal: 'task_board' })).toBeNull();
+    expect(resolveShortcutAction({ key: '1' }, { modalOpen: true, activeModal: 'task_board' })).toBeNull();
   });
 
   it('resolveShortcutAction memetakan shortcut panel (T, P, L, O, H/?, Esc)', () => {

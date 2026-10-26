@@ -195,6 +195,10 @@ export default function ProjectPanel() {
               </>
             )}
           </div>
+          <footer className="panel-footer-hints" role="note" aria-label="Petunjuk pintasan keyboard">
+            <span className="hint-item"><kbd className="hint-kbd">Esc</kbd> Tutup</span>
+            <span className="hint-item"><kbd className="hint-kbd">P</kbd> Toggle Panel</span>
+          </footer>
         </section>
       )}
     </>

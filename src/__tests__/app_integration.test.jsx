@@ -164,7 +164,8 @@ describe('App — integrasi UI', () => {
     expect(screen.queryByRole('dialog', { name: 'Papan task' })).toBeNull()
     fireEvent.keyDown(window, { key: 't' })
     await waitFor(() => expect(screen.getByRole('dialog', { name: 'Papan task' })).toBeTruthy())
-    fireEvent.keyDown(document, { key: 'Escape' })
+    // Tekan 't' lagi menutup panel task
+    fireEvent.keyDown(window, { key: 't' })
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Papan task' })).toBeNull())
   })
 
@@ -174,7 +175,8 @@ describe('App — integrasi UI', () => {
     expect(screen.queryByRole('dialog', { name: 'Proyek dibantuin.com' })).toBeNull()
     fireEvent.keyDown(window, { key: 'p' })
     await waitFor(() => expect(screen.getByRole('dialog', { name: 'Proyek dibantuin.com' })).toBeTruthy())
-    fireEvent.keyDown(document, { key: 'Escape' })
+    // Tekan 'p' lagi menutup panel proyek
+    fireEvent.keyDown(window, { key: 'p' })
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Proyek dibantuin.com' })).toBeNull())
   })
 

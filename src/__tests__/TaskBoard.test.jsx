@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, cleanup, act, within } from '@testing-library/react'
 import TaskBoard from '../components/TaskBoard'
 
 const tasks = [
@@ -588,5 +588,19 @@ describe('TaskBoard', () => {
       window.dispatchEvent(new CustomEvent('wfs-toggle-task-board'));
     });
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Papan task' })).toBeNull());
+  });
+
+  it('merender footer bar petunjuk shortcut (Esc, T Toggle, Shift+Klik Multi-Tag)', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks: [] }) })));
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />);
+    act(() => {
+      window.dispatchEvent(new CustomEvent('wfs-toggle-task-board'));
+    });
+    await waitFor(() => screen.getByRole('dialog', { name: 'Papan task' }));
+    const footer = screen.getByRole('note', { name: /Petunjuk pintasan keyboard/i });
+    expect(footer).toBeTruthy();
+    expect(within(footer).getByText('Esc')).toBeTruthy();
+    expect(within(footer).getByText('T')).toBeTruthy();
+    expect(within(footer).getByText(/Shift\+Klik/)).toBeTruthy();
   });
 });

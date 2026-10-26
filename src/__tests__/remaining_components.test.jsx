@@ -103,6 +103,19 @@ describe('OverlayHelp', () => {
     fireEvent.click(screen.getByRole('button', { name: /Berikutnya/ }))
     expect(within(liveBox).getByText(/2\/6/)).toBeTruthy()
   })
+
+  it('langkah 6 menampilkan kartu shortcut terstruktur dengan elemen kbd', () => {
+    render(<OverlayHelp show onClose={() => {}} />)
+    // Maju ke langkah 6 (Shortcut Keyboard)
+    for (let i = 0; i < 5; i++) fireEvent.click(screen.getByRole('button', { name: /Berikutnya/ }))
+    expect(screen.getByText(/6\/6/)).toBeTruthy()
+    const container = screen.getByRole('region', { name: /Daftar shortcut keyboard/i })
+    expect(container).toBeTruthy()
+    expect(within(container).getByText('T')).toBeTruthy()
+    expect(within(container).getByText('P')).toBeTruthy()
+    expect(within(container).getByText('A')).toBeTruthy()
+    expect(within(container).getByText('Esc')).toBeTruthy()
+  })
 })
 
 describe('ActivityLog', () => {

@@ -4,7 +4,7 @@
 // TIDAK diubah; fetch di-stub penuh lewat vi.stubGlobal.
 import React from 'react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, cleanup, act, within } from '@testing-library/react'
 import ProjectPanel from '../components/ProjectPanel'
 
 const DATA = {
@@ -153,5 +153,18 @@ describe('ProjectPanel', () => {
       window.dispatchEvent(new CustomEvent('wfs-toggle-project-panel'))
     })
     await waitFor(() => expect(screen.queryByRole('dialog', { name: 'Proyek dibantuin.com' })).toBeNull())
+  })
+
+  it('merender footer bar petunjuk shortcut (Esc, P Toggle Panel)', async () => {
+    mockOk()
+    render(<ProjectPanel />)
+    act(() => {
+      window.dispatchEvent(new CustomEvent('wfs-toggle-project-panel'))
+    })
+    await waitFor(() => screen.getByRole('dialog', { name: 'Proyek dibantuin.com' }))
+    const footer = screen.getByRole('note', { name: /Petunjuk pintasan keyboard/i })
+    expect(footer).toBeTruthy()
+    expect(within(footer).getByText('Esc')).toBeTruthy()
+    expect(within(footer).getByText('P')).toBeTruthy()
   })
 })

@@ -68,6 +68,22 @@ export function createSoundEngine({
     } catch {
       if (ambienceNodes.gain.gain) ambienceNodes.gain.gain.value = target;
     }
+
+    if (ambienceNodes.filter && ambienceNodes.filter.frequency) {
+      const targetFreq = calcAmbienceFilterFreq(ambienceVolume);
+      try {
+        if (ambienceNodes.filter.frequency.linearRampToValueAtTime) {
+          if (ambienceNodes.filter.frequency.setValueAtTime) {
+            ambienceNodes.filter.frequency.setValueAtTime(ambienceNodes.filter.frequency.value, curTime);
+          }
+          ambienceNodes.filter.frequency.linearRampToValueAtTime(targetFreq, curTime + rampSec);
+        } else {
+          ambienceNodes.filter.frequency.value = targetFreq;
+        }
+      } catch {
+        if (ambienceNodes.filter.frequency) ambienceNodes.filter.frequency.value = targetFreq;
+      }
+    }
   }
 
   function cleanupAmbienceNodes(nodes) {
@@ -124,7 +140,7 @@ export function createSoundEngine({
       if (ctx.createBiquadFilter) {
         filter = ctx.createBiquadFilter();
         filter.type = 'lowpass';
-        filter.frequency.value = AMBIENCE_FILTER_FREQ;
+        filter.frequency.value = calcAmbienceFilterFreq(ambienceVolume);
         if (filter.Q) filter.Q.value = AMBIENCE_FILTER_Q;
       }
 

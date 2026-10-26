@@ -365,8 +365,15 @@ export default function App() {
   // ---- shortcut keyboard (abaikan saat fokus di input/textarea/modal) ----
   useEffect(() => {
     const onKey = (e) => {
+      let activeModal = null
+      if (showSettings) activeModal = 'settings'
+      else if (showHelp) activeModal = 'help'
+      else if (showLog) activeModal = 'log'
+      else if (typeof document !== 'undefined' && document.getElementById('task-board')) activeModal = 'task_board'
+      else if (typeof document !== 'undefined' && document.getElementById('project-panel')) activeModal = 'project_panel'
+
       const modalOpen = Boolean(showTask || confirm || ask || showHelp || showSettings || showLog || selectedAgent || anyModalOpen())
-      const action = resolveShortcutAction(e, { modalOpen })
+      const action = resolveShortcutAction(e, { modalOpen, activeModal })
       if (!action) return
 
       const actType = typeof action === 'string' ? action : action.type
@@ -525,13 +532,13 @@ export default function App() {
         <TaskBoard onFlash={flash} onAsk={setAsk} />
         <ProjectPanel />
         <TeamStats />
-        <button className="ibtn" onClick={toggleMute} onContextMenu={(e) => { e.preventDefault(); setShowSettings(true) }} title={muted ? 'Nyalakan suara notifikasi (Klik kanan untuk opsi volume)' : 'Bisukan suara notifikasi (Klik kanan untuk opsi volume)'} aria-label={muted ? 'Nyalakan suara' : 'Bisukan suara'} aria-pressed={muted}>
+        <button className="ibtn" onClick={toggleMute} onContextMenu={(e) => { e.preventDefault(); setShowSettings(true) }} title={muted ? 'Nyalakan suara notifikasi (shortcut M) — Klik kanan untuk opsi volume' : 'Bisukan suara notifikasi (shortcut M) — Klik kanan untuk opsi volume'} aria-label={muted ? 'Nyalakan suara' : 'Bisukan suara'} aria-pressed={muted}>
           <span className="ic">
             {muted ? <><IconVolumeMute size={19} /><span className="sr-only">🔇</span></> : <><IconVolume size={19} /><span className="sr-only">🔊</span></>}
           </span>
           <span className="lb">{muted ? 'Suara Mati' : 'Suara'}</span>
         </button>
-        <button className="ibtn" onClick={() => setShowLog(true)} title="Log aktivitas kantor" aria-label="Log aktivitas">
+        <button className="ibtn" onClick={() => setShowLog(true)} title="Log aktivitas kantor — shortcut L" aria-label="Log aktivitas">
           <span className="ic"><IconScroll size={19} /><span className="sr-only">📜</span></span>
           <span className="lb">Log</span>
         </button>
@@ -542,11 +549,11 @@ export default function App() {
           <span className="ic"><span aria-hidden="true">🖥️</span><span className="sr-only">🖥️</span></span>
           <span className="lb">Konsol</span>
         </button>
-        <button className="ibtn" onClick={() => setShowSettings(true)} title="Pengaturan audio & tampilan kantor (O)" aria-label="Pengaturan">
+        <button className="ibtn" onClick={() => setShowSettings(true)} title="Pengaturan audio & tampilan kantor — shortcut O" aria-label="Pengaturan">
           <span className="ic"><IconGear size={19} /><span className="sr-only">⚙️</span></span>
           <span className="lb">Atur</span>
         </button>
-        <button className="ibtn" onClick={() => setShowHelp(true)} title="Panduan penggunaan kantor" aria-label="Bantuan">
+        <button className="ibtn" onClick={() => setShowHelp(true)} title="Panduan penggunaan kantor — shortcut H atau ?" aria-label="Bantuan">
           <span className="ic"><IconHelp size={19} /><span className="sr-only">❔</span></span>
           <span className="lb">Bantuan</span>
         </button>

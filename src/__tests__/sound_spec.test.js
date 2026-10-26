@@ -11,8 +11,9 @@ import {
   VOLUME_KEY, DEFAULT_VOLUME, VOLUME_PRESETS, VOLUME_PRESET_LABELS,
   clampVolume, loadAudioVolume, saveAudioVolume, formatVolumePercent,
   AMBIENCE_KEY, AMBIENCE_VOL_KEY, DEFAULT_AMBIENCE_ENABLED, DEFAULT_AMBIENCE_VOLUME,
-  AMBIENCE_BASE_FREQ, AMBIENCE_OVERTONE_FREQ, AMBIENCE_FILTER_FREQ, AMBIENCE_FILTER_Q,
-  AMBIENCE_BASE_GAIN, AMBIENCE_RAMP_SEC, AMBIENCE_PREVIEW_SEC, AMBIENCE_PRESETS, AMBIENCE_PRESET_LABELS,
+ AMBIENCE_BASE_FREQ, AMBIENCE_OVERTONE_FREQ, AMBIENCE_FILTER_FREQ, AMBIENCE_FILTER_Q,
+ AMBIENCE_FILTER_FREQ_MIN, AMBIENCE_FILTER_FREQ_MAX, calcAmbienceFilterFreq,
+ AMBIENCE_BASE_GAIN, AMBIENCE_RAMP_SEC, AMBIENCE_PREVIEW_SEC, AMBIENCE_PRESETS, AMBIENCE_PRESET_LABELS,
   clampAmbienceVolume, loadAmbienceEnabled, saveAmbienceEnabled, loadAmbienceVolume, saveAmbienceVolume,
   formatAmbiencePercent, calcAmbienceGain, generatePinkNoiseData,
   getNextAmbiencePreset, getAmbienceStatusLabel, getAmbienceTooltip, getAmbienceAriaLabel,
@@ -331,5 +332,20 @@ describe('sound_spec — ambience ruangan kantor (Web Audio HVAC / room hum)', (
 
     const ariaMuted = getAmbienceAriaLabel({ enabled: true, muted: true, volume: 0.70 });
     expect(ariaMuted).toContain('terbungkam');
+  });
+
+  it('calcAmbienceFilterFreq menghitung frekuensi cutoff filter dinamis terhadap volume', () => {
+    expect(AMBIENCE_FILTER_FREQ_MIN).toBe(120);
+    expect(AMBIENCE_FILTER_FREQ_MAX).toBe(255);
+    // Volume default (0.35) menghasilkan tepat 180 Hz
+    expect(calcAmbienceFilterFreq(DEFAULT_AMBIENCE_VOLUME)).toBe(180);
+    // Batas volume 0 -> 140 Hz
+    expect(calcAmbienceFilterFreq(0)).toBe(140);
+    // Batas volume 1.0 -> 255 Hz
+    expect(calcAmbienceFilterFreq(1.0)).toBe(255);
+    // Toleran terhadap input tak terhingga / negatif / NaN
+    expect(calcAmbienceFilterFreq(-0.5)).toBe(140);
+    expect(calcAmbienceFilterFreq(2.0)).toBe(255);
+    expect(calcAmbienceFilterFreq('invalid')).toBe(180);
   });
 });
