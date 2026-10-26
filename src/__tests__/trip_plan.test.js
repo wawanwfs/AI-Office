@@ -83,6 +83,13 @@ describe('pickDest', () => {
     expect(s2).not.toBeNull(); // re-cek terakhir menemukan spot percobaan ke-3 bebas
     expect(calls).toBe(4);
   });
+  it('tries <= 0 / non-integer → null tanpa throw (tidak mungkin freeSpot(null.x, null.z))', () => {
+    const freeSpot = () => true;
+    expect(pickDest(dests, rmock(0.5), freeSpot, 0)).toBeNull();
+    expect(pickDest(dests, rmock(0.5), freeSpot, -3)).toBeNull();
+    expect(pickDest(dests, rmock(0.5), freeSpot, 2.5)).toBeNull();
+    expect(pickDest(dests, rmock(0.5), freeSpot, NaN)).toBeNull();
+  });
 });
 
 describe('fallbackSpot', () => {

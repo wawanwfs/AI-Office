@@ -43,6 +43,7 @@ export function jitterDest(dest, rng, jitter = DEST_JITTER) {
 // semua gagal (pemanggil menentukan fallback koridor).
 export function pickDest(dests, rng, freeSpot, tries = 8) {
   if (!Array.isArray(dests) || dests.length === 0) return null;
+  if (!Number.isInteger(tries) || tries <= 0) return null; // tanpa percobaan → null (bukan TypeError)
   let spot = null;
   for (let i = 0; i < tries; i++) {
     const dest = dests[rng.i(0, dests.length - 1)];

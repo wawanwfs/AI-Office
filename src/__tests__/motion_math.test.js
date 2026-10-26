@@ -130,4 +130,11 @@ describe('motion_math: angleDelta (selisih sudut terpendek)', () => {
     const after = cur + d * 0.5;         // setengah langkah
     expect(after).toBeCloseTo(-Math.PI); // bergerak menuju -π, bukan melompat lewat +π
   });
+  it('selisih sangat besar tidak menggantung & tetap dalam [-π, π] (normalisasi O(1))', () => {
+    const d = angleDelta(1e9, 0);
+    expect(d).toBeGreaterThanOrEqual(-Math.PI);
+    expect(d).toBeLessThanOrEqual(Math.PI);
+    // hasil tetap ekivalen modulo 2π dengan selisih asli
+    expect((d - 1e9) % (Math.PI * 2)).toBeCloseTo(0, 5);
+  });
 });

@@ -10,10 +10,10 @@ export const ARRIVE = 0.2;
 // Selisih sudut terpendek (wrap ke [-π, π]) — dipakai interpolasi rotasi halus
 // walker (slerp/lerp sudut terpendek) supaya tidak berputar memutar.
 export function angleDelta(target, current) {
-  let d = target - current;
-  while (d > Math.PI) d -= Math.PI * 2;
-  while (d < -Math.PI) d += Math.PI * 2;
-  return d;
+  // Normalisasi O(1) ke [-π, π): selisih terpendek tanpa loop (loop lama bisa
+  // berputar jutaan kali untuk selisih sangat besar — mis. angleDelta(1e9, 0)).
+  const d = (target - current + Math.PI) % (Math.PI * 2);
+  return ((d + Math.PI * 2) % (Math.PI * 2)) - Math.PI;
 }
 
 export function dist2(a, b) {
