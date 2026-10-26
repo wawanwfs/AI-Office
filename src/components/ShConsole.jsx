@@ -363,7 +363,7 @@ export default function ShConsole({ show, onClose }) {
                         onKeyDown={(e) => { if (e.key === 'Enter') runTerm(wsId) }} />
                       <button style={STYLE.btn} onClick={() => runTerm(wsId)}>Jalankan</button>
                     </div>
-                    <pre style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 200, overflow: 'auto', fontSize: 11, marginTop: 8 }}>
+                    <pre style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 200, overflow: 'auto', fontSize: 11, marginTop: 8 }} role="status">
                       {termOut || '(belum ada output)'}</pre>
                   </div>
                 </div>
@@ -436,10 +436,12 @@ function Overview({ ov, liveLogs }) {
       </div>
       <div style={STYLE.card}>
         <div style={{ fontWeight: 700, marginBottom: 8 }}>Log terbaru <span style={{ color: '#5f6f90', fontWeight: 400, fontSize: 11 }}>(realtime)</span></div>
-        {(liveLogs && liveLogs.length) ? null : (ov.recent_logs || []).length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>Belum ada log.</div>}
-        {(liveLogs && liveLogs.length ? liveLogs : (ov.recent_logs || [])).map((l, i) => (
-          <div key={i} style={STYLE.logLine}><b>{l.level || 'INFO'}</b> · {l.message} <span style={{ color: '#5f6f90' }}>({l.source || 'system'})</span></div>
-        ))}
+        <div role="log" aria-live="polite" aria-label="Log realtime">
+          {(liveLogs && liveLogs.length) ? null : (ov.recent_logs || []).length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>Belum ada log.</div>}
+          {(liveLogs && liveLogs.length ? liveLogs : (ov.recent_logs || [])).map((l, i) => (
+            <div key={i} style={STYLE.logLine}><b>{l.level || 'INFO'}</b> · {l.message} <span style={{ color: '#5f6f90' }}>({l.source || 'system'})</span></div>
+          ))}
+        </div>
       </div>
     </div>
   )

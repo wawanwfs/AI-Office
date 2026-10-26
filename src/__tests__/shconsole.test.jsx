@@ -43,6 +43,9 @@ describe('ShConsole — konsol software house', () => {
     expect(screen.getByText('Agent total')).toBeTruthy()
     expect(screen.getByText('Task per status')).toBeTruthy()
     expect(screen.getByText('running')).toBeTruthy()
+    // a11y: log realtime hidup dalam live region log (diumumkan ke pembaca layar)
+    const logRegion = screen.getByRole('log')
+    expect(logRegion.getAttribute('aria-live')).toBe('polite')
   })
 
   it('tab Projects menampilkan daftar + tombol preview', async () => {
@@ -117,6 +120,8 @@ describe('ShConsole — konsol software house', () => {
     expect(await screen.findByLabelText('Pilih project')).toBeTruthy()
     fireEvent.change(screen.getByLabelText('Pilih project'), { target: { value: '1' } })
     expect(await screen.findByText(/Dockerfile/)).toBeTruthy()
+    // a11y: output terminal memakai live region status (diumumkan ke pembaca layar)
+    expect(screen.getByRole('status').textContent).toMatch(/belum ada output/)
     fireEvent.click(screen.getByText(/Dockerfile/))
     expect(await screen.findByText(/FROM python:3.12-slim/)).toBeTruthy()
     fireEvent.change(screen.getByLabelText('Pesan commit'), { target: { value: 'init' } })
