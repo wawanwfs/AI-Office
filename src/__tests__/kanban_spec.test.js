@@ -151,3 +151,20 @@ describe('kanban_spec — computeSprintMetrics & filterTasks', () => {
     expect(f3).toEqual([]);
   });
 });
+
+describe('kanban_spec — normalisasi huruf besar/kecil & spasi', () => {
+  it('getTaskRoleBadgeColor toleran terhadap huruf besar & spasi', () => {
+    expect(getTaskRoleBadgeColor('BE')).toBe(ROLE_COLORS.be);
+    expect(getTaskRoleBadgeColor(' Fe ')).toBe(ROLE_COLORS.fe);
+    expect(getTaskRoleBadgeColor('Ops')).toBe(ROLE_COLORS.ops);
+    expect(getTaskRoleBadgeColor(' SEC ')).toBe(ROLE_COLORS.sec);
+  });
+
+  it('getKanbanColumnKey toleran terhadap huruf besar & spasi', () => {
+    expect(getKanbanColumnKey(' IN_PROGRESS ')).toBe('running');
+    expect(getKanbanColumnKey('Done')).toBe('done');
+    expect(getKanbanColumnKey('QA')).toBe('review');
+    expect(getKanbanColumnKey('Pending')).toBe('pending');
+    expect(getKanbanColumnKey(' ERROR ')).toBe('review');
+  });
+});
