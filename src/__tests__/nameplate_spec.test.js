@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { NAMEPLATE, PLATE, titleCase, clampText, drawNameplate } from '../scene/parts/nameplate_spec.js';
+import { NAMEPLATE, PLATE, titleCase, clampText, drawNameplate, ACRONYMS } from '../scene/parts/nameplate_spec.js';
 
 function mockCtx() {
   const calls = { fill: [], text: [], font: null, align: null, baseline: null };
@@ -57,6 +57,24 @@ describe('titleCase', () => {
   it('akronim tetap uppercase walau setelah hyphen', () => {
     expect(titleCase('ai-bot')).toBe('AI-Bot');
     expect(titleCase('CTO-bot')).toBe('CTO-Bot');
+  });
+});
+
+describe('ACRONYMS — kamus akronim titleCase', () => {
+  it('berisi anggota kanonik (termasuk yang belum pernah dipakai test individual)', () => {
+    expect([...ACRONYMS]).toEqual(expect.arrayContaining([
+      'ai', 'hr', 'qa', 'ui', 'ux', 'ml', 'api', 'sql', 'fs', 'wfs', 'cs', 'pm', 'it', 'cto', 'ceo',
+    ]));
+  });
+  it('tiap anggota di-uppecase-kan penuh oleh titleCase (invariant sinkron kamus ↔ perilaku)', () => {
+    for (const a of ACRONYMS) {
+      expect(titleCase(a)).toBe(a.toUpperCase());
+      expect(titleCase('senior ' + a)).toBe('Senior ' + a.toUpperCase());
+    }
+  });
+  it('kata biasa TIDAK ter-uppecase-kan penuh (hanya inisial)', () => {
+    expect(titleCase('backend engineer')).toBe('Backend Engineer');
+    expect(titleCase('lead platform')).toBe('Lead Platform');
   });
 });
 
