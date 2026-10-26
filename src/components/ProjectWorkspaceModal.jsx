@@ -2,6 +2,28 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useDialogA11y } from '../lib/dialogA11y'
 import { IconClose, IconRocket } from './Icons'
 
+const WORKSPACE_TABS = [
+  { id: 'preview', label: 'Live Preview' },
+  { id: 'files', label: 'File Explorer' },
+  { id: 'terminal', label: 'Terminal' },
+  { id: 'tests', label: 'Quality & QA' },
+]
+
+// Navigasi panah tablist (pola WAI-ARIA tabs): Left/Right/Home/End memindahkan
+// fokus antar tab; Tab keluar seperti biasa (roving tabindex di render).
+const workspaceTabKeys = (e, setTab) => {
+  if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(e.key)) return
+  const ids = WORKSPACE_TABS.map(t => t.id)
+  const cur = document.activeElement?.id || ''
+  const i = Math.max(0, ids.indexOf(cur.startsWith('pw-tab-') ? cur.slice(8) : ''))
+  let n
+  if (e.key === 'Home') n = 0
+  else if (e.key === 'End') n = ids.length - 1
+  else n = e.key === 'ArrowRight' ? (i + 1) % ids.length : (i - 1 + ids.length) % ids.length
+  e.preventDefault(); setTab(ids[n])
+  setTimeout(() => { const el = document.getElementById('pw-tab-' + ids[n]); if (el) el.focus() }, 0)
+}
+
 export default function ProjectWorkspaceModal({ project, open, onClose, onRefreshProject }) {
   const [activeTab, setActiveTab] = useState('preview') // 'preview' | 'files' | 'terminal' | 'tests'
   const [files, setFiles] = useState([])
@@ -144,15 +166,15 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
           </div>
 
           {/* Tab Navigation */}
-          <div className="flex items-center space-x-1 bg-slate-950 p-1 rounded-xl border border-slate-800">
-            {[
-              { id: 'preview', label: 'Live Preview' },
-              { id: 'files', label: 'File Explorer' },
-              { id: 'terminal', label: 'Terminal' },
-              { id: 'tests', label: 'Quality & QA' }
-            ].map(tab => (
+          <div role="tablist" aria-label="Tab workspace" className="flex items-center space-x-1 bg-slate-950 p-1 rounded-xl border border-slate-800" onKeyDown={e => workspaceTabKeys(e, setActiveTab)}>
+            {WORKSPACE_TABS.map(tab => (
               <button
                 key={tab.id}
+                id={`pw-tab-${tab.id}`}
+                role="tab"
+                aria-selected={activeTab === tab.id}
+                aria-controls={`pw-panel-${tab.id}`}
+                tabIndex={activeTab === tab.id ? 0 : -1}
                 onClick={() => setActiveTab(tab.id)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-medium transition ${
                   activeTab === tab.id
@@ -189,7 +211,7 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
         <div className="flex-1 overflow-hidden flex flex-col bg-slate-950/30">
           {/* TAB 1: LIVE PREVIEW */}
           {activeTab === 'preview' && (
-            <div className="flex-1 flex flex-col h-full">
+            <div role="tabpanel" id="pw-panel-preview" aria-labelledby="pw-tab-preview" className="flex-1 flex flex-col h-full">
               <div className="px-6 py-2.5 bg-slate-950 border-b border-slate-800 flex items-center justify-between text-xs font-mono">
                 <div className="flex items-center space-x-2 text-slate-400">
                   <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
@@ -225,7 +247,7 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
 
           {/* TAB 2: FILE EXPLORER & EDITOR */}
           {activeTab === 'files' && (
-            <div className="flex-1 flex overflow-hidden">
+            <div role="tabpanel" id="pw-panel-files" aria-labelledby="pw-tab-files" className="flex-1 flex overflow-hidden">
               <div className="w-64 border-r border-slate-800 bg-slate-950/70 p-4 overflow-y-auto">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Project Workspace</div>
                 <div className="space-y-1">
@@ -265,7 +287,7 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
 
           {/* TAB 3: TERMINAL */}
           {activeTab === 'terminal' && (
-            <div className="flex-1 flex flex-col p-6 font-mono text-xs bg-slate-950">
+            <div role="tabpanel" id="pw-panel-terminal" aria-labelledby="pw-tab-terminal" className="flex-1 flex flex-col p-6 font-mono text-xs bg-slate-950">
               <div className="text-slate-400 mb-3">WFS PROJECT ISOLATED SANDBOX TERMINAL — HOST: DOCKER RUNTIME</div>
               <div className="flex-1 p-4 rounded-xl bg-slate-900/90 border border-slate-800 overflow-y-auto text-slate-200 mb-4 whitespace-pre-wrap">
                 {termOutput || 'Siap menerima perintah shell. Contoh: python3 -m unittest test_app.py'}
@@ -292,7 +314,7 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
 
           {/* TAB 4: QUALITY & QA REPORT */}
           {activeTab === 'tests' && (
-            <div className="flex-1 p-8 overflow-y-auto space-y-6">
+            <div role="tabpanel" id="pw-panel-tests" aria-labelledby="pw-tab-tests" className="flex-1 p-8 overflow-y-auto space-y-6">
               <div className="max-w-3xl mx-auto space-y-6">
                 <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
                   <div>

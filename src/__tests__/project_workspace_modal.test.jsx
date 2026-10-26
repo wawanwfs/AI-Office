@@ -93,7 +93,7 @@ describe('ProjectWorkspaceModal', () => {
       '/api/projects/p1/file': (u, opts) => { saveBody = JSON.parse(opts.body); return okJson({ ok: true }) },
     })
     render(<ProjectWorkspaceModal project={PROJECT} open onClose={() => {}} />)
-    fireEvent.click(screen.getByRole('button', { name: 'File Explorer' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'File Explorer' }))
     await waitFor(() => expect(screen.getByText('📄 index.html')).toBeTruthy())
     expect(screen.getByText('📄 app.py')).toBeTruthy()
     await waitFor(() => expect(screen.getByLabelText('Isi file index.html').value).toBe('<html>hello</html>'))
@@ -110,7 +110,7 @@ describe('ProjectWorkspaceModal', () => {
       '/api/projects/p1/terminal': okJson({ stdout: 'OK: 2 tests passed', stderr: '', exit_code: 0 }),
     })
     render(<ProjectWorkspaceModal project={PROJECT} open onClose={() => {}} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Terminal' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Terminal' }))
     const input = screen.getByLabelText('Perintah terminal')
     expect(input.value).toBe('python3 -m unittest test_app.py')
     fireEvent.change(input, { target: { value: 'pytest' } })
@@ -125,9 +125,36 @@ describe('ProjectWorkspaceModal', () => {
   it('tab Quality & QA menampilkan laporan lolos', async () => {
     mockFetch({ '/api/projects/p1/files': okJson({ files: [] }) })
     render(<ProjectWorkspaceModal project={PROJECT} open onClose={() => {}} />)
-    fireEvent.click(screen.getByRole('button', { name: 'Quality & QA' }))
+    fireEvent.click(screen.getByRole('tab', { name: 'Quality & QA' }))
     expect(screen.getByText('ALL CRITERIA PASSED')).toBeTruthy()
     expect(screen.getByText(/DOCKER CONTAINER ISOLATION/)).toBeTruthy()
     expect(screen.getByText(/Automated QA & Security Gate/)).toBeTruthy()
+  })
+})
+
+describe('ProjectWorkspaceModal tabs — pola WAI-ARIA tabs', () => {
+  it('tablist: role + aria-label; tab punya aria-selected & aria-controls; panel terhubung', async () => {
+    mockFetch({ '/api/projects/p1/files': okJson({ files: [] }) })
+    render(<ProjectWorkspaceModal project={PROJECT} open onClose={() => {}} />)
+    expect(screen.getByRole('tablist', { name: 'Tab workspace' })).toBeTruthy()
+    const preview = screen.getByRole('tab', { name: 'Live Preview' })
+    expect(preview.getAttribute('aria-selected')).toBe('true')
+    expect(preview.getAttribute('aria-controls')).toBe('pw-panel-preview')
+    expect(screen.getByRole('tab', { name: 'File Explorer' }).getAttribute('aria-selected')).toBe('false')
+    expect(screen.getByRole('tabpanel').getAttribute('aria-labelledby')).toBe('pw-tab-preview')
+  })
+
+  it('panah kanan memindahkan tab & fokus (roving tabindex); Home kembali ke tab pertama', async () => {
+    mockFetch({ '/api/projects/p1/files': okJson({ files: [] }) })
+    render(<ProjectWorkspaceModal project={PROJECT} open onClose={() => {}} />)
+    // tunggu auto-fokus awal useDialogA11y (30ms) selesai agar tidak menimpa navigasi
+    await new Promise(r => setTimeout(r, 40))
+    const preview = screen.getByRole('tab', { name: 'Live Preview' })
+    preview.focus()
+    fireEvent.keyDown(preview, { key: 'ArrowRight' })
+    await waitFor(() => expect(document.activeElement.id).toBe('pw-tab-files'))
+    expect(screen.getByRole('tab', { name: 'File Explorer' }).getAttribute('aria-selected')).toBe('true')
+    fireEvent.keyDown(document.activeElement, { key: 'Home' })
+    await waitFor(() => expect(document.activeElement.id).toBe('pw-tab-preview'))
   })
 })
