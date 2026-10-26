@@ -32,6 +32,7 @@ import {
   extractTaskTags,
   computeTagCloud,
   matchTaskTags,
+  SPECIAL_TAG_LABELS,
 } from '../scene/parts/kanban_spec.js';
 
 describe('kanban_spec — KANBAN_COLUMNS & role badges', () => {
@@ -680,5 +681,21 @@ describe('kanban_spec — Tag extraction, color, cloud & multi-tag filter', () =
     expect(ciTag).toBeTruthy();
     expect(ciTag.label).toBe('CI/CD');
     expect(ciTag.color).toMatch(/^#[0-9a-fA-F]{6}$/);
+  });
+});
+
+describe('kanban_spec — SPECIAL_TAG_LABELS', () => {
+  it('memetakan tag khusus ke label human-readable yang konsisten', () => {
+    expect(SPECIAL_TAG_LABELS).toBeTruthy();
+    const labels = Object.entries(SPECIAL_TAG_LABELS);
+    expect(labels.length).toBeGreaterThan(0);
+    for (const [key, label] of labels) {
+      expect(key).toBe(normalizeTag(key));       // kunci sudah ternormalisasi
+      expect(label).toBeTruthy();                // label tidak kosong
+      expect(formatTagLabel(key)).toBe(label);    // round-trip lewat formatter
+    }
+    // Tidak ada label duplikat untuk kunci berbeda
+    const vals = labels.map(([, label]) => label);
+    expect(new Set(vals).size).toBe(vals.length);
   });
 });
