@@ -124,17 +124,26 @@ describe('drawTerrazzo (512×512)', () => {
     expect(a.ops).toEqual(b.ops);
   });
 
-  it('420 chip ellipse ditarik dengan radius & pusat wajar, alpha kembali ke 1', () => {
+  it('420 chip ellipse + 10 lempeng marmer ditarik dengan radius & pusat wajar, alpha kembali ke 1', () => {
     const c = recFull();
     drawTerrazzo(c);
     const ellipses = c.ops.filter(o => o[0] === 'ellipse');
-    expect(ellipses).toHaveLength(420);
-    for (const e of ellipses) {
-      const [, cx, cy, rx, ry] = e;
+    expect(ellipses).toHaveLength(430);
+    // 420 chip kecil pertama
+    for (let i = 0; i < 420; i++) {
+      const [, cx, cy, rx, ry] = ellipses[i];
       expect(cx).toBeGreaterThanOrEqual(0); expect(cx).toBeLessThanOrEqual(512);
       expect(cy).toBeGreaterThanOrEqual(0); expect(cy).toBeLessThanOrEqual(512);
-      expect(rx).toBeGreaterThanOrEqual(3.5); expect(rx).toBeLessThanOrEqual(12.5);
-      expect(ry).toBeGreaterThanOrEqual(0); expect(ry).toBeLessThanOrEqual(15);
+      expect(rx).toBeGreaterThanOrEqual(5); expect(rx).toBeLessThanOrEqual(22);
+      expect(ry).toBeGreaterThanOrEqual(0); expect(ry).toBeLessThanOrEqual(28);
+    }
+    // 10 lempeng marmer kilap lembut
+    for (let i = 420; i < 430; i++) {
+      const [, cx, cy, rx, ry] = ellipses[i];
+      expect(cx).toBeGreaterThanOrEqual(0); expect(cx).toBeLessThanOrEqual(512);
+      expect(cy).toBeGreaterThanOrEqual(0); expect(cy).toBeLessThanOrEqual(512);
+      expect(rx).toBeGreaterThanOrEqual(60); expect(rx).toBeLessThanOrEqual(190);
+      expect(ry).toBeGreaterThanOrEqual(30); expect(ry).toBeLessThanOrEqual(200);
     }
     expect(c.globalAlpha).toBe(1);
   });
