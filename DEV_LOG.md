@@ -815,6 +815,13 @@
     - `scripts/verify_desks.mjs`: `ALL_DESKS_OK` (26 meja, 0 collision).
 - **Sisa backlog:** evaluasi optimasi chunking dinamis OfficeScene atau filtering per divisi pada tampilan Kanban.
 
+## 2026-10-28 01:50 WIB — Siklus 88: Audit — Dashboard overview + Landing page publik + re-link sandbox preview
+- **Pemicu:** user — "audit total karena masih kurang ada dashboard dan landing page".
+- **Audit temuan:** (1) tidak ada halaman dashboard overview (Statistik lama hanya panel kecil per-task); (2) tidak ada landing page (root = langsung app); (3) 4 proyek lama kehilangan relasi preview_port/container_name di DB (reset memutusnya) → /preview/* 404 meski sandbox masih Up; (4) 2 task dummy "ready" tersisa dari uji tadi.
+- **Dibangun:** (a) src/components/Dashboard.jsx — overview penuh: 8 kartu metrik (proyek, task, file, sandbox — semua dari /api nyata), 3 kolom (proyek + status/preview port, task terkini, agen & container CPU/RAM), log aktivitas, host stats; shortcut E; di dock antara ActionMenu dan ProjectPanel; CSS responsif (grid 3→1 kolom mobile). (b) public/landing.html + route /landing & /app di server.py wfs-hq — hero navy royal sesuai tema, statistik live dari /api/dashboard/stats, 6 fitur, cara kerja 4 langkah, CTA masuk kantor 3D. (c) Re-link 4 sandbox jalan (3100/3101/3103/3104) ke proyeknya di DB → /preview/* 200 semua.
+- **Verifikasi:** 2212/2212 test; BUILD 0; deploy 200; /landing 200, /app 200, /preview/proj-* 200; shot WebGL 264KB (scene render — uniq 3249, mean navy royal); landing PNG: 650 piksel teks terang + 21650 navy + aksen royal; Vision masih 429 quota (26 dtk reset terakhir) — penilaian visual menyusul.
+- **Catatan:** endpoint /api/dashboard/stats sudah ada sebelumnya — dashboard baru mengonsumsi + memperkaya UI, bukan stub.
+
 ## 2026-10-27 00:15 WIB — Siklus 87: Reset task + fix 404 CS widget + chat AI CS hidup
 - **Reset data:** endpoint baru DELETE /api/tasks (hapus semua tasks+subtasks+projects+logs, agen → idle) + do_DELETE di server 9503. Eksekusi: 6 task/5 proyek/48 subtask dibersihkan, 12 agen idle — siap uji tugas nyata.
 - **Console error 404:** iframe CsWidget menunjuk /cs-widget/ yang tidak ada di 9503. Fix: proxy same-origin 9503→widget Docker :3001 (do_GET) + proxy POST /api/admin/* → backend :8000 (do_POST, _proxy_bantuin).
