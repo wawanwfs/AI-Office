@@ -10,6 +10,12 @@ export const STAIR_X = [-2.6, 2.6];
 export const getNearestStairX = (x) => (Math.abs(x - (-2.6)) < Math.abs(x - 2.6) ? -2.6 : 2.6);
 
 export function routePath(a, b) {
+  // Guard anti-poisoning: koordinat non-finite (NaN/±Infinity) atau titik asal/tujuan
+  // hilang TIDAK boleh menghasilkan waypoint korup (x/z NaN) yang bisa mengirim agen
+  // menembus lantai/furnitur — kembalikan jalur kosong (no-op aman), konsisten dgn
+  // pola anti-poisoning modul lain (obstacles/floor_elevation/motion_math).
+  if (!a || !b || !Number.isFinite(a.x) || !Number.isFinite(a.z) ||
+      !Number.isFinite(b.x) || !Number.isFinite(b.z)) return [];
   const ba = bandOf(a.z), bb = bandOf(b.z), path = [];
   if (ba !== bb) {
     // Jalur antar lantai WAJIB melewati tangga arsitektural di X = ±2.6

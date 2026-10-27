@@ -69,6 +69,16 @@ describe('routing.routePath', () => {
     expect(crossingDesks(path, a, b)).toEqual([]);
   });
 
+  it('input non-finite (NaN/±Infinity/undefined/null) → jalur kosong (no-op aman)', () => {
+    expect(routePath({ x: NaN, z: -3 }, { x: 8, z: 6 })).toEqual([]);
+    expect(routePath({ x: -4, z: Infinity }, { x: 8, z: 6 })).toEqual([]);
+    expect(routePath({ x: -4, z: -3 }, { x: NaN, z: 6 })).toEqual([]);
+    expect(routePath({ x: -4, z: -3 }, { x: 8, z: -Infinity })).toEqual([]);
+    expect(routePath(undefined, { x: 8, z: 6 })).toEqual([]);
+    expect(routePath({ x: -4, z: -3 }, null)).toEqual([]);
+    expect(routePath({ x: -4, z: -3 }, { x: 8, z: 6 })).not.toEqual([]);
+  });
+
   it('bandOf klasifikasi tiga baris dengan benar', () => {
     expect(bandOf(-5)).toBe(0);
     expect(bandOf(0)).toBe(1);
