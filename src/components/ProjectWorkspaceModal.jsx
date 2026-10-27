@@ -27,6 +27,10 @@ const workspaceTabKeys = (e, setTab) => {
 export default function ProjectWorkspaceModal({ project, open, onClose, onRefreshProject }) {
   const [activeTab, setActiveTab] = useState('preview') // 'preview' | 'files' | 'terminal' | 'tests'
   const [files, setFiles] = useState([])
+  const [filesState, setFilesState] = useState('loading')
+  const [fileReady, setFileReady] = useState(false)
+  const [workspaceError, setWorkspaceError] = useState('')
+  const [fileError, setFileError] = useState('')
   const [selectedFile, setSelectedFile] = useState('index.html')
   const [fileContent, setFileContent] = useState('')
   const [savingFile, setSavingFile] = useState(false)
@@ -49,28 +53,28 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
   // Load file list
   const loadFiles = useCallback(async () => {
     if (!pid) return
+    setFilesState('loading')
     try {
       const res = await fetch(`/api/projects/${pid}/files`)
-      if (res.ok) {
-        const data = await res.json()
-        setFiles(data.files || [])
-        if (!selectedFile && data.files?.length) {
-          setSelectedFile(data.files[0])
-        }
-      }
-    } catch { /* ignore */ }
-  }, [pid, selectedFile])
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setFiles(data.files || [])
+      setFilesState('ready')
+    } catch { setFilesState('error'); setFiles([]) }
+  }, [pid])
 
   // Load selected file content
   const loadFileContent = useCallback(async (path) => {
     if (!pid || !path) return
+    setFileReady(false)
+    setFileError('')
     try {
       const res = await fetch(`/api/projects/${pid}/file?path=${encodeURIComponent(path)}`)
-      if (res.ok) {
-        const data = await res.json()
-        setFileContent(data.content || '')
-      }
-    } catch { /* ignore */ }
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const data = await res.json()
+      setFileContent(data.content || '')
+      setFileReady(true)
+    } catch { setFileError('Gagal memuat isi file. Pilih file lagi untuk mencoba ulang.') }
   }, [pid])
 
   useEffect(() => {
@@ -90,16 +94,18 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
   if (!open || !project) return null
 
   const handleSaveFile = async () => {
-    if (!pid || !selectedFile) return
+    if (!pid || !selectedFile || !fileReady || savingFile) return
     setSavingFile(true)
+    setWorkspaceError('')
     try {
-      await fetch(`/api/projects/${pid}/file`, {
+      const response = await fetch(`/api/projects/${pid}/file`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ path: selectedFile, content: fileContent })
       })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
       setPreviewKey(k => k + 1)
-    } catch { /* ignore */ }
+    } catch { setWorkspaceError('Gagal menyimpan. Isi editor tetap tersedia; coba simpan lagi setelah koneksi pulih.') }
     setSavingFile(false)
   }
 
@@ -124,27 +130,29 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
   const handleContainerAction = async (action) => {
     if (!pid) return
     setContainerBusy(true)
+    setWorkspaceError('')
     try {
-      await fetch(`/api/projects/${pid}/container/${action}`, { method: 'POST' })
+      const response = await fetch(`/api/projects/${pid}/container/${action}`, { method: 'POST' })
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
       if (onRefreshProject) onRefreshProject()
       setPreviewKey(k => k + 1)
-    } catch { /* ignore */ }
+    } catch { setWorkspaceError('Restart gagal. Periksa koneksi lalu coba lagi.') }
     setContainerBusy(false)
   }
 
   const previewUrl = project.preview_url || `/preview/${pid}/`
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">
+    <div className="workspace-overlay fixed inset-0 z-50 flex items-center justify-center p-3 bg-slate-950/85 backdrop-blur-md">
       <div
         ref={box}
         role="dialog"
         aria-modal="true"
         aria-labelledby="workspace-title"
-        className="w-full max-w-6xl h-[92vh] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-sm"
+        className="workspace-dialog w-full max-w-6xl h-[92vh] bg-slate-900 border border-slate-700/80 rounded-2xl shadow-2xl flex flex-col overflow-hidden text-sm"
       >
         {/* Workspace Top Bar */}
-        <div className="flex items-center justify-between px-6 py-3.5 border-b border-slate-800 bg-slate-950/70">
+        <div className="workspace-header flex items-center justify-between px-6 py-3.5 border-b border-slate-800 bg-slate-950/70">
           <div className="flex items-center space-x-3">
             <span className="p-2 rounded-xl bg-blue-500/10 text-blue-400 border border-blue-500/20">
               <IconRocket size={18} />
@@ -207,6 +215,7 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
           </div>
         </div>
 
+        {workspaceError && <div role="alert">{workspaceError}</div>}
         {/* Tab Content Panes */}
         <div className="flex-1 overflow-hidden flex flex-col bg-slate-950/30">
           {/* TAB 1: LIVE PREVIEW */}
@@ -251,10 +260,13 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
               <div className="w-64 border-r border-slate-800 bg-slate-950/70 p-4 overflow-y-auto">
                 <div className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Project Workspace</div>
                 <div className="space-y-1">
+                  {filesState === 'loading' && <p role="status">Memuat daftar file…</p>}
+                  {filesState === 'error' && <div role="alert">Gagal memuat daftar file. <button onClick={loadFiles}>Coba lagi</button></div>}
+                  {filesState === 'ready' && files.length === 0 && <p>Belum ada file.</p>}
                   {files.map(f => (
                     <button
                       key={f}
-                      onClick={() => setSelectedFile(f)}
+                      onClick={() => { setFileReady(false); setSelectedFile(f); if (f === selectedFile) loadFileContent(f) }}
                       className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-mono truncate transition ${
                         selectedFile === f ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
                       }`}
@@ -269,13 +281,15 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
                   <span className="font-mono text-xs text-emerald-400">{selectedFile}</span>
                   <button
                     onClick={handleSaveFile}
-                    disabled={savingFile}
+                    disabled={savingFile || !fileReady || filesState !== 'ready'}
                     className="px-3 py-1 rounded-lg bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold text-xs transition"
                   >
                     {savingFile ? 'Menyimpan…' : 'Simpan Perubahan'}
                   </button>
                 </div>
+                {fileError && <p role="alert">{fileError}</p>}
                 <textarea
+                  disabled={!fileReady}
                   value={fileContent}
                   onChange={(e) => setFileContent(e.target.value)}
                   aria-label={`Isi file ${selectedFile}`}
@@ -316,41 +330,10 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
           {activeTab === 'tests' && (
             <div role="tabpanel" id="pw-panel-tests" aria-labelledby="pw-tab-tests" className="flex-1 p-8 overflow-y-auto space-y-6">
               <div className="max-w-3xl mx-auto space-y-6">
-                <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 flex items-center justify-between">
-                  <div>
-                    <h3 className="text-lg font-bold text-white mb-1">Automated QA & Security Gate</h3>
-                    <p className="text-xs text-slate-400">Verifikasi berkelanjutan terhadap integritas sandbox dan fungsionalitas aplikasi.</p>
-                  </div>
-                  <span className="px-3 py-1 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-xs font-mono font-bold">
-                    ALL CRITERIA PASSED
-                  </span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div className="p-5 rounded-xl bg-slate-900 border border-slate-800">
-                    <div className="text-xs font-mono text-emerald-400 mb-1">DOCKER CONTAINER ISOLATION</div>
-                    <div className="text-white font-semibold mb-1">Resource & Privilege Bounds</div>
-                    <p className="text-xs text-slate-400">Non-privileged execution, memory cap 512MB, isolated filesystem mount.</p>
-                  </div>
-                  <div className="p-5 rounded-xl bg-slate-900 border border-slate-800">
-                    <div className="text-xs font-mono text-blue-400 mb-1">HEALTHCHECK HTTP 200</div>
-                    <div className="text-white font-semibold mb-1">Network & Port Readiness</div>
-                    <p className="text-xs text-slate-400">Port {project.preview_port || 3100} aktif dan dapat diakses melalui reverse-proxy internal.</p>
-                  </div>
-                </div>
-
-                <div className="p-5 rounded-xl bg-slate-950 border border-slate-800">
-                  <div className="text-xs font-mono text-slate-400 mb-2">AUTOMATED TEST SUITE EXECUTION</div>
-                  <pre className="text-xs font-mono text-slate-300 bg-slate-900 p-3 rounded-lg overflow-x-auto">
-{`test_index_exists (test_app) ... ok
-test_index_content (test_app) ... ok
-
-----------------------------------------------------------------------
-Ran 2 tests in 0.003s
-
-OK`}
-                  </pre>
-                </div>
+                <h3>Automated QA & Security Gate</h3>
+                <p role="status">Belum ada hasil QA terverifikasi.</p>
+                <p>Status container dan URL preview bukan bukti pengujian atau audit keamanan. Jalankan pengujian di Terminal untuk melihat output dan exit code aktual.</p>
+                <button className="btn" onClick={() => { setActiveTab('terminal'); setTimeout(() => document.getElementById('pw-tab-terminal')?.focus(), 0) }}>Buka Terminal</button>
               </div>
             </div>
           )}

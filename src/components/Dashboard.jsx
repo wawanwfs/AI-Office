@@ -27,18 +27,17 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
   useDialogA11y({ open, onClose: closeDash, ref: box })
 
   const load = useCallback(async (signal) => {
-    try {
-      const [s, t, p] = await Promise.allSettled([
-        api('dashboard/stats', { signal }),
-        api('tasks', { signal }),
-        api('projects', { signal }),
-      ])
-      if (s.status === 'fulfilled') setStats(s.value)
-      if (t.status === 'fulfilled') setTasks(t.value.tasks || [])
-      if (p.status === 'fulfilled') setProjects(p.value.projects || [])
-      setErr(s.status === 'rejected' && t.status === 'rejected')
-    } catch { setErr(true) }
-    try { setRes(await api('system/resources', { signal })) } catch { /* abaikan */ }
+    const [s, t, p, r] = await Promise.allSettled([
+      api('dashboard/stats', { signal }), api('tasks', { signal }),
+      api('projects', { signal }), api('system/resources', { signal }),
+    ])
+    if (signal?.aborted) return
+    // Failed sections are unknown, never zero/empty or silently stale.
+    setStats(s.status === 'fulfilled' ? s.value : null)
+    setTasks(t.status === 'fulfilled' ? t.value.tasks || [] : null)
+    setProjects(p.status === 'fulfilled' ? p.value.projects || [] : null)
+    setRes(r.status === 'fulfilled' ? r.value : null)
+    setErr([s, t, p, r].some(result => result.status === 'rejected'))
   }, [])
 
   useEffect(() => {
@@ -80,8 +79,12 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
             </button>
           </div>
           <div className="dash-body" aria-live="polite">
+            <nav className="dash-nav" aria-label="Navigasi dashboard">
+              <button className="btn" onClick={() => { setOpen(false); onOpenBoard?.() }}>Buka papan task</button>
+              <button className="btn" onClick={() => { setOpen(false); onOpenProjects?.() }}>Buka daftar proyek</button>
+            </nav>
             {!stats && !err && <div className="skeleton" role="status">Memuat dashboard…</div>}
-            {err && <div role="alert" className="msg err" style={{ maxWidth: '100%' }}>Gateway offline. <button className="btn" style={{ minHeight: 32, marginLeft: 6 }} onClick={() => load()}>Coba lagi</button></div>}
+            {err && <div role="alert" className="msg err" style={{ maxWidth: '100%' }}>Data belum lengkap — sebagian layanan tidak dapat dihubungi. <button className="btn" style={{ minHeight: 32, marginLeft: 6 }} onClick={() => load()}>Coba lagi</button></div>}
             {stats && (
               <>
                 <div className="dash-grid">
@@ -91,8 +94,8 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
                   {card('Task jalan', stats.tasks_running ?? running, '#F59E0B')}
                   {card('Selesai', stats.tasks_completed ?? (byStatus.done || 0), '#10E5A0')}
                   {card('Agen', stats.agents_count ?? 0, '#4D9FFF')}
-                  {card('File dihasilkan', totalFiles, '#ADDBF2')}
-                  {card('Sandbox', (res?.containers || []).filter(c => /wfs-sandbox|sbx/.test(c.name)).length, '#60A5FA')}
+                  {card('File dihasilkan', tasks ? totalFiles : '—', '#ADDBF2')}
+                  {card('Sandbox', res ? (res.containers || []).filter(c => /wfs-sandbox|sbx/.test(c.name)).length : '—', '#60A5FA')}
                 </div>
 
                 <div className="dash-cols">
@@ -101,7 +104,8 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
                       <span>Proyek</span>
                       <button className="btn" style={{ minHeight: 28 }} onClick={() => { setOpen(false); onOpenProjects && onOpenProjects() }}>Buka panel proyek</button>
                     </div>
-                    {(projects || []).length === 0 && <div className="skeleton">Belum ada proyek.</div>}
+                    {projects === null && <p>Data proyek tidak tersedia.</p>}
+                    {projects?.length === 0 && <div className="skeleton">Belum ada proyek.</div>}
                     {(projects || []).slice(0, 6).map(p => (
                       <button key={p.id} className="dash-row" onClick={() => { setOpen(false); onOpenProjects && onOpenProjects() }}
                         aria-label={`Proyek ${p.name} status ${p.status}`}
@@ -116,7 +120,8 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
 
                   <section aria-label="Task terkini">
                     <div className="dash-sec"><span>Task terkini</span><span className="note">{byStatus.running || 0} jalan</span></div>
-                    {(tasks || []).length === 0 && <div className="skeleton">Belum ada task. Klik ＋ Task.</div>}
+                    {tasks === null && <p>Data task tidak tersedia.</p>}
+                    {tasks?.length === 0 && <div className="skeleton">Belum ada task. Klik ＋ Task.</div>}
                     {(tasks || []).slice(0, 7).map(t => (
                       <button key={t.id} className="dash-row" style={{ borderLeft: `3px solid ${t.status === 'done' ? '#10E5A0' : t.status === 'failed' ? '#f66' : t.status === 'running' ? '#F59E0B' : '#60A5FA'}` }}
                         onClick={() => { setOpen(false); onOpenBoard && onOpenBoard() }}
@@ -128,8 +133,9 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
                   </section>
 
                   <section aria-label="Agen & sandbox">
-                    <div className="dash-sec"><span>Agen aktif</span><span className="note">{agentsBusy.length ? `${agentsBusy.length} mengerjakan task` : 'semua idle'}</span></div>
-                    {(res?.containers || []).length === 0 && <div className="skeleton">Tidak ada container.</div>}
+                    <div className="dash-sec"><span>Agen aktif</span><span className="note">{tasks === null ? 'Status agen tidak tersedia' : agentsBusy.length ? `${agentsBusy.length} mengerjakan task` : 'semua idle'}</span></div>
+                    {!res && <p>Data container tidak tersedia.</p>}
+                    {res && (res.containers || []).length === 0 && <div className="skeleton">Tidak ada container.</div>}
                     {(res?.containers || []).filter(c => /wfs-sandbox|sbx|dibantuin|omniroute/.test(c.name)).slice(0, 8).map(c => (
                       <div key={c.name} className="dash-row" style={{ cursor: 'default' }}>
                         <span className="dash-row-t">{c.name.replace('wfs-sandbox-', 'sbx · ').replace('saas-dibantuin-', 'dbt · ').replace('wfs-office-', '')}</span>

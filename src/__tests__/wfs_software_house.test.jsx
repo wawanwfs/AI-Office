@@ -83,7 +83,7 @@ describe('WFS PROJECT Software House — ProjectWorkspaceModal', () => {
 
     fireEvent.click(screen.getByRole('tab', { name: 'Quality & QA' }))
     expect(screen.getByText('Automated QA & Security Gate')).toBeTruthy()
-    expect(screen.getByText('ALL CRITERIA PASSED')).toBeTruthy()
+    expect(screen.getByText('Belum ada hasil QA terverifikasi.')).toBeTruthy()
   })
 
   it('terminal & editor file punya nama aksesibel (a11y)', () => {

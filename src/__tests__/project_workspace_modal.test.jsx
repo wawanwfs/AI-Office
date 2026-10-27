@@ -122,13 +122,45 @@ describe('ProjectWorkspaceModal', () => {
     expect(JSON.parse(termCall[1].body).command).toBe('pytest')
   })
 
-  it('tab Quality & QA menampilkan laporan lolos', async () => {
+  it('tab Quality & QA tidak mengarang hasil pengujian', async () => {
     mockFetch({ '/api/projects/p1/files': okJson({ files: [] }) })
     render(<ProjectWorkspaceModal project={PROJECT} open onClose={() => {}} />)
     fireEvent.click(screen.getByRole('tab', { name: 'Quality & QA' }))
-    expect(screen.getByText('ALL CRITERIA PASSED')).toBeTruthy()
-    expect(screen.getByText(/DOCKER CONTAINER ISOLATION/)).toBeTruthy()
-    expect(screen.getByText(/Automated QA & Security Gate/)).toBeTruthy()
+    expect(screen.queryByText('ALL CRITERIA PASSED')).toBeNull()
+    expect(screen.queryByText(/Ran 2 tests/)).toBeNull()
+    expect(screen.getByText('Belum ada hasil QA terverifikasi.')).toBeTruthy()
+  })
+})
+
+describe('workspace failure feedback', () => {
+  it('does not allow saving unread content and reports file list failure', async () => {
+    mockFetch({ '/api/projects/p1/files': { ok: false, status: 503 } })
+    render(<ProjectWorkspaceModal project={PROJECT} open onClose={() => {}} />)
+    fireEvent.click(screen.getByRole('tab', { name: 'File Explorer' }))
+    expect(screen.getByRole('button', { name: 'Simpan Perubahan' }).disabled).toBe(true)
+    await waitFor(() => expect(screen.getAllByRole('alert').some(el => el.textContent.includes('Gagal memuat daftar file'))).toBe(true))
+  })
+  it('shows failed save and keeps editor content for retry', async () => {
+    mockFetch({ '/api/projects/p1/files': okJson({ files: ['index.html'] }), '/api/projects/p1/file?path=index.html': okJson({ content: 'draft' }), '/api/projects/p1/file': { ok: false, status: 500 } })
+    render(<ProjectWorkspaceModal project={PROJECT} open onClose={() => {}} />)
+    fireEvent.click(screen.getByRole('tab', { name: 'File Explorer' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Simpan Perubahan' }).disabled).toBe(false))
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan Perubahan' }))
+    expect((await screen.findByRole('alert')).textContent).toContain('Gagal menyimpan')
+    expect(screen.getByLabelText('Isi file index.html').value).toBe('draft')
+  })
+  it('uses a dedicated responsive workspace shell with a named tab navigation', () => {
+    render(<ProjectWorkspaceModal project={PROJECT} open onClose={() => {}} />)
+    expect(screen.getByRole('dialog').classList.contains('workspace-dialog')).toBe(true)
+    expect(screen.getByRole('tablist').closest('.workspace-header')).toBeTruthy()
+  })
+  it('reports failed restart without reporting refreshed project', async () => {
+    const refresh = vi.fn()
+    mockFetch({ '/api/projects/p1/files': okJson({ files: [] }), '/api/projects/p1/container/restart': { ok: false, status: 503 } })
+    render(<ProjectWorkspaceModal project={PROJECT} open onClose={() => {}} onRefreshProject={refresh} />)
+    fireEvent.click(screen.getByRole('button', { name: 'Restart' }))
+    expect((await screen.findByRole('alert')).textContent).toContain('Restart gagal')
+    expect(refresh).not.toHaveBeenCalled()
   })
 })
 
