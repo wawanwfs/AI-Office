@@ -100,6 +100,19 @@ def _parse_uptime_s(text):
     except (ValueError, IndexError):
         return 0
 
+
+def _parse_loadavg(text):
+    """Parse /proc/loadavg → nilai load 1 menit (string), toleran.
+
+    Format normal: "0.05 0.10 0.15 1/234 5678" — token pertama adalah load
+    1 menit. Input kosong/None/malformed → "0.00" (guard anti-poisoning,
+    pola sama dgn _parse_meminfo; tidak pernah melempar ke pemanggil).
+    """
+    try:
+        return text.split()[0]
+    except (IndexError, AttributeError):
+        return "0.00"
+
 # ---------- models ----------
 class ChatIn(BaseModel):
     agent_id: str
@@ -659,7 +672,12 @@ async def api_run_task(tid: int):
 
 @app.get("/api/system/resources")
 async def api_system_resources():
-    """Pemakaian CPU/RAM per kontainer docker + host, utk panel monitoring."""
+    """Pemakaian CPU/RAM per kontainer docker + host, utk panel monitoring.
+
+    Baca /proc lewat parser toleran (_parse_meminfo/_parse_loadavg) + try/except
+    OSError agar endpoint tidak pernah 500 pada file hilang/format tak terduga
+    (guard anti-poisoning, pola sama dgn _clamp_int).
+    """
     import subprocess, os
     try:
         out = subprocess.run(["docker","stats","--no-stream","--format","{{.Name}} {{.CPUPerc}} {{.MemUsage}}"],
@@ -669,15 +687,17 @@ async def api_system_resources():
             parts = line.split()
             if len(parts) >= 3:
                 containers.append({"name": parts[0], "cpu": parts[1], "mem": " ".join(parts[2:])})
-    except Exception as e:
+    except Exception:
         containers = []
-    with open("/proc/loadavg") as f:
-        la = f.read().split()
-    with open("/proc/meminfo") as f:
-        mi = {l.split(":")[0]: l.split()[1] for l in f.readlines()[:3]}
-    ram_used = (int(mi["MemTotal"]) - int(mi["MemAvailable"])) // 1024
-    ram_total = int(mi["MemTotal"]) // 1024
-    return {"containers": containers, "load": la[0], "ram_mb": f"{ram_used}/{ram_total}"}
+    try:
+        mem = _parse_meminfo(open("/proc/meminfo").read())
+        load = _parse_loadavg(open("/proc/loadavg").read())
+    except OSError:
+        mem = {"MemTotal": 0, "MemAvailable": 0}
+        load = "0.00"
+    ram_total = mem["MemTotal"]
+    ram_used = max(0, mem["MemTotal"] - mem["MemAvailable"])  # clamp negatif (MemAvailable > MemTotal)
+    return {"containers": containers, "load": load, "ram_mb": f"{ram_used}/{ram_total}"}
 
 
 @app.get("/api/agents/status")

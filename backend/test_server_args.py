@@ -56,3 +56,15 @@ def test_parse_uptime_s_normal_dan_malformed():
     assert server._parse_uptime_s("") == 0
     assert server._parse_uptime_s("abc def") == 0
     assert server._parse_uptime_s("   ") == 0
+
+
+def test_parse_loadavg_normal():
+    assert server._parse_loadavg("0.05 0.10 0.15 1/234 5678") == "0.05"
+    assert server._parse_loadavg("0.42") == "0.42"
+
+
+def test_parse_loadavg_malformed_dan_missing():
+    assert server._parse_loadavg("") == "0.00"
+    assert server._parse_loadavg("   ") == "0.00"
+    assert server._parse_loadavg(None) == "0.00"
+    assert server._parse_loadavg("abc def") == "abc"  # token pertama tetap dikembalikan
