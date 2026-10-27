@@ -4032,3 +4032,19 @@
   - E2E regresi: `e2e_camera_reset.py` OK (r 41.02); `e2e_tv.py` OK; `e2e_zone_multi.py` OK; `e2e_tvwysiwyg_painter.py` OK (dist 0.0); shot.sh :0 **672.763 B** (>500 KB, E2E_VISUAL OK).
   - Catatan debug: follow per-frame TERBUKTI bekerja di headless (probe dbg: jarak ring→agen stabil 0.04–0.10 pada ~1.5 FPS; kegagalan attempt pertama probe = salah identifikasi agen — x beku -8.000 milik agen lain, bukan regresi kode).
 - Sisa backlog: KOSONG. Kandidat berikutnya: ekstraksi blok handler interaksi (klik/dblclick, ~170 baris) — butuh ctx state; atau perbaikan kualitas kecil sesuai temuan.
+
+## 2026-10-27 12:45 WIB — Siklus 117: Fix bug cincin hover menyangkut saat kursor meninggalkan kanvas (pointerleave tidak ada) + DRY hoverRingPos (+8 test, probe E2E baru dgn bukti diskriminasi)
+
+- **Bug visual nyata ditemukan:** kanvas TIDAK punya handler `pointerleave` — saat kursor pindah ke dock/header React atau keluar jendela, cincin hover biru & kursor `pointer` TETAP tampil: blok follow per-frame terus menggerakkan ring utk agen yang sudah tidak di-hover, dan timeout throttle 80 ms yang masih pending mengeksekusi raycast dgn NDC basi (posisi kursor terakhir di tepi kanvas) → ring menyala kembali TEPAT SETELAH kursor keluar. Satu keluarga dgn bug siklus 116 (ring hover), sisi berlawanan: siklus 116 = ring tertinggal saat agen pergi; siklus 117 = ring nyangkut saat kursor pergi.
+- **Perubahan:**
+  - `OfficeScene.js`: handler `pointerleave` baru — batalkan `hoverTmr` (timer throttle kini disimpan, dulu `setTimeout` anonim tak bisa dibatalkan) + reset `hoverPend`/`hoveredAgent` + sembunyikan ring + kursor kembali normal (kecuali sedang dragging `grabbing`). Pointermove berikutnya menghidupkan kembali normal.
+  - `parts/ring_spec.js`: +`hoverRingPos(agent,isNexus,nexusPos)` murni & null-safe — posisi penuh ring hover (agent → selAnchorOf+ringFloorY; nexus → konstanta `NEXUS_HOVER` {7.6,1.20,6.1} yang dulu hardcode 2×). Formula duplikat handler pointermove vs blok follow per-frame (2×) → 1 sumber.
+  - OfficeScene: handler hover & blok follow pakai `hoverRingPos` (blok follow kini tak lagi membaca `selAnchorOf`/`ringFloorY` langsung); `if(ha!==hoveredAgent)` diperdering menjadi assignment biasa (nilai sama persis, guard tanpa efek).
+- **Probe E2E permanen baru `scripts/e2e_hover_leave.py`** (WS→CDP, mouse nyata): hover agen berjalan (pre-condition ring tampil) → kursor dipindahkan ke titik DOCK React yang diverifikasi `elementFromPoint` ≠ canvas (pointerleave asli dari browser, bukan simulasi) → ring harus hilang; lalu tunggu 0.8 s (melewati umur timeout throttle 80 ms lama) → ring TETAP hilang & kursor bukan `pointer` (anti-kebangkitan-dari-NDC-basi).
+- **Bukti terukur:**
+  - **Diskriminasi bug**: kode lama (pointerleave dihapus dari build, dideploy) → probe **FAIL** (`LEAVE: vis:true cursor:pointer` — ring & kursor menyangkut, 3 attempt); kode baru dideploy ulang → **OK**. `E2E_HOVERLEAVE: OK` 3× berturut pada kode baru.
+  - Regresi follow siklus 116 tetap hijau: `e2e_hover_follow.py` OK (moved 2.517, dist 0.399).
+  - Vitest **2091/2091 (155 file)** (+8 dari 2083; describe hoverRingPos baru), 0 fail; ESLint 0/0 (`npx eslint .` exit 0).
+  - Build sukses (37 precache 1806.73 KiB) → deploy `dist/*` → `~/wfs-hq/`; `wfs-hq` & `wfs-office` active, HTTP 200.
+  - E2E regresi: `e2e_camera_reset.py` OK; `e2e_tv.py` OK; `e2e_zone_multi.py` OK; `e2e_tvwysiwyg_painter.py` OK (dist 0.0); shot.sh :0 **673.773 B** (>500 KB, E2E_VISUAL OK).
+- Sisa backlog: KOSONG. Kandidat berikutnya: ekstraksi blok handler interaksi klik/dblclick (~170 baris, butuh ctx state) — atau perbaikan kecil sesuai temuan berikutnya.
