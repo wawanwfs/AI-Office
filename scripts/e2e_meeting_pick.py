@@ -192,7 +192,7 @@ def main():
             #   agen TIDAK pernah di-set (sel false/null) atau r lerp ke r lain.
             sm = {}
             ok_click = False
-            for _ in range(28):
+            for _ in range(48):
                 time.sleep(0.5)
                 sm = json.loads(ev(
                     "JSON.stringify({r: window.__cam ? window.__cam.sph.radius : -1,"

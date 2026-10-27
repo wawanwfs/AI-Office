@@ -84,7 +84,6 @@ beforeEach(() => {
   delete window.__tvData
   delete window.__tvPullErr
   delete window.__lastTvDrawAt
-  window.__tvData = { project: 'WFS PROJECT', done: 23, total: 30 } // pull awal sudah sukses (state sebelum uji)
 })
 afterEach(() => {
   vi.useRealTimers()
@@ -109,41 +108,48 @@ async function buildBoard() {
 }
 
 describe('siklus 125 — tvPull (lounge.js): fetch in-flight saat destroy tidak menulis window/canvas mati', () => {
-  it('resolve SETELAH tvDestroy → window.__tvData/__lastTvDrawAt tidak bangkit, needsUpdate tidak disentuh', async () => {
+  it('resolve SETELAH tvDestroy → __tvData/__lastTvDrawAt tidak berubah, __tvPullErr tidak ditulis', async () => {
     stubDeferredFetch()
     const refs = await buildLounge()
+    const drawAt0 = window.__lastTvDrawAt // drawTv() awal di createLounge sudah men-set
     await vi.advanceTimersByTimeAsync(1) // tvPull awal → fetch menggantung
     expect(deferred.length).toBe(1)
     refs.tvDestroy() // destroy scene
-    expect(window.__tvData.project).toBe('WFS PROJECT') // purge di luar scope — nilai awal masih ada
     resolveAll() // fetch in-flight selesai SETELAH destroy
     await vi.advanceTimersByTimeAsync(1)
     // KUNCI: await selesai setelah tvStopped → tidak menulis apa pun
-    expect(window.__tvData).toBeUndefined() // belum ditimpa data fetch (belum pernah sukses)
-    expect(window.__lastTvDrawAt).toBeUndefined() // drawTv tidak dijalankan
+    expect(window.__tvData).toBeUndefined() // belum pernah sukses → tidak ditulis
+    expect(window.__lastTvDrawAt).toBe(drawAt0) // drawTv tidak dijalankan ulang
     expect(window.__tvPullErr).toBeUndefined()
   })
 
   it('resolve SETELAH tvDestroy (pernah sukses sebelumnya) → __tvData lama TIDAK ditimpa data baru', async () => {
-    stubDeferredFetch({ ...SNAP, tasks: { ...SNAP.tasks, total: 999 } })
+    stubDeferredFetch() // sukses pertama: SNAP (total 3)
     const refs = await buildLounge()
     await vi.advanceTimersByTimeAsync(1)
+    resolveAll() // sukses pertama (seed __tvData via tvPull) — snapshot datanya
+    await vi.advanceTimersByTimeAsync(1)
+    const data0 = window.__tvData
+    expect(data0?.tasks?.total).toBe(3)
+    stubDeferredFetch({ ...SNAP, tasks: { ...SNAP.tasks, total: 999 } }) // fetch berikutnya: data baru
+    await vi.advanceTimersByTimeAsync(60000) // interval 60 dtk → fetch menggantung
+    expect(deferred.length).toBe(1)
     refs.tvDestroy()
     resolveAll()
     await vi.advanceTimersByTimeAsync(1)
-    expect(window.__tvData?.total).toBe(30) // nilai awal (fetch baru tidak ditulis)
-    expect(window.__lastTvDrawAt).toBeUndefined()
+    expect(window.__tvData).toBe(data0) // TIDAK ditimpa (referensi sama)
   })
 
-  it('reject SETELAH tvDestroy → catch tidak menulis __tvPullErr / tidak menggambar badge offline', async () => {
+  it('reject SETELAH tvDestroy → catch tidak menulis __tvPullErr / tidak menggambar ulang', async () => {
     stubDeferredFetch()
     const refs = await buildLounge()
+    const drawAt0 = window.__lastTvDrawAt
     await vi.advanceTimersByTimeAsync(1)
     refs.tvDestroy()
     rejectAll()
     await vi.advanceTimersByTimeAsync(1)
     expect(window.__tvPullErr).toBeUndefined()
-    expect(window.__lastTvDrawAt).toBeUndefined()
+    expect(window.__lastTvDrawAt).toBe(drawAt0)
   })
 
   it('resolve SEBELUM tvDestroy → perilaku lama tetap: __tvData diperbarui + needsUpdate', async () => {
@@ -152,7 +158,7 @@ describe('siklus 125 — tvPull (lounge.js): fetch in-flight saat destroy tidak 
     await vi.advanceTimersByTimeAsync(1)
     resolveAll()
     await vi.advanceTimersByTimeAsync(1)
-    expect(window.__tvData.total).toBe(42)
+    expect(window.__tvData.tasks.total).toBe(42)
     expect(window.__tvData.at).toBeGreaterThan(0)
     expect(window.__lastTvDrawAt).toBeGreaterThan(0)
     expect(refs.tvTex.needsUpdate).toBe(true)
