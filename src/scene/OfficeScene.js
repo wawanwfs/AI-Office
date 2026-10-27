@@ -280,6 +280,26 @@ renderer.domElement&&renderer.domElement.addEventListener('dblclick',e=>{
     return;
   }
   if(hits.length){
+    const root=findAgentRoot(hits[0].object,agentData);
+    if(root){
+      // REGRESI siklus 118: cabang AGEN dblclick baru — dulu jatuh ke goal
+      // titik generik STATIS (tanpa follow): (1) MENIMPA goal follow yang baru
+      // dibuat klik pertama → kamera berhenti mengikuti agen yang berjalan;
+      // (2) y goal mengikuti titik intersect badan (bukan formula mata +1.5).
+      // Kini idempoten dgn klik pertama (fokusAgentRoot): follow tetap aktif +
+      // saveCam & ensureHomeRadius (dulu satu-satunya jalur fokus yang skip
+      // keduanya → Escape "kembali" tidak berfungsi setelah dblclick agen).
+      focusAgentRoot(root,{bubble:false});
+      return;
+    }
+    // REGRESI siklus 118: cabang NEXUS dblclick — dulu jatuh ke goal titik
+    // generik (y = titik intersect + 0.8, bisa mengarah ke kepala/dada) yang
+    // menimpa goal r:16 klik pertama; kini goal kamera idempoten (posisi
+    // nexus, r 16, seleksi -2 dari klik pertama dipertahankan).
+    if(isNexusHit(hits[0].object,nxChar)){
+      focusGoal={t:new THREE.Vector3(7.6,1.20+0.8,6.1),r:16};
+      return;
+    }
     const pg=dblclickPointGoal(hits[0].point,sph.radius);
     if(pg)focusGoal={t:new THREE.Vector3(pg.t.x,pg.t.y,pg.t.z),r:pg.r};
   }

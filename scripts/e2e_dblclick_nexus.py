@@ -25,7 +25,7 @@ import subprocess, os, time, urllib.request, json, socket, struct, base64, sys, 
 
 CHROME = os.path.expanduser(
     "~/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell")
-PORT = 9463
+PORT = int(os.environ.get("E2E_DBLNX_PORT", "9463"))
 URL = "http://127.0.0.1:9503/"
 
 NEXUS = (7.6, 1.45, 6.1)
