@@ -73,6 +73,26 @@ def test_get_task_missing_returns_none(tmp_tasks_db):
     assert tasks.get_task(999999) is None
 
 
+def test_load_agent_cfg_reads_and_falls_back(tmp_path, monkeypatch):
+    # agents.json dibaca relatif ke direktori modul tasks (__file__).
+    cfg_dir = tmp_path / "config"
+    cfg_dir.mkdir()
+    (cfg_dir / "agents.json").write_text(json.dumps({
+        "be1": {"model": "m1", "key": "k1"},
+        "default": {"model": "m0"},
+    }))
+    monkeypatch.setattr(tasks, "__file__", str(tmp_path / "tasks.py"))
+    assert tasks.load_agent_cfg("be1") == {"model": "m1", "key": "k1"}
+    # agent tak dikenal → {} (default global dipakai call_llm)
+    assert tasks.load_agent_cfg("nope") == {}
+    # file hilang → {}, tidak throw (pola anti-poisoning)
+    (cfg_dir / "agents.json").rename(cfg_dir / "agents.json.bak")
+    assert tasks.load_agent_cfg("be1") == {}
+    # JSON rusak → {}
+    (cfg_dir / "agents.json").write_text("bukan json {")
+    assert tasks.load_agent_cfg("be1") == {}
+
+
 # ---------------- orders.py ----------------
 
 def test_init_seeds_demo_orders(tmp_orders_db):

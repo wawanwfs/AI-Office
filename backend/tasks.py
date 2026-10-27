@@ -104,14 +104,23 @@ ROLE_SYS = {
 }
 
 
+def load_agent_cfg(agent_id):
+    """Baca config agent dari config/agents.json (toleran).
+
+    File hilang/rusak/bukan JSON → {} (jangan 500). Handle file ditutup
+    eksplisit via context manager (sebelumnya open() telanjang bocor FD).
+    """
+    cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config", "agents.json")
+    try:
+        with open(cfg_path, encoding="utf-8") as f:
+            return json.load(f).get(agent_id, {})
+    except Exception:
+        return {}
+
+
 async def call_llm(agent_id, sys_prompt, user_prompt):
     # API config per agent (config/agents.json) atau default
-    cfg_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "config", "agents.json")
-    cfg = {}
-    try:
-        cfg = json.load(open(cfg_path)).get(agent_id, {})
-    except Exception:
-        pass
+    cfg = load_agent_cfg(agent_id)
     base = cfg.get("base") or DEFAULT_AI["base"]
     key = cfg.get("key") or DEFAULT_AI["key"]
     model = cfg.get("model") or DEFAULT_AI["model"]
