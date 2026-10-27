@@ -134,6 +134,29 @@ class TestHQProxy(unittest.TestCase):
         # token UI hanya dicek di proxy, tidak diteruskan ke gateway (tidak bocor ke upstream)
         self.assertIsNone(rec["x_wfs_token"])
 
+    def test_post_with_invalid_content_length_still_proxies(self):
+        # Content-Length malformed (non-numerik) tidak boleh melempar — body fallback JSON {}.
+        _StubGatewayHandler.last = None
+        fake = FakeH(path="/wfs-api/projects", command="POST",
+                     body=b"tidak dipakai",
+                     headers={"Content-Length": "abc",
+                              "X-WFS-Token": hq_proxy.UI_TOKEN})
+        H._proxy(fake)
+        self.assertEqual(fake._status, 200)
+        rec = _StubGatewayHandler.last
+        self.assertIsNotNone(rec)
+        self.assertEqual(rec["body"], b"{}")
+
+    def test_post_with_negative_content_length_still_proxies(self):
+        _StubGatewayHandler.last = None
+        fake = FakeH(path="/wfs-api/projects", command="POST",
+                     body=b"tidak dipakai",
+                     headers={"Content-Length": "-5",
+                              "X-WFS-Token": hq_proxy.UI_TOKEN})
+        H._proxy(fake)
+        self.assertEqual(fake._status, 200)
+        self.assertEqual(_StubGatewayHandler.last["body"], b"{}")
+
     def test_get_proxies_without_token(self):
         _StubGatewayHandler.last = None
         fake = FakeH(path="/wfs-api/agents", command="GET")

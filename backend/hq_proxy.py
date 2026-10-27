@@ -28,6 +28,19 @@ def _security_headers():
     )
 
 
+def _parse_content_length(raw):
+    """Parse Content-Length dengan toleran: nilai invalid/negatif → 0.
+
+    Konsisten dgn pola _clamp_int di server.py — header malformed tidak boleh
+    melempar ValueError (int() telanjang) yang membunuh handler proxy.
+    """
+    try:
+        n = int(raw)
+    except (TypeError, ValueError):
+        return 0
+    return n if n >= 0 else 0
+
+
 class H(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         if not hasattr(self, "_wfs_cc"):
@@ -88,7 +101,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(msg)
                 return
-            ln = int(self.headers.get("Content-Length", 0))
+            ln = _parse_content_length(self.headers.get("Content-Length", 0))
             body = self.rfile.read(ln) if ln else b"{}"
         req = urllib.request.Request(url, data=body, method=self.command)
         req.add_header("Content-Type", "application/json")
