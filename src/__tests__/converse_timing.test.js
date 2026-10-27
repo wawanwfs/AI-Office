@@ -17,6 +17,17 @@ describe('converse_timing: talkStep', () => {
   it('lineSec custom ikut dipakai', () => {
     expect(talkStep(1.0, 0.5)).toBe(2);
   });
+  it('guard anti-poisoning: walkPause non-finite (NaN/±Infinity) → 0', () => {
+    expect(talkStep(NaN, 1.8)).toBe(0);
+    expect(talkStep(Infinity, 1.8)).toBe(0);
+    expect(talkStep(-Infinity, 1.8)).toBe(0);
+  });
+  it('guard anti-poisoning: lineSec non-finite / <= 0 → 0 (bukan Infinity)', () => {
+    expect(talkStep(3.6, NaN)).toBe(0);
+    expect(talkStep(3.6, Infinity)).toBe(0);
+    expect(talkStep(3.6, 0)).toBe(0);
+    expect(talkStep(3.6, -1.8)).toBe(0);
+  });
 });
 
 describe('converse_timing: isConverseOver', () => {
@@ -33,6 +44,14 @@ describe('converse_timing: isConverseOver', () => {
     expect(isConverseOver(8.4, 4, 1.8)).toBe(false); // 8.4 > 8.4 salah (boundary sama persis)
     expect(isConverseOver(8.41, 4, 1.8)).toBe(true);
     expect(isConverseOver(1.21, 0, 1.8)).toBe(true); // tanpa baris: hanya jeda
+  });
+  it('guard anti-poisoning: input non-finite/rusak → false (tidak selesai)', () => {
+    expect(isConverseOver(NaN, 4, 1.8)).toBe(false);
+    expect(isConverseOver(Infinity, 4, 1.8)).toBe(false);
+    expect(isConverseOver(8.41, 4, NaN)).toBe(false);
+    expect(isConverseOver(8.41, NaN, 1.8)).toBe(false);
+    expect(isConverseOver(8.41, 4.5, 1.8)).toBe(false); // lineCount non-integer
+    expect(isConverseOver(8.41, -1, 1.8)).toBe(false);  // lineCount negatif
   });
 });
 
