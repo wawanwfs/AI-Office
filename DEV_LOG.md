@@ -4016,3 +4016,19 @@
   - E2E: `e2e_camera_reset.py` **OK**; `e2e_shot.py` via shot.sh :0 **672.999 B** (26 agen, E2E_VISUAL OK); `e2e_tv.py` OK; `e2e_zone_multi.py` OK (label zona terlihat); `e2e_tvwysiwyg_painter.py` OK (dist 0.0).
   - Catatan: `~/.hermes/cache/scratch/e2e_err.py` telah ter-prune (scratch 24 h) — cek error "Scene init failed" kini tercakup `uiOnly` banner di `e2e_shot.py` (OK).
 - Sisa backlog: KOSONG. Kandidat berikutnya: ekstraksi blok handler interaksi (klik/dblclick/hover, ~176 baris, 166–341) ke modul tersendiri — perlu ctx state (focusGoal/sph/selectedIdx) atau refactoring lebih luas; atau perbaikan kualitas kecil sesuai temuan.
+
+## 2026-10-27 11:40 WIB — Siklus 116: Fix bug cincin hover membeku saat agen berjalan + anchor ring DRY via selAnchorOf/ringFloorY (+9 test, probe E2E baru)
+
+- **Bug visual nyata ditemukan:** cincin hover biru hanya diposisikan di handler pointermove (throttle 80 ms) — saat agen yang di-hover BERJALAN/naik-turun lantai, cincin TIDAK mengikuti: beku di posisi terakhir kursor, terlihat "tertinggal" melintas di lantai. Sel ring emas sudah follow per-frame (lerp 0.25) sejak lama; hover ring tidak sama sekali.
+- **Bug kedua (satu keluarga):** anchor hover dihitung INLINE (hardcode `.55` + `(walker.visible?…:…)||0` di handler hover; formula Y duplikat total 3× di OfficeScene) — tanpa cek `sittingChar.visible`, beda kontrak dengan `selAnchorOf`: bila agen offsite/meeting (walker & sittingChar hidden), inline menganggap "duduk" → cincin nyangkut di meja kosongnya; sel ring sudah benar (null → disembunyikan). Walker tanpa `position` juga bisa melontarkan exception di formula inline lama.
+- **Perubahan:**
+  - `parts/ring_spec.js`: +`ringFloorY(a)` murni & null-safe (walker visible→position.y, `Number.isFinite(home.y)` fallback, else 0) — satu sumber kebenaran komponen Y ring; kontrak `selAnchorOf` (x,z,off) TIDAK diubah (test toEqual eksak tetap lulus).
+  - `OfficeScene.js`: handler hover kini pakai `selAnchorOf`+`ringFloorY` (−3 baris duplikat, hardcode .55/0.02 hilang → `HOVER_RING.Y`); `applySelected` & blok follow sel ring juga pakai `ringFloorY` (total 3 duplikat formula Y → 1); blok animasi baru: hover ring follow per-frame (lerp 0.45 — lebih responsif dari sel 0.25; ring hilang bila anchor null/offsite, konsisten dgn sel ring).
+- **Probe E2E permanen baru `scripts/e2e_hover_follow.py`** (WS→CDP, mouse NYATA): trigger lunch via `__setTime(720)` (jalur asli) → 26 agen berjalan ke kafe; hover badan agen berjalan via `Input.dispatchMouseEvent` (proyeksi dunia→layar via `__camCam`); identifikasi target anti-salah-agen via argmin jarak ring→agen berjalan (SwiftShader headless ~1.5 FPS → lerp settle tidak instan); anti-vakuus: agen wajib pindah >1.0 unit dgn kursor diakui tidak digerakkan; PASS bila ring tetap ≤0.6 dari agen.
+- **Bukti terukur:**
+  - Probe: `E2E_HOVERFOLLOW: OK` 2× berturut (moved 1.040/1.040, dist akhir 0.023/0.020 — bug lama akan ≈1.0+).
+  - Vitest **2078/2078 (154 file)** (+9 dari 2069), 0 fail; ESLint 0/0 (`npx eslint .` exit 0).
+  - Build sukses (37 precache 1806.64 KiB) → deploy `dist/*` → `~/wfs-hq/`; `wfs-hq` & `wfs-office` active.
+  - E2E regresi: `e2e_camera_reset.py` OK (r 41.02); `e2e_tv.py` OK; `e2e_zone_multi.py` OK; `e2e_tvwysiwyg_painter.py` OK (dist 0.0); shot.sh :0 **672.763 B** (>500 KB, E2E_VISUAL OK).
+  - Catatan debug: follow per-frame TERBUKTI bekerja di headless (probe dbg: jarak ring→agen stabil 0.04–0.10 pada ~1.5 FPS; kegagalan attempt pertama probe = salah identifikasi agen — x beku -8.000 milik agen lain, bukan regresi kode).
+- Sisa backlog: KOSONG. Kandidat berikutnya: ekstraksi blok handler interaksi (klik/dblclick, ~170 baris) — butuh ctx state; atau perbaikan kualitas kecil sesuai temuan.

@@ -149,8 +149,8 @@ def main():
             sys.exit(1)
 
         ok = False
-        for attempt in range(3):
-            # ── 2. pilih agen berjalan & hover badannya via mouse nyata ──
+        for attempt in range(4):
+            # ── 2. hover badan agen berjalan via mouse nyata ──
             w = walkers[attempt % len(walkers)]
             got = False
             for _ in range(4):
@@ -159,7 +159,6 @@ def main():
                     cmd("Input.dispatchMouseEvent", type="mouseMoved",
                         x=int(round(pj["x"])), y=int(round(pj["y"])), buttons=0)
                 time.sleep(0.08)
-                # refresh posisi agen (dia bergerak)
                 cur = json.loads(ev(
                     "JSON.stringify((window.__agentData[%d]||{}).walker&&window.__agentData[%d].walker.visible?"
                     "{x:window.__agentData[%d].walker.position.x,y:window.__agentData[%d].walker.position.y,"
@@ -169,15 +168,26 @@ def main():
                     got = True
             if not got:
                 continue
-            time.sleep(0.5)  # throttle hover 80 ms + lerp follow
+            time.sleep(0.6)  # throttle hover 80 ms + lerp follow (headless ~1.5 FPS)
             hov = json.loads(ev(RING_EXPR) or "null")
             print("HOVER[%d]:" % attempt, json.dumps(hov))
             if not hov or not hov.get("vis"):
                 continue
-            d0 = math.dist([hov["x"], hov["y"], hov["z"]], [w["x"], w["y"] + 0.02, w["z"]])
-            print("DIST0[%d]: %.3f" % (attempt, d0))
-            if d0 > 1.2:
-                continue  # ring bukan milik agen ini (ter-hover agen lain) → coba lagi
+            # Identifikasi agen yang BENAR-BENAR di-hover: argmin jarak ring→agen
+            # berjalan (raycast tak bisa dipakai dari luar; SwiftShader ~1.5 FPS
+            # membuat lerp settle tidak instan — 1.2 unit toleransi wajar).
+            allw = json.loads(ev(WALKERS_EXPR) or "[]")
+            best, bi = None, -1
+            for j, aw in enumerate(allw):
+                dd = math.dist([hov["x"], hov["z"]], [aw["x"], aw["z"]])
+                if best is None or dd < best:
+                    best, bi = dd, j
+            if bi < 0 or best is None or best > 1.2:
+                print("  (ring tidak menempel agen berjalan mana pun — d=%.3f, ulangi)" % (best if best is not None else -1))
+                continue
+            w = dict(walkers[bi])  # agen target = yang benar-benar di-hover
+            d0 = best
+            print("TARGET[%d]: idx=%d d0=%.3f" % (attempt, w["i"], d0))
 
             # ── 3. agen terus berjalan, kursor DIAKUI tidak digerakkan ──
             # Sampling tiap 0.4 s sampai agen berpindah > 1.0 unit (anti-vakuus:
