@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent, ringFloorY } from '../scene/parts/ring_spec.js';
+import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent, ringFloorY, hoverRingPos } from '../scene/parts/ring_spec.js';
 
 describe('ring constants', () => {
   it('selection ring historical values', () => {
@@ -100,6 +100,50 @@ describe('ringFloorY', () => {
     const a = { walker: { visible: false }, home: { x: 5, y: 1.2, z: 6 }, sittingChar: { visible: false } };
     expect(selAnchorOf(a)).toBeNull(); // ring disembunyikan, bukan dipindah ke meja kosong
     expect(ringFloorY(a)).toBe(1.2);
+  });
+});
+
+// Posisi penuh cincin hover (siklus 117): satu sumber kebenaran utk handler
+// pointermove & blok follow per-frame — dulu formula duplikat 2×.
+describe('hoverRingPos', () => {
+  const NX = { x: 7.6, y: 1.20, z: 6.1 };
+  it('agen duduk → anchor home + off 0.55, Y = home.y + HOVER_RING.Y', () => {
+    const a = { walker: { visible: false }, home: { x: 2, y: 0.72, z: 3 }, sittingChar: { visible: true } };
+    expect(hoverRingPos(a, false, NX)).toEqual({ x: 2, y: 0.72 + HOVER_RING.Y, z: 3 + 0.55 });
+  });
+  it('agen berjalan → posisi walker, off 0', () => {
+    const a = { walker: { visible: true, position: { x: 5, y: 1.1, z: -7 } }, home: { x: 1, y: 0.72, z: 1 }, sittingChar: { visible: false } };
+    expect(hoverRingPos(a, false, NX)).toEqual({ x: 5, y: 1.1 + HOVER_RING.Y, z: -7 });
+  });
+  it('agen offsite (tak terlihat) → null (ring disembunyikan, bukan nyangkut di meja)', () => {
+    const a = { walker: { visible: false }, home: { x: 2, y: 0.72, z: 3 }, sittingChar: { visible: false } };
+    expect(hoverRingPos(a, false, NX)).toBeNull();
+  });
+  it('null agent + isNexus → posisi nexus + HOVER_RING.Y (formula hardcode 7.6/1.20/6.1 → konstanta)', () => {
+    expect(hoverRingPos(null, true, NX)).toEqual({ x: 7.6, y: 1.20 + HOVER_RING.Y, z: 6.1 });
+  });
+  it('isNexus tanpa posisi valid → null (null-safe, tidak throw)', () => {
+    expect(hoverRingPos(null, true, null)).toBeNull();
+    expect(hoverRingPos(null, true, undefined)).toBeNull();
+    expect(hoverRingPos(null, true, { x: NaN, y: 1, z: 1 })).toBeNull();
+    expect(hoverRingPos(null, true, { x: 1, y: Infinity, z: 1 })).toBeNull();
+  });
+  it('agent null & bukan nexus → null', () => {
+    expect(hoverRingPos(null, false, NX)).toBeNull();
+    expect(hoverRingPos(undefined, false, NX)).toBeNull();
+  });
+  it('agent diprioritaskan di atas nexus bila keduanya ada', () => {
+    const a = { walker: { visible: true, position: { x: 9, y: 0, z: 9 } }, home: { x: 0, y: 0, z: 0 }, sittingChar: { visible: true } };
+    const p = hoverRingPos(a, true, NX);
+    expect(p.x).toBe(9);
+  });
+  it('konsisten dengan selAnchorOf + ringFloorY (X/Z dari anchor, Y dari ringFloorY)', () => {
+    const a = { walker: { visible: false }, home: { x: -3, y: 1.44, z: 8 }, sittingChar: { visible: true } };
+    const anchor = selAnchorOf(a);
+    const p = hoverRingPos(a, false, NX);
+    expect(p.x).toBe(anchor.x);
+    expect(p.z).toBe(anchor.z + anchor.off);
+    expect(p.y).toBe(ringFloorY(a) + HOVER_RING.Y);
   });
 });
 

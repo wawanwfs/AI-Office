@@ -13,7 +13,7 @@ import { perfStep } from './parts/perf_quality.js';
 import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam, resetFocusGoal } from './parts/kamera_focus.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
-import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent, ringFloorY } from './parts/ring_spec.js';
+import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent, ringFloorY, hoverRingPos } from './parts/ring_spec.js';
 import { paintRing } from './parts/ring_canvas.js';
 import { drawSky, drawGlassSheen } from './parts/sky_canvas.js';
 import { drawWoodFloor, drawAoStrip } from './parts/floor_canvas.js';
@@ -270,7 +270,14 @@ renderer.domElement&&renderer.domElement.addEventListener('dblclick',e=>{
 });
 
 // hover pointer di atas agent/papan: isyarat "bisa diklik" (raycast throttled)
+// Posisi nexus utk hover ring (agent null + isNexus) — dipakai hoverRingPos.
+const NEXUS_HOVER={x:7.6,y:1.20,z:6.1};
 const hoverRay=new THREE.Raycaster();let hoverNdc={x:0,y:0},hoverPend=false,hoveredAgent=null;
+// Timer throttle hover disimpan agar pointerleave bisa MEMBATALKAN raycast yang
+// masih tertunda — tanpa itu, mouseout tepi kanvas menyisakan timeout yang
+// menjalankan raycast dgn NDC basi (posisi kursor terakhir) & menyalakan kembali
+// ring/kursor pointer tepat setelah leave membersihkannya.
+let hoverTmr=null;
 // cincin highlight hover di bawah agent (visual feedback mengikuti cursor pointer)
 let hoverRing=null;
 // cincin emas agent TERPILIH (persist: tetap tampil sampai pilihan berubah)
@@ -298,7 +305,7 @@ function applySelected(){
   selRing.visible=true;
 }
 // posisi ring utk agent: walker (berjalan) / home (duduk) / null (tidak terlihat di kantor)
-const selAnchor=(a)=>selAnchorOf(a);
+const selAnchor=(a)=>selAnchorOf(a); // alias kompakt (dipakai blok animasi sel ring)
 
 function ensureHoverRing(){if(hoverRing)return;const c=document.createElement('canvas');c.width=c.height=HOVER_RING.SIZE;paintRing(c.getContext('2d'),HOVER_RING,0.9);
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
@@ -306,8 +313,8 @@ function ensureHoverRing(){if(hoverRing)return;const c=document.createElement('c
   hoverRing.rotation.x=-Math.PI/2;hoverRing.position.y=HOVER_RING.Y;hoverRing.renderOrder=3;hoverRing.visible=false;office.add(hoverRing);window.__sceneRing=hoverRing;}
 renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
   hoverNdc=getCanvasPointerNdc(e,renderer&&renderer.domElement);
-  if(!hoverPend){hoverPend=true;setTimeout(()=>{
-    hoverPend=false;
+  if(!hoverPend){hoverPend=true;hoverTmr=setTimeout(()=>{
+    hoverPend=false;hoverTmr=null;
     if(!agentData.length)return;
     if(renderer.domElement.style.cursor==='grabbing')return; // jangan ganggu feedback drag
     hoverRay.setFromCamera(hoverNdc,camera);
@@ -323,22 +330,30 @@ renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
       isNxHover=isNexusHit(p,nxChar);
       ha=findAgentRoot(p,agentData);
     }
-    if(ha!==hoveredAgent)hoveredAgent=ha;
-    // anchor via selAnchorOf (satu sumber kebenaran dgn sel ring): dulu inline
-    // (hardcode .55, tanpa cek sittingChar.visible — ring nyangkut di meja
-    // kosong saat agent offsite). Komponen Y diikuti per-frame (blok animasi).
-    const hp=selAnchorOf(hoveredAgent);
-    if(hp){
+    hoveredAgent=ha;
+    // Posisi ring via hoverRingPos (satu sumber kebenaran dgn blok follow):
+    // dulu formula inline duplikat (anchor + Y dihitung 2× — handler & follow).
+    const hpos=hoverRingPos(hoveredAgent,isNxHover,NEXUS_HOVER);
+    if(hpos){
       ensureHoverRing();
-      hoverRing.position.set(hp.x,ringFloorY(hoveredAgent)+HOVER_RING.Y,hp.z+hp.off);
-      hoverRing.visible=true;
-    }else if(isNxHover){
-      ensureHoverRing();
-      hoverRing.position.set(7.6,1.20+HOVER_RING.Y,6.1);
+      hoverRing.position.set(hpos.x,hpos.y,hpos.z);
       hoverRing.visible=true;
     }else if(hoverRing)hoverRing.visible=false;
   },80)};
 },{passive:true});
+// pointerleave kanvas (kursor pindah ke dock/header React atau keluar jendela):
+// dulu TIDAK ADA handler — cincin hover biru & kursor pointer menyangkut (blok
+// follow per-frame terus menggerakkan ring utk agent yang sudah tidak di-hover)
+// dan timeout throttle yang masih pending bisa menyalakan kembali ring dari
+// NDC basi tepat setelah kursor keluar. Kini: batalkan timer pending + bersihkan
+// ring/cursor/state. pointermove di kanvas mana pun akan menghidupkan kembali.
+renderer.domElement&&renderer.domElement.addEventListener('pointerleave',()=>{
+  if(hoverTmr){clearTimeout(hoverTmr);hoverTmr=null;}
+  hoverPend=false;
+  hoveredAgent=null;
+  if(hoverRing)hoverRing.visible=false;
+  if(renderer.domElement.style.cursor!=='grabbing')renderer.domElement.style.cursor='';
+});
 renderer.domElement&&renderer.domElement.addEventListener('wheel',e=>{if(focusGoal&&!focusGoal.reset)focusGoal=null;sph.radius=Math.max(12,Math.min(130,sph.radius+e.deltaY*.04));updCam()},{passive:true});
 
 // ─── LIGHTS ────────────────────────────────────────
@@ -1487,14 +1502,15 @@ function animate(){
   // cincin biru hover mengikuti agent yang di-hover tiap frame — dulu posisi
   // hanya diset saat pointermove (throttle 80 ms): ring BEKU di posisi lama
   // saat agent berjalan / naik-turun lantai, terlihat "tertinggal" di lantai.
+  // Posisi via hoverRingPos (satu sumber kebenaran dgn handler pointermove);
+  // state hoveredAgent juga dibersihkan pointerleave (ring tetap false-safe).
   if(hoverRing&&hoverRing.visible&&hoveredAgent){
-    const hp=selAnchorOf(hoveredAgent);
-    if(!hp){hoverRing.visible=false}
+    const hpos=hoverRingPos(hoveredAgent,false,NEXUS_HOVER);
+    if(!hpos){hoverRing.visible=false}
     else{
-      const hy=ringFloorY(hoveredAgent)+HOVER_RING.Y;
-      hoverRing.position.x += (hp.x - hoverRing.position.x) * 0.45;
-      hoverRing.position.z += (hp.z + hp.off - hoverRing.position.z) * 0.45;
-      hoverRing.position.y += (hy - hoverRing.position.y) * 0.45;
+      hoverRing.position.x += (hpos.x - hoverRing.position.x) * 0.45;
+      hoverRing.position.z += (hpos.z - hoverRing.position.z) * 0.45;
+      hoverRing.position.y += (hpos.y - hoverRing.position.y) * 0.45;
     }
   }
   // Atap & lampu panel disembunyikan saat kamera di atas (agar isi kantor terlihat), dimunculkan dari sudut rendah

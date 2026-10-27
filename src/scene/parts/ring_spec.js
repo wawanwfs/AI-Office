@@ -53,3 +53,20 @@ export function ringFloorY(a) {
   if (a.home && Number.isFinite(a.home.y)) return a.home.y;
   return 0;
 }
+
+// Posisi penuh cincin hover utk satu hasil raycast hover: agent biasa →
+// selAnchorOf + ringFloorY (satu sumber kebenaran dgn sel ring); hover nexus
+// (agent null + isNexus) → posisi nexus statis. Selain itu null (ring disembunyikan).
+// Murni & null-safe — menggantikan formula duplikat di handler pointermove
+// DAN blok follow per-frame (2× → 1).
+export function hoverRingPos(agent, isNexus, nexusPos) {
+  if (agent) {
+    const a = selAnchorOf(agent);
+    if (a) return { x: a.x, y: ringFloorY(agent) + HOVER_RING.Y, z: a.z + a.off };
+    return null;
+  }
+  if (isNexus && nexusPos && Number.isFinite(nexusPos.x) && Number.isFinite(nexusPos.y) && Number.isFinite(nexusPos.z)) {
+    return { x: nexusPos.x, y: nexusPos.y + HOVER_RING.Y, z: nexusPos.z };
+  }
+  return null;
+}
