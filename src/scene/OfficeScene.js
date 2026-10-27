@@ -359,6 +359,9 @@ const hoverRay=new THREE.Raycaster();let hoverNdc={x:0,y:0},hoverPend=false,hove
 // menjalankan raycast dgn NDC basi (posisi kursor terakhir) & menyalakan kembali
 // ring/kursor pointer tepat setelah leave membersihkannya.
 let hoverTmr=null;
+// Figur peserta rapat yang sedang di-hover (utk blok follow per-frame).
+// Dibersihkan oleh pointerleave bersama hoveredAgent.
+let isMfHover=null;
 // cincin highlight hover di bawah agent (visual feedback mengikuti cursor pointer)
 let hoverRing=null;
 // cincin emas agent TERPILIH (persist: tetap tampil sampai pilihan berubah)
@@ -377,7 +380,13 @@ function applySelected(){
   }
   const a=selectedAgent(agentData,selectedIdx);
   if(!a)return;
-  // agent tidak ada di kantor (offsite/meeting figures terpisah) → ring disembunyikan,
+  // REGRESI siklus 119: agen PESERTA RAPAT (walker & sittingChar hidden,
+  // figur rapat tampil di kursi) → ring emas di KURSI RAPAT via
+  // meetingFigureAnchor — dulu selAnchorOf(a)=null → ring disembunyikan
+  // (agen bisa dipilih via figur rapat tapi tanpa umpan balik ring).
+  const mfp=meetingFigureAnchor(__meet&&__meet.figures?__meet.figures[selectedIdx]:null);
+  if(mfp){ensureSelRing();selRing.position.set(mfp.x,mfp.y+SEL_RING.Y,mfp.z);selRing.visible=true;return;}
+  // agent tidak ada di kantor (offsite) → ring disembunyikan,
   // selectedIdx tetap tersimpan sehingga ring muncul lagi saat agent kembali.
   const p=selAnchorOf(a);
   if(!p)return;
@@ -417,6 +426,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
       isMf=findMeetingFigureOwner(p,__meet?__meet.figures:null);
       if(!isMf)ha=findAgentRoot(p,agentData);
     }
+    isMfHover=isMf;
     hoveredAgent=ha;
     // Posisi ring via hoverRingPos (satu sumber kebenaran dgn blok follow):
     // dulu formula inline duplikat (anchor + Y dihitung 2× — handler & follow).
@@ -435,9 +445,10 @@ renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
 // NDC basi tepat setelah kursor keluar. Kini: batalkan timer pending + bersihkan
 // ring/cursor/state. pointermove di kanvas mana pun akan menghidupkan kembali.
 renderer.domElement&&renderer.domElement.addEventListener('pointerleave',()=>{
-  if(hoverTmr){clearTimeout(hoverTmr);hoverTmr=null;}
+  if(hoverTmr){clearTimeout(hoverTmr);hoverTmr=null;hoverPend=false;}
   hoverPend=false;
   hoveredAgent=null;
+  isMfHover=null;
   if(hoverRing)hoverRing.visible=false;
   if(renderer.domElement.style.cursor!=='grabbing')renderer.domElement.style.cursor='';
 });
@@ -1054,7 +1065,7 @@ setTimeout(()=>{
   }catch{ /* abaikan: bubble intro opsional */ }
 },1200);
 
-  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
+  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__meetFigs=__meet.figures; window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
   // Badge status real-time: poll gateway tiap 20s, warnai badge dada sesuai status task
   const __intervals=[];
   const __timeouts=[];
@@ -1591,7 +1602,18 @@ function animate(){
   // saat agent berjalan / naik-turun lantai, terlihat "tertinggal" di lantai.
   // Posisi via hoverRingPos (satu sumber kebenaran dgn handler pointermove);
   // state hoveredAgent juga dibersihkan pointerleave (ring tetap false-safe).
-  if(hoverRing&&hoverRing.visible&&hoveredAgent){
+  // siklus 119: hover figur peserta rapat → follow kursi rapat via
+  // meetingFigureAnchor (figur BUKAN bagian agentData, posisi kursi).
+  if(hoverRing&&hoverRing.visible&&isMfHover){
+    const hpos=meetingFigureAnchor(isMfHover);
+    if(!hpos){hoverRing.visible=false}
+    else{
+      hoverRing.position.x += (hpos.x - hoverRing.position.x) * 0.45;
+      hoverRing.position.z += (hpos.z - hoverRing.position.z) * 0.45;
+      hoverRing.position.y += (hpos.y - hoverRing.position.y) * 0.45;
+    }
+  }
+  else if(hoverRing&&hoverRing.visible&&hoveredAgent){
     const hpos=hoverRingPos(hoveredAgent,false,NEXUS_HOVER);
     if(!hpos){hoverRing.visible=false}
     else{
