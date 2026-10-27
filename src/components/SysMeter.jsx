@@ -1,13 +1,9 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../lib/api'
+import { fmtUptime } from '../lib/uptime'
 
 // Meter status host — data NYATA dari gateway (status + resources), polled tiap 12 dtk.
 // Widget kecil kanan-atas supaya "data yang ada" selalu terlihat tanpa buka panel.
-const fmtUptime = s => {
-  if (!s && s !== 0) return '—'
-  const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60)
-  return h ? `${h}j ${m}m` : `${m}m`
-}
 
 export default function SysMeter() {
   const [d, setD] = useState(null)
