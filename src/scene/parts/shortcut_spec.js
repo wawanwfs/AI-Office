@@ -10,6 +10,7 @@ export const SHORTCUT_CATEGORIES = {
 
 export const KEYBOARD_SHORTCUTS = [
   { key: 'T', action: 'toggle_task_board', label: 'Papan Task (Kanban)', desc: 'Buka / tutup papan kanban & list task tim AI', category: 'panel' },
+  { key: 'E', action: 'toggle_dashboard', label: 'Dashboard', desc: 'Buka / tutup dashboard overview proyek-task-agen', category: 'panel' },
   { key: 'P', action: 'toggle_project_panel', label: 'Proyek dibantuin.com', desc: 'Buka / tutup ringkasan live proyek dibantuin.com', category: 'panel' },
   { key: 'L', action: 'toggle_log', label: 'Log Aktivitas', desc: 'Buka / tutup riwayat aktivitas kantor', category: 'panel' },
   { key: 'O', action: 'toggle_settings', label: 'Pengaturan Kantor', desc: 'Buka / tutup modal konfigurasi audio, visual & performa', category: 'panel' },
@@ -90,6 +91,7 @@ export function resolveShortcutAction(event, context = {}) {
   // Standard keys
   if (k === 't') return { type: 'TOGGLE_TASK_BOARD' };
   if (k === 'p') return { type: 'TOGGLE_PROJECT_PANEL' };
+  if (k === 'e') return { type: 'TOGGLE_DASHBOARD' };
   if (k === 'd') return { type: 'CYCLE_DIV_PRESET' };
   if (k === 'a') return { type: 'TOGGLE_AMBIENCE' };
   if (k === 'm') return { type: 'TOGGLE_MUTE' };

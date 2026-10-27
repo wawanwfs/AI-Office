@@ -7,6 +7,7 @@ import Ticker from './components/Ticker'
 import SysMeter from './components/SysMeter'
 import WfsPanel from './components/WfsPanel'
 import TeamStats from './components/TeamStats'
+import Dashboard from './components/Dashboard'
 import ActionMenu from './components/ActionMenu'
 import QuickToolbar from './components/QuickToolbar'
 import OverlayHelp from './components/OverlayHelp'
@@ -431,6 +432,9 @@ export default function App() {
       } else if (actType === 'CYCLE_DIV_PRESET_BACKWARD') {
         e.preventDefault()
         window.dispatchEvent(new CustomEvent('wfs-cycle-div-preset', { detail: { backward: true } }))
+      } else if (actType === 'TOGGLE_DASHBOARD') {
+        e.preventDefault()
+        window.dispatchEvent(new CustomEvent('wfs-toggle-dashboard'))
       } else if (actType === 'TOGGLE_PROJECT_PANEL') {
         e.preventDefault()
         window.dispatchEvent(new CustomEvent('wfs-toggle-project-panel'))
@@ -568,6 +572,7 @@ export default function App() {
         <span className="sep" />
         <ActionMenu sceneRef={sceneRef} onFlash={flash} actionMenuRef={actionMenuApi} onOpenSettings={() => setShowSettings(true)} />
         <TaskBoard onFlash={flash} onAsk={setAsk} />
+        <Dashboard onOpenBoard={() => window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { view: 'kanban' } }))} onOpenProjects={() => window.dispatchEvent(new CustomEvent('wfs-open-project-panel', { detail: {} }))} />
         <ProjectPanel />
         <TeamStats />
         <button className="ibtn" onClick={toggleMute} onContextMenu={(e) => { e.preventDefault(); setShowSettings(true) }} title={muted ? 'Nyalakan suara notifikasi (shortcut M) — Klik kanan untuk opsi volume' : 'Bisukan suara notifikasi (shortcut M) — Klik kanan untuk opsi volume'} aria-label={muted ? 'Nyalakan suara' : 'Bisukan suara'} aria-pressed={muted}>

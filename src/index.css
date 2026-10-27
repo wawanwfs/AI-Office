@@ -2638,3 +2638,31 @@ button { font-family: inherit; }
 
 
 
+
+/* ── Dashboard (siklus 88) — overview proyek/task/agen/sandbox ── */
+.panel.wide#dashboard {
+  position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(860px, calc(100vw - 24px)); max-height: min(640px, calc(100dvh - 90px));
+  display: flex; flex-direction: column;
+}
+.dash-body { padding: 10px 16px 14px; overflow-y: auto; flex: 1; }
+.dash-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; margin-bottom: 12px; }
+.dash-card { background: rgba(255,255,255,.05); border: 1px solid rgba(255,255,255,.08); border-radius: 10px; padding: 10px 8px; text-align: center; }
+.dash-card b { font-size: 22px; display: block; font-family: 'Orbitron', sans-serif; }
+.dash-card span { font-size: 10px; color: var(--text-tertiary); text-transform: uppercase; letter-spacing: .6px; }
+.dash-cols { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+.dash-cols section { min-width: 0; }
+.dash-sec { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-weight: 700; font-size: 12px; color: #cfd8e3; text-transform: uppercase; letter-spacing: .5px; }
+.dash-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; margin-bottom: 4px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); border-radius: 7px; color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; text-align: left; }
+.dash-row:hover { background: rgba(77,159,255,.1); border-color: rgba(77,159,255,.35); }
+.dash-row-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dash-row-s { color: var(--text-tertiary); font-size: 11px; white-space: nowrap; }
+.dash-log { max-height: 130px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
+.dash-log-row { display: flex; gap: 8px; font-size: 11.5px; color: var(--text-secondary); padding: 3px 6px; background: rgba(255,255,255,.02); border-radius: 5px; }
+.dash-log-t { color: #4D9FFF; font-family: 'Orbitron', monospace; font-size: 10px; padding-top: 1px; white-space: nowrap; }
+.dash-host { margin-top: 10px; padding: 7px 10px; background: rgba(16,229,160,.07); border: 1px solid rgba(16,229,160,.18); border-radius: 8px; font-size: 12px; color: #10E5A0; font-weight: 600; }
+@media (max-width: 640px) {
+  .dash-grid { grid-template-columns: repeat(2, 1fr); }
+  .dash-cols { grid-template-columns: 1fr; }
+  .panel.wide#dashboard { width: calc(100vw - 16px); }
+}
