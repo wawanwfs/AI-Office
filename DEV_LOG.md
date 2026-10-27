@@ -3966,3 +3966,22 @@
   - Probe permanen baru di repo: `scripts/e2e_tvwysiwyg.py` (fill magenta) + `scripts/e2e_tvwysiwyg_painter.py` (fill painter).
 - Sisa backlog: verifikasi subjektif audio web-audio (butuh pendengaran manusia).
 
+## 2026-10-27 08:55 WIB — Siklus 113: Backlog audio tuntas — verifikasi SUBJEKTIF → OBJEKTIF otomatis (probe E2E sinyal Web Audio di browser nyata)
+
+- **Sisa backlog terakhir ("verifikasi subjektif audio web-audio, butuh pendengaran manusia") dikonversi menjadi pengukuran objektif otomatis** — tidak lagi butuh manusia: probe baru membuktikan sinyal audio benar-benar mengalir di graph Web Audio browser nyata (Chrome headless-shell + Xvfb :99, CDP).
+- **Perubahan kode aplikasi (1 baris + komentar):**
+  - `src/scene/parts/sound_engine.js`: aksesor `masterGainNode()` diekspos dari engine (null sebelum `ensure()`/setelah `dispose()`) — satu-satunya celah instrumentasi: tanpa ini tak ada cara mengetuk sinyal masterGain untuk pengukuran E2E. Logika audio tidak berubah sama sekali.
+  - `src/__tests__/sound_engine.test.js`: +1 test kontrak aksesor (null→node→null; gain=1).
+- **Probe permanen baru `scripts/e2e_audio_signal.py`** (pola WS→CDP seperti probe WYSIWYG siklus 112), 6 verifikasi:
+  1. WAKE — gesture keydown NYATA via CDP `Input.dispatchKeyEvent` → jalur wake listener asli (`installAudioWake`) membangunkan engine: ctx `none → running`.
+  2. AMBIENCE — fitur nyata (hum 55 Hz + overtone 110 Hz + pink noise) via `setAmbienceEnabled(true)`: RMS terukur **1.93e-3, peak 3.6e-3** (eksak sesuai desain: calcAmbienceGain(1.0, 0.35) = 1.0×0.35×AMBIENCE_BASE_GAIN 0.015 = 0.00525 → peak wajar ~4e-3) via AnalyserNode tap di masterGainNode.
+  3. CHAIN — test-osc kontinu (gain 0.2) → masterGainNode engine: RMS **1.42e-1, peak eksak 0.2000** — jalur masterGain→destination + tap terbukti membawa sinyal.
+  4. CHIME — `playMeetingChime()` counter naik (transien tak dapat disample andal di null-sink; envelope/penjadwalan sudah diuji unit sound_engine).
+  5. MUTE-CHECK (anti-false-positive) — `setMuted(true)` + osc kontinu mengalir → RMS **0.00e+0** (tap benar-benar mendengarkan masterGain yang dibisukan, bukan jalur lain).
+  6. TIME — `ctx.currentTime` maju (graph hidup).
+- **Temuan penting headless (dokumentasi):** chrome-headless-shell memakai null audio sink → WebAudio berjalan **fast-forward** (currentTime ~5-100× realtime; terukur 4.8×). Sinyal TRANSIEN (chime 0.5 s audio) mustahil ditangkap polling realtime (terbukti: 3-10 poll per 4.8 s audio) — maka probe mengukur sinyal KONTINU (ambience/osc) yang kebal fast-forward; keputusan amb_ok memakai threshold sesuai gain desain, bukan threshold arbitrer.
+- Bukti terukur:
+  - `E2E_AUDIO: OK` (amb_ok chain_ok chime_ok mute_ok advanced = True semua; stabil 2× run berturut-turut).
+  - Vitest **2030/2030 (151 file)** (+1 dari 2029), 0 fail; ESLint 0/0; build sukses (37 precache 1806.69 KiB) → deploy `~/wfs-hq/`; `wfs-hq` & `wfs-office` active, HTTP 200.
+  - `e2e_shot.py` **675.078 bytes** (26 agen, ws true, E2E_VISUAL OK); `shot.sh` :0 **675.254 bytes** (>500 KB); `e2e_tv.py` OK; `e2e_zone_multi.py` OK (0 OFFSCREEN); `e2e_tvwysiwyg_painter.py` OK (dist 0.0 — regresi warna siklus 112 tetap bersih).
+- Sisa backlog: **KOSONG** — verifikasi audio (item terakhir) kini objektif & otomatis. Siklus berikutnya: pemeliharaan rutin / perbaikan kualitas kecil sesuai temuan.

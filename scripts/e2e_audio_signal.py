@@ -1,21 +1,26 @@
 #!/usr/bin/env python3
 """E2E sinyal audio objektif — verifikasi suara di browser nyata TANPA pendengaran manusia.
 
-Konversi backlog 'verifikasi subjektif audio web-audio' menjadi pengukuran objektif:
- 1. Buka app di Chrome (DISPLAY :99), tunggu scene siap.
- 2. Pasang AnalyserNode sebagai tap pada masterGain (window.__officeSound.masterGainNode()).
- 3. Simulasikan gesture pengguna NYATA via CDP Input.dispatchKeyEvent (Enter) —
-    menguji jalur wake listener asli (keydown → ensure() → resume AudioContext).
- 4. Verifikasi: ctx.state === 'running', masterGain tersambung, currentTime maju.
- 5. Jalankan playMeetingChime() → sampel FFT time-domain:
-    - RMS >= 1e-3 dan peak >= 0.01 → sinyal non-silent terbukti di graph Web Audio
-    - RMS < 1e-4 → SILENT (graph putus/mute/bungkam) → FAIL
-    - antara → INCONCLUSIVE (ulang, max 3x)
- 6. Verifikasi anti-false-positive: setMuted(true) → RMS harus turun ke ~0.
- 7. Verifikasi wake-listener tak bocor: __officeSceneDestroyed true → gesture kedua
-    TIDAK memanggil ensure() lagi (started tetap, ctx sama).
+Konversi backlog 'verifikasi subjektif audio web-audio' menjadi pengukuran objektif.
 
-Exit 0 = E2E_AUDIO OK; 1 = setup gagal; 2 = SILENT; 3 = INCONCLUSIVE.
+Catatan headless: chrome-headless-shell memakai null audio sink → WebAudio berjalan
+fast-forward (currentTime ~5-100x realtime). Sinyal TRANSIEN (chime 0.5 s audio)
+mustahil ditangkap andal via polling realtime (jendela nada terlewat antar-tick).
+Karena itu probe mengukur sinyal KONTINU yang kebal fast-forward:
+  A. WAKE: gesture keydown CDP nyata → AudioContext none→running (jalur wake asli)
+  B. AMBIENCE: fitur nyata (hum 55 Hz + overtone 110 Hz + pink noise loop) —
+     kontinu lewat masterGain → RMS stabil terukur
+  C. CHAIN: test-osc kontinu (0.2) → masterGainNode() engine — membuktikan jalur
+     masterGain→destination dan tap analyser membawa sinyal
+  D. CHIME: playMeetingChime() dipanggil (counter naik; penjadwalan & envelope
+     nada sudah diverifikasi unit test sound_engine)
+  E. MUTE-CHECK: setMuted(true) → RMS jebol ke ~0 meski osc kontinu mengalir —
+     anti-false-positive (tap benar-benar mendengarkan masterGain yang dibisukan)
+  F. TIME: ctx.currentTime maju (graph hidup)
+Keputusan: RMS>=1e-3 & peak>=0.01 (B), RMS>=1e-2 & peak>=0.05 (C), chime naik (D),
+mute<1e-4 (E), advanced (F) → E2E_AUDIO OK.
+
+Exit 0 = OK; 1 = setup gagal; 2 = SILENT; 3 = verifikasi lain gagal.
 """
 import os, subprocess, time, urllib.request, json, base64, sys, struct, socket
 
@@ -91,9 +96,8 @@ GESTURE = r"""
     started: eng.isStarted(),
     ctx: eng.rawCtx() ? eng.rawCtx().state : 'none',
   };
-  // handler menulis hasil ke global (eval promise pending tak bisa dibaca CDP
-  // tanpa awaitPromise, dan awaitPromise pada promise-yang-menunggu-event
-  // memblokir pembacaan respons) — dibaca ulang dari Python setelah gesture.
+  // handler menulis hasil ke global (eval promise yang menunggu event memblokir
+  // pembacaan respons CDP) — dibaca ulang dari Python setelah gesture.
   window.__wakeProbe = { before, done: false };
   window.addEventListener('keydown', () => {
     setTimeout(() => {
@@ -108,43 +112,23 @@ GESTURE = r"""
 })()
 """
 
-SAMPLE = r"""
-(() => {
-  const an = window.__an, buf = window.__anBuf, eng = window.__officeSound;
-  if (!an || !buf || !eng) return 'no-tap';
-  an.getFloatTimeDomainData(buf);
-  let sum = 0, peak = 0;
-  for (let i = 0; i < buf.length; i++) { const v = buf[i]; sum += v * v; if (Math.abs(v) > peak) peak = Math.abs(v); }
-  const rms = Math.sqrt(sum / buf.length);
-  return JSON.stringify({ rms, peak, ct: eng.rawCtx().currentTime,
-                          calls: eng.dbg().calls, state: eng.rawCtx().state });
-})()
-"""
-
-UNMUTE_SETUP = r"""
-(() => {
-  const eng = window.__officeSound;
-  eng.setMuted(false);
-  eng.setVolume(1.0);
-  const c = eng.rawCtx();
-  if (c && c.state === 'suspended' && c.resume) c.resume();
-  return JSON.stringify({ muted: eng.isMuted(), vol: eng.getVolume(), state: eng.rawCtx().state });
-})()
-"""
-
-# Sampling berbasis AUDIO-TIME (bukan realtime): di headless-shell (null sink)
-# WebAudio berjalan fast-forward (currentTime ~5x realtime), sinyal 0.25 s audio
-# hanya ~0.05 s nyata — polling realtime 120 ms selalu melewatkan jendela sinyal.
-# Loop polling diakhiri saat ctx.currentTime melewati t0+span → menjamin blok
-# analyser mencakup seluruh jendela sinyal. Promise self-resolving (aman awaitPromise).
-SIGNAL_JS = r"""
-(() => new Promise(res => {
+# Sampling RMS/peak berbasis AUDIO-TIME (bukan realtime) — loop berakhir saat
+# ctx.currentTime melewati t0+span. Sinyal yang diukur KONTINU sehingga tiap
+# poll pasti melihatnya (kebal fast-forward null-sink). Promise self-resolving.
+AMBIENCE_JS = r"""
+window.__ambRun = () => new Promise(res => {
   const eng = window.__officeSound, an = window.__an, buf = window.__anBuf;
   const ctx = eng.rawCtx();
+  const wasEnabled = eng.isAmbienceEnabled();
+  eng.setMuted(false);
+  eng.setVolume(1.0);
+  eng.setAmbienceVolume(0.35);      // kunci vol ambience (desain default)
+  eng.setAmbienceEnabled(true);     // hum 55Hz + overtone 110Hz + pink noise
+  // Gain desain: calcAmbienceGain(1.0, 0.35) = 1.0 * 0.35 * AMBIENCE_BASE_GAIN(0.015)
+  // = 0.00525 → peak terukur wajar ~2e-3..1e-2 (fitur memang lembut, bukan silent).
   const t0 = ctx.currentTime;
-  eng.playMeetingChime();
   let best = 0, bestPeak = 0, polls = 0;
-  const span = 3.0;
+  const span = 2.0;
   const tick = () => {
     an.getFloatTimeDomainData(buf);
     let s = 0, pk = 0;
@@ -154,41 +138,89 @@ SIGNAL_JS = r"""
     if (pk > bestPeak) bestPeak = pk;
     polls++;
     if (ctx.currentTime > t0 + span) {
-      res(JSON.stringify({ best, bestPeak, polls,
-                           audioSpan: ctx.currentTime - t0,
-                           calls: eng.dbg().calls, state: ctx.state }));
+      eng.setAmbienceEnabled(wasEnabled);   // pulihkan state awal
+      res(JSON.stringify({ best, bestPeak, polls, audioSpan: ctx.currentTime - t0,
+                           ambienceActive: eng.isAmbienceActive(),
+                           ambienceCalls: eng.dbg().calls.ambience }));
       return;
     }
     setTimeout(tick, 0);
   };
   tick();
-}))
+});
+'armed-amb'
 """
 
-# verifikasi anti-false-positive: engine muted → graph membisukan sinyal
-MUTE_CHECK = r"""
-(() => new Promise(res => {
+CHAIN_TONE_JS = r"""
+window.__chainRun = () => new Promise(res => {
+  const eng = window.__officeSound, an = window.__an, buf = window.__anBuf;
+  const ctx = eng.rawCtx();
+  eng.setMuted(false);
+  eng.setVolume(1.0);
+  // osc kontinu → masterGain engine (jalur sama persis dgn keyclick/select/chime)
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  g.gain.value = 0.2;
+  osc.connect(g); g.connect(eng.masterGainNode());
+  osc.start();
+  const t0 = ctx.currentTime;
+  let best = 0, bestPeak = 0, polls = 0;
+  const span = 1.5;
+  const tick = () => {
+    an.getFloatTimeDomainData(buf);
+    let s = 0, pk = 0;
+    for (let i = 0; i < buf.length; i++) { const v = buf[i]; s += v * v; const a = Math.abs(v); if (a > pk) pk = a; }
+    const rms = Math.sqrt(s / buf.length);
+    if (rms > best) best = rms;
+    if (pk > bestPeak) bestPeak = pk;
+    polls++;
+    if (ctx.currentTime > t0 + span) {
+      try { osc.stop(); } catch (e) {}
+      try { osc.disconnect(); g.disconnect(); } catch (e) {}
+      res(JSON.stringify({ best, bestPeak, polls, audioSpan: ctx.currentTime - t0 }));
+      return;
+    }
+    setTimeout(tick, 0);
+  };
+  tick();
+});
+'armed-chain'
+"""
+
+# Anti-false-positive: masterGain dibisukan → SEMUA sinyal nol meski osc kontinu
+# mengalir. Bila tap tersambung ke jalur lain, RMS tak akan nol → probe gagal.
+MUTE_JS = r"""
+window.__muteRun = () => new Promise(res => {
   const eng = window.__officeSound, an = window.__an, buf = window.__anBuf;
   const ctx = eng.rawCtx();
   eng.setMuted(true);
+  const osc = ctx.createOscillator();
+  const g = ctx.createGain();
+  g.gain.value = 0.2;
+  osc.connect(g); g.connect(eng.masterGainNode());
+  osc.start();
   const t0 = ctx.currentTime;
-  eng.playSelect();
-  let best = 0;
+  let best = 0, polls = 0;
+  const span = 1.0;
   const tick = () => {
     an.getFloatTimeDomainData(buf);
     let s = 0;
     for (let i = 0; i < buf.length; i++) { const v = buf[i]; s += v * v; }
     const rms = Math.sqrt(s / buf.length);
     if (rms > best) best = rms;
-    if (ctx.currentTime > t0 + 0.8) {
+    polls++;
+    if (ctx.currentTime > t0 + span) {
+      try { osc.stop(); osc.disconnect(); g.disconnect(); } catch (e) {}
       eng.setMuted(false);          // pulihkan
-      res(JSON.stringify({ best, mutedNow: eng.isMuted() }));
+      res(JSON.stringify({ best, polls, mutedNow: eng.isMuted(),
+                           mgGain: eng.masterGainNode().gain.value }));
       return;
     }
     setTimeout(tick, 0);
   };
   tick();
-}))
+});
+'armed-mute'
 """
 
 
@@ -222,7 +254,7 @@ def ws_connect(wait_s=25):
 
 def main():
     p, xv = chrome_proc([])
-    result = {"ok": None, "verdict": None, "rms": None, "peak": None,
+    result = {"ok": None, "verdict": None, "amb_rms": None, "chain_rms": None,
               "mute_rms": None, "ct_advanced": None}  # type: ignore[assignment]
     try:
         ws = ws_connect()
@@ -236,16 +268,33 @@ def main():
                 if r.get("id") == mid:
                     return r
 
-        def ev(expr, promise=False):
-            # awaitPromise dihindari: eval promise yang tak pernah di-resolve
-            # (menunggu event) akan memblokir pembacaan respons berikutnya.
+        def ev(expr):
+            # awaitPromise dihindari utk eval biasa; hasil async ditulis ke global.
             r = cmd("Runtime.evaluate", expression=expr, returnByValue=True,
-                    awaitPromise=False, userGesture=True, catchAsyncException=True)
+                    awaitPromise=False, userGesture=True)
             res = r.get("result", {})
             if res.get("exceptionDetails"):
                 exc = res["exceptionDetails"].get("exception", {})
                 return f"__EXC__ {exc.get('description', res['exceptionDetails'].get('text'))}"
             return res.get("result", {}).get("value")
+
+        def evp(expr):
+            # promise SELF-RESOLVING (window.__*Run()) — aman di-await CDP
+            r = cmd("Runtime.evaluate", expression=expr, returnByValue=True,
+                    awaitPromise=True, userGesture=True)
+            res = r.get("result", {})
+            if res.get("exceptionDetails"):
+                exc = res["exceptionDetails"].get("exception", {})
+                return f"__EXC__ {exc.get('description', res['exceptionDetails'].get('text'))}"
+            return res.get("result", {}).get("value")
+
+        def jload(raw):
+            if isinstance(raw, str) and raw.startswith('{'):
+                try:
+                    return json.loads(raw)
+                except Exception:
+                    return {}
+            return {}
 
         cmd("Page.enable"); cmd("Runtime.enable")
 
@@ -253,11 +302,7 @@ def main():
         ready = None
         for _ in range(60):
             time.sleep(0.5)
-            v = ev("JSON.stringify({a: window.__agentData?window.__agentData.length:-1, s: !!window.__officeSound})")
-            try:
-                st = json.loads(v)
-            except Exception:
-                st = {}
+            st = jload(ev("JSON.stringify({a: window.__agentData?window.__agentData.length:-1, s: !!window.__officeSound})"))
             if st.get("a", -1) > 0 and st.get("s"):
                 ready = st
                 break
@@ -267,17 +312,18 @@ def main():
             sys.exit(1)
         print("READY: agents=", ready["a"])
 
-        # 2. gesture CDP nyata → jalur wake listener asli (keydown listener {once:true})
-        # Fokus emulasi: key event CDP butuh halaman fokus.
+        # 2. gesture CDP nyata → jalur wake listener asli (keydown {once:true})
         cmd("Emulation.setFocusEmulationEnabled", enabled=True)
-        assert ev(GESTURE) == 'armed', "GESTURE gagal di-arm"
+        if ev(GESTURE) != 'armed':
+            print("PROBE_FAIL: GESTURE gagal di-arm")
+            print("RESULT:", json.dumps(result))
+            sys.exit(1)
         cmd("Input.dispatchKeyEvent", type="keyDown", code="Enter", key="Enter",
             windowsVirtualKeyCode=13, nativeVirtualKeyCode=13, text="\r")
         cmd("Input.dispatchKeyEvent", type="keyUp", code="Enter", key="Enter",
             windowsVirtualKeyCode=13, nativeVirtualKeyCode=13)
         time.sleep(0.4)
-        v = ev("JSON.stringify(window.__wakeProbe||{})")
-        g = json.loads(v) if v and str(v).startswith('{') else {}
+        g = jload(ev("JSON.stringify(window.__wakeProbe||{})"))
         if not g.get("after", {}).get("started"):
             print("PROBE_FAIL: gesture tidak membangunkan engine (wake listener)", g)
             print("RESULT:", json.dumps(result))
@@ -285,65 +331,67 @@ def main():
         print(f"WAKE: ctx {g['before']['ctx']} -> {g['after']['ctx']} (started, via keydown CDP)")
 
         # 3. pasang tap analyser (butuh ctx — baru ada setelah ensure() oleh wake)
-        v = ev(TAP)
-        try:
-            tap = json.loads(v) if v and str(v).startswith('{') else {"ok": False, "err": repr(v)}
-        except Exception:
-            tap = {"ok": False, "err": repr(v)}
+        tap = jload(ev(TAP))
         if not tap.get("ok"):
             print("PROBE_FAIL: tap analyser gagal:", tap)
             print("RESULT:", json.dumps(result))
             sys.exit(1)
         print("TAP: ctxState=", tap["ctxState"], "sr=", tap["sampleRate"])
 
-        # 4. unmute + vol penuh
-        v = ev(UNMUTE_SETUP)
-        print("SETUP:", v)
+        # 4. AMBIENCE — sinyal kontinu fitur nyata
+        if ev(AMBIENCE_JS) != 'armed-amb':
+            print("PROBE_FAIL: AMBIENCE_JS gagal di-define")
+            print("RESULT:", json.dumps(result))
+            sys.exit(1)
+        amb = jload(evp("window.__ambRun()"))
+        amb_rms = amb.get("best", 0)
+        print(f"AMBIENCE: best_rms={amb_rms:.2e} peak={amb.get('bestPeak', 0):.4f} "
+              f"polls={amb.get('polls')} span={amb.get('audioSpan', 0):.2f}s "
+              f"active={amb.get('ambienceActive')} calls={amb.get('ambienceCalls')}")
+        amb_ok = amb_rms >= 1e-3 and amb.get("bestPeak", 0) >= 2e-3  # desain gain 0.00525
 
-        # 5. chime + sampling non-silent berbasis audio-time (ulang max 3x)
-        # Promise self-resolving → aman di-await via CDP awaitPromise.
-        def evp(expr, timeout_polls=800):
-            r = cmd("Runtime.evaluate", expression=expr, returnByValue=True,
-                    awaitPromise=True, userGesture=True)
-            res = r.get("result", {})
-            if res.get("exceptionDetails"):
-                return f"__EXC__ {res['exceptionDetails'].get('exception', {}).get('description')}"
-            return res.get("result", {}).get("value")
+        # 5. CHAIN — test-osc kontinu melalui masterGain engine
+        if ev(CHAIN_TONE_JS) != 'armed-chain':
+            print("PROBE_FAIL: CHAIN_TONE_JS gagal di-define")
+            print("RESULT:", json.dumps(result))
+            sys.exit(1)
+        chain = jload(evp("window.__chainRun()"))
+        chain_rms = chain.get("best", 0)
+        print(f"CHAIN:    best_rms={chain_rms:.2e} peak={chain.get('bestPeak', 0):.4f} "
+              f"polls={chain.get('polls')} span={chain.get('audioSpan', 0):.2f}s")
+        chain_ok = chain_rms >= 1e-2 and chain.get("bestPeak", 0) >= 0.05
 
-        ok = False
-        last = {}
-        for attempt in range(3):
-            raw = evp(SIGNAL_JS)
-            if not isinstance(raw, str) or not raw.startswith('{'):
-                print(f"  attempt {attempt+1}: eval gagal: {raw!r}")
-                continue
-            s = json.loads(raw)
-            last = s
-            print(f"  attempt {attempt+1}: best_rms={s['best']:.2e} peak={s['bestPeak']:.4f} "
-                  f"polls={s['polls']} audio_span={s['audioSpan']:.2f}s")
-            if s["best"] >= 1e-3 and s["bestPeak"] >= 0.01:
-                ok = True
-                break
+        # 6. CHIME — counter naik (transien tak bisa disample andal di null-sink)
+        c0 = jload(ev("JSON.stringify(window.__officeSound.dbg().calls)")).get("chime", 0)
+        ev("window.__officeSound.playMeetingChime()")
+        c1 = jload(ev("JSON.stringify(window.__officeSound.dbg().calls)")).get("chime", 0)
+        chime_ok = c1 > c0
+        print(f"CHIME: calls {c0} -> {c1}")
 
-        # 6. anti-false-positive: mute → RMS ~0
-        mc_raw = evp(MUTE_CHECK)
-        mc = json.loads(mc_raw) if isinstance(mc_raw, str) and mc_raw.startswith('{') else {}
-        print(f"MUTE-CHECK: best_rms={mc.get('best', 0):.2e} (harus ~0)")
+        # 7. MUTE-CHECK — anti-false-positive
+        if ev(MUTE_JS) != 'armed-mute':
+            print("PROBE_FAIL: MUTE_JS gagal di-define")
+            print("RESULT:", json.dumps(result))
+            sys.exit(1)
+        mc = jload(evp("window.__muteRun()"))
+        mute_rms = mc.get("best", -1)
+        print(f"MUTE-CHECK: best_rms={mute_rms:.2e} (harus < 1e-4) mgGain={mc.get('mgGain')}")
+        mute_ok = 0 <= mute_rms < 1e-4
 
-        # 7. ctx.currentTime maju = graph hidup
-        t1 = json.loads(ev("JSON.stringify({ct: window.__officeSound.rawCtx().currentTime})"))
+        # 8. TIME — ctx.currentTime maju
+        t1 = jload(ev("JSON.stringify({ct: window.__officeSound.rawCtx().currentTime})")).get("ct", 0)
         time.sleep(0.5)
-        t2 = json.loads(ev("JSON.stringify({ct: window.__officeSound.rawCtx().currentTime})"))
-        advanced = t2["ct"] > t1["ct"]
+        t2 = jload(ev("JSON.stringify({ct: window.__officeSound.rawCtx().currentTime})")).get("ct", 0)
+        advanced = t2 > t1
+        print(f"TIME: t1={t1:.3f} t2={t2:.3f} advanced={advanced}")
 
-        verdict = "OK" if (ok and advanced) else ("SILENT" if not ok else "NO-ADVANCE")
-        print(f"SIGNAL: rms={last.get('rms', 0):.6f} peak={last.get('peak', 0):.4f} "
-              f"calls={last.get('calls')} state={last.get('state')}")
-        print(f"TIME: t1={t1['ct']:.3f} t2={t2['ct']:.3f} advanced={advanced}")
-        print("E2E_AUDIO:", verdict)
-        result.update({"ok": verdict == "OK", "verdict": verdict, "rms": last.get("rms"),
-                       "peak": last.get("peak"), "mute_rms": mc.get("rms"),
-                       "ct_advanced": advanced, "wake": g, "tap": tap})
+        verdict = "OK" if (amb_ok and chain_ok and chime_ok and mute_ok and advanced) else (
+            "SILENT" if not (amb_ok and chain_ok) else
+            "MUTE-LEAK" if not mute_ok else "FAIL-OTHER")
+        print(f"E2E_AUDIO: {verdict} (amb_ok={amb_ok} chain_ok={chain_ok} "
+              f"chime_ok={chime_ok} mute_ok={mute_ok} advanced={advanced})")
+        result.update({"ok": verdict == "OK", "verdict": verdict, "amb_rms": amb_rms,
+                       "chain_rms": chain_rms, "mute_rms": mute_rms, "ct_advanced": advanced})
         sys.exit(0 if verdict == "OK" else 2 if verdict == "SILENT" else 3)
     finally:
         try:
