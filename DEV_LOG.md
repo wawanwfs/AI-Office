@@ -3985,3 +3985,17 @@
   - Vitest **2030/2030 (151 file)** (+1 dari 2029), 0 fail; ESLint 0/0; build sukses (37 precache 1806.69 KiB) → deploy `~/wfs-hq/`; `wfs-hq` & `wfs-office` active, HTTP 200.
   - `e2e_shot.py` **675.078 bytes** (26 agen, ws true, E2E_VISUAL OK); `shot.sh` :0 **675.254 bytes** (>500 KB); `e2e_tv.py` OK; `e2e_zone_multi.py` OK (0 OFFSCREEN); `e2e_tvwysiwyg_painter.py` OK (dist 0.0 — regresi warna siklus 112 tetap bersih).
 - Sisa backlog: **KOSONG** — verifikasi audio (item terakhir) kini objektif & otomatis. Siklus berikutnya: pemeliharaan rutin / perbaikan kualitas kecil sesuai temuan.
+
+## 2026-10-27 09:35 WIB — Siklus 114: Refactor interaksi raycast — daftar target duplikat 3× + cek hit papan/nexus/root agen diekstrak ke parts/raycast_targets.js (+16 test)
+
+- **Temuan (audit kode pasca-backlog kosong):** logika pengumpulan target raycast interaksi dibangun SECARA DUPLIKAT di 3 call site OfficeScene.js (pointerup klik, dblclick zoom, hover pointermove): tiap site menyusun sendiri daftar agen visible + papan proyek (mesh+frame) + whiteboard (mesh+frame) + nexus (visible!==false). Selain itu cek hit duplikat: papan proyek 2× inline (klik + dblclick, pola `obj===mesh || frame.getObjectById(obj.id)`), nexus 2× inline, dan pencarian root agen (telusuri rantai parent) 2× inline. Total ~30 baris duplikasi × 3 + risiko desinkronisasi antar call site saat satu diubah.
+- **Perubahan:**
+  - `src/scene/parts/raycast_targets.js` (BARU, murni tanpa THREE): `collectPickTargets({agentData, board, whiteboard, nexus})` — satu sumber kebenaran daftar target intersect (agen sittingChar/walker yang visible → board.mesh/frame → whiteboard.mesh/frame → nexus bila visible!==false); `findAgentRoot(obj, agentData)` — cek langsung lalu naik rantai parent; `isNexusHit(obj, nexus)` — langsung + getObjectById; `isBoardHit(obj, board)` — mesh langsung + frame langsung/anakan. Semua null-safe.
+  - `src/scene/OfficeScene.js`: 3 call site kini memanggil `collectPickTargets(...)` (klik: −13 baris, dblclick: −6, hover: −10); cek papan `isBoardHit`, nexus `isNexusHit`, root `findAgentRoot`. 1959 → 1939 baris. Perilaku identik (urutan target & semantik hit dipertahankan persis).
+  - `src/__tests__/raycast_targets.test.js` (BARU): 16 test — collect (null/kosong, agen hidden/visible, agen tanpa mesh, board frame saja, urutan agen→board→whiteboard→nexus, nexus visible=false dikecualikan), findAgentRoot (hit langsung, anak/cucu via parent chain, asing→null), isNexusHit (langsung, getObjectById, negatif), isBoardHit (mesh, frame, anakan frame, negatif).
+- Bukti terukur:
+  - Vitest **2053/2053 (154 file)** (+16 dari 2037), 0 fail.
+  - ESLint: 0 warning, 0 error (`npx eslint .` exit 0).
+  - Build: sukses (37 precache 1806.55 KiB, 480 ms) → deploy `dist/*` → `~/wfs-hq/` OK; `wfs-hq` & `wfs-office` `active`, HTTP 200.
+  - E2E: `scripts/e2e_shot.py` **674.723 bytes** (26 agen, ws true, E2E_VISUAL OK); `e2e_tv.py` OK; `e2e_zone_multi.py` OK (label zona terlihat semua); `e2e_tvwysiwyg_painter.py` OK (dist 0.0); `e2e_conn.py` OK (chip "Sinkron"/live).
+- Sisa backlog: KOSONG. Kandidat berikutnya: ekstraksi blok interaksi handler (klik/dblclick/hover) ke modul tersendiri bila OfficeScene masih >1.900 baris, atau perbaikan kualitas kecil sesuai temuan.
