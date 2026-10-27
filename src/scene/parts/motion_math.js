@@ -10,6 +10,10 @@ export const ARRIVE = 0.2;
 // Selisih sudut terpendek (wrap ke [-π, π]) — dipakai interpolasi rotasi halus
 // walker (slerp/lerp sudut terpendek) supaya tidak berputar memutar.
 export function angleDelta(target, current) {
+  // Guard anti-poisoning: input non-finite (NaN/±Infinity, mis. state rotasi
+  // korup) TIDAK boleh menulari rotasi walker — kembalikan 0 (no-op) alih-alih
+  // NaN yang akan membuat agent berhenti berputar/posisi absur.
+  if (!Number.isFinite(target) || !Number.isFinite(current)) return 0;
   // Normalisasi O(1) ke [-π, π): selisih terpendek tanpa loop (loop lama bisa
   // berputar jutaan kali untuk selisih sangat besar — mis. angleDelta(1e9, 0)).
   const d = (target - current + Math.PI) % (Math.PI * 2);

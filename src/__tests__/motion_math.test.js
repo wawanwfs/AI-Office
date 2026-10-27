@@ -165,4 +165,16 @@ describe('motion_math: angleDelta (selisih sudut terpendek)', () => {
     // hasil tetap ekivalen modulo 2π dengan selisih asli
     expect((d - 1e9) % (Math.PI * 2)).toBeCloseTo(0, 5);
   });
+  it('input non-finite (NaN/±Infinity) → 0 (no-op), tidak menulari rotasi (anti-poisoning)', () => {
+    const bad = [NaN, Infinity, -Infinity];
+    for (const b of bad) {
+      expect(angleDelta(b, 0)).toBe(0);
+      expect(angleDelta(0, b)).toBe(0);
+      expect(angleDelta(b, b)).toBe(0);
+      expect(Number.isFinite(angleDelta(b, 0))).toBe(true);
+    }
+    // input valid tetap berfungsi normal setelah guard
+    expect(angleDelta(0.5, 0.5)).toBe(0);
+    expect(angleDelta(Math.PI, -Math.PI)).toBe(0);
+  });
 });
