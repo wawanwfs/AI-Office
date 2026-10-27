@@ -120,6 +120,50 @@ describe('motion_math: stepMove', () => {
     expect(s.z).toBe(4);
     expect(s.rot).toBe(-0.25);
   });
+  it('speed NaN/±Infinity → 0 (no-op): posisi & rotasi tetap finite, belum arrived bila jauh (anti-poisoning)', () => {
+    const safe = { x: 0, z: 0, rot: 0.3 };
+    const tgt = { x: 10, z: 0 };
+    const badSpeeds = [NaN, Infinity, -Infinity];
+    for (const sp of badSpeeds) {
+      const s = stepMove(safe, tgt, sp, 0.5);
+      expect(Number.isFinite(s.x)).toBe(true);
+      expect(Number.isFinite(s.z)).toBe(true);
+      expect(s.x).toBe(0);      // tidak bergerak (speed dianggap 0)
+      expect(s.z).toBe(0);
+      expect(Number.isFinite(s.rot)).toBe(true); // arah tetap finite (tidak menulari)
+      expect(s.arrived).toBe(false); // jarak masih > ARRIVE
+      expect(s.clamped).toBe(false);
+    }
+  });
+  it('delta NaN/±Infinity → 0 (no-op): posisi & rotasi tetap finite, belum arrived bila jauh (anti-poisoning)', () => {
+    const safe = { x: -2, z: 3, rot: -1.1 };
+    const tgt = { x: 6, z: -2 };
+    const badDeltas = [NaN, Infinity, -Infinity];
+    for (const dt of badDeltas) {
+      const s = stepMove(safe, tgt, 2, dt);
+      expect(Number.isFinite(s.x)).toBe(true);
+      expect(Number.isFinite(s.z)).toBe(true);
+      expect(s.x).toBe(-2);
+      expect(s.z).toBe(3);
+      expect(Number.isFinite(s.rot)).toBe(true); // arah tetap finite (tidak menulari)
+      expect(s.arrived).toBe(false);
+      expect(s.clamped).toBe(false);
+    }
+  });
+  it('speed & delta keduanya non-finite: hasil tetap finite & aman', () => {
+    const s = stepMove({ x: 1, z: 1, rot: 0 }, { x: 4, z: 5 }, NaN, Infinity);
+    expect(Number.isFinite(s.x)).toBe(true);
+    expect(Number.isFinite(s.z)).toBe(true);
+    expect(s.x).toBe(1);
+    expect(s.z).toBe(1);
+  });
+  it('input valid tetap berfungsi normal setelah guard speed/delta', () => {
+    const s = stepMove({ x: 0, z: 0, rot: 0 }, { x: 10, z: 0 }, 2, 0.5);
+    expect(s.x).toBeCloseTo(1);
+    expect(s.z).toBeCloseTo(0);
+    expect(s.arrived).toBe(false);
+    expect(s.clamped).toBe(false);
+  });
 });
 
 describe('motion_math: angleDelta (selisih sudut terpendek)', () => {

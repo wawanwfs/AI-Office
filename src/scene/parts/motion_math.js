@@ -34,9 +34,14 @@ export function stepMove(pos, target, speed, delta) {
   if (!Number.isFinite(d) || d < ARRIVE) {
     return { x: pos.x, z: pos.z, rot: pos.rot ?? 0, arrived: true, clamped: false };
   }
+  // Guard anti-poisoning: speed/delta non-finite (NaN/±Infinity) → 0 (no-op aman).
+  // Jangan biarkan NaN menulari posisi — nx*NaN*delta=NaN tidak kena clamp BOUNDS
+  // (NaN < xMin false) sehingga walker bisa diam-diam lenyap ke NaN.
+  const sp = Number.isFinite(speed) ? speed : 0;
+  const dt = Number.isFinite(delta) ? delta : 0;
   const nx = dx / d, nz = dz / d;
-  let x = pos.x + nx * speed * delta;
-  let z = pos.z + nz * speed * delta;
+  let x = pos.x + nx * sp * dt;
+  let z = pos.z + nz * sp * dt;
   // hard clamp: tanpa ini agent bisa keluar lantai/dinding (spawn DOOR.x=-12
   // di luar BOUNDS dulu, atau walkTarget acak dekat tepi) — dilihat dari
   // luar kantor tampak menembus dinding kiri.
