@@ -77,6 +77,15 @@ describe('dialog: pickCollab', () => {
     const c = pickCollab(pm, [pm, eng]);
     expect(c.partner.name).toBe('eng');
   });
+
+  it('guard anti-poisoning: agent tanpa .agent tidak melempar, dianggap tanpa role → null', () => {
+    expect(() => pickCollab({ state: 'sitting' }, agents)).not.toThrow();
+    expect(pickCollab({ state: 'sitting' }, agents)).toBeNull();
+    // partner tanpa .agent tidak jadi partner, tanpa crash
+    const weird = { state: 'sitting' };
+    expect(() => pickCollab(fe, [fe, weird])).not.toThrow();
+    expect(pickCollab(fe, [fe, weird])).toBeNull();
+  });
 });
 
 describe('dialog: clampBubbleText', () => {

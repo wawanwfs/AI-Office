@@ -115,11 +115,13 @@ export const COLLAB_PAIRS=[
 // Pilih pasangan kolaborasi utk agent ad: 75% menghampiri rekan dengan role
 // yang terhubung di COLLAB_PAIRS (arah ± bebas), sisanya null (jalan-jalan).
 export function pickCollab(ad, agentData){
-  const r=String(ad.agent.role||'').toUpperCase();
+  // Guard anti-poisoning: agent tanpa properti .agent (data parsial/malformed)
+  // tidak boleh melempar — dianggap tanpa role (string kosong) → tidak ada match.
+  const r=String(ad.agent?.role||'').toUpperCase();
   const options=[];
   agentData.forEach(o=>{
     if(o===ad||o.state!=='sitting')return;
-    const orole=String(o.agent.role||'').toUpperCase();
+    const orole=String(o.agent?.role||'').toUpperCase();
     COLLAB_PAIRS.forEach(([a,b,lines])=>{
       const m1=r.includes(a)&&orole.includes(b), m2=r.includes(b)&&orole.includes(a);
       if(m1||m2)options.push({partner:o,lines,first:m1});
