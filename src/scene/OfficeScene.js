@@ -40,6 +40,7 @@ import { createReception } from './parts/reception.js';
 import { createCafe } from './parts/cafe.js';
 import { createDecor } from './parts/decor.js';
 import { computeAspect, isPortraitViewport, getResponsiveFov, getResponsiveRadius, getViewOffsetConfig, getCanvasPointerNdc, getMaxBubbles } from './parts/viewport_spec.js';
+import { zoomRadius, zoomFocusGoal } from './parts/zoom_spec.js';
 import { createServerRoom } from './parts/serverroom.js';
 import { createLounge } from './parts/lounge.js';
 import { createStructure } from './parts/structure.js';
@@ -477,7 +478,16 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerleave',()=>{
   if(hoverRing)hoverRing.visible=false;
   if(renderer.domElement.style.cursor!=='grabbing')renderer.domElement.style.cursor='';
 });
-renderer.domElement&&renderer.domElement.addEventListener('wheel',e=>{if(focusGoal&&!focusGoal.reset)focusGoal=null;sph.radius=Math.max(12,Math.min(130,sph.radius+e.deltaY*.04));updCam()},{passive:true});
+renderer.domElement&&renderer.domElement.addEventListener('wheel',e=>{
+  // Siklus 121: zoom JUJUR — goal follow/statis TIDAK dibatalkan (dulu
+  // focusGoal=null diam-diam: kamera berhenti mengikuti agen berjalan
+  // & __saved yatim); radius goal ikut digeser (zoomFocusGoal). Goal
+  // reset: radius goal ikut — dulu lerp menarik radius balik (sticky).
+  const d=zoomRadius(sph.radius,e.deltaY*.04)-sph.radius;
+  sph.radius=zoomRadius(sph.radius,d);
+  if(focusGoal)zoomFocusGoal(focusGoal,d);
+  updCam();
+},{passive:true});
 
 // ─── LIGHTS ────────────────────────────────────────
 const ambient=new THREE.AmbientLight(0xFFF5EB,0.65);scene.add(ambient);
@@ -1902,8 +1912,22 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
     setTime: (minutes) => updateTime(minutes),
     toggleCyberpunk: () => toggleCyberpunk(),
     isCyberpunk: () => cyberpunkMode,
-    zoomIn: () => { if(focusGoal&&!focusGoal.reset)focusGoal=null; sph.radius=Math.max(12,sph.radius-4); updCam(); },
-    zoomOut: () => { if(focusGoal&&!focusGoal.reset)focusGoal=null; sph.radius=Math.min(130,sph.radius+4); updCam(); },
+    zoomIn: () => {
+      // Siklus 121: zoom JUJUR — follow goal dipertahankan, radius goal ikut
+      // (dulu focusGoal=null: kamera berhenti follow & radius ditarik balik
+      // lerp ke goal.r lama — tombol zoom tak terasa saat follow aktif).
+      const d=zoomRadius(sph.radius,-4)-sph.radius;
+      sph.radius=zoomRadius(sph.radius,d);
+      if(focusGoal)zoomFocusGoal(focusGoal,d);
+      updCam();
+    },
+    zoomOut: () => {
+      // Siklus 121: zoom JUJUR — mirror zoomIn (lihat catatan di atas).
+      const d=zoomRadius(sph.radius,4)-sph.radius;
+      sph.radius=zoomRadius(sph.radius,d);
+      if(focusGoal)zoomFocusGoal(focusGoal,d);
+      updCam();
+    },
     focusFloor: (floorNum) => {
       if (selectedIdx !== -1) { selectedIdx = -1; applySelected(); if (onSelectAgent) onSelectAgent(null); }
       delete sph.__saved;
