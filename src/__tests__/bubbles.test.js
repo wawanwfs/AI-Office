@@ -86,4 +86,27 @@ describe('updateBubbles', () => {
     updateBubbles(bubbles, 0, { remove: vi.fn() });
     expect(bubbles.length).toBe(0);
   });
+
+  it('guard anti-poisoning: delta non-finite (NaN/±Infinity/null/undefined) → no-op aman', () => {
+    for (const bad of [NaN, Infinity, -Infinity, null, undefined]) {
+      const b = mkBubble({ life: 3.5 });
+      const bubbles = [b];
+      updateBubbles(bubbles, bad, { remove: vi.fn() });
+      expect(b.life).toBeCloseTo(3.5);       // life tak berubah (tak NaN/Infinity)
+      expect(b.sprite.position.x).toBe(0);   // posisi tak jadi NaN
+      expect(Number.isFinite(b.sprite.position.y)).toBe(true);
+      expect(b.sprite.position.y).toBeCloseTo(2 + (3 - 3.5) * .12); // float-up rumus lama (life tetap)
+      expect(b.sprite.material.opacity).toBe(0);
+      expect(bubbles.length).toBe(1);        // tak terhapus
+    }
+  });
+
+  it('delta negatif tidak korup: k dibatasi 0 (posisi diam), tak NaN', () => {
+    const b = mkBubble({ life: 3.0 });
+    updateBubbles([b], -0.5, { remove: vi.fn() });
+    expect(b.sprite.position.x).toBe(0);               // x tak bergerak (k=0)
+    expect(Number.isFinite(b.sprite.position.y)).toBe(true);
+    expect(b.sprite.position.y).toBeCloseTo(2 + (3 - 3.5) * .12); // float-up rumus lama
+    expect(b.life).toBeCloseTo(3.5);                  // life naik 0.5 (semantik lama)
+  });
 });

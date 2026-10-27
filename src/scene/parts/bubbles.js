@@ -9,6 +9,10 @@
 const BUBBLE_SMOOTH_RATE = 10; // 1/dtk — konvergensi ±0.3 dtk, tanpa snap
 
 export function updateBubbles(bubbles, delta, { remove }){
+  // Guard anti-poisoning (konsisten dgn pola modul lain): timestep non-finite
+  // (NaN/±Infinity) TIDAK boleh menulari bubble — Math.exp(NaN)=NaN → posisi/
+  // opacity bubble jadi NaN & hilang diam-diam. Perlakukan sebagai 0 (no-op aman).
+  if (!Number.isFinite(delta)) delta = 0;
   const k = 1 - Math.exp(-BUBBLE_SMOOTH_RATE * Math.max(0, delta));
   for(let i=bubbles.length-1;i>=0;i--){
     const b=bubbles[i];
