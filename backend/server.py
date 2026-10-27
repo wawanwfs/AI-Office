@@ -244,11 +244,15 @@ async def preview_proxy(slug: str, path: str, request: Request):
         sep = "&" if "?" in target else "?"
         target += sep + request.url.query
     body = await request.body() if request.method in ("POST", "PUT", "PATCH") else None
-    headers = {k: v for k, v in request.headers.items() if k.lower() not in
-               ("host", "content-length", "connection", "accept-encoding")}
+    # Sandbox applications must never receive dashboard credentials or metadata.
+    allowed_headers = {"accept", "accept-language", "content-type", "range",
+                       "if-none-match", "if-modified-since"}
+    headers = {k: v for k, v in request.headers.items() if k.lower() in allowed_headers}
     try:
-        async with httpx.AsyncClient(timeout=30, follow_redirects=True) as client:
+        async with httpx.AsyncClient(timeout=30, follow_redirects=False, trust_env=False) as client:
             r = await client.request(request.method, target, content=body, headers=headers)
+        if r.is_redirect:
+            return Response(content="preview redirects are disabled", status_code=502)
         return Response(content=r.content, status_code=r.status_code,
                         media_type=r.headers.get("content-type"))
     except Exception as e:
@@ -447,11 +451,30 @@ def _project_workspace(pid):
     return ws, proj
 
 
+def _workspace_private(rel):
+    """Conservative file-name policy, not a substitute for secret scanning."""
+    for part in rel.replace("\\", "/").split("/"):
+        name = part.lower()
+        if (name.startswith(".") and name not in (
+            "", ".", "..", ".gitignore", ".gitattributes", ".editorconfig",
+        )) or name in {
+            "id_rsa", "id_ed25519", "id_ecdsa", "credentials", "credentials.json",
+            "secrets", "secrets.json", "secrets.yaml", "secrets.yml",
+        } or name.endswith((".pem", ".key", ".p12", ".pfx", ".keystore",
+                            ".db", ".sqlite", ".sqlite3", ".db-wal", ".db-shm")):
+            return True
+    return False
+
+
 def _safe_resolve(base, rel):
     base_r = os.path.realpath(base)
-    p = os.path.realpath(os.path.join(base, rel or ""))
+    lexical = os.path.abspath(os.path.join(base, rel or ""))
+    p = os.path.realpath(lexical)
     if p != base_r and not p.startswith(base_r + os.sep):
         raise HTTPException(403, "path di luar workspace")
+    if (_workspace_private(os.path.relpath(lexical, base_r)) or
+            _workspace_private(os.path.relpath(p, base_r))):
+        raise HTTPException(403, "private workspace path")
     return p
 
 
@@ -465,6 +488,7 @@ def api_project_files(pid: int, path: str = ""):
     for name in sorted(os.listdir(target), key=str.lower):
         full = os.path.join(target, name)
         try:
+            full = _safe_resolve(base, os.path.relpath(full, base))
             st = os.stat(full)
             is_dir = os.path.isdir(full)
             entries.append({
@@ -472,7 +496,7 @@ def api_project_files(pid: int, path: str = ""):
                 "size": st.st_size if not is_dir else None,
                 "mtime": int(st.st_mtime),
             })
-        except OSError:
+        except (OSError, HTTPException):
             continue
     return {"path": path, "entries": entries}
 
@@ -550,18 +574,54 @@ def api_project_git_commit(pid: int, body: dict):
     if not msg or len(msg) > 500:
         raise HTTPException(400, "message wajib (≤500 karakter)")
     def sh(*args):
-        return subprocess.run(list(args), cwd=base, capture_output=True, text=True, timeout=30)
-    if sh("git", "status", "--short").returncode != 0:  # belum repo → init + identitas lokal
-        sh("git", "init", "-q")
-        sh("git", "config", "user.name", "WFS Bot")
-        sh("git", "config", "user.email", "bot@wfs.local")
-    sh("git", "add", "-A")
-    if not sh("git", "status", "--porcelain").stdout.strip():
+        result = subprocess.run(["git", "--literal-pathspecs", "-c", "core.hooksPath=/dev/null",
+                                 *args], cwd=base, capture_output=True, text=True, timeout=30)
+        if result.returncode != 0:
+            raise HTTPException(502, "workspace git operation failed")
+        return result
+    # Never discover and modify an enclosing repository (or an external worktree).
+    metadata = os.path.join(base, ".git")
+    if os.path.lexists(metadata):
+        if os.path.islink(metadata) or not os.path.isdir(metadata):
+            raise HTTPException(403, "external git metadata is not allowed")
+    else:
+        parent = os.path.dirname(os.path.realpath(base))
+        probe = subprocess.run(["git", "-C", parent, "rev-parse", "--show-toplevel"],
+                               capture_output=True, text=True, timeout=30)
+        if probe.returncode == 0:
+            raise HTTPException(403, "workspace is inside another repository")
+        sh("init", "-q")
+        sh("config", "user.name", "WFS Bot")
+        sh("config", "user.email", "bot@wfs.local")
+    if os.path.realpath(sh("rev-parse", "--show-toplevel").stdout.strip()) != os.path.realpath(base):
+        raise HTTPException(403, "workspace repository root mismatch")
+
+    def safe_path(name):
+        try:
+            _safe_resolve(base, name)
+            return not os.path.islink(os.path.join(base, name))
+        except HTTPException:
+            return False
+
+    def check_index():
+        # Inspect the index itself: a staged secret may no longer exist on disk.
+        for record in sh("ls-files", "--stage", "-z").stdout.split("\0"):
+            if not record:
+                continue
+            meta, name = record.split("\t", 1)
+            if meta.split()[0] not in ("100644", "100755") or not safe_path(name):
+                raise HTTPException(403, "private or unsafe path in git index")
+
+    check_index()
+    candidates = sh("ls-files", "--cached", "--others", "--exclude-standard", "-z").stdout
+    for name in sorted(set(candidates.split("\0")) - {""}):
+        if safe_path(name):
+            sh("add", "-A", "--", name)
+    check_index()
+    if not sh("diff", "--cached", "--name-only").stdout.strip():
         return {"ok": True, "committed": False, "reason": "nothing_to_commit"}
-    c = sh("git", "commit", "-m", msg)
-    if c.returncode != 0:
-        raise HTTPException(502, c.stderr.strip()[:300] or "commit gagal")
-    rev = sh("git", "rev-parse", "--short", "HEAD")
+    sh("commit", "-m", msg)
+    rev = sh("rev-parse", "--short", "HEAD")
     return {"ok": True, "committed": True, "hash": rev.stdout.strip() or ""}
 
 
