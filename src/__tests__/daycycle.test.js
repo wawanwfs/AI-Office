@@ -81,3 +81,18 @@ describe('daycycle: mixHex', () => {
     }
   });
 });
+
+describe('daycycle: mixHex — anti-poisoning (t non-finite)', () => {
+  it('t NaN → warna asal a (t=0)', () => {
+    expect(mixHex(0x102030, 0xffeedd, NaN)).toBe(0x102030);
+  });
+  it('t ±Infinity → warna asal a', () => {
+    expect(mixHex(0x102030, 0xffeedd, Infinity)).toBe(0x102030);
+    expect(mixHex(0x102030, 0xffeedd, -Infinity)).toBe(0x102030);
+  });
+  it('hasil tetap 24-bit valid setelah guard', () => {
+    const v = mixHex(0x123456, 0x654321, NaN);
+    expect(v).toBeGreaterThanOrEqual(0);
+    expect(v).toBeLessThanOrEqual(0xffffff);
+  });
+});

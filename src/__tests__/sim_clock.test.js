@@ -99,3 +99,52 @@ describe('advanceSimClock — state default & batas resume manual', () => {
     expect(s.time).toBe(900);
   });
 });
+
+describe('advanceSimClock — anti-poisoning (input non-finite)', () => {
+  it('nowMs NaN tidak memajukan jam & tidak menulari state', () => {
+    let s = { acc: 0, last: 1000, manual: false, lastManualSet: 0, time: 480 };
+    s = advanceSimClock(s, NaN);
+    expect(s.time).toBe(480);
+    expect(s.acc).toBe(0);
+    expect(s.last).toBe(1000);
+    expect(s.stepped).toBeFalsy();
+    // tick valid berikutnya tetap normal
+    s = advanceSimClock(s, 1000 + SIM_SEC_PER_MIN * 1000);
+    expect(s.time).toBe(481);
+  });
+  it('nowMs ±Infinity tidak memajukan jam', () => {
+    for (const bad of [Infinity, -Infinity]) {
+      let s = { acc: 0, last: 1000, manual: false, lastManualSet: 0, time: 480 };
+      s = advanceSimClock(s, bad);
+      expect(s.time).toBe(480);
+      expect(Number.isFinite(s.acc)).toBe(true);
+    }
+  });
+  it('prev.time NaN di-reset ke 0 (tidak NaN), jam tetap berjalan', () => {
+    let s = { acc: 0, last: 0, manual: false, lastManualSet: 0, time: NaN };
+    s = advanceSimClock(s, 3000); // < 5 dtk → belum melangkah
+    expect(s.time).toBe(0);
+    s = advanceSimClock(s, 3000 + SIM_SEC_PER_MIN * 1000);
+    expect(s.time).toBe(1);
+  });
+  it('prev.acc NaN di-reset ke 0, langkah tetap berjalan', () => {
+    let s = { acc: NaN, last: 0, manual: false, lastManualSet: 0, time: 480 };
+    s = advanceSimClock(s, SIM_SEC_PER_MIN * 1000);
+    expect(s.acc).toBe(0);
+    expect(s.time).toBe(481);
+  });
+});
+
+describe('setSimManual — anti-poisoning (input non-finite)', () => {
+  it('time NaN → 0, bukan NaN', () => {
+    const s = setSimManual(NaN, 5000);
+    expect(s.time).toBe(0);
+    expect(s.manual).toBe(true);
+  });
+  it('nowMs NaN → last/lastManualSet 0, aman', () => {
+    const s = setSimManual(900, NaN);
+    expect(s.last).toBe(0);
+    expect(s.lastManualSet).toBe(0);
+    expect(Number.isFinite(s.time)).toBe(true);
+  });
+});

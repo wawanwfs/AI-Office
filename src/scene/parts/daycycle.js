@@ -35,6 +35,7 @@ export function daylight(m) {
 }
 
 export function mixHex(a, b, t) {
+  if (!Number.isFinite(t)) t = 0; // anti-poisoning: t non-finite → warna asal a (t=0), bukan NaN
   const ch = (v, s) => (v >> s) & 255;
   const mix = (s) => Math.round(ch(a, s) + (ch(b, s) - ch(a, s)) * t);
   return (mix(16) << 16) | (mix(8) << 8) | mix(0);

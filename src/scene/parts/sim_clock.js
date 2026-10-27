@@ -5,7 +5,11 @@ export const SIM_SEC_PER_MIN = 5; // 1 menit simulasi / 5 dtk nyata (1 hari kerj
 export const MANUAL_RESUME_MS = 8000;
 
 export function advanceSimClock(prev, nowMs) {
-  const p = prev || { acc: 0, last: null, manual: false, lastManualSet: 0, time: 0 };
+  let p = prev || { acc: 0, last: null, manual: false, lastManualSet: 0, time: 0 };
+  // anti-poisoning: timestamp non-finite (NaN/±Infinity) tidak boleh memajukan / menulari jam
+  if (!Number.isFinite(nowMs)) return { ...p, last: Number.isFinite(p.last) ? p.last : null, stepped: false };
+  // state rusak non-finite (dari poison sebelumnya) → reset ke nilai aman agar wrap/waktu tetap valid
+  if (!Number.isFinite(p.time) || !Number.isFinite(p.acc)) p = { ...p, time: Number.isFinite(p.time) ? p.time : 0, acc: Number.isFinite(p.acc) ? p.acc : 0 };
   // mode MANUAL: tunggu sampai pengguna diam MANUAL_RESUME_MS, lalu autoplay lanjut dari posisi baru
   if (p.manual) {
     if (nowMs - p.lastManualSet > MANUAL_RESUME_MS) {
@@ -25,5 +29,7 @@ export function advanceSimClock(prev, nowMs) {
 }
 
 export function setSimManual(time, nowMs) {
-  return { acc: 0, last: nowMs, manual: true, lastManualSet: nowMs, time };
+  const t = Number.isFinite(time) ? time : 0; // anti-poisoning: waktu non-finite → 0
+  const n = Number.isFinite(nowMs) ? nowMs : 0; // timestamp non-finite → 0 (bukan NaN)
+  return { acc: 0, last: n, manual: true, lastManualSet: n, time: t };
 }
