@@ -112,8 +112,15 @@ def main():
                 r = json.loads(ws.recv())
                 if r.get("id") == mid:
                     return r
+                raise_timeout()
 
+        import threading
+        _t0 = [time.time()]
+        def raise_timeout():
+            if time.time() - _t0[0] > 20:
+                raise TimeoutError("CDP eval >20s — VM overload")
         def ev(expr):
+            _t0[0] = time.time()  # reset budget timeout per evaluasi
             r = cmd("Runtime.evaluate", expression=expr, returnByValue=True)
             res = (r or {}).get("result") or {}
             val = (res.get("result") or {}).get("value")
@@ -197,8 +204,13 @@ def main():
             # 28 s (bukan 14): lerp .06/frame butuh ~18 frame utk turun 20.4→17.4;
             # SwiftShader ~1.5 FPS saat VM load tinggi → 14 s kerap ambigu
             # (r berhenti 17.4x tanpa verdict). Verdict tetap ketat.
-            for _ in range(45):
-                time.sleep(1.0)
+            # Sampling berbasis waktu-dinding: budget 40 s (lerp .06/frame
+            # mencapai goal ~30-40 dtk pada ~1.5 FPS SwiftShader). Di bawah
+            # beban VM 1 evaluasi ~1.5-3 s → jumlah bacaan menyesuaikan sendiri;
+            # dulu 45x1 s statis → probe kehabisan waktu saat VM overload.
+            _sdl = time.time()
+            while time.time() - _sdl < 55:
+                time.sleep(0.5)
                 sm = json.loads(ev(
                     "JSON.stringify({r: window.__cam ? window.__cam.sph.radius : -1,"
                     " ty: window.__cam ? window.__cam.tgt.y : -1,"
@@ -207,6 +219,13 @@ def main():
                 r, ty = sm.get("r"), sm.get("ty")
                 if not isinstance(r, (int, float)) or not isinstance(ty, (int, float)):
                     continue
+                # Verdict cepat: goal resmi nexus (r:16) terpasang di scene —
+                # idempotensi klik tunggal vs dblclick (regresi siklus 119).
+                fg = json.loads(ev("JSON.stringify(window.__dbg ? window.__dbg().focus : null)") or "null")
+                if isinstance(fg, dict) and fg.get("r") == 16 \
+                        and sm.get("sv") and sm.get("sel"):
+                    verdict = "NEW"
+                    break
                 if r < 17.4 and ty < 2.6 and sm.get("sv") and sm.get("sel"):
                     verdict = "NEW"
                     break
@@ -221,7 +240,7 @@ def main():
             if verdict == "OLD":
                 print("  (perilaku LAMA terdeteksi: r=%.2f tgt.y=%.2f — goal dipecah dblclick)" % (r, ty))
                 break
-            print("  (ambiguous setelah 14 s — ulangi)")
+            print("  (ambiguous setelah 40 s — ulangi)")
         if not ok:
             print("E2E_DBLNX: FAIL (goal nexus dipecah dblclick / __saved hilang)")
             sys.exit(1)
