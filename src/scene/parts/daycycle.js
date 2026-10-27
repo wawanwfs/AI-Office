@@ -42,7 +42,7 @@ export function mixHex(a, b, t) {
 }
 
 export function createLighting(ctx) {
-  const { THREE, scene, renderer, sun, ambient, agentData, onTimeUpdate, onStatusUpdate, onTick } = ctx;
+  const { THREE, scene, renderer, sun, ambient, agentData, onTimeUpdate, onStatusUpdate, onTick, onTime } = ctx;
   const NAVY = 0x010a28;
   let current = 660;
 
@@ -63,6 +63,11 @@ export function createLighting(ctx) {
     sun.color = new THREE.Color(tint);
     agentData.forEach((a) => { a.dGlow.intensity = 0.15 + (1 - d) * 0.3; });
     onTick && onTick(min);
+    // Siklus 120: __setTime (manual) harus meng-update jam simulasi juga — dulu
+    // __setTime hanya apply lighting + updateMeeting, tapi __sim.time tidak
+    // diset → jam HUD & auto-advance melompat balik dari waktu sisa simulasi
+    // lama. Callback opsional (tanpa mode manual — slider React punya jalurnya).
+    onTime && onTime(min);
   }
   return { apply, get minutes() { return current; } };
 }

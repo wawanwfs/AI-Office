@@ -28,7 +28,10 @@ export function followAnchor(a, figAnchor) {
 // dimutasi t.set) atau goal reset baru.
 export function updateFollowGoal(goal, homeRadius, radiusFallback, homeT = { x: 0, y: 1.8, z: 0 }, figAnchor = null) {
   const f = goal.follow;
-  const fp = followAnchor(f, figAnchor);
+  // Follow figur rapat ({meetIdx, root}) → agen ada di .root; follow biasa →
+  // objek follow itu sendiri (walker/home langsung).
+  const agent = (f && f.meetIdx != null) ? f.root : f;
+  const fp = followAnchor(agent, figAnchor);
   if (!fp) return goal; // tidak ada anchor valid → pertahankan goal (jangan merusak tgt)
   goal.t.set(fp.x, fp.y, fp.z);
   if (f.state === 'offsite') {

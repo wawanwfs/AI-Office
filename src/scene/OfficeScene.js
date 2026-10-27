@@ -171,6 +171,26 @@ const __disposeAudioWake=installAudioWake(__ensureAudioEarly);
 // Formula `walker.visible?walker.position:home` dulu terduplikasi 3×
 // (klik, focusAgent, updateFollowGoal); goal dblclick agen bahkan memakai
 // formula titik generik berbeda (regresi siklus 118).
+// Siklus 120: bila agen yang di-follow sedang PESERTA RAPAT (figur tampil di
+// kursi), follow goal mengikuti KURSI rapat (meetIdx — di-resolve per-frame
+// oleh animate), bukan meja kosongnya; rapat usai → anchor hilang → jatuh ke
+// home agen. Return indeks agen bila peserta aktif, else null. Function
+// declaration (hoisted) — __meet didefinisikan jauh di bawah (TDZ reg. 119).
+function meetFollowIdx(root){
+  if(!root||!__meet||typeof __meet.attendees!=='function')return null;
+  const idx=agentData.indexOf(root);
+  return idx>=0&&__meet.attendees().indexOf(idx)!==-1?idx:null;
+}
+// Goal follow utk satu agen root: {root} biasa, atau {root,meetIdx} bila peserta
+// rapat aktif; titik awal goal = kursi rapat (bila anchor tersedia) agar kamera
+// tidak mengglide dari meja kosong dulu.
+const agentFollowGoal=(root,rf)=>{
+  const mi=meetFollowIdx(root);
+  const mfig=(mi!=null&&__meet&&__meet.figures)?meetingFigureAnchor(__meet.figures[mi]):null;
+  const fp=mfig||agentFocusPos(root)||{x:root.home.x,y:(root.home.y||0)+1.5,z:root.home.z};
+  return {t:new THREE.Vector3(fp.x,fp.y,fp.z),r:Math.min(sph.radius,rf),
+    follow:mi!=null?{root,meetIdx:mi}:root};
+};
 const focusAgentRoot=(root,opts={})=>{
   if(!root)return false;
   const {bubble=true,rf=24}=opts;
@@ -179,11 +199,11 @@ const focusAgentRoot=(root,opts={})=>{
     const idMap={}; window.__wfsAgentIdList&&window.__wfsAgentIdList.forEach(x=>idMap[x.name]=x.id);
     window.__wfsSelectAgent(idMap[root.agent.name]||root.agent.name);
   }
-  const fp=agentFocusPos(root)||{x:root.home.x,y:(root.home.y||0)+1.5,z:root.home.z};
+  const g=agentFollowGoal(root,rf);
   const hr=ensureHomeRadius(homeRadius,sph.radius); homeRadius=hr.homeRadius;
-  focusGoal={t:new THREE.Vector3(fp.x,fp.y,fp.z),r:Math.min(sph.radius,rf),follow:root};
+  focusGoal=g;
   saveCam(sph);
-  if(bubble)createBubble(fp.x,fp.y-0.2,fp.z,'“Halo! Aku '+root.agent.name+'”',root.agent.hex);
+  if(bubble)createBubble(g.t.x,g.t.y-0.2,g.t.z,'“Halo! Aku '+root.agent.name+'”',root.agent.hex);
   selectedIdx=agentData.indexOf(root);applySelected();
   if(onSelectAgent)onSelectAgent(root.agent);
   return true;
@@ -208,7 +228,12 @@ const focusMeetingFigure=(figIdx,opts={})=>{
     window.__wfsSelectAgent(idMap[ad.agent.name]||ad.agent.name);
   }
   const hr=ensureHomeRadius(homeRadius,sph.radius); homeRadius=hr.homeRadius;
-  focusGoal={t:new THREE.Vector3(anc.x,anc.y+1.5,anc.z),r:Math.min(sph.radius,16)};
+  // Siklus 120: goal FOLLOW figur rapat — {meetIdx:figIdx, root} — bukan goal
+  // statis. updateFollowGoal resolve anchor kursi per-frame (bisa pindah dgn
+  // placeFigure). Dulu goal statis: kursi antre (figur lompat saat begin/
+  // window ganti) & kamera menatap kursi lama setelah window berganti.
+  focusGoal={t:new THREE.Vector3(anc.x,anc.y+1.5,anc.z),r:Math.min(sph.radius,16),
+    follow:{meetIdx:figIdx,root:ad}};
   saveCam(sph);
   if(bubble)createBubble(anc.x,anc.y+1.3,anc.z,'“Halo! Aku '+ad.agent.name+' (rapat)”',ad.agent.hex);
   selectedIdx=figIdx;applySelected();
@@ -1245,9 +1270,13 @@ const drawScreen=(s,i)=>{ if(shouldRedrawScreenAt(frame,i)) drawScreenFrame(s,fr
 let timeOfDay=(()=>{ // mulai dari jam NYATA saat load (biar jam dinding & HUD terasa hidup),
   // dibulatkan ke menit; disinkronkan dgn sim clock (1 hari kerja ≈ 12 mnt nyata)
   const d=new Date();return d.getHours()*60+d.getMinutes();})();
-const __light=createLighting({THREE,scene,renderer,sun,ambient,agentData,onTimeUpdate,onStatusUpdate,onTick:m=>updateMeeting(m)});
+const __light=createLighting({THREE,scene,renderer,sun,ambient,agentData,onTimeUpdate,onStatusUpdate,onTick:m=>updateMeeting(m),onTime:m=>applySimTime(m,false)});
 let __sim={acc:0,last:null,manual:false,lastManualSet:0,time:timeOfDay};
-function updateTime(min,manual=true){timeOfDay=min;__light.apply(min);__sim.time=min;if(manual){__sim=setSimManual(min,performance.now())}}
+// Siklus 120: applySimTime = set jam simulasi TANPA re-apply lighting (dipakai
+// onTime dari daycycle.apply — dulu onTime→updateTime→__light.apply→onTime =
+// rekursi tak hingga → RangeError maximum call stack → scene mati UI-only).
+function applySimTime(min,manual=true){timeOfDay=min;__sim.time=min;if(manual){__sim=setSimManual(min,performance.now())}}
+function updateTime(min,manual=true){applySimTime(min,manual);__light.apply(min)}
 updateTime(timeOfDay);
 
 // ═══════════════════════════════════════════════════
@@ -1500,8 +1529,16 @@ function animate(){
   frame++;
   window.__animFrames=frame;
   if(focusGoal){
-    if(focusGoal.follow&&!focusGoal.reset){ // follow agent berjalan: target kamera ikut posisi agent saat ini (murni, parts/kamera_focus.js)
-      focusGoal=updateFollowGoal(focusGoal,homeRadius,sph.radius,HOME_TGT);
+    if(focusGoal.follow&&!focusGoal.reset){ // follow agent berjalan / figur rapat: target kamera ikut posisi saat ini (murni, parts/kamera_focus.js)
+      // Siklus 120: follow figur peserta rapat ({meetIdx}) → anchor kursi
+      // di-resolve per-frame via meetingFigureAnchor (figur bisa pindah kursi
+      // saat window berganti, HILANG saat rapat usai → anchor jatuh ke
+      // follow.root = agen: meja home, BUKAN kursi lama beku).
+      let figAnchor=null;
+      if(Number.isInteger(focusGoal.follow.meetIdx)&&__meet&&__meet.figures){
+        figAnchor=meetingFigureAnchor(__meet.figures[focusGoal.follow.meetIdx]);
+      }
+      focusGoal=updateFollowGoal(focusGoal,homeRadius,sph.radius,HOME_TGT,figAnchor);
     }
     if(focusGoal.reset&&focusStep(tgt,sph,focusGoal.t,focusGoal.r,focusGoal.phi))focusGoal=null;
     else{focusStep(tgt,sph,focusGoal.t,focusGoal.r,focusGoal.phi)}
@@ -1939,11 +1976,14 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
           if (window.__wfsAgentIdList) window.__wfsAgentIdList.forEach(x => { idMap[x.name] = x.id; });
           window.__wfsSelectAgent(idMap[root.agent.name] || root.agent.name);
         }
-        const wp = agentFocusPos(root) || { x: root.home.x, y: (root.home.y || 0) + 1.5, z: root.home.z };
+        // Siklus 120: satu sumber goal follow dgn klik agen (agentFollowGoal) —
+        // dulu duplikat inline r:20 yang TIDAK tahu peserta rapat: fokus agen
+        // peserta rapat via panel/menu menargetkan meja kosongnya 30 menit.
+        const g=agentFollowGoal(root,20);
         const hr2=ensureHomeRadius(homeRadius,sph.radius); homeRadius=hr2.homeRadius;
-        focusGoal = { t: new THREE.Vector3(wp.x, wp.y || 0, wp.z), r: Math.min(sph.radius, 20), follow: root };
+        focusGoal = g;
         saveCam(sph);
-        createBubble(wp.x, (wp.y || 0) - 0.2, wp.z, '“Halo! Aku ' + root.agent.name + '”', root.agent.hex || '#10E5A0');
+        createBubble(g.t.x, g.t.y - 0.2, g.t.z, '“Halo! Aku ' + root.agent.name + '”', root.agent.hex || '#10E5A0');
         selectedIdx = agentData.indexOf(root);
         applySelected();
         if (onSelectAgent) onSelectAgent(root.agent);
