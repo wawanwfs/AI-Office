@@ -153,6 +153,24 @@ describe('ShConsole — konsol software house', () => {
     expect(fileRegion.textContent).toMatch(/FROM python:3.12-slim/)
   })
 
+  it('a11y: git status & log commit terekspos sebagai region berlabel saat repo ada', async () => {
+    stubFetch({
+      '/wfs-api/sh/overview': OV,
+      '/wfs-api/projects': PROJ_RESP,
+      '/wfs-api/projects/1/files': { path: '', entries: [{ name: 'Dockerfile', type: 'file', size: 120 }] },
+      '/wfs-api/projects/1/file?path=Dockerfile': { path: 'Dockerfile', content: 'FROM python:3.12-slim' },
+      '/wfs-api/projects/1/logs?lines=100': { logs: ['INFO line'] },
+      '/wfs-api/projects/1/git': { repo: true, branch: 'main', status: 'working tree bersih', log: 'abc123 fix(x): init' },
+    })
+    render(<ShConsole show onClose={() => {}} />)
+    clickTab('Workspace')
+    expect(await screen.findByLabelText('Pilih project')).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Pilih project'), { target: { value: '1' } })
+    expect(await screen.findByRole('region', { name: 'Status git' })).toBeTruthy()
+    const logRegion = screen.getByRole('region', { name: 'Log commit' })
+    expect(logRegion.textContent).toContain('abc123')
+  })
+
   it('tab Workspace: entri file dapat diakses keyboard (Enter/Space + peran button)', async () => {
     stubFetch({
       '/wfs-api/sh/overview': OV,

@@ -31,6 +31,9 @@ const STYLE = {
   tag: { fontSize: 11, padding: '2px 8px', borderRadius: 99, background: '#1e2a44', color: '#aebfe0', whiteSpace: 'nowrap' },
   err: { color: '#ff8080', fontSize: 13, padding: 8 },
   logLine: { fontSize: 12, color: '#9fb0d0', borderBottom: '1px dashed #18233c', padding: '6px 0' },
+  // blok output monospace (log container, isi file, git, terminal) — core style
+  // bersama; tiap situs menambah maxHeight/fontSize/marginTop sesuai kebutuhan.
+  pre: { background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, overflow: 'auto' },
 }
 
 const ROLES = ['backend', 'frontend', 'pm', 'design', 'qa', 'devops', 'research', 'content', 'security']
@@ -315,14 +318,14 @@ export default function ShConsole({ show, onClose }) {
                     {entries.length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>(folder kosong)</div>}
                     {fileView && (
                       <pre role="region" aria-label={`Isi file ${fileView.name}`}
-                        style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 220, overflow: 'auto', fontSize: 12, marginTop: 8 }}
+                        style={{ ...STYLE.pre, maxHeight: 220, fontSize: 12, marginTop: 8 }}
                         onClick={(e) => e.stopPropagation()}>{fileView.content}</pre>
                     )}
                   </div>
                   <div style={STYLE.card}>
                     <div style={{ fontWeight: 700, marginBottom: 8 }}>🪵 Container Logs</div>
                     <button style={STYLE.btnGhost} onClick={() => loadWsLogs(wsId)}>Muat ulang</button>
-                    <pre role="region" aria-label="Container logs" style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 180, overflow: 'auto', fontSize: 11 }}>
+                    <pre role="region" aria-label="Container logs" style={{ ...STYLE.pre, maxHeight: 180, fontSize: 11 }}>
                       {logs.length ? logs.join('\n') : '(log kosong)'}</pre>
                   </div>
                   <div style={STYLE.card}>
@@ -339,8 +342,8 @@ export default function ShConsole({ show, onClose }) {
                               onKeyDown={(e) => { if (e.key === 'Enter') commitWs(wsId) }} />
                             <button style={STYLE.btn} onClick={() => commitWs(wsId)}>Commit</button>
                           </div>
-                          <pre style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 160, overflow: 'auto', fontSize: 11 }}>{gitInfo.status || '(bersih)'}</pre>
-                          <pre style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 160, overflow: 'auto', fontSize: 11 }}>{gitInfo.log}</pre>
+                          <pre role="region" aria-label="Status git" style={{ ...STYLE.pre, maxHeight: 160, fontSize: 11 }}>{gitInfo.status || '(bersih)'}</pre>
+                          <pre role="region" aria-label="Log commit" style={{ ...STYLE.pre, maxHeight: 160, fontSize: 11 }}>{gitInfo.log}</pre>
                         </div>
                       : <div>
                           <div style={{ color: '#8fa2c4', fontSize: 13, marginBottom: 8 }}>Workspace belum di-inisialisasi git — commit pertama akan init otomatis.</div>
@@ -364,7 +367,7 @@ export default function ShConsole({ show, onClose }) {
                         onKeyDown={(e) => { if (e.key === 'Enter') runTerm(wsId) }} />
                       <button style={STYLE.btn} onClick={() => runTerm(wsId)}>Jalankan</button>
                     </div>
-                    <pre style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 200, overflow: 'auto', fontSize: 11, marginTop: 8 }} role="status">
+                    <pre style={{ ...STYLE.pre, maxHeight: 200, fontSize: 11, marginTop: 8 }} role="status">
                       {termOut || '(belum ada output)'}</pre>
                   </div>
                 </div>
