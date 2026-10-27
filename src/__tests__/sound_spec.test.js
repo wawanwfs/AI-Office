@@ -273,8 +273,18 @@ describe('sound_spec — ambience ruangan kantor (Web Audio HVAC / room hum)', (
   });
 
   it('generatePinkNoiseData menghasilkan Float32Array dengan nilai finite dan rentang wajar', () => {
+    // RNG deterministik (seed tetap) agar assertion statistik tidak flaky:
+    // pink noise punya memori panjang, jadi |mean| buffer acak bisa sesekali
+    // melampaui ambang 0.3 (~0.015% run) walau implementasi benar.
+    const lcg = (seed) => {
+      let s = seed >>> 0;
+      return () => {
+        s = (s * 1664525 + 1013904223) >>> 0;
+        return s / 4294967296;
+      };
+    };
     const samples = 1000;
-    const data = generatePinkNoiseData(samples);
+    const data = generatePinkNoiseData(samples, lcg(42));
     expect(data).toBeInstanceOf(Float32Array);
     expect(data.length).toBe(samples);
 
