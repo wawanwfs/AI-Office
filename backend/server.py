@@ -955,7 +955,17 @@ from orders import router as orders_router
 app.include_router(orders_router)
 
 # ---------- static ----------
-app.mount("/", StaticFiles(directory=BASE / "static", html=True), name="static")
+# API-only deployments and clean checkouts must still start without a UI build.
+# Do not silently create an empty directory and present it as a healthy UI.
+if (BASE / "static" / "index.html").is_file():
+    app.mount("/", StaticFiles(directory=BASE / "static", html=True), name="static")
+else:
+    @app.get("/{path:path}", include_in_schema=False)
+    async def ui_not_built(path: str):
+        return Response(
+            "UI assets not built. Run npm run build and copy dist/ into backend/static/, then restart the gateway.",
+            status_code=503, media_type="text/plain",
+        )
 
 if __name__ == "__main__":
     import uvicorn
