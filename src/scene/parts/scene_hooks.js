@@ -42,6 +42,9 @@ export const SCENE_HOOKS = [
   '__tvCanvas', '__tvData', '__lastTvDrawAt', '__tvPullErr', '__lastWbDrawAt',
   // controls scene utuh (jembatan destroy/probe E2E — memegang seluruh closure)
   '__wfsSceneControls',
+  // hitungan dispose graph scene terakhir (siklus 124 — dibaca probe remount
+  // SETELAH destroy; dibersihkan purge-create scene berikutnya)
+  '__lastSceneDispose',
   // ekspos utk probe E2E (verifikasi cakupan purge — siklus 123)
   '__SCENE_HOOKS', '__sceneHygienePurge',
 ];

@@ -1115,27 +1115,36 @@ window.__spawnBubble=(x,y,z,text,color,anchor)=>createBubble(x,y,z,text,color,an
   // Badge status real-time: poll gateway tiap 20s, warnai badge dada sesuai status task
   const __intervals=[];
   const __timeouts=[];
+  const __destroyHooks=[]; // siklus 124: stopper async yang dijalankan destroy (fetch in-flight saat destroy TIDAK boleh menulis window/graph mati)
   (function(){
   const idMapFn=()=>agentIdMap(window.__wfsAgentIdList||[]);
   const findByGid=(gid)=>agentData.find(a=>idMapFn()[a.agent?.name]===gid);
   const prevFailed={};
+  let pollStopped=false; // siklus 124: destroy → stop; fetch in-flight tidak boleh lanjut
   async function pollStatus(){
-    if(pageHidden) return; // hemat fetch saat tab tidak dilihat
+    if(pageHidden||pollStopped) return; // hemat fetch saat tab tidak dilihat
     window.__pollBadges=pollStatus; // diekspos utk refresh instan onVis
     try{
-      const r=await fetch('/wfs-api/agents/status');
-      const d=await r.json();
-      const agents=d.agents||{};
-      const im=idMapFn();
-      window.__wfsAgentIdMap=im;
-      // SATU fetch utk badge + bangun + alert + task running (dulu 2 interval fetch terpisah)
-      try{
-        const r2=await fetch('/wfs-api/tasks');
-        const t2=await r2.json();
-        const tasks=Array.isArray(t2)?t2:(t2.tasks||[]);
-        // gabung data via parts/running_tasks.js (murni, diuji unit) — dipakai autoTalk
-        window.__wfsRunningTasks={byAgent:buildRunningByAgent(agents,tasks)};
-      }catch{ /* respons non-JSON */ }
+          const r=await fetch('/wfs-api/agents/status');
+          // Siklus 124: scene bisa dimusnahkan selama fetch berjalan (remount/HMR).
+          // Dulu penulisan window.__wfsAgentIdMap/__wfsRunningTasks + aksi badge/
+          // bubble pada graph mati tetap jalan SETELAH purge destroy → hook
+          // "bangkit kembali" menunjuk data scene mati (terdeteksi probe remount).
+          if(pollStopped)return;
+          const d=await r.json();
+          const agents=d.agents||{};
+          const im=idMapFn();
+          window.__wfsAgentIdMap=im;
+          // SATU fetch utk badge + bangun + alert + task running (dulu 2 interval fetch terpisah)
+          try{
+            const r2=await fetch('/wfs-api/tasks');
+            const t2=await r2.json();
+            const tasks=Array.isArray(t2)?t2:(t2.tasks||[]);
+            // gabung data via parts/running_tasks.js (murni, diuji unit) — dipakai autoTalk
+            if(pollStopped)return; // guard kedua: fetch tasks juga bisa kejar scene mati
+            window.__wfsRunningTasks={byAgent:buildRunningByAgent(agents,tasks)};
+          }catch{ /* respons non-JSON */ }
+      if(pollStopped)return; // guard ketiga: aksi badge/bubble tidak boleh menyentuh graph mati
       // SATU fetch utk badge + bangun + alert + task running (dulu 2 interval fetch terpisah)
       statusPollActions(agentData,agents,im,prevFailed,findByGid).forEach(act=>{
         if(act.type==='badge'){
@@ -1153,6 +1162,7 @@ window.__spawnBubble=(x,y,z,text,color,anchor)=>createBubble(x,y,z,text,color,an
   }
   __timeouts.push(setTimeout(pollStatus,4000));
   __intervals.push(setInterval(pollStatus,20000));
+  __destroyHooks.push(()=>{pollStopped=true;}); // siklus 124: destroy menghentikan poll async
   })();
 
 
@@ -2147,6 +2157,9 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       try { __mr && __mr.destroy && __mr.destroy(); } catch{/* abaikan */}
       // Shift (daycycle): clear semua setTimeout pending (arrive/depart berantai per 800ms)
       try { __shift && __shift.dispose && __shift.dispose() } catch{/* abaikan */}
+      // Siklus 124: stopper async (poll status) — fetch in-flight saat destroy
+      // tidak boleh menulis window/graph scene mati setelah purge
+      __destroyHooks.forEach((h) => { try { h && h() } catch {/* abaikan */} });
       // Audio: engine menutup AudioContext scene lama (mencegah MaxAudioContextsExceeded)
       try { __sound.dispose() } catch{/* abaikan */}
       // Siklus 123: SEMUA hook window milik scene di-purge via satu daftar
