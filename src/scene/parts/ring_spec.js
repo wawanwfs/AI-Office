@@ -70,3 +70,15 @@ export function hoverRingPos(agent, isNexus, nexusPos) {
   }
   return null;
 }
+
+// Anchor cincin (hover/terpilih) utk FIGUR PESERTA RAPAT (createMeeting.figures,
+// urutan = agentData): kursi rapat (seat) yang ditempati figur. Posisi dari
+// figure.position itu sendiri (dipindah ke kursi oleh meeting.begin →
+// placeFigure) — bukan dari home agen (mejanya kosong saat rapat).
+// Return null bila figur tak valid/tersembunyi → ring disembunyikan.
+// Murni & null-safe [regresi siklus 119].
+export function meetingFigureAnchor(fig) {
+  if (!fig || fig.visible === false || !fig.position) return null;
+  const y = Number.isFinite(fig.position.y) ? fig.position.y : 0;
+  return { x: fig.position.x, y, z: fig.position.z, off: 0 };
+}

@@ -14,6 +14,10 @@
  * @param {{mesh?:THREE.Object3D, frame?:THREE.Object3D}|null} src.board   papan proyek (window.__projectBoard)
  * @param {{mesh?:THREE.Object3D, frame?:THREE.Object3D}|null} src.whiteboard
  * @param {THREE.Object3D|null} src.nexus  karakter nexus (disertakan bila visible!==false)
+ * @param {Array<THREE.Object3D>} [src.meetingFigures]  figur peserta rapat yang
+ *   sedang TAMPIL (createMeeting.figures — dulu TIDAK disertakan: klik pada
+ *   peserta rapat jatuh ke jalur "klik kosong" → kamera me-reset ke rumah
+ *   [regresi siklus 119])
  * @returns {Array<THREE.Object3D>} target intersect
  */
 export function collectPickTargets(src) {
@@ -31,6 +35,9 @@ export function collectPickTargets(src) {
   if (wb && wb.mesh) targets.push(wb.mesh);
   if (wb && wb.frame) targets.push(wb.frame);
   if (s.nexus && s.nexus.visible !== false) targets.push(s.nexus);
+  if (Array.isArray(s.meetingFigures)) {
+    s.meetingFigures.forEach(f => { if (f && f.visible) targets.push(f); });
+  }
   return targets;
 }
 
@@ -68,6 +75,26 @@ export function isNexusHit(obj, nexus) {
   if (!obj || !nexus) return false;
   if (obj === nexus) return true;
   return !!(nexus.getObjectById && nexus.getObjectById(obj.id));
+}
+
+/**
+ * Figur peserta rapat (createMeeting.figures) yang kena ray — telusuri rantai
+ * parent sampai menemukan salah satu figur. Return { index, figure } pemilik
+ * objek, atau null. Dulu figur peserta rapat TIDAK bisa diklik sama sekali:
+ * tak ada di daftar raycast & tak ada pemetaan hit→agen [regresi siklus 119].
+ * @param {THREE.Object3D} obj            object hasil intersect (hits[0].object)
+ * @param {Array<THREE.Object3D>} figures daftar figur peserta (urutan = agentData)
+ * @returns {{index:number, figure:THREE.Object3D}|null}
+ */
+export function findMeetingFigureOwner(obj, figures) {
+  if (!obj || !Array.isArray(figures) || figures.length === 0) return null;
+  let p = obj;
+  while (p) {
+    const idx = figures.indexOf(p);
+    if (idx !== -1) return { index: idx, figure: p };
+    p = p.parent;
+  }
+  return null;
 }
 
 /**

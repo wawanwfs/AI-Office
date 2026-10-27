@@ -14,7 +14,7 @@ import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam,
 import { dblclickPointGoal, dblclickBlankGoal } from './parts/dblclick_spec.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
-import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent, ringFloorY, hoverRingPos } from './parts/ring_spec.js';
+import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent, ringFloorY, hoverRingPos, meetingFigureAnchor } from './parts/ring_spec.js';
 import { paintRing } from './parts/ring_canvas.js';
 import { drawSky, drawGlassSheen } from './parts/sky_canvas.js';
 import { drawWoodFloor, drawAoStrip } from './parts/floor_canvas.js';
@@ -57,7 +57,7 @@ import { DESKS } from './parts/desk_layout.js';
 import { teamPodFocusTarget, findTeamByKey } from './parts/team_spec.js';
 import { meetingFocusTarget, getWhiteboardTooltipText, isWhiteboardHit } from './parts/whiteboard_spec.js';
 import { isLongHair, STANDING, SITTING, accessoryAnchor } from './parts/character_spec.js';
-import { collectPickTargets, findAgentRoot, isNexusHit, isBoardHit } from './parts/raycast_targets.js';
+import { collectPickTargets, findAgentRoot, isNexusHit, isBoardHit, findMeetingFigureOwner } from './parts/raycast_targets.js';
 import { nearbyPairs as nearbyPairsPure, tickCooldown as tickCooldownPure, CHAT_RADIUS, CHAT_COOLDOWN_SEC } from './parts/chat_check.js';
 
 export function createOfficeScene(container, callbacks = {}) {
@@ -188,6 +188,33 @@ const focusAgentRoot=(root,opts={})=>{
   if(onSelectAgent)onSelectAgent(root.agent);
   return true;
 };
+// Fokus FIGUR PESERTA RAPAT (createMeeting.figures[i], urutan = agentData):
+// klik pada peserta yang duduk di ruang meeting. Goal kamera ke kursi rapat
+// (posisi figur), r = min(radius, 16) — idempoten dgn keluarga fokus lain
+// (ensureHomeRadius + saveCam → Escape "kembali" berfungsi). Agen tetap
+// DIPILIH di UI (selectedIdx = index agen, ring via meetingFigureAnchor —
+// bukan ring -2 nexus) + bubble sapaan konsisten dgn fokus agen biasa.
+// Dulu: figur peserta tidak ada di daftar raycast → klik jatuh ke jalur
+// "klik kosong" (kamera me-reset ke rumah, pilihan justru dihapus) [119].
+const focusMeetingFigure=(figIdx,opts={})=>{
+  const {bubble=true}=opts;
+  const ad=selectedAgent(agentData,figIdx);
+  const fig=__meet&&__meet.figures?__meet.figures[figIdx]:null;
+  const anc=meetingFigureAnchor(fig);
+  if(!ad||!anc)return false;
+  __sound.playSelect();
+  if(window.__wfsSelectAgent){
+    const idMap={}; window.__wfsAgentIdList&&window.__wfsAgentIdList.forEach(x=>idMap[x.name]=x.id);
+    window.__wfsSelectAgent(idMap[ad.agent.name]||ad.agent.name);
+  }
+  const hr=ensureHomeRadius(homeRadius,sph.radius); homeRadius=hr.homeRadius;
+  focusGoal={t:new THREE.Vector3(anc.x,anc.y+1.5,anc.z),r:Math.min(sph.radius,16)};
+  saveCam(sph);
+  if(bubble)createBubble(anc.x,anc.y+1.3,anc.z,'“Halo! Aku '+ad.agent.name+' (rapat)”',ad.agent.hex);
+  selectedIdx=figIdx;applySelected();
+  if(onSelectAgent)onSelectAgent(ad.agent);
+  return true;
+};
 renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{isDrag=true;prev={x:e.clientX,y:e.clientY};autoRot=false;clearTimeout(autoTmr);__ensureAudioEarly();if(renderer.domElement.style.cursor!=='pointer')renderer.domElement.style.cursor='grabbing'});
 renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{downXY={x:e.clientX,y:e.clientY}});
 renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
@@ -203,9 +230,14 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   const wbMesh=window.__whiteboard&&window.__whiteboard.mesh;
   const wbFrame=window.__whiteboard&&window.__whiteboard.frame;
   const hits=ray.intersectObjects(collectPickTargets({
-    agentData, board:window.__projectBoard, whiteboard:window.__whiteboard, nexus:nxChar
+    agentData, board:window.__projectBoard, whiteboard:window.__whiteboard, nexus:nxChar,
+    meetingFigures:__meet?__meet.figures:null
   }),true);
   if(!hits.length){ if(focusGoal)focusGoal=resetFocusGoal(HOME_TGT,homeRadius,sph.radius); selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null); return; }
+  // REGRESI siklus 119: figur peserta rapat kini target raycast — cabang baru
+  // SEBELUM findAgentRoot (figur bukan bagian sittingChar/walker agen).
+  const mf=findMeetingFigureOwner(hits[0].object,__meet?__meet.figures:null);
+  if(mf){ focusMeetingFigure(mf.index); return; }
   if(isBoardHit(hits[0].object,window.__projectBoard)) {
     __sound.playSelect();
     const hr=ensureHomeRadius(homeRadius,sph.radius); homeRadius=hr.homeRadius;
@@ -260,13 +292,22 @@ renderer.domElement&&renderer.domElement.addEventListener('dblclick',e=>{
   const wbm=window.__whiteboard&&window.__whiteboard.mesh;
   const wbf=window.__whiteboard&&window.__whiteboard.frame;
   const hits=ray.intersectObjects(collectPickTargets({
-    agentData, board:window.__projectBoard, whiteboard:window.__whiteboard, nexus:nxChar
+    agentData, board:window.__projectBoard, whiteboard:window.__whiteboard, nexus:nxChar,
+    meetingFigures:__meet?__meet.figures:null
   }),true);
   if(hits.length&&isWhiteboardHit(hits[0].object,wbm,wbf)){
     __sound.playSelect();
     focusMeetingRoom();
     try { window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { view: 'kanban', source: 'whiteboard' } })); } catch { /* ignore */ }
     return;
+  }
+  // REGRESI siklus 119: dblclick figur peserta rapat → jalur fokus peserta
+  // (idempoten dgn klik pertama via focusMeetingFigure: follow + saveCam +
+  // ensureHomeRadius) — dulu jatuh ke goal titik generik yang menimpa goal
+  // klik pertama (framing kamera melompat, __saved tak dibuat).
+  if(hits.length){
+    const mf=findMeetingFigureOwner(hits[0].object,__meet?__meet.figures:null);
+    if(mf){ focusMeetingFigure(mf.index,{bubble:false}); return; }
   }
   if(hits.length&&isBoardHit(hits[0].object,window.__projectBoard)){
     __sound.playSelect();
@@ -359,21 +400,27 @@ renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
     if(renderer.domElement.style.cursor==='grabbing')return; // jangan ganggu feedback drag
     hoverRay.setFromCamera(hoverNdc,camera);
     const hh=hoverRay.intersectObjects(collectPickTargets({
-      agentData, board:window.__projectBoard, whiteboard:window.__whiteboard, nexus:nxChar
+      agentData, board:window.__projectBoard, whiteboard:window.__whiteboard, nexus:nxChar,
+      meetingFigures:__meet?__meet.figures:null
     }),true);
     renderer.domElement.style.cursor=hh.length?'pointer':'';
     // highlight visual agent saat hover
     let ha=null;
     let isNxHover=false;
+    // REGRESI siklus 119: figur peserta rapat juga di-hover (ring biru di
+    // kursi rapat via meetingFigureAnchor — dulu figur tak bisa di-hover
+    // sama sekali, kursor & ring mengabaikannya).
+    let isMf=null;
     if(hh.length){
       const p=hh[0].object;
       isNxHover=isNexusHit(p,nxChar);
-      ha=findAgentRoot(p,agentData);
+      isMf=findMeetingFigureOwner(p,__meet?__meet.figures:null);
+      if(!isMf)ha=findAgentRoot(p,agentData);
     }
     hoveredAgent=ha;
     // Posisi ring via hoverRingPos (satu sumber kebenaran dgn blok follow):
     // dulu formula inline duplikat (anchor + Y dihitung 2× — handler & follow).
-    const hpos=hoverRingPos(hoveredAgent,isNxHover,NEXUS_HOVER);
+    const hpos=isMf?meetingFigureAnchor(isMf.figure):hoverRingPos(hoveredAgent,isNxHover,NEXUS_HOVER);
     if(hpos){
       ensureHoverRing();
       hoverRing.position.set(hpos.x,hpos.y,hpos.z);
