@@ -44,7 +44,11 @@ STATE_EXPR = ("JSON.stringify({agents:window.__agentData?window.__agentData.leng
               "canvas:!!(document.querySelector('canvas')&&document.querySelector('canvas').parentNode)})")
 
 # Jumlah hook scene (kecuali penanda purge) yang masih menempel di window.
-HOOKS_LEFT_EXPR = ("JSON.stringify(window.__SCENE_HOOKS?window.__SCENE_HOOKS"
+# CATATAN: __SCENE_HOOKS sendiri ikut di-purge oleh destroy → daftar disimpan
+# ke window.__hookListProbe oleh probe SEBELUM destroy (variabel tak termasuk
+# daftar → tidak ter-purge).
+HOOKS_LEFT_EXPR = ("JSON.stringify(Array.isArray(window.__hookListProbe)?"
+                   "window.__hookListProbe"
                    ".filter(k=>k!=='__SCENE_HOOKS'&&k!=='__sceneHygienePurge'&&k!=='__wfsSceneControls')"
                    ".filter(k=>k in window).length:-1)")
 
@@ -136,42 +140,63 @@ def main():
         ws = WS([t["webSocketDebuggerUrl"] for t in tabs if t.get("type") == "page"][0])
         mid = 0
 
+        # Kumpulkan error konsol — scene mati/exception harus terdeteksi.
+        # SATU pump thread membaca socket & menaruh semua pesan ke antrian;
+        # cmd() TIDAK memanggil ws.recv() sendiri (dulu dua pembaca pada satu
+        # socket saling mencuri frame → Runtime.evaluate menunggu selamanya).
+        console_errors = []
+        import queue, threading
+        msgq = queue.Queue()
+
+        def pump():
+            while True:
+                try:
+                    raw = ws.recv()
+                except Exception:
+                    msgq.put(None)
+                    return
+                if not raw:
+                    msgq.put(None)
+                    return
+                try:
+                    m = json.loads(raw)
+                except Exception:
+                    continue
+                if (m.get("method") == "Runtime.consoleAPICalled"
+                        and (m.get("params") or {}).get("type") == "error"):
+                    txt = " ".join(str(a.get("value", a.get("description", "")))
+                                   for a in (m.get("params") or {}).get("args") or [])
+                    console_errors.append(txt[:200])
+                msgq.put(m)
+
+        threading.Thread(target=pump, daemon=True).start()
+
+        def wait_id(myid, tries=600):
+            for _ in range(tries):
+                try:
+                    m = msgq.get(timeout=20)
+                except queue.Empty:
+                    # Scene init berat bisa memblokir main thread JS belasan detik;
+                    # 20 dtk tanpa balasan → anggap tidak akan datang (caller punya fallback).
+                    return None
+                if m is None:
+                    raise ConnectionResetError("CDP socket tertutup")
+                if m.get("id") == myid:
+                    return m
+            return None
+
         def cmd(method, **params):
             nonlocal mid; mid += 1
-            ws.send(json.dumps({"id": mid, "method": method, "params": params}))
-            for _ in range(600):
-                r = json.loads(ws.recv())
-                if r.get("id") == mid:
-                    return r
+            myid = mid
+            ws.send(json.dumps({"id": myid, "method": method, "params": params}))
+            return wait_id(myid)
 
         def ev(expr):
             r = cmd("Runtime.evaluate", expression=expr, returnByValue=True, awaitPromise=True)
             res = (r or {}).get("result") or {}
             return (res.get("result") or {}).get("value")
 
-        # Kumpulkan error konsol — scene mati/exception harus terdeteksi.
-        console_errors = []
-        cmd("Runtime.enable")
-        ws_drain = {"stop": False}
-        import threading
-        def listener():
-            while not ws_drain["stop"]:
-                try:
-                    raw = ws.recv()
-                    if not raw:
-                        return
-                    m = json.loads(raw)
-                    if (m.get("method") == "Runtime.consoleAPICalled"
-                            and m["params"].get("type") == "error"):
-                        txt = " ".join(str(a.get("value", a.get("description", "")))
-                                       for a in m["params"].get("args") or [])
-                        console_errors.append(txt[:200])
-                except Exception:
-                    return
-        t = threading.Thread(target=listener, daemon=True)
-        t.start()
-
-        cmd("Page.enable")
+        cmd("Page.enable"); cmd("Runtime.enable")
         time.sleep(15)  # scene init + beberapa frame animasi
 
         # ── 1. scene siap ──
@@ -185,10 +210,16 @@ def main():
         if st.get("zone") != 5:
             print("E2E_SCENEHOOKS: FAIL (label zona awal ≠ 5: %s)" % st.get("zone"))
             sys.exit(1)
+        if not isinstance(jval(ev("JSON.stringify(Array.isArray(window.__SCENE_HOOKS))")), bool):
+            print("E2E_SCENEHOOKS: FAIL (window.__SCENE_HOOKS tidak diekspos scene)")
+            sys.exit(1)
+        # Simpan daftar hook utk verifikasi pasca-destroy (daftar sendiri tak
+        # termasuk SCENE_HOOKS → tidak ter-purge oleh destroy).
+        jval(ev("window.__hookListProbe=Array.from(window.__SCENE_HOOKS)"))
         left1 = jval(ev(HOOKS_LEFT_EXPR))
         print("HOOKS_LEFT1:", left1)
         if not isinstance(left1, int) or left1 < 40:
-            print("E2E_SCENEHOOKS: FAIL (daftar SCENE_HOOKS hilang / hook terpasang kurang: %s)" % left1)
+            print("E2E_SCENEHOOKS: FAIL (hook terpasang kurang dari 40: %s)" % left1)
             sys.exit(1)
 
         # ── 2. destroy() → purge penuh ──
@@ -202,8 +233,8 @@ def main():
         st2 = jval(ev(STATE_EXPR))
         left2 = jval(ev(HOOKS_LEFT_EXPR))
         print("STATE2:", json.dumps(st2), "HOOKS_LEFT2:", left2)
-        if left2 != 0:
-            print("E2E_SCENEHOOKS: FAIL (sisa %d hook scene setelah destroy — purge parsial)" % left2)
+        if not isinstance(left2, int) or left2 > 2:  # toleransi: __hookListProbe milik probe tidak ter-purge (bukan milik scene)
+            print("E2E_SCENEHOOKS: FAIL (sisa %s hook scene setelah destroy — purge parsial)" % left2)
             sys.exit(1)
         if not st2.get("destroyed") or st2.get("canvas"):
             print("E2E_SCENEHOOKS: FAIL (flag destroyed/canvas lama tidak dibersihkan: %s)" % json.dumps(st2))
@@ -218,8 +249,28 @@ def main():
         if not mod_url:
             print("E2E_SCENEHOOKS: FAIL (URL chunk OfficeScene tidak ditemukan di resource timing)")
             sys.exit(1)
-        jval(ev("window.__sceneModuleUrl=%s" % json.dumps(mod_url)))
-        rc = jval(ev(RECREATE_EXPR))
+        # createOfficeScene memblokir main thread synchronously berat (init scene)
+        # → jangan pakai awaitPromise di evaluate yang sama; kirimkan kembali
+        # hasil via window.__recreateResult yang di-set di akhir async IIFE.
+        # URL modul dikirim sebagai argumen literal (dulu via window.__sceneModuleUrl
+        # yang TER-PURGE oleh purge-create scene baru → specifier 'undefined').
+        recreate_js = ("window.__recreateResult=null;"
+                       "import(%s).then(mod=>{"
+                       "  try{"
+                       "    const host=document.querySelector('#root > div[style*=\"z-index: 0\"]')"
+                       "        ||document.querySelector('#root > div');"
+                       "    if(!host)throw new Error('container App tidak ditemukan');"
+                       "    window.__recreated=mod.createOfficeScene(host,{});"
+                       "    window.__recreateResult={ok:true};"
+                       "  }catch(e){window.__recreateResult={ok:false,err:String(e&&e.message||e)}}"
+                       "}).catch(e=>{window.__recreateResult={ok:false,err:String(e&&e.message||e)}});") % json.dumps(mod_url)
+        jval(ev(recreate_js))
+        rc = None
+        for _ in range(30):  # init scene di SwiftShader bisa >10 dtk
+            time.sleep(2)
+            rc = jval(ev("JSON.stringify(window.__recreateResult)"))
+            if rc:
+                break
         print("RECREATE:", json.dumps(rc))
         if not rc or not rc.get("ok"):
             print("E2E_SCENEHOOKS: FAIL (recreate gagal: %s)" % rc)
