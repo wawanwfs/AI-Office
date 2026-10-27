@@ -148,9 +148,18 @@ def main():
                 "v.project(c);if(v.z>=1||v.z<-1)return null;"
                 "return {x:(v.x*0.5+0.5)*innerWidth,y:(-v.y*0.5+0.5)*innerHeight};}))") or "null")
             if not pts:
-                log("  (tak ada figur terproyeksi — ulangi)")
-                time.sleep(1)
-                continue
+                if not allow_old:
+                    log("  (tak ada figur terproyeksi — ulangi)")
+                    time.sleep(1)
+                    continue
+                # mode diskriminasi kode lama: proyeksikan kursi rapat dari spec
+                pts = []
+                for dx in (-1.4, 0, 1.4):
+                    for dz in (-1.1, 1.1):
+                        pj = json.loads(ev(proj_expr(8 + dx, 1.05, -3 + dz)) or "null")
+                        if pj:
+                            pts.append(pj)
+            pts = [q for q in pts if q]
             cand = None
             for pj in pts:
                 if not pj:
@@ -175,21 +184,27 @@ def main():
                     button="left", buttons=1, clickCount=cc)
                 cmd("Input.dispatchMouseEvent", type="mouseReleased", x=cand[0], y=cand[1],
                     button="left", buttons=0, clickCount=cc)
-            near = False
+            # Pembeda ganda (siklus 119):
+            #   kode BARU → jalur focusMeetingFigure: r konvergen ≤ 18 (goal r =
+            #   min(radius,16)), sel ring emas agen tampil (seleksi agen di-set),
+            #   __saved ada.
+            #   kode LAMA → klik jatuh ke jalur klik kosong/fokus lain: seleksi
+            #   agen TIDAK pernah di-set (sel false/null) atau r lerp ke r lain.
             sm = {}
-            for _ in range(20):
+            ok_click = False
+            for _ in range(28):
                 time.sleep(0.5)
                 sm = json.loads(ev(
                     "JSON.stringify({r: window.__cam ? window.__cam.sph.radius : -1,"
                     " ty: window.__cam ? window.__cam.tgt.y : -1,"
                     " sv: !!(window.__cam && window.__cam.sph && window.__cam.sph.__saved),"
                     " sel: window.__sceneSelRing ? window.__sceneSelRing.visible : null})") or "{}")
-                r1 = sm.get("r")
-                if isinstance(r1, (int, float)) and r1 < 26:
-                    near = True
+                r1, s1 = sm.get("r"), sm.get("sel")
+                if isinstance(r1, (int, float)) and r1 < 19 and s1 and sm.get("sv"):
+                    ok_click = True
                     break
-            log("  AFTER-CLICK:", json.dumps(sm), "near=", near)
-            if near and sm.get("sv") and sm.get("sel"):
+            log("  AFTER-CLICK:", json.dumps(sm), "ok=", ok_click)
+            if ok_click:
                 log("E2E_MEETPK: OK (r=%.2f tgt.y=%.2f — figur rapat difokus, __saved+seleksi ada)"
                     % (sm["r"], sm.get("ty") or -1))
                 ok = True
