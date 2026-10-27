@@ -28,7 +28,16 @@ def load_default():
 
 DEFAULT_AI = load_default()
 
-app = FastAPI(title="WFS Virtual Office Gateway")
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def lifespan(app):
+    taskengine.recover_interrupted()
+    yield
+
+
+app = FastAPI(title="WFS Virtual Office Gateway", lifespan=lifespan)
 
 # ---------- WFS Software House — persistent state (SQLite) ----------
 import database as sh_db
@@ -330,6 +339,22 @@ async def test_conn(body: TestIn):
 # ---------- TASK ENGINE (100% real) ----------
 import tasks as taskengine
 
+def _container_status(name):
+    if not name:
+        return "missing"
+    try:
+        result = subprocess.run(
+            ['docker', 'inspect', '--format', '{{.State.Status}}', name],
+            capture_output=True, text=True, timeout=3)
+        if result.returncode == 0:
+            return result.stdout.strip() or 'unknown'
+        if 'No such object' in result.stderr or 'No such container' in result.stderr:
+            return 'missing'
+    except (OSError, subprocess.TimeoutExpired):
+        pass
+    return 'unknown'
+
+
 @app.get("/api/projects")
 async def api_projects():
     base = taskengine.list_projects()          # [{id,name,status}]
@@ -347,7 +372,7 @@ async def api_projects():
             port = s.get("preview_port")
             rec["direct_url"] = ("http://127.0.0.1:%s/" % port) if port else None
             rec["container_name"] = s.get("container_name")
-            rec["container_status"] = s.get("status")
+            rec["container_status"] = await asyncio.to_thread(_container_status, s.get("container_name"))
             rec["workspace_path"] = s.get("workspace_path")
         out.append(rec)
     return {"projects": out}
@@ -364,7 +389,7 @@ async def api_new_project(body: dict):
     sandbox = None
     try:
         from docker_sandbox import DockerSandboxManager as SB
-        slug = re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:40] or f"project-{pid}"
+        slug = (re.sub(r"[^a-z0-9]+", "-", name.lower()).strip("-")[:40] or "project") + f"-{pid}"
         SB.scaffold_project(slug, name)
         sandbox = SB.start_container(slug)
         try:
@@ -377,7 +402,7 @@ async def api_new_project(body: dict):
                 "container_name": sandbox.get("container_name"),
                 "preview_port": sandbox.get("port"),
                 "preview_url": sandbox.get("preview_url"),
-                "status": "running", "created_at": time.time(),
+                "status": sandbox.get("status", "unknown"), "created_at": time.time(),
             })
         except Exception as e:
             print("save_project db:", e)
@@ -625,7 +650,6 @@ async def api_tasks(project: int = None):
     return {"tasks": taskengine.list_tasks(project)}
 
 _bg_tasks = set()
-_PAUSED = {"on": False}
 
 class TaskIn(BaseModel):
     title: str
@@ -642,45 +666,94 @@ async def api_add_task(body: TaskIn):
     tid = taskengine.add_task(body.project, title[:200], body.role, (body.prompt or title)[:4000])
     return {"ok": True, "task_id": tid}
 
+def _check_task(tid):
+    task = taskengine.get_task(tid)
+    if not task:
+        raise HTTPException(404, "task not found")
+    try:
+        taskengine.require_launch_approval(task['project'])
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    if task['status'] not in ('pending', 'review', 'failed'):
+        raise HTTPException(409, 'task is not runnable')
+
+
+def _schedule(tids):
+    # Reserve all tasks before returning; rollback reservations on any conflict.
+    claims = {}
+    try:
+        for tid in tids:
+            _check_task(tid)
+            claims[tid] = taskengine.claim_task(tid)
+    except Exception as exc:
+        for tid, claim in claims.items():
+            taskengine.release_task(tid, claim)
+        if isinstance(exc, RuntimeError):
+            raise HTTPException(409, str(exc)) from exc
+        raise
+    for tid, claim in claims.items():
+        async def execute(tid=tid):
+            try:
+                if taskengine.is_paused():
+                    taskengine.set_status(tid, 'pending')
+                    return
+                await taskengine._execute_task(tid)
+            except asyncio.CancelledError:
+                taskengine.set_status(tid, 'pending')
+                raise
+            except Exception as exc:
+                taskengine.set_status(tid, 'failed', result=str(exc))
+        taskengine.set_status(tid, 'assigned')
+        t = asyncio.create_task(execute())
+        _bg_tasks.add(t)
+        def finished(t, tid=tid, claim=claim):
+            if t.cancelled():
+                taskengine.set_status(tid, 'pending')
+            taskengine.release_task(tid, claim)
+            _bg_tasks.discard(t)
+        t.add_done_callback(finished)
+    return tids
+
+
 @app.post("/api/tasks/pause_all")
 async def api_pause_all():
-    """Hentikan semua task yang sedang jalan -> kembali pending, dan blok run baru sampai resume."""
-    _PAUSED["on"] = True
-    n = 0
-    for t in list(_bg_tasks):
-        if not t.done():
-            t.cancel(); n += 1
-    c = taskengine.db()
-    cur = c.execute("UPDATE tasks SET status='pending' WHERE status IN ('running','assigned')")
-    reset = cur.rowcount
-    c.commit(); c.close()
-    return {"ok": True, "paused": True, "cancelled": n, "reset": reset}
+    taskengine.set_paused(True)
+    active = [t for t in _bg_tasks if not t.done()]
+    for t in active:
+        t.cancel()
+    await asyncio.gather(*active, return_exceptions=True)
+    reset = taskengine.recover_interrupted()
+    return {"ok": True, "paused": True, "cancelled": len(active), "reset": reset}
+
 
 @app.get("/api/tasks/paused")
 async def api_paused():
-    return {"paused": _PAUSED["on"]}
+    return {"paused": taskengine.is_paused()}
+
 
 @app.post("/api/tasks/resume_all")
 async def api_resume_all(body: dict = None):
-    """Lepas pause lalu jalankan semua task pending/review/failed."""
-    import asyncio
-    _PAUSED["on"] = False
-    pid = (body or {}).get("project")
-    ts = [t["id"] for t in taskengine.list_tasks(pid) if t["status"] in ("pending","review","failed")]
+    taskengine.recover_interrupted()
+    ts = [t['id'] for t in taskengine.list_tasks((body or {}).get('project'))
+          if t['status'] in ('pending', 'review', 'failed')]
+    # A rejected resume must not clear the persistent pause.
     for tid in ts:
-        t = asyncio.create_task(taskengine.run_task(tid))
-        _bg_tasks.add(t)
-        t.add_done_callback(_bg_tasks.discard)
+        _check_task(tid)
+    was_paused = taskengine.is_paused()
+    taskengine.set_paused(False)
+    try:
+        _schedule(ts)
+    except Exception:
+        taskengine.set_paused(was_paused)
+        raise
     return {"ok": True, "paused": False, "started": ts}
+
 
 @app.post("/api/tasks/{tid}/run")
 async def api_run_task(tid: int):
-    import asyncio
-    if _PAUSED["on"]:
-        raise HTTPException(409, "paused")
-    t = asyncio.create_task(taskengine.run_task(tid))
-    _bg_tasks.add(t)
-    t.add_done_callback(_bg_tasks.discard)
+    if taskengine.is_paused():
+        raise HTTPException(409, 'paused')
+    _schedule([tid])
     return {"ok": True, "started": tid}
 
 @app.get("/api/system/resources")
@@ -753,15 +826,12 @@ async def sandbox_test(agent_id: str):
 
 @app.post("/api/tasks/run_all")
 async def api_run_all(body: dict):
-    import asyncio
-    if _PAUSED["on"]:
+    if taskengine.is_paused():
         raise HTTPException(409, "paused")
-    pid = body.get("project")
-    ts = [t["id"] for t in taskengine.list_tasks(pid) if t["status"] in ("pending","review","failed")]
-    for tid in ts:
-        t = asyncio.create_task(taskengine.run_task(tid))
-        _bg_tasks.add(t)
-        t.add_done_callback(_bg_tasks.discard)
+    taskengine.recover_interrupted()
+    ts = [t['id'] for t in taskengine.list_tasks(body.get('project'))
+          if t['status'] in ('pending', 'review', 'failed')]
+    _schedule(ts)
     return {"ok": True, "started": ts}
 
 @app.post("/api/chat")

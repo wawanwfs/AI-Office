@@ -240,15 +240,108 @@ def write_output_files(task_id, output):
         return [str(p.relative_to(REPO))]
     return written
 
+def require_launch_approval(project):
+    import database
+    from contextlib import closing
+    with closing(database.get_db()) as conn:
+        row = conn.execute(
+            "SELECT status FROM approvals WHERE project_id=? AND action_type='project_launch' "
+            "ORDER BY created_at DESC, rowid DESC LIMIT 1", (str(project),)).fetchone()
+    if not row or row[0] != 'approved':
+        raise PermissionError('project_launch approval required')
+
+
+def is_paused():
+    c = db()
+    c.execute("CREATE TABLE IF NOT EXISTS engine_state (key TEXT PRIMARY KEY, value INTEGER)")
+    row = c.execute("SELECT value FROM engine_state WHERE key='paused'").fetchone()
+    c.close()
+    return bool(row and row[0])
+
+
+def set_paused(paused):
+    c = db()
+    c.execute("CREATE TABLE IF NOT EXISTS engine_state (key TEXT PRIMARY KEY, value INTEGER)")
+    c.execute("INSERT OR REPLACE INTO engine_state VALUES ('paused', ?)", (int(paused),))
+    c.commit(); c.close()
+
+
+def claim_task(tid):
+    """OS lock survives concurrent processes, and is released on process death."""
+    import fcntl
+    lock = open(f'{DB}.{tid}.lock', 'a')
+    try:
+        fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+    except BlockingIOError:
+        lock.close()
+        raise RuntimeError('already running')
+    return lock
+
+
+def release_task(tid, claim):
+    claim.close()
+
+
+def recover_interrupted():
+    recovered = 0
+    for task in list_tasks():
+        if task['status'] not in ('running', 'assigned'):
+            continue
+        try:
+            claim = claim_task(task['id'])
+        except RuntimeError:
+            continue
+        try:
+            if get_task(task['id'])['status'] in ('running', 'assigned'):
+                set_status(task['id'], 'pending')
+                recovered += 1
+        finally:
+            release_task(task['id'], claim)
+    return recovered
+
+
 async def run_task(tid, attempt_no=0):
+    import asyncio
     t = get_task(tid)
-    if not t: return
+    if not t:
+        raise LookupError('task not found')
+    require_launch_approval(t['project'])
+    if is_paused():
+        raise RuntimeError('paused')
+    claim = claim_task(tid)
+    try:
+        if get_task(tid)['status'] not in ('pending', 'review', 'failed'):
+            raise RuntimeError('task is not runnable')
+        await _execute_task(tid, attempt_no)
+    except asyncio.CancelledError:
+        set_status(tid, 'pending')
+        raise
+    finally:
+        release_task(tid, claim)
+
+
+async def _execution_llm(tid, *args):
+    import asyncio
+    if is_paused():
+        raise asyncio.CancelledError()
+    require_launch_approval(get_task(tid)['project'])
+    result = await call_llm(*args)
+    if is_paused():
+        raise asyncio.CancelledError()
+    require_launch_approval(get_task(tid)['project'])
+    return result
+
+
+async def _execute_task(tid, attempt_no=0):
+    import asyncio
+    t = get_task(tid)
+    require_launch_approval(t['project'])
     set_status(tid, "running")
     try:
         # Multi-call: minta daftar path dulu, lalu 1 call per file (muat max_tokens)
         import re as _rex
         all_files = []
-        plan_out = await call_llm(t["agent_id"],
+        plan_out = await _execution_llm(tid, t["agent_id"],
             'Kamu engineer. Dari brief berikut, balas HANYA JSON: {"paths":["app/x.py","..."]} daftar 4-6 path file yang harus dibuat. Tanpa teks lain.',
             t["prompt"])
         paths = []
@@ -258,14 +351,14 @@ async def run_task(tid, attempt_no=0):
         except Exception:
             paths = []
         if not paths:
-            out = await call_llm(t["agent_id"], ROLE_SYS.get(t["role"], ROLE_SYS["backend"]), t["prompt"])
+            out = await _execution_llm(tid, t["agent_id"], ROLE_SYS.get(t["role"], ROLE_SYS["backend"]), t["prompt"])
             files = write_json_files(tid, out) or write_output_files(tid, out)
             result_out = out
         else:
             role_sys = ROLE_SYS.get(t["role"], ROLE_SYS["backend"])
             for p in paths:
                 try:
-                    fout = await call_llm(t["agent_id"],
+                    fout = await _execution_llm(tid, t["agent_id"],
                         'Balas HANYA JSON: {"path":"%s","code":"<kode lengkap>"}. Kode lengkap siap jalan. Tanpa teks lain.' % p,
                         t["prompt"])
                     fl = write_json_files(tid, fout)
@@ -292,7 +385,7 @@ async def run_task(tid, attempt_no=0):
                     test_evidence = f"\n\nHASIL TEST SANDBOX (ok={tr['ok']}):\n{tr['output'][:1500]}"
             except Exception:
                 pass
-            review = await call_llm("qa1",
+            review = await _execution_llm(tid, "qa1",
                 ROLE_SYS["qa"],
                 f"Review task ini: '{t['title']}'. Output agent:\n\n{result_out[:6000]}{test_evidence}\n\nNilai layak/pass atau perlu revisi.")
             import re as _re
@@ -302,7 +395,7 @@ async def run_task(tid, attempt_no=0):
                        review=review[:3000])
             if verdict != "pass" and attempt_no < 1:
                 await asyncio.sleep(2)
-                await run_task(tid, attempt_no + 1)
+                await _execute_task(tid, attempt_no + 1)
                 return
         else:
             set_status(tid, "done")
