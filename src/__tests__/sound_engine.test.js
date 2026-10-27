@@ -346,6 +346,17 @@ describe('sound engine runtime', () => {
     expect(snap.state).not.toBe('running');
   });
 
+  it('masterGainNode: null sebelum ensure, node aktif setelah ensure, null lagi setelah dispose', () => {
+    const { eng } = makeEngine();
+    expect(eng.masterGainNode()).toBeNull(); // belum started
+    eng.ensure();
+    const mg = eng.masterGainNode();
+    expect(mg).not.toBeNull();
+    expect(mg.gain.value).toBe(1); // default masterGainValue(unmuted, vol 1)
+    eng.dispose();
+    expect(eng.masterGainNode()).toBeNull(); // instrumentasi tak bocor ke state lama
+  });
+
   it('resume/suspend/state passthrough untuk visibilitychange (tab hidden hemat CPU audio)', () => {
     const { eng, ctx } = makeEngine('suspended');
     eng.ensure();

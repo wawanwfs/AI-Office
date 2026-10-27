@@ -511,5 +511,8 @@ export function createSoundEngine({
     isMuted: () => muted,
     masterGainValue: () => (masterGain ? masterGain.gain.value : masterGainValue(muted, volume)),
     isStarted: () => started,
+    // Akses node masterGain utk instrumentasi E2E (tap AnalyserNode, verifikasi
+    // sinyal non-silent di browser nyata) — null sebelum ensure()/setelah dispose().
+    masterGainNode: () => masterGain,
   };
 }
