@@ -14,8 +14,8 @@ Langkah probe (mouse NYATA via CDP):
   1. __setTime(605) → window rapat 10:00–10:30 → peserta tampil di kursi.
   2. __focusMeetingRoom → klik figur peserta (proyeksi __meetFigs) →
      focusMeetingFigure: goal follow aktif + __saved + sel ring.
-  3. __setTime(845) → window BERGANTI (peserta baru) → sampel jarak
-     kamera-target vs anchor kursi agen terpilih BARU.
+  3. __setTime(700) → rapat USAI → kamera ikut pulang ke meja agen terpilih
+     (kode baru dist<1.2; kode lama: tgt beku di kursi, dist≥2.5).
 Pemakaian: uv run scripts/e2e_meeting_follow.py
 """
 import subprocess, os, time, urllib.request, json, socket, struct, base64, sys
@@ -130,13 +130,16 @@ def main():
                 if isinstance(rv, (int, float)) and rv < 14.5:
                     break
 
-            # ── 3. klik figur peserta via proyeksi (__meetFigs) ──
+            # ── 3. proyeksikan figur; kandidat = klik-able & home JAUH dari kursi ──
             pts = json.loads(ev(
-                "JSON.stringify((window.__meetFigs||[]).map(f=>{"
+                "JSON.stringify((window.__meetFigs||[]).map((f,i)=>{"
                 "if(!f.visible)return null;const c=window.__camCam;"
                 "const v=new (c.position.constructor)(f.position.x,f.position.y+1.05,f.position.z);"
                 "v.project(c);if(v.z>=1||v.z<-1)return null;"
-                "return {x:(v.x*0.5+0.5)*innerWidth,y:(-v.y*0.5+0.5)*innerHeight};}))") or "null")
+                "const ad=window.__agentData[i];"
+                "return {i:i,x:(v.x*0.5+0.5)*innerWidth,y:(-v.y*0.5+0.5)*innerHeight,"
+                "sx:f.position.x,sz:f.position.z,"
+                "hx:ad&&ad.home?ad.home.x:null,hz:ad&&ad.home?ad.home.z:null};}))") or "null")
             cand = None
             for pj in (pts or []):
                 if not pj:
@@ -144,19 +147,24 @@ def main():
                 x, y = int(pj["x"]), int(pj["y"])
                 if not (0 <= x <= 1365 and 0 <= y <= 767):
                     continue
+                if pj.get("hx") is None:
+                    continue
+                seat_home = ((pj["sx"] - pj["hx"]) ** 2 + (pj["sz"] - pj["hz"]) ** 2) ** 0.5
+                if seat_home < 2.5:
+                    continue  # kursi & meja terlalu dekat — pembeda lemah
                 el = json.loads(ev(
                     "JSON.stringify((document.elementFromPoint(%d,%d)||{}).tagName)" % (x, y)) or '"?"')
-                log("  CAND px=(%d,%d) el=%s" % (x, y, el))
+                log("  CAND fig#%s px=(%d,%d) el=%s seat_home=%.2f" % (pj["i"], x, y, el, seat_home))
                 if el == "CANVAS":
-                    cand = (x, y)
+                    cand = pj
                     break
             if not cand:
-                log("  (semua kandidat tertutup UI React — ulangi)")
+                log("  (tak ada kandidat klik-able dgn meja jauh — ulangi)")
                 time.sleep(1)
                 continue
-            cmd("Input.dispatchMouseEvent", type="mousePressed", x=cand[0], y=cand[1],
+            cmd("Input.dispatchMouseEvent", type="mousePressed", x=int(cand["x"]), y=int(cand["y"]),
                 button="left", buttons=1, clickCount=1)
-            cmd("Input.dispatchMouseEvent", type="mouseReleased", x=cand[0], y=cand[1],
+            cmd("Input.dispatchMouseEvent", type="mouseReleased", x=int(cand["x"]), y=int(cand["y"]),
                 button="left", buttons=0, clickCount=1)
 
             # konfirmasi jalur 119: kamera mendekat + seleksi + __saved
@@ -182,40 +190,33 @@ def main():
                 time.sleep(1)
                 continue
 
-            # ── 4. pembeda siklus 120: GANTI WINDOW rapat → follow ikut kursi baru ──
-            ev("window.__setTime(845)")  # window 2 (14:00–14:30): peserta & kursi berbeda
-            time.sleep(1.5)
-            mt2 = json.loads(ev("JSON.stringify(window.__meet ? window.__meet() : {})") or "{}")
-            # sampel: tgt harus mendekat ke anchor kursi agen terpilih (selectedIdx)
+            # ── 4. PEMBEDA siklus 120: rapat USAI → kamera ikut PULANG ke meja ──
+            #     kode baru: follow root → tgt konvergen ke home agen terpilih.
+            #     kode lama (goal statis 119): tgt beku di kursi rapat
+            #     (dist kursi→meja ≥ 2.5 oleh pemilihan kandidat).
+            ev("window.__setTime(700)")
             dist = None
-            for _ in range(24):
+            fin = {}
+            for _ in range(28):
                 time.sleep(0.5)
-                d = json.loads(ev(
-                    "JSON.stringify((()=>{const i=window.__cam&&window.__sceneSelRing?-1:-1;"
-                    "const si=(window.__agentData&&window.__sceneSelRing)?"
-                    "(function(){try{return (window.__sceneSelRing&&window.__sceneSelRing.visible)?(window.__dbgSelIdx!=null?window.__dbgSelIdx:(function(){const f=(window.__meetFigs||[]).filter(function(x){return x.visible});return f.length?f.length:-1})():null):null}catch(e){return null}})():null;"
-                    "if(!window.__cam)return null;"
-                    "const t=window.__cam.tgt;const s=window.__sceneSelRing;"
-                    "if(!s||!s.visible)return null;"
-                    "return {dx:t.x-s.position.x, dz:t.z-s.position.z};})())") or "null")
-                if d is None:
-                    continue
-                dist = (d["dx"] ** 2 + d["dz"] ** 2) ** 0.5
-                if dist < 0.35:
+                fin = json.loads(ev(
+                    "JSON.stringify({meet: window.__meet ? window.__meet() : null,"
+                    " tx: window.__cam ? window.__cam.tgt.x : null,"
+                    " tz: window.__cam ? window.__cam.tgt.z : null})") or "{}")
+                if not fin.get("meet") or fin["meet"].get("active"):
+                    continue  # rapat belum benar-benar usai
+                d = ((fin["tx"] - cand["hx"]) ** 2 + (fin["tz"] - cand["hz"]) ** 2) ** 0.5
+                dist = d
+                if d < 1.2:
                     break
-            # pembeda akhir: posisi ring (kursi agen terpilih window 2) vs tgt
-            fin = json.loads(ev(
-                "JSON.stringify({ring: window.__sceneSelRing ? {x: window.__sceneSelRing.position.x, z: window.__sceneSelRing.position.z} : null,"
-                " tx: window.__cam ? window.__cam.tgt.x : null, tz: window.__cam ? window.__cam.tgt.z : null})") or "{}")
-            log("  WIN2: meet=%s dist=%.3f fin=%s" % (json.dumps(mt2), dist if dist is not None else -1, json.dumps(fin)))
-            # Fokus mengikuti kursi: sel ring (kursi terpilih) & tgt konvergen
-            # (goal follow anchor kursi). Bug lama: goal statis → tgt beku di
-            # kursi window-1 (jarak besar dari ring window-2).
-            if dist is not None and dist < 0.35 and mt2.get("active"):
-                log("E2E_MEETFL: OK (follow anchor kursi — window ganti ikut kursi baru, dist=%.3f)" % dist)
+            log("  END: meet=%s tgt=(%.2f,%.2f) home=(%.2f,%.2f) dist=%.3f"
+                % (json.dumps(fin.get("meet")), fin.get("tx") or -9, fin.get("tz") or -9,
+                   cand["hx"], cand["hz"], dist if dist is not None else -1))
+            if dist is not None and dist < 1.2:
+                log("E2E_MEETFL: OK (follow root — rapat usai kamera pulang ke meja, dist=%.3f)" % dist)
                 ok = True
                 break
-            log("  (follow tidak mengikuti kursi baru — ulangi)")
+            log("  (kamera tidak mengikuti pulang — ulangi)")
             ev("window.__cam&&(window.__cam.sph.radius=42.5,window.__cam.upd())")
             ev("window.__sceneSelRing&&(window.__sceneSelRing.visible=false)")
             time.sleep(1)
