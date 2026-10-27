@@ -2,14 +2,35 @@
 // Diekstrak dari blok inline di OfficeScene.animate() agar logika lerp/follow/
 // reset dapat diuji tanpa renderer.
 
-// Perbarui goal follow: target kamera mengikuti posisi agent saat ini
-// (walker visible → posisi walker; else posisi home), dan transisi ke
-// mode reset saat agent offsite.
-// return: goal baru (objek sama, dimutasi t.set) atau goal reset baru.
-export function updateFollowGoal(goal, homeRadius, radiusFallback, homeT = { x: 0, y: 1.8, z: 0 }) {
+// Anchor follow goal utk satu agen: peserta RAPAT (figAnchor terisi — kursi
+// rapat, di-resolve per-frame dari figur) MENANG atas walker/home; agen biasa
+// → mirror eksak formula updateFollowGoal (walker visible → posisi walker;
+// else home), +1.5 (tinggi mata). Null-safe: tanpa figAnchor & tanpa
+// walker/home valid (mis. follow {meetIdx} dgn rapat sudah usai DAN root
+// tak tersedia) → null — pemanggil mempertahankan goal lama.
+export function followAnchor(a, figAnchor) {
+  if (figAnchor) return figAnchor;
+  if (!a) return null;
+  if (a.walker && a.walker.visible) {
+    const p = a.walker.position;
+    if (!p) return null;
+    return { x: p.x, y: (p.y || 0) + 1.5, z: p.z };
+  }
+  const h = a.home;
+  if (!h) return null;
+  return { x: h.x, y: (h.y || 0) + 1.5, z: h.z };
+}
+
+// Perbarui goal follow: target kamera mengikuti posisi agen saat ini.
+// figAnchor (opsional): anchor kursi rapat peserta yang di-follow —
+// OfficeScene resolve dari figur tiap frame (bisa HILANG saat rapat usai →
+// jatuh ke home meja agen via follow.root). Return: goal baru (objek sama,
+// dimutasi t.set) atau goal reset baru.
+export function updateFollowGoal(goal, homeRadius, radiusFallback, homeT = { x: 0, y: 1.8, z: 0 }, figAnchor = null) {
   const f = goal.follow;
-  const fp = f.walker && f.walker.visible ? f.walker.position : { x: f.home.x, y: f.home.y || 0, z: f.home.z };
-  goal.t.set(fp.x, (fp.y || 0) + 1.5, fp.z);
+  const fp = followAnchor(f, figAnchor);
+  if (!fp) return goal; // tidak ada anchor valid → pertahankan goal (jangan merusak tgt)
+  goal.t.set(fp.x, fp.y, fp.z);
   if (f.state === 'offsite') {
     return resetFocusGoal(homeT, homeRadius, radiusFallback);
   }
