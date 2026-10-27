@@ -34,6 +34,7 @@ import { advanceSimClock, setSimManual, SIM_SEC_PER_MIN as __SIM_SPM, MANUAL_RES
 import { simMinutesToClockSeconds } from './parts/clock_units.js';
 import { createSoundEngine } from './parts/sound_engine.js';
 import { installAudioWake } from './parts/audio_wake.js';
+import { SCENE_HOOKS, purgeSceneHooks } from './parts/scene_hooks.js';
 import { createProjectBoard } from './parts/projectboard.js';
 import { createBookshelf } from './parts/bookshelf.js';
 import { createReception } from './parts/reception.js';
@@ -65,6 +66,11 @@ export function createOfficeScene(container, callbacks = {}) {
   // scene baru dibuat → flag destroy scene LAMA dicabut; tanpa ini remount/hot-reload
   // membuat scene baru dengan audio mati permanen (__ensureAudio selalu return early).
   window.__officeSceneDestroyed = false;
+  // Siklus 123: sisa hook scene LAMA yang belum ter-purge (remount/HMR cepat,
+  // destroy terlewat) direset di sini — tanpa ini registri zona (__zoneLabels/
+  // __zoneBase) DIPAKAI ULANG scene baru: createZones push label zona tambahan
+  // ke array lama → label zona duplikat & anti-tumpuk memproses sprite mati.
+  purgeSceneHooks(window, SCENE_HOOKS);
   const { onTimeUpdate, onStatusUpdate, onMeetingChange, onSelectAgent } = callbacks;
 
 // ═══════════════════════════════════════════════════
@@ -118,7 +124,8 @@ const __prm=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):nul
 let __userRot=null;try{const __v=localStorage.getItem('wfs_autorot');if(__v==='0')__userRot=false;else if(__v==='1')__userRot=true}catch{/* abaikan */}
 const autoRotDefault=()=>__userRot!==null?__userRot:(__prm?!__prm.matches:true);
 let autoRot=autoRotDefault(),autoTmr;
-__prm&&__prm.addEventListener&&__prm.addEventListener('change',e=>{if(__userRot===null)autoRot=!e.matches});
+const __prmListener=(e)=>{if(__userRot===null)autoRot=!e.matches}; // bernama: destroy() bisa melepas (siklus 123)
+__prm&&__prm.addEventListener&&__prm.addEventListener('change',__prmListener);
 let focusGoal=null;const HOME_TGT=new THREE.Vector3(0,1.4,0.3);let homeRadius=null;let nxChar=null,nxAgent=null;
 function updCam(){const p=Math.max(.18,Math.min(Math.PI/2.3,sph.phi));sph.phi=p;camera.position.set(sph.radius*Math.sin(p)*Math.sin(sph.theta)+tgt.x,sph.radius*Math.cos(p)+tgt.y,sph.radius*Math.sin(p)*Math.cos(sph.theta)+tgt.z);camera.lookAt(tgt)}
 const __vo=()=>{const w=Math.max(1,container.clientWidth||1),h=Math.max(1,container.clientHeight||1);const vo=getViewOffsetConfig(w,h);if(vo.enabled)camera.setViewOffset(vo.fullWidth,vo.fullHeight,vo.offsetX,vo.offsetY,vo.width,vo.height);else camera.clearViewOffset()};__vo();
@@ -2140,15 +2147,26 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       try { __shift && __shift.dispose && __shift.dispose() } catch{/* abaikan */}
       // Audio: engine menutup AudioContext scene lama (mencegah MaxAudioContextsExceeded)
       try { __sound.dispose() } catch{/* abaikan */}
-      delete window.__officeSound;
-      delete window.__toggleNeon;
-      delete window.__sceneSelRing;
-      delete window.__focusTeam;
-      delete window.__focusAgent;
-      delete window.__focusMeetingRoom;
-      delete window.__whiteboard;
-      delete window.__openTaskBoard;
-      if(renderer){renderer.dispose();container.removeChild(renderer.domElement);}
+      // Siklus 123: SEMUA hook window milik scene di-purge via satu daftar
+      // (parts/scene_hooks.js). Dulu hanya 10 di antara ±45 yang dihapus →
+      // sisa hook menunjuk graph scene mati (heap terkunci; SysMeter membaca
+      // hitungan agen basi; probe E2E bisa membaca scene lama yang seharusnya gugur).
+      purgeSceneHooks(window, SCENE_HOOKS);
+      window.__sceneHygienePurge = true; // jejak debug/e2e: purge destroy sudah jalan
+      // Timer interaksi yang masih pending saat destroy (pointerup >6 dtk → auto-rotate;
+      // pointermove throttle 80 ms → hover) tidak boleh menembak ke scene mati.
+      clearTimeout(autoTmr);
+      if(hoverTmr){clearTimeout(hoverTmr);hoverTmr=null;}
+      // Listener preferensi OS: bila dipasang, scene mati tidak boleh ikut
+      // membalik auto-rotate scene baru saat user mengganti reduced-motion.
+      if(__prm&&__prm.removeEventListener)try{__prm.removeEventListener('change',__prmListener)}catch{/* abaikan */}
+      if(renderer){
+        // Siklus 123: paksa rilis konteks WebGL SEBELUM dispose — dulu hanya
+        // dispose(): VRAM (tekstur/buffer GPU) menunggu GC browser, di display
+        // kiosk remount berulang menumpuk konteks hingga batas 16/ke-halaman.
+        try{renderer.forceContextLoss()}catch{/* abaikan */}
+        renderer.dispose();container.removeChild(renderer.domElement);
+      }
     }
   };
   window.__focusTeam = (k) => sceneControls.focusTeam(k);
