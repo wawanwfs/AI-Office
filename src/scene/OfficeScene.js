@@ -35,6 +35,7 @@ import { simMinutesToClockSeconds } from './parts/clock_units.js';
 import { createSoundEngine } from './parts/sound_engine.js';
 import { installAudioWake } from './parts/audio_wake.js';
 import { SCENE_HOOKS, purgeSceneHooks } from './parts/scene_hooks.js';
+import { disposeSceneGraph } from './parts/scene_dispose.js';
 import { createProjectBoard } from './parts/projectboard.js';
 import { createBookshelf } from './parts/bookshelf.js';
 import { createReception } from './parts/reception.js';
@@ -2154,6 +2155,14 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       // hitungan agen basi; probe E2E bisa membaca scene lama yang seharusnya gugur).
       purgeSceneHooks(window, SCENE_HOOKS);
       window.__sceneHygienePurge = true; // jejak debug/e2e: purge destroy sudah jalan
+      // Siklus 124: graph scene ikut di-dispose (geometri/material/tekstur) —
+      // dulu hanya konteks GPU yang dilepas (forceContextLoss, siklus 123);
+      // typed-array atribut & CanvasTexture tetap hidup di JS heap selama
+      // referensi ada. Dispose eksplisit = pelepasan deterministik tanpa GC
+      // (display kiosk remount berulang) + angka terukur utk probe E2E.
+      // Purge hook dulu → disposers tidak memicu referensi scene baru.
+      const __dg = disposeSceneGraph(office);
+      window.__lastSceneDispose = __dg; // jejak debug/e2e: hitungan sumber daya dibuang
       // Timer interaksi yang masih pending saat destroy (pointerup >6 dtk → auto-rotate;
       // pointermove throttle 80 ms → hover) tidak boleh menembak ke scene mati.
       clearTimeout(autoTmr);
