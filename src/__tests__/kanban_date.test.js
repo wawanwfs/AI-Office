@@ -259,6 +259,19 @@ describe('kanban_date.js', () => {
         const dateObj = new Date(2026, 9, 20, 15, 0);
         expect(parseDateInputToTimestamp(dateObj, false)).toBe(new Date(2026, 9, 20, 0, 0, 0, 0).getTime());
       });
+
+      it('menolak tanggal YMD mustahil (bulan/hari melompat) alih-alih rollover', () => {
+        expect(parseDateInputToTimestamp('2026-13-01')).toBeNull(); // bulan 13
+        expect(parseDateInputToTimestamp('2026-00-10')).toBeNull(); // bulan 0
+        expect(parseDateInputToTimestamp('2026-02-30')).toBeNull(); // Feb 30
+        expect(parseDateInputToTimestamp('2026-04-31')).toBeNull(); // Apr 31
+        expect(parseDateInputToTimestamp('2026-10-32')).toBeNull(); // hari 32
+        expect(parseDateInputToTimestamp('2026-10-00')).toBeNull(); // hari 0
+        // kasus batas sah tetap diterima
+        expect(parseDateInputToTimestamp('2026-02-28')).not.toBeNull();
+        expect(parseDateInputToTimestamp('2024-02-29')).not.toBeNull(); // kabisat
+        expect(parseDateInputToTimestamp('2026-02-29')).toBeNull(); // bukan kabisat
+      });
     });
 
     describe('normalizeCustomDateRange', () => {

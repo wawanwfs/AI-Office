@@ -95,9 +95,15 @@ export function parseDateInputToTimestamp(input, isEndOfDay = false) {
     const ymdMatch = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(s);
     if (ymdMatch) {
       const y = parseInt(ymdMatch[1], 10);
-      const m = parseInt(ymdMatch[2], 10) - 1;
+      const m = parseInt(ymdMatch[2], 10); // 1..12
       const day = parseInt(ymdMatch[3], 10);
-      const d = new Date(y, m, day);
+      // Validasi ketat: bulan 1..12 dan hari dalam batas bulan itu. Tanpa ini
+      // '2026-13-01' diam-diam melompat ke Jan 2027 dan '2026-02-30' ke Mar
+      // (new Date rollover), sehingga rentang kustom jadi salah tapi tampak valid.
+      if (m < 1 || m > 12) return null;
+      const daysInMonth = new Date(y, m, 0).getDate();
+      if (!Number.isInteger(day) || day < 1 || day > daysInMonth) return null;
+      const d = new Date(y, m - 1, day);
       if (isNaN(d.getTime())) return null;
       if (isEndOfDay) {
         d.setHours(23, 59, 59, 999);
