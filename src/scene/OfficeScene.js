@@ -48,7 +48,7 @@ import { createTerraces } from './parts/terraces.js';
 import { chatPhrases, COLLAB_PAIRS, pickCollab, clampBubbleText, LINE_SEC, autoTalkDelay, autoTalkText } from './parts/dialog.js';
 import { agentIdMap, buildRunningByAgent } from './parts/running_tasks.js';
 import { BADGE_COLORS, statusPollActions } from './parts/status_poll.js';
-import { updateBubbles as updateBubblesPure } from './parts/bubbles.js';
+import { updateBubbles as updateBubblesPure, disposeBubble } from './parts/bubbles.js';
 import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canvas.js';
 import { drawTvDashboard } from './parts/tv_canvas.js';
 import { looksOf } from './parts/character_looks.js';
@@ -1101,6 +1101,8 @@ setTimeout(()=>{
 },1200);
 
   window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
+window.__renderer=renderer; // debug/e2e: info.memory.textures/geometries (probe kebocoran tekstur)
+window.__spawnBubble=(x,y,z,text,color,anchor)=>createBubble(x,y,z,text,color,anchor); // debug/e2e probe kebocoran (jalur createBubble asli)
   // Badge status real-time: poll gateway tiap 20s, warnai badge dada sesuai status task
   const __intervals=[];
   const __timeouts=[];
@@ -1432,7 +1434,9 @@ function createBubble(x,y,z,text,color,anchor){
     const samePos=Math.hypot(b.sprite.position.x-x,b.sprite.position.z-z)<1.2;
     if(sameAgent||samePos){
       office.remove(b.sprite);
-      b.sprite.material.dispose();
+      // Siklus 122: map tekstur ikut dibuang (dulu hanya material.dispose →
+      // CanvasTexture 360×76 bocor di VRAM selamanya).
+      disposeBubble(b);
       chatBubbles.splice(i,1);
     }
   }
@@ -1441,7 +1445,7 @@ function createBubble(x,y,z,text,color,anchor){
   while(chatBubbles.length >= MAX_BUBBLES){
     const old=chatBubbles.shift();
     office.remove(old.sprite);
-    old.sprite.material.dispose();
+    disposeBubble(old); // siklus 122: tekstur ikut dibuang (dulu bocor)
   }
   const bc=document.createElement('canvas');
   bc.width=BUBBLE_W;bc.height=BUBBLE_H;
@@ -1506,7 +1510,7 @@ let bubbleAcc = 0; // akumulasi dt antar tick bubble (throttle ~20×/dtk)
 function updateBubbles(delta){
   bubbleAcc += delta;
   if (!shouldUpdateBubbles(frame)) return;
-  updateBubblesPure(chatBubbles, bubbleAcc, { remove: (b)=>{ office.remove(b.sprite); b.sprite.material.dispose(); } });
+  updateBubblesPure(chatBubbles, bubbleAcc, { remove: (b)=>{ office.remove(b.sprite); disposeBubble(b); } });
   bubbleAcc = 0;
 }
 

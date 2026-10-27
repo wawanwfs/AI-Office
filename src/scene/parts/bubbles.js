@@ -8,6 +8,20 @@
 // saat frame drop. Diekstrak murni agar bisa di-unit-test.
 const BUBBLE_SMOOTH_RATE = 10; // 1/dtk — konvergensi ±0.3 dtk, tanpa snap
 
+// Buang resource GPU/VRAM bubble yang dihapus: map tekstur (CanvasTexture)
+// SEBELUM material — dulu hanya material.dispose() → tekstur 360×76 bocor
+// di VRAM selamanya (autoTalk ~8 dtk + chat pasangan + klik papan; kantor
+// display jalan berhari-hari menumpuk ribuan tekstur mati). Sprite tetap
+// dilepas dari scene oleh pemanggil; di sini cukup resource-nya.
+// Null-safe: material/map bisa sudah di-dispose pihak lain atau tak ada.
+export function disposeBubble(b) {
+  const m = b && b.sprite && b.sprite.material;
+  if (m) {
+    if (m.map && typeof m.map.dispose === 'function') m.map.dispose();
+    if (typeof m.dispose === 'function') m.dispose();
+  }
+}
+
 export function updateBubbles(bubbles, delta, { remove }){
   // Guard anti-poisoning (konsisten dgn pola modul lain): timestep non-finite
   // (NaN/±Infinity) TIDAK boleh menulari bubble — Math.exp(NaN)=NaN → posisi/

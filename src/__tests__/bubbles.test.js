@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest';
-import { updateBubbles } from '../scene/parts/bubbles.js';
+import { updateBubbles, disposeBubble } from '../scene/parts/bubbles.js';
 
 function mkBubble({ life = 3.5, startY = 2, anchor = null, y0 = 2 } = {}) {
   return { life, startY, anchor, sprite: { position: { x: 0, y: y0, z: 0 }, material: { opacity: 0 } } };
@@ -138,5 +138,54 @@ describe('updateBubbles', () => {
       expect(b.sprite.position.y).toBeCloseTo(4 + (3 - 3.5) * .12); // float-up dari startY
       expect(Number.isFinite(b.sprite.material.opacity)).toBe(true);
     }
+  });
+});
+
+describe('disposeBubble (siklus 122 — anti kebocoran tekstur GPU)', () => {
+  const mkTex = () => {
+    let n = 0;
+    return { map: { dispose: () => { n++; } }, count: () => n };
+  };
+
+  it('map tekstur di-dispose SEBELUM material (urutan aman GPU)', () => {
+    const tex = mkTex();
+    const order = [];
+    const b = { sprite: { material: {
+      map: { dispose: () => order.push('map') },
+      dispose: () => order.push('material'),
+    } } };
+    disposeBubble(b);
+    expect(order).toEqual(['map', 'material']);
+    expect(tex.count()).toBe(0); // tex dummy tak dipakai di case ini
+  });
+
+  it('material tanpa map tetap aman (map undefined/null)', () => {
+    let matDisposed = false;
+    const b = { sprite: { material: { dispose: () => { matDisposed = true; } } } };
+    disposeBubble(b);
+    expect(matDisposed).toBe(true);
+  });
+
+  it('null-safe: bubble/sprite/material korup tidak melempar exception', () => {
+    expect(() => disposeBubble(null)).not.toThrow();
+    expect(() => disposeBubble(undefined)).not.toThrow();
+    expect(() => disposeBubble({})).not.toThrow();
+    expect(() => disposeBubble({ sprite: null })).not.toThrow();
+    expect(() => disposeBubble({ sprite: {} })).not.toThrow();
+    expect(() => disposeBubble({ sprite: { material: null } })).not.toThrow();
+    expect(() => disposeBubble({ sprite: { material: {} } })).not.toThrow();
+    // map tanpa fungsi dispose (mock Korup) → dilewati, material tetap di-dispose
+    let matDisposed = false;
+    expect(() => disposeBubble({ sprite: { material: { map: {}, dispose: () => { matDisposed = true; } } } })).not.toThrow();
+    expect(matDisposed).toBe(true);
+  });
+
+  it('jalur updateBubbles remove → disposeBubble membuang map + material', () => {
+    const disposed = [];
+    const b = mkBubble({ life: 0.05 });
+    b.sprite.material.map = { dispose: () => disposed.push('map') };
+    b.sprite.material.dispose = () => disposed.push('material');
+    updateBubbles([b], 0.2, { remove: (bb) => { disposeBubble(bb); } });
+    expect(disposed).toEqual(['map', 'material']);
   });
 });
