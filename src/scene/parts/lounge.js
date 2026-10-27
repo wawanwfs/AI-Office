@@ -96,14 +96,22 @@ export function createLounge(ctx) {
   const tvScr = new THREE.Mesh(new THREE.PlaneGeometry(1.2, .68), uiMaterial(new THREE.MeshBasicMaterial({ map: tvTex })));
   async function tvPull(force = false) {
     if (!force && document.visibilityState === 'hidden') return;
+    if (tvStopped) return; // destroy sudah jalan (remount/HMR) — jangan mulai siklus baru
     try {
       const r = await fetch('/wfs-project');
+      // Siklus 125: scene bisa dimusnahkan selama fetch berjalan (remount/HMR).
+      // Dulu await selesai SETELAH purge destroy → window.__tvData/__lastTvDrawAt
+      // "bangkit" kembali menunjuk scene mati + drawTv() menggambar canvas mati
+      // (terdeteksi probe e2e_async_destroy: intercept fetch → destroy → resolve).
+      if (tvStopped) return;
       if (!r.ok) throw new Error('HTTP ' + r.status);
       const d = await r.json();
+      if (tvStopped) return; // guard kedua: await json juga bisa kejar scene mati
       window.__tvData = { ...d, at: Date.now() };
       tvConn = applyPollResult(tvConn, { ok: true });
       drawTv();
     } catch (e) {
+      if (tvStopped) return; // guard catch: error fetch tidak boleh menyentuh scene mati
       tvConn = applyPollResult(tvConn, { ok: false, error: 'offline' });
       drawTv(); // badge koneksi langsung berubah (TERPUTUS/SINKRON) tanpa menunggu tick
       window.__tvPullErr = String(e && e.stack || e);

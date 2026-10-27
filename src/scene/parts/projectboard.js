@@ -37,23 +37,6 @@ export function createProjectBoard(office, THREE) {
   // live / stale (data basi tapi papan masih layak) / down (belum pernah sukses).
   let conn = applyPollResult(null, { ok: false, error: 'init' }, 0)
 
-  async function pull() {
-    if (document.visibilityState === 'hidden') return
-    try {
-      const r = await fetch('/wfs-project')
-      if (!r.ok) throw new Error('HTTP ' + r.status)
-      const d = await r.json()
-      if (d && d.tasks) { snap = d; lastOk = Date.now() }
-      conn = applyPollResult(conn, { ok: true })
-      draw()
-    } catch {
-      conn = applyPollResult(conn, { ok: false, error: 'offline' })
-      draw() // segarkan strip segera: badge koneksi berubah tanpa menunggu tick 60 dtk
-    }
-  }
-
-
-
   function roundRect(x, y, w, h, r) {
     g.beginPath()
     g.moveTo(x + r, y)
@@ -186,6 +169,28 @@ export function createProjectBoard(office, THREE) {
       await pull()
       if (!pollStopped) schedulePoll()
     }, nextPollDelay(conn, BOARD_POLL_HEALTHY_MS))
+  }
+  async function pull() {
+    if (document.visibilityState === 'hidden') return
+    if (pollStopped) return // destroy sudah jalan (remount/HMR) — jangan mulai siklus baru
+    try {
+      const r = await fetch('/wfs-project')
+      // Siklus 125: scene bisa dimusnahkan selama fetch berjalan (remount/HMR).
+      // Dulu await selesai SETELAH purge destroy → draw() menggambar canvas papan
+      // scene mati + tracker koneksi terus di-update (pola bug sama dgn tvPull,
+      // terdeteksi probe e2e_async_destroy: intercept fetch → destroy → resolve).
+      if (pollStopped) return
+      if (!r.ok) throw new Error('HTTP ' + r.status)
+      const d = await r.json()
+      if (pollStopped) return // guard kedua: await json juga bisa kejar scene mati
+      if (d && d.tasks) { snap = d; lastOk = Date.now() }
+      conn = applyPollResult(conn, { ok: true })
+      draw()
+    } catch {
+      if (pollStopped) return // guard catch: error fetch tidak boleh menyentuh scene mati
+      conn = applyPollResult(conn, { ok: false, error: 'offline' })
+      draw() // segarkan strip segera: badge koneksi berubah tanpa menunggu tick 60 dtk
+    }
   }
   pull().then(() => { if (!pollStopped) schedulePoll() })
   // Umur data pada badge koneksi (label "Sinkron N dtk/mnt lalu" saat stale)
