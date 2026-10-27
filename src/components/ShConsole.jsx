@@ -62,6 +62,8 @@ export default function ShConsole({ show, onClose }) {
   const [approvals, setApprovals] = useState([])
   const [gitMsg, setGitMsg] = useState('')
   const [tFilter, setTFilter] = useState('')
+  const [bulkBusy, setBulkBusy] = useState(false)
+  const bulkInFlight = useRef(false)
   const [liveLogs, setLiveLogs] = useState([])
   const drawerRef = useRef(null)
   // Guard jalur async poll overview (siklus 127): satu rid untuk seluruh tab
@@ -184,12 +186,12 @@ export default function ShConsole({ show, onClose }) {
   }
   const runPreset = async (pid, kind) => {
     const cmd = kind === 'py'
-      ? 'cd /app && python3 -m pytest -q 2>&1 || true'
-      : 'cd /app && { [ -f package.json ] && npm test -- --run 2>&1 || echo "tidak ada package.json"; }'
+      ? 'cd /app && python3 -m pytest -q 2>&1'
+      : 'cd /app && { if [ ! -f package.json ]; then echo "tidak ada package.json" >&2; exit 2; elif ! command -v npm >/dev/null 2>&1; then echo "runner npm tidak tersedia" >&2; exit 127; else npm test -- --run 2>&1; fi; }'
     setTermOut('menjalankan ' + kind + '…')
     try {
       const d = await api('projects/' + pid + '/exec', { method: 'POST', body: { cmd } })
-      setTermOut((d.stderr || '') + (d.stdout || ''))
+      setTermOut('Exit status: ' + (d.exit ?? 'unknown') + '\n' + (d.stderr || '') + (d.stdout || ''))
     } catch (e) { setTermOut('ERROR: ' + e.message) }
   }
 
@@ -270,11 +272,19 @@ export default function ShConsole({ show, onClose }) {
     catch (e) { setErr(e.message) }
   }
   const runAllPending = async () => {
+    if (bulkInFlight.current) return
+    const project = tFilter || null
+    const selected = projects.find((p) => String(p.id) === project)
+    const scope = project ? `${selected?.name || 'Project'} (#${project})` : 'SEMUA PROJECT'
+    if (!window.confirm(`Jalankan semua task di ${scope} dengan status pending, review, failed? Task dapat memulai agent dan memakai resource.`)) return
+    bulkInFlight.current = true
+    setBulkBusy(true)
     setErr('')
     try {
-      await api('tasks/resume_all', { method: 'POST', body: { project: tFilter || null } })
-      await loadTasks(tFilter)
+      await api('tasks/resume_all', { method: 'POST', body: { project } })
+      await loadTasks(project)
     } catch (e) { setErr(e.message) }
+    finally { bulkInFlight.current = false; setBulkBusy(false) }
   }
 
   const openWsFile = async (pid, path) => {
@@ -290,7 +300,7 @@ export default function ShConsole({ show, onClose }) {
     setTermOut('menjalankan…')
     try {
       const d = await api('projects/' + pid + '/exec', { method: 'POST', body: { cmd: termCmd } })
-      setTermOut((d.stderr || '') + (d.stdout || ''))
+      setTermOut('Exit status: ' + (d.exit ?? 'unknown') + '\n' + (d.stderr || '') + (d.stdout || ''))
     } catch (e) { setTermOut('ERROR: ' + e.message) }
   }
   const selectWsProject = (pid) => {
@@ -336,10 +346,10 @@ export default function ShConsole({ show, onClose }) {
               <div style={STYLE.card}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <div style={{ fontWeight: 700 }}>Daftar task ({tasks.length})</div>
-                  <button style={STYLE.btnGhost} onClick={runAllPending} title="Jalankan semua task pending/review/failed">▶ Jalankan Semua Pending</button>
+                  <button style={STYLE.btnGhost} onClick={runAllPending} disabled={bulkBusy} aria-busy={bulkBusy} title="Jalankan semua task pending/review/failed">▶ Jalankan Semua Pending</button>
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                  <select style={STYLE.select} aria-label="Filter project" value={tFilter} onChange={(e) => setTFilter(e.target.value)}>
+                  <select style={STYLE.select} aria-label="Filter project" disabled={bulkBusy} value={tFilter} onChange={(e) => setTFilter(e.target.value)}>
                     <option value="">Semua project</option>
                     {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>

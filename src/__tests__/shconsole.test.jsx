@@ -319,6 +319,7 @@ describe('ShConsole — konsol software house', () => {
   })
 
   it('tab Tasks: filter project memicu ?project dan Jalankan Semua Pending memanggil resume_all', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const urls = []
     const resumeBodies = []
     const fn = stubFetch({
@@ -335,7 +336,60 @@ describe('ShConsole — konsol software house', () => {
     await waitFor(() => expect(urls.some((x) => x.includes('project=1'))).toBe(true))
     fireEvent.click(screen.getByText(/Jalankan Semua Pending/))
     await waitFor(() => expect(resumeBodies.some((b) => b && JSON.parse(b).project === '1')).toBe(true))
+    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/Demo.*#1.*pending.*review.*failed/))
     expect(fn.mock.calls.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('bulk execution requires global scope confirmation and prevents duplicate submissions', async () => {
+    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
+    let rejectRun
+    const run = vi.fn(() => new Promise((resolve, reject) => { rejectRun = reject }))
+    stubFetch({
+      '/wfs-api/sh/overview': OV, '/wfs-api/projects': PROJ_RESP,
+      '/wfs-api/tasks': TASKS_RESP, '/wfs-api/tasks/resume_all': run,
+    })
+    render(<ShConsole show onClose={() => {}} />)
+    clickTab('Tasks')
+    await screen.findByText(/#1 Buat Login/)
+    const button = screen.getByText(/Jalankan Semua Pending/)
+    fireEvent.click(button)
+    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/SEMUA PROJECT.*pending.*review.*failed/))
+    expect(run).not.toHaveBeenCalled()
+    confirm.mockReturnValue(true)
+    fireEvent.click(button)
+    fireEvent.click(button)
+    expect(run).toHaveBeenCalledTimes(1)
+    expect(button.disabled).toBe(true)
+    expect(screen.getByLabelText('Filter project').disabled).toBe(true)
+    expect(JSON.parse(run.mock.calls[0][1].body)).toEqual({ project: null })
+    rejectRun(new Error('bulk failed'))
+    expect((await screen.findByRole('alert')).textContent).toContain('bulk failed')
+    await waitFor(() => expect(button.disabled).toBe(false))
+    expect(screen.getByLabelText('Filter project').disabled).toBe(false)
+  })
+
+  it('Node preset keeps failed tests distinct from missing package/runner', async () => {
+    const cmds = []
+    stubFetch({
+      '/wfs-api/sh/overview': OV, '/wfs-api/projects': PROJ_RESP,
+      '/wfs-api/projects/1/files': { entries: [] },
+      '/wfs-api/projects/1/logs?lines=100': { logs: [] },
+      '/wfs-api/projects/1/git': { repo: false },
+      '/wfs-api/projects/1/exec': (u, opts) => {
+        cmds.push(JSON.parse(opts.body).cmd)
+        return { exit: 1, stdout: 'tests failed', stderr: '' }
+      },
+    })
+    render(<ShConsole show onClose={() => {}} />)
+    clickTab('Workspace')
+    await screen.findByText('Demo')
+    fireEvent.change(screen.getByLabelText('Pilih project'), { target: { value: '1' } })
+    fireEvent.click(screen.getByText(/Test Node/))
+    await waitFor(() => expect(screen.getByRole('status').textContent).toContain('Exit status: 1'))
+    expect(cmds[0]).not.toMatch(/npm test.*\|\| echo/)
+    expect(cmds[0]).toContain('if [ ! -f package.json ]')
+    expect(cmds[0]).toContain('command -v npm')
+    expect(screen.getByRole('status').textContent).toContain('tests failed')
   })
 
   it('tab Workspace: pintasan Test Python memanggil exec dengan cmd pytest', async () => {
@@ -355,6 +409,8 @@ describe('ShConsole — konsol software house', () => {
     await screen.findByText(/Dockerfile/)
     fireEvent.click(screen.getByText(/Test Python/))
     await waitFor(() => expect(cmds.some((c) => c.includes('pytest'))).toBe(true))
+    expect(cmds[0]).not.toContain('|| true')
+    expect(screen.getByRole('status').textContent).toContain('Exit status: 0')
   })
 })
 
