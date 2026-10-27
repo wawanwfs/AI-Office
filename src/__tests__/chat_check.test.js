@@ -102,4 +102,14 @@ describe('tickCooldown', () => {
     for (let i = 0; i < 60; i++) cd = tickCooldown(cd, 1 / 60); // 1 detik nyata @60fps
     expect(cd).toBeCloseTo(7, 5);
   });
+  it('guard anti-poisoning: cd non-finite (NaN/±Infinity) → 0 (bukan NaN yang macet)', () => {
+    expect(tickCooldown(NaN, 0.016)).toBe(0);
+    expect(tickCooldown(Infinity, 1)).toBe(0);
+    expect(tickCooldown(-Infinity, 1)).toBe(0);
+  });
+  it('guard anti-poisoning: delta non-finite → 0 (tanpa penurunan)', () => {
+    expect(tickCooldown(8, NaN)).toBe(0);
+    expect(tickCooldown(8, Infinity)).toBe(0);
+    expect(tickCooldown(8, -Infinity)).toBe(0);
+  });
 });

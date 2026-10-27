@@ -27,5 +27,8 @@ export function nearbyPairs(ppl, radius = CHAT_RADIUS) {
 // Turunkan cooldown dengan delta DETIK (bukan per-frame konstan — bug lama
 // memakai 0.016/frame sehingga di GPU lambat agent terkunci bermenit-menit).
 export function tickCooldown(cd, delta) {
+  // Guard anti-poisoning: cd/delta non-finite (NaN/±Infinity) → perlakukan sebagai 0.
+  // Jangan biarkan NaN bertahan — Math.max(0, NaN)=NaN membuat cooldown macet selamanya.
+  if (!Number.isFinite(cd) || !Number.isFinite(delta)) return 0;
   return Math.max(0, (cd || 0) - delta);
 }

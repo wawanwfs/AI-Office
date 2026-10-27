@@ -69,6 +69,10 @@ export function fallbackSpot(home) {
 // Pose stride pada waktu t (sudah dikali TIME_SCALE) dan fase limb.
 // Kaki: posisi z + rotasi x; lengan: rotasi x (berlawanan fase); badan: bob.
 export function stridePose(t, phase = 0) {
+  // Guard anti-poisoning (konsisten dgn pola motion_math/converse_timing/pickDest):
+  // t/phase non-finite (NaN/±Infinity) → pose netral REST_POSE, jangan biarkan
+  // NaN merambat ke matriks bone karakter (limb NaN).
+  if (!Number.isFinite(t) || !Number.isFinite(phase)) return { ...REST_POSE };
   return {
     legZ: Math.sin(t + phase) * STRIDE.LEG_POS,
     legRotX: Math.cos(t + phase) * STRIDE.LEG_ROT,

@@ -141,6 +141,16 @@ describe('stridePose', () => {
     expect(stridePose(-1).bob).toBeCloseTo(Math.abs(Math.sin(-1)) * STRIDE.BOB);
     expect(stridePose(Math.PI).bob).toBeCloseTo(0);
   });
+  it('guard anti-poisoning: t non-finite (NaN/±Infinity) → REST_POSE (limb tak NaN)', () => {
+    expect(stridePose(NaN)).toEqual(REST_POSE);
+    expect(stridePose(Infinity)).toEqual(REST_POSE);
+    expect(stridePose(-Infinity)).toEqual(REST_POSE);
+  });
+  it('guard anti-poisoning: phase non-finite → REST_POSE', () => {
+    expect(stridePose(1, NaN)).toEqual(REST_POSE);
+    expect(stridePose(1, Infinity)).toEqual(REST_POSE);
+    expect(stridePose(1, -Infinity)).toEqual(REST_POSE);
+  });
   it('amplitudo lengan > amplitudo kaki rotasi (lengan lebih lebar)', () => {
     expect(STRIDE.ARM_ROT).toBeGreaterThan(STRIDE.LEG_ROT);
   });

@@ -22,6 +22,11 @@ describe('wallFadeOf', () => {
     expect(wallFadeOf(4.5)).toBe(0);
     expect(wallFadeOf(100)).toBe(0);
   });
+  it('guard anti-poisoning: jarak non-finite → solid 1 (dinding tak hilang diam-diam)', () => {
+    expect(wallFadeOf(NaN)).toBe(1);
+    expect(wallFadeOf(Infinity)).toBe(1);
+    expect(wallFadeOf(-Infinity)).toBe(1);
+  });
 });
 
 describe('applyWallFade', () => {
