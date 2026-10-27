@@ -71,6 +71,7 @@ export function createOfficeScene(container, callbacks = {}) {
   // __zoneBase) DIPAKAI ULANG scene baru: createZones push label zona tambahan
   // ke array lama → label zona duplikat & anti-tumpuk memproses sprite mati.
   purgeSceneHooks(window, SCENE_HOOKS);
+  window.__SCENE_HOOKS = SCENE_HOOKS; // daftar utk probe E2E (hapus/pasang ulang tiap siklus create-destroy)
   const { onTimeUpdate, onStatusUpdate, onMeetingChange, onSelectAgent } = callbacks;
 
 // ═══════════════════════════════════════════════════
@@ -2169,6 +2170,8 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       }
     }
   };
+  const __sceneControls=sceneControls;
+  window.__wfsSceneControls=__sceneControls; // jembatan destroy/probe E2E (siklus 123): App.jsx tetap pakai sceneRef internal
   window.__focusTeam = (k) => sceneControls.focusTeam(k);
   window.__focusAgent = (k) => sceneControls.focusAgent(k);
   window.__focusMeetingRoom = () => sceneControls.focusMeetingRoom();

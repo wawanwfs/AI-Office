@@ -40,6 +40,8 @@ export const SCENE_HOOKS = [
   '__zoneLabels', '__zoneBase',
   // TV lounge & whiteboard (parts/lounge.js, parts/room.js)
   '__tvCanvas', '__tvData', '__lastTvDrawAt', '__tvPullErr', '__lastWbDrawAt',
+  // controls scene utuh (jembatan destroy/probe E2E — memegang seluruh closure)
+  '__wfsSceneControls',
   // ekspos utk probe E2E (verifikasi cakupan purge — siklus 123)
   '__SCENE_HOOKS', '__sceneHygienePurge',
 ];
