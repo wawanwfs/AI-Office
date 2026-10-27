@@ -1578,10 +1578,22 @@ function animate(){
   }
   // Labels (bobbing duduk di-throttle di blok ambient di atas)
   // cincin emas mengikuti agent terpilih (juga saat berjalan/meeting) dgn tracking halus & rotasi elegan
+  // siklus 119: agen PESERTA RAPAT (walker & sittingChar hidden) → anchor =
+  // kursi rapat via meetingFigureAnchor (dulu selAnchorOf(a)=null → ring
+  // dimatikan SETIAP FRAME oleh blok ini, mengalahkan applySelected).
   if(selRing&&selectedIdx>=0&&selectedIdx<agentData.length){
     const a=agentData[selectedIdx];
-    const p=selAnchor(a);
+    const mfa=meetingFigureAnchor(__meet&&__meet.figures?__meet.figures[selectedIdx]:null);
+    const p=mfa||selAnchor(a);
     if(!p){selRing.visible=false}
+    else if(mfa){
+      const targetY = mfa.y + SEL_RING.Y;
+      selRing.position.x += (mfa.x - selRing.position.x) * 0.25;
+      selRing.position.z += (mfa.z - selRing.position.z) * 0.25;
+      selRing.position.y += (targetY - selRing.position.y) * 0.25;
+      selRing.rotation.z += 0.012;
+      selRing.visible=true;
+    }
     else{
       const targetY = ringFloorY(a) + SEL_RING.Y;
       selRing.position.x += (p.x - selRing.position.x) * 0.25;
