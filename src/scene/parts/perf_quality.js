@@ -16,8 +16,17 @@
  */
 export function perfStep(st, nowMs, frame, opts) {
   const o = opts || {};
+  // anti-poisoning: timestamp/nomor frame non-finite (NaN/±Infinity) → no-op aman.
+  // Jangan biarkan NaN masuk ke t0/lastFrame — selisih waktu jadi NaN dan tangga
+  // degradasi/recovery berhenti bekerja (konsisten dgn pola sim_clock/motion_math).
+  if (!Number.isFinite(nowMs) || !Number.isFinite(frame)) return { ...st };
   const sampleMs = o.fpsSampleMs || 2000;
   let s = { ...st };
+  // state rusak non-finite (dari poison sebelumnya) → reset ke nilai aman
+  if (!Number.isFinite(s.t0)) s.t0 = 0;
+  if (!Number.isFinite(s.lastFrame)) s.lastFrame = 0;
+  if (!Number.isFinite(s.fps)) s.fps = 0;
+  if (!Number.isFinite(s.goodStreak)) s.goodStreak = 0;
   const r = o.renderer;
   const sun = o.sun;
   if (!s.t0) { s.t0 = nowMs; return s; }

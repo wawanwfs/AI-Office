@@ -115,4 +115,38 @@ describe('perfStep — tangga adaptive quality', () => {
     const out = perfStep({ ...BASE, t0: 1000 }, 3000, 10, {});
     expect(out.fps).toBe(5);
   });
+
+  it('anti-poisoning: nowMs/frame non-finite → no-op (t0/lastFrame/fps tak tertulari)', () => {
+    const r = mockRenderer(1.5); const sun = mockSun();
+    let s = { ...BASE, t0: 1000, lastFrame: 10 };
+    s = perfStep(s, NaN, 20, { renderer: r, sun });
+    expect(s.t0).toBe(1000);
+    expect(s.lastFrame).toBe(10);
+    expect(s.fps).toBe(0);
+    expect(r.current).toBe(1.5);
+    expect(sun.castShadow).toBe(true);
+    s = perfStep(s, Infinity, 20, { renderer: r, sun });
+    expect(s.t0).toBe(1000);
+    s = perfStep(s, 3000, NaN, { renderer: r, sun });
+    expect(s.lastFrame).toBe(10);
+    expect(s.fps).toBe(0);
+  });
+
+  it('anti-poisoning: setelah sampel korup, sampel sehat berikutnya tetap jalan normal', () => {
+    const r = mockRenderer(1.5); const sun = mockSun();
+    let s = { ...BASE, t0: 1000, lastFrame: 10 };
+    s = perfStep(s, NaN, NaN, { renderer: r, sun }); // sampel korup diabaikan
+    s = perfStep(s, 3000, 30, { renderer: r, sun }); // fps 15 → pixelRatio turun
+    expect(r.current).toBe(1.25);
+    expect(s.downgraded).toBe(true);
+  });
+
+  it('anti-poisoning: state t0/lastFrame/fps rusak (NaN) → di-reset saat sampel sehat', () => {
+    const r = mockRenderer(1.5); const sun = mockSun();
+    const s = perfStep({ ...BASE, t0: NaN, lastFrame: NaN, fps: NaN }, 1000, 10, { renderer: r, sun });
+    // t0 NaN dianggap baseline kosong → dicatat ulang, tanpa aksi
+    expect(s.t0).toBe(1000);
+    expect(r.current).toBe(1.5);
+    expect(sun.castShadow).toBe(true);
+  });
 });
