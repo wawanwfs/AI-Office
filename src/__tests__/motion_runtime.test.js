@@ -305,6 +305,21 @@ describe('createMotion — leaving / offsite', () => {
     const moved = Math.hypot(ad.walker.position.x - (-8), ad.walker.position.z - (-3));
     expect(moved).toBeGreaterThan(0); // keluar dari titik awal (rute via gang)
   });
+
+  it('walkTarget korup (NaN/Infinity) → tidak terkunci: perlakukan sebagai tiba → offsite', () => {
+    const ad = mkAd(0, { x: -8, z: -3 });
+    ad.state = 'leaving';
+    ad.walker.visible = true;
+    ad.walkTarget = { x: NaN, z: Infinity }; // target non-finite (poisoning)
+    ad.walker.position.set(-11.9, 0, 7.7);
+    ad._route = null;
+    const update = createMotion(mkCtx([ad]));
+    update(0.1);
+    expect(ad.state).toBe('offsite');    // DULU: terkunci selamanya (Infinity < 0.5 = false)
+    expect(ad.walker.visible).toBe(false);
+    expect(ad.label.position.x).toBe(-8);
+    expect(ad.label.position.z).toBe(-3);
+  });
 });
 
 describe('createMotion — hard clamp & route koridor', () => {

@@ -179,7 +179,11 @@ export function createMotion(ctx) {
     },
     leaving(ad, delta) {
       const { d } = dist2(ad.walker.position, ad.walkTarget);
-      if (d < 0.5) {
+      // Guard anti-poisoning: jarak non-finite (NaN/±Infinity, mis. walkTarget
+      // korup) TIDAK boleh mengunci agen di state leaving selamanya — perlakukan
+      // sebagai sudah tiba (departure selesai) alih-alih `d < 0.5` yang selalu
+      // false untuk Infinity/NaN (konsisten dgn guard stepMove/routePath).
+      if (!Number.isFinite(d) || d < 0.5) {
         ad.walker.visible = false; ad.state = 'offsite';
         if (ad.label) ad.label.visible = false;
         const deskY = (ad.home && Number.isFinite(ad.home.y)) ? ad.home.y : floorElevationAt(ad.home.z);
