@@ -27,6 +27,17 @@ describe('tvPct',()=>{
     expect(tvPct({total:10,done:3})).toBe(30);
     expect(tvPct({total:0,done:5})).toBe(0); // hindari NaN
   });
+  it('non-finite total/done → 0 (hindari NaN/Infinity merambat ke bar & teks)',()=>{
+    expect(tvPct({total:10,done:NaN})).toBe(0);
+    expect(tvPct({total:10,done:Infinity})).toBe(0);
+    expect(tvPct({total:Infinity,done:5})).toBe(0);
+    expect(tvPct({total:10})).toBe(0);          // done undefined
+    expect(tvPct({total:undefined,done:5})).toBe(0);
+    expect(tvPct({total:null,done:5})).toBe(0);
+    expect(tvPct(null)).toBe(0);
+    expect(tvPct(undefined)).toBe(0);
+    expect(tvPct({})).toBe(0);
+  });
 });
 
 describe('statusRows',()=>{

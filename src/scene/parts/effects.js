@@ -1,5 +1,6 @@
 // Efek visual WFS Project: layar monitor, dokumen melayang, detail meja, tema waktu.
 // Ditulis ulang: tiap layar = fungsi renderer terpisah dalam tabel, bukan rangkaian if/else.
+import { tvPct } from './tv_canvas.js';
 
 const GRID = (c, w, h, step, col, alpha) => {
   c.strokeStyle = col; c.globalAlpha = alpha; c.lineWidth = 0.5;
@@ -90,13 +91,17 @@ export const SCREEN_RENDERERS = {
       c.globalAlpha = 0.35; c.fillRect(6, h / 2 + 4, (w - 12) * (0.3 + 0.2 * Math.sin(t)), 4);
       return;
     }
-    const pct = T.total ? Math.round(T.done / T.total * 100) : 0;
+    const pct = tvPct(T);
     c.globalAlpha = 0.85; c.fillStyle = col; c.font = '7px sans-serif';
     c.fillText('PAPAN TASK', 6, 11);
     c.globalAlpha = 0.2; c.fillRect(6, 14, w - 12, 6);
     c.globalAlpha = 0.9; c.fillRect(6, 14, Math.max(4, (w - 12) * pct / 100), 6);
     c.globalAlpha = 0.85; c.fillStyle = '#fff'; c.font = '6px monospace';
-    c.fillText(pct + '% · ' + T.done + '/' + T.total + ' task', 6, 30);
+    // Guard anti-poisoning: done/total non-finite tidak boleh tampil sebagai NaN
+    // di teks (pct sudah diamankan via tvPct; di sini nilai mentah dilemahkan).
+    const doneN = Number.isFinite(T.done) ? T.done : 0;
+    const totalN = Number.isFinite(T.total) ? T.total : 0;
+    c.fillText(pct + '% · ' + doneN + '/' + totalN + ' task', 6, 30);
     c.globalAlpha = 0.5; c.fillStyle = col;
     c.fillText((T.review ? 'REVIEW: ' + T.review + '  ' : '') + (T.failed ? 'GAGAL: ' + T.failed : 'on track'), 6, 42);
     if (Math.sin(t * 2.5) > 0) { c.globalAlpha = 0.9; c.fillStyle = '#4ade80'; c.fillRect(w - 11, 6, 5, 5); } // dot live
