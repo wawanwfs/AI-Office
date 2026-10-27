@@ -41,3 +41,15 @@ export function selectedAgent(agentData, selectedIdx) {
   const i = clampIdx(selectedIdx, agentData ? agentData.length : 0);
   return i === null ? null : agentData[i];
 }
+
+// Tinggi lantai ring di bawah agent: y walker saat berjalan (ikut bob &
+// naik-turun lantai), y home saat duduk, 0 bila tak keduanya. Murni &
+// null-safe — satu sumber kebenaran komponen Y untuk hover ring & sel ring
+// (menggantikan formula inline `(walker.visible?pos.y:home.y)||0` yang
+// duplikat 3× dan bisa melontarkan exception bila walker.position hilang).
+export function ringFloorY(a) {
+  if (!a) return 0;
+  if (a.walker && a.walker.visible && a.walker.position) return a.walker.position.y || 0;
+  if (a.home && Number.isFinite(a.home.y)) return a.home.y;
+  return 0;
+}

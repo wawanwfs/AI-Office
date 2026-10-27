@@ -13,7 +13,7 @@ import { perfStep } from './parts/perf_quality.js';
 import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam, resetFocusGoal } from './parts/kamera_focus.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
-import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent } from './parts/ring_spec.js';
+import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent, ringFloorY } from './parts/ring_spec.js';
 import { paintRing } from './parts/ring_canvas.js';
 import { drawSky, drawGlassSheen } from './parts/sky_canvas.js';
 import { drawWoodFloor, drawAoStrip } from './parts/floor_canvas.js';
@@ -294,8 +294,7 @@ function applySelected(){
   const p=selAnchorOf(a);
   if(!p)return;
   ensureSelRing();
-  const hy=(a.walker&&a.walker.visible?a.walker.position.y:a.home.y)||0;
-  selRing.position.set(p.x,hy+SEL_RING.Y,p.z+p.off);
+  selRing.position.set(p.x,ringFloorY(a)+SEL_RING.Y,p.z+p.off);
   selRing.visible=true;
 }
 // posisi ring utk agent: walker (berjalan) / home (duduk) / null (tidak terlihat di kantor)
@@ -325,15 +324,17 @@ renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
       ha=findAgentRoot(p,agentData);
     }
     if(ha!==hoveredAgent)hoveredAgent=ha;
-    if(hoveredAgent){
+    // anchor via selAnchorOf (satu sumber kebenaran dgn sel ring): dulu inline
+    // (hardcode .55, tanpa cek sittingChar.visible — ring nyangkut di meja
+    // kosong saat agent offsite). Komponen Y diikuti per-frame (blok animasi).
+    const hp=selAnchorOf(hoveredAgent);
+    if(hp){
       ensureHoverRing();
-      const src=hoveredAgent.walker.visible?hoveredAgent.walker.position:hoveredAgent.home;
-      const hy=(hoveredAgent.walker&&hoveredAgent.walker.visible?hoveredAgent.walker.position.y:hoveredAgent.home.y)||0;
-      hoverRing.position.set(src.x,hy+0.02,src.z+ (hoveredAgent.walker.visible?0:.55));
+      hoverRing.position.set(hp.x,ringFloorY(hoveredAgent)+HOVER_RING.Y,hp.z+hp.off);
       hoverRing.visible=true;
     }else if(isNxHover){
       ensureHoverRing();
-      hoverRing.position.set(7.6,1.20+0.02,6.1);
+      hoverRing.position.set(7.6,1.20+HOVER_RING.Y,6.1);
       hoverRing.visible=true;
     }else if(hoverRing)hoverRing.visible=false;
   },80)};
@@ -1468,7 +1469,7 @@ function animate(){
     const p=selAnchor(a);
     if(!p){selRing.visible=false}
     else{
-      const targetY = ((a.walker && a.walker.visible ? a.walker.position.y : a.home.y) || 0) + SEL_RING.Y;
+      const targetY = ringFloorY(a) + SEL_RING.Y;
       selRing.position.x += (p.x - selRing.position.x) * 0.25;
       selRing.position.z += (p.z + p.off - selRing.position.z) * 0.25;
       selRing.position.y += (targetY - selRing.position.y) * 0.25;
@@ -1482,6 +1483,19 @@ function animate(){
     selRing.position.y += (targetY - selRing.position.y) * 0.25;
     selRing.rotation.z += 0.012;
     selRing.visible=true;
+  }
+  // cincin biru hover mengikuti agent yang di-hover tiap frame — dulu posisi
+  // hanya diset saat pointermove (throttle 80 ms): ring BEKU di posisi lama
+  // saat agent berjalan / naik-turun lantai, terlihat "tertinggal" di lantai.
+  if(hoverRing&&hoverRing.visible&&hoveredAgent){
+    const hp=selAnchorOf(hoveredAgent);
+    if(!hp){hoverRing.visible=false}
+    else{
+      const hy=ringFloorY(hoveredAgent)+HOVER_RING.Y;
+      hoverRing.position.x += (hp.x - hoverRing.position.x) * 0.45;
+      hoverRing.position.z += (hp.z + hp.off - hoverRing.position.z) * 0.45;
+      hoverRing.position.y += (hy - hoverRing.position.y) * 0.45;
+    }
   }
   // Atap & lampu panel disembunyikan saat kamera di atas (agar isi kantor terlihat), dimunculkan dari sudut rendah
   if(window.__wallFade)window.__wallFade(camera.position);

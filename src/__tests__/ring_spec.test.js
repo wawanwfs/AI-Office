@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent } from '../scene/parts/ring_spec.js';
+import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent, ringFloorY } from '../scene/parts/ring_spec.js';
 
 describe('ring constants', () => {
   it('selection ring historical values', () => {
@@ -60,6 +60,46 @@ describe('selAnchorOf', () => {
   it('custom seat offset respected', () => {
     const a = { home: { x: 0, z: 0 }, sittingChar: { visible: true } };
     expect(selAnchorOf(a, 1.25).off).toBe(1.25);
+  });
+});
+
+describe('ringFloorY', () => {
+  it('walker visible → walker.position.y', () => {
+    const a = { walker: { visible: true, position: { x: 1, y: 3.25, z: 2 } }, home: { x: 0, y: 9, z: 0 } };
+    expect(ringFloorY(a)).toBe(3.25);
+  });
+  it('walker visible with falsy y → 0 (|| 0 semantics preserved)', () => {
+    const a = { walker: { visible: true, position: { x: 1, y: 0, z: 2 } }, home: { x: 0, y: 9, z: 0 } };
+    expect(ringFloorY(a)).toBe(0);
+  });
+  it('walker hidden → home.y (duduk)', () => {
+    const a = { walker: { visible: false, position: { x: 1, y: 3, z: 2 } }, home: { x: 2, y: 0.72, z: 3 } };
+    expect(ringFloorY(a)).toBe(0.72);
+  });
+  it('walker hidden, home.y missing → 0', () => {
+    const a = { walker: { visible: false, position: { x: 1, y: 3, z: 2 } }, home: { x: 2, z: 3 } };
+    expect(ringFloorY(a)).toBe(0);
+  });
+  it('walker hidden, home.y NaN → 0 (guard Number.isFinite)', () => {
+    const a = { walker: { visible: false, position: { x: 1, y: 3, z: 2 } }, home: { x: 2, y: NaN, z: 3 } };
+    expect(ringFloorY(a)).toBe(0);
+  });
+  it('walker visible but position missing → fallback home (tidak throw)', () => {
+    const a = { walker: { visible: true }, home: { x: 2, y: 1.5, z: 3 } };
+    expect(ringFloorY(a)).toBe(1.5);
+  });
+  it('no home at all → 0 tanpa throw', () => {
+    expect(ringFloorY({ walker: { visible: false } })).toBe(0);
+    expect(ringFloorY({})).toBe(0);
+  });
+  it('null/undefined agent → 0 tanpa throw', () => {
+    expect(ringFloorY(null)).toBe(0);
+    expect(ringFloorY(undefined)).toBe(0);
+  });
+  it('konsisten dengan selAnchorOf: agent tak terlihat (offsite) → anchor null & Y fallback 0', () => {
+    const a = { walker: { visible: false }, home: { x: 5, y: 1.2, z: 6 }, sittingChar: { visible: false } };
+    expect(selAnchorOf(a)).toBeNull(); // ring disembunyikan, bukan dipindah ke meja kosong
+    expect(ringFloorY(a)).toBe(1.2);
   });
 });
 
