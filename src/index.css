@@ -1643,6 +1643,11 @@ button { font-family: inherit; }
   transform: translateY(-1px);
 }
 
+.task-tag-chip:focus-visible {
+  outline: 2px solid var(--teal, #4d9fff);
+  outline-offset: 1px;
+}
+
 .task-tag-chip.active {
   background: rgba(16, 229, 160, 0.16);
   border-color: var(--chip-accent, #10E5A0);
@@ -1716,6 +1721,11 @@ button { font-family: inherit; }
   transform: translateY(-1px);
 }
 
+.task-tag-mode-btn:focus-visible {
+  outline: 2px solid var(--teal, #4d9fff);
+  outline-offset: 1px;
+}
+
 /* Strip Preset Kombinasi Tag */
 .task-preset-strip {
   display: flex;
@@ -1770,6 +1780,11 @@ button { font-family: inherit; }
   border-color: rgba(255, 255, 255, 0.22);
   color: #ffffff;
   transform: translateY(-1px);
+}
+
+.task-preset-chip:focus-visible {
+  outline: 2px solid var(--teal, #4d9fff);
+  outline-offset: 1px;
 }
 
 .task-preset-chip.active {
@@ -1845,6 +1860,11 @@ button { font-family: inherit; }
   background: #f43f5e;
   color: #ffffff;
   transform: scale(1.15);
+}
+
+.task-preset-del-btn:focus-visible {
+  outline: 2px solid var(--teal, #4d9fff);
+  outline-offset: 1px;
 }
 
 .task-preset-add-btn {
