@@ -89,7 +89,7 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
                   {card('Proyek jalan', stats.projects_running ?? 0, '#F59E0B')}
                   {card('Task', stats.tasks_total ?? 0, '#8B5CF6')}
                   {card('Task jalan', stats.tasks_running ?? running, '#F59E0B')}
-                  {card('Selesai', stats.tasks_completed ?? byStatus.done || 0, '#10E5A0')}
+                  {card('Selesai', stats.tasks_completed ?? (byStatus.done || 0), '#10E5A0')}
                   {card('Agen', stats.agents_count ?? 0, '#4D9FFF')}
                   {card('File dihasilkan', totalFiles, '#ADDBF2')}
                   {card('Sandbox', (res?.containers || []).filter(c => /wfs-sandbox|sbx/.test(c.name)).length, '#60A5FA')}

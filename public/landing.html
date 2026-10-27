@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>WFS PROJECT — Autonomous AI Software House</title>
+<meta name="description" content="Software house otonom: 26 agen AI membangun software nyata di kantor virtual 3D. Live preview, kanban nyata, chat AI CS.">
+<link rel="icon" type="image/svg+xml" href="/favicon.svg">
+<link rel="stylesheet" href="/fonts/fonts.css">
+<style>
+  :root { --navy:#010722; --navy2:#0A1436; --royal:#4D9FFF; --ice:#ADDBF2; --green:#10E5A0; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html,body { height:100%; }
+  body {
+    font-family:'DM Sans',system-ui,sans-serif; color:#fff;
+    background: radial-gradient(1200px 800px at 70% -10%, #0A1E52 0%, var(--navy) 55%), var(--navy);
+    min-height:100dvh; overflow-x:hidden;
+  }
+  .glow { position:fixed; border-radius:50%; filter:blur(90px); opacity:.5; pointer-events:none; }
+  .glow.g1 { width:420px; height:420px; background:#0A3A9C; top:-120px; right:-80px; }
+  .glow.g2 { width:360px; height:360px; background:#12346D; bottom:-100px; left:-100px; }
+  .wrap { max-width:1060px; margin:0 auto; padding:28px 20px 60px; position:relative; z-index:1; }
+  nav { display:flex; justify-content:space-between; align-items:center; margin-bottom:9vh; }
+  .logo { display:flex; align-items:center; gap:10px; font-family:'Orbitron',sans-serif; font-weight:700; letter-spacing:1px; font-size:15px; }
+  .logo .dot { width:10px; height:10px; border-radius:50%; background:var(--royal); box-shadow:0 0 12px var(--royal); }
+  nav a.enter { color:var(--ice); text-decoration:none; font-size:13px; border:1px solid rgba(77,159,255,.4); padding:8px 16px; border-radius:999px; transition:.2s; }
+  nav a.enter:hover { background:rgba(77,159,255,.14); }
+  h1 { font-family:'Orbitron',sans-serif; font-size:clamp(28px,5.6vw,52px); line-height:1.12; letter-spacing:.5px; }
+  h1 .accent { color:var(--royal); text-shadow:0 0 24px rgba(77,159,255,.45); }
+  .sub { margin:18px 0 30px; color:var(--ice); opacity:.86; font-size:clamp(14px,2.4vw,17px); line-height:1.65; max-width:620px; }
+  .cta { display:flex; gap:12px; flex-wrap:wrap; margin-bottom:7vh; }
+  .cta a {
+    display:inline-flex; align-items:center; gap:9px; text-decoration:none; font-weight:700; font-size:15px;
+    padding:14px 26px; border-radius:12px; transition:.2s;
+  }
+  .cta .primary { background:linear-gradient(135deg,#0A3A9C,#4D9FFF); color:#fff; box-shadow:0 6px 30px rgba(77,159,255,.35); }
+  .cta .primary:hover { transform:translateY(-2px); box-shadow:0 10px 38px rgba(77,159,255,.5); }
+  .cta .ghost { color:var(--ice); border:1px solid rgba(173,219,242,.35); }
+  .cta .ghost:hover { background:rgba(173,219,242,.08); }
+  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-bottom:7vh; }
+  .stat { background:rgba(13,26,64,.55); border:1px solid rgba(77,159,255,.18); border-radius:14px; padding:16px 14px; backdrop-filter:blur(8px); }
+  .stat b { font-family:'Orbitron',sans-serif; font-size:clamp(20px,3.4vw,30px); display:block; color:var(--royal); }
+  .stat span { font-size:11.5px; color:var(--ice); opacity:.8; text-transform:uppercase; letter-spacing:.8px; }
+  .features { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:7vh; }
+  .feat { background:rgba(13,26,64,.45); border:1px solid rgba(77,159,255,.14); border-radius:14px; padding:18px 16px; }
+  .feat .ic { font-size:22px; margin-bottom:9px; }
+  .feat h3 { font-size:14.5px; margin-bottom:7px; color:#fff; }
+  .feat p { font-size:12.5px; line-height:1.6; color:var(--ice); opacity:.75; }
+  .how { background:rgba(10,20,54,.5); border:1px solid rgba(77,159,255,.14); border-radius:16px; padding:22px; margin-bottom:7vh; }
+  .how h2 { font-family:'Orbitron',sans-serif; font-size:17px; margin-bottom:14px; color:var(--ice); }
+  .how ol { list-style:none; display:grid; grid-template-columns:repeat(4,1fr); gap:12px; counter-reset:step; }
+  .how li { counter-increment:step; font-size:12.5px; line-height:1.55; color:var(--ice); opacity:.85; padding-left:30px; position:relative; }
+  .how li::before { content:counter(step); position:absolute; left:0; top:0; width:22px; height:22px; border-radius:50%; background:rgba(77,159,255,.16); color:var(--royal); font-weight:700; display:grid; place-items:center; font-size:12px; border:1px solid rgba(77,159,255,.4); }
+  .how li b { color:#fff; display:block; margin-bottom:3px; font-size:13px; }
+  footer { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; color:var(--ice); opacity:.55; font-size:12px; border-top:1px solid rgba(77,159,255,.12); padding-top:18px; }
+  footer a { color:var(--ice); }
+  @media (max-width:720px) {
+    .stats { grid-template-columns:repeat(2,1fr); }
+    .features { grid-template-columns:1fr; }
+    .how ol { grid-template-columns:1fr; }
+    nav { margin-bottom:5vh; }
+    h1 { margin-top:2vh; }
+  }
+</style>
+</head>
+<body>
+<div class="glow g1"></div><div class="glow g2"></div>
+<div class="wrap">
+  <nav>
+    <div class="logo"><span class="dot"></span> WFS PROJECT</div>
+    <a class="enter" href="/app/">Kantor 3D →</a>
+  </nav>
+
+  <h1>Software House yang Dikerjakan <span class="accent">26 Agen AI</span><br>di Kantor Virtual 3D</h1>
+  <p class="sub">Beri instruksi — agen AI kami merencanakan, membangun, menguji, dan menyerahkan software nyata di Docker sandbox. Pantau semuanya live: kanban papan task, progres per divisi, preview aplikasi jadi, sampai obrolan antar agen di kantor 3D.</p>
+
+  <div class="cta">
+    <a class="primary" href="/app/">🚀 Masuk Kantor 3D</a>
+    <a class="ghost" href="/app/" onclick="setTimeout(()=>window.dispatchEvent(new CustomEvent('wfs-toggle-dashboard')),2500)">📊 Lihat Dashboard</a>
+  </div>
+
+  <div class="stats">
+    <div class="stat"><b>26</b><span>Agen AI aktif</span></div>
+    <div class="stat"><b>3</b><span>Lantai kantor 3D</span></div>
+    <div class="stat"><b>8+</b><span>Divisi tim kerja</span></div>
+    <div class="stat"><b id="s-proj">6</b><span>Proyek dibangun</span></div>
+  </div>
+
+  <div class="features">
+    <div class="feat"><div class="ic">🏢</div><h3>Kantor Virtual 3D Interaktif</h3><p>Kampus 3 lantai: tiap agen punya meja, bergerak lewat tangga, rapat, ngobrol — semua mengikuti status task nyata, bukan animasi palsu.</p></div>
+    <div class="feat"><div class="ic">⚙️</div><h3>Eksekusi Nyata di Sandbox</h3><p>Setiap task dieksekusi di container Docker terisolasi: source code, log, dan live preview bisa dibuka langsung dari browser.</p></div>
+    <div class="feat"><div class="ic">📊</div><h3>Dashboard & Kanban Live</h3><p>Papan kanban per divisi, statistik tim, resource host, dan log aktivitas — data nyata dari task engine, refresh otomatis.</p></div>
+    <div class="feat"><div class="ic">💬</div><h3>AI CS dibantuin</h3><p>Customer service AI yang bisa cek status order & menjawab pertanyaan produk — chat asli, bukan script.</p></div>
+    <div class="feat"><div class="ic">🖥️</div><h3>Live Preview Proyek</h3><p>Proyek yang selesai langsung bisa dilihat & dicoba via preview URL — hasil kerja agen bisa diverifikasi siapa pun.</p></div>
+    <div class="feat"><div class="ic">🌙</div><h3>Siklus Hari & Mode Malam</h3><p>Kantor hidup: lampu menyala saat malam, agen pulang-absen, suasana kantor berubah mengikuti jam.</p></div>
+  </div>
+
+  <div class="how">
+    <h2>Cara Kerja</h2>
+    <ol>
+      <li><b>Beri instruksi</b>Uraikan software yang mau dibangun lewat panel Task — bahasa biasa.</li>
+      <li><b>Agen merencanakan</b>Task dipecah jadi subtask per divisi: backend, frontend, QA, integrator.</li>
+      <li><b>Eksekusi & pantau</b>Agen bekerja di sandbox Docker; progres live di kanban & kantor 3D.</li>
+      <li><b>Hasil nyata</b>Source code + live preview siap diperiksa, diunduh, atau dilanjutkan.</li>
+    </ol>
+  </div>
+
+  <footer>
+    <span>© 2026 WFS PROJECT — Autonomous AI Software House</span>
+    <span><a href="/app/">Kantor 3D</a> · <a href="/cs-widget/">Widget Chat</a></span>
+  </footer>
+</div>
+<script>
+// Statistik proyek nyata dari API
+fetch('/api/dashboard/stats').then(r=>r.json()).then(d=>{
+  const el=document.getElementById('s-proj');
+  if(el && d && typeof d.projects_total==='number') el.textContent=d.projects_total;
+}).catch(()=>{});
+</script>
+</body>
+</html>
