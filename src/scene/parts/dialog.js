@@ -119,7 +119,8 @@ export function pickCollab(ad, agentData){
   // tidak boleh melempar — dianggap tanpa role (string kosong) → tidak ada match.
   const r=String(ad.agent?.role||'').toUpperCase();
   const options=[];
-  agentData.forEach(o=>{
+  // Guard: agentData undefined/null (pemanggil lupa seed) → dianggap tanpa kandidat
+  (agentData || []).forEach(o=>{
     if(o===ad||o.state!=='sitting')return;
     const orole=String(o.agent?.role||'').toUpperCase();
     COLLAB_PAIRS.forEach(([a,b,lines])=>{

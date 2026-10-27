@@ -86,6 +86,13 @@ describe('dialog: pickCollab', () => {
     expect(() => pickCollab(fe, [fe, weird])).not.toThrow();
     expect(pickCollab(fe, [fe, weird])).toBeNull();
   });
+
+  it('guard anti-poisoning: agentData undefined/null (pemanggil lupa seed) tidak melempar → null', () => {
+    expect(() => pickCollab(fe, undefined)).not.toThrow();
+    expect(pickCollab(fe, undefined)).toBeNull();
+    expect(() => pickCollab(fe, null)).not.toThrow();
+    expect(pickCollab(fe, null)).toBeNull();
+  });
 });
 
 describe('dialog: clampBubbleText', () => {

@@ -90,6 +90,17 @@ describe('pickDest', () => {
     expect(pickDest(dests, rmock(0.5), freeSpot, 2.5)).toBeNull();
     expect(pickDest(dests, rmock(0.5), freeSpot, NaN)).toBeNull();
   });
+  it('guard anti-poisoning: indeks rng.i rusak (NaN/out-of-range) → null tanpa throw (fallback koridor)', () => {
+    // semua percobaan memakai indeks rusak → tidak ada spot teruji → null (bukan TypeError)
+    expect(pickDest(dests, { r: () => 0, i: () => NaN }, () => true)).toBeNull();
+    expect(pickDest(dests, { r: () => 0, i: () => 99 }, () => true)).toBeNull();
+    expect(pickDest(dests, { r: () => 0, i: () => -1 }, () => true)).toBeNull();
+    expect(pickDest(dests, { r: () => 0, i: () => Infinity }, () => true)).toBeNull();
+  });
+  it('guard anti-poisoning: freeSpot hilang (bukan fungsi) → null tanpa throw', () => {
+    expect(pickDest(dests, rmock(0.5))).toBeNull();
+    expect(pickDest(dests, rmock(0.5), null)).toBeNull();
+  });
 });
 
 describe('fallbackSpot', () => {

@@ -44,13 +44,20 @@ export function jitterDest(dest, rng, jitter = DEST_JITTER) {
 export function pickDest(dests, rng, freeSpot, tries = 8) {
   if (!Array.isArray(dests) || dests.length === 0) return null;
   if (!Number.isInteger(tries) || tries <= 0) return null; // tanpa percobaan → null (bukan TypeError)
+  if (typeof freeSpot !== 'function') return null; // tanpa penguji spot → null (bukan TypeError)
+  const n = dests.length;
   let spot = null;
   for (let i = 0; i < tries; i++) {
-    const dest = dests[rng.i(0, dests.length - 1)];
+    // Guard anti-poisoning: indeks rusak (NaN/±Infinity/out-of-range dari rng.i)
+    // → lewati percobaan ini, jangan biarkan dests[NaN]=undefined masuk jitterDest
+    // (dest.x → TypeError) dan matikan loop gerak agent.
+    const idx = rng && typeof rng.i === 'function' ? rng.i(0, n - 1) : 0;
+    const dest = Number.isInteger(idx) && idx >= 0 && idx < n ? dests[idx] : null;
+    if (!dest) continue;
     spot = jitterDest(dest, rng);
     if (freeSpot(spot.x, spot.z)) return spot;
   }
-  return freeSpot(spot.x, spot.z) ? spot : null;
+  return spot && freeSpot(spot.x, spot.z) ? spot : null;
 }
 
 // Fallback koridor depan baris meja (band dari routing.js), clamp aman.
