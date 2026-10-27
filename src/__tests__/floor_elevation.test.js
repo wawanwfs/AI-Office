@@ -109,4 +109,19 @@ describe('floorElevationAt(z) — perhitungan ketinggian lantai', () => {
       prev = y;
     }
   });
+
+  it('guard anti-poisoning: z non-finite (NaN/±Infinity) → L1_Y (0), tidak terlempar ke L3', () => {
+    // Bug lama: NaN menembus semua perbandingan → return L3_Y (1.20) — agen
+    // dengan posisi z korup terangkat ke lantai atas. Sekarang no-op aman: dasar.
+    expect(floorElevationAt(NaN)).toBe(0);
+    expect(floorElevationAt(Infinity)).toBe(0);
+    expect(floorElevationAt(-Infinity)).toBe(0);
+    // Untuk kombinasi dengan x (guard z menang lebih dulu)
+    expect(floorElevationAt(NaN, -2.6)).toBe(0);
+    expect(floorElevationAt(Infinity, 2.6)).toBe(0);
+    // Nilai finite normal tetap tidak berubah (regresi guard)
+    expect(floorElevationAt(-1.2, -2.6)).toBeCloseTo(0.30, 4);
+    expect(floorElevationAt(0)).toBe(0.60);
+    expect(floorElevationAt(7.5)).toBe(1.20);
+  });
 });

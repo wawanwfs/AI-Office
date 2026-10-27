@@ -25,6 +25,11 @@ export const isNearStairX = (x) => {
  * @returns {number} Ketinggian permukaan lantai (meter)
  */
 export function floorElevationAt(z, x) {
+  // Guard anti-poisoning: z non-finite (NaN/±Infinity, mis. posisi walker korup)
+  // TIDAK boleh mengangkat agen ke lantai atas (NaN menembus semua perbandingan →
+  // jatuh ke return L3_Y). Kembalikan lantai dasar L1_Y (0) sebagai no-op aman,
+  // konsisten dgn guard isNearStairX & pola anti-poisoning modul lain.
+  if (!Number.isFinite(z)) return L1_Y;
   if (z <= STAIR1_START_Z) return L1_Y;
   if (z < STAIR1_END_Z) {
     if (!isNearStairX(x)) return L1_Y;
