@@ -126,3 +126,51 @@ describe('clock_canvas — konstanta & painter wajah jam', () => {
     expect(b.ctx.fillStyle).toBe(CLOCK_PIN);
   });
 });
+
+describe('clock_canvas — guard anti-poisoning input waktu non-finite', () => {
+  it('NaN nowSeconds → jarum jam/menit di 12:00, detik ikut dateMs normal, tanpa koordinat NaN', () => {
+    const { ops, ctx } = mkCtx();
+    drawClockFace(ctx, NaN, FIXED_DATE);
+    const lines = ops.filter((o) => o[0] === 'lineTo');
+    expect(lines).toHaveLength(TICKS + 3);
+    // jam & menit: sudut 0 → titik ujung (48, 48-len)
+    expect(lines[TICKS][1]).toBeCloseTo(CLOCK_CENTER, 6);
+    expect(lines[TICKS][2]).toBeCloseTo(CLOCK_CENTER - HANDS.hour.len, 6);
+    expect(lines[TICKS + 1][1]).toBeCloseTo(CLOCK_CENTER, 6);
+    expect(lines[TICKS + 1][2]).toBeCloseTo(CLOCK_CENTER - HANDS.minute.len, 6);
+    // detik: tetap mengikuti dateMs valid
+    const secAng = secondHandAngle(((FIXED_DATE / 1000) % 60));
+    expect(lines[TICKS + 2][1]).toBeCloseTo(CLOCK_CENTER + Math.sin(secAng) * HANDS.second.len, 6);
+    expect(lines[TICKS + 2][2]).toBeCloseTo(CLOCK_CENTER - Math.cos(secAng) * HANDS.second.len, 6);
+  });
+
+  it('Infinity/-Infinity/undefined/null nowSeconds → semua jarum tetap finite pada panjang spec', () => {
+    for (const bad of [Infinity, -Infinity, undefined, null]) {
+      const { ops, ctx } = mkCtx();
+      drawClockFace(ctx, bad, FIXED_DATE);
+      const lines = ops.filter((o) => o[0] === 'lineTo');
+      expect(lines).toHaveLength(TICKS + 3);
+      for (let i = 0; i < 3; i++) {
+        const x = lines[TICKS + i][1], y = lines[TICKS + i][2];
+        expect(Number.isFinite(x)).toBe(true);
+        expect(Number.isFinite(y)).toBe(true);
+        expect(Math.hypot(x - CLOCK_CENTER, y - CLOCK_CENTER))
+          .toBeCloseTo([HANDS.hour.len, HANDS.minute.len, HANDS.second.len][i], 6);
+      }
+    }
+  });
+
+  it('dateMs NaN → detik fallback Date.now() tanpa koordinat NaN, oper tetap berakhir dgn pin', () => {
+    const { ops, ctx } = mkCtx();
+    drawClockFace(ctx, NOW, NaN);
+    const lines = ops.filter((o) => o[0] === 'lineTo');
+    const sx = lines[TICKS + 2][1], sy = lines[TICKS + 2][2];
+    expect(Number.isFinite(sx)).toBe(true);
+    expect(Number.isFinite(sy)).toBe(true);
+    expect(Math.hypot(sx - CLOCK_CENTER, sy - CLOCK_CENTER)).toBeCloseTo(HANDS.second.len, 6);
+    const i = ops.findIndex((o) => o[0] === 'arc' && o[3] === CLOCK_PIN_R);
+    expect(i).toBeGreaterThan(-1);
+    expect(ops[i + 1]).toEqual(['fill']);
+    expect(ops.slice(i + 2)).toHaveLength(0);
+  });
+});

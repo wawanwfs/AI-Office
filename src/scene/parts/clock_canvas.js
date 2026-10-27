@@ -14,7 +14,12 @@ export const CLOCK_PIN = '#f97316';
 export const CLOCK_PIN_R = 3;
 
 export function drawClockFace(c, nowSeconds, dateMs = Date.now()) {
-  const minutes = nowSeconds / 60;
+  // Guard anti-poisoning: input waktu non-finite (NaN/±Infinity/undefined) → 0
+  // (jarum di 12:00), jangan biarkan NaN merambat ke koordinat lineTo arc
+  // (jarum diam-diam tak tergambar). Konsisten dgn pola guard modul lain.
+  const safeSeconds = Number.isFinite(nowSeconds) ? nowSeconds : 0;
+  const safeDateMs = Number.isFinite(dateMs) ? dateMs : Date.now();
+  const minutes = safeSeconds / 60;
   const cx = CLOCK_CENTER, cy = CLOCK_CENTER;
   c.fillStyle = CLOCK_BG; c.fillRect(0, 0, CLOCK_SIZE, CLOCK_SIZE);
   c.strokeStyle = CLOCK_RIM; c.lineWidth = CLOCK_RIM_W; c.beginPath(); c.arc(cx, cy, CLOCK_RIM_R, 0, Math.PI * 2); c.stroke();
@@ -30,6 +35,6 @@ export function drawClockFace(c, nowSeconds, dateMs = Date.now()) {
   };
   hand(hourHandAngle(minutes), HANDS.hour.len, HANDS.hour.w, HANDS.hour.color);
   hand(minuteHandAngle(minutes), HANDS.minute.len, HANDS.minute.w, HANDS.minute.color);
-  hand(secondHandAngle(((dateMs / 1000) % 60)), HANDS.second.len, HANDS.second.w, HANDS.second.color);
+  hand(secondHandAngle(((safeDateMs / 1000) % 60)), HANDS.second.len, HANDS.second.w, HANDS.second.color);
   c.fillStyle = CLOCK_PIN; c.beginPath(); c.arc(cx, cy, CLOCK_PIN_R, 0, Math.PI * 2); c.fill();
 }
