@@ -68,3 +68,37 @@ def test_parse_loadavg_malformed_dan_missing():
     assert server._parse_loadavg("   ") == "0.00"
     assert server._parse_loadavg(None) == "0.00"
     assert server._parse_loadavg("abc def") == "abc"  # token pertama tetap dikembalikan
+
+
+# ---------- endpoint /api/status (guard anti-poisoning) ----------
+
+def test_status_bentuk_normal_dan_kunci_lengkap():
+    out = server.status()
+    assert out["ok"] is True
+    for k in ("disk_used_gb", "disk_total_gb", "mem_available_mb", "mem_total_mb",
+              "uptime_s", "agents", "custom_cfg"):
+        assert k in out
+
+
+def test_status_toleran_proc_dan_disk_hilang(monkeypatch):
+    # /proc/meminfo & /proc/uptime hilang/tak terbaca → fallback 0, tidak 500.
+    import builtins
+    real_open = builtins.open
+
+    def fake_open(path, *a, **kw):
+        if str(path).startswith("/proc/"):
+            raise FileNotFoundError("no /proc in this env")
+        return real_open(path, *a, **kw)
+
+    monkeypatch.setattr(builtins, "open", fake_open)
+
+    def fake_usage(_):
+        raise OSError("disk tidak tersedia")
+
+    monkeypatch.setattr("shutil.disk_usage", fake_usage)
+
+    out = server.status()
+    assert out["ok"] is True
+    assert out["disk_used_gb"] == 0.0 and out["disk_total_gb"] == 0.0
+    assert out["mem_available_mb"] == 0 and out["mem_total_mb"] == 0
+    assert out["uptime_s"] == 0

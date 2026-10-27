@@ -248,12 +248,25 @@ async def preview_proxy(slug: str, path: str, request: Request):
 @app.get("/api/status")
 def status():
     import shutil, os
-    du = shutil.disk_usage("/")
-    with open("/proc/meminfo") as f:
-        mem = _parse_meminfo(f.read())
-    return {"ok": True, "disk_used_gb": round(du.used / 2**30, 1), "disk_total_gb": round(du.total / 2**30, 1),
+    # Guard anti-poisoning (pola sama dgn /api/system/resources): /proc & disk
+    # hilang/tak terbaca (non-Linux, container tanpa /proc) → fallback 0, jangan 500.
+    try:
+        du = shutil.disk_usage("/")
+    except OSError:
+        du = None
+    try:
+        mem = _parse_meminfo(open("/proc/meminfo").read())
+    except OSError:
+        mem = {"MemTotal": 0, "MemAvailable": 0}
+    try:
+        uptime_s = _parse_uptime_s(open("/proc/uptime").read())
+    except OSError:
+        uptime_s = 0
+    return {"ok": True,
+            "disk_used_gb": round(du.used / 2**30, 1) if du else 0.0,
+            "disk_total_gb": round(du.total / 2**30, 1) if du else 0.0,
             "mem_available_mb": mem["MemAvailable"], "mem_total_mb": mem["MemTotal"],
-            "uptime_s": _parse_uptime_s(open("/proc/uptime").read()),
+            "uptime_s": uptime_s,
             "agents": len(AGENTS_META), "custom_cfg": sum(1 for c in load_cfg().values() if c.get("key"))}
 
 @app.get("/api/agents")
