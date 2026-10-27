@@ -35,11 +35,19 @@ export function agentFocusPos(a) {
 // tgt = {x,y,z}, sph = {radius,theta,phi,...} — dimutasi langsung.
 // return: true bila goal reset selesai (pemanggil boleh set focusGoal=null).
 export function focusStep(tgt, sph, goalT, goalR, goalPhi) {
+  // Guard anti-poisoning: goal non-finite (NaN/±Infinity) → no-op aman.
+  // Lerp dari goal korup akan menulari tgt/sph → posisi kamera NaN
+  // (kamera runtuh/lenyap). Konsisten dgn guard anti-poisoning modul lain
+  // (motion_math.stepMove, label_overlap, sim_clock, resetFocusGoal).
+  if (!Number.isFinite(goalT.x) || !Number.isFinite(goalT.y) ||
+      !Number.isFinite(goalT.z) || !Number.isFinite(goalR)) {
+    return false;
+  }
   tgt.x += (goalT.x - tgt.x) * .06;
   tgt.y += (goalT.y - tgt.y) * .06;
   tgt.z += (goalT.z - tgt.z) * .06;
   sph.radius += (goalR - sph.radius) * .06;
-  if (goalPhi !== undefined) sph.phi += (goalPhi - sph.phi) * .06;
+  if (goalPhi !== undefined && Number.isFinite(goalPhi)) sph.phi += (goalPhi - sph.phi) * .06;
   return Math.sqrt(tgt.x * tgt.x + (tgt.y - 1.8) * (tgt.y - 1.8) + tgt.z * tgt.z) < .05;
 }
 

@@ -87,6 +87,33 @@ describe('focusStep', () => {
     focusStep(tgt, sph, HOME, 20, 1.05);
     expect(sph.phi).toBeCloseTo(0.35 + (1.05 - 0.35) * 0.06);
   });
+
+  it('guard: goal non-finite (NaN/±Infinity) → no-op, tgt/sph tak tertulari', () => {
+    for (const bad of [NaN, Infinity, -Infinity]) {
+      const tgt = { x: 0, y: 1.8, z: 0 };
+      const sph = { radius: 40 };
+      expect(focusStep(tgt, sph, { x: bad, y: 1.8, z: 0 }, 20)).toBe(false);
+      expect(tgt).toEqual({ x: 0, y: 1.8, z: 0 });
+      expect(sph.radius).toBe(40);
+    }
+  });
+
+  it('guard: radius goal non-finite → no-op (bukan NaN tersimpan)', () => {
+    const tgt = { x: 0, y: 1.8, z: 0 };
+    const sph = { radius: 40 };
+    expect(focusStep(tgt, sph, { x: 10, y: 1.8, z: 0 }, NaN)).toBe(false);
+    expect(tgt.x).toBe(0);
+    expect(sph.radius).toBe(40);
+  });
+
+  it('guard: goalPhi non-finite → phi tak ikut lerp, x/y/z/radius tetap jalan', () => {
+    const tgt = { x: 0, y: 1.8, z: 0 };
+    const sph = { radius: 20, phi: 0.35 };
+    focusStep(tgt, sph, { x: 10, y: 1.8, z: 0 }, 20, NaN);
+    expect(sph.phi).toBe(0.35);
+    expect(tgt.x).toBeCloseTo(0.6);
+    expect(sph.radius).toBeCloseTo(20);
+  });
 });
 
 describe('autoRotateStep', () => {
