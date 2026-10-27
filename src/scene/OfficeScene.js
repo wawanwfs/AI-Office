@@ -10,7 +10,7 @@ import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScre
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { perfStep } from './parts/perf_quality.js';
-import { updateFollowGoal, focusStep, autoRotateStep } from './parts/kamera_focus.js';
+import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam, resetFocusGoal } from './parts/kamera_focus.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
 import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent } from './parts/ring_spec.js';
@@ -180,11 +180,11 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   const hits=ray.intersectObjects(collectPickTargets({
     agentData, board:window.__projectBoard, whiteboard:window.__whiteboard, nexus:nxChar
   }),true);
-  if(!hits.length){ if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius,reset:true}} selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null); return; }
+  if(!hits.length){ if(focusGoal)focusGoal=resetFocusGoal(HOME_TGT,homeRadius,sph.radius); selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null); return; }
   if(isBoardHit(hits[0].object,window.__projectBoard)) {
     __sound.playSelect();
-    if(homeRadius===null)homeRadius=Math.max(24,Math.min(70,sph.radius));
-    if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
+    const hr=ensureHomeRadius(homeRadius,sph.radius); homeRadius=hr.homeRadius;
+    saveCam(sph);
     const bpos=boardMesh?boardMesh.position:new THREE.Vector3(-8.35,3.8,13.3);
     focusGoal={t:new THREE.Vector3(bpos.x,bpos.y,13.2),r:8.5};
     createBubble(bpos.x,bpos.y+2.15,7.8,'“WFS PROJECT Software House — membuka detail proyek…”','#10E5A0');
@@ -203,8 +203,8 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   }
   if(isNexusHit(hits[0].object,nxChar)) {
     __sound.playSelect();
-    if(homeRadius===null)homeRadius=Math.max(24,Math.min(70,sph.radius));
-    if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
+    const hr=ensureHomeRadius(homeRadius,sph.radius); homeRadius=hr.homeRadius;
+    saveCam(sph);
     const np=new THREE.Vector3(7.6,1.20+0.8,6.1);
     focusGoal={t:np,r:16};
     createBubble(7.6,1.20+1.3,6.1,'“Halo! Selamat datang di WFS PROJECT Autonomous Software House!”','#F59E0B');
@@ -224,9 +224,9 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
       window.__wfsSelectAgent(idMap[root.agent.name]||root.agent.name);
     }
     const wp=root.walker.visible?root.walker.position:{x:root.home.x,y:root.home.y||0,z:root.home.z};
-    if(homeRadius===null)homeRadius=Math.max(24,Math.min(70,sph.radius));
+    const hr=ensureHomeRadius(homeRadius,sph.radius); homeRadius=hr.homeRadius;
     focusGoal={t:new THREE.Vector3(wp.x,(wp.y||0)+1.5,wp.z),r:Math.min(sph.radius,24),follow:root};
-    if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
+    saveCam(sph);
     createBubble(wp.x,(wp.y||0)+1.3,wp.z,'“Halo! Aku '+root.agent.name+'”',root.agent.hex);
     selectedIdx=agentData.indexOf(root);applySelected();
     if(onSelectAgent)onSelectAgent(root.agent);
@@ -256,8 +256,8 @@ renderer.domElement&&renderer.domElement.addEventListener('dblclick',e=>{
   }
   if(hits.length&&isBoardHit(hits[0].object,window.__projectBoard)){
     __sound.playSelect();
-    if(homeRadius===null)homeRadius=Math.max(24,Math.min(70,sph.radius));
-    if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
+    const hr=ensureHomeRadius(homeRadius,sph.radius); homeRadius=hr.homeRadius;
+    saveCam(sph);
     const bpos=bm?bm.position:new THREE.Vector3(-8.35,3.8,13.3);
     focusGoal={t:new THREE.Vector3(bpos.x,bpos.y,13.2),r:8.5};
     createBubble(bpos.x,bpos.y+2.15,7.8,'“WFS PROJECT Software House — membuka detail proyek…”','#10E5A0');
@@ -436,8 +436,8 @@ window.__openTaskBoard = (opts) => {
   }
 };
 function focusMeetingRoom() {
-  if (homeRadius === null) homeRadius = Math.max(24, Math.min(70, sph.radius));
-  if (!sph.__saved) sph.__saved = { theta: sph.theta, phi: sph.phi, radius: sph.radius };
+  const hr=ensureHomeRadius(homeRadius,sph.radius); homeRadius=hr.homeRadius;
+  saveCam(sph);
   if (selectedIdx !== -1) { selectedIdx = -1; applySelected(); if (onSelectAgent) onSelectAgent(null); }
   const ft = meetingFocusTarget(MRX, MRZ);
   focusGoal = { t: new THREE.Vector3(ft.x, ft.y, ft.z), r: ft.radius };
@@ -1662,7 +1662,7 @@ if (typeof ResizeObserver !== 'undefined' && container) {
 }
 window.addEventListener('resize', onResize);
 window.__resizeScene = onResize;
-const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius||sph.radius,reset:true};selectedIdx=-1;applySelected();if(onSelectAgent)onSelectAgent(null);delete sph.__saved;} };window.addEventListener('keydown',onKey);
+const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&focusGoal){focusGoal=resetFocusGoal(HOME_TGT,homeRadius,sph.radius);selectedIdx=-1;applySelected();if(onSelectAgent)onSelectAgent(null);delete sph.__saved;} };window.addEventListener('keydown',onKey);
 
   // Return controls for React UI
   // ── Kontrol aksi tim (dipakai menu React) ──
@@ -1707,7 +1707,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
     isNamesVisible: () => namesVisible,
     setSelected: (idx) => { selectedIdx=idx; applySelected(); if(onSelectAgent)onSelectAgent(idx>=0&&idx<agentData.length?agentData[idx].agent:(idx===-2?(nxAgent?{...nxAgent,name:'Wahyu FS',floor:3}:{name:'Wahyu FS',color:0xF59E0B,hex:'#F59E0B',role:'Founder / CEO',floor:3}):null)); },
     getSelected: () => selectedIdx,
-    resetFocus: () => { if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius||sph.radius,reset:true}} selectedIdx=-1; applySelected(); if(onSelectAgent)onSelectAgent(null); delete sph.__saved; },
+    resetFocus: () => { if(focusGoal){focusGoal=resetFocusGoal(HOME_TGT,homeRadius,sph.radius)} selectedIdx=-1; applySelected(); if(onSelectAgent)onSelectAgent(null); delete sph.__saved; },
     setAutoRotate: (v) => { autoRot=!!v; __userRot=!!v; try{localStorage.setItem('wfs_autorot',autoRot?'1':'0')}catch{/* abaikan */} },
     isAutoRotate: () => autoRot,
     setTime: (minutes) => updateTime(minutes),
@@ -1748,8 +1748,8 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       const q = String(idOrName).toLowerCase().trim();
       if (q === 'ceo' || q === 'wahyu fs' || q === 'wahyu' || q === 'founder') {
         __sound.playSelect();
-        if(homeRadius===null)homeRadius=Math.max(24,Math.min(70,sph.radius));
-        if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
+        const hr=ensureHomeRadius(homeRadius,sph.radius); homeRadius=hr.homeRadius;
+        saveCam(sph);
         const np=new THREE.Vector3(7.6,1.20+0.8,6.1);
         focusGoal={t:np,r:16};
         createBubble(7.6,1.20+1.3,6.1,'“Halo! Selamat datang di WFS PROJECT Autonomous Software House!”','#F59E0B');
@@ -1788,9 +1788,9 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
           window.__wfsSelectAgent(idMap[root.agent.name] || root.agent.name);
         }
         const wp = root.walker && root.walker.visible ? root.walker.position : { x: root.home.x, y: root.home.y || 0, z: root.home.z };
-        if (homeRadius === null) homeRadius = Math.max(24, Math.min(70, sph.radius));
+        const hr2=ensureHomeRadius(homeRadius,sph.radius); homeRadius=hr2.homeRadius;
         focusGoal = { t: new THREE.Vector3(wp.x, (wp.y || 0) + 1.5, wp.z), r: Math.min(sph.radius, 20), follow: root };
-        if (!sph.__saved) sph.__saved = { theta: sph.theta, phi: sph.phi, radius: sph.radius };
+        saveCam(sph);
         createBubble(wp.x, (wp.y || 0) + 1.3, wp.z, '“Halo! Aku ' + root.agent.name + '”', root.agent.hex || '#10E5A0');
         selectedIdx = agentData.indexOf(root);
         applySelected();

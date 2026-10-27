@@ -11,7 +11,7 @@ export function updateFollowGoal(goal, homeRadius, radiusFallback, homeT = { x: 
   const fp = f.walker && f.walker.visible ? f.walker.position : { x: f.home.x, y: f.home.y || 0, z: f.home.z };
   goal.t.set(fp.x, (fp.y || 0) + 1.5, fp.z);
   if (f.state === 'offsite') {
-    return { t: homeT.clone ? homeT.clone() : { ...homeT }, r: homeRadius || radiusFallback, reset: true };
+    return resetFocusGoal(homeT, homeRadius, radiusFallback);
   }
   return goal;
 }
@@ -32,3 +32,44 @@ export function focusStep(tgt, sph, goalT, goalR, goalPhi) {
 
 // Auto-rotate idle: theta bertambah konstan per frame (0.0012 rad).
 export function autoRotateStep(sph) { sph.theta += .0012; }
+
+// ── Siklus 115: helper interaksi kamera (murni, null-safe) ──────────
+// Menggantikan duplikat inline di OfficeScene (7× clamp homeRadius,
+// 7× snapshot __saved, 4× konstruksi goal reset) dengan satu sumber
+// kebenaran yang bisa diuji unit tanpa renderer.
+
+// Pastikan radius "rumah" tersimpan SEKALI (radius kamera saat fokus
+// pertama dibuat, clamp 24..70). Return { homeRadius, saved } — saved
+// true bila nilai baru dipasang (pemanggil tak perlu cek null lagi).
+export function ensureHomeRadius(homeRadius, radius) {
+  if (homeRadius !== null && homeRadius !== undefined) return { homeRadius, saved: false };
+  const r = (typeof radius === 'number' && isFinite(radius)) ? radius : 42.5;
+  return { homeRadius: Math.max(24, Math.min(70, r)), saved: true };
+}
+
+// Snapshot pose kamera sekali per sesi fokus (untuk "kembali" via
+// Escape / setView). Return true bila snapshot baru dibuat.
+// Null-safe: radius NaN/undefined (mis. goal rusak) → fallback 42.5,
+// sehingga pose tersimpan selalu valid.
+export function saveCam(sph) {
+  if (!sph || sph.__saved) return false;
+  const r = (typeof sph.radius === 'number' && isFinite(sph.radius)) ? sph.radius : 42.5;
+  sph.__saved = { theta: sph.theta, phi: sph.phi, radius: r };
+  return true;
+}
+
+// Goal reset ke HOME_TGT (klik area kosong / Escape / resetFocus /
+// follow agent offsite). Null-safe: bila homeRadius belum pernah
+// tersimpan (null/undefined/NaN) pakai radiusFallback — dulu jalur
+// klik kosong meneruskan `r:homeRadius` mentah dan bila null, lerp
+// focusStep membuat radius MELURUH ke ~0 (kamera runtuh ke titik
+// target, view kosong/rusak) [bug siklus 115].
+export function resetFocusGoal(homeT, homeRadius, radiusFallback) {
+  const fb = (typeof radiusFallback === 'number' && isFinite(radiusFallback)) ? radiusFallback : 42.5;
+  const hr = (typeof homeRadius === 'number' && isFinite(homeRadius)) ? homeRadius : null;
+  return {
+    t: homeT && typeof homeT.clone === 'function' ? homeT.clone() : { ...homeT },
+    r: hr ? hr : fb,
+    reset: true,
+  };
+}

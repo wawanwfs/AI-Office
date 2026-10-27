@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { updateFollowGoal, focusStep, autoRotateStep } from '../scene/parts/kamera_focus.js';
+import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam, resetFocusGoal } from '../scene/parts/kamera_focus.js';
 
 const HOME = { x: 0, y: 1.8, z: 0 };
 const cloneHome = () => ({ x: 0, y: 1.8, z: 0 });
@@ -96,5 +96,96 @@ describe('autoRotateStep', () => {
     expect(sph.theta).toBeCloseTo(1.0012);
     autoRotateStep(sph);
     expect(sph.theta).toBeCloseTo(1.0024);
+  });
+});
+
+// ── Siklus 115: helper interaksi kamera (null-safe) ──
+describe('ensureHomeRadius', () => {
+  it('null → nilai baru di-clamp 24..70, saved=true', () => {
+    const a = ensureHomeRadius(null, 10);
+    expect(a).toEqual({ homeRadius: 24, saved: true });
+    expect(ensureHomeRadius(null, 90).homeRadius).toBe(70);
+    expect(ensureHomeRadius(null, 42.5).homeRadius).toBe(42.5);
+  });
+  it('sudah ada → return nilai lama tanpa saved', () => {
+    expect(ensureHomeRadius(30, 50)).toEqual({ homeRadius: 30, saved: false });
+    expect(ensureHomeRadius(30, 10).homeRadius).toBe(30);
+  });
+  it('undefined diperlakukan seperti null', () => {
+    expect(ensureHomeRadius(undefined, 40)).toEqual({ homeRadius: 40, saved: true });
+  });
+  it('radius non-finite → fallback 42.5 (bukan NaN tersimpan)', () => {
+    expect(ensureHomeRadius(null, NaN).homeRadius).toBe(42.5);
+    expect(ensureHomeRadius(null, undefined).homeRadius).toBe(42.5);
+  });
+});
+
+describe('saveCam', () => {
+  it('snapshot pose sekali; panggilan berikutnya no-op (return false)', () => {
+    const sph = { theta: 1.1, phi: 0.9, radius: 44 };
+    expect(saveCam(sph)).toBe(true);
+    expect(sph.__saved).toEqual({ theta: 1.1, phi: 0.9, radius: 44 });
+    sph.theta = 9;
+    expect(saveCam(sph)).toBe(false);
+    expect(sph.__saved.theta).toBe(1.1);
+  });
+  it('radius NaN → snapshot pakai fallback 42.5 (pose selalu valid)', () => {
+    const sph = { theta: 0.5, phi: 1.0, radius: NaN };
+    saveCam(sph);
+    expect(sph.__saved.radius).toBe(42.5);
+  });
+  it('null/undefined sph → false tanpa error', () => {
+    expect(saveCam(null)).toBe(false);
+    expect(saveCam(undefined)).toBe(false);
+  });
+  it('__saved sudah ada → false (tidak menimpa snapshot lama)', () => {
+    const sph = { theta: 2, phi: 1, radius: 30, __saved: { theta: 0, phi: 0.8, radius: 60 } };
+    expect(saveCam(sph)).toBe(false);
+    expect(sph.__saved.radius).toBe(60);
+  });
+});
+
+describe('resetFocusGoal', () => {
+  const H = { x: 0, y: 1.4, z: 0.3 };
+  it('goal reset: clone HOME_TGT (bukan referensi), r=homeRadius, reset=true', () => {
+    const g = resetFocusGoal(H, 35, 50);
+    expect(g.reset).toBe(true);
+    expect(g.t).toEqual(H);
+    expect(g.t).not.toBe(H);
+    expect(g.r).toBe(35);
+  });
+  it('homeRadius null → fallback radius (REGRESI siklus 115: dulu r=null → lerp radius meluruh ke ~0, kamera runtuh)', () => {
+    const g = resetFocusGoal(H, null, 44);
+    expect(g.r).toBe(44);
+    expect(Number.isFinite(g.r)).toBe(true);
+  });
+  it('homeRadius undefined/NaN → fallback juga', () => {
+    expect(resetFocusGoal(H, undefined, 44).r).toBe(44);
+    expect(resetFocusGoal(H, NaN, 44).r).toBe(44);
+  });
+  it('fallback non-finite (mis. sph.radius NaN) → 42.5; goal.r SELALU finite', () => {
+    const g = resetFocusGoal(H, null, NaN);
+    expect(g.r).toBe(42.5);
+    expect(Number.isFinite(g.r)).toBe(true);
+  });
+  it('homeRadius 0 (falsy) → fallback, konsisten dgn updateFollowGoal', () => {
+    expect(resetFocusGoal(H, 0, 18).r).toBe(18);
+  });
+  it('homeT polos (tanpa clone) → disalin dangkal', () => {
+    const t = { x: 1, y: 2, z: 3 };
+    const g = resetFocusGoal(t, 30, 20);
+    expect(g.t).toEqual(t);
+    expect(g.t).not.toBe(t);
+  });
+  it('updateFollowGoal offsite kini memakai resetFocusGoal (hasil identik dgn kontrak lama)', () => {
+    const g = {
+      t: { set(x, y, z) { this.x = x; this.y = y; this.z = z; } },
+      follow: { walker: { visible: true, position: { x: 1, z: 1 } }, state: 'offsite', home: { x: 3, z: 4 } },
+      r: 20,
+    };
+    const out = updateFollowGoal(g, null, 20, { clone: cloneHome });
+    expect(out.reset).toBe(true);
+    expect(out.t).toEqual(HOME);
+    expect(out.r).toBe(20); // homeRadius null → fallback
   });
 });
