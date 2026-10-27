@@ -1065,7 +1065,7 @@ setTimeout(()=>{
   }catch{ /* abaikan: bubble intro opsional */ }
 },1200);
 
-  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__meetFigs=__meet.figures; window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
+  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
   // Badge status real-time: poll gateway tiap 20s, warnai badge dada sesuai status task
   const __intervals=[];
   const __timeouts=[];
@@ -1122,6 +1122,7 @@ const pickCollabLocal=(ad)=>pickCollab(ad,agentData);
 const allOfficeAgents = [...allAgents, ...EXTENDED_SPECIALISTS];
 const __meet=createMeeting({THREE,office,rng,agents:allOfficeAgents,agentData,buildChar,seats:meetSeats,roomZ:MRZ,onChange:onMeetingChange,looksOf,addBlobShadow});
 const updateMeeting=m=>__meet.update(m);
+window.__meetFigs=__meet.figures; // debug/e2e (proyeksi figur rapat) — SETELAH __meet init (TDZ reg. 119)
 
 
 // ═══ PERABOT (modul terpisah: parts/furniture.js) ═══
