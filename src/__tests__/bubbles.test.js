@@ -109,4 +109,34 @@ describe('updateBubbles', () => {
     expect(b.sprite.position.y).toBeCloseTo(2 + (3 - 3.5) * .12); // float-up rumus lama
     expect(b.life).toBeCloseTo(3.5);                  // life naik 0.5 (semantik lama)
   });
+
+  it('guard anti-poisoning: life bubble non-finite (NaN/±Infinity) → dianggap habis & dihapus (tidak bocor/NaN)', () => {
+    for (const bad of [NaN, Infinity, -Infinity]) {
+      const b = mkBubble({ life: bad });
+      const bubbles = [b];
+      const remove = vi.fn();
+      updateBubbles(bubbles, 0.1, { remove });
+      expect(remove).toHaveBeenCalledWith(b);
+      expect(bubbles.length).toBe(0);
+    }
+  });
+
+  it('guard anti-poisoning: anchor korup (koordinat non-finite) → fallback melayang naik dari startY, bukan posisi NaN', () => {
+    const anchors = [
+      { x: NaN, z: 1, y: 2.6 },
+      { x: 1, z: Infinity, y: 2.6 },
+      { x: 1, z: 1, y: NaN },
+      { x: null, z: 1, y: 2.6 },
+    ];
+    for (const anchor of anchors) {
+      const b = mkBubble({ life: 3.5, startY: 4, anchor });
+      b.sprite.position.x = 7; b.sprite.position.z = -2; b.sprite.position.y = 5;
+      updateBubbles([b], 0, { remove: vi.fn() });
+      expect(b.sprite.position.x).toBe(7);                // posisi tak jadi NaN
+      expect(b.sprite.position.z).toBe(-2);
+      expect(Number.isFinite(b.sprite.position.y)).toBe(true);
+      expect(b.sprite.position.y).toBeCloseTo(4 + (3 - 3.5) * .12); // float-up dari startY
+      expect(Number.isFinite(b.sprite.material.opacity)).toBe(true);
+    }
+  });
 });

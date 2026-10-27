@@ -16,8 +16,19 @@ export function updateBubbles(bubbles, delta, { remove }){
   const k = 1 - Math.exp(-BUBBLE_SMOOTH_RATE * Math.max(0, delta));
   for(let i=bubbles.length-1;i>=0;i--){
     const b=bubbles[i];
+    // Guard anti-poisoning: life bubble rusak (NaN/±Infinity) → perlakukan sbg
+    // habis (0) supaya lewat jalur hapus di bawah — tanpa ini NaN merambat ke
+    // opacity/posisi (bubble tak terlihat) & life<=0 selalu false → tak pernah
+    // dihapus (bocor selamanya).
+    if (!Number.isFinite(b.life)) b.life = 0;
     b.life-=delta;
-    if(b.anchor){ // ikuti pembicara secara mulus (tidak melompat antar posisi)
+    // Guard anti-poisoning: anchor korup (koordinat non-finite/hilang) → jangan
+    // ikuti (posisi jadi NaN & sprite terbang ke koordinat rusak) — fallback ke
+    // melayang naik dari startY (branch tanpa anchor).
+    const anchorOk = !!b.anchor &&
+      Number.isFinite(b.anchor.x) && Number.isFinite(b.anchor.z) &&
+      (b.anchor.y === undefined || Number.isFinite(b.anchor.y));
+    if(anchorOk){ // ikuti pembicara secara mulus (tidak melompat antar posisi)
       b.sprite.position.x+=(b.anchor.x-b.sprite.position.x)*k;
       b.sprite.position.z+=(b.anchor.z-b.sprite.position.z)*k;
       const baseT=(b.anchor.y||2.0)+1.35;          // anchor.y=2.6 (berdiri) / 1.4 (ngobrol)
