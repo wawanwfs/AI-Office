@@ -98,3 +98,29 @@ describe('obstacles: seatOccupied', () => {
     expect(seatOccupied(0.63, 0.63, agents, null)).toBe(true); // hypot ≈ 0.891
   });
 });
+
+describe('obstacles: guard anti-poisoning non-finite (NaN/±Infinity)', () => {
+  it('inObstacle NaN/±Infinity → true (terblokir), bukan false (bebas)', () => {
+    expect(inObstacle(NaN, 0)).toBe(true);
+    expect(inObstacle(0, NaN)).toBe(true);
+    expect(inObstacle(NaN, NaN)).toBe(true);
+    expect(inObstacle(Infinity, 0)).toBe(true);
+    expect(inObstacle(0, -Infinity)).toBe(true);
+    expect(inObstacle(undefined, 0)).toBe(true);
+    expect(inObstacle(null, 0)).toBe(true);
+    // koordinat valid tetap berperilaku lama
+    expect(inObstacle(-10, 2.5)).toBe(true);
+    expect(inObstacle(-9.4, 2.5)).toBe(false);
+  });
+
+  it('seatOccupied NaN → true (terhuni), agen tak duduk di titik korup', () => {
+    const agents = [{ agent: 'a', home: { x: -6, z: -1 }, state: 'sitting' }];
+    expect(seatOccupied(NaN, -1, agents, null)).toBe(true);
+    expect(seatOccupied(-6, NaN, agents, null)).toBe(true);
+    expect(seatOccupied(NaN, NaN, agents, null)).toBe(true);
+    expect(seatOccupied(Infinity, -1, agents, null)).toBe(true);
+    // koordinat valid tetap berperilaku lama
+    expect(seatOccupied(-6.6, -1.3, agents, null)).toBe(true);
+    expect(seatOccupied(-6.5, -2.5, agents, null)).toBe(false);
+  });
+});

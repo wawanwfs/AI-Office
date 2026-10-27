@@ -9,10 +9,17 @@ export const OBSTACLES = [
   [8.0, 12.4, 4.3, 9.4],      // lounge: sofa (10.5,6), coffee table, armchairs, lamp, magRack
 ];
 
+// Guard anti-poisoning: koordinat non-finite (NaN/±Infinity) TIDAK boleh dianggap
+// "bebas" (return false) — NaN menembus semua perbandingan → agen bisa disuruh
+// berhenti/menembus furnitur. Perlakukan sebagai TERBLOKIR (true) = no-op aman,
+// konsisten dgn isNearStairX & pola anti-poisoning modul lain.
 export const inObstacle = (x, z) =>
+  !(Number.isFinite(x) && Number.isFinite(z)) ||
   OBSTACLES.some(([x0, x1, z0, z1]) => x >= x0 && x <= x1 && z >= z0 && z <= z1);
 
 // Titik dalam zona meja+kursi agent (±0.9) yang dihuni. agents = agentData
 // (entri {agent, home:{x,z}, state}); selfAgent = objek agent pemilik target.
+// Koordinat non-finite → dianggap TERHUNI (true), agen tak mencoba duduk di titik korup.
 export const seatOccupied = (x, z, agents, selfAgent) =>
+  !(Number.isFinite(x) && Number.isFinite(z)) ||
   agents.some((o) => o.agent !== selfAgent && o.state !== 'offsite' && Math.hypot(o.home.x - x, o.home.z - z) < 0.9);
