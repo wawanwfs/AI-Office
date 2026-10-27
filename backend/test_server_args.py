@@ -24,3 +24,35 @@ def test_clamp_int_angka_benar_di_batas():
     assert server._clamp_int("500", 100, 10, 500) == 500
     assert server._clamp_int("1", 60, 1, 600) == 1
     assert server._clamp_int("600", 60, 1, 600) == 600
+
+
+# ---------- helper parse /proc/meminfo & /proc/uptime (toleran) ----------
+
+def test_parse_meminfo_normal():
+    text = "MemTotal:       16384000 kB\nMemFree:         1024000 kB\nMemAvailable:    12345678 kB\n"
+    out = server._parse_meminfo(text)
+    assert out == {"MemTotal": 16000, "MemAvailable": 12056}
+    assert isinstance(out["MemTotal"], int) and isinstance(out["MemAvailable"], int)
+
+
+def test_parse_meminfo_malformed_dan_missing():
+    # nilai non-numerik, baris tanpa colon, kosong → 0, tidak melempar
+    text = "MemTotal:    abc kB\nMemAvailable:\nbaris-tanpa-colon\n"
+    assert server._parse_meminfo(text) == {"MemTotal": 0, "MemAvailable": 0}
+    assert server._parse_meminfo("") == {"MemTotal": 0, "MemAvailable": 0}
+    # file hanya berisi baris lain (bukan MemTotal/MemAvailable)
+    assert server._parse_meminfo("Dirty: 0 kB\n") == {"MemTotal": 0, "MemAvailable": 0}
+
+
+def test_parse_meminfo_kunci_tak_dikenal_diabaikan():
+    text = "MemTotal: 2048000 kB\nSwapTotal: 1024000 kB\nMemAvailable: 1024000 kB\n"
+    out = server._parse_meminfo(text)
+    assert "SwapTotal" not in out and out == {"MemTotal": 2000, "MemAvailable": 1000}
+
+
+def test_parse_uptime_s_normal_dan_malformed():
+    assert server._parse_uptime_s("1234.56 987.65") == 1234
+    assert server._parse_uptime_s("42") == 42
+    assert server._parse_uptime_s("") == 0
+    assert server._parse_uptime_s("abc def") == 0
+    assert server._parse_uptime_s("   ") == 0

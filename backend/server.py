@@ -73,6 +73,33 @@ def _clamp_int(v, default, lo=None, hi=None):
         return hi
     return n
 
+
+def _parse_meminfo(text):
+    """Parse /proc/meminfo → {MemTotal, MemAvailable} dalam MB, toleran.
+
+    Baris tanpa colon / nilai non-numerik / kosong → 0 (guard anti-poisoning,
+    konsisten dgn pola _clamp_int; tidak pernah melempar pada format tak terduga).
+    """
+    out = {}
+    for line in text.splitlines():
+        k, _, v = line.partition(":")
+        if k not in ("MemTotal", "MemAvailable"):
+            continue
+        try:
+            kb = int(v.split()[0])
+        except (ValueError, IndexError):
+            kb = 0
+        out[k] = kb // 1024
+    return {"MemTotal": out.get("MemTotal", 0), "MemAvailable": out.get("MemAvailable", 0)}
+
+
+def _parse_uptime_s(text):
+    """Parse /proc/uptime → detik (int), toleran terhadap format tak terduga."""
+    try:
+        return int(text.split()[0].split(".")[0])
+    except (ValueError, IndexError):
+        return 0
+
 # ---------- models ----------
 class ChatIn(BaseModel):
     agent_id: str
@@ -209,15 +236,11 @@ async def preview_proxy(slug: str, path: str, request: Request):
 def status():
     import shutil, os
     du = shutil.disk_usage("/")
-    mem = {}
     with open("/proc/meminfo") as f:
-        for line in f:
-            k, _, v = line.partition(":")
-            if k in ("MemTotal", "MemAvailable"):
-                mem[k] = int(v.split()[0]) // 1024
+        mem = _parse_meminfo(f.read())
     return {"ok": True, "disk_used_gb": round(du.used / 2**30, 1), "disk_total_gb": round(du.total / 2**30, 1),
-            "mem_available_mb": mem.get("MemAvailable", 0), "mem_total_mb": mem.get("MemTotal", 0),
-            "uptime_s": int(open("/proc/uptime").read().split()[0].split(".")[0]),
+            "mem_available_mb": mem["MemAvailable"], "mem_total_mb": mem["MemTotal"],
+            "uptime_s": _parse_uptime_s(open("/proc/uptime").read()),
             "agents": len(AGENTS_META), "custom_cfg": sum(1 for c in load_cfg().values() if c.get("key"))}
 
 @app.get("/api/agents")
