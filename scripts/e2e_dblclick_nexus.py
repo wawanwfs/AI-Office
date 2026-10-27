@@ -194,7 +194,10 @@ def main():
             # t.y = titik intersect badan + 0.8 (kepala/torso ≈ 3.3-4.3).
             verdict = None
             sm, r, ty = {}, None, None
-            for _ in range(14):
+            # 28 s (bukan 14): lerp .06/frame butuh ~18 frame utk turun 20.4→17.4;
+            # SwiftShader ~1.5 FPS saat VM load tinggi → 14 s kerap ambigu
+            # (r berhenti 17.4x tanpa verdict). Verdict tetap ketat.
+            for _ in range(28):
                 time.sleep(1.0)
                 sm = json.loads(ev(
                     "JSON.stringify({r: window.__cam ? window.__cam.sph.radius : -1,"
