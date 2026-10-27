@@ -21,6 +21,22 @@ except (ImportError, ValueError):
     from docker_sandbox import DockerSandboxManager
     from orchestrator import TaskOrchestrator
 
+MAX_API_BODY = 5 * 1024 * 1024
+
+
+def _content_length(headers):
+    """Parse Content-Length toleran: invalid/negatif → 0.
+
+    Pola sama dgn hq_proxy._parse_content_length / server._clamp_int — header
+    malformed tidak boleh melempar ValueError (int() telanjang) yang membunuh handler.
+    """
+    try:
+        n = int(headers.get("Content-Length", 0))
+    except (TypeError, ValueError):
+        return 0
+    return n if n >= 0 else 0
+
+
 def handle_api_request(handler, method, path):
     """
     Dispatches /api/* and /preview/* requests.
@@ -87,7 +103,16 @@ def handle_api_request(handler, method, path):
 
     body = {}
     if method == "POST":
-        ln = int(handler.headers.get("Content-Length", 0))
+        ln = _content_length(handler.headers)
+        if ln > MAX_API_BODY:
+            # Cegah memory DoS via header Content-Length palsu (pola sama dgn hq_proxy 413).
+            msg = json.dumps({"error": "payload terlalu besar"}).encode("utf-8")
+            handler.send_response(413)
+            handler.send_header("Content-Type", "application/json")
+            handler.send_header("Content-Length", str(len(msg)))
+            handler.end_headers()
+            handler.wfile.write(msg)
+            return True
         if ln > 0:
             raw = handler.rfile.read(ln)
             try:

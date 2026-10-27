@@ -24,6 +24,22 @@ def get_token():
 
 UI_TOKEN = get_token()
 
+MAX_PROXY_BODY = 5 * 1024 * 1024
+
+
+def _parse_content_length(raw):
+    """Parse Content-Length toleran: nilai invalid/negatif → 0.
+
+    Konsisten dgn pola _parse_content_length di hq_proxy.py — header malformed
+    tidak boleh melempar ValueError (int() telanjang) yang membunuh handler proxy.
+    """
+    try:
+        n = int(raw)
+    except (TypeError, ValueError):
+        return 0
+    return n if n >= 0 else 0
+
+
 class H(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         if not hasattr(self, "_wfs_cc"):
@@ -82,7 +98,15 @@ class H(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(msg)
                 return
-            ln = int(self.headers.get("Content-Length", 0))
+            ln = _parse_content_length(self.headers.get("Content-Length", 0))
+            if ln > MAX_PROXY_BODY:
+                msg = json.dumps({"error": "payload terlalu besar"}).encode()
+                self.send_response(413)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(msg)))
+                self.end_headers()
+                self.wfile.write(msg)
+                return
             body = self.rfile.read(ln) if ln else b"{}"
         req = urllib.request.Request(url, data=body, method=self.command)
         req.add_header("Content-Type", "application/json")
@@ -167,5 +191,6 @@ class ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
     daemon_threads = True
     allow_reuse_address = True
 
-with ThreadingTCPServer(("0.0.0.0", 9503), H) as s:
-    s.serve_forever()
+if __name__ == "__main__":
+    with ThreadingTCPServer(("0.0.0.0", 9503), H) as s:
+        s.serve_forever()
