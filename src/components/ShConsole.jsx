@@ -314,14 +314,15 @@ export default function ShConsole({ show, onClose }) {
                     })}
                     {entries.length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>(folder kosong)</div>}
                     {fileView && (
-                      <pre style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 220, overflow: 'auto', fontSize: 12, marginTop: 8 }}
+                      <pre role="region" aria-label={`Isi file ${fileView.name}`}
+                        style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 220, overflow: 'auto', fontSize: 12, marginTop: 8 }}
                         onClick={(e) => e.stopPropagation()}>{fileView.content}</pre>
                     )}
                   </div>
                   <div style={STYLE.card}>
                     <div style={{ fontWeight: 700, marginBottom: 8 }}>🪵 Container Logs</div>
                     <button style={STYLE.btnGhost} onClick={() => loadWsLogs(wsId)}>Muat ulang</button>
-                    <pre style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 180, overflow: 'auto', fontSize: 11 }}>
+                    <pre role="region" aria-label="Container logs" style={{ background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, maxHeight: 180, overflow: 'auto', fontSize: 11 }}>
                       {logs.length ? logs.join('\n') : '(log kosong)'}</pre>
                   </div>
                   <div style={STYLE.card}>

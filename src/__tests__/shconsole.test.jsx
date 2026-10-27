@@ -131,6 +131,28 @@ describe('ShConsole — konsol software house', () => {
     await waitFor(() => expect(acts).toContain('restart'))
   })
 
+  it('a11y: konten file & log container terekspos sebagai region berlabel', async () => {
+    stubFetch({
+      '/wfs-api/sh/overview': OV,
+      '/wfs-api/projects': PROJ_RESP,
+      '/wfs-api/projects/1/files': { path: '', entries: [{ name: 'src', type: 'dir' }, { name: 'Dockerfile', type: 'file', size: 120 }] },
+      '/wfs-api/projects/1/file?path=Dockerfile': { path: 'Dockerfile', content: 'FROM python:3.12-slim' },
+      '/wfs-api/projects/1/logs?lines=100': { logs: ['INFO line'] },
+      '/wfs-api/projects/1/git': { repo: false },
+    })
+    render(<ShConsole show onClose={() => {}} />)
+    clickTab('Workspace')
+    expect(await screen.findByLabelText('Pilih project')).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Pilih project'), { target: { value: '1' } })
+    expect(await screen.findByText(/Dockerfile/)).toBeTruthy()
+    // log container: region berlabel (bukan <pre> telanjang)
+    expect(screen.getByRole('region', { name: 'Container logs' })).toBeTruthy()
+    fireEvent.click(screen.getByText(/Dockerfile/))
+    // konten file terbuka: region berlabel nama file (bukan <pre> telanjang)
+    const fileRegion = await screen.findByRole('region', { name: 'Isi file Dockerfile' })
+    expect(fileRegion.textContent).toMatch(/FROM python:3.12-slim/)
+  })
+
   it('tab Workspace: entri file dapat diakses keyboard (Enter/Space + peran button)', async () => {
     stubFetch({
       '/wfs-api/sh/overview': OV,
