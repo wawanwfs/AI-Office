@@ -19,6 +19,12 @@ def get_token():
 
 UI_TOKEN = get_token()
 
+# Batas atas body POST yang diteruskan ke gateway (byte). Mencegah pembacaan
+# tak terbatas via header Content-Length palsu/raksasa (memory DoS) pada port
+# 9503 yang terpapar — proxy ini dipakai UI same-origin, semua payload nyata
+# (proyek/task/cfg/exec/git/approvals) jauh di bawah 5 MB.
+MAX_PROXY_BODY = 5 * 1024 * 1024
+
 
 def _security_headers():
     """Header keamanan dasar untuk semua respons UI (anti MIME-sniff + referrer leak)."""
@@ -102,6 +108,14 @@ class H(http.server.SimpleHTTPRequestHandler):
                 self.wfile.write(msg)
                 return
             ln = _parse_content_length(self.headers.get("Content-Length", 0))
+            if ln > MAX_PROXY_BODY:
+                msg = json.dumps({"error": "payload terlalu besar"}).encode()
+                self.send_response(413)
+                self.send_header("Content-Type", "application/json")
+                self.send_header("Content-Length", str(len(msg)))
+                self.end_headers()
+                self.wfile.write(msg)
+                return
             body = self.rfile.read(ln) if ln else b"{}"
         req = urllib.request.Request(url, data=body, method=self.command)
         req.add_header("Content-Type", "application/json")

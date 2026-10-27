@@ -157,6 +157,30 @@ class TestHQProxy(unittest.TestCase):
         self.assertEqual(fake._status, 200)
         self.assertEqual(_StubGatewayHandler.last["body"], b"{}")
 
+    def test_post_with_oversized_content_length_returns_413(self):
+        # Content-Length melebihi MAX_PROXY_BODY → 413 tanpa meneruskan ke gateway
+        # (cegah memory DoS: baca tak terbatas dari header palsu di port 9503).
+        _StubGatewayHandler.last = None
+        fake = FakeH(path="/wfs-api/projects", command="POST",
+                     body=b"{}",
+                     headers={"Content-Length": str(hq_proxy.MAX_PROXY_BODY + 1),
+                              "X-WFS-Token": hq_proxy.UI_TOKEN})
+        H._proxy(fake)
+        self.assertEqual(fake._status, 413)
+        self.assertEqual(json.loads(fake.wfile.data), {"error": "payload terlalu besar"})
+        self.assertIsNone(_StubGatewayHandler.last)
+
+    def test_post_at_max_content_length_still_proxies(self):
+        # Tepat di batas harus tetap diteruskan (boundary).
+        _StubGatewayHandler.last = None
+        fake = FakeH(path="/wfs-api/projects", command="POST",
+                     body=b"{}",
+                     headers={"Content-Length": str(hq_proxy.MAX_PROXY_BODY),
+                              "X-WFS-Token": hq_proxy.UI_TOKEN})
+        H._proxy(fake)
+        self.assertEqual(fake._status, 200)
+        self.assertIsNotNone(_StubGatewayHandler.last)
+
     def test_get_proxies_without_token(self):
         _StubGatewayHandler.last = None
         fake = FakeH(path="/wfs-api/agents", command="GET")
