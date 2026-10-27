@@ -47,9 +47,14 @@ describe('zoneJitter', () => {
 });
 
 describe('zoneScreenFade', () => {
-  it('pw ≤ 340 → opacity 1, visible true', () => {
+  it('0/340 → tampil penuh', () => {
     expect(zoneScreenFade(0)).toEqual({ opacity: 1, visible: true });
     expect(zoneScreenFade(340)).toEqual({ opacity: 1, visible: true });
+  });
+  it('anti-poisoning: NaN/±Infinity → tampil penuh (default aman)', () => {
+    expect(zoneScreenFade(NaN)).toEqual({ opacity: 1, visible: true });
+    expect(zoneScreenFade(Infinity)).toEqual({ opacity: 1, visible: true });
+    expect(zoneScreenFade(-Infinity)).toEqual({ opacity: 1, visible: true });
   });
   it('pw > 340: linear fade, clamp 0, visible false saat ≤0.03', () => {
     expect(zoneScreenFade(470).opacity).toBeCloseTo(0.5); // 1 - 130/260

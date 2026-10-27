@@ -76,6 +76,21 @@ describe('buildZonePts', () => {
     const pts = buildZonePts([ent({ dist: 0.1 })], 700, 683, 384);
     expect(pts[0].zw).toBeCloseTo(3.0 * 700 / 2 * 1.06, 10);
   });
+  it('anti-poisoning: dist NaN → fallback dz=2 (zw/zh tetap finite, tak merambat NaN)', () => {
+    const pts = buildZonePts([ent({ dist: NaN })], 700, 683, 384);
+    expect(pts).toHaveLength(1);
+    expect(Number.isFinite(pts[0].zw)).toBe(true);
+    expect(Number.isFinite(pts[0].zh)).toBe(true);
+    expect(pts[0].zw).toBeCloseTo(3.0 * 700 / 2 * 1.06, 10); // sama dgn clamp dist<2
+  });
+  it('anti-poisoning: scale NaN/undefined → zw/zh 0 (ukuran nol, no-op layout) & fade tampil penuh', () => {
+    const pts = buildZonePts([ent({ scale: { x: NaN, y: NaN } })], 700, 683, 384);
+    expect(pts).toHaveLength(1);
+    expect(pts[0].zw).toBe(0);
+    expect(pts[0].zh).toBe(0);
+    expect(pts[0].fade).toEqual({ opacity: 1, visible: true });
+    expect(buildZonePts([ent({ scale: undefined })], 700, 683, 384)[0].zw).toBe(0);
+  });
   it('fade: sangat dekat → opacity rendah & invisible; jauh → opaque', () => {
     const far = buildZonePts([ent({ dist: 50 })], 700, 683, 384)[0];
     expect(far.fade.opacity).toBe(1); expect(far.fade.visible).toBe(true);

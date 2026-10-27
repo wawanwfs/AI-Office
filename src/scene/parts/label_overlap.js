@@ -249,6 +249,8 @@ export function zoneJitter(label) {
 // pw = piksel lebar zona; >340 mulai memudar hingga 0.03 (lalu invisible).
 // return {opacity, visible} — null bila zona tidak perlu diubah (pw ≤ 340).
 export function zoneScreenFade(pw) {
+  // Guard anti-poisoning: pw non-finite (NaN/±Infinity) → tampil penuh (aman).
+  if (!Number.isFinite(pw)) return { opacity: 1, visible: true };
   if (pw > 340) {
     const f = Math.max(0, 1 - (pw - 340) / 260);
     return { opacity: f, visible: f > 0.03 };
@@ -288,15 +290,20 @@ export function buildZonePts(zones, k, pxW, pxH) {
     if (!z.visible) return;
     const v = z.proj;
     if (!v || v.z > 1) return;
-    const dz = Math.max(2, z.dist);
-    const pw = z.scale.x * k / dz;
+    // Guard anti-poisoning: dist/scale non-finite (NaN/±Infinity) → fallback
+    // aman (dz=2, skala=0). Math.max(2, NaN)=NaN → zw/zh NaN membuat label zona
+    // tak ikut anti-overlap diam-diam; skala 0 = ukuran nol (no-op layout).
+    const dz = Number.isFinite(z.dist) ? Math.max(2, z.dist) : 2;
+    const sx = Number.isFinite(z.scale && z.scale.x) ? z.scale.x : 0;
+    const sy = Number.isFinite(z.scale && z.scale.y) ? z.scale.y : 0;
+    const pw = sx * k / dz;
     const zf = zoneScreenFade(pw);
     const zay = z.antiY || 0, zax = z.antiX || 0;
     const { jy, jx } = zoneJitter(z.label);
     const b = z.base || { y: 0, x: 0 };
     out.push({
       a: null, zone: true, zt: z.ref, fade: zf,
-      zw: pw * 1.06, zh: z.scale.y * k / dz * 1.25,
+      zw: pw * 1.06, zh: sy * k / dz * 1.25,
       baseY: b.y + jy * 0.06 + zay, baseX: b.x + jx * 0.08 + zax,
       x: v.x * pxW, y: v.y * pxH, offY: 0, offX: 0,
     });
