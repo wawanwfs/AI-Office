@@ -56,6 +56,7 @@ import { DESKS } from './parts/desk_layout.js';
 import { teamPodFocusTarget, findTeamByKey } from './parts/team_spec.js';
 import { meetingFocusTarget, getWhiteboardTooltipText, isWhiteboardHit } from './parts/whiteboard_spec.js';
 import { isLongHair, STANDING, SITTING, accessoryAnchor } from './parts/character_spec.js';
+import { collectPickTargets, findAgentRoot, isNexusHit, isBoardHit } from './parts/raycast_targets.js';
 import { nearbyPairs as nearbyPairsPure, tickCooldown as tickCooldownPure, CHAT_RADIUS, CHAT_COOLDOWN_SEC } from './parts/chat_check.js';
 
 export function createOfficeScene(container, callbacks = {}) {
@@ -173,20 +174,14 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   const ndc=new THREE.Vector2(pt.x,pt.y);
   const ray=new THREE.Raycaster();
   ray.setFromCamera(ndc,camera);
-  const targets=[];
-  agentData.forEach(ad=>{ if(ad.sittingChar.visible)targets.push(ad.sittingChar); if(ad.walker.visible)targets.push(ad.walker); });
-  // papan proyek juga bisa diklik → kamera zoom ke papan
   const boardMesh=window.__projectBoard&&window.__projectBoard.mesh;
-  const boardFrame=window.__projectBoard&&window.__projectBoard.frame;
-  const boardTargets=[ ...(boardMesh?[boardMesh]:[]), ...(boardFrame?[boardFrame]:[]) ];
-  // whiteboard ruang meeting juga bisa diklik → fokus ruang meeting
   const wbMesh=window.__whiteboard&&window.__whiteboard.mesh;
   const wbFrame=window.__whiteboard&&window.__whiteboard.frame;
-  const wbTargets=[ ...(wbMesh?[wbMesh]:[]), ...(wbFrame?[wbFrame]:[]) ];
-  const nexusTarget=(nxChar&&nxChar.visible!==false)?[nxChar]:[];
-  const hits=ray.intersectObjects([...targets,...boardTargets,...wbTargets,...nexusTarget],true);
+  const hits=ray.intersectObjects(collectPickTargets({
+    agentData, board:window.__projectBoard, whiteboard:window.__whiteboard, nexus:nxChar
+  }),true);
   if(!hits.length){ if(focusGoal){focusGoal={t:HOME_TGT.clone(),r:homeRadius,reset:true}} selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null); return; }
-  if((boardMesh&&hits[0].object===boardMesh)||(boardFrame&&(hits[0].object===boardFrame||(boardFrame.getObjectById&&boardFrame.getObjectById(hits[0].object.id))))) {
+  if(isBoardHit(hits[0].object,window.__projectBoard)) {
     __sound.playSelect();
     if(homeRadius===null)homeRadius=Math.max(24,Math.min(70,sph.radius));
     if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
@@ -206,7 +201,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
     selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null);
     return;
   }
-  if(nxChar&&(hits[0].object===nxChar||(nxChar.getObjectById&&nxChar.getObjectById(hits[0].object.id)))) {
+  if(isNexusHit(hits[0].object,nxChar)) {
     __sound.playSelect();
     if(homeRadius===null)homeRadius=Math.max(24,Math.min(70,sph.radius));
     if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
@@ -221,12 +216,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
     }
     return;
   }
-  let obj=hits[0].object;let root=null;
-  agentData.forEach(ad=>{ if(ad.sittingChar===obj||ad.walker===obj)root=ad; });
-  if(!root){
-    let p=hits[0].object;
-    while(p){ const f=agentData.find(ad=>ad.sittingChar===p||ad.walker===p); if(f){root=f;break} p=p.parent; }
-  }
+  let root=findAgentRoot(hits[0].object,agentData);
   if(root){
     __sound.playSelect();
     if(window.__wfsSelectAgent){
@@ -252,22 +242,19 @@ renderer.domElement&&renderer.domElement.addEventListener('dblclick',e=>{
   const pt=getCanvasPointerNdc(e,renderer&&renderer.domElement);
   const ndc=new THREE.Vector2(pt.x,pt.y);
   const ray=new THREE.Raycaster();ray.setFromCamera(ndc,camera);
-  const targets=[];agentData.forEach(ad=>{if(ad.sittingChar.visible)targets.push(ad.sittingChar);if(ad.walker.visible)targets.push(ad.walker)});
   const bm=window.__projectBoard&&window.__projectBoard.mesh;
-  const bf=window.__projectBoard&&window.__projectBoard.frame;
-  const bt=[...(bm?[bm]:[]),...(bf?[bf]:[])];
   const wbm=window.__whiteboard&&window.__whiteboard.mesh;
   const wbf=window.__whiteboard&&window.__whiteboard.frame;
-  const wbt=[...(wbm?[wbm]:[]),...(wbf?[wbf]:[])];
-  const nt=(nxChar&&nxChar.visible!==false)?[nxChar]:[];
-  const hits=ray.intersectObjects([...targets,...bt,...wbt,...nt],true);
+  const hits=ray.intersectObjects(collectPickTargets({
+    agentData, board:window.__projectBoard, whiteboard:window.__whiteboard, nexus:nxChar
+  }),true);
   if(hits.length&&isWhiteboardHit(hits[0].object,wbm,wbf)){
     __sound.playSelect();
     focusMeetingRoom();
     try { window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { view: 'kanban', source: 'whiteboard' } })); } catch { /* ignore */ }
     return;
   }
-  if(hits.length&&((bm&&hits[0].object===bm)||(bf&&(hits[0].object===bf||(bf.getObjectById&&bf.getObjectById(hits[0].object.id)))))){
+  if(hits.length&&isBoardHit(hits[0].object,window.__projectBoard)){
     __sound.playSelect();
     if(homeRadius===null)homeRadius=Math.max(24,Math.min(70,sph.radius));
     if(!sph.__saved)sph.__saved={theta:sph.theta,phi:sph.phi,radius:sph.radius};
@@ -325,25 +312,17 @@ renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
     if(!agentData.length)return;
     if(renderer.domElement.style.cursor==='grabbing')return; // jangan ganggu feedback drag
     hoverRay.setFromCamera(hoverNdc,camera);
-    const targets=[];agentData.forEach(ad=>{if(ad.sittingChar.visible)targets.push(ad.sittingChar);if(ad.walker.visible)targets.push(ad.walker)});
-    const bm=window.__projectBoard&&window.__projectBoard.mesh;
-    const bf=window.__projectBoard&&window.__projectBoard.frame;
-    const bt=[...(bm?[bm]:[]),...(bf?[bf]:[])];
-    const wbm=window.__whiteboard&&window.__whiteboard.mesh;
-    const wbf=window.__whiteboard&&window.__whiteboard.frame;
-    const wbt=[...(wbm?[wbm]:[]),...(wbf?[wbf]:[])];
-    const nt=(nxChar&&nxChar.visible!==false)?[nxChar]:[];
-    const hh=hoverRay.intersectObjects([...targets,...bt,...wbt,...nt],true);
+    const hh=hoverRay.intersectObjects(collectPickTargets({
+      agentData, board:window.__projectBoard, whiteboard:window.__whiteboard, nexus:nxChar
+    }),true);
     renderer.domElement.style.cursor=hh.length?'pointer':'';
     // highlight visual agent saat hover
     let ha=null;
     let isNxHover=false;
     if(hh.length){
-      let p=hh[0].object;
-      if(nxChar&&(p===nxChar||(nxChar.getObjectById&&nxChar.getObjectById(p.id)))){
-        isNxHover=true;
-      }
-      while(p&&!ha){ha=agentData.find(ad=>ad.sittingChar===p||ad.walker===p);p=p.parent}
+      const p=hh[0].object;
+      isNxHover=isNexusHit(p,nxChar);
+      ha=findAgentRoot(p,agentData);
     }
     if(ha!==hoveredAgent)hoveredAgent=ha;
     if(hoveredAgent){
