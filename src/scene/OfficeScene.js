@@ -10,7 +10,8 @@ import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScre
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { perfStep } from './parts/perf_quality.js';
-import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam, resetFocusGoal } from './parts/kamera_focus.js';
+import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam, resetFocusGoal, agentFocusPos } from './parts/kamera_focus.js';
+import { dblclickPointGoal, dblclickBlankGoal } from './parts/dblclick_spec.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
 import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent, ringFloorY, hoverRingPos } from './parts/ring_spec.js';
@@ -163,6 +164,30 @@ const __ensureAudioEarly=()=>{if(window.__officeSceneDestroyed)return;__sound.en
 // membangunkan engine audio LAMA yang sudah dispose → AudioContext bocor
 // (installAudioWake: parts/audio_wake.js, diuji unit).
 const __disposeAudioWake=installAudioWake(__ensureAudioEarly);
+// Fokus + follow satu agen hasil raycast (klik tunggal & dblclick & focusAgent
+// API memakai jalur sama): pilih agen di UI, goal kamera FOLLOW posisi agen
+// saat ini (formula anchor via agentFocusPos — mirror eksak updateFollowGoal),
+// bubble sapaan, simpan radius & pose kamera sekali per sesi fokus.
+// Formula `walker.visible?walker.position:home` dulu terduplikasi 3×
+// (klik, focusAgent, updateFollowGoal); goal dblclick agen bahkan memakai
+// formula titik generik berbeda (regresi siklus 118).
+const focusAgentRoot=(root,opts={})=>{
+  if(!root)return false;
+  const {bubble=true,rf=24}=opts;
+  __sound.playSelect();
+  if(window.__wfsSelectAgent){
+    const idMap={}; window.__wfsAgentIdList&&window.__wfsAgentIdList.forEach(x=>idMap[x.name]=x.id);
+    window.__wfsSelectAgent(idMap[root.agent.name]||root.agent.name);
+  }
+  const fp=agentFocusPos(root)||{x:root.home.x,y:(root.home.y||0)+1.5,z:root.home.z};
+  const hr=ensureHomeRadius(homeRadius,sph.radius); homeRadius=hr.homeRadius;
+  focusGoal={t:new THREE.Vector3(fp.x,fp.y,fp.z),r:Math.min(sph.radius,rf),follow:root};
+  saveCam(sph);
+  if(bubble)createBubble(fp.x,fp.y-0.2,fp.z,'“Halo! Aku '+root.agent.name+'”',root.agent.hex);
+  selectedIdx=agentData.indexOf(root);applySelected();
+  if(onSelectAgent)onSelectAgent(root.agent);
+  return true;
+};
 renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{isDrag=true;prev={x:e.clientX,y:e.clientY};autoRot=false;clearTimeout(autoTmr);__ensureAudioEarly();if(renderer.domElement.style.cursor!=='pointer')renderer.domElement.style.cursor='grabbing'});
 renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{downXY={x:e.clientX,y:e.clientY}});
 renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
@@ -218,18 +243,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
   }
   let root=findAgentRoot(hits[0].object,agentData);
   if(root){
-    __sound.playSelect();
-    if(window.__wfsSelectAgent){
-      const idMap={}; window.__wfsAgentIdList&&window.__wfsAgentIdList.forEach(x=>idMap[x.name]=x.id);
-      window.__wfsSelectAgent(idMap[root.agent.name]||root.agent.name);
-    }
-    const wp=root.walker.visible?root.walker.position:{x:root.home.x,y:root.home.y||0,z:root.home.z};
-    const hr=ensureHomeRadius(homeRadius,sph.radius); homeRadius=hr.homeRadius;
-    focusGoal={t:new THREE.Vector3(wp.x,(wp.y||0)+1.5,wp.z),r:Math.min(sph.radius,24),follow:root};
-    saveCam(sph);
-    createBubble(wp.x,(wp.y||0)+1.3,wp.z,'“Halo! Aku '+root.agent.name+'”',root.agent.hex);
-    selectedIdx=agentData.indexOf(root);applySelected();
-    if(onSelectAgent)onSelectAgent(root.agent);
+    focusAgentRoot(root); // jalur fokus agen tunggal (juga dipakai dblclick & API)
   }
 });
 let onDragUp=null, onDragMove=null;
@@ -265,8 +279,14 @@ renderer.domElement&&renderer.domElement.addEventListener('dblclick',e=>{
     selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null);
     return;
   }
-  if(hits.length){focusGoal={t:hits[0].point.clone().setY(Math.max(1.5,(hits[0].point.y||0)+0.8)),r:Math.min(sph.radius,18)}}
-  else{focusGoal={t:tgt.clone(),r:Math.max(14,sph.radius*0.7)}}
+  if(hits.length){
+    const pg=dblclickPointGoal(hits[0].point,sph.radius);
+    if(pg)focusGoal={t:new THREE.Vector3(pg.t.x,pg.t.y,pg.t.z),r:pg.r};
+  }
+  else{
+    const bg=dblclickBlankGoal(tgt,sph.radius);
+    if(bg)focusGoal={t:new THREE.Vector3(bg.t.x,bg.t.y,bg.t.z),r:bg.r};
+  }
 });
 
 // hover pointer di atas agent/papan: isyarat "bisa diklik" (raycast throttled)
@@ -1817,11 +1837,11 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
           if (window.__wfsAgentIdList) window.__wfsAgentIdList.forEach(x => { idMap[x.name] = x.id; });
           window.__wfsSelectAgent(idMap[root.agent.name] || root.agent.name);
         }
-        const wp = root.walker && root.walker.visible ? root.walker.position : { x: root.home.x, y: root.home.y || 0, z: root.home.z };
+        const wp = agentFocusPos(root) || { x: root.home.x, y: (root.home.y || 0) + 1.5, z: root.home.z };
         const hr2=ensureHomeRadius(homeRadius,sph.radius); homeRadius=hr2.homeRadius;
-        focusGoal = { t: new THREE.Vector3(wp.x, (wp.y || 0) + 1.5, wp.z), r: Math.min(sph.radius, 20), follow: root };
+        focusGoal = { t: new THREE.Vector3(wp.x, wp.y || 0, wp.z), r: Math.min(sph.radius, 20), follow: root };
         saveCam(sph);
-        createBubble(wp.x, (wp.y || 0) + 1.3, wp.z, '“Halo! Aku ' + root.agent.name + '”', root.agent.hex || '#10E5A0');
+        createBubble(wp.x, (wp.y || 0) - 0.2, wp.z, '“Halo! Aku ' + root.agent.name + '”', root.agent.hex || '#10E5A0');
         selectedIdx = agentData.indexOf(root);
         applySelected();
         if (onSelectAgent) onSelectAgent(root.agent);

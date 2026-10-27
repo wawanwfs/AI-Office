@@ -16,6 +16,19 @@ export function updateFollowGoal(goal, homeRadius, radiusFallback, homeT = { x: 
   return goal;
 }
 
+// Posisi fokus kamera utk satu agen — mirror EKSAK formula updateFollowGoal
+// (walker visible → posisi walker; else home), +1.5 (tinggi mata). Dipakai
+// jalur fokus agen: klik tunggal (OfficeScene), focusAgent (API), dan kini
+// dblclick agen — sebelumnya formula `walker.visible?walker.position:home`
+// terduplikasi 3× dan dblclick memakai formula titik generik yang berbeda.
+// Null-safe: agen tak terlihat di kantor (offsite/meeting) → null —
+// pemanggil memutuskan fallback (fokus home/meja kosong).
+export function agentFocusPos(a) {
+  if (!a || !a.home) return null;
+  const fp = (a.walker && a.walker.visible) ? a.walker.position : { x: a.home.x, y: a.home.y || 0, z: a.home.z };
+  return { x: fp.x, y: (fp.y || 0) + 1.5, z: fp.z };
+}
+
 // Satu langkah kamera: lerp posisi target & radius ke goal (faktor .06),
 // opsi goalPhi untuk menyelaraskan pitch kamera bila disediakan,
 // lalu bila goal.reset dan target sudah dekat HOME_TGT (<.05) goal selesai.
