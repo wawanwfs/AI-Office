@@ -123,6 +123,9 @@ describe('WfsPanel — gateway chat AI + konfigurasi agent', () => {
     })
     await openPanel()
     fireEvent.click(screen.getByRole('tab', { name: /Model API/ }))
+    // tunggu cfg termuat dari API dulu (loadCfg async) — tanpanya race: body.model
+    // masih '' saat Test diklik (flaky), padahal form sudah kelihatan terisi
+    await screen.findByDisplayValue('gpt-4o-mini')
     fireEvent.click(screen.getByRole('button', { name: /Test/ }))
     expect(await screen.findByText(/✅ OK — 3 model tersedia/)).toBeTruthy()
     expect(tests.length).toBe(1)
