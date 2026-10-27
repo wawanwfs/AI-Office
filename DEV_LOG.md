@@ -3999,3 +3999,20 @@
   - Build: sukses (37 precache 1806.55 KiB, 480 ms) → deploy `dist/*` → `~/wfs-hq/` OK; `wfs-hq` & `wfs-office` `active`, HTTP 200.
   - E2E: `scripts/e2e_shot.py` **674.723 bytes** (26 agen, ws true, E2E_VISUAL OK); `e2e_tv.py` OK; `e2e_zone_multi.py` OK (label zona terlihat semua); `e2e_tvwysiwyg_painter.py` OK (dist 0.0); `e2e_conn.py` OK (chip "Sinkron"/live).
 - Sisa backlog: KOSONG. Kandidat berikutnya: ekstraksi blok interaksi handler (klik/dblclick/hover) ke modul tersendiri bila OfficeScene masih >1.900 baris, atau perbaikan kualitas kecil sesuai temuan.
+
+## 2026-10-27 10:35 WIB — Siklus 115: Fix bug kamera runtuh (klik kosong saat homeRadius null → radius meluruh ke 0) + DRY helper kamera null-safe (+15 test, probe E2E baru)
+
+- **Bug nyata ditemukan & diperbaiki (bukan sekadar refactor):** klik area kosong saat `focusGoal` aktif & `homeRadius` masih null membuat goal reset `r: homeRadius` = **null** → lerp `focusStep` (`radius += (goalR−radius)×.06`) membuat radius **meluruh eksponensial ke 0** (terukur: 42.5 → 0.000000 dalam 1200 frame ~5 s) → kamera runtuh ke titik target, view kosong, sampai reload. Repro: halaman segar → dblclick langit (goal tanpa menyentuh homeRadius) → klik kosong. Jalur Escape/resetFocus sudah aman (`||sph.radius`); hanya jalur klik kosong yang bocor.
+- **Perbaikan + DRY (3 helper murni di `parts/kamera_focus.js`, satu sumber kebenaran):**
+  - `resetFocusGoal(homeT, homeRadius, fallback)` — goal reset null-safe: homeRadius null/undefined/NaN → fallback (fallback non-finite → 42.5); `r` goal **selalu finite**. Menggantikan 4 konstruksi goal reset inline (klik kosong, Escape, resetFocus API, `updateFollowGoal` offsite — semantik `||` dipertahankan agar kontrak test lama tetap benar).
+  - `ensureHomeRadius(homeRadius, radius)` — clamp 24..70 sekali + null-safe radius non-finite; menggantikan 7 duplikat `if(homeRadius===null)homeRadius=Math.max(...)`.
+  - `saveCam(sph)` — snapshot pose `__saved` sekali, null-safe (radius NaN → fallback 42.5); menggantikan 7 duplikat `if(!sph.__saved)sph.__saved=...`.
+  - OfficeScene: 14 call site kini memakai helper; grep duplikat lama = **0**.
+- **Probe E2E permanen baru `scripts/e2e_camera_reset.py`** (WS→CDP, chrome-headless-shell + Xvfb :99): replikasi skenario bug via input mouse NYATA (dblclick langit → goal aktif; klik kosong → jalur reset; radius 5 s kemudian harus > 20). Dua assert anti-vakuus: titik klik dicek `elementFromPoint` = CANVAS (dock React menutupi area bawah — koordinat dipindah ke langit) dan goal WAJIB terbentuk sebelum reset.
+- Bukti terukur:
+  - Diskriminasi bug: kode lama (simulasi eksak pola lama) radius → **0.000000**; kode baru di browser nyata → **39.11** (`E2E_CAMRESET: OK`, focus `{r:39.1, reset:true}`).
+  - Vitest **2068/2068 (154 file)** (+15 dari 2053), 0 fail; ESLint 0/0 (`npx eslint .` exit 0).
+  - Build sukses (37 precache 1806.47 KiB) → deploy `dist/*` → `~/wfs-hq/`; `wfs-hq` & `wfs-office` active, HTTP 200 (port 9503).
+  - E2E: `e2e_camera_reset.py` **OK**; `e2e_shot.py` via shot.sh :0 **672.999 B** (26 agen, E2E_VISUAL OK); `e2e_tv.py` OK; `e2e_zone_multi.py` OK (label zona terlihat); `e2e_tvwysiwyg_painter.py` OK (dist 0.0).
+  - Catatan: `~/.hermes/cache/scratch/e2e_err.py` telah ter-prune (scratch 24 h) — cek error "Scene init failed" kini tercakup `uiOnly` banner di `e2e_shot.py` (OK).
+- Sisa backlog: KOSONG. Kandidat berikutnya: ekstraksi blok handler interaksi (klik/dblclick/hover, ~176 baris, 166–341) ke modul tersendiri — perlu ctx state (focusGoal/sph/selectedIdx) atau refactoring lebih luas; atau perbaikan kualitas kecil sesuai temuan.
