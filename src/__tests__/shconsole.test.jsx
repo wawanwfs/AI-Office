@@ -562,10 +562,11 @@ describe('ShConsole — guard loader Workspace (files/file/logs/git): out-of-ord
   }
 
   async function openWs(t, { first = true } = {}) {
+    let view
     if (first) {
-      render(<ShConsole show onClose={() => {}} />)
+      view = render(<ShConsole show onClose={() => {}} />)
       clickTab('Workspace')
-      await screen.findByLabelText('Pilih project')
+      await screen.findByRole('option', { name: 'Demo' })
       fireEvent.change(screen.getByLabelText('Pilih project'), { target: { value: '1' } })
     }
     // 3 fetch paralel: files, logs, git
@@ -574,7 +575,7 @@ describe('ShConsole — guard loader Workspace (files/file/logs/git): out-of-ord
       expect(t.count('/logs')).toBeGreaterThanOrEqual(1)
       expect(t.count('/git')).toBeGreaterThanOrEqual(1)
     })
-    return first ? { files: 0, logs: 0, git: 0 } : null
+    return first ? { files: 0, logs: 0, git: 0, rerender: view.rerender } : null
   }
 
   it('files: navigasi folder — respons folder LAMA tiba belakangan tak menimpa daftar folder BARU', async () => {
@@ -614,29 +615,38 @@ describe('ShConsole — guard loader Workspace (files/file/logs/git): out-of-ord
   it('ganti project: respons file/log/git project LAMA tiba belakangan tak menulis panel project BARU', async () => {
     const t = stubDeferredWs()
     await openWs(t)
-    // settle project 1: file Dockerfile, log lama, git repo:false
     await t.settle('/files', 0, { path: '', entries: [{ name: 'Dockerfile', type: 'file' }] })
     await t.settle('/logs', 0, { logs: ['log-proyek-1'] })
     await t.settle('/git', 0, { repo: false })
     expect(await screen.findByRole('button', { name: 'File: Dockerfile' })).toBeTruthy()
+    // Re-entering Workspace starts fresh project 1 requests. Leave these
+    // pending: a settled promise cannot deliver a second response.
+    clickTab('Overview')
+    clickTab('Workspace')
+    await waitFor(() => {
+      for (const p of ['/files', '/logs', '/git']) expect(t.count(p)).toBe(2)
+    })
     fireEvent.change(screen.getByLabelText('Pilih project'), { target: { value: '2' } }) // ganti project
-    await waitFor(() => expect(t.count('/files')).toBe(2)) // fetch project 2 menggantung
+    await waitFor(() => {
+      for (const p of ['/files', '/logs', '/git']) expect(t.count(p)).toBe(3)
+    }) // fetch project 2 menggantung
     // project BARU tampil duluan
-    await t.settle('/files', 1, { path: 'api', entries: [{ name: 'server.py', type: 'file' }] })
-    await t.settle('/logs', 1, { logs: ['log-proyek-2'] })
-    await t.settle('/git', 1, { repo: true, branch: 'main', status: 'bersih', log: 'xyz789 fitur' })
+    await t.settle('/files', 2, { path: 'api', entries: [{ name: 'server.py', type: 'file' }] })
+    await t.settle('/logs', 2, { logs: ['log-proyek-2'] })
+    await t.settle('/git', 2, { repo: true, branch: 'main', status: 'bersih', log: 'xyz789 fitur' })
     expect(await screen.findByRole('button', { name: 'File: server.py' })).toBeTruthy()
     expect(screen.getByText('log-proyek-2')).toBeTruthy()
     // respons project LAMA (in-flight sejak sebelum ganti) tiba belakangan
-    await t.settle('/files', 0, { path: '', entries: [{ name: 'Dockerfile', type: 'file' }] })
-    await t.settle('/logs', 0, { logs: ['log-proyek-1'] })
-    await t.settle('/git', 0, { repo: false })
+    await t.settle('/files', 1, { path: '', entries: [{ name: 'Dockerfile', type: 'file' }] })
+    await t.settle('/logs', 1, { logs: ['log-proyek-1'] })
+    await t.settle('/git', 1, { repo: false })
     expect(screen.queryByRole('button', { name: 'File: Dockerfile' })).toBeNull() // kode lama: daftar file mundur
     expect(screen.queryByText('log-proyek-1')).toBeNull()     // kode lama: log mundur
     expect(screen.getByRole('button', { name: 'File: server.py' })).toBeTruthy()
     expect(screen.getByText('log-proyek-2')).toBeTruthy()
     // git tetap milik project BARU (repo:true, branch main) — bukan repo:false
-    expect(screen.getByRole('region', { name: 'Status git' }).textContent).toContain('main')
+    expect(screen.getByText('branch: main')).toBeTruthy()
+    expect(screen.getByRole('region', { name: 'Status git' }).textContent).toBe('bersih')
   })
 
   it('file: buka file A menggantung, file B tampil — isi file A telat tak menimpa file B (label region ikut benar)', async () => {
@@ -663,13 +673,21 @@ describe('ShConsole — guard loader Workspace (files/file/logs/git): out-of-ord
     await t.settle('/logs', idx.logs, { logs: [] })
     // git TIDAK disettle — menggantung
     await screen.findByRole('button', { name: 'File: Dockerfile' })
-    fireEvent.click(screen.getByRole('button', { name: 'Tutup konsol' })) // cleanup → rid bump
+    // Visibility belongs to the parent; clicking a no-op onClose does not
+    // close the controlled drawer or run its effect cleanup.
+    idx.rerender(<ShConsole show={false} onClose={() => {}} />)
+    expect(screen.queryByRole('dialog')).toBeNull()
     await t.settle('/git', idx.git, { repo: true, branch: 'hacked-branch', status: 'x', log: 'z' }) // telat
+    idx.rerender(<ShConsole show onClose={() => {}} />)
+    // Assert before the fresh response can hide an incorrectly accepted stale one.
+    expect(screen.queryByText(/hacked-branch/)).toBeNull()
     // drawer dibuka lagi → project masih terpilih (state persist) → 3 fetch baru
     await waitFor(() => expect(t.count('/git')).toBe(2))
     await t.settle('/git', 1, { repo: true, branch: 'main', status: 'bersih', log: 'abc fitur' })
     const st = await screen.findByRole('region', { name: 'Status git' })
-    expect(st.textContent).toContain('main')          // kode lama: 'hacked-branch' tampil
+    expect(screen.getByText('branch: main')).toBeTruthy()
+    expect(st.textContent).toBe('bersih')
+    expect(screen.queryByText(/hacked-branch/)).toBeNull()
     expect(st.textContent).not.toContain('hacked-branch')
   })
 
