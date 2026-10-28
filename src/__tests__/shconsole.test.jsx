@@ -983,16 +983,24 @@ describe('ShConsole — guard aksi POST/exec (terminal, commit, sandbox, approva
   })
 })
 
-describe('ShConsole — guard aksi create/ task-run (siklus 135): out-of-order, err basi, anti dobel-klik', () => {
+describe('ShConsole — guard aksi create/task-run (siklus 135): out-of-order, err basi, anti dobel-klik', () => {
+  // stubDeferred POST-aware: kunci "METHOD substring" (mis. 'POST /run') = URL
+  // yang match substring DENGAN method itu DITAHAN (resolver consume-once —
+  // settle ulang slot sama = error); kunci tanpa method = semua method.
+  // instant: EXACT-match URL → data instan. Sisanya instan {}.
   function stubDeferred(deferred, instant = {}) {
-    // Sama dengan describe guard siklus 130: URL deferred DITAHAN (resolver
-    // consume-once — settle ulang slot sama = error), instant EXACT-match.
+    const rules = Object.entries(deferred).map(([k, v]) => {
+      const sp = k.indexOf(' ')
+      return sp > -1 ? { m: k.slice(0, sp), p: k.slice(sp + 1), v } : { m: null, p: k, v }
+    })
     const resolvers = []
     let seqD = 0
     const seq = new Map()
-    vi.stubGlobal('fetch', vi.fn((url) => {
+    vi.stubGlobal('fetch', vi.fn((url, opts) => {
       const u = String(url)
-      if (Object.keys(deferred).some((p) => u.includes(p))) {
+      const m = (opts?.method || 'GET').toUpperCase()
+      const rule = rules.find((r) => u.includes(r.p) && (r.m === null || r.m === m))
+      if (rule) {
         const s = ++seqD
         return new Promise((resolve) => { resolvers[s] = resolve })
       }
@@ -1029,114 +1037,90 @@ describe('ShConsole — guard aksi create/ task-run (siklus 135): out-of-order, 
     await screen.findByText(/#1 Buat Login/)
   }
 
-  it('task: run A menggantung, klik dobel → hanya SATU POST /run (POST berbayar tak dobel kirim)', async () => {
-    const t = stubDeferred({ '/run': null }, T_INSTANT)
+  it('task: run menggantung + klik dobel/triple → hanya SATU POST /run (aksi berbayar tak dobel kirim)', async () => {
+    const t = stubDeferred({ 'POST /run': null }, T_INSTANT)
     await openTasks()
     fireEvent.click(screen.getByRole('button', { name: 'Jalankan' })) // klik 1 — POST menggantung
     await waitFor(() => expect(t.countD()).toBe(1))
-    fireEvent.click(screen.getByRole('button', { name: 'Jalankan' })) // klik 2 — tombol disabled
-    fireEvent.click(screen.getByRole('button', { name: 'Jalankan' })) // klik 3 — memicu runTask lagi (Enter/fokus)
+    expect(screen.getByRole('button', { name: 'Menjalankan…' }).disabled).toBe(true)
+    fireEvent.click(screen.getByRole('button', { name: 'Menjalankan…' })) // klik 2 — tombol disabled
+    fireEvent.click(screen.getByRole('button', { name: 'Menjalankan…' })) // klik 3 — lock ref (Enter/fokus/programmatis)
     await t.settle(1, { ok: true })
-    expect(t.countD()).toBe(1) // kode lama: klik 2/3 mengirim POST /run lagi (2-3× kuota API)
-    expect(screen.queryByRole('button', { name: 'Jalankan' })).toBeTruthy() // tombol kembali aktif pasca-selesai
+    await waitFor(() => expect(screen.getByRole('button', { name: 'Jalankan' }).disabled).toBe(false)) // pulih pasca-selesai
+    expect(t.countD()).toBe(1) // kode lama: klik 2/3 mengirim POST /run lagi (2-3x kuota API)
   })
 
-  it('task: run A menggantung, run B sukses duluan → refresh A telat tak menimpa hasil refresh B, err basi tak muncul', async () => {
-    const t = stubDeferred({ '/run': null }, { ...T_INSTANT, '/wfs-api/tasks?project=2': { tasks: [{ id: 5, title: 'TASK B', role: 'qa', status: 'pending' }] } })
+  it('task: run A menggantung, run B (project lain) sukses duluan → refresh A telat tak menimpa daftar B, err basi tak muncul', async () => {
+    const t = stubDeferred(
+      { 'POST /run': null },
+      {
+        ...T_INSTANT,
+        '/wfs-api/projects': { projects: [{ id: '2', name: 'Beta', description: 'b', status: 'running' }] },
+        '/wfs-api/tasks?project=2': { tasks: [{ id: 5, title: 'TASK B', role: 'qa', status: 'pending' }] },
+      },
+    )
     await openTasks()
     fireEvent.click(screen.getByRole('button', { name: 'Jalankan' })) // run #1 (task #1, menggantung)
     await waitFor(() => expect(t.countD()).toBe(1))
-    // ganti filter → task #5 beda project, klik Jalankan (run #2)
     fireEvent.change(screen.getByLabelText('Filter project'), { target: { value: '2' } })
-    fireEvent.click(await screen.findByRole('button', { name: 'Jalankan' }))
+    fireEvent.click(await screen.findByRole('button', { name: 'Jalankan' })) // run #2 (task #5)
     await waitFor(() => expect(t.countD()).toBe(2))
     await t.settle(2, { ok: true }) // run BARU selesai duluan → refresh tasks?project=2 instan
     expect(await screen.findByText(/TASK B/)).toBeTruthy()
     await t.settle(1, {}, { fail: true }) // run LAMA GAGAL telat
-    expect(screen.queryByText(/HTTP 503/)).toBeNull() // kode lama: banner basi menimpa daftar valid
+    expect(screen.queryByRole('alert')).toBeNull() // kode lama: banner 503 basi menimpa daftar valid
     expect(screen.getByText(/TASK B/)).toBeTruthy()
   })
 
-  it('project baru: create menggantung, tutup drawer, buka lagi & ketik nama lain → create LAMA sukses telat TIDAK menghapus input user / pindah tab', async () => {
+  it('project baru: create menggantung, drawer ditutup-dibuka → create LAMA sukses telat TIDAK menghapus input / pindah tab', async () => {
     const t = stubDeferred(
-      { method: 'x' }, // tak terpakai — POST /projects ditahan via deferred '/wfs-api/projects' POST
-      { '/wfs-api/projects': { projects: [{ id: '1', name: 'Demo', description: 'd', status: 'running' }] } },
+      { 'POST /wfs-api/projects': null },
+      { '/wfs-api/sh/overview': OV, '/wfs-api/projects': { projects: [{ id: '1', name: 'Demo', description: 'd', status: 'running' }] } },
     )
-    // deferred khusus POST: bungkus URL berisi '/wfs-api/projects' TAPI hanya POST —
-    // GET daftar harus instan. stubDeferred tak melihat method → pakai stub manual.
-    const resolvers = []
-    let seqD = 0
-    const base = t // eslint-disable-line no-unused-vars
-    vi.stubGlobal('fetch', vi.fn((url, opts) => {
-      const u = String(url)
-      if (u.includes('/wfs-api/projects') && ((opts?.method || 'GET').toUpperCase() === 'POST')) {
-        const s = ++seqD
-        return new Promise((resolve) => { resolvers[s] = resolve })
-      }
-      if (u.includes('/wfs-api/projects')) {
-        return Promise.resolve({ ok: true, status: 200, json: async () => ({ projects: [{ id: '1', name: 'Demo', description: 'd', status: 'running' }] }) })
-      }
-      if (u.includes('/wfs-api/sh/overview')) return Promise.resolve({ ok: true, status: 200, json: async () => OV })
-      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) })
-    }))
-    render(<ShConsole show onClose={() => {}} />)
+    const view = render(<ShConsole show onClose={() => {}} />)
     clickTab('Project Baru')
     fireEvent.change(screen.getByLabelText('Nama project'), { target: { value: 'PROYEK-LAMA' } })
     fireEvent.change(screen.getByLabelText('Brief'), { target: { value: 'brief lama' } })
     fireEvent.click(screen.getByText('Buat project & jalankan container')) // POST menggantung
-    await waitFor(() => expect(seqD).toBe(1))
-    fireEvent.click(screen.getByRole('button', { name: 'Tutup konsol' })) // tutup drawer — rid naik
-    render(<ShConsole show onClose={() => {}} />) // buka drawer BARU (instansi sama, komponen mounted ulang)
+    await waitFor(() => expect(t.countD()).toBe(1))
+    view.rerender(<ShConsole show={false} onClose={() => {}} />) // tutup drawer → cleanup konteks menaikkan rid
+    view.rerender(<ShConsole show onClose={() => {}} />)
     clickTab('Project Baru')
     fireEvent.change(screen.getByLabelText('Nama project'), { target: { value: 'PROYEK-BARU' } })
-    await act(async () => {
-      resolvers[1]({ ok: true, status: 200, json: async () => ({ ok: true }) }) // create LAMA sukses telat
-    })
+    await t.settle(1, { ok: true }) // create LAMA sukses telat
     expect(screen.getByLabelText('Nama project').value).toBe('PROYEK-BARU') // kode lama: input dihapus
-    expect(screen.queryByRole('button', { name: 'Tab Projects' })).toBeTruthy() // TIDAK pindah tab otomatis
     const active = screen.getByRole('button', { name: 'Tab Project Baru' })
-    expect(active.getAttribute('aria-pressed')).toBe('true') // tetap di tab Project Baru
+    expect(active.getAttribute('aria-pressed')).toBe('true') // kode lama: pindah tab otomatis ke Projects
   })
 
   it('project baru: create LAMA GAGAL telat → alert 503 basi tidak muncul di drawer baru', async () => {
-    const resolvers = []
-    let seqD = 0
-    vi.stubGlobal('fetch', vi.fn((url, opts) => {
-      const u = String(url)
-      if (u.includes('/wfs-api/projects') && ((opts?.method || 'GET').toUpperCase() === 'POST')) {
-        const s = ++seqD
-        return new Promise((resolve) => { resolvers[s] = resolve })
-      }
-      if (u.includes('/wfs-api/projects')) {
-        return Promise.resolve({ ok: true, status: 200, json: async () => ({ projects: [{ id: '1', name: 'Demo', description: 'd', status: 'running' }] }) })
-      }
-      if (u.includes('/wfs-api/sh/overview')) return Promise.resolve({ ok: true, status: 200, json: async () => OV })
-      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) })
-    }))
-    render(<ShConsole show onClose={() => {}} />)
+    const t = stubDeferred(
+      { 'POST /wfs-api/projects': null },
+      { '/wfs-api/sh/overview': OV, '/wfs-api/projects': { projects: [{ id: '1', name: 'Demo', description: 'd', status: 'running' }] } },
+    )
+    const view = render(<ShConsole show onClose={() => {}} />)
     clickTab('Project Baru')
     fireEvent.change(screen.getByLabelText('Nama project'), { target: { value: 'A' } })
     fireEvent.change(screen.getByLabelText('Brief'), { target: { value: 'b' } })
     fireEvent.click(screen.getByText('Buat project & jalankan container'))
-    await waitFor(() => expect(seqD).toBe(1))
-    fireEvent.click(screen.getByRole('button', { name: 'Tutup konsol' }))
-    render(<ShConsole show onClose={() => {}} />)
-    await screen.findByText('2') // drawer baru hidup (projects: 2 dari OV)
-    await act(async () => {
-      resolvers[1]({ ok: false, status: 503, json: async () => ({}) }) // create LAMA gagal telat
-    })
-    expect(screen.queryByRole('alert')).toBeNull() // kode lama: banner 503 basi tampil
+    await waitFor(() => expect(t.countD()).toBe(1))
+    view.rerender(<ShConsole show={false} onClose={() => {}} />)
+    view.rerender(<ShConsole show onClose={() => {}} />) // tab state tersisa 'new' — pindah ke Overview utk bukti hidup
+    fireEvent.click(screen.getByRole('button', { name: 'Tab Overview' }))
+    await screen.findByText('2') // drawer baru hidup (stat Projects: 2 dari OV)
+    await t.settle(1, {}, { fail: true }) // create LAMA gagal telat
+    expect(screen.queryByRole('alert')).toBeNull() // kode lama: banner 503 basi tampil di drawer baru
   })
 
-  it('task baru: createTask menggantung, drawer ditutup-telah dibuka → createTask LAMA telat TIDAK menghapus input "Task KEDUA"', async () => {
-    const t = stubDeferred({ '/wfs-api/tasks': null }, { ...T_INSTANT, '/wfs-api/agents': AGENTS_RESP })
-    await openTasks()
+  it('task baru: createTask menggantung, drawer ditutup-dibuka → createTask LAMA telat TIDAK menghapus input "Task KEDUA"', async () => {
+    const t = stubDeferred({ 'POST /wfs-api/tasks': null }, T_INSTANT)
+    const view = render(<ShConsole show onClose={() => {}} />)
+    clickTab('Tasks')
+    await screen.findByText(/#1 Buat Login/)
     fireEvent.change(screen.getByLabelText('Judul task'), { target: { value: 'Task PERTAMA' } })
     fireEvent.click(screen.getByText('Tambah task')) // POST menggantung
     await waitFor(() => expect(t.countD()).toBe(1))
-    // tutup + buka drawer (instansi sama, cleanup konteks menaikkan rid)
-    const view = render(<ShConsole show onClose={() => {}} />)
-    view.rerender(<ShConsole show={false} onClose={() => {}} />)
+    view.rerender(<ShConsole show={false} onClose={() => {}} />) // cleanup konteks menaikkan rid
     view.rerender(<ShConsole show onClose={() => {}} />)
     clickTab('Tasks')
     await screen.findByText(/#1 Buat Login/)
