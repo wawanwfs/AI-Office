@@ -588,23 +588,22 @@ button { font-family: inherit; }
 /* ===== Ticker: pita tipis di bawah header, tepi memudar ===== */
 .ticker {
   position: fixed; top: 76px; left: 0; right: 0; margin: 0 auto; width: min(720px, calc(100vw - 380px));
-  z-index: var(--z-hud); pointer-events: none; overflow: hidden; height: 26px;
+  z-index: var(--z-hud); pointer-events: none; overflow: hidden; min-height: 30px;
+  display: flex; align-items: center; gap: 8px; padding: 2px 8px;
   background: rgba(6, 12, 24, 0.65); backdrop-filter: blur(16px);
   border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 999px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.4);
   animation: fadeUp 1s ease 1.4s both;
 }
-.ticker::before, .ticker::after { content: ''; position: absolute; top: 0; bottom: 0; width: 48px; z-index: 2; pointer-events: none; }
-.ticker::before { left: 0; background: linear-gradient(to right, rgba(6, 12, 24, 0.95) 15%, transparent); }
-.ticker::after { right: 0; background: linear-gradient(to left, rgba(6, 12, 24, 0.95) 15%, transparent); }
+.ticker-window { min-width: 0; flex: 1; overflow: hidden; }
 .ticker .track { display: flex; white-space: nowrap; width: max-content; animation: tickerScroll 60s linear infinite; }
-.ticker span {
+.ticker .track > span {
   font-family: 'DM Sans', sans-serif; font-size: 12.5px; font-weight: 600; margin-right: 0;
   padding: 0 20px; text-shadow: 0 1px 6px rgba(0,0,0,.9); line-height: 26px;
 }
 /* Chip koneksi gateway di tepi kiri pita (paritas .hud .conn-chip): live/stale/down */
 .ticker .ticker-conn {
-  position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+  position: relative; flex: none; line-height: 18px;
   display: inline-flex; align-items: center; gap: 5px;
   font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 700;
   letter-spacing: .4px; color: var(--text-secondary);
@@ -658,11 +657,15 @@ button { font-family: inherit; }
     margin: 8px auto 2px;
     flex-shrink: 0;
   }
-  .toast { bottom: calc(76px + var(--safe-b)); top: auto; }
+  /* Keep transient feedback above the HUD, not over interactive controls. */
+  .toast { bottom: calc(140px + var(--safe-b)); top: auto; }
   .pop { left: 0; }
   input, select, textarea { font-size: 16px !important; }
 }
 @media (max-width: 560px) {
+  /* The wrapped dock is up to 120px tall plus its 18px bottom inset. */
+  .hud { bottom: calc(148px + var(--safe-b)); }
+  .toast { bottom: calc(200px + var(--safe-b)); }
   .ibtn span.lb { display: none; }
   .ibtn { min-width: 0; flex: 1 1 0; min-height: 44px; padding: 4px; }
   .dock { gap: 0; width: calc(100vw - 16px); overflow-x: auto; padding: 3px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }

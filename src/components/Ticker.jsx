@@ -59,14 +59,14 @@ export default function Ticker({ conn }) {
             <span>{conn.label}</span>
           </span>
         )}
-        <div className="track">
+        <div className="ticker-window"><div className="track">
           {list.map((m, i) => {
             // Dua salinan track (efek marquee); key harus unik antar salinan
             // supaya tidak ada peringatan React "duplicate key" tiap render.
             const k = i < msgs.length ? 'f' + i : 's' + (i - msgs.length)
             return <span key={k} style={{ color: m.color }} aria-hidden="true">▸ {m.text}</span>
           })}
-        </div>
+        </div></div>
       </div>
     </>
   )
