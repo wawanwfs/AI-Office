@@ -80,6 +80,14 @@ export default function ShConsole({ show, onClose }) {
   const tabRid = useRef({ projects: 0, tasks: 0, agents: 0, approvals: 0 })
   const guardTab = (k, rid) => tabRid.current[k] === rid
 
+  // Guard jalur async loader Workspace (siklus 129): rid PER-LOADER (files/
+  // file/logs/git) — ganti project / klik Refresh / navigasi folder / buka
+  // file overlap saat gateway lambat: respons LAMA tak boleh menimpa tampilan
+  // (daftar file proyek lain, log basi, git status basi, isi file salah) dan
+  // kegagalan basi tak memunculkan banner err (err dibagi lintas tab).
+  const wsRid = useRef({ files: 0, file: 0, logs: 0, git: 0 })
+  const guardWs = (k, rid) => wsRid.current[k] === rid
+
   const loadOverview = useCallback(async () => {
     const rid = ++ovRid.current
     try {
@@ -185,7 +193,11 @@ export default function ShConsole({ show, onClose }) {
     else if (tab === 'ws' && projects.length === 0) loadProjects()
     else if (tab === 'approvals') loadApprovals()
     // eslint-disable-next-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async): ganti tab/filter/drawer membatalkan semua loader in-flight
-    return () => { for (const k of Object.keys(tabRid.current)) tabRid.current[k]++ }
+    return () => {
+      for (const k of Object.keys(tabRid.current)) tabRid.current[k]++
+      // loader Workspace juga (respons telat setelah ganti tab / tutup drawer)
+      for (const k of Object.keys(wsRid.current)) wsRid.current[k]++
+    }
   }, [show, tab, loadOverview, loadProjects, loadTasks, loadAgents, projects.length, loadApprovals, tFilter])
 
   const create = async () => {
@@ -220,25 +232,40 @@ export default function ShConsole({ show, onClose }) {
   }
 
   const loadWsFiles = useCallback(async (pid, path) => {
+    const rid = ++wsRid.current.files
     try {
       const q = path ? '?path=' + encodeURIComponent(path) : ''
       const d = await api('projects/' + pid + '/files' + q)
-      setEntries(d.entries || []); setWsPath(d.path || ''); setErr('')
-    } catch (e) { setErr(e.message) }
+      if (!guardWs('files', rid)) return // respons LAMA (ganti project/navigasi) — abaikan
+      // normalisasi: entries non-array (gateway balas rusak) tak boleh crash
+      // render (entries.map is not a function → drawer blank), kelas sama dgn
+      // projects.map (siklus 128)
+      setEntries(Array.isArray(d?.entries) ? d.entries : []); setWsPath(d?.path || ''); setErr('')
+    } catch (e) { if (!guardWs('files', rid)) return; setErr(e.message) }
   }, [])
   const openWsFile = async (pid, path) => {
+    const rid = ++wsRid.current.file
     try {
       const d = await api('projects/' + pid + '/file?path=' + encodeURIComponent(path))
-      setFileView({ name: path, content: d.content }); setErr('')
-    } catch (e) { setErr(e.message) }
+      if (!guardWs('file', rid)) return // file LAMA tiba belakangan — tak menimpa file yang baru dibuka
+      setFileView({ name: path, content: d?.content ?? '' }); setErr('')
+    } catch (e) { if (!guardWs('file', rid)) return; setErr(e.message) }
   }
   const loadWsLogs = async (pid) => {
-    try { const d = await api('projects/' + pid + '/logs?lines=100'); setLogs(d.logs || []); setErr('') }
-    catch (e) { setErr(e.message) }
+    const rid = ++wsRid.current.logs
+    try {
+      const d = await api('projects/' + pid + '/logs?lines=100')
+      if (!guardWs('logs', rid)) return
+      setLogs(Array.isArray(d?.logs) ? d.logs : []); setErr('')
+    } catch (e) { if (!guardWs('logs', rid)) return; setErr(e.message) }
   }
   const loadWsGit = async (pid) => {
-    try { setGitInfo(await api('projects/' + pid + '/git')); setErr('') }
-    catch (e) { setErr(e.message) }
+    const rid = ++wsRid.current.git
+    try {
+      const d = await api('projects/' + pid + '/git')
+      if (!guardWs('git', rid)) return
+      setGitInfo(d || null); setErr('')
+    } catch (e) { if (!guardWs('git', rid)) return; setErr(e.message) }
   }
   const runTerm = async (pid) => {
     if (!termCmd.trim()) return
@@ -249,6 +276,8 @@ export default function ShConsole({ show, onClose }) {
     } catch (e) { setTermOut('ERROR: ' + e.message) }
   }
   const selectWsProject = (pid) => {
+    // ganti project: semua respons in-flight milik project LAMA jadi basi
+    for (const k of Object.keys(wsRid.current)) wsRid.current[k]++
     setWsId(pid); setFileView(null); setTermOut(''); setGitInfo(null); setLogs([]); setGitMsg('')
     if (pid) { loadWsFiles(pid, ''); loadWsLogs(pid); loadWsGit(pid) }
   }

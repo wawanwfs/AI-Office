@@ -470,6 +470,168 @@ describe('ShConsole — guard poll overview & EventSource (out-of-order, cleanup
   })
 })
 
+describe('ShConsole — guard loader Workspace (files/file/logs/git): out-of-order, err basi, ganti project', () => {
+  function stubDeferredWs() {
+    // deferred per prefix URL (consume-once resolver — pola siklus 128)
+    const resolvers = new Map() // prefix → [resolve, ...]
+    const seq = new Map() // prefix → hitung fetch
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      const u = String(url)
+      for (const p of ['/files', '/file?path=', '/logs', '/git']) {
+        if (u.includes('/wfs-api/projects/') && u.includes(p)) {
+          const n = (seq.get(p) || 0) + 1
+          seq.set(p, n)
+          return new Promise((resolve) => {
+            if (!resolvers.has(p)) resolvers.set(p, [])
+            resolvers.get(p).push(resolve)
+          })
+        }
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    }))
+    return {
+      count: (p) => seq.get(p) || 0,
+      async settle(p, i, data, opts = {}) {
+        const arr = resolvers.get(p)
+        const res = arr && arr[i]
+        if (!res) throw new Error(p + ' #' + (i + 1) + ' tidak ditemukan / sudah dipakai')
+        arr[i] = null
+        await act(async () => {
+          res(opts.fail ? { ok: false, status: 503, json: async () => ({}) } : { ok: true, json: async () => data })
+        })
+      },
+    }
+  }
+
+  async function openWs(t, { first = true } = {}) {
+    if (first) {
+      render(<ShConsole show onClose={() => {}} />)
+      clickTab('Workspace')
+      await screen.findByLabelText('Pilih project')
+      fireEvent.change(screen.getByLabelText('Pilih project'), { target: { value: '1' } })
+    }
+    // 3 fetch paralel: files, logs, git
+    await waitFor(() => {
+      expect(t.count('/files')).toBeGreaterThanOrEqual(1)
+      expect(t.count('/logs')).toBeGreaterThanOrEqual(1)
+      expect(t.count('/git')).toBeGreaterThanOrEqual(1)
+    })
+    return first ? { files: 0, logs: 0, git: 0 } : null
+  }
+
+  it('files: navigasi folder — respons folder LAMA tiba belakangan tak menimpa daftar folder BARU', async () => {
+    const t = stubDeferredWs()
+    const idx = await openWs(t)
+    await t.settle('/files', idx.files, { path: '', entries: [{ name: 'src', type: 'dir' }] })
+    expect(await screen.findByText('Folder: src')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Folder: src' })) // masuk src → fetch #2
+    await waitFor(() => expect(t.count('/files')).toBe(2))
+    await t.settle('/files', 1, { path: 'src', entries: [{ name: 'App.jsx', type: 'file', size: 5 }] })
+    expect(await screen.findByText('File: App.jsx')).toBeTruthy()
+    // klik Refresh → fetch #3 (instan? tidak — deferred juga), lalu respons #1
+    // (folder root, LAMA) tiba belakangan → wajib diabaikan
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' })) // fetch #3
+    await waitFor(() => expect(t.count('/files')).toBe(3))
+    await t.settle('/files', 2, { path: 'src', entries: [{ name: 'main.jsx', type: 'file', size: 9 }] })
+    expect(await screen.findByText('File: main.jsx')).toBeTruthy()
+    await t.settle('/files', 0, { path: '', entries: [{ name: 'Bas', type: 'file', size: 1 }] }) // #1 LAMA
+    expect(screen.queryByText('File: Bas')).toBeNull() // kode lama: daftar mundur ke root basi
+    expect(screen.getByText('File: main.jsx')).toBeTruthy()
+    expect(screen.getByText(/File · \/src/)).toBeTruthy() // wsPath juga tak mundur
+  })
+
+  it('files: refresh LAMA GAGAL setelah refresh BARU sukses → banner HTTP 503 basi tidak muncul', async () => {
+    const t = stubDeferredWs()
+    const idx = await openWs(t)
+    await t.settle('/files', idx.files, { path: '', entries: [{ name: 'Dockerfile', type: 'file' }] })
+    expect(await screen.findByText('File: Dockerfile')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' })) // fetch #2 (menggantung)
+    await waitFor(() => expect(t.count('/files')).toBe(2))
+    await t.settle('/files', 1, { path: '', entries: [{ name: 'app.py', type: 'file' }] })
+    expect(await screen.findByText('File: app.py')).toBeTruthy()
+    await t.settle('/files', 0, {}, { fail: true }) // fetch #1 (LAMA) gagal tiba belakangan
+    expect(screen.queryByText(/HTTP 503/)).toBeNull() // kode lama: banner basi muncul
+    expect(screen.getByText('File: app.py')).toBeTruthy()
+  })
+
+  it('ganti project: respons file/log/git project LAMA tiba belakangan tak menulis panel project BARU', async () => {
+    const t = stubDeferredWs()
+    await openWs(t)
+    // settle project 1: file Dockerfile, log lama, git repo:false
+    await t.settle('/files', 0, { path: '', entries: [{ name: 'Dockerfile', type: 'file' }] })
+    await t.settle('/logs', 0, { logs: ['log-proyek-1'] })
+    await t.settle('/git', 0, { repo: false })
+    expect(await screen.findByText('File: Dockerfile')).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Pilih project'), { target: { value: '2' } }) // ganti project
+    await waitFor(() => expect(t.count('/files')).toBe(2)) // fetch project 2 menggantung
+    // project BARU tampil duluan
+    await t.settle('/files', 1, { path: 'api', entries: [{ name: 'server.py', type: 'file' }] })
+    await t.settle('/logs', 1, { logs: ['log-proyek-2'] })
+    await t.settle('/git', 1, { repo: true, branch: 'main', status: 'bersih', log: 'xyz789 fitur' })
+    expect(await screen.findByText('File: server.py')).toBeTruthy()
+    expect(screen.getByText(/Container logs/)).toBeTruthy()
+    expect(screen.getByText('log-proyek-2')).toBeTruthy()
+    // respons project LAMA (in-flight sejak sebelum ganti) tiba belakangan
+    await t.settle('/files', 0, { path: '', entries: [{ name: 'Dockerfile', type: 'file' }] })
+    await t.settle('/logs', 0, { logs: ['log-proyek-1'] })
+    await t.settle('/git', 0, { repo: false })
+    expect(screen.queryByText('File: Dockerfile')).toBeNull() // kode lama: daftar file mundur
+    expect(screen.queryByText('log-proyek-1')).toBeNull()     // kode lama: log mundur
+    expect(screen.getByText('File: server.py')).toBeTruthy()
+    expect(screen.getByText('log-proyek-2')).toBeTruthy()
+    // git tetap milik project BARU (repo:true, branch main) — bukan repo:false
+    expect(screen.getByRole('region', { name: 'Status git' }).textContent).toContain('main')
+  })
+
+  it('file: buka file B lalu file A menggantung — isi file A telat tak menimpa file B (label region ikut benar)', async () => {
+    const t = stubDeferredWs()
+    const idx = await openWs(t)
+    await t.settle('/files', idx.files, { path: '', entries: [{ name: 'a.py', type: 'file' }, { name: 'b.py', type: 'file' }] })
+    expect(await screen.findByText('File: a.py')).toBeTruthy()
+    fireEvent.click(screen.getByRole('button', { name: 'File: b.py' })) // fetch file #1
+    await waitFor(() => expect(t.count('/file?path=')).toBe(1))
+    await t.settle('/file?path=', 0, { path: 'b.py', content: 'ISI-B' })
+    const regB = await screen.findByRole('region', { name: 'Isi file b.py' })
+    expect(regB.textContent).toContain('ISI-B')
+    fireEvent.click(screen.getByRole('button', { name: 'File: a.py' })) // fetch file #2
+    await waitFor(() => expect(t.count('/file?path=')).toBe(2))
+    await t.settle('/file?path=', 1, { path: 'a.py', content: 'ISI-A' })
+    expect(await screen.findByRole('region', { name: 'Isi file a.py' })).toBeTruthy()
+    await t.settle('/file?path=', 0, { path: 'b.py', content: 'ISI-B-LAMA' }) // #1 telat
+    expect(screen.queryByRole('region', { name: 'Isi file b.py' })).toBeNull() // kode lama: isi b menimpa a
+    expect(screen.getByRole('region', { name: 'Isi file a.py' }).textContent).toContain('ISI-A')
+  })
+
+  it('cleanup (tutup drawer) saat fetch git menggantung → respons telat tak menulis setelah dibuka lagi', async () => {
+    const t = stubDeferredWs()
+    const idx = await openWs(t)
+    await t.settle('/files', idx.files, { path: '', entries: [{ name: 'Dockerfile', type: 'file' }] })
+    await t.settle('/logs', idx.logs, { logs: [] })
+    // git TIDAK disettle — menggantung
+    await screen.findByText('File: Dockerfile')
+    fireEvent.click(screen.getByRole('button', { name: 'Tutup konsol' })) // cleanup → rid bump
+    await t.settle('/git', idx.git, { repo: true, branch: 'hacked-branch', status: 'x', log: 'z' }) // telat
+    // drawer dibuka lagi → project masih terpilih (state persist) → 3 fetch baru
+    await waitFor(() => expect(t.count('/git')).toBe(2))
+    await t.settle('/git', 1, { repo: true, branch: 'main', status: 'bersih', log: 'abc fitur' })
+    const st = await screen.findByRole('region', { name: 'Status git' })
+    expect(st.textContent).toContain('main')          // kode lama: 'hacked-branch' tampil
+    expect(st.textContent).not.toContain('hacked-branch')
+  })
+
+  it('entries/logs non-array (gateway balas rusak) → render tetap aman, tidak crash', async () => {
+    const t = stubDeferredWs()
+    const idx = await openWs(t)
+    await t.settle('/files', idx.files, {})              // tanpa entries, path undefined
+    await t.settle('/logs', idx.logs, { logs: 'bukan-array' })
+    await t.settle('/git', idx.git, null)
+    expect(await screen.findByText('(folder kosong)')).toBeTruthy()
+    expect(screen.getByText(/File · \//)).toBeTruthy()   // wsPath fallback ''
+    expect(screen.getByText('(log kosong)')).toBeTruthy() // logs dinormalisasi []
+    expect(screen.queryByRole('alert')).toBeNull()        // tak ada err
+  })
+})
+
 describe('ShConsole — guard loader tab lain (projects/tasks/approvals): out-of-order & err basi', () => {
   function stubDeferred(paths) {
     // paths: array substring URL yang harus ditahan manual (deferred).
