@@ -1556,19 +1556,29 @@ let keyTimer=0, stepTimer=0;
 const walkDestinations = CAMPUS_WALK_DESTINATIONS || WALK_DESTINATIONS;
 const updateWalkers=createMotion({rng,agentData,walkDestinations,pickCollab:pickCollabLocal,createBubble});
 let lastMeetingState=false;
-const clock=new THREE.Clock();
-// Hemat CPU/GPU: saat tab tersembunyi, hentikan loop render (visibilitas
-// tak mengubah logika clock — THREE.Clock.getDelta melompat saat resume,
-// delta sudah di-clamp .05 sehingga aman).
+// Siklus 134: THREE.Clock → THREE.Timer (Clock deprecated sejak three r17x,
+// konsol E2E tiap load memunculkan warning deprekasi; Timer API baru: update()
+// dipanggil sekali per frame, getDelta()/getElapsed() murni pembacaan — nilai
+// konsisten walau dipanggil berkali-kali dalam satu frame).
+// Visibilitas: Timer.connect(document) memakai Page Visibility API — delta=0
+// saat tab hidden & reset saat kembali visible → fase ambient/dust/pulse TIDAK
+// melompat sebesar durasi hidden (Clock.getElapsedTime lama melompat). Loop
+// animate() sendiri sudah berhenti saat hidden (pageHidden), jadi tanpa
+// connect() delta pertama pasca-resume besar & di-clamp .05 — dengan connect()
+// malah mulus. Listener visibilitychange-nya dilepas via timer.dispose() di
+// destroy() (masuk rantai teardown, tidak menambah listener yang bocor).
+const timer=new THREE.Timer();
+timer.connect(document);
 let rafId=null, pageHidden=document.visibilityState==='hidden';
 let __perfWin={t0:0,lastFrame:0,fps:0,downgraded:false,shadowLevel:0,goodStreak:0,basePR:0};
 function animate(){
   if(pageHidden)return; // loop berhenti total saat tab hidden (hemat CPU/GPU)
   rafId=requestAnimationFrame(animate);
   if(!renderer)return; // UI-only mode (tanpa WebGL)
-  const delta=Math.min(clock.getDelta(),.05);
+  timer.update(); // sekali per frame → getDelta/getElapsed konsisten sepanjang frame
+  const delta=Math.min(timer.getDelta(),.05);
   deltaFrame=delta;
-  const elapsed=clock.getElapsedTime();
+  const elapsed=timer.getElapsed();
   frame++;
   window.__animFrames=frame;
   if(focusGoal){
@@ -2178,6 +2188,9 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       // Siklus 124: stopper async (poll status) — fetch in-flight saat destroy
       // tidak boleh menulis window/graph scene mati setelah purge
       __destroyHooks.forEach((h) => { try { h && h() } catch {/* abaikan */} });
+      // Siklus 134: Timer ambil alih peran Clock (deprekasi) — lepas listener
+      // visibilitychange-nya agar tidak menunjuk scene mati pasca-destroy.
+      try { timer && timer.dispose && timer.dispose() } catch {/* abaikan */}
       // Audio: engine menutup AudioContext scene lama (mencegah MaxAudioContextsExceeded)
       try { __sound.dispose() } catch{/* abaikan */}
       // Siklus 123: SEMUA hook window milik scene di-purge via satu daftar
