@@ -254,6 +254,7 @@ export default function App() {
       alive = false
       clearTimeout(timer)
       clearInterval(iv)
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- bump generasi rid saat unmount memang disengaja (guard async), bukan membaca snapshot ref
       pollRid.current++ // guard: respons poll in-flight setelah unmount tak menulis state
       window.removeEventListener('offline', off)
       window.removeEventListener('online', on)
