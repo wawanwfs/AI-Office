@@ -4354,3 +4354,14 @@
   - E2E: `e2e_err.py` **0 pesan / 0 error / 0 warning**; scene hidup via `shot.sh` :0 **687.956 B** (>500 KB); probe CDP: 6/6 hook debug utuh (__agentData/__cam/__setTime/__wallState/__camCam/__screens), **26 agen**, cam jauh 42.75.
 - Commit: kode di commit siklus ini.
 - Sisa backlog: **KOSONG**. Kandidat berikutnya: probe remount ×20 (bukti leak fix 133), atau perbaikan kecil sesuai temuan berikutnya.
+
+## 2026-10-29 02:35 WIB — Siklus 139: Probe remount ×20 TANPA GC eksplisit — bukti kuat fix leak siklus 133: heap tertahan 20 remount hanya Δ+22 MB (kode lama diproyeksi Δ+520 MB), heap-after-dispose datar 64–75 MB sepanjang 20 putaran
+
+- **Kandidat (satu-satunya item dari siklus 138):** turunkan probe `e2e_scene_dispose10.py` (siklus 133) → `scripts/e2e_scene_dispose20.py`: ROUNDS 10→20, ambang tertahan proporsional (Δ≤100 MB ≈5 MB/putaran, absolut ≤300 MB), marker log `E2E_SCENEDISPOSE20`. Klaim yang diuji identik ×10: destroy selalu sukses, dispose graph tiap destroy (geometries>200 & textures>10), hook scene bersih (≤2), recreate hidup (26 agen, zona tetap 5 — registri tidak dobel), heap tertahan pasca-GC paksa CDP terkendali, konsol bersih; chrome tetap TANPA `--expose-gc` (hanya GC otomatis V8 di antara putaran).
+- **Hasil (scene NYATA WebGL SwiftShader, 20 putaran ×~36 s = 12,7 menit):** `E2E_SCENEDISPOSE20: OK` — **heap tertahan pasca-GC paksa 80→102 MB (Δ+22 MB)**. Kebocoran pra-fix siklus 133 terukur ~26 MB/remount → pada ×20 diproyeksi Δ+520 MB; hasil nyata 22 MB ≈ 1 MB/putaran = bisu. dispose graph tiap destroy konsisten (geometries 5063, materials 4981–4982, textures 128–129); heap-after-dispose datar 35–127 MB (mayoritas 64–75 MB, fluktuasi = GC lazy V8, bukan tren naik); hook sisa ≤2 tiap putaran; 26 agen & zona 5 di semua recreate; konsol 0 error.
+- **Catatan metodologi:** run `npm test` #1 melaporkan 1 FAIL flake saat dieksekusi BERSAMAAN dgn Chrome probe SwiftShader di mesin 2 vCPU (kontensi CPU memicu timeout test); rerun solo (2×) **2276/2276 PASS (167 file)** — bukan regresi kode (siklus ini tanpa perubahan src/). Probe ×20 disimpan ke repo (`scripts/`) agar bisa dijadwalkan ulang sebagai regresi berkala, sementara ×10 tetap jadi gate cepat.
+- **Bukti terukur:**
+  - Vitest **2276/2276 (167 file)**; build sukses (38 precache 1837.01 KiB) → deploy `dist/*` → `~/wfs-hq/`; `wfs-hq` & `wfs-office` active, :9503 HTTP 200.
+  - `e2e_err.py` **0 pesan / 0 error / 0 warning**; `shot.sh` :0 **689.072 B** (>500 KB — scene hidup).
+- Commit: probe baru di commit siklus ini (tanpa perubahan src/).
+- Sisa backlog: **KOSONG** — bukti remount ×20 selesai, probe ×10 tetap dipakai. Kandidat berikutnya: perbaikan kecil sesuai temuan berikutnya.
