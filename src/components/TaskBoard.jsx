@@ -111,6 +111,13 @@ export default function TaskBoard({ onFlash, onAsk }) {
   const [divPresetFormDivisions, setDivPresetFormDivisions] = useState([])
   const board = useRef(null)
   const searchInputRef = useRef(null)
+  // Guard out-of-order poll (pola siklus 126–130): poll interval 8 dtk memakai
+  // SATU AbortController utk semua poll (abort hanya saat cleanup effect), jadi
+  // overlap nyata terjadi saat gateway lambat. rid menjamin hanya poll TERBARU
+  // yang boleh menulis tasks/err — respons LAMA (out-of-order), kegagalan poll
+  // basi pasca-poll baru sukses, dan refresh pasca-run tidak bisa menimpa data
+  // baru. Tanpa AbortController tambahan: satu titik kebenaran (rid).
+  const pollRid = useRef(0)
   useModalFlag(open || !!sel)
   const onEscRef = useRef(() => {})
   useEffect(() => {
@@ -313,14 +320,16 @@ export default function TaskBoard({ onFlash, onAsk }) {
   }, [customDivPresets, division, onFlash])
 
   const load = useCallback(async (signal) => {
+    const rid = ++pollRid.current
     try {
       const d = await api('tasks', { signal })
+      if (rid !== pollRid.current) return // poll lebih baru sudah menulis / unmount
       setTasks(d.tasks || [])
       // refresh detail yang sedang terbuka agar status/files selalu terbaru
       setSel(s => (s ? (d.tasks || []).find(t => String(t.id) === String(s.id)) || s : s))
       setErr(false)
     }
-    catch (e) { if (e.name !== 'AbortError') setErr(true) }
+    catch (e) { if (e.name !== 'AbortError' && rid === pollRid.current) setErr(true) }
   }, [])
 
   useEffect(() => {
@@ -396,7 +405,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
       }
     }
     document.addEventListener('keydown', k)
-    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k) }
+    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k); pollRid.current++ }
   }, [open, load, sel, q, showPresetCreator, showDivPresetCreator])
 
   // Fokus ke panel detail saat task dibuka: tombol task yang diklik unmount,

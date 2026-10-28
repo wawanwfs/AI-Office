@@ -1150,3 +1150,120 @@ describe('TaskBoard', () => {
     });
   });
 });
+
+describe('TaskBoard — guard poll out-of-order (rid): respons LAMA tak menimpa poll BARU', () => {
+  afterEach(() => { vi.useRealTimers() })
+
+  function stubDeferred() {
+    // consume-once resolver: settle ulang slot yang sama = error (mencegah test
+    // palsu yang me-resolve promise sudah-settle / no-op).
+    const pending = new Map() // seq → resolve
+    let seq = 0
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      if (String(url).includes('/wfs-api/tasks')) {
+        const s = ++seq
+        return new Promise((resolve) => { pending.set(s, resolve) })
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) })
+    }))
+    return {
+      count: () => seq,
+      async settle(s, tasks, opts = {}) {
+        const res = pending.get(s)
+        if (!res) throw new Error('fetch ke-' + s + ' tidak ditemukan / sudah dipakai')
+        pending.delete(s)
+        await act(async () => {
+          res(opts.fail ? { ok: false, status: 503, json: async () => ({}) } : { ok: true, status: 200, json: async () => ({ tasks }) })
+        })
+      },
+    }
+  }
+
+  it('poll #1 tertahan (gateway lambat), interval menyulut poll #2 → respons LAMA tiba belakangan tak menimpa daftar BARU (out-of-order)', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true }) // interval 8 dtk pada instansi sama
+    const t = stubDeferred()
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />)
+    fireEvent.click(screen.getByText('Papan'))
+    await waitFor(() => expect(t.count()).toBe(1)) // poll mount tertahan
+    await act(async () => { vi.advanceTimersByTime(8000) }) // poll #2 via interval
+    await waitFor(() => expect(t.count()).toBe(2))
+    await t.settle(2, [{ id: 2, title: 'Task BARU', agent_id: 'fe1', status: 'pending', role: 'fe' }])
+    expect(screen.getByText(/Task BARU/)).toBeTruthy()
+    await t.settle(1, [{ id: 1, title: 'Task LAMA', agent_id: 'be1', status: 'pending', role: 'be' }]) // #1 (LAMA) tiba belakangan
+    expect(screen.queryByText(/Task LAMA/)).toBeNull() // kode lama: daftar mundur
+    expect(screen.getByText(/Task BARU/)).toBeTruthy()
+  })
+
+  it('poll LAMA GAGAL tiba setelah poll BARU sukses → banner "Gagal memuat task" basi tidak muncul', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
+    const t = stubDeferred()
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />)
+    fireEvent.click(screen.getByText('Papan'))
+    await waitFor(() => expect(t.count()).toBe(1))
+    await act(async () => { vi.advanceTimersByTime(8000) })
+    await waitFor(() => expect(t.count()).toBe(2))
+    await t.settle(2, [{ id: 2, title: 'Task BARU', agent_id: 'fe1', status: 'pending', role: 'fe' }])
+    expect(screen.getByText(/Task BARU/)).toBeTruthy()
+    await t.settle(1, [], { fail: true }) // poll #1 (LAMA) gagal tiba belakangan
+    expect(screen.queryByText(/Gagal memuat task/)).toBeNull() // kode lama: banner basi muncul
+    expect(screen.getByText(/Task BARU/)).toBeTruthy()
+  })
+
+  it('refresh pasca-run menang atas poll pra-run menggantung (run → load rid lebih tinggi); status task tak mundur', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true }) // untuk interval 8 dtk
+    // Stub hanya mendefer URL '/wfs-api/tasks' EXACT (poll); POST /tasks/1/run
+    // & jalur lain instan — agar poll #2 benar-benar in-flight terpisah.
+    const pending = new Map()
+    let seq = 0
+    let lastTasksBody = null
+    vi.stubGlobal('fetch', vi.fn((url, opts = {}) => {
+      const u = String(url)
+      if (u === '/wfs-api/tasks') {
+        const s = ++seq
+        return new Promise((resolve) => { pending.set(s, resolve) })
+      }
+      if (u === '/wfs-api/tasks/1/run') {
+        lastTasksBody = 'run'
+        return Promise.resolve({ ok: true, status: 200, json: async () => ({}) })
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) })
+    }))
+    const ask = { onOk: null }
+    render(<TaskBoard onFlash={() => {}} onAsk={(a) => { ask.onOk = a.onOk }} />)
+    fireEvent.click(screen.getByText('Papan'))
+    await waitFor(() => expect(seq).toBe(1))
+    const settle = async (s, tasks) => {
+      const res = pending.get(s)
+      if (!res) throw new Error('fetch ke-' + s + ' sudah dipakai')
+      pending.delete(s)
+      await act(async () => {
+        res({ ok: true, status: 200, json: async () => ({ tasks }) })
+      })
+    }
+    await settle(1, [{ id: 1, title: 'Porting modul', agent_id: 'be1', status: 'pending', role: 'be' }])
+    fireEvent.click(screen.getByText(/Porting modul/))
+    fireEvent.click(screen.getByText(/Jalankan task/)) // memicu onAsk (bukan run langsung)
+    expect(ask.onOk).toBeTruthy()
+    await act(async () => { ask.onOk() }) // run: POST /run lalu load() (fetch #2, rid tertinggi)
+    expect(lastTasksBody).toBe('run')
+    await waitFor(() => expect(seq).toBe(2))
+    // poll interval pra-run juga menyusul menggantung (#3, rid LEBIH RENDAH
+    // dari refresh pasca-run) — tiba belakangan.
+    await act(async () => { vi.advanceTimersByTime(8000) })
+    await waitFor(() => expect(seq).toBe(3))
+    await settle(2, [{ id: 1, title: 'Porting modul', agent_id: 'be1', status: 'running', role: 'be' }])
+    expect(screen.getByText(/Jalan 1/)).toBeTruthy()
+    await settle(3, [{ id: 1, title: 'Porting modul', agent_id: 'be1', status: 'pending', role: 'be' }])
+    expect(screen.queryByText(/Antri 1/)).toBeNull() // kode lama: status mundur ke pra-run
+    expect(screen.getByText(/Jalan 1/)).toBeTruthy()
+  })
+
+  it('unmount saat poll menggantung → respons telat tidak menulis state komponen gugur (0 act-error)', async () => {
+    const t = stubDeferred()
+    const { unmount } = render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />)
+    fireEvent.click(screen.getByText('Papan'))
+    await waitFor(() => expect(t.count()).toBe(1))
+    unmount() // poll masih menggantung
+    await t.settle(1, [{ id: 1, title: 'Hantu', agent_id: 'be1', status: 'pending', role: 'be' }]) // tak boleh throw act-error
+  })
+})
