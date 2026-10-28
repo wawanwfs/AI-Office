@@ -4380,3 +4380,20 @@
   - `e2e_err.py` **0 pesan / 0 error / 0 warning**; `shot.sh` :0 **686.262 B** (>500 KB — scene hidup).
 - Commit: `a72474f` — PUSH-OK ke origin/main.
 - Sisa backlog: **KOSONG**. Kandidat berikutnya: perbaikan kecil sesuai temuan berikutnya.
+
+## 2026-10-29 04:00 WIB — Siklus 141: Chip fase kantor LIVE di HUD — jalur data scene→UI yang terbangun tapi DIBUANG App (onStatusUpdate: () => {}) kini tampil; 12 fase daycycle (fokus/rapat/makan siang/shift malam…) terlihat founder tanpa buka panel (+7 test, diskriminasi 1/7 FAIL kode lama)
+
+- **Bug (audit rutin pasca-backlog kosong — jalur data scene→UI, keluarga temuan siklus 140):** scene memanggil `onStatusUpdate(statusAt(min))` tiap perubahan jam simulasi — `daycycle.SCHEDULE` punya 12 fase kantor ("Fokus pagi", "Stand-up pagi", "Deep work · semua online", "Istirahat makan siang", "Sprint review", "Shift malam · WFS online", dst) — tapi App mendaftarkan callback KOSONG `onStatusUpdate: () => {}` (App.jsx:294) → seluruh label fase tidak pernah tampil di UI mana pun. Founder tidak bisa tahu kantor sedang fase apa (rapat? makan siang? shift malam?) tanpa menebak dari cahaya scene.
+- **Perubahan:**
+  - `src/scene/parts/office_phase.js` (BARU, murni): `phaseStyleFor(label)` memetakan 11 label unik SCHEDULE → tone CSS + ikon (work hijau/meet biru/break amber/dawn-dusk amber/night abu). SATU sumber kebenaran: label fase TIDAK dihitung ulang dari menit di UI (berisiko desinkron dgn scene) — scene tetap pemilik label, modul hanya menata gaya. Anti-poisoning: non-string/kosong → null (chip disembunyikan, bukan fallback palsu); label tak dikenal → tone dim generik (tetap tampil, scene tetap sumber kebenaran).
+  - `App.jsx`: `officePhase` state + `onStatusUpdate: (label) => setOfficePhase(label)` + prop `phase` ke HUD.
+  - `HUD.jsx`: chip `.phase-chip` (role=status, title tooltip) antara jam & slider — disembunyikan saat scene belum lapor.
+  - `index.css`: gaya chip + tone per fase + responsive ≤760px (ellipsis, font 10px).
+- **+7 test (`office_phase.test.jsx` baru):** 5 murni (11 label→tone benar; Tanpa fallback tersembunyi — SEMUA label SCHEDULE harus terpetakan, bukan jatuh ke dim; anti-poisoning 6 input korup → null; label tak dikenal → dim) + 2 integrasi App→HUD (onStatusUpdate menampilkan chip & perubahan label → chip ikut berubah live; scene belum lapor → chip TIDAK dirender).
+- **Bukti diskriminasi:** kode LAMA (backup /tmp/AI.bak-*) → **1/7 FAIL** persis hipotesis (integrasi: chip tak pernah muncul karena callback dibuang); kode BARU → **7/7 PASS**. Test "tanpa fallback" menyelamatkan bug nyata saat dev: kunci peta awal `'Shift malam'` meleset dgn label asli `'Shift malam · WFS online'` → ketahuan test, bukan lolos diam-diam.
+- **Bukti E2E scene NYATA (`scripts/e2e_office_phase.py` baru, disimpan ke repo):** Chrome SwiftShader Xvfb :99 → 26 agen → chip awal HUD **"Shift malam · WFS online"** (cls phase-chip night) → `__setTime(720)` → chip berubah LIVE **"Istirahat makan siang"** (cls phase-chip break) tanpa reload — jalur scene→App→HUD terbukti ujung-ke-ujung.
+- **Bukti terukur:**
+  - Vitest **2299/2299 (169 file, +7)**; ESLint 0 error 0 warning; build sukses (38 precache 1839.78 KiB) → deploy `dist/*` → `~/wfs-hq/`; `wfs-hq` & `wfs-office` active, :9503 HTTP 200.
+  - `e2e_err.py` **0 pesan / 0 error / 0 warning**; `shot.sh` :0 **688.562 B** (>500 KB — scene hidup).
+- Commit: kode+test+probe di commit siklus ini.
+- Sisa backlog: **KOSONG**. Kandidat berikutnya: perbaikan kecil sesuai temuan berikutnya.

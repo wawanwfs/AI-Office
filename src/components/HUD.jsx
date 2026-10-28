@@ -4,14 +4,16 @@ import {
   getAmbienceTooltip,
   getAmbienceAriaLabel,
 } from '../scene/parts/sound_spec.js'
+import { phaseStyleFor } from '../scene/parts/office_phase.js'
 
-// Pill kiri-atas: jam + slider waktu + status gateway nyata + widget kontrol cepat audio ambience kantor.
+// Pill kiri-atas: jam + fase kantor live + slider waktu + status gateway nyata + widget kontrol cepat audio ambience kantor.
 export default function HUD({
   time,
   timeValue,
   status,
   statusKind,
   conn,
+  phase,
   onTimeChange,
   ambienceEnabled = false,
   ambienceVolume = 0.35,
@@ -24,6 +26,9 @@ export default function HUD({
   const statusLabel = getAmbienceStatusLabel({ enabled: ambienceEnabled, muted, volume: ambienceVolume })
   const tooltipText = getAmbienceTooltip({ enabled: ambienceEnabled, muted, volume: ambienceVolume })
   const ariaLabelText = getAmbienceAriaLabel({ enabled: ambienceEnabled, muted, volume: ambienceVolume })
+  // Fase kantor: label yang dikirim scene (via onStatusUpdate → App) dipetakan
+  // ke tone/ikon. Scene belum lapor (phase kosong/non-string) → chip disembunyikan.
+  const phaseInfo = phaseStyleFor(phase)
 
   const handleClick = (e) => {
     if (e.shiftKey && onCycleAmbienceVolume) {
@@ -42,6 +47,13 @@ export default function HUD({
   return (
     <div className="hud" role="group" aria-label="Waktu simulasi dan status">
       <span className="clock">{time}</span>
+      {phaseInfo && (
+        <span
+          className={`phase-chip ${phaseInfo.tone}`}
+          role="status"
+          title={`Fase kantor: ${phaseInfo.label} ${phaseInfo.icon}`}
+        ><i aria-hidden="true" />{phaseInfo.label}</span>
+      )}
       <input
         type="range"
         min="0"

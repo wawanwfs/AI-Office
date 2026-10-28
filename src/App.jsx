@@ -47,6 +47,10 @@ export default function App() {
     const d = new Date(); return d.getHours() * 60 + d.getMinutes(); })
   const [status, setStatus] = useState('Memuat…')
   const [statusKind, setStatusKind] = useState('')
+  // Fase kantor live dari scene (daycycle.statusAt via onStatusUpdate) —
+  // dulu callback ini kosong () => {} sehingga 12 label fase (fokus, rapat,
+  // makan siang, shift malam…) tidak pernah tampil di UI.
+  const [officePhase, setOfficePhase] = useState(null)
   const [conn, setConn] = useState(() => applyPollResult(null, { ok: false, error: 'init' }, 0))
   const [cyberpunk, setCyberpunk] = useState(() => {
     try { return typeof localStorage !== 'undefined' && localStorage.getItem('wfs_neon') === '1' } catch { return false }
@@ -291,7 +295,7 @@ export default function App() {
       try {
         sceneRef.current = createOfficeScene(canvasRef.current, {
           onTimeUpdate: (min) => setTime(min),
-          onStatusUpdate: () => {},
+          onStatusUpdate: (min) => setOfficePhase(min),
           onMeetingChange: (m) => setInMeeting(m),
           onSelectAgent: (ag) => {
             setSelectedAgent(ag)
@@ -583,6 +587,7 @@ export default function App() {
         statusKind={statusKind}
         conn={connBadge}
         onTimeChange={handleTimeChange}
+        phase={officePhase}
         ambienceEnabled={ambienceEnabled}
         ambienceVolume={ambienceVolume}
         muted={muted}
