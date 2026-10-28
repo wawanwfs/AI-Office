@@ -58,6 +58,7 @@ import { AGENTS, AGENTS_EXTRA, allAgents as allAgentsFn } from './parts/agents_s
 import { EXTENDED_SPECIALISTS } from './parts/extended_desks.js';
 import { DESKS } from './parts/desk_layout.js';
 import { teamPodFocusTarget, findTeamByKey } from './parts/team_spec.js';
+import { levelOf } from './parts/agent_status.js'; // siklus 145: lantai kamera → FloorNavigator (onCameraFloor)
 import { meetingFocusTarget, getWhiteboardTooltipText, isWhiteboardHit } from './parts/whiteboard_spec.js';
 import { isLongHair, STANDING, SITTING, accessoryAnchor } from './parts/character_spec.js';
 import { collectPickTargets, findAgentRoot, isNexusHit, isBoardHit, findMeetingFigureOwner } from './parts/raycast_targets.js';
@@ -73,7 +74,7 @@ export function createOfficeScene(container, callbacks = {}) {
   // ke array lama → label zona duplikat & anti-tumpuk memproses sprite mati.
   purgeSceneHooks(window, SCENE_HOOKS);
   window.__SCENE_HOOKS = SCENE_HOOKS; // daftar utk probe E2E (hapus/pasang ulang tiap siklus create-destroy)
-  const { onTimeUpdate, onStatusUpdate, onMeetingChange, onSelectAgent } = callbacks;
+  const { onTimeUpdate, onStatusUpdate, onMeetingChange, onSelectAgent, onCameraFloor } = callbacks;
 
 // ═══════════════════════════════════════════════════
 // THE AGENCY v3
@@ -609,6 +610,8 @@ function focusMeetingRoom() {
   if (selectedIdx !== -1) { selectedIdx = -1; applySelected(); if (onSelectAgent) onSelectAgent(null); }
   const ft = meetingFocusTarget(MRX, MRZ);
   focusGoal = { t: new THREE.Vector3(ft.x, ft.y, ft.z), r: ft.radius };
+  // Siklus 145: ruang rapat selalu di L1 (ROOM_CZ=-3) — nav ikut, dulu tetap.
+  if (onCameraFloor) onCameraFloor(levelOf(MRZ));
   return true;
 }
 
@@ -1997,6 +2000,10 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
         __sound.playSelect();
         createBubble(ft.x, ft.y + 1.8, ft.z, '“Pod ' + teamObj.name + ' (Lt. ' + teamObj.floor + ')”', teamObj.hex || teamObj.color || '#10E5A0');
       }
+      // Siklus 145: kamera melompat ke pod tim (L1/L2/L3 sesuai spesifikasi
+      // tim) — FloorNavigator harus ikut, dulu nav tetap di lantai lama
+      // (founder melihat pod L3 sementara tombol "L1" tetap aktif).
+      if (onCameraFloor) onCameraFloor(levelOf(ft.z));
       return true;
     },
     focusAgent: (idOrName) => {

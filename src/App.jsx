@@ -298,6 +298,12 @@ export default function App() {
           onTimeUpdate: (min) => setTime(min),
           onStatusUpdate: (min) => setOfficePhase(min),
           onMeetingChange: (m) => setInMeeting(m),
+          // Siklus 145: kamera pindah lantai TANPA agen terpilih (Fokus 3D pod
+          // tim via TeamStats/TaskBoard → scene.focusTeam, fokus ruang rapat →
+          // scene.focusMeetingRoom) → FloorNavigator ikut. Dulu nav tetap di
+          // lantai lama — founder melihat pod L3 sementara tombol "L1" aktif.
+          // Guard: selain 1–3 (null/korup) diabaikan, bukan mengarang lantai.
+          onCameraFloor: (fl) => { if (fl === 1 || fl === 2 || fl === 3) setCurrentFloor(fl) },
           onSelectAgent: (ag) => {
             setSelectedAgent(ag)
             // Siklus 144: lantai sinkron kini dari posisi LIVE scene (satu
@@ -309,6 +315,8 @@ export default function App() {
             // padahal kamera fokus ke posisi live (agentFollowGoal/anchor
             // rapat) → label nav menunjuk lantai kosong. Entri scene tidak
             // ada (Founder nexus idx -2, scene gagal init) → fallback lama.
+            // Siklus 145: lantai ini juga di-override onCameraFloor saat
+            // kamera pindah TANPA agen terpilih (focusTeam/focusMeetingRoom).
             const entry = ag && findAgentLiveEntry(window.__agentData, ag.name)
             const live = agentLiveLevel(entry)
             if (live) setCurrentFloor(live)

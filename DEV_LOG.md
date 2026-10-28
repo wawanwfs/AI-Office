@@ -4442,3 +4442,18 @@
   - `e2e_err.py` **0 pesan / 0 error / 0 warning**; `shot.sh` :0 **688.468 B** (>500 KB — scene hidup).
 - Commit: kode+test+probe di commit siklus ini.
 - Sisa backlog: **KOSONG**. Kandidat berikutnya: perbaikan kecil sesuai temuan berikutnya.
+
+## 2026-10-29 06:58 WIB — Siklus 145: Kamera pindah lantai TANPA agen → FloorNavigator ikut (onCameraFloor) — Fokus 3D pod tim (TeamStats/TaskBoard) & fokus ruang rapat kini menyinkronkan nav; kebalikan siklus 144, jalur kamera lintas lantai terakhir (+10 test, diskriminasi 7/10 FAIL kode lama; E2E: core-be→L2, qa-gov→L3, meeting→L1, kode lama: L1 terus)
+
+- **Bug (audit rutin pasca-backlog kosong — jalur kamera scene→UI, penutup keluarga siklus 142–144):** jalur kamera lintas lantai yang melewati `onSelectAgent` tidak pernah melaporkan lantai ke App — (1) `scene.focusTeam` (kartu "Fokus 3D" TeamStats ×2 + 4 titik TaskBoard → `window.__focusTeam`): kamera melompat ke pod tim L1/L2/L3 sesuai `team_spec.podCenter.z`, tapi tombol nav tetap di lantai lama; (2) `scene.focusMeetingRoom`: kamera ke ruang rapat (selalu L1, ROOM_CZ=-3), nav tetap. Founder melihat pod L3 di layar sementara "L1 · Ops & AI" tetap aktif — kebalikan persis bug siklus 144 (dulu: nav salah saat agen diklik; kini: nav salah saat kamera pindah TANPA agen).
+- **Perubahan:**
+  - `OfficeScene.js`: callback baru `onCameraFloor(level)` — `focusTeam` melaporkan `levelOf(ft.z)` (fungsi murni agent_status.js — SATU sumber kebenaran dgn agentLiveLevel 142/143/144), `focusMeetingRoom` melaporkan `levelOf(MRZ)`.
+  - `App.jsx`: `onCameraFloor: (fl) => { if (fl === 1 || fl === 2 || fl === 3) setCurrentFloor(fl) }` — guard anti-poisoning (null/0/4 diabaikan, bukan mengarang lantai). `onSelectAgent(null)` dari focusTeam TETAP tidak menggeser nav (perilaku siklus 144 utuh) — urutan panggilan scene: onSelectAgent(null) dulu, baru onCameraFloor.
+- **+10 test (`app_camera_floor_live.test.jsx` baru):** 3 murni (podCenter SEMUA 6 tim → levelOf == field floor tim; fallback tim tak dikenal z=1.5 → L2; guard levelOf non-finite → null) + 7 integrasi App→FloorNavigator (BUG UTAMA qa-gov → L3 aktif bukan L1; BUG UTAMA fe-design dari L2 → L1; focusMeetingRoom dari L3 → L1; core-be → L2; guard null/0/4 diabaikan; interaksi siklus 144: klik agen meja L2 → L2 lalu fokus tim L3 → L3; callback eksis).
+- **Bukti diskriminasi:** kode LAMA (backup /tmp/AI.bak-*.jsx + OS.bak-*.js) → **7/10 FAIL** (semua integrasi App: onCameraFloor tak dikenal scene, nav tak pernah berubah); 3 lolos = test murni levelOf/team_spec yang memang tak sentuh App. Kode BARU → **10/10 PASS**.
+- **Bukti E2E scene NYATA (`scripts/e2e_camera_floor_live.py` baru, disimpan ke repo):** Chrome SwiftShader Xvfb :99 → 26 agen → `__focusTeam('core-be')` → nav aktif **L2** → `__focusTeam('qa-gov')` → **L3** → `__focusMeetingRoom()` → **L1** (semua via hook scene nyata → callback → App → DOM nav). Diskriminasi E2E penuh: kode lama di-build & deploy ulang → probe sama **FAIL: nav L1 terus** di ketiga langkah; kode baru → OK semua.
+- **Bukti terukur:**
+  - Vitest **2348/2348 (173 file, +10)**; ESLint 0 error 0 warning (file tersentuh); build sukses (38 precache 1841.28 KiB) → deploy `dist/*` → `~/wfs-hq/`; `wfs-hq` & `wfs-office` active, :9503 HTTP 200.
+  - `e2e_err.py` **0 pesan / 0 error / 0 warning**; `shot.sh` :0 **682.362 B** (>500 KB — scene hidup).
+- Commit: kode+test+probe di commit siklus ini.
+- Sisa backlog: **KOSONG**. Kandidat berikutnya: perbaikan kecil sesuai temuan berikutnya.
