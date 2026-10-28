@@ -1,7 +1,7 @@
 // @vitest-environment jsdom
 import React from 'react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, waitFor, act } from '@testing-library/react'
 import TaskModal from '../components/TaskModal.jsx'
 import { api } from '../lib/api'
 
@@ -94,5 +94,129 @@ describe('components/TaskModal', () => {
     const { container } = render(h(TaskModal, base))
     fireEvent.click(container.querySelector('.modal-scrim'))
     expect(base.onClose).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('TaskModal — guard rid submit (siklus 132): respons submit LAMA telat tak menulis state generasi BARU', () => {
+  // Consume-once deferred api (pola siklus 131 — settle ulang slot yang sama =
+  // error; mencegah test palsu yang me-resolve promise sudah-settle / no-op).
+  // PENTING: file ini me-mock '../lib/api' dgn vi.fn() — defer mock API-nya
+  // sendiri (bukan global fetch, yang tak pernah dipakai komponen di sini).
+  function stubDeferredApi() {
+    const pending = new Map()
+    const urls = []
+    let seq = 0
+    api.mockImplementation((url) => {
+      const s = ++seq
+      urls.push(String(url))
+      return new Promise((resolve, reject) => { pending.set(s, { resolve, reject }) })
+    })
+    return {
+      count: () => seq,
+      urls,
+      async settle(s, body, opts = {}) {
+        const p = pending.get(s)
+        if (!p) throw new Error('api ke-' + s + ' tidak ditemukan / sudah dipakai')
+        pending.delete(s)
+        await act(async () => {
+          if (opts.fail) p.reject(new Error('HTTP ' + (opts.status || 503)))
+          else p.resolve(body)
+        })
+      },
+    }
+  }
+  const fill = (title) => {
+    fireEvent.change(screen.getByLabelText('Judul'), { target: { value: title } })
+    fireEvent.change(screen.getByLabelText('Brief (opsional)'), { target: { value: 'brief' } })
+  }
+
+  it('submit #1 tertahan → modal ditutup (input tetap terisi) → dibuka ulang, submit #2 sukses → respons LAMA telat TIDAK menutup modal BARU, TIDAK menghapus input, onDone basi TIDAK jalan', async () => {
+    const t = stubDeferredApi()
+    const props = { show: true, onClose: vi.fn(), onDone: vi.fn() }
+    const { rerender } = render(h(TaskModal, props))
+    fill('Task LAMA')
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan' }))
+    await waitFor(() => expect(t.count()).toBe(1)) // POST /tasks tertahan
+    // user menutup modal saat submit menggantung
+    await act(async () => { rerender(h(TaskModal, { ...props, show: false })) })
+    expect(props.onClose).not.toHaveBeenCalled()
+    // modal dibuka ulang, user mengetik task BARU
+    await act(async () => { rerender(h(TaskModal, { ...props, show: true })) })
+    fill('Task BARU')
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan' }))
+    await waitFor(() => expect(t.count()).toBe(2))
+    await t.settle(2, { task_id: 8 }) // submit BARU sukses lebih dulu
+    expect(props.onDone).toHaveBeenCalledWith('Task #8 dibuat (pending)')
+    expect(props.onClose).toHaveBeenCalledTimes(1) // modal BARU tertutup oleh submit BARU
+    // modal dibuka lagi (simulasi user lanjut membuat task berikutnya)
+    await act(async () => { rerender(h(TaskModal, { ...props, show: true })) })
+    fill('Task KEDUA')
+    // respons submit #1 (LAMA) tiba belakangan → semua efeknya basi:
+    await t.settle(1, { task_id: 7 })
+    expect(screen.getByLabelText('Judul').value).toBe('Task KEDUA') // tak terhapus oleh setTitle('') basi
+    expect(props.onDone).toHaveBeenCalledTimes(1) // onDone basi tak jalan ulang
+    expect(props.onClose).toHaveBeenCalledTimes(1) // modal BARU tak tertutup
+    // modal masih fungsional: submit lagi → normal
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan' }))
+    await waitFor(() => expect(t.count()).toBe(3))
+    await t.settle(3, { task_id: 9 })
+    expect(props.onDone).toHaveBeenLastCalledWith('Task #9 dibuat (pending)')
+    expect(props.onClose).toHaveBeenCalledTimes(2)
+  })
+
+  it('submit LAMA GAGAL telat setelah modal dibuka ulang → alert "HTTP 503" basi TIDAK muncul di form BARU', async () => {
+    const t = stubDeferredApi()
+    const props = { show: true, onClose: vi.fn(), onDone: vi.fn() }
+    const { rerender } = render(h(TaskModal, props))
+    fill('Task GAGAL')
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan' }))
+    await waitFor(() => expect(t.count()).toBe(1))
+    await act(async () => { rerender(h(TaskModal, { ...props, show: false })) })
+    await act(async () => { rerender(h(TaskModal, { ...props, show: true })) }) // dibuka ulang → rid naik
+    fill('Task BARU')
+    // respons LAMA (sebelum dibuka ulang) GAGAL telat:
+    await t.settle(1, {}, { fail: true, status: 503 })
+    expect(screen.queryByRole('alert')).toBeNull() // kode lama: alert 503 palsu muncul di form baru
+    // form BARU masih fungsional (tak terkunci busy basi):
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan' }))
+    await waitFor(() => expect(t.count()).toBe(2))
+    await t.settle(2, { task_id: 11 })
+    expect(props.onDone).toHaveBeenCalledWith('Task #11 dibuat (pending)')
+  })
+
+  it('submit BARU sukses duluan, submit LAMA telat sukses → tak ada task kedua palsu (onDone sekali, tak ada run task lama)', async () => {
+    const t = stubDeferredApi()
+    const props = { show: true, onClose: vi.fn(), onDone: vi.fn() }
+    const { rerender } = render(h(TaskModal, props))
+    fill('Task SATU')
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan & Jalankan' }))
+    await waitFor(() => expect(t.count()).toBe(1)) // POST /tasks tertahan
+    await act(async () => { rerender(h(TaskModal, { ...props, show: false })) })
+    await act(async () => { rerender(h(TaskModal, { ...props, show: true })) })
+    fill('Task DUA')
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan' }))
+    await waitFor(() => expect(t.count()).toBe(2))
+    await t.settle(2, { task_id: 21 })
+    expect(props.onDone).toHaveBeenCalledWith('Task #21 dibuat (pending)')
+    await act(async () => { rerender(h(TaskModal, { ...props, show: false })) })
+    await act(async () => { rerender(h(TaskModal, { ...props, show: true })) }) // buka ulang (rid naik)
+    fill('Task TIGA')
+    await t.settle(1, { task_id: 20 }) // submit & run LAMA telat sukses — run tak pernah dipanggil utk task lama
+    expect(props.onDone).toHaveBeenCalledTimes(1)
+    // hanya 2 api yang pernah dibuat: /tasks (#1, tertahan basi) dan /tasks (#2) — tidak ada /tasks/20/run basi
+    expect(t.urls.filter(u => u.includes('/run')).length).toBe(0)
+  })
+
+  it('busy tombol: submit menggantung → tombol disabled; modal dibuka ulang → form langsung siap (busy basi di-reset)', async () => {
+    const t = stubDeferredApi()
+    const props = { show: true, onClose: vi.fn(), onDone: vi.fn() }
+    const { rerender } = render(h(TaskModal, props))
+    fill('Task X')
+    fireEvent.click(screen.getByRole('button', { name: 'Simpan' }))
+    await waitFor(() => expect(t.count()).toBe(1))
+    expect(screen.getByRole('button', { name: 'Simpan' }).disabled).toBe(true) // busy saat in-flight
+    await act(async () => { rerender(h(TaskModal, { ...props, show: false })) })
+    await act(async () => { rerender(h(TaskModal, { ...props, show: true })) })
+    expect(screen.getByRole('button', { name: 'Simpan' }).disabled).toBe(false) // generasi baru siap
   })
 })
