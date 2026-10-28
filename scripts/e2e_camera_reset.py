@@ -71,10 +71,25 @@ class WS:
         return d.decode("utf-8", "replace")
 
 
+def x99_alive():
+    """Cek X server :99 hidup (bukan cuma socket basi — pelajaran siklus 127/
+    128: probe sebelumnya men-terminate Xvfb-nya sendiri di finally dan socket
+    basi membuat auto-start run berikutnya skip → probe 'scene tidak siap')."""
+    return subprocess.run(["xdpyinfo", "-display", ":99"],
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+
+def cleanup_x99():
+    try:
+        if os.path.exists("/tmp/.X11-unix/X99") and not x99_alive():
+            os.remove("/tmp/.X11-unix/X99")
+    except OSError:
+        pass
+
 def main():
     env = dict(os.environ, DISPLAY=":99")
     xv = None
-    if not os.path.exists("/tmp/.X11-unix/X99"):
+    if not x99_alive():
+        cleanup_x99()
         xv = subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x768x24"],
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         time.sleep(1)

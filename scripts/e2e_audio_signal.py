@@ -227,7 +227,7 @@ window.__muteRun = () => new Promise(res => {
 def chrome_proc(extra):
     env = dict(os.environ, DISPLAY=":99")
     xv = None
-    if not os.path.exists("/tmp/.X11-unix/X99"):
+    if not _x99_alive():
         xv = subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x768x24"],
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         time.sleep(1)

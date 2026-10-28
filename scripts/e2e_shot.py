@@ -43,10 +43,26 @@ class WS:
             if op != 0: break
         return d.decode("utf-8", "replace")
 
+def x99_alive():
+    """Cek X server :99 hidup (bukan cuma socket basi — pelajaran siklus 127/
+    128: probe sebelumnya men-terminate Xvfb-nya sendiri di finally dan socket
+    basi membuat auto-start run berikutnya skip → scene tak pernah boot)."""
+    return subprocess.run(["xdpyinfo", "-display", ":99"],
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+
+def cleanup_x99():
+    # socket basi tanpa server: hapus agar auto-start berikutnya berhasil
+    try:
+        if os.path.exists("/tmp/.X11-unix/X99") and not x99_alive():
+            os.remove("/tmp/.X11-unix/X99")
+    except OSError:
+        pass
+
 def main():
     env = dict(os.environ, DISPLAY=":99")
     xv = None
-    if not os.path.exists("/tmp/.X11-unix/X99"):
+    if not x99_alive():
+        cleanup_x99()
         xv = subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x768x24"],
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         time.sleep(1)
@@ -67,7 +83,7 @@ def main():
                 r = json.loads(ws.recv())
                 if r.get("id") == mid[0]: return r
         cmd("Page.enable"); cmd("Runtime.enable")
-        time.sleep(15)
+        time.sleep(25)  # scene init + beberapa frame animasi (SwiftShader lambat saat VM load)
         r = cmd("Page.captureScreenshot", format="png")
         data = base64.b64decode(r["result"]["data"])
         open(out, "wb").write(data)

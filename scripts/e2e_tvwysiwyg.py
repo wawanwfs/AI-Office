@@ -150,10 +150,17 @@ def analyze(W, H, img):
     return (x0, y0, x1, y1), area, inside/area, loose
 
 
+def _x99_alive():
+    """Cek X server :99 hidup (bukan cuma socket basi — pelajaran siklus 127/
+    128: probe sebelumnya men-terminate Xvfb-nya sendiri di finally dan socket
+    basi membuat auto-start run berikutnya skip → probe 'scene tidak siap')."""
+    return subprocess.run(["xdpyinfo", "-display", ":99"],
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+
 def main():
     env = dict(os.environ, DISPLAY=":99")
     xv = None
-    if not os.path.exists("/tmp/.X11-unix/X99"):
+    if not _x99_alive():
         xv = subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x768x24"],
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         time.sleep(1)
