@@ -1,11 +1,24 @@
-import React, { useEffect } from 'react'
+import React, { useEffect, useState } from 'react'
 import { IconClose, IconChat, IconUser } from './Icons'
 import { getAgentCompetency } from '../scene/parts/agent_competencies.js'
 import { resolveAgentId } from '../scene/parts/running_tasks.js'
 import { findTeamByAgent } from '../scene/parts/team_spec.js'
+import { agentLiveStatus, findAgentLiveEntry } from '../scene/parts/agent_status.js'
 
 // Kartu Inspektur Agen Interaktif — Tampil saat agen 3D diklik di ruangan
 export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloor, onOpenConsole }) {
+  // Status live dari state machine scene (window.__agentData). Dulu HARDCODED
+  // "Aktif Bekerja" utk semua agen — agen rapat/makan siang/berjalan tetap
+  // dilabeli bekerja. Polling 1 dtk selama kartu terbuka: agen berjalan antar
+  // lantai berpindah status tanpa perlu membuka ulang kartu.
+  const [live, setLive] = useState(null)
+  useEffect(() => {
+    if (!agent) return undefined
+    const read = () => setLive(agentLiveStatus(findAgentLiveEntry(window.__agentData, agent && agent.name)))
+    read()
+    const iv = setInterval(read, 1000)
+    return () => clearInterval(iv)
+  }, [agent])
   useEffect(() => {
     if (!agent) return
     const onKey = (e) => {
@@ -85,10 +98,16 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
           <div style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '8px 10px' }}>
             <span style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 3 }}>Status</span>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--green)', fontWeight: 600 }}>
-              <i style={{ width: 6, height: 6, borderRadius: '50%', background: 'var(--green)', boxShadow: '0 0 8px var(--green)' }} />
-              Aktif Bekerja
-            </div>
+            {(() => {
+              // Status live dari state machine scene; scene belum ada → Standby (bukan klaim palsu)
+              const st = live || agentLiveStatus(null)
+              return (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: st.hex, fontWeight: 600 }}>
+                  <i style={{ width: 6, height: 6, borderRadius: '50%', background: st.hex, boxShadow: `0 0 8px ${st.hex}` }} />
+                  {st.label}
+                </div>
+              )
+            })()}
           </div>
           <button
             type="button"
