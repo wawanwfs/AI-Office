@@ -152,10 +152,14 @@ def main():
         time.sleep(2)
         occ_initial = ev(OCC_EXPR).get("value", "?")
 
-        # 12:00 — lunch window: sebagian besar agen jalan ke kafe L3 (z≈5.6).
+        # 12:00 — lunch window: agen berjalan ke kafe L3 via tangga nyata (rute
+        # koridor + Grand Staircase) — di SwiftShader ~1.5 FPS perjalanan bisa
+        # >60 dtk. Break saat badge L3 naik ≥3 dari baseline (walker benar-benar
+        # menyeberang), BUKAN sekadar hitungan absolut (baseline L3 sudah 8).
         ev("window.__setTime(720)")
         occ_final = None
         cafe = {}
+        base_l3 = json.loads(occ_initial).get("L3", 0)
         for _ in range(50):
             time.sleep(1.5)
             cafe = ev("(()=>{const d=window.__agentData||[];"
@@ -165,7 +169,7 @@ def main():
             occ_final = ev(OCC_EXPR).get("value", "?")
             try:
                 f = json.loads(occ_final)
-                if f.get("L3", 0) >= 5:
+                if f.get("L3", 0) >= base_l3 + 3:
                     break
             except Exception:
                 pass
@@ -174,7 +178,7 @@ def main():
         try:
             i = json.loads(occ_initial); f = json.loads(occ_final)
             ok = (agents >= 26 and sum(i.values()) == agents and sum(f.values()) >= 1
-                  and f.get("L3", 0) > i.get("L3", 0))
+                  and f.get("L3", 0) >= i.get("L3", 0) + 3 and f.get("L3", 0) <= agents)
         except Exception:
             ok = False
         print("E2E_FLOORSOCC: OK" if ok else "E2E_FLOORSOCC: FAIL")
