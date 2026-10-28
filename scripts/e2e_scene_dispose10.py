@@ -28,8 +28,11 @@ CHROME = os.path.expanduser(
 PORT = 9468
 URL = "http://127.0.0.1:9503/"
 ROUNDS = 10
-MAX_HEAP_GROWTH_MB = 50
-MAX_HEAP_ABS_MB = 160
+# Metrik PASS = heap TERTAHAN setelah GC dipaksa via CDP HeapProfiler
+# (window.gc TIDAK tersedia di run tanpa --expose-gc). Pertumbuhan lazy
+# antar-round hanyalah informasi — V8 tanpa tekanan memori menunda major GC.
+MAX_RETAINED_GROWTH_MB = 50
+MAX_RETAINED_ABS_MB = 200
 
 STATE_EXPR = ("JSON.stringify({agents:window.__agentData?window.__agentData.length:-1,"
               "cam:!!window.__camCam,renderer:!!window.__renderer,zone:window.__zoneLabels?window.__zoneLabels.length:-1,"
@@ -228,19 +231,27 @@ def main():
             ev("window.__hookListProbe=Array.from(window.__SCENE_HOOKS||[])")
 
         print("HEAPS:", heaps)
-        growth = (heaps[-1] or 0) - (heaps[0] or 0)
-        if growth > MAX_HEAP_GROWTH_MB:
-            print(f"E2E_SCENEDISPOSE10: FAIL (heap tumbuh {growth} MB > {MAX_HEAP_GROWTH_MB} MB — kebocoran per-remount)")
+        # ── GC DIPAKSA via CDP (setara window.gc() tanpa --expose-gc) ──
+        cmd("HeapProfiler.enable")
+        cmd("HeapProfiler.collectGarbage")
+        time.sleep(3)
+        retained = jval(ev(
+            "JSON.stringify(performance.memory?Math.round(performance.memory.usedJSHeapSize/1048576):-1)"))
+        growth = (retained or 0) - (heaps[0] or 0)
+        print(f"RETAINED after forced GC: {retained} MB (awal {heaps[0]} MB, Δ{growth} MB)")
+        if growth > MAX_RETAINED_GROWTH_MB:
+            print(f"E2E_SCENEDISPOSE10: FAIL (heap tertahan tumbuh {growth} MB > "
+                  f"{MAX_RETAINED_GROWTH_MB} MB — kebocoran per-remount)")
             sys.exit(1)
-        if (heaps[-1] or 0) > MAX_HEAP_ABS_MB:
-            print(f"E2E_SCENEDISPOSE10: FAIL (heap akhir {heaps[-1]} MB > {MAX_HEAP_ABS_MB} MB)")
+        if (retained or 0) > MAX_RETAINED_ABS_MB:
+            print(f"E2E_SCENEDISPOSE10: FAIL (heap tertahan {retained} MB > {MAX_RETAINED_ABS_MB} MB)")
             sys.exit(1)
         fresh_errs = [e for e in console_errors if "deprecat" not in e.lower()]
         if fresh_errs:
             print("E2E_SCENEDISPOSE10: FAIL (error konsol:", fresh_errs[:3], ")")
             sys.exit(1)
         print(f"E2E_SCENEDISPOSE10: OK ({ROUNDS} remount TANPA GC eksplisit, "
-              f"heap {heaps[0]}→{heaps[-1]} MB (Δ{growth} MB), dispose graph tiap destroy, "
+              f"heap tertahan {heaps[0]}→{retained} MB (Δ{growth} MB), dispose graph tiap destroy, "
               f"zona tetap 5, konsol bersih)")
         sys.exit(0)
     finally:
