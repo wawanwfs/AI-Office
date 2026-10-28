@@ -143,6 +143,7 @@ export default function ShConsole({ show, onClose }) {
       }
       return () => {
         clearInterval(iv)
+        // eslint-disable-next-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async), bukan membaca snapshot ref
         ovRid.current++ // invalidate respons in-flight (tab/drawer ditutup)
         esAlive = false
         if (es) es.close()

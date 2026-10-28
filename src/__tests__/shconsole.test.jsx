@@ -363,18 +363,20 @@ describe('ShConsole — konsol software house', () => {
 // data poll BARU, dan respons/event telat setelah cleanup TIDAK boleh menulis
 // state komponen (banner err basi di tab lain / live log komponen mati).
 describe('ShConsole — guard poll overview & EventSource (out-of-order, cleanup)', () => {
+  afterEach(() => { vi.useRealTimers() })
+
+  function marker(projects) {
+    return { ...OV, projects }
+  }
+
   function stubDeferredOverview() {
     const pending = new Map() // seq → resolve
     let seq = 0
-    const urls = []
     vi.stubGlobal('fetch', vi.fn((url) => {
-      const u = String(url)
-      urls.push(u)
-      if (u.includes('sh/overview')) {
+      if (String(url).includes('sh/overview')) {
         const s = ++seq
         return new Promise((resolve) => { pending.set(s, resolve) })
       }
-      if (u.includes('/wfs-api/events')) return new Promise(() => {}) // EventSource pollyfill via fetch — tak dipakai
       return Promise.resolve({ ok: true, json: async () => ({}) })
     }))
     return {
@@ -387,23 +389,19 @@ describe('ShConsole — guard poll overview & EventSource (out-of-order, cleanup
           res(opts.fail ? { ok: false, status: 503, json: async () => ({}) } : { ok: true, json: async () => data })
         })
       },
-      urls,
     }
   }
 
-  function marker(projects) {
-    return { ...OV, projects }
-  }
-
   it('respons poll LAMA tiba belakangan → tidak menimpa data poll BARU (out-of-order)', async () => {
+    // Interval 10 dtk: fake timers hybrid agar waitFor tetap jalan.
+    vi.useFakeTimers({ shouldAdvanceTime: true })
     const t = stubDeferredOverview()
     render(<ShConsole show onClose={() => {}} />)
-    expect(t.count()).toBe(1) // poll mount tertahan
-    // poll #2 disulut tanpa menunggu #1: interval 10 dtk tak tersentuh — cukup
-    // unmount+remount (drawer ditutup-dibuka cepat) yang memicu poll baru via
-    // rid ref persist lintas mount.
-    await act(async () => { cleanup() })
-    render(<ShConsole show onClose={() => {}} />)
+    await waitFor(() => expect(t.count()).toBe(1)) // poll mount tertahan
+    // Poll #2 disulut oleh interval 10 dtk pada instansi YANG SAMA (skenario
+    // nyata: drawer terbuka, gateway lambat) — bukan unmount/remount (setState
+    // instansi yang sudah gugur jadi no-op & tak membedakan apa pun).
+    await act(async () => { vi.advanceTimersByTime(10000) })
     await waitFor(() => expect(t.count()).toBe(2))
     await t.settle(2, marker(9))   // poll BARU duluan → tampil 9
     expect(screen.getByText('9')).toBeTruthy()
@@ -413,65 +411,61 @@ describe('ShConsole — guard poll overview & EventSource (out-of-order, cleanup
   })
 
   it('poll LAMA GAGAL tiba setelah poll BARU sukses → banner err basi tidak muncul', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true })
     const t = stubDeferredOverview()
     render(<ShConsole show onClose={() => {}} />)
-    await act(async () => { cleanup() })
-    render(<ShConsole show onClose={() => {}} />)
+    await waitFor(() => expect(t.count()).toBe(1))
+    await act(async () => { vi.advanceTimersByTime(10000) })
     await waitFor(() => expect(t.count()).toBe(2))
-    await t.settle(2, marker(9))       // poll baru sukses
+    await t.settle(2, marker(9))          // poll baru sukses
     expect(screen.getByText('9')).toBeTruthy()
     await t.settle(1, {}, { fail: true }) // poll lama gagal menyusul
     expect(screen.queryByText(/HTTP 503/)).toBeNull()
     expect(screen.getByText('9')).toBeTruthy()
   })
 
-  it('cleanup saat poll in-flight (tutup drawer) → respons telat tak menulis state/banner', async () => {
+  it('cleanup saat poll in-flight (drawer ditutup) → respons telat tak memunculkan banner saat drawer dibuka lagi', async () => {
+    // ShConsole TIDAK pernah unmount (show=false hanya merender null, state
+    // persist) — setState stale tetap hidup dan tampil saat drawer dibuka lagi.
+    let hang = true
     let resolveHang = null
     vi.stubGlobal('fetch', vi.fn((url) => {
       if (String(url).includes('sh/overview')) {
-        return new Promise((resolve) => { resolveHang = resolve })
+        if (hang) { hang = false; return new Promise((res) => { resolveHang = res }) }
+        return new Promise(() => {}) // poll drawer-dibuka-lagi sengaja menggantung (agar tak membersihkan err)
       }
       return Promise.resolve({ ok: true, json: async () => ({}) })
     }))
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    render(<ShConsole show onClose={() => {}} />)
+    const { rerender } = render(<ShConsole show onClose={() => {}} />)
     await waitFor(() => expect(resolveHang).toBeTruthy())
-    await act(async () => { cleanup() }) // drawer ditutup → cleanup menaikkan ovRid
-    await act(async () => {
-      resolveHang({ ok: false, status: 503, json: async () => ({}) })
-    })
-    const errs = errSpy.mock.calls.map((a) => String(a[0])).filter((s) => /act\(|unmounted|Can't perform/i.test(s))
-    expect(errs).toHaveLength(0)
+    rerender(<ShConsole show={false} onClose={() => {}} />) // cleanup → ovRid++
+    await act(async () => { resolveHang({ ok: false, status: 503, json: async () => ({}) }) })
+    rerender(<ShConsole show onClose={() => {}} />)         // drawer dibuka lagi
+    expect(screen.queryByText(/HTTP 503/)).toBeNull()       // kode lama: banner basi muncul
     errSpy.mockRestore()
-    // remount bersih: tak ada banner basi dari respons komponen sebelumnya
-    vi.stubGlobal('fetch', vi.fn((url) =>
-      String(url).includes('sh/overview')
-        ? Promise.resolve({ ok: true, json: async () => marker(21) })
-        : Promise.resolve({ ok: true, json: async () => ({}) })))
-    render(<ShConsole show onClose={() => {}} />)
-    expect(await screen.findByText('21')).toBeTruthy()
-    expect(screen.queryByText(/HTTP 503/)).toBeNull()
   })
 
-  it('pesan EventSource setelah cleanup (tab ditutup) → live log komponen gugur tak menulis', async () => {
-    const listeners = {}
+  it('pesan EventSource setelah drawer ditutup → live log "hantu" tak muncul saat dibuka lagi', async () => {
+    const made = []
     class FakeES {
-      constructor() { listeners.onmessage = null }
-      set onmessage(fn) { listeners.onmessage = fn }
-      close() { listeners.closed = true }
+      constructor() { this._onmessage = null; this.closed = false; made.push(this) }
+      set onmessage(fn) { this._onmessage = fn }
+      get onmessage() { return this._onmessage }
+      close() { this.closed = true }
     }
     vi.stubGlobal('EventSource', FakeES)
     vi.stubGlobal('fetch', vi.fn((url) => Promise.resolve({ ok: true, json: async () => (String(url).includes('sh/overview') ? marker(21) : {}) })))
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    render(<ShConsole show onClose={() => {}} />)
+    const { rerender } = render(<ShConsole show onClose={() => {}} />)
     await screen.findByText('21')
-    const esMsg = listeners.onmessage
+    const esMsg = made[0].onmessage
     expect(typeof esMsg).toBe('function')
-    await act(async () => { cleanup() })
-    expect(listeners.closed).toBe(true)
-    await act(async () => { esMsg({ data: JSON.stringify({ type: 'log', data: { level: 'INFO', message: 'ghost', source: 'x' } }) }) })
-    const errs = errSpy.mock.calls.map((a) => String(a[0])).filter((s) => /act\(|unmounted|Can't perform/i.test(s))
-    expect(errs).toHaveLength(0)
+    rerender(<ShConsole show={false} onClose={() => {}} />)
+    expect(made[0].closed).toBe(true) // ES ditutup di cleanup
+    await act(async () => { esMsg({ data: JSON.stringify({ type: 'log', data: { level: 'INFO', message: 'ghost-log-entry', source: 'x' } }) }) })
+    rerender(<ShConsole show onClose={() => {}} />)
+    expect(screen.queryByText(/ghost-log-entry/)).toBeNull() // kode lama: log hantu tampil
     errSpy.mockRestore()
   })
 })
