@@ -24,7 +24,13 @@ const workspaceTabKeys = (e, setTab) => {
   setTimeout(() => { const el = document.getElementById('pw-tab-' + ids[n]); if (el) el.focus() }, 0)
 }
 
-export default function ProjectWorkspaceModal({ project, open, onClose, onRefreshProject }) {
+// A new project/open session must never inherit another workspace's editor or requests.
+export default function ProjectWorkspaceModal(props) {
+  if (!props.open || !props.project) return null
+  return <WorkspaceSession key={props.project.id} {...props} />
+}
+
+function WorkspaceSession({ project, open, onClose, onRefreshProject }) {
   const [activeTab, setActiveTab] = useState('preview') // 'preview' | 'files' | 'terminal' | 'tests'
   const [files, setFiles] = useState([])
   const [filesState, setFilesState] = useState('loading')
@@ -41,6 +47,11 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
   const [previewKey, setPreviewKey] = useState(1)
 
   const pid = project?.id
+  const mounted = useRef(false)
+  useEffect(() => {
+    mounted.current = true
+    return () => { mounted.current = false }
+  }, [])
 
   // a11y: Escape menutup, fokus masuk ke dialog & terkunci di dalamnya
   // (paritas dgn modal lain yang pakai useDialogA11y).
@@ -63,18 +74,26 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
     } catch { setFilesState('error'); setFiles([]) }
   }, [pid])
 
-  // Load selected file content
+  const fileRequest = useRef(0)
+  useEffect(() => () => { fileRequest.current += 1 }, [])
+
+  // Load selected file content; only the newest selection/retry may update the editor.
   const loadFileContent = useCallback(async (path) => {
     if (!pid || !path) return
+    const request = ++fileRequest.current
     setFileReady(false)
+    setFileContent('')
     setFileError('')
     try {
       const res = await fetch(`/api/projects/${pid}/file?path=${encodeURIComponent(path)}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
+      if (request !== fileRequest.current) return
       setFileContent(data.content || '')
       setFileReady(true)
-    } catch { setFileError('Gagal memuat isi file. Pilih file lagi untuk mencoba ulang.') }
+    } catch {
+      if (request === fileRequest.current) setFileError('Gagal memuat isi file. Pilih file lagi untuk mencoba ulang.')
+    }
   }, [pid])
 
   useEffect(() => {
@@ -87,7 +106,7 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
   useEffect(() => {
     if (open && pid && selectedFile && activeTab === 'files') {
       const t = setTimeout(() => { loadFileContent(selectedFile) }, 0)
-      return () => clearTimeout(t)
+      return () => { clearTimeout(t); fileRequest.current += 1 }
     }
   }, [open, pid, selectedFile, activeTab, loadFileContent])
 
@@ -119,6 +138,7 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ command: termCmd })
       })
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const data = await res.json()
       setTermOutput(`$ ${termCmd}\n` + (data.stdout || '') + (data.stderr || '') + `\n[Exit Code: ${data.exit_code}]`)
     } catch (err) {
@@ -134,6 +154,7 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
     try {
       const response = await fetch(`/api/projects/${pid}/container/${action}`, { method: 'POST' })
       if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      if (!mounted.current) return
       if (onRefreshProject) onRefreshProject()
       setPreviewKey(k => k + 1)
     } catch { setWorkspaceError('Restart gagal. Periksa koneksi lalu coba lagi.') }
@@ -266,7 +287,7 @@ export default function ProjectWorkspaceModal({ project, open, onClose, onRefres
                   {files.map(f => (
                     <button
                       key={f}
-                      onClick={() => { setFileReady(false); setSelectedFile(f); if (f === selectedFile) loadFileContent(f) }}
+                      onClick={() => { fileRequest.current += 1; setFileReady(false); setFileContent(''); setSelectedFile(f); if (f === selectedFile) loadFileContent(f) }}
                       className={`w-full text-left px-2.5 py-1.5 rounded-lg text-xs font-mono truncate transition ${
                         selectedFile === f ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30 font-semibold' : 'text-slate-400 hover:text-white hover:bg-slate-800/50'
                       }`}

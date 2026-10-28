@@ -1,0 +1,73 @@
+// @vitest-environment jsdom
+import React from 'react'
+import { it, expect, vi, afterEach } from 'vitest'
+import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react'
+import ProjectWorkspaceModal from '../components/ProjectWorkspaceModal'
+const project = { id: 'p1', name: 'First' }
+const ok = data => ({ ok: true, json: async () => data })
+const deferred = () => { let resolve; const promise = new Promise(r => { resolve = r }); return { promise, resolve } }
+afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+it('never puts a late file response into the newly selected file or save payload', async () => {
+  const old = deferred()
+  const fetcher = vi.fn(url => url.endsWith('/files') ? Promise.resolve(ok({ files: ['index.html', 'app.py'] })) : url.includes('index.html') ? old.promise : Promise.resolve(ok({ content: 'new content' })))
+  vi.stubGlobal('fetch', fetcher)
+  render(<ProjectWorkspaceModal project={project} open onClose={() => {}} />)
+  fireEvent.click(screen.getByRole('tab', { name: 'File Explorer' }))
+  await waitFor(() => expect(fetcher.mock.calls.some(([url]) => url.includes('index.html'))).toBe(true))
+  fireEvent.click(await screen.findByText('📄 app.py'))
+  await waitFor(() => expect(screen.getByLabelText('Isi file app.py').value).toBe('new content'))
+  await act(async () => old.resolve(ok({ content: 'old content' })))
+  expect(screen.getByLabelText('Isi file app.py').value).toBe('new content')
+  fireEvent.click(screen.getByRole('button', { name: 'Simpan Perubahan' }))
+  expect(JSON.parse(fetcher.mock.calls.find(([url]) => url.endsWith('/file'))[1].body)).toEqual({ path: 'app.py', content: 'new content' })
+})
+it.each([403, 500, 503])('reports terminal HTTP %s rather than an undefined exit code', async status => {
+  vi.stubGlobal('fetch', vi.fn(async url => url.endsWith('/files') ? ok({ files: [] }) : { ok: false, status, json: async () => ({ detail: 'unavailable' }) }))
+  render(<ProjectWorkspaceModal project={project} open onClose={() => {}} />)
+  fireEvent.click(screen.getByRole('tab', { name: 'Terminal' }))
+  fireEvent.submit(screen.getByLabelText('Perintah terminal').closest('form'))
+  expect(await screen.findByText(`[Error executing]: HTTP ${status}`)).toBeTruthy()
+  expect(screen.queryByText(/Exit Code/)).toBeNull()
+  expect(screen.getByRole('button', { name: 'Jalankan' }).disabled).toBe(false)
+})
+it.each(['switch', 'reopen'])('discards loaded editor and in-flight terminal state on %s', async mode => {
+  const pending = deferred()
+  vi.stubGlobal('fetch', vi.fn(async url => url.endsWith('/terminal') ? pending.promise : url.endsWith('/files') ? ok({ files: ['index.html'] }) : ok({ content: 'first draft' })))
+  const props = { project, open: true, onClose: () => {} }
+  const { rerender } = render(<ProjectWorkspaceModal {...props} />)
+  fireEvent.click(screen.getByRole('tab', { name: 'File Explorer' }))
+  await waitFor(() => expect(screen.getByLabelText('Isi file index.html').value).toBe('first draft'))
+  fireEvent.click(screen.getByRole('tab', { name: 'Terminal' }))
+  fireEvent.submit(screen.getByLabelText('Perintah terminal').closest('form'))
+  if (mode === 'reopen') rerender(<ProjectWorkspaceModal {...props} open={false} />)
+  rerender(<ProjectWorkspaceModal {...props} project={mode === 'switch' ? { id: 'p2', name: 'Second' } : project} />)
+  fireEvent.click(screen.getByRole('tab', { name: 'Terminal' }))
+  await act(async () => pending.resolve(ok({ stdout: 'old output', exit_code: 0 })))
+  expect(screen.queryByText(/old output/)).toBeNull()
+  expect(screen.getByRole('button', { name: 'Jalankan' }).disabled).toBe(false)
+  fireEvent.click(screen.getByRole('tab', { name: 'File Explorer' }))
+  expect(screen.getByRole('button', { name: 'Simpan Perubahan' }).disabled).toBe(true)
+  expect(screen.getByLabelText('Isi file index.html').value).toBe('')
+})
+it('ignores restart completion from a closed workspace', async () => {
+  const pending = deferred()
+  const refresh = vi.fn()
+  vi.stubGlobal('fetch', vi.fn(async url => url.includes('/container/') ? pending.promise : ok({ files: [] })))
+  const { rerender } = render(<ProjectWorkspaceModal project={project} open onClose={() => {}} onRefreshProject={refresh} />)
+  fireEvent.click(screen.getByRole('button', { name: 'Restart' }))
+  rerender(<ProjectWorkspaceModal project={project} open={false} onClose={() => {}} onRefreshProject={refresh} />)
+  await act(async () => pending.resolve(ok({})))
+  expect(refresh).not.toHaveBeenCalled()
+})
+it('resets project state and ignores old file lists after project switching', async () => {
+  const old = deferred()
+  vi.stubGlobal('fetch', vi.fn(url => url.includes('/p1/') ? old.promise : Promise.resolve(ok({ files: ['new.txt'] }))))
+  const { rerender } = render(<ProjectWorkspaceModal project={project} open onClose={() => {}} />)
+  await waitFor(() => expect(fetch).toHaveBeenCalled())
+  rerender(<ProjectWorkspaceModal project={{ id: 'p2', name: 'Second' }} open onClose={() => {}} />)
+  fireEvent.click(screen.getByRole('tab', { name: 'File Explorer' }))
+  await screen.findByText('📄 new.txt')
+  await act(async () => old.resolve(ok({ files: ['old.txt'] })))
+  expect(screen.queryByText('📄 old.txt')).toBeNull()
+  expect(screen.getByText('📄 new.txt')).toBeTruthy()
+})
