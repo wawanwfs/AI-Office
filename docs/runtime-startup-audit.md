@@ -44,3 +44,17 @@ Screenshots were inspected: shell is not blank; status text overlaps/clips, part
 - `runtime-evidence/frontend-tests.txt`: 167 files, 2251 tests passed; existing jsdom canvas/navigation warnings remain.
 
 No changes to ProjectWorkspaceModal, package manifests, live credentials, service configuration, or existing listeners.
+
+## Resumed verification on stage 1/2 main
+
+Rebased only the runtime commit onto `3704396`; rewritten runtime commit is `fdd189f`. The ordinary pull attempted to replay an already-integrated UI commit and conflicted; it was aborted, then the runtime-only range was rebased. No main or sibling worktree edits.
+
+Built this branch successfully and ran its actual backend and HQ proxy from a scratch copy with isolated HOME/database, empty project state, and task engine paused. Temporary listeners were loopback-only (18787/19513), terminated afterward. No API interception or mocked backend: `/wfs-api/status` returned HTTP 200 and actual host resource readings. This is an isolated integration test, **not a live deployment** or validation of configured AI providers/Docker execution.
+
+New evidence: `/home/agentuser/.hermes/cache/scratch/runtime-resumed/{desktop,mobile}.{png,json}`, `api.log`, `proxy.log`; harness: `/home/agentuser/.hermes/cache/scratch/runtime_verify.py`. Chromium screenshots at 1440x900 and 390x844 were visually inspected. Both show the UI-only fallback, synchronized API data, no uncaught page errors, and no HTTP error responses. Desktop visibly shows paused; mobile DOM reports paused but that label is not clearly visible. Header ticker clipping and mobile toast obstruction remain. WebGL was deliberately disabled for these successful captures.
+
+A real software-WebGL attempt initialized one canvas without JS/HTTP errors but screenshot/compositor capture hung until the 180-second outer deadline. **3D rendering remains unverified**, not fixed. Temporary listeners were absent after termination. Existing 9510 static service was untouched.
+
+Validation: backend suite 120 passed plus 4 subtests (one existing warning); expanded startup cases (missing directory, empty directory, built index) separately passed 3/3. Production Vite build passed. Frontend suite: 2266 passed, 2 failed in existing `shconsole.test.jsx` workspace-loader tests after rebase onto stage 1/2. These failures are in sibling-owned UI work and were not edited. Full logs are in `runtime-resumed/*-tests.log`.
+
+Deployment additionally requires installing backend runtime dependencies including `uvicorn` (absent in the test venv before this run), an authorized supervisor configuration with explicit private binding and correct static asset cwd, and real GPU/browser verification. Keep workers paused; do not treat these empty-database integration results as production readiness.

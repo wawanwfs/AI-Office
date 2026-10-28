@@ -7,14 +7,15 @@ import sys
 import pytest
 
 
-@pytest.mark.parametrize('built', [False, True])
+@pytest.mark.parametrize('built', ['missing', 'empty', 'built'])
 def test_clean_checkout_without_static_can_start_api(tmp_path, built):
     backend = tmp_path / 'backend'
     backend.mkdir()
     for source in Path(__file__).parent.glob('*.py'):
         shutil.copy2(source, backend / source.name)
-    if built:
+    if built != 'missing':
         (backend / 'static').mkdir()
+    if built == 'built':
         (backend / 'static' / 'index.html').write_text('<h1>Built UI</h1>')
     result = subprocess.run([sys.executable, '-c', '''
 from pathlib import Path
