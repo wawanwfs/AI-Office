@@ -52,3 +52,45 @@ export function findAgentLiveEntry(agentData, name) {
   return agentData.find((ad) => ad && ad.agent &&
     String(ad.agent.name || '').toUpperCase() === q) || null;
 }
+
+// ── Lantai LIVE (siklus 142) ──────────────────────────────────────────────
+// Bug: badge "Lokasi Lantai" AgentInspector memakai agent.floor yang di-set
+// SEKALI saat scene build (OfficeScene.js — posisi MEJA), padahal agen berpindah
+// lantai live: rapat selalu L1 (z=-3), makan siang kafe L3 (z=5.6), jalan-jalan
+// kampus lintas lantai, pulang → offsite. Founder yang klik "FOKUS" dibawa ke
+// lantai kosong. Fix: lantai dihitung dari posisi walker/sittingChar scene
+// (floorElevationAt) tiap kali kartu polling membaca — SATU sumber kebenaran.
+//
+// levelOf(z): batas lantai SAMA dengan penugasan meja OfficeScene.js:1052
+// (z < -0.8 → L1, z <= 4.5 → L2, sisanya L3). Guard anti-poisoning: z non-finite
+// → null (pemanggil fallback ke agent.floor, bukan mengarang lantai).
+export function levelOf(z) {
+  if (typeof z !== 'number' || !Number.isFinite(z)) return null;
+  if (z < -0.8) return 1;
+  if (z <= 4.5) return 2;
+  return 3;
+}
+
+// Nama zona per lantai — konsisten dgn label eksisting komponen (L1 · Ops & AI,
+// L2 · Engineering, L3 · Executive). Lantai tak dikenal → null (pemanggil
+// menampilkan fallback meja, bukan teks palsu).
+export function floorZoneName(level) {
+  if (level === 1) return 'Ops & AI';
+  if (level === 2) return 'Engineering';
+  if (level === 3) return 'Executive';
+  return null;
+}
+
+// Lantai live entri agentData: prioritas walker (agen sedang berjalan — sittingChar
+// disembunyikan), fallback sittingChar (duduk/rapat), terakhir home (duduk).
+// level di-cache di ad.floorLive oleh scene? TIDAK — scene tidak menulis; UI
+// murni membaca. Entri tak punya koordinat valid → null.
+export function agentLiveLevel(ad) {
+  if (!ad || typeof ad !== 'object') return null;
+  const w = ad.walker && ad.walker.visible && ad.walker.position;
+  const s = ad.sittingChar && ad.sittingChar.visible && ad.sittingChar.position;
+  const pos = (w && Number.isFinite(w.z)) ? w
+    : (s && Number.isFinite(s.z)) ? s
+    : (ad.home && Number.isFinite(ad.home.z)) ? ad.home : null;
+  return pos ? levelOf(pos.z) : null;
+}
