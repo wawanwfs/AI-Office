@@ -1,4 +1,13 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
+// Siklus 143: okupansi lantai LIVE — dulu tombol lantai hanya daftar statis
+// (pod + nama agen meja), founder tak bisa lihat berapa agen yang SAAT INI ada
+// di tiap lantai (rapat L1, kafe L3, jalan kampus memindahkan agen lintas lantai
+// terus-menerus). Kini badge jumlah dihitung dari posisi karakter scene
+// (window.__agentData via floorOccupancy — satu sumber kebenaran dgn badge
+// lantai AgentInspector siklus 142), polling 1 dtk selama komponen terpasang.
+// floorOccupancy murni tinggal di scene/parts/agent_status.js (bisa diuji unit,
+// aturan react-refresh: file komponen tak mengekspor non-komponen).
+import { floorOccupancy } from '../scene/parts/agent_status.js'
 
 const FLOORS = [
   {
@@ -35,6 +44,15 @@ const FLOORS = [
 
 export default function FloorNavigator({ onSelectFloor, currentFloor }) {
   const [internalFloor, setInternalFloor] = useState(1)
+  // Okupansi lantai live (siklus 143): {1: n, 2: n, 3: n} dari posisi karakter
+  // scene; null = scene belum siap (badge disembunyikan — bukan angka karangan).
+  const [occupancy, setOccupancy] = useState(null)
+  useEffect(() => {
+    const read = () => setOccupancy(floorOccupancy(window.__agentData))
+    read()
+    const iv = setInterval(read, 1000)
+    return () => clearInterval(iv)
+  }, [])
   const isControlled = currentFloor !== undefined && currentFloor !== null
   const activeFloor = isControlled ? currentFloor : internalFloor
 
@@ -90,6 +108,13 @@ export default function FloorNavigator({ onSelectFloor, currentFloor }) {
             >
               <span className="floor-nav-dot" style={{ background: fl.color }} />
               <span>{fl.name}</span>
+              {occupancy && typeof occupancy[fl.num] === 'number' && (
+                <span
+                  className="floor-nav-occ"
+                  aria-hidden="true"
+                  title={`${occupancy[fl.num]} agen saat ini di Lantai ${fl.num}`}
+                >{occupancy[fl.num]}</span>
+              )}
             </button>
           )
         })}

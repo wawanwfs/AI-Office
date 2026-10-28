@@ -101,3 +101,23 @@ export function agentLiveLevel(ad) {
     : (ad.home && Number.isFinite(ad.home.z)) ? ad.home : null;
   return pos ? levelOf(pos.z) : null;
 }
+
+// ── Okupansi lantai (siklus 143) ──────────────────────────────────────────
+// Jumlah agen per lantai SAAT INI dari entri agentData scene — lantai live per
+// agen via agentLiveLevel (sama dengan badge AgentInspector siklus 142), kini
+// dipakai badge jumlah di tombol FloorNavigator. KEHADIRAN ≠ posisi: agen
+// offsite (pulang/shift malam) TIDAK dihitung di lantai mana pun —
+// agentLiveLevel murni posisi (masih membaca home utk offsite). Guard:
+// agentData bukan array → null (badge disembunyikan, bukan angka palsu);
+// array kosong (scene siap, 0 agen) → {1:0,2:0,3:0}; entri korup dilewati.
+export function floorOccupancy(agentData) {
+  if (!Array.isArray(agentData)) return null;
+  const occ = { 1: 0, 2: 0, 3: 0 };
+  agentData.forEach((ad) => {
+    if (!ad || !ad.agent) return;
+    if (ad.state === 'offsite') return;
+    const lv = agentLiveLevel(ad);
+    if (lv === 1 || lv === 2 || lv === 3) occ[lv]++;
+  });
+  return occ;
+}
