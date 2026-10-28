@@ -35,6 +35,7 @@ import {
   formatAmbiencePercent,
 } from './scene/parts/sound_spec.js'
 import { resolveShortcutAction } from './scene/parts/shortcut_spec.js'
+import { findAgentLiveEntry, agentLiveLevel } from './scene/parts/agent_status.js'
 
 const CsWidget = lazy(() => import('./components/CsWidget'))
 
@@ -299,7 +300,19 @@ export default function App() {
           onMeetingChange: (m) => setInMeeting(m),
           onSelectAgent: (ag) => {
             setSelectedAgent(ag)
-            if (ag && ag.floor) setCurrentFloor(ag.floor)
+            // Siklus 144: lantai sinkron kini dari posisi LIVE scene (satu
+            // sumber kebenaran dgn badge AgentInspector/FloorNavigator —
+            // agentLiveLevel). Dulu `ag.floor` — lantai MEJA statis yang di-set
+            // sekali saat scene build (OfficeScene.js:1052): agen meja L3 yang
+            // diklik saat rapat (figur L1) / makan siang kafe (L3 cafe) /
+            // berjalan kampus tetap menyetel tombol "L3 · Executive" aktif,
+            // padahal kamera fokus ke posisi live (agentFollowGoal/anchor
+            // rapat) → label nav menunjuk lantai kosong. Entri scene tidak
+            // ada (Founder nexus idx -2, scene gagal init) → fallback lama.
+            const entry = ag && findAgentLiveEntry(window.__agentData, ag.name)
+            const live = agentLiveLevel(entry)
+            if (live) setCurrentFloor(live)
+            else if (ag && ag.floor) setCurrentFloor(ag.floor)
           },
         })
         setSceneReady(true)

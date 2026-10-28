@@ -4429,3 +4429,16 @@
   - `e2e_err.py` **0 pesan / 0 error / 0 warning**; `shot.sh` :0 **689.315 B** (>500 KB — scene hidup).
 - Commit: `842d3cc` — PUSH-OK ke origin/main (kode+test+probe di commit auto eeba496 + fix probe di 842d3cc).
 - Sisa backlog: **KOSONG**. Kandidat berikutnya: perbaikan kecil sesuai temuan berikutnya.
+
+## 2026-10-29 06:15 WIB — Siklus 144: Sinkron lantai FloorNavigator saat klik agen kini dari posisi LIVE scene — jalur App.onSelectAgent tersisa keluarga bug 142–143 diperbaiki (+7 test, diskriminasi 2/7 FAIL kode lama; E2E: DEWI rapat → nav L1 bukan lantai meja L2)
+
+- **Bug (audit rutin pasca-backlog kosong — jalur data scene→UI, terakhir jalur App yang belum live):** `App.jsx onSelectAgent` (callback scene saat agen diklik/dipilih) menyinkronkan FloorNavigator dgn `ag.floor` — lantai MEJA statis yang di-set SEKALI saat scene build (OfficeScene.js:1052). Padahal kamera fokus ke posisi LIVE (agentFollowGoal utk walker/sitting, anchor kursi rapat utk peserta meeting): agen meja L2 yang diklik SAAT RAPAT (figur di ruang meeting L1) → kamera ke L1 tapi tombol "L2 · Engineering" aktif — label nav menunjuk lantai kosong, kontradiksi langsung dgn apa yang founder lihat di layar. Keluarga bug siklus 140–143 (badge status, fase, lantai inspector, okupansi) — jalur App tersisa.
+- **Perubahan:** `App.jsx onSelectAgent`: lantai sinkron = `agentLiveLevel(findAgentLiveEntry(window.__agentData, ag.name))` (murni di scene/parts/agent_status.js — SATU sumber kebenaran dgn badge AgentInspector 142 & okupansi FloorNavigator 143); entri scene tidak ada (Founder nexus idx -2, scene gagal init) → fallback lama `ag.floor`; onSelectAgent(null) → nav tak diubah (perilaku lama utuh).
+- **+7 test (`app_select_floor_live.test.jsx` baru):** 3 murni (rapat meja L3 → LIVE L1 via ROOM_CZ; lunch walker meja L1 → LIVE L3 z=5.6; anti-poisoning founder/tanpa entri → null → fallback) + 4 integrasi App→FloorNavigator (BUG UTAMA rapat → L1 aktif bukan L3; BUG UTAMA lunch → L3 aktif bukan L1; duduk normal → alur lama tak berubah; fallback founder + null tak menggeser nav).
+- **Bukti diskriminasi:** kode LAMA (backup /tmp/AI.bak-*.jsx) → **2/7 FAIL** persis dua "BUG UTAMA" integrasi; 5 lolos = test murni + alur tak berubah. Kode BARU → 7/7 PASS.
+- **Bukti E2E scene NYATA (`scripts/e2e_select_floor_live.py` baru, disimpan ke repo):** Chrome SwiftShader Xvfb :99 → 26 agen → `__setTime(600)` (stand-up 10:00, window rapat 0) → pilih peserta rapat bermeja L2 via `__wfsSceneSelect` (jalur klik scene nyata → App.onSelectAgent) → **DEWI state=meeting desk=L2 → tombol aktif L1** (live ruang rapat), ring emas menyala → `__setTime(480)` (08:00) → pilih ulang → **tombol aktif L2** (lantai meja; live == meja, alur lama). Diskriminasi E2E: kode lama di-deploy ulang → probe sama **FAIL dgn active_meeting=L2** (nav menunjuk lantai kosong); kode baru → **OK dgn active_meeting=L1**.
+- **Bukti terukur:**
+  - Vitest **2338/2338 (172 file, +7)**; ESLint 0 error 0 warning; build sukses (38 precache 1841.15 KiB) → deploy `dist/*` → `~/wfs-hq/`; `wfs-hq` & `wfs-office` active, :9503 HTTP 200.
+  - `e2e_err.py` **0 pesan / 0 error / 0 warning**; `shot.sh` :0 **688.468 B** (>500 KB — scene hidup).
+- Commit: kode+test+probe di commit siklus ini.
+- Sisa backlog: **KOSONG**. Kandidat berikutnya: perbaikan kecil sesuai temuan berikutnya.
