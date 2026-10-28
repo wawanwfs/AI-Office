@@ -1209,29 +1209,30 @@ describe('TaskBoard — guard poll out-of-order (rid): respons LAMA tak menimpa 
     expect(screen.getByText(/Task BARU/)).toBeTruthy()
   })
 
-  it('refresh pasca-run menang atas poll pra-run menggantung (run → load rid lebih tinggi); status task tak mundur', async () => {
-    vi.useFakeTimers({ shouldAdvanceTime: true }) // untuk interval 8 dtk
+  it('refresh pasca-run menang atas poll lama menggantung (rid tertinggi); status task tak mundur ke pra-run', async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true }) // interval 8 dtk
     // Stub hanya mendefer URL '/wfs-api/tasks' EXACT (poll); POST /tasks/1/run
-    // & jalur lain instan — agar poll #2 benar-benar in-flight terpisah.
-    const pending = new Map()
+    // & jalur lain instan — poll benar-benar in-flight terpisah. Jumlah fetch
+    // poll TIDAK diasumsikan (effect re-run saat sel/tasks berikutnya menambah
+    // fetch) — yang diuji: data slot TERTINGGI (refresh pasca-run) menang atas
+    // slot lama yang tiba belakangan.
+    const pending = new Map() // seq → resolve
     let seq = 0
-    let lastTasksBody = null
-    vi.stubGlobal('fetch', vi.fn((url, opts = {}) => {
+    let runHit = 0
+    vi.stubGlobal('fetch', vi.fn((url) => {
       const u = String(url)
       if (u === '/wfs-api/tasks') {
         const s = ++seq
         return new Promise((resolve) => { pending.set(s, resolve) })
       }
       if (u === '/wfs-api/tasks/1/run') {
-        lastTasksBody = 'run'
+        runHit++
         return Promise.resolve({ ok: true, status: 200, json: async () => ({}) })
       }
       return Promise.resolve({ ok: true, status: 200, json: async () => ({}) })
     }))
-    const ask = { onOk: null }
-    render(<TaskBoard onFlash={() => {}} onAsk={(a) => { ask.onOk = a.onOk }} />)
-    fireEvent.click(screen.getByText('Papan'))
-    await waitFor(() => expect(seq).toBe(1))
+    const PENDING = [{ id: 1, title: 'Porting modul', agent_id: 'be1', status: 'pending', role: 'be' }]
+    const RUNNING = [{ id: 1, title: 'Porting modul', agent_id: 'be1', status: 'running', role: 'be' }]
     const settle = async (s, tasks) => {
       const res = pending.get(s)
       if (!res) throw new Error('fetch ke-' + s + ' sudah dipakai')
@@ -1240,22 +1241,30 @@ describe('TaskBoard — guard poll out-of-order (rid): respons LAMA tak menimpa 
         res({ ok: true, status: 200, json: async () => ({ tasks }) })
       })
     }
-    await settle(1, [{ id: 1, title: 'Porting modul', agent_id: 'be1', status: 'pending', role: 'be' }])
+    const ask = { onOk: null }
+    render(<TaskBoard onFlash={vi.fn()} onAsk={(a) => { ask.onOk = a.onOk }} />)
+    fireEvent.click(screen.getByText('Papan'))
+    await waitFor(() => expect(pending.has(1)).toBe(true))
+    await settle(1, PENDING)
+    await act(async () => { vi.advanceTimersByTime(8000) }) // poll interval ekstra (pra-run) menggantung
+    await waitFor(() => expect(seq).toBeGreaterThanOrEqual(2))
     fireEvent.click(screen.getByText(/Porting modul/))
     fireEvent.click(screen.getByText(/Jalankan task/)) // memicu onAsk (bukan run langsung)
     expect(ask.onOk).toBeTruthy()
-    await act(async () => { ask.onOk() }) // run: POST /run lalu load() (fetch #2, rid tertinggi)
-    expect(lastTasksBody).toBe('run')
-    await waitFor(() => expect(seq).toBe(2))
-    // poll interval pra-run juga menyusul menggantung (#3, rid LEBIH RENDAH
-    // dari refresh pasca-run) — tiba belakangan.
-    await act(async () => { vi.advanceTimersByTime(8000) })
-    await waitFor(() => expect(seq).toBe(3))
-    await settle(2, [{ id: 1, title: 'Porting modul', agent_id: 'be1', status: 'running', role: 'be' }])
-    expect(screen.getByText(/Jalan 1/)).toBeTruthy()
-    await settle(3, [{ id: 1, title: 'Porting modul', agent_id: 'be1', status: 'pending', role: 'be' }])
-    expect(screen.queryByText(/Antri 1/)).toBeNull() // kode lama: status mundur ke pra-run
-    expect(screen.getByText(/Jalan 1/)).toBeTruthy()
+    await act(async () => { ask.onOk() }) // run: POST /run lalu load() (refresh pasca-run)
+    expect(runHit).toBe(1)
+    await waitFor(() => expect(seq).toBeGreaterThanOrEqual(3))
+    // settle slot TERTINGGI (= refresh pasca-run) → status BARU tampil;
+    // lalu SEMUA slot lama (rid lebih rendah) tiba belakangan dgn data pra-run.
+    const top = Math.max(...pending.keys())
+    await settle(top, RUNNING)
+    const detail = screen.getByText('#1 Porting modul').closest('h3').parentElement
+    const note = detail.querySelector('p.note')
+    expect(within(note).getByText('Jalan', { exact: true })).toBeTruthy() // status detail = running
+    expect(pending.size).toBeGreaterThan(0)
+    for (const s of [...pending.keys()]) await settle(s, PENDING)
+    expect(within(note).queryByText('Antri', { exact: true })).toBeNull() // kode lama: status mundur ke pra-run
+    expect(within(note).getByText('Jalan', { exact: true })).toBeTruthy()
   })
 
   it('unmount saat poll menggantung → respons telat tidak menulis state komponen gugur (0 act-error)', async () => {
