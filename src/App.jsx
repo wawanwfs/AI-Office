@@ -171,9 +171,24 @@ export default function App() {
   }, [ambienceVolume, muted, flash])
 
   // ---- status nyata dari gateway ----
+  // Guard async (siklus 126 — pola sama dgn guard scene siklus 124–125):
+  //  1. rid: schedule() jalan segera SETELAH tick() MULAI (bukan selesai), jadi
+  //     saat gateway lambat poll berikutnya menyusul sebelum respons sebelumnya
+  //     tiba → respons poll LAMA bisa tiba belakangan dan menimpa state
+  //     (chip koneksi mundur ke stale, toast "Task #N berjalan" palsu muncul
+  //     SETELAH toast "selesai"). Hanya respons dengan rid terbaru yang boleh
+  //     menulis state/log; pemanggilan manual (doConfirm, TaskModal) ikut aman
+  //     karena rid dari ref, bukan dari scheduler.
+  //  2. unmount: rid di-reset di cleanup effect — respons in-flight setelah
+  //     unmount (atau setelah effect lama diganti) tak menulis state/log
+  //     komponen gugur. Tanpa AbortController sengaja: satu titik kebenaran
+  //     (rid), tidak ada dua mekanisme yang bisa saling lolos.
+  const pollRid = useRef(0)
   const refreshStatus = useCallback(async () => {
+    const rid = ++pollRid.current
     try {
       const [p, t] = await Promise.all([api('tasks/paused'), api('tasks')])
+      if (rid !== pollRid.current) return // poll lebih baru sudah menulis / unmount
       setPaused(!!p.paused)
       setConn(c => applyPollResult({ ...c }, { ok: true }))
       const prev = prevStatus.current
@@ -199,6 +214,7 @@ export default function App() {
       setStatus(p.paused ? 'Dijeda' : `${c.running || 0} jalan · ${c.pending || 0} antri`)
       setStatusKind(p.paused || (c.running || 0) > 0 ? 'busy' : '')
     } catch {
+      if (rid !== pollRid.current) return // poll lama gagal setelah poll baru sukses — abaikan
       setConn(c => applyPollResult({ ...c }, { ok: false, error: 'offline' }))
       setStatus('Gateway offline'); setStatusKind('off')
     }
@@ -238,6 +254,7 @@ export default function App() {
       alive = false
       clearTimeout(timer)
       clearInterval(iv)
+      pollRid.current++ // guard: respons poll in-flight setelah unmount tak menulis state
       window.removeEventListener('offline', off)
       window.removeEventListener('online', on)
     }
