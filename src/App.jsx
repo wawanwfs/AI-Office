@@ -519,19 +519,39 @@ export default function App() {
   }, [showTask, confirm, ask, showHelp, showSettings, showLog, selectedAgent, handleCyberpunk, handleFloorSelect, zoom, flash, amRef, toggleAmbience, cycleAmbienceVolume])
 
   // ---- Pause / Resume nyata (konfirmasi dulu) ----
+  // Guard rid (pola siklus 132/135): dialog konfirmasi bisa dibuka ulang kapan
+  // pun — tombol Batal sengaja TIDAK disabled saat busy (user harus selalu bisa
+  // membatalkan). Tanpa guard: respons POST pause/resume LAMA yang telat
+  // (a) menutup dialog BARU lewat setConfirm(null), (b) menaikkan toast basi
+  // ("Dijeda/HTTP 503") di atas generasi baru, (c) finally-nya menghapus busy
+  // milik generasi baru. Setiap buka/tutup dialog menaikkan rid → semua respons
+  // in-flight generasi sebelumnya jadi basi dan busy di-reset (dialog baru
+  // langsung siap). Server-side POST tetap sudah terkirim — yang dibatalkan
+  // hanya penulisannya ke UI.
+  const confirmRid = useRef(0)
+  const openConfirm = (mode) => { ++confirmRid.current; setConfirmBusy(false); setConfirm(mode) }
+  const closeConfirm = () => { ++confirmRid.current; setConfirmBusy(false); setConfirm(null) }
   const doConfirm = async () => {
+    const rid = ++confirmRid.current
     setConfirmBusy(true)
     try {
       if (confirm === 'pause') {
         const d = await api('tasks/pause_all', { method: 'POST', body: {} })
+        if (rid !== confirmRid.current) return // dialog sudah generasi baru / ditutup
         flash(`Dijeda — ${d.cancelled} proses dihentikan, ${d.reset} task kembali pending`)
       } else {
         const d = await api('tasks/resume_all', { method: 'POST', body: {} })
+        if (rid !== confirmRid.current) return
         flash(`Dilanjutkan — ${d.started.length} task dijalankan`)
       }
+      if (rid !== confirmRid.current) return
       setConfirm(null); refreshStatus()
-    } catch (e) { flash(e.message, true); setConfirm(null) }
-    setConfirmBusy(false)
+    } catch (e) {
+      if (rid !== confirmRid.current) return // kegagalan basi: jangan toast / tutup dialog baru
+      flash(e.message, true); setConfirm(null)
+    } finally {
+      if (rid === confirmRid.current) setConfirmBusy(false) // jangan hapus busy generasi baru
+    }
   }
 
   const formatTime = (min) => {
@@ -576,8 +596,8 @@ export default function App() {
         <QuickToolbar
           paused={paused}
           onAddTask={() => setShowTask(true)}
-          onPauseAll={() => setConfirm('pause')}
-          onResumeAll={() => setConfirm('resume')}
+          onPauseAll={() => openConfirm('pause')}
+          onResumeAll={() => openConfirm('resume')}
           onToggleTheme={handleCyberpunk}
           theme={!cyberpunk}
           onZoomIn={() => zoom(1)}
@@ -657,7 +677,7 @@ export default function App() {
           ? 'Semua task yang sedang berjalan dihentikan dan dikembalikan ke status pending. Task baru tidak akan jalan sampai Anda menekan Lanjut.'
           : `${pendingCount} task (pending/review/failed) akan dijalankan. Tiap task memanggil model AI dan memakai kuota API. Lanjutkan?`}
         confirmLabel={confirm === 'pause' ? 'Ya, jeda' : 'Ya, jalankan'}
-        onConfirm={doConfirm} onCancel={() => setConfirm(null)} />
+        onConfirm={doConfirm} onCancel={closeConfirm} />
 
       <ConfirmModal show={!!ask} title={ask?.title} text={ask?.body} confirmLabel={ask?.ok}
         onConfirm={() => { const f = ask.onOk; setAsk(null); f() }} onCancel={() => setAsk(null)} />
