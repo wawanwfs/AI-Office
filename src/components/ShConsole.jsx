@@ -90,14 +90,19 @@ export default function ShConsole({ show, onClose }) {
   const wsRid = useRef({ files: 0, file: 0, logs: 0, git: 0 })
   const guardWs = (k, rid) => wsRid.current[k] === rid
 
-  // Guard jalur aksi POST/exec (siklus 130): rid PER-SURFACE — output terminal
-  // (runTerm + runPreset menulis termOut yang sama), git commit, sandbox,
-  // approval. Exec perintah A yang tiba belakangan tak boleh menimpa output
-  // perintah B yang lebih baru; kegagalan POST basi (ganti project, tutup
-  // drawer, ganti tab — semua menaikkan rid) tak memunculkan banner err palsu
-  // atau menulis state persist yang tampil saat drawer dibuka lagi.
-  const actRid = useRef({ term: 0, git: 0, sb: 0, approval: 0 })
+  // Guard jalur aksi POST/exec (siklus 130 + 135): rid PER-SURFACE — output
+  // terminal (runTerm + runPreset menulis termOut yang sama), git commit,
+  // sandbox, approval, project-create, task-create, task-run. Exec perintah A
+  // yang tiba belakangan tak boleh menimpa output perintah B yang lebih baru;
+  // kegagalan POST basi (ganti project, tutup drawer, ganti tab — semua
+  // menaikkan rid) tak memunculkan banner err palsu atau menulis state persist
+  // yang tampil saat drawer dibuka lagi. runTask (POST /tasks/{id}/run
+  // BERBAYAR) juga anti dobel-klik: tombol disabled via running selama POST
+  // menggantung — POST kedua di klik cepat tak pernah terkirim (dulu 2× kuota).
+  const actRid = useRef({ term: 0, git: 0, sb: 0, approval: 0, create: 0, task: 0, run: 0, bulk: 0 })
   const guardAct = (k, rid) => actRid.current[k] === rid
+  const [runningTask, setRunningTask] = useState(() => new Set()) // id task dgn POST /run in-flight (tombol per-task disabled)
+  const runInFlight = useRef(new Set()) // lock reentrancy per-task: dobel klik/Enter pada task sama tak mengirim POST run kedua (BERBAYAR)
 
   const loadOverview = useCallback(async () => {
     const rid = ++ovRid.current
@@ -274,25 +279,39 @@ export default function ShConsole({ show, onClose }) {
   const create = async () => {
     if (!name.trim() || !brief.trim()) { setErr('Nama dan brief wajib diisi'); return }
     setBusy(true); setErr('')
+    const rid = ++actRid.current.create
     try {
       await api('projects', { method: 'POST', body: { name: name.trim(), brief: brief.trim() } })
+      if (!guardAct('create', rid)) return // create LAMA telat — form BARU milik user, jangan dihapus
       setName(''); setBrief(''); await loadProjects(); setTab('projects')
-    } catch (e) { setErr(e.message) } finally { setBusy(false) }
+    } catch (e) { if (!guardAct('create', rid)) return; setErr(e.message) } finally { setBusy(false) }
   }
 
   const createTask = async () => {
     if (!tTitle.trim()) { setErr('Judul task wajib diisi'); return }
     setBusy(true); setErr('')
+    const rid = ++actRid.current.task
     try {
       await api('tasks', { method: 'POST', body: { title: tTitle.trim(), role: tRole, prompt: tPrompt.trim() } })
+      if (!guardAct('task', rid)) return // create LAMA telat — input task BARU tak dihapus
       setTTitle(''); setTPrompt(''); await loadTasks()
-    } catch (e) { setErr(e.message) } finally { setBusy(false) }
+    } catch (e) { if (!guardAct('task', rid)) return; setErr(e.message) } finally { setBusy(false) }
   }
 
   const runTask = async (tid) => {
+    if (runInFlight.current.has(tid)) return // POST run BERBAYAR — dobel klik/Enter pada task sama tak mengirim POST kedua
+    runInFlight.current = new Set(runInFlight.current).add(tid)
     setErr('')
-    try { await api('tasks/' + tid + '/run', { method: 'POST', body: {} }); await loadTasks(tFilter) }
-    catch (e) { setErr(e.message) }
+    const rid = ++actRid.current.run
+    setRunningTask(prev => new Set(prev).add(tid)) // anti dobel-klik: tombol task ini disabled selama POST menggantung
+    try {
+      await api('tasks/' + tid + '/run', { method: 'POST', body: {} })
+      if (!guardAct('run', rid)) return // run LAMA telat — refresh milik run BARU yang menang
+      await loadTasks(tFilter)
+    } catch (e) { if (!guardAct('run', rid)) return; setErr(e.message) } finally {
+      runInFlight.current = new Set(runInFlight.current); runInFlight.current.delete(tid)
+      setRunningTask(prev => { const n = new Set(prev); n.delete(tid); return n }) // bersihkan hanya milik sendiri (run task lain mungkin in-flight)
+    }
   }
   const runAllPending = async () => {
     if (bulkInFlight.current) return
@@ -303,11 +322,12 @@ export default function ShConsole({ show, onClose }) {
     bulkInFlight.current = true
     setBulkBusy(true)
     setErr('')
+    const rid = ++actRid.current.bulk
     try {
       await api('tasks/resume_all', { method: 'POST', body: { project } })
+      if (!guardAct('bulk', rid)) return // resume LAMA telat — refresh milik resume BARU yang menang
       await loadTasks(project)
-    } catch (e) { setErr(e.message) }
-    finally { bulkInFlight.current = false; setBulkBusy(false) }
+    } catch (e) { if (!guardAct('bulk', rid)) return; setErr(e.message) } finally { bulkInFlight.current = false; setBulkBusy(false) }
   }
 
   const openWsFile = async (pid, path) => {
@@ -390,7 +410,7 @@ export default function ShConsole({ show, onClose }) {
                     </div>
                     <span style={STYLE.tag}>{t.status}</span>
                     {(t.status === 'pending' || t.status === 'failed' || t.status === 'review') && (
-                      <button style={STYLE.btnGhost} onClick={() => runTask(t.id)}>Jalankan</button>
+                      <button style={STYLE.btnGhost} onClick={() => runTask(t.id)} disabled={runningTask.has(t.id)} aria-busy={runningTask.has(t.id)} title={runningTask.has(t.id) ? 'Mengirim ke agent…' : 'Jalankan task ini'}>{runningTask.has(t.id) ? 'Menjalankan…' : 'Jalankan'}</button>
                     )}
                   </div>
                 ))}
