@@ -139,6 +139,38 @@ export default function ShConsole({ show, onClose }) {
     try { await api('approvals/' + aid + '/decide', { method: 'POST', body: { action } }); await loadApprovals() }
     catch (e) { setErr(e.message) }
   }
+
+  // Loader Workspace (files/logs/git) — dideklarasikan SEBELUM effect loader
+  // (dipakai di deps array; const = TDZ bila di bawah). openWsFile dipicu
+  // klik manual, boleh di bawah.
+  const loadWsFiles = useCallback(async (pid, path) => {
+    const rid = ++wsRid.current.files
+    try {
+      const q = path ? '?path=' + encodeURIComponent(path) : ''
+      const d = await api('projects/' + pid + '/files' + q)
+      if (!guardWs('files', rid)) return // respons LAMA (ganti project/navigasi) — abaikan
+      // normalisasi: entries non-array (gateway balas rusak) tak boleh crash
+      // render (entries.map is not a function → drawer blank), kelas sama dgn
+      // projects.map (siklus 128)
+      setEntries(Array.isArray(d?.entries) ? d.entries : []); setWsPath(d?.path || ''); setErr('')
+    } catch (e) { if (!guardWs('files', rid)) return; setErr(e.message) }
+  }, [])
+  const loadWsLogs = useCallback(async (pid) => {
+    const rid = ++wsRid.current.logs
+    try {
+      const d = await api('projects/' + pid + '/logs?lines=100')
+      if (!guardWs('logs', rid)) return
+      setLogs(Array.isArray(d?.logs) ? d.logs : []); setErr('')
+    } catch (e) { if (!guardWs('logs', rid)) return; setErr(e.message) }
+  }, [])
+  const loadWsGit = useCallback(async (pid) => {
+    const rid = ++wsRid.current.git
+    try {
+      const d = await api('projects/' + pid + '/git')
+      if (!guardWs('git', rid)) return
+      setGitInfo(d || null); setErr('')
+    } catch (e) { if (!guardWs('git', rid)) return; setErr(e.message) }
+  }, [])
   const commitWs = async (pid) => {
     if (!gitMsg.trim()) { setErr('Pesan commit wajib'); return }
     try {
@@ -190,15 +222,29 @@ export default function ShConsole({ show, onClose }) {
     if (tab === 'projects') loadProjects()
     else if (tab === 'tasks') { loadTasks(tFilter); if (projects.length === 0) loadProjects() }
     else if (tab === 'agents') loadAgents()
-    else if (tab === 'ws' && projects.length === 0) loadProjects()
-    else if (tab === 'approvals') loadApprovals()
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async): ganti tab/filter/drawer membatalkan semua loader in-flight
-    return () => {
-      for (const k of Object.keys(tabRid.current)) tabRid.current[k]++
-      // loader Workspace juga (respons telat setelah ganti tab / tutup drawer)
-      for (const k of Object.keys(wsRid.current)) wsRid.current[k]++
+    else if (tab === 'ws') {
+      // muat/re-muat workspace saat masuk tab / ganti project (sumber tunggal —
+      // selectWsProject TIDAK fetch sendiri: draf pertama memfetch di event
+      // handler lalu cleanup effect (tab berubah pada klik yang sama)
+      // membatalkan fetch itu → panel tak pernah terisi; tertangkap test)
+      if (wsId && projects.length > 0) { loadWsFiles(wsId, ''); loadWsLogs(wsId); loadWsGit(wsId) }
+      else if (projects.length === 0) loadProjects()
     }
-  }, [show, tab, loadOverview, loadProjects, loadTasks, loadAgents, projects.length, loadApprovals, tFilter])
+    else if (tab === 'approvals') loadApprovals()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async): ganti tab/filter/drawer membatalkan semua loader tab in-flight
+    return () => { for (const k of Object.keys(tabRid.current)) tabRid.current[k]++ }
+  }, [show, tab, loadOverview, loadProjects, loadTasks, loadAgents, projects.length, loadApprovals, tFilter, wsId, loadWsFiles, loadWsLogs, loadWsGit])
+
+  // Guard konteks Workspace (siklus 129): tutup drawer / ganti tab = konteks
+  // BARU — respons ws in-flight jadi basi (err 503 basi tak memunculkan banner
+  // lintas tab). Deps HANYA [show, tab]: draf pertama menaruh bump di cleanup
+  // effect loader (deps memuat projects.length) — perubahan daftar project
+  // (state internal) ikut membatalkan fetch ws yang SAH; dan fetch yang
+  // dimulai event handler pada klik ganti-tab yang sama ikut terbunuh.
+  // Ganti project ditangani bump eksplisit di selectWsProject.
+  useEffect(() => () => {
+    for (const k of Object.keys(wsRid.current)) wsRid.current[k]++
+  }, [show, tab])
 
   const create = async () => {
     if (!name.trim() || !brief.trim()) { setErr('Nama dan brief wajib diisi'); return }
@@ -231,18 +277,6 @@ export default function ShConsole({ show, onClose }) {
     } catch (e) { setErr(e.message) }
   }
 
-  const loadWsFiles = useCallback(async (pid, path) => {
-    const rid = ++wsRid.current.files
-    try {
-      const q = path ? '?path=' + encodeURIComponent(path) : ''
-      const d = await api('projects/' + pid + '/files' + q)
-      if (!guardWs('files', rid)) return // respons LAMA (ganti project/navigasi) — abaikan
-      // normalisasi: entries non-array (gateway balas rusak) tak boleh crash
-      // render (entries.map is not a function → drawer blank), kelas sama dgn
-      // projects.map (siklus 128)
-      setEntries(Array.isArray(d?.entries) ? d.entries : []); setWsPath(d?.path || ''); setErr('')
-    } catch (e) { if (!guardWs('files', rid)) return; setErr(e.message) }
-  }, [])
   const openWsFile = async (pid, path) => {
     const rid = ++wsRid.current.file
     try {
@@ -250,22 +284,6 @@ export default function ShConsole({ show, onClose }) {
       if (!guardWs('file', rid)) return // file LAMA tiba belakangan — tak menimpa file yang baru dibuka
       setFileView({ name: path, content: d?.content ?? '' }); setErr('')
     } catch (e) { if (!guardWs('file', rid)) return; setErr(e.message) }
-  }
-  const loadWsLogs = async (pid) => {
-    const rid = ++wsRid.current.logs
-    try {
-      const d = await api('projects/' + pid + '/logs?lines=100')
-      if (!guardWs('logs', rid)) return
-      setLogs(Array.isArray(d?.logs) ? d.logs : []); setErr('')
-    } catch (e) { if (!guardWs('logs', rid)) return; setErr(e.message) }
-  }
-  const loadWsGit = async (pid) => {
-    const rid = ++wsRid.current.git
-    try {
-      const d = await api('projects/' + pid + '/git')
-      if (!guardWs('git', rid)) return
-      setGitInfo(d || null); setErr('')
-    } catch (e) { if (!guardWs('git', rid)) return; setErr(e.message) }
   }
   const runTerm = async (pid) => {
     if (!termCmd.trim()) return
@@ -276,10 +294,10 @@ export default function ShConsole({ show, onClose }) {
     } catch (e) { setTermOut('ERROR: ' + e.message) }
   }
   const selectWsProject = (pid) => {
-    // ganti project: semua respons in-flight milik project LAMA jadi basi
+    // ganti project: semua respons in-flight milik project LAMA jadi basi;
+    // fetch 3 panel dimicukan effect loader (deps wsId) — sumber tunggal.
     for (const k of Object.keys(wsRid.current)) wsRid.current[k]++
     setWsId(pid); setFileView(null); setTermOut(''); setGitInfo(null); setLogs([]); setGitMsg('')
-    if (pid) { loadWsFiles(pid, ''); loadWsLogs(pid); loadWsGit(pid) }
   }
 
   // a11y: Esc menutup, fokus pindah ke dalam drawer, Tab terkunci di dalamnya
