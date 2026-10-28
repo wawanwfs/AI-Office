@@ -64,9 +64,22 @@ export default function ShConsole({ show, onClose }) {
   const [tFilter, setTFilter] = useState('')
   const [liveLogs, setLiveLogs] = useState([])
   const drawerRef = useRef(null)
+  // Guard jalur async poll overview (siklus 127): satu rid untuk seluruh tab
+  // overview — respons poll LAMA (interval 10 dtk overlap saat gateway lambat)
+  // dan respons in-flight saat cleanup (tab/drawer ditutup) tak boleh menulis
+  // setOv/setErr; err dibagi lintas tab, banner basi tampil di tab lain.
+  const ovRid = useRef(0)
 
   const loadOverview = useCallback(async () => {
-    try { setOv(await api('sh/overview')); setErr('') } catch (e) { setErr(e.message) }
+    const rid = ++ovRid.current
+    try {
+      const d = await api('sh/overview')
+      if (ovRid.current !== rid) return // poll lebih baru / tab ditutup — basi, abaikan
+      setOv(d); setErr('')
+    } catch (e) {
+      if (ovRid.current !== rid) return // kegagalan poll basi tak boleh menaikkan banner palsu
+      setErr(e.message)
+    }
   }, [])
   const loadProjects = useCallback(async () => {
     try { const d = await api('projects'); setProjects(d.projects || d || []); setErr('') } catch (e) { setErr(e.message) }
@@ -116,18 +129,24 @@ export default function ShConsole({ show, onClose }) {
       loadOverview()
       const iv = setInterval(loadOverview, 10000)
       let es = null
+      let esAlive = true // pesan EventSource yang disetel setelah cleanup tak menulis state
       if (typeof EventSource !== 'undefined') {
         try {
           es = new EventSource('/wfs-api/events')
           es.onmessage = (ev) => {
             try {
               const j = JSON.parse(ev.data)
-              if (j.type === 'log' && j.data) setLiveLogs((p) => [j.data, ...p].slice(0, 30))
+              if (j.type === 'log' && j.data && esAlive) setLiveLogs((p) => [j.data, ...p].slice(0, 30))
             } catch { /* abaikan */ }
           }
         } catch { /* EventSource tidak tersedia */ }
       }
-      return () => { clearInterval(iv); if (es) es.close() }
+      return () => {
+        clearInterval(iv)
+        ovRid.current++ // invalidate respons in-flight (tab/drawer ditutup)
+        esAlive = false
+        if (es) es.close()
+      }
     }
     if (tab === 'projects') loadProjects()
     else if (tab === 'tasks') { loadTasks(tFilter); if (projects.length === 0) loadProjects() }

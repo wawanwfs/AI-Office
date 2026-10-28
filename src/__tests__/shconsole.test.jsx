@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, waitFor, act } from '@testing-library/react'
 import ShConsole from '../components/ShConsole'
 
 const OV = {
@@ -355,5 +355,123 @@ describe('ShConsole — konsol software house', () => {
     await screen.findByText(/Dockerfile/)
     fireEvent.click(screen.getByText(/Test Python/))
     await waitFor(() => expect(cmds.some((c) => c.includes('pytest'))).toBe(true))
+  })
+})
+
+// Siklus 127 — guard jalur async poll overview (rid) + EventSource (esAlive).
+// Diskriminasi: respons poll LAMA yang settle belakangan TIDAK boleh menimpa
+// data poll BARU, dan respons/event telat setelah cleanup TIDAK boleh menulis
+// state komponen (banner err basi di tab lain / live log komponen mati).
+describe('ShConsole — guard poll overview & EventSource (out-of-order, cleanup)', () => {
+  function stubDeferredOverview() {
+    const pending = new Map() // seq → resolve
+    let seq = 0
+    const urls = []
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      const u = String(url)
+      urls.push(u)
+      if (u.includes('sh/overview')) {
+        const s = ++seq
+        return new Promise((resolve) => { pending.set(s, resolve) })
+      }
+      if (u.includes('/wfs-api/events')) return new Promise(() => {}) // EventSource pollyfill via fetch — tak dipakai
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    }))
+    return {
+      count: () => seq,
+      async settle(s, data, opts = {}) {
+        const res = pending.get(s)
+        if (!res) throw new Error('poll ke-' + s + ' tidak ditemukan')
+        pending.delete(s)
+        await act(async () => {
+          res(opts.fail ? { ok: false, status: 503, json: async () => ({}) } : { ok: true, json: async () => data })
+        })
+      },
+      urls,
+    }
+  }
+
+  function marker(projects) {
+    return { ...OV, projects }
+  }
+
+  it('respons poll LAMA tiba belakangan → tidak menimpa data poll BARU (out-of-order)', async () => {
+    const t = stubDeferredOverview()
+    render(<ShConsole show onClose={() => {}} />)
+    expect(t.count()).toBe(1) // poll mount tertahan
+    // poll #2 disulut tanpa menunggu #1: interval 10 dtk tak tersentuh — cukup
+    // unmount+remount (drawer ditutup-dibuka cepat) yang memicu poll baru via
+    // rid ref persist lintas mount.
+    await act(async () => { cleanup() })
+    render(<ShConsole show onClose={() => {}} />)
+    await waitFor(() => expect(t.count()).toBe(2))
+    await t.settle(2, marker(9))   // poll BARU duluan → tampil 9
+    expect(screen.getByText('9')).toBeTruthy()
+    await t.settle(1, marker(2))   // poll LAMA menyusul → wajib diabaikan guard
+    expect(screen.getByText('9')).toBeTruthy()
+    expect(screen.queryByText('2')).toBeNull()
+  })
+
+  it('poll LAMA GAGAL tiba setelah poll BARU sukses → banner err basi tidak muncul', async () => {
+    const t = stubDeferredOverview()
+    render(<ShConsole show onClose={() => {}} />)
+    await act(async () => { cleanup() })
+    render(<ShConsole show onClose={() => {}} />)
+    await waitFor(() => expect(t.count()).toBe(2))
+    await t.settle(2, marker(9))       // poll baru sukses
+    expect(screen.getByText('9')).toBeTruthy()
+    await t.settle(1, {}, { fail: true }) // poll lama gagal menyusul
+    expect(screen.queryByText(/HTTP 503/)).toBeNull()
+    expect(screen.getByText('9')).toBeTruthy()
+  })
+
+  it('cleanup saat poll in-flight (tutup drawer) → respons telat tak menulis state/banner', async () => {
+    let resolveHang = null
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      if (String(url).includes('sh/overview')) {
+        return new Promise((resolve) => { resolveHang = resolve })
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    }))
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(<ShConsole show onClose={() => {}} />)
+    await waitFor(() => expect(resolveHang).toBeTruthy())
+    await act(async () => { cleanup() }) // drawer ditutup → cleanup menaikkan ovRid
+    await act(async () => {
+      resolveHang({ ok: false, status: 503, json: async () => ({}) })
+    })
+    const errs = errSpy.mock.calls.map((a) => String(a[0])).filter((s) => /act\(|unmounted|Can't perform/i.test(s))
+    expect(errs).toHaveLength(0)
+    errSpy.mockRestore()
+    // remount bersih: tak ada banner basi dari respons komponen sebelumnya
+    vi.stubGlobal('fetch', vi.fn((url) =>
+      String(url).includes('sh/overview')
+        ? Promise.resolve({ ok: true, json: async () => marker(21) })
+        : Promise.resolve({ ok: true, json: async () => ({}) })))
+    render(<ShConsole show onClose={() => {}} />)
+    expect(await screen.findByText('21')).toBeTruthy()
+    expect(screen.queryByText(/HTTP 503/)).toBeNull()
+  })
+
+  it('pesan EventSource setelah cleanup (tab ditutup) → live log komponen gugur tak menulis', async () => {
+    const listeners = {}
+    class FakeES {
+      constructor() { listeners.onmessage = null }
+      set onmessage(fn) { listeners.onmessage = fn }
+      close() { listeners.closed = true }
+    }
+    vi.stubGlobal('EventSource', FakeES)
+    vi.stubGlobal('fetch', vi.fn((url) => Promise.resolve({ ok: true, json: async () => (String(url).includes('sh/overview') ? marker(21) : {}) })))
+    const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    render(<ShConsole show onClose={() => {}} />)
+    await screen.findByText('21')
+    const esMsg = listeners.onmessage
+    expect(typeof esMsg).toBe('function')
+    await act(async () => { cleanup() })
+    expect(listeners.closed).toBe(true)
+    await act(async () => { esMsg({ data: JSON.stringify({ type: 'log', data: { level: 'INFO', message: 'ghost', source: 'x' } }) }) })
+    const errs = errSpy.mock.calls.map((a) => String(a[0])).filter((s) => /act\(|unmounted|Can't perform/i.test(s))
+    expect(errs).toHaveLength(0)
+    errSpy.mockRestore()
   })
 })
