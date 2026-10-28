@@ -70,6 +70,16 @@ export default function ShConsole({ show, onClose }) {
   // setOv/setErr; err dibagi lintas tab, banner basi tampil di tab lain.
   const ovRid = useRef(0)
 
+  // Guard jalur async loader tab lain (siklus 128): rid PER-LOADER — respons
+  // LAMA (klik Refresh/ganti filter overlap saat gateway lambat) tak boleh
+  // menimpa respons BARU, err basi tak memunculkan banner (err dibagi lintas
+  // tab), dan cleanup effect (ganti tab/filter/drawer) membatalkan semua
+  // respons in-flight. Per-loader, bukan satu rid bersama: di tab Tasks
+  // loadTasks + loadProjects berjalan bersamaan (data BERBEDA) — rid bersama
+  // justru membatalkan respons tasks.
+  const tabRid = useRef({ projects: 0, tasks: 0, agents: 0, approvals: 0 })
+  const guardTab = (k, rid) => tabRid.current[k] === rid
+
   const loadOverview = useCallback(async () => {
     const rid = ++ovRid.current
     try {
@@ -82,20 +92,40 @@ export default function ShConsole({ show, onClose }) {
     }
   }, [])
   const loadProjects = useCallback(async () => {
-    try { const d = await api('projects'); setProjects(d.projects || d || []); setErr('') } catch (e) { setErr(e.message) }
+    const rid = ++tabRid.current.projects
+    try {
+      const d = await api('projects')
+      if (!guardTab('projects', rid)) return // respons LAMA — abaikan
+      // normalisasi: gateway balas {} / null tak boleh membuat projects bukan
+      // array (projects.map crash → seluruh drawer blank)
+      setProjects(Array.isArray(d?.projects) ? d.projects : Array.isArray(d) ? d : []); setErr('')
+    } catch (e) { if (!guardTab('projects', rid)) return; setErr(e.message) }
   }, [])
   const loadTasks = useCallback(async (project) => {
+    const rid = ++tabRid.current.tasks
     try {
       const q = project ? '?project=' + encodeURIComponent(project) : ''
-      const d = await api('tasks' + q); setTasks(d.tasks || []); setErr('')
-    } catch (e) { setErr(e.message) }
+      const d = await api('tasks' + q)
+      if (!guardTab('tasks', rid)) return // respons LAMA (filter berganti) — abaikan
+      setTasks(d.tasks || []); setErr('')
+    } catch (e) { if (!guardTab('tasks', rid)) return; setErr(e.message) }
   }, [])
   const loadAgents = useCallback(async () => {
-    try { const d = await api('agents'); setAgents(Array.isArray(d) ? d : []); setErr('') } catch (e) { setErr(e.message) }
+    const rid = ++tabRid.current.agents
+    try {
+      const d = await api('agents')
+      if (!guardTab('agents', rid)) return
+      setAgents(Array.isArray(d) ? d : []); setErr('')
+    } catch (e) { if (!guardTab('agents', rid)) return; setErr(e.message) }
   }, [])
   const loadApprovals = useCallback(async () => {
-    try { const d = await api('approvals'); setApprovals(d.approvals || []); setErr('') }
-    catch (e) { setErr(e.message) }
+    const rid = ++tabRid.current.approvals
+    try {
+      const d = await api('approvals')
+      if (!guardTab('approvals', rid)) return
+      setApprovals(d.approvals || []); setErr('')
+    }
+    catch (e) { if (!guardTab('approvals', rid)) return; setErr(e.message) }
   }, [])
   const decideApproval = async (aid, action) => {
     try { await api('approvals/' + aid + '/decide', { method: 'POST', body: { action } }); await loadApprovals() }
@@ -154,6 +184,8 @@ export default function ShConsole({ show, onClose }) {
     else if (tab === 'agents') loadAgents()
     else if (tab === 'ws' && projects.length === 0) loadProjects()
     else if (tab === 'approvals') loadApprovals()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async): ganti tab/filter/drawer membatalkan semua loader in-flight
+    return () => { for (const k of Object.keys(tabRid.current)) tabRid.current[k]++ }
   }, [show, tab, loadOverview, loadProjects, loadTasks, loadAgents, projects.length, loadApprovals, tFilter])
 
   const create = async () => {

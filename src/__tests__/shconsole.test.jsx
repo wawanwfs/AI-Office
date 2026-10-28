@@ -469,3 +469,127 @@ describe('ShConsole — guard poll overview & EventSource (out-of-order, cleanup
     errSpy.mockRestore()
   })
 })
+
+describe('ShConsole — guard loader tab lain (projects/tasks/approvals): out-of-order & err basi', () => {
+  function stubDeferred(paths) {
+    // paths: array substring URL yang harus ditahan manual (deferred)
+    const resolvers = new Map() // substring → [resolve, ...]
+    let seq = new Map() // substring → hitung fetch
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      const u = String(url)
+      for (const p of paths) {
+        if (u.includes(p)) {
+          const n = (seq.get(p) || 0) + 1
+          seq.set(p, n)
+          return new Promise((resolve) => {
+            if (!resolvers.has(p)) resolvers.set(p, [])
+            resolvers.get(p).push(resolve)
+          })
+        }
+      }
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    }))
+    return {
+      count: (p) => seq.get(p) || 0,
+      async settle(p, i, data, opts = {}) {
+        const arr = resolvers.get(p)
+        const res = arr && arr[i]
+        if (!res) throw new Error(p + ' #' + (i + 1) + ' tidak ditemukan')
+        await act(async () => {
+          res(opts.fail ? { ok: false, status: 503, json: async () => ({}) } : { ok: true, json: async () => data })
+        })
+      },
+    }
+  }
+
+  it('projects: respons Refresh LAMA tiba belakangan → tidak menimpa daftar dari Refresh BARU (out-of-order)', async () => {
+    const t = stubDeferred(['/wfs-api/projects'])
+    render(<ShConsole show onClose={() => {}} />)
+    clickTab('Projects')
+    await waitFor(() => expect(t.count('/wfs-api/projects')).toBe(1))
+    await t.settle('/wfs-api/projects', 0, { projects: [{ id: '1', name: 'Pertama', description: 'a', status: 'running' }] })
+    // settle #1 → daftar terisi → deps projects.length berubah → effect
+    // memicu refetch otomatis (fetch #2 = refresh otomatis, BUKAN klik).
+    await waitFor(() => expect(t.count('/wfs-api/projects')).toBe(2))
+    await t.settle('/wfs-api/projects', 1, { projects: [{ id: '1', name: 'Pertama', description: 'a', status: 'running' }] })
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' })) // fetch #3 (manual)
+    await waitFor(() => expect(t.count('/wfs-api/projects')).toBe(3))
+    await t.settle('/wfs-api/projects', 2, { projects: [{ id: '2', name: 'Kedua', description: 'b', status: 'running' }] })
+    expect(screen.getByText('Kedua')).toBeTruthy()
+    await t.settle('/wfs-api/projects', 0, { projects: [{ id: '0', name: 'Bas', description: 'x', status: 'idle' }] }) // paling LAMA menyusul
+    expect(screen.queryByText('Bas')).toBeNull()   // kode lama: daftar mundur ke 'Bas'
+    expect(screen.getByText('Kedua')).toBeTruthy()
+  })
+
+  it('projects: Refresh LAMA GAGAL setelah Refresh BARU sukses → banner HTTP 503 basi tidak muncul', async () => {
+    const t = stubDeferred(['/wfs-api/projects'])
+    render(<ShConsole show onClose={() => {}} />)
+    clickTab('Projects')
+    await waitFor(() => expect(t.count('/wfs-api/projects')).toBe(1))
+    await t.settle('/wfs-api/projects', 0, { projects: [{ id: '1', name: 'Pertama', description: 'a', status: 'running' }] })
+    await waitFor(() => expect(t.count('/wfs-api/projects')).toBe(2)) // refetch otomatis (deps panjang daftar)
+    await t.settle('/wfs-api/projects', 1, { projects: [{ id: '1', name: 'Pertama', description: 'a', status: 'running' }] })
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' })) // fetch #3 (manual)
+    await waitFor(() => expect(t.count('/wfs-api/projects')).toBe(3))
+    await t.settle('/wfs-api/projects', 2, { projects: [{ id: '2', name: 'Kedua', description: 'b', status: 'running' }] })
+    expect(screen.getByText('Kedua')).toBeTruthy()
+    await t.settle('/wfs-api/projects', 0, {}, { fail: true }) // fetch #1 (paling lama) gagal menyusul
+    expect(screen.queryByText(/HTTP 503/)).toBeNull() // kode lama: banner basi muncul
+    expect(screen.getByText('Kedua')).toBeTruthy()
+  })
+
+  it('tasks: ganti filter project — respons filter LAMA tak menimpa daftar filter BARU (out-of-order)', async () => {
+    // Stub gabungan: tasks & projects deferred, sisanya instan.
+    const resolvers = [] // tasks: index = seq
+    const resProjects = []
+    let tasksSeq = 0
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      const u = String(url)
+      if (u.includes('/wfs-api/tasks')) {
+        const s = ++tasksSeq
+        return new Promise((resolve) => { resolvers[s] = resolve })
+      }
+      if (u.includes('/wfs-api/projects')) return new Promise((resolve) => { resProjects.push(resolve) })
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    }))
+    render(<ShConsole show onClose={() => {}} />)
+    clickTab('Tasks') // memuat tasks #1 + projects #1 paralel (daftar kosong)
+    await waitFor(() => expect(tasksSeq).toBe(1))
+    expect(resProjects.length).toBe(1)
+    await act(async () => { resProjects[0]({ ok: true, json: async () => ({ projects: [{ id: '1', name: 'Demo', description: 'd', status: 'running' }] }) }) })
+    // daftar project terisi → deps projects.length berubah → effect memicu
+    // tasks #2 otomatis (masih tanpa filter). Select kini punya option '1'.
+    await waitFor(() => expect(tasksSeq).toBe(2))
+    fireEvent.change(screen.getByLabelText('Filter project'), { target: { value: '1' } })
+    await waitFor(() => expect(tasksSeq).toBe(3)) // fetch dengan ?project=1
+    await act(async () => { resolvers[3]({ ok: true, json: async () => ({ tasks: [{ id: 2, title: 't-filter', role: 'qa', status: 'pending', agent_id: null }] }) }) })
+    expect(await screen.findByText(/t-filter/)).toBeTruthy()
+    await act(async () => { resolvers[1]({ ok: true, json: async () => ({ tasks: [{ id: 1, title: 't-semua', role: 'qa', status: 'pending', agent_id: null }] }) }) })
+    expect(screen.queryByText(/t-semua/)).toBeNull() // kode lama: daftar mundur ke 'Semua project'
+    expect(screen.getByText(/t-filter/)).toBeTruthy()
+  })
+
+  it('approvals: keputusan (Setujui) — list refresh BARU tak ditimpa respons GET LAMA yang menyusul', async () => {
+    const BEFORE = { approvals: [{ id: 'a1', action_type: 'project_launch', project_id: '2', description: 'POS LAMA', status: 'pending' }] }
+    const AFTER = { approvals: [{ id: 'a2', action_type: 'deploy', project_id: '3', description: 'List C', status: 'pending' }] }
+    const dec = []
+    const resA = []
+    vi.stubGlobal('fetch', vi.fn((url, opts) => {
+      const u = String(url)
+      if (u.includes('/approvals') && u.includes('decide')) { dec.push(u); return Promise.resolve({ ok: true, json: async () => ({ ok: true }) }) }
+      if (u.includes('/approvals')) return new Promise((resolve) => { resA.push(resolve) })
+      return Promise.resolve({ ok: true, json: async () => ({}) })
+    }))
+    render(<ShConsole show onClose={() => {}} />)
+    clickTab('Approvals')
+    await waitFor(() => expect(resA.length).toBe(1))
+    await act(async () => { resA[0]({ ok: true, json: async () => BEFORE }) })
+    fireEvent.click(await screen.findByText('Setujui'))
+    await waitFor(() => expect(resA.length).toBe(2)) // refresh hasil keputusan
+    await act(async () => { resA[1]({ ok: true, json: async () => AFTER }) })
+    expect(screen.getByText('List C')).toBeTruthy()
+    await act(async () => { resA[0]({ ok: true, json: async () => BEFORE }) }) // GET LAMA menyusul belakangan
+    expect(screen.queryByText('POS LAMA')).toBeNull() // kode lama: list mundur ke keputusan basi
+    expect(screen.getByText('List C')).toBeTruthy()
+  })
+})
