@@ -90,6 +90,15 @@ export default function ShConsole({ show, onClose }) {
   const wsRid = useRef({ files: 0, file: 0, logs: 0, git: 0 })
   const guardWs = (k, rid) => wsRid.current[k] === rid
 
+  // Guard jalur aksi POST/exec (siklus 130): rid PER-SURFACE — output terminal
+  // (runTerm + runPreset menulis termOut yang sama), git commit, sandbox,
+  // approval. Exec perintah A yang tiba belakangan tak boleh menimpa output
+  // perintah B yang lebih baru; kegagalan POST basi (ganti project, tutup
+  // drawer, ganti tab — semua menaikkan rid) tak memunculkan banner err palsu
+  // atau menulis state persist yang tampil saat drawer dibuka lagi.
+  const actRid = useRef({ term: 0, git: 0, sb: 0, approval: 0 })
+  const guardAct = (k, rid) => actRid.current[k] === rid
+
   const loadOverview = useCallback(async () => {
     const rid = ++ovRid.current
     try {
@@ -138,8 +147,13 @@ export default function ShConsole({ show, onClose }) {
     catch (e) { if (!guardTab('approvals', rid)) return; setErr(e.message) }
   }, [])
   const decideApproval = async (aid, action) => {
-    try { await api('approvals/' + aid + '/decide', { method: 'POST', body: { action } }); await loadApprovals() }
-    catch (e) { setErr(e.message) }
+    const rid = ++actRid.current.approval
+    try {
+      await api('approvals/' + aid + '/decide', { method: 'POST', body: { action } })
+      if (!guardAct('approval', rid)) return // keputusan basi — refresh dgn daftar basi justru menampilkan item yg baru diputuskan
+      await loadApprovals()
+    }
+    catch (e) { if (!guardAct('approval', rid)) return; setErr(e.message) }
   }
 
   // Loader Workspace (files/logs/git) — dideklarasikan SEBELUM effect loader
@@ -175,24 +189,32 @@ export default function ShConsole({ show, onClose }) {
   }, [])
   const commitWs = async (pid) => {
     if (!gitMsg.trim()) { setErr('Pesan commit wajib'); return }
+    const rid = ++actRid.current.git
     try {
       await api('projects/' + pid + '/git/commit', { method: 'POST', body: { message: gitMsg.trim() } })
+      if (!guardAct('git', rid)) return // commit basi — konteks ganti / aksi commit lain menyusul
       setGitMsg(''); await loadWsGit(pid); setErr('')
-    } catch (e) { setErr(e.message) }
+    } catch (e) { if (!guardAct('git', rid)) return; setErr(e.message) }
   }
   const sbAction = async (pid, action) => {
-    try { await api('projects/' + pid + '/sandbox/' + action, { method: 'POST', body: {} }); await loadProjects(); setErr('') }
-    catch (e) { setErr(e.message) }
+    const rid = ++actRid.current.sb
+    try {
+      await api('projects/' + pid + '/sandbox/' + action, { method: 'POST', body: {} })
+      if (!guardAct('sb', rid)) return // aksi sandbox basi — jangan refresh daftar dgn state basi
+      await loadProjects(); setErr('')
+    } catch (e) { if (!guardAct('sb', rid)) return; setErr(e.message) }
   }
   const runPreset = async (pid, kind) => {
     const cmd = kind === 'py'
       ? 'cd /app && python3 -m pytest -q 2>&1'
       : 'cd /app && { if [ ! -f package.json ]; then echo "tidak ada package.json" >&2; exit 2; elif ! command -v npm >/dev/null 2>&1; then echo "runner npm tidak tersedia" >&2; exit 127; else npm test -- --run 2>&1; fi; }'
+    const rid = ++actRid.current.term
     setTermOut('menjalankan ' + kind + '…')
     try {
       const d = await api('projects/' + pid + '/exec', { method: 'POST', body: { cmd } })
+      if (!guardAct('term', rid)) return // exec LAMA tiba belakangan — tak menimpa output exec BARU
       setTermOut('Exit status: ' + (d.exit ?? 'unknown') + '\n' + (d.stderr || '') + (d.stdout || ''))
-    } catch (e) { setTermOut('ERROR: ' + e.message) }
+    } catch (e) { if (!guardAct('term', rid)) return; setTermOut('ERROR: ' + e.message) }
   }
 
   useEffect(() => {
@@ -246,6 +268,7 @@ export default function ShConsole({ show, onClose }) {
   // Ganti project ditangani bump eksplisit di selectWsProject.
   useEffect(() => () => {
     for (const k of Object.keys(wsRid.current)) wsRid.current[k]++
+    for (const k of Object.keys(actRid.current)) actRid.current[k]++
   }, [show, tab])
 
   const create = async () => {
@@ -297,16 +320,20 @@ export default function ShConsole({ show, onClose }) {
   }
   const runTerm = async (pid) => {
     if (!termCmd.trim()) return
+    const rid = ++actRid.current.term
     setTermOut('menjalankan…')
     try {
       const d = await api('projects/' + pid + '/exec', { method: 'POST', body: { cmd: termCmd } })
+      if (!guardAct('term', rid)) return // exec LAMA tiba belakangan — tak menimpa output exec BARU
       setTermOut('Exit status: ' + (d.exit ?? 'unknown') + '\n' + (d.stderr || '') + (d.stdout || ''))
-    } catch (e) { setTermOut('ERROR: ' + e.message) }
+    } catch (e) { if (!guardAct('term', rid)) return; setTermOut('ERROR: ' + e.message) }
   }
   const selectWsProject = (pid) => {
-    // ganti project: semua respons in-flight milik project LAMA jadi basi;
+    // ganti project: semua respons in-flight milik project LAMA jadi basi —
+    // termasuk aksi POST (exec terminal/commit/sandbox) yang menggantung;
     // fetch 3 panel dimicukan effect loader (deps wsId) — sumber tunggal.
     for (const k of Object.keys(wsRid.current)) wsRid.current[k]++
+    for (const k of Object.keys(actRid.current)) actRid.current[k]++
     setWsId(pid); setFileView(null); setTermOut(''); setGitInfo(null); setLogs([]); setGitMsg('')
   }
 

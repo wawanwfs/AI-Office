@@ -831,3 +831,154 @@ describe('ShConsole — guard loader tab lain (projects/tasks/approvals): out-of
     expect(screen.getByText('List C')).toBeTruthy()
   })
 })
+
+describe('ShConsole — guard aksi POST/exec (terminal, commit, sandbox, approval): out-of-order & basi', () => {
+  function stubDeferred(deferred, instant = {}) {
+    // deferred: {substring: null} — fetch URL yang match substring DITAHAN
+    // manual (resolver consume-once). instant: {exactUrl: data} — balas instan
+    // (EXACT-match: substring "/projects" ikut mencocokkan "/projects/1/files"
+    // dan mengacaukan panel ws). Sisanya instan {}.
+    const resolvers = []
+    let seqD = 0
+    const seq = new Map()
+    vi.stubGlobal('fetch', vi.fn((url) => {
+      const u = String(url)
+      if (Object.keys(deferred).some((p) => u.includes(p))) {
+        const s = ++seqD
+        return new Promise((resolve) => { resolvers[s] = resolve })
+      }
+      if (Object.prototype.hasOwnProperty.call(instant, u)) {
+        const n = (seq.get(u) || 0) + 1
+        seq.set(u, n)
+        return Promise.resolve({ ok: true, status: 200, json: async () => instant[u] })
+      }
+      return Promise.resolve({ ok: true, status: 200, json: async () => ({}) })
+    }))
+    return {
+      countD: () => seqD,
+      count: (u) => seq.get(u) || 0,
+      async settle(i, data, opts = {}) {
+        const res = resolvers[i]
+        if (!res) throw new Error('deferred #' + i + ' tidak ditemukan / sudah dipakai')
+        resolvers[i] = null
+        await act(async () => {
+          res(opts.fail ? { ok: false, status: 503, json: async () => ({}) } : { ok: true, status: 200, json: async () => data })
+        })
+      },
+    }
+  }
+
+  const WS_INSTANT = {
+    '/wfs-api/projects': { projects: [{ id: '1', name: 'Demo', description: 'd', status: 'running' }] },
+    '/wfs-api/projects/1/files': { path: '', entries: [{ name: 'Dockerfile', type: 'file' }] },
+    '/wfs-api/projects/1/logs?lines=100': { logs: [] },
+    '/wfs-api/projects/1/git': { repo: false },
+  }
+
+  async function openWs() {
+    render(<ShConsole show onClose={() => {}} />)
+    clickTab('Workspace')
+    await screen.findByRole('option', { name: 'Demo' })
+    fireEvent.change(screen.getByLabelText('Pilih project'), { target: { value: '1' } })
+    await screen.findByRole('button', { name: 'File: Dockerfile' })
+  }
+
+  it('terminal: exec A menggantung, exec B tampil → output A telat tak menimpa output B', async () => {
+    const t = stubDeferred({ '/exec': null }, WS_INSTANT)
+    await openWs()
+    fireEvent.change(screen.getByLabelText('Command'), { target: { value: 'sleep 5' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Jalankan' })) // exec #1 (menggantung)
+    await waitFor(() => expect(t.countD()).toBe(1))
+    fireEvent.change(screen.getByLabelText('Command'), { target: { value: 'ls /' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Jalankan' })) // exec #2
+    await waitFor(() => expect(t.countD()).toBe(2))
+    await t.settle(2, { exit: 0, stdout: 'OUT-LS', stderr: '' }) // exec BARU selesai duluan
+    expect(await screen.findByText(/OUT-LS/)).toBeTruthy()
+    await t.settle(1, { exit: 0, stdout: 'OUT-SLEEP-LAMA', stderr: '' }) // exec LAMA telat
+    expect(screen.queryByText(/OUT-SLEEP-LAMA/)).toBeNull() // kode lama: output mundur
+    expect(screen.getByText(/OUT-LS/)).toBeTruthy()
+  })
+
+  it('terminal: exec LAMA GAGAL tiba setelah exec BARU sukses → ERROR basi tidak menimpa output valid', async () => {
+    const t = stubDeferred({ '/exec': null }, WS_INSTANT)
+    await openWs()
+    fireEvent.change(screen.getByLabelText('Command'), { target: { value: 'lama' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Jalankan' }))
+    await waitFor(() => expect(t.countD()).toBe(1))
+    fireEvent.change(screen.getByLabelText('Command'), { target: { value: 'baru' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Jalankan' }))
+    await waitFor(() => expect(t.countD()).toBe(2))
+    await t.settle(2, { exit: 0, stdout: 'OK-BARU', stderr: '' })
+    expect(await screen.findByText(/OK-BARU/)).toBeTruthy()
+    await t.settle(1, {}, { fail: true }) // exec LAMA gagal (503) tiba belakangan
+    expect(screen.queryByText(/ERROR: HTTP 503/)).toBeNull() // kode lama: ERROR basi menimpa
+    expect(screen.getByText(/OK-BARU/)).toBeTruthy()
+  })
+
+  it('terminal: preset Test Python menggantung, exec manual BARU tampil → hasil preset telat tak menimpa (termOut satu permukaan)', async () => {
+    const t = stubDeferred({ '/exec': null }, WS_INSTANT)
+    await openWs()
+    fireEvent.click(screen.getByRole('button', { name: '▶ Test Python' })) // exec #1 (preset, menggantung)
+    await waitFor(() => expect(t.countD()).toBe(1))
+    fireEvent.change(screen.getByLabelText('Command'), { target: { value: 'echo hai' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Jalankan' })) // exec #2 (manual)
+    await waitFor(() => expect(t.countD()).toBe(2))
+    await t.settle(2, { exit: 0, stdout: 'hai', stderr: '' })
+    expect(await screen.findByText(/Exit status: 0/)).toBeTruthy()
+    await t.settle(1, { exit: 1, stdout: 'PYTEST-LAMA', stderr: 'err lama' }) // preset telat
+    expect(screen.queryByText(/PYTEST-LAMA/)).toBeNull() // kode lama: hasil preset menimpa
+    expect(screen.getByText(/Exit status: 0/)).toBeTruthy()
+  })
+
+  it('git commit LAMA GAGAL telat setelah commit BARU sukses → banner basi tidak muncul, gitMsg tetap kosong', async () => {
+    const t = stubDeferred(
+      { '/git/commit': null },
+      { ...WS_INSTANT, '/wfs-api/projects/1/git': { repo: true, branch: 'main', status: 'bersih', log: 'abc fitur' } },
+    )
+    await openWs()
+    expect(screen.getByText('branch: main')).toBeTruthy()
+    fireEvent.change(screen.getByLabelText('Pesan commit'), { target: { value: 'lama' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Commit' })) // #1 menggantung
+    await waitFor(() => expect(t.countD()).toBe(1))
+    fireEvent.change(screen.getByLabelText('Pesan commit'), { target: { value: 'baru' } })
+    fireEvent.click(screen.getByRole('button', { name: 'Commit' })) // #2
+    await waitFor(() => expect(t.countD()).toBe(2))
+    await t.settle(2, { ok: true, committed: true }) // commit BARU sukses duluan
+    await waitFor(() => expect(screen.getByLabelText('Pesan commit').value).toBe('')) // gitMsg di-reset
+    await t.settle(1, {}, { fail: true }) // commit LAMA gagal tiba belakangan
+    expect(screen.queryByText(/HTTP 503/)).toBeNull() // kode lama: banner basi
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByLabelText('Pesan commit').value).toBe('')
+  })
+
+  it('sandbox: tutup drawer saat aksi menggantung → kegagalan telat tak memunculkan banner saat dibuka lagi', async () => {
+    const t = stubDeferred({ '/sandbox/stop': null }, WS_INSTANT)
+    const view = render(<ShConsole show onClose={() => {}} />)
+    clickTab('Workspace')
+    await screen.findByRole('option', { name: 'Demo' })
+    fireEvent.change(screen.getByLabelText('Pilih project'), { target: { value: '1' } })
+    await screen.findByRole('button', { name: /Stop/ })
+    fireEvent.click(screen.getByRole('button', { name: /Stop/ })) // POST menggantung
+    await waitFor(() => expect(t.countD()).toBe(1))
+    view.rerender(<ShConsole show={false} onClose={() => {}} />) // tutup drawer → cleanup konteks → rid naik
+    await t.settle(1, {}, { fail: true }) // gagal telat
+    view.rerender(<ShConsole show onClose={() => {}} />)
+    await screen.findByRole('option', { name: 'Demo' })
+    expect(screen.queryByText(/HTTP 503/)).toBeNull() // kode lama: banner basi saat dibuka lagi
+  })
+
+  it('approval: keputusan menggantung lalu pengguna ganti tab & kembali → kegagalan keputusan telat tak menaikkan banner', async () => {
+    const t = stubDeferred(
+      { '/decide': null },
+      { '/wfs-api/approvals': { approvals: [{ id: 'a1', action_type: 'deploy', project_id: '3', description: 'POS', status: 'pending' }] } },
+    )
+    render(<ShConsole show onClose={() => {}} />)
+    clickTab('Approvals')
+    fireEvent.click(await screen.findByText('Setujui')) // POST menggantung
+    await waitFor(() => expect(t.countD()).toBe(1))
+    fireEvent.click(screen.getByRole('button', { name: 'Tab Agents' })) // konteks ganti → rid naik
+    fireEvent.click(screen.getByRole('button', { name: 'Tab Approvals' }))
+    await t.settle(1, {}, { fail: true }) // keputusan LAMA gagal telat
+    expect(screen.queryByText(/HTTP 503/)).toBeNull() // kode lama: banner basi
+  })
+})
