@@ -4342,3 +4342,15 @@
   - E2E: `e2e_err.py` **0 pesan / 0 error / 0 warning**; smoke **4/4 OK** (camreset r=39.70 reset goal, hover follow moved 1.120/dist 0.014, scene hooks destroy→sisa hook 0 + recreate zona=5/26 agen, zoom follow 21.46→12.00 dipertahankan); `shot.sh` :0 **685.983 B** (>500 KB — scene hidup).
 - Commit: kode+test di commit siklus ini.
 - Sisa backlog: **KOSONG** — guard rid kini mencakup SELURUH jalur async aktif: poll (App 126, TaskBoard 131, ShConsole 127–130, panel/widget 136), aksi POST (ShConsole 135, TaskModal 132, App doConfirm 137). Audit menyisakan GlobalTaskComposer & ProjectWorkspaceModal sebagai komponen yatim (tidak dipakai) — kandidat berikutnya: hapus kedua komponen yatim + test-nya (rasio sinyal test), atau probe remount ×20, atau perbaikan kecil sesuai temuan berikutnya.
+
+## 2026-10-29 01:55 WIB — Siklus 138: Hapus 2 komponen yatim (GlobalTaskComposer, ProjectWorkspaceModal) + 4 file test-nya — audit pasca-backlog kosong, repo jadi sumber kebenaran yang jujur (−1130 baris, rasio sinyal test naik)
+
+- **Dasar keputusan (kandidat dari siklus 137):** audit referensi menyeluruh (`grep -rn` ke seluruh src/ + index.html) membuktikan `GlobalTaskComposer.jsx` (303 baris) & `ProjectWorkspaceModal.jsx` (365 baris) **tidak diimpor dan tidak dirender di mana pun** — hanya dirujuk oleh file test. Fitur yang dijanjikan komponen ini (composer task global, workspace proyek dgn Live Preview/File Explorer/Terminal/QA) TIDAK terjangkau user dari UI — dead code yang menyesatkan pembaca repo & test suite (37 test menguji komponen tak terpakai = sinyal palsu kesehatan).
+- **Dihapus:** 2 komponen + 4 file test yang murni menguji keduanya (`global_task_composer.test.jsx` 6 test, `project_workspace_modal.test.jsx` 15, `workspace_races.test.jsx` 5, `wfs_software_house.test.jsx` 11) — total −1130 baris. Post-grep verifikasi: 0 referensi tersisa. Backup /tmp sebelum hapus.
+- **Bonus:** ESLint menemukan 1 warning `exhaustive-deps` pre-existing di `TaskBoard.jsx:408` (cleanup `pollRid.current++` — pola guard rid siklus 131 yang sama dgn 5 komponen lain tapi luput diberi disable-comment) → diberi alasan eksplisit, ESLint kembali 0/0.
+- **Bukti terukur:**
+  - Bundle **TIDAK berubah**: `dist/assets/index-ZPDOcQUA.js` 237314 B hash identik dgn sebelum penghapusan → rollup memang sudah tree-shake kedua komponen (ship byte-identik, diverifikasi `diff -q` dgn `~/wfs-hq/`); manfaat nyata = repo & test suite.
+  - Vitest **2276/2276 (167 file, −37 test yatim, −4 file)**; ESLint **0 error 0 warning**; build sukses (38 precache 1837.01 KiB) → deploy `dist/*` → `~/wfs-hq/`; `wfs-hq` & `wfs-office` active, :9503 HTTP 200.
+  - E2E: `e2e_err.py` **0 pesan / 0 error / 0 warning**; scene hidup via `shot.sh` :0 **687.956 B** (>500 KB); probe CDP: 6/6 hook debug utuh (__agentData/__cam/__setTime/__wallState/__camCam/__screens), **26 agen**, cam jauh 42.75.
+- Commit: kode di commit siklus ini.
+- Sisa backlog: **KOSONG**. Kandidat berikutnya: probe remount ×20 (bukti leak fix 133), atau perbaikan kecil sesuai temuan berikutnya.

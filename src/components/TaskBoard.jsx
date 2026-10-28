@@ -405,7 +405,7 @@ export default function TaskBoard({ onFlash, onAsk }) {
       }
     }
     document.addEventListener('keydown', k)
-    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k); pollRid.current++ }
+    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k); pollRid.current++ } // eslint-disable-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async), bukan membaca snapshot ref
   }, [open, load, sel, q, showPresetCreator, showDivPresetCreator])
 
   // Fokus ke panel detail saat task dibuka: tombol task yang diklik unmount,
