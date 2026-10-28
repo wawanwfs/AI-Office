@@ -110,6 +110,16 @@ scene.name = 'Office3D';
     renderer.toneMappingExposure=1.1;
     container.appendChild(renderer.domElement);
   }
+  // Siklus 133: SEMUA listener canvas lewat satu AbortController. destroy()
+  // dulu melepas listener window/document tapi BUKAN listener
+  // renderer.domElement — canvas WebGL tertahan oleh eternal/global handle
+  // sisi GPU (SwiftShader) walau forceContextLoss+dispose, dan tiap listener
+  // canvas berbagi scope closure createOfficeScene (office/agentData/...) →
+  // SATU listener yang tersisa menahan SELURUH dunia scene lama di heap.
+  // Terbukti heap snapshot: +26 MB/remount, semua kelas objek tumbuh seragam
+  // ×2.33 per 4 remount (hs_a 2 remount vs hs_b 6 remount).
+  const __canvasAbort=new AbortController();
+  const __onCanvas=(ev,fn,opts)=>renderer.domElement.addEventListener(ev,fn,Object.assign({signal:__canvasAbort.signal},opts||{}));
 
 // ─── ORBIT ─────────────────────────────────────────
 let isDrag=false,prev={x:0,y:0};
@@ -135,12 +145,12 @@ updCam();
 let downXY=null;
 // Touch pinch-zoom untuk mobile
 let pinchDist=null;
-renderer.domElement&&renderer.domElement.addEventListener('touchstart',e=>{
+__onCanvas('touchstart',e=>{
   if(e.touches.length===2){
     pinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
   }
 },{passive:true});
-renderer.domElement&&renderer.domElement.addEventListener('touchmove',e=>{
+__onCanvas('touchmove',e=>{
   if(e.touches.length===2&&pinchDist!==null){
     e.preventDefault();
     const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
@@ -149,7 +159,7 @@ renderer.domElement&&renderer.domElement.addEventListener('touchmove',e=>{
     updCam();pinchDist=d;
   }
 },{passive:false});
-renderer.domElement&&renderer.domElement.addEventListener('touchend',()=>{pinchDist=null},{passive:true});
+__onCanvas('touchend',()=>{pinchDist=null},{passive:true});
 // ═══════════════════════════════════════════════════
 // SOUND SYSTEM — Web Audio API (runtime di parts/sound_engine.js, teruji unit)
 // ═══════════════════════════════════════════════════
@@ -250,9 +260,9 @@ const focusMeetingFigure=(figIdx,opts={})=>{
   if(onSelectAgent)onSelectAgent(ad.agent);
   return true;
 };
-renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{isDrag=true;prev={x:e.clientX,y:e.clientY};autoRot=false;clearTimeout(autoTmr);__ensureAudioEarly();if(renderer.domElement.style.cursor!=='pointer')renderer.domElement.style.cursor='grabbing'});
-renderer.domElement&&renderer.domElement.addEventListener('pointerdown',e=>{downXY={x:e.clientX,y:e.clientY}});
-renderer.domElement&&renderer.domElement.addEventListener('pointerup',e=>{
+__onCanvas('pointerdown',e=>{isDrag=true;prev={x:e.clientX,y:e.clientY};autoRot=false;clearTimeout(autoTmr);__ensureAudioEarly();if(renderer.domElement.style.cursor!=='pointer')renderer.domElement.style.cursor='grabbing'});
+__onCanvas('pointerdown',e=>{downXY={x:e.clientX,y:e.clientY}});
+__onCanvas('pointerup',e=>{
   if(!downXY)return;
   const moved=Math.hypot(e.clientX-downXY.x,e.clientY-downXY.y);
   downXY=null;
@@ -319,7 +329,7 @@ onDragMove=(e)=>{if(!isDrag)return;sph.theta-=(e.clientX-prev.x)*.005;sph.phi+=(
 addEventListener('pointerup',onDragUp);
 addEventListener('pointermove',onDragMove);
 // double-click: zoom ke titik (agent/papan = fokus, kosong = maju 30%)
-renderer.domElement&&renderer.domElement.addEventListener('dblclick',e=>{
+__onCanvas('dblclick',e=>{
   const pt=getCanvasPointerNdc(e,renderer&&renderer.domElement);
   const ndc=new THREE.Vector2(pt.x,pt.y);
   const ray=new THREE.Raycaster();ray.setFromCamera(ndc,camera);
@@ -436,7 +446,7 @@ function ensureHoverRing(){if(hoverRing)return;const c=document.createElement('c
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
   hoverRing=new THREE.Mesh(new THREE.PlaneGeometry(HOVER_RING.PLANE,HOVER_RING.PLANE),new THREE.MeshBasicMaterial({map:t,transparent:true,opacity:HOVER_RING.OPACITY,depthWrite:false,color:HOVER_RING.COLOR}));
   hoverRing.rotation.x=-Math.PI/2;hoverRing.position.y=HOVER_RING.Y;hoverRing.renderOrder=3;hoverRing.visible=false;office.add(hoverRing);window.__sceneRing=hoverRing;}
-renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
+__onCanvas('pointermove',e=>{
   hoverNdc=getCanvasPointerNdc(e,renderer&&renderer.domElement);
   if(!hoverPend){hoverPend=true;hoverTmr=setTimeout(()=>{
     hoverPend=false;hoverTmr=null;
@@ -479,7 +489,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointermove',e=>{
 // dan timeout throttle yang masih pending bisa menyalakan kembali ring dari
 // NDC basi tepat setelah kursor keluar. Kini: batalkan timer pending + bersihkan
 // ring/cursor/state. pointermove di kanvas mana pun akan menghidupkan kembali.
-renderer.domElement&&renderer.domElement.addEventListener('pointerleave',()=>{
+__onCanvas('pointerleave',()=>{
   if(hoverTmr){clearTimeout(hoverTmr);hoverTmr=null;hoverPend=false;}
   hoverPend=false;
   hoveredAgent=null;
@@ -487,7 +497,7 @@ renderer.domElement&&renderer.domElement.addEventListener('pointerleave',()=>{
   if(hoverRing)hoverRing.visible=false;
   if(renderer.domElement.style.cursor!=='grabbing')renderer.domElement.style.cursor='';
 });
-renderer.domElement&&renderer.domElement.addEventListener('wheel',e=>{
+__onCanvas('wheel',e=>{
   // Siklus 121: zoom JUJUR — goal follow/statis TIDAK dibatalkan (dulu
   // focusGoal=null diam-diam: kamera berhenti mengikuti agen berjalan
   // & __saved yatim); radius goal ikut digeser (zoomFocusGoal). Goal
@@ -2131,6 +2141,14 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
     resize: onResize,
     destroy: () => {
       window.__officeSceneDestroyed=true;
+      // Siklus 133: lepaskan SEMUA listener canvas via satu signal — SEBELUM
+      // teardown apa pun. Canvas WebGL lama tertahan eternal/global handle
+      // sisi GPU (terlihat di heap snapshot sbg (Eternal handles) →
+      // WebGL2RenderingContext → canvas), dan 10 listener canvas berbagi
+      // scope closure createOfficeScene (office/agentData/...) → satu
+      // listener tersisa = seluruh dunia lama terkunci di heap (+26 MB
+      // per remount, terukur snapshot hs_a vs hs_b).
+      try { __canvasAbort.abort(); } catch { /* abaikan */ }
       __intervals.forEach(clearInterval);
       __timeouts.forEach(clearTimeout);
       if (resizeObserver) {
