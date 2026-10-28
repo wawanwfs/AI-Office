@@ -11,6 +11,11 @@ const ST = { done: ['Selesai', '#10E5A0'], running: ['Jalan', '#F59E0B'], review
 export default function ProjectPanel() {
   const [open, setOpen] = useState(false)
   const box = useRef(null)
+  // rid guard poll out-of-order (pola TaskBoard siklus 131): interval 15 dtk tidak
+  // membatalkan poll in-flight sebelumnya (abort bersama hanya di cleanup) —
+  // respons poll LAMA tiba belakangan tak boleh menimpa data BARU / menaikkan
+  // banner "gagal memuat" basi.
+  const loadRid = useRef(0)
   useModalFlag(open)
   // onClose stabil (useCallback + ref): inline closure membuat effect useDialogA11y
   // re-run tiap render — panel ini re-render tiap 15 dtk dari polling /wfs-project,
@@ -22,11 +27,13 @@ export default function ProjectPanel() {
   const [err, setErr] = useState(false)
 
   const load = useCallback(async (signal) => {
+    const rid = ++loadRid.current
     try {
       const r = await fetch('/wfs-project', { signal })
+      if (rid !== loadRid.current) return // poll lebih baru / panel ditutup — basi, abaikan
       if (!r.ok) throw new Error('HTTP ' + r.status)
       setD(await r.json()); setErr(false)
-    } catch (e) { if (e.name !== 'AbortError') setErr(true) }
+    } catch (e) { if (e.name !== 'AbortError' && rid === loadRid.current) setErr(true) }
   }, [])
 
   useEffect(() => {
@@ -47,7 +54,7 @@ export default function ProjectPanel() {
     const iv = setInterval(() => { if (document.visibilityState === 'visible') load(ac.signal) }, 15000)
     const k = (e) => { if (e.key === 'Escape') setOpen(false) }
     document.addEventListener('keydown', k)
-    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k) }
+    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k); loadRid.current++ }
   }, [open, load])
 
   const T = d?.tasks || {}

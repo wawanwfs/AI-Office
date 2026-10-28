@@ -35,6 +35,10 @@ export default function TeamStats() {
   const [err, setErr] = useState(false)
   const box = useRef(null)
   useModalFlag(open)
+  // rid guard poll out-of-order (pola TaskBoard siklus 131): interval 15 dtk tak
+  // membatalkan poll tasks in-flight sebelumnya — respons LAMA tiba belakangan
+  // tak menimpa data BARU; kegagalan poll basi tak menaikkan banner offline palsu.
+  const loadRid = useRef(0)
   // onClose stabil (ref + useCallback): panel polling tiap 15 dtk — inline closure
   // membuat effect useDialogA11y re-run tiap render dan cleanup-nya melempar fokus
   // ke tombol ✕ berulang (pola bug sama dgn WfsPanel/ProjectPanel).
@@ -43,10 +47,12 @@ export default function TeamStats() {
   useDialogA11y({ open, onClose: closeStats, ref: box })
 
   const load = useCallback(async (signal) => {
+    const rid = ++loadRid.current
     try {
       const d = await api('tasks', { signal })
+      if (rid !== loadRid.current) return // poll lebih baru / panel ditutup — basi, abaikan
       setData(d.tasks || []); setErr(false)
-    } catch (e) { if (e.name !== 'AbortError') setErr(true) }
+    } catch (e) { if (e.name !== 'AbortError' && rid === loadRid.current) setErr(true) }
     try { setRes(await api('system/resources', { signal })) } catch { /* abaikan */ }
   }, [])
 
@@ -57,7 +63,7 @@ export default function TeamStats() {
     const iv = setInterval(() => { if (document.visibilityState === 'visible') load(ac.signal) }, 15000)
     const k = e => { if (e.key === 'Escape') setOpen(false) }
     document.addEventListener('keydown', k)
-    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k) }
+    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k); loadRid.current++ }
   }, [open, load])
 
   const byStatus = {}

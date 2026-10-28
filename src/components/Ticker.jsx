@@ -17,9 +17,14 @@ export default function Ticker({ conn }) {
 
   useEffect(() => {
     let stop = false
+    let rid = 0 // guard out-of-order (pola TaskBoard siklus 131): poll #2 menyusul
+    // saat #1 menggantung (tak di-abort) → batch LAMA tak menimpa batch BARU,
+    // kegagalan batch basi tak menampilkan "Gateway offline" palsu.
     const load = async () => {
+      const my = ++rid
       try {
         const [t, a, s] = await Promise.all([api('tasks'), api('agents'), api('status')])
+        if (stop || my !== rid) return
         const agents = Array.isArray(a) ? a : (a.agents || [])
         const name = Object.fromEntries(agents.map(x => [x.id, x.name]))
         const tasks = t.tasks || []
@@ -32,9 +37,9 @@ export default function Ticker({ conn }) {
           color: COL[x.status] || '#fff',
         }))
         if (s && s.mem_total_mb) out.push({ text: `Host RAM tersedia ${s.mem_available_mb}/${s.mem_total_mb} MB · disk ${s.disk_used_gb}/${s.disk_total_gb} GB`, color: '#A78BFA' })
-        if (!stop) setMsgs(out)
+        if (!stop && my === rid) setMsgs(out)
       } catch {
-        if (!stop) setMsgs([{ text: 'Gateway offline — mencoba lagi…', color: '#FB7185' }])
+        if (!stop && my === rid) setMsgs([{ text: 'Gateway offline — mencoba lagi…', color: '#FB7185' }])
       }
     }
     load()

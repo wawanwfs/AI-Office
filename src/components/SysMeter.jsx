@@ -12,14 +12,18 @@ export default function SysMeter() {
 
   useEffect(() => {
     let stop = false
+    let rid = 0 // guard out-of-order (pola TaskBoard siklus 131): poll #2 menyusul
+    // saat #1 menggantung (tak di-abort) → respons LAMA tak menimpa data BARU,
+    // kegagalan poll basi tak menampilkan "Gateway offline" palsu.
     const load = async () => {
+      const my = ++rid
       try {
         const [st, res] = await Promise.all([api('status'), api('system/resources')])
-        if (stop) return
+        if (stop || my !== rid) return
         setD({ ...st, load: res?.load ?? '—', ram: res?.ram_mb ?? '—' })
         setErr(false)
       } catch {
-        if (!stop) setErr(true)
+        if (!stop && my === rid) setErr(true)
       }
     }
     load()

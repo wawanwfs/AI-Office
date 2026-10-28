@@ -21,17 +21,22 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
   const [res, setRes] = useState(null)
   const [err, setErr] = useState(false)
   const box = useRef(null)
+  // rid guard poll out-of-order (pola TaskBoard siklus 131): interval 10 dtk tak
+  // membatalkan poll in-flight sebelumnya — batch respons LAMA tiba belakangan
+  // tak menimpa data BARU; kegagalan batch basi tak menaikkan banner palsu.
+  const loadRid = useRef(0)
   useModalFlag(open)
   const onCloseRef = useRef(() => setOpen(false))
   const closeDash = useCallback(() => onCloseRef.current(), [])
   useDialogA11y({ open, onClose: closeDash, ref: box })
 
   const load = useCallback(async (signal) => {
+    const rid = ++loadRid.current
     const [s, t, p, r] = await Promise.allSettled([
       api('dashboard/stats', { signal }), api('tasks', { signal }),
       api('projects', { signal }), api('system/resources', { signal }),
     ])
-    if (signal?.aborted) return
+    if (loadRid.current !== rid) return // poll lebih baru / dashboard ditutup — batch basi, abaikan
     // Failed sections are unknown, never zero/empty or silently stale.
     setStats(s.status === 'fulfilled' ? s.value : null)
     setTasks(t.status === 'fulfilled' ? t.value.tasks || [] : null)
@@ -45,7 +50,7 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
     const ac = new AbortController()
     const t0 = setTimeout(() => load(ac.signal), 0)
     const iv = setInterval(() => { if (document.visibilityState === 'visible') load(ac.signal) }, 10000)
-    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv) }
+    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); loadRid.current++ }
   }, [open, load])
 
   // Toggle via shortcut D / tombol lain (pola sama dgn ProjectPanel & TaskBoard)
