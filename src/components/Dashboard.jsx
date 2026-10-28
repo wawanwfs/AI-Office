@@ -50,7 +50,9 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
     const ac = new AbortController()
     const t0 = setTimeout(() => load(ac.signal), 0)
     const iv = setInterval(() => { if (document.visibilityState === 'visible') load(ac.signal) }, 10000)
-    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); loadRid.current++ }
+    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv);
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async), bukan membaca snapshot ref
+      loadRid.current++ }
   }, [open, load])
 
   // Toggle via shortcut D / tombol lain (pola sama dgn ProjectPanel & TaskBoard)

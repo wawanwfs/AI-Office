@@ -54,7 +54,9 @@ export default function ProjectPanel() {
     const iv = setInterval(() => { if (document.visibilityState === 'visible') load(ac.signal) }, 15000)
     const k = (e) => { if (e.key === 'Escape') setOpen(false) }
     document.addEventListener('keydown', k)
-    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k); loadRid.current++ }
+    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k);
+      // eslint-disable-next-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async), bukan membaca snapshot ref
+      loadRid.current++ }
   }, [open, load])
 
   const T = d?.tasks || {}
