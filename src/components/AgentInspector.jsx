@@ -3,7 +3,7 @@ import { IconClose, IconChat, IconUser } from './Icons'
 import { getAgentCompetency } from '../scene/parts/agent_competencies.js'
 import { resolveAgentId } from '../scene/parts/running_tasks.js'
 import { findTeamByAgent } from '../scene/parts/team_spec.js'
-import { agentLiveStatus, findAgentLiveEntry } from '../scene/parts/agent_status.js'
+import { agentLiveStatus, findAgentLiveEntry, agentLiveLevel, floorZoneName } from '../scene/parts/agent_status.js'
 
 // Kartu Inspektur Agen Interaktif — Tampil saat agen 3D diklik di ruangan
 export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloor, onOpenConsole }) {
@@ -12,9 +12,18 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
   // dilabeli bekerja. Polling 1 dtk selama kartu terbuka: agen berjalan antar
   // lantai berpindah status tanpa perlu membuka ulang kartu.
   const [live, setLive] = useState(null)
+  // Lantai LIVE (siklus 142): dulu badge "Lokasi Lantai" statis dari agent.floor
+  // (posisi MEJA saat scene build) — agen rapat (L1), makan siang kafe (L3),
+  // jalan kampus, pulang tetap dilabeli lantai meja → tombol FOKUS membawa kamera
+  // ke lantai kosong. Kini dibaca dari posisi karakter scene tiap polling.
+  const [liveFloor, setLiveFloor] = useState(null)
   useEffect(() => {
     if (!agent) return undefined
-    const read = () => setLive(agentLiveStatus(findAgentLiveEntry(window.__agentData, agent && agent.name)))
+    const read = () => {
+      const entry = findAgentLiveEntry(window.__agentData, agent && agent.name)
+      setLive(agentLiveStatus(entry))
+      setLiveFloor(agentLiveLevel(entry))
+    }
     read()
     const iv = setInterval(read, 1000)
     return () => clearInterval(iv)
@@ -112,9 +121,9 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
           <button
             type="button"
             className="agent-floor-badge-btn"
-            onClick={() => onFocusFloor && onFocusFloor(agent.floor || (isFounder ? 3 : 1))}
-            title={`Fokus kamera ke Lantai ${agent.floor || (isFounder ? 3 : 1)}`}
-            aria-label={`Fokus kamera ke Lantai ${agent.floor || (isFounder ? 3 : 1)}`}
+            onClick={() => onFocusFloor && onFocusFloor(liveFloor || agent.floor || (isFounder ? 3 : 1))}
+            title={`Fokus kamera ke Lantai ${liveFloor || agent.floor || (isFounder ? 3 : 1)}`}
+            aria-label={`Fokus kamera ke Lantai ${liveFloor || agent.floor || (isFounder ? 3 : 1)}`}
             style={{
               background: 'rgba(255,255,255,0.04)',
               border: '1px solid rgba(255,255,255,0.06)',
@@ -144,7 +153,9 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
               {onFocusFloor && <span style={{ fontSize: 9, color: 'var(--teal)', fontWeight: 700 }}>FOKUS ↗</span>}
             </span>
             <div style={{ fontSize: 12, color: '#fff', fontWeight: 600 }}>
-              {agent.floor ? `L${agent.floor} · ${agent.floor === 1 ? 'Ops & AI' : agent.floor === 2 ? 'Engineering' : 'Executive'}` : (isFounder ? 'L3 · Executive' : 'L3 · Penthouse')}
+              {liveFloor
+                ? `L${liveFloor} · ${floorZoneName(liveFloor)}`
+                : (agent.floor ? `L${agent.floor} · ${agent.floor === 1 ? 'Ops & AI' : agent.floor === 2 ? 'Engineering' : 'Executive'}` : (isFounder ? 'L3 · Executive' : 'L3 · Penthouse'))}
             </div>
           </button>
         </div>

@@ -1,6 +1,10 @@
-// Status live agen untuk kartu AgentInspector — diekstrak murni (tanpa THREE/DOM)
+// parts/agent_status.js — status & lantai live agen (diekstrak murni, tanpa THREE/DOM)
 // agar bisa di-unit-test deterministik. Sumber kebenaran = entri agentData scene
 // (window.__agentData), yang mengandung { state, lunch, walker }.
+// Satu-satunya dependensi: ROOM_CZ (meeting_room_spec.js, data murni) untuk
+// lantai ruang rapat — tetap bebas THREE/DOM.
+import { ROOM_CZ } from './meeting_room_spec.js';
+
 //
 // BUG yang diperbaiki (siklus 140): kartu AgentInspector sebelumnya SELALU
 // menampilkan "Aktif Bekerja" (hardcoded) untuk semua agen — agen yang sedang
@@ -82,11 +86,14 @@ export function floorZoneName(level) {
 }
 
 // Lantai live entri agentData: prioritas walker (agen sedang berjalan — sittingChar
-// disembunyikan), fallback sittingChar (duduk/rapat), terakhir home (duduk).
-// level di-cache di ad.floorLive oleh scene? TIDAK — scene tidak menulis; UI
-// murni membaca. Entri tak punya koordinat valid → null.
+// disembunyikan), fallback sittingChar (duduk), terakhir home (duduk).
+// PESERTA RAPAT: scene memindahkan FIGUR ke ruang meeting (meeting_room_spec —
+// ROOM_CZ=-3 → L1) tanpa memindahkan sittingChar/home (tetap di meja) → lantai
+// dibaca dari spesifikasi ruang rapat (SATU sumber kebenaran, bukan hardcode UI).
+// Entri tak punya koordinat valid → null.
 export function agentLiveLevel(ad) {
   if (!ad || typeof ad !== 'object') return null;
+  if (ad.state === 'meeting') return levelOf(ROOM_CZ);
   const w = ad.walker && ad.walker.visible && ad.walker.position;
   const s = ad.sittingChar && ad.sittingChar.visible && ad.sittingChar.position;
   const pos = (w && Number.isFinite(w.z)) ? w

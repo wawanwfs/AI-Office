@@ -118,3 +118,94 @@ describe('AgentInspector — integrasi status live', () => {
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 })
+
+describe('AgentInspector — lokasi lantai LIVE (siklus 142)', () => {
+  const agent = { name: 'BUDI', role: 'Backend Dev', floor: 1 }
+
+  it('agen di meja L1 → badge tetap "L1 · Ops & AI" (alur lama tak berubah)', () => {
+    window.__agentData = [{
+      agent: { name: 'BUDI' }, state: 'sitting',
+      walker: { visible: false, position: { z: -3 } },
+      sittingChar: { visible: true, position: { z: -3 } },
+      home: { z: -3 },
+    }]
+    render(<AgentInspector agent={agent} onClose={vi.fn()} onChatWith={vi.fn()} />)
+    expect(screen.getByText('L1 · Ops & AI')).toBeTruthy()
+  })
+
+  it('BUG UTAMA: agen meja L3 sedang rapat di ruang meeting L1 (ROOM_CZ) → badge L1, bukan lantai meja L3', () => {
+    // BUDI meja L3 (floor:3), state meeting — figur dipindahkan scene ke kursi
+    // rapat L1 (ROOM_CZ=-3) sementara sittingChar/home tetap di meja → badge
+    // dulu STASIS "L3 · Executive" (salah arah FOKUS), kini ikut ruang rapat.
+    const agentL3 = { name: 'BUDI', role: 'Backend Dev', floor: 3 }
+    window.__agentData = [{
+      agent: { name: 'BUDI' }, state: 'meeting',
+      walker: { visible: false, position: { z: 6 } },
+      sittingChar: { visible: false, position: { z: 6 } },
+      home: { z: 6 },
+    }]
+    render(<AgentInspector agent={agentL3} onClose={vi.fn()} onChatWith={vi.fn()} />)
+    expect(screen.getByText('L1 · Ops & AI')).toBeTruthy()
+    expect(screen.queryByText('L3 · Executive')).toBeNull()
+  })
+
+  it('BUG UTAMA: agen lunch berjalan ke kafe L3 (walker z=5.6) → badge "L3 · Executive" meski meja L1', () => {
+    window.__agentData = [{
+      agent: { name: 'BUDI' }, state: 'walking_out', lunch: true,
+      walker: { visible: true, position: { z: 5.6, x: -6 } },
+      sittingChar: { visible: false, position: { z: -3 } },
+      home: { z: -3 },
+    }]
+    render(<AgentInspector agent={agent} onClose={vi.fn()} onChatWith={vi.fn()} />)
+    expect(screen.getByText('L3 · Executive')).toBeTruthy()
+    expect(screen.queryByText('L1 · Ops & AI')).toBeNull()
+  })
+
+  it('live update: agen berangkat lunch saat kartu terbuka → badge pindah L1 → L3 tanpa buka-tutup', () => {
+    vi.useFakeTimers()
+    try {
+      window.__agentData = [{
+        agent: { name: 'BUDI' }, state: 'sitting',
+        walker: { visible: false, position: { z: -3 } },
+        sittingChar: { visible: true, position: { z: -3 } },
+        home: { z: -3 },
+      }]
+      render(<AgentInspector agent={agent} onClose={vi.fn()} onChatWith={vi.fn()} />)
+      expect(screen.getByText('L1 · Ops & AI')).toBeTruthy()
+      // daycycle sendToLunch: walker muncul & berjalan ke kafe L3
+      const e = window.__agentData[0]
+      e.state = 'walking_out'; e.lunch = true
+      e.walker.visible = true; e.walker.position.z = 5.6
+      e.sittingChar.visible = false
+      act(() => { vi.advanceTimersByTime(1100) })
+      expect(screen.getByText('L3 · Executive')).toBeTruthy()
+      expect(screen.queryByText('L1 · Ops & AI')).toBeNull()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('scene belum ada → fallback agent.floor (bukan crash, bukan lantai karangan)', () => {
+    render(<AgentInspector agent={agent} onClose={vi.fn()} onChatWith={vi.fn()} />)
+    expect(screen.getByText('L1 · Ops & AI')).toBeTruthy()
+  })
+
+  it('tombol FOKUS memakai lantai LIVE (bukan meja) saat agen berpindah lantai', () => {
+    const onFocusFloor = vi.fn()
+    window.__agentData = [{
+      agent: { name: 'BUDI' }, state: 'walking_out', lunch: true,
+      walker: { visible: true, position: { z: 5.6 } },
+      sittingChar: { visible: false, position: { z: -3 } },
+      home: { z: -3 },
+    }]
+    render(<AgentInspector agent={agent} onClose={vi.fn()} onFocusFloor={onFocusFloor} onChatWith={vi.fn()} />)
+    fireEvent.click(screen.getByText('L3 · Executive').closest('button'))
+    expect(onFocusFloor).toHaveBeenCalledWith(3)
+  })
+
+  it('entri scene tanpa koordinat valid → fallback agent.floor (bukan L0 karangan)', () => {
+    window.__agentData = [{ agent: { name: 'BUDI' }, state: 'sitting' }]
+    render(<AgentInspector agent={agent} onClose={vi.fn()} onChatWith={vi.fn()} />)
+    expect(screen.getByText('L1 · Ops & AI')).toBeTruthy()
+  })
+})
