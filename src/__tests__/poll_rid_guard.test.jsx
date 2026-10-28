@@ -22,14 +22,17 @@ import { api } from '../lib/api'
 // di dalam promise tidak memicu act-warning.
 function makeDeferred() {
   const pending = new Map()
-  const wait = (key) => new Promise((resolve) => { pending.set(key, resolve) })
+  const wait = (key) => new Promise((resolve, reject) => { pending.set(key, { resolve, reject }) })
   return {
     wait,
     async settle(key, value) {
       const res = pending.get(key)
       if (!res) throw new Error('slot ' + String(key) + ' tidak ditemukan / sudah dipakai')
       pending.delete(key)
-      await act(async () => { res(value) })
+      await act(async () => {
+        if (value instanceof Error) res.reject(value) // reject sungguhan → jalur catch komponen
+        else res.resolve(value)
+      })
     },
   }
 }
@@ -68,6 +71,7 @@ describe('ProjectPanel — guard poll out-of-order', () => {
   }
 
   const open = () => fireEvent.click(screen.getByRole('button', { name: /proyek/i }))
+  const RESP = (data) => ({ ok: true, status: 200, json: async () => data }) // ProjectPanel pakai fetch langsung
 
   it('poll #2 (interval) sukses → respons poll #1 LAMA tiba belakangan tak menimpa data BARU', async () => {
     vi.useFakeTimers({ shouldAdvanceTime: true })
@@ -77,9 +81,9 @@ describe('ProjectPanel — guard poll out-of-order', () => {
     await waitFor(() => expect(t.count()).toBe(1)) // poll mount tertahan
     await act(async () => { vi.advanceTimersByTime(15000) })
     await waitFor(() => expect(t.count()).toBe(2))
-    await t.d.settle(2, DATA('BARU'))
+    await t.d.settle(2, RESP(DATA('BARU')))
     expect(screen.getByText(/task-BARU/)).toBeTruthy()
-    await t.d.settle(1, DATA('LAMA')) // respons LAMA tiba belakangan
+    await t.d.settle(1, RESP(DATA('LAMA'))) // respons LAMA tiba belakangan
     expect(screen.queryByText(/task-LAMA/)).toBeNull() // kode lama: daftar mundur
     expect(screen.getByText(/task-BARU/)).toBeTruthy()
   })
@@ -92,7 +96,7 @@ describe('ProjectPanel — guard poll out-of-order', () => {
     await waitFor(() => expect(t.count()).toBe(1))
     await act(async () => { vi.advanceTimersByTime(15000) })
     await waitFor(() => expect(t.count()).toBe(2))
-    await t.d.settle(2, DATA('BARU'))
+    await t.d.settle(2, RESP(DATA('BARU')))
     expect(screen.getByText(/task-BARU/)).toBeTruthy()
     await t.d.settle(1, { ok: false, status: 503, json: async () => ({}) }) // poll LAMA gagal belakangan
     expect(screen.queryByText(/Gagal memuat data proyek/)).toBeNull() // kode lama: banner basi
@@ -162,9 +166,9 @@ describe('Dashboard — guard poll out-of-order', () => {
     await waitFor(() => expect(t.count()).toBe(1))
     await act(async () => { vi.advanceTimersByTime(10000) })
     await waitFor(() => expect(t.count()).toBe(2))
-    await t.d.settle(2, { ok: true, status: 200, json: async () => ({ tasks_completed: 7 }) })
+    await t.d.settle(2, { tasks_completed: 7 }) // api() mock: data mentah (bukan wrapper Response)
     await waitFor(() => expect(screen.getByText('7')).toBeTruthy()) // kartu "Selesai"
-    await t.d.settle(1, { ok: true, status: 200, json: async () => ({ tasks_completed: 3 }) })
+    await t.d.settle(1, { tasks_completed: 3 })
     await waitFor(() => expect(screen.queryByText('3')).toBeNull()) // kode lama: data mundur ke batch LAMA
     expect(screen.getByText('7')).toBeTruthy()
   })
@@ -177,7 +181,7 @@ describe('Dashboard — guard poll out-of-order', () => {
     await waitFor(() => expect(t.count()).toBe(1))
     await act(async () => { vi.advanceTimersByTime(10000) })
     await waitFor(() => expect(t.count()).toBe(2))
-    await t.d.settle(2, { ok: true, status: 200, json: async () => ({ tasks_completed: 7 }) })
+    await t.d.settle(2, { tasks_completed: 7 })
     await waitFor(() => expect(screen.queryByRole('alert')).toBeNull())
     await t.d.settle(1, new Error('HTTP 503')) // batch LAMA gagal belakangan
     expect(screen.queryByRole('alert')).toBeNull() // kode lama: banner basi muncul
@@ -246,10 +250,10 @@ describe('Ticker — guard poll out-of-order', () => {
     await act(async () => { vi.advanceTimersByTime(20000) })
     await waitFor(() => expect(t.count()).toBe(2))
     await t.d.settle(2, T_NEW)
-    expect(screen.getByText(/Task BARU/)).toBeTruthy()
+    expect(screen.getAllByText(/Task BARU/).length).toBeGreaterThan(0) // marquee diduplikasi [...msgs, ...msgs]
     await t.d.settle(1, T_OLD)
     expect(screen.queryByText(/Task LAMA/)).toBeNull() // kode lama: marquee mundur
-    expect(screen.getByText(/Task BARU/)).toBeTruthy()
+    expect(screen.getAllByText(/Task BARU/).length).toBeGreaterThan(0)
   })
 
   it('batch LAMA GAGAL setelah batch BARU sukses → "Gateway offline" basi tidak muncul', async () => {
@@ -260,10 +264,10 @@ describe('Ticker — guard poll out-of-order', () => {
     await act(async () => { vi.advanceTimersByTime(20000) })
     await waitFor(() => expect(t.count()).toBe(2))
     await t.d.settle(2, T_NEW)
-    expect(screen.getByText(/Task BARU/)).toBeTruthy()
+    expect(screen.getAllByText(/Task BARU/).length).toBeGreaterThan(0)
     await t.d.settle(1, new Error('offline'))
     expect(screen.queryByText(/Gateway offline — mencoba lagi/)).toBeNull() // kode lama: basi muncul
-    expect(screen.getByText(/Task BARU/)).toBeTruthy()
+    expect(screen.getAllByText(/Task BARU/).length).toBeGreaterThan(0)
   })
 
   it('respons telat pasca-unmount tidak menulis state (0 act-error)', async () => {
