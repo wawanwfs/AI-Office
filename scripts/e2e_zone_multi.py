@@ -93,6 +93,12 @@ def run_view(cmd, name, theta, phi, radius):
     return ok
 
 
+def _x99_alive():
+    """Cek X server :99 hidup (bukan cuma socket basi — pelajaran siklus 127/
+    128: socket basi membuat Xvfb baru gagal bind → chrome tak punya display)."""
+    return subprocess.run(["xdpyinfo", "-display", ":99"],
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+
 def main():
     views = []
     if len(sys.argv) == 4:
@@ -100,7 +106,7 @@ def main():
     else:
         views = [(k, *v) for k, v in PRESETS.items()]
     env = dict(os.environ, DISPLAY=":99")
-    xv = subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x768x24"],
+    xv = None if _x99_alive() else subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x768x24"],
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     p = subprocess.Popen([CHROME, "--no-sandbox", f"--remote-debugging-port={PORT}",
                           "--window-size=1366,768", "--disable-dev-shm-usage", URL],
@@ -129,7 +135,8 @@ def main():
         print("E2E_ZONE_MULTI:", "OK" if all_ok else "FAIL")
         sys.exit(0 if all_ok else 1)
     finally:
-        p.kill(); xv.kill()
+        p.kill()
+        if xv: xv.kill()
 
 
 if __name__ == "__main__":

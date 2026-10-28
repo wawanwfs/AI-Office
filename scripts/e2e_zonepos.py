@@ -30,9 +30,15 @@ EXPR = """
  return {H, W, zones:out};})()
 """
 
+def _x99_alive():
+    """Cek X server :99 hidup (bukan cuma socket basi — pelajaran siklus 127/
+    128: socket basi membuat Xvfb baru gagal bind → chrome tak punya display)."""
+    return subprocess.run(["xdpyinfo", "-display", ":99"],
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+
 def main():
     env = dict(os.environ, DISPLAY=":99")
-    xv = subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x768x24"],
+    xv = None if _x99_alive() else subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x768x24"],
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     p = subprocess.Popen([CHROME, "--no-sandbox", f"--remote-debugging-port={PORT}",
                           "--window-size=1366,768", "--disable-dev-shm-usage", URL],
@@ -67,7 +73,8 @@ def main():
             if bot > data["H"] - 110: flag += " BELOW_BOT_MARGIN"
             print(f"{z['label']!r:26} cx={z['x']:5} cy={z['y']:4} sx={z['sx']:4} sy={z['sy']:3} behind={z['behind']}{flag}")
     finally:
-        p.kill(); xv.kill()
+        p.kill()
+        if xv: xv.kill()
 
 if __name__ == "__main__":
     main()
