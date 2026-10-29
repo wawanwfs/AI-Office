@@ -129,7 +129,10 @@ STREAM_METHOD = '''    # === wfs SSE streaming proxy (siklus 154) ===
         """
         import urllib.request as _ur
         try:
-            r = _ur.urlopen(_ur.Request("http://127.0.0.1:8787/api/events"), timeout=10)
+            # timeout=90: batas per-recv() upstream — HARUS > interval keepalive
+            # (15 dtk) agar stream tidak mati saat idle (bug tertangkap E2E
+            # siklus 154: timeout=10 < 15 → tiap stream mati tiap ~10 dtk).
+            r = _ur.urlopen(_ur.Request("http://127.0.0.1:8787/api/events"), timeout=90)
             self.send_response(r.status)
             self.send_header("Content-Type", r.headers.get("Content-Type") or "text/event-stream")
             self.send_header("Cache-Control", "no-cache")
@@ -154,19 +157,38 @@ STREAM_METHOD = '''    # === wfs SSE streaming proxy (siklus 154) ===
 '''
 
 PROXY_GET_MARK = "        if self.path == \"/wfs-api/events\":\n            return self._proxy_stream_events()\n"
+PROXY_STAMP = "timeout=90"  # versi metode stream — naikkan bila metode diubah
 
 
 def patch_proxy(txt: str) -> str:
-    assert METHOD_MARK not in txt, "proxy sudah dipatch (metode ada)"
-    assert PROXY_GET_MARK not in txt, "proxy sudah dipatch (do_GET ada)"
+    """Sisipkan / perbarui metode stream + branch do_GET (idempoten per-versi).
+
+    Stamp PROXY_STAMP menandai versi metode: bila metode lama (stamp beda)
+    sudah terpasang, blok lama dibuang dulu lalu versi baru disisipkan —
+    sehingga --apply dapat memutakhirkan metode tanpa duplikasi.
+    """
+    had_method = METHOD_MARK in txt
+    had_branch = PROXY_GET_MARK in txt
+    if had_method:
+        assert PROXY_STAMP not in txt, "proxy sudah dipatch versi sama — tak ada yang diubah"
+        start = txt.index(MARK_PX)
+        end = txt.index("    def _proxy(self):", start)  # blok lama ber tepat sebelum _proxy
+        txt = txt[:start] + txt[end:]
+    if had_branch:
+        txt = txt.replace(PROXY_GET_MARK, "", 1)  # sisip ulang di posisi kanan
     assert ANCHOR_PX in txt, "anchor proxy _proxy tidak ditemukan — server.py proxy berubah, apply DIBATALKAN"
     # (1) metode stream disisipkan sebelum _proxy
     i = txt.index(ANCHOR_PX)
     txt = txt[:i] + STREAM_METHOD + txt[i:]
-    # (2) branch do_GET sebelum delegasi _proxy
-    branch = '        if self.path.startswith("/wfs-api/"):\n' + PROXY_GET_MARK
-    assert branch in txt, "branch do_GET /wfs-api/ tidak ditemukan"
-    txt = txt.replace(branch, branch + PROXY_GET_MARK, 1)
+    # (2) branch do_GET events disisipkan SEBELUM delegasi _proxy generik.
+    # Anchor = konteks unik do_GET (delegasi _proxy juga ada di do_POST —
+    # tanpa konteks ini replace(...,1) menyasar do_POST).
+    proj_ret = "            return project_api.handle_project(self)\n"
+    ifline = '        if self.path.startswith("/wfs-api/"):\n'
+    retline = "            return self._proxy()\n"
+    anchor = proj_ret + ifline + retline  # unik: delegasi do_POST tak diawali project_api
+    assert txt.count(anchor) == 1, "anchor do_GET tidak unik/tidak ditemukan"
+    txt = txt.replace(anchor, proj_ret + PROXY_GET_MARK + ifline + retline, 1)
     return txt
 
 
@@ -216,7 +238,8 @@ def main():
     stage_h = hashlib.sha256(ROUTER_SRC.read_bytes()).hexdigest()[:12]
     dst_h = hashlib.sha256(ROUTER_DST.read_bytes()).hexdigest()[:12] if ROUTER_DST.exists() else "-"
     gw_installed = MARK_GW in deployed_gw
-    px_installed = METHOD_MARK in deployed_px and PROXY_GET_MARK in deployed_px
+    px_installed = (METHOD_MARK in deployed_px and PROXY_GET_MARK in deployed_px
+                    and PROXY_STAMP in deployed_px)  # stamp = versi metode stream
     print(f"gw_marker={gw_installed} px_marker={px_installed} router stage={stage_h} dst={dst_h}")
     print(f"health={health()} gw_events={gw_events_status()} px_events={proxy_events_status()} guards={guards_ok()}")
     print("backups:", ", ".join(p.name for p in sorted(BACKUPS.glob("server.py.bak-*"))[-3:]) or "-")
@@ -258,7 +281,7 @@ def main():
             print("gateway server.py dipatch; backup:", bak_gw.name)
         ROUTER_DST.write_bytes(ROUTER_SRC.read_bytes())
         print(f"router events di-stage ({stage_h})")
-    if do_px and need_px:
+    if do_px and not px_installed:
         pxb = HQ / "backups"
         pxb.mkdir(exist_ok=True)
         bak_px = pxb / f"server.py.bak-{int(time.time())}"
@@ -272,11 +295,17 @@ def main():
         (do_gw and need_gw_router) else True
     ok_px = restart_unit("wfs-hq") if bak_px else True
     g = guards_ok() if ok_gw else {}
-    ok = (ok_gw and ok_px and gw_events_status() == "ok" and proxy_events_status() == "ok"
+    gw_st = gw_events_status() if ok_gw else "down"
+    # px_events hanya disyaratkan bila Half B ikut di-apply (mode --only gw = proxy belum dipatch)
+    px_st = proxy_events_status() if (ok_px and do_px) else proxy_events_status()
+    ok = (ok_gw and ok_px and gw_st == "ok"
+          and (px_st == "ok" or not do_px)
           and all(v is True or (isinstance(v, int) and v >= 0) for v in g.values()))
 
     if not ok:
-        print("VERIFIKASI GAGAL — rollback otomatis bagian yang dipatch")
+        print(f"VERIFIKASI GAGAL — gw_events={gw_st} px_events={px_st} "
+              f"restart_gw={ok_gw} restart_px={ok_px} guards={g}")
+        print("rollback otomatis bagian yang dipatch")
         if bak_gw is not None:
             shutil.copy2(bak_gw, srv_gw)
             restart_unit("wfs-office")

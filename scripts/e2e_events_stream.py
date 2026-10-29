@@ -23,7 +23,8 @@ CHROME = os.path.expanduser(
 PORT = 9469
 URL = "http://127.0.0.1:9503/"
 DB = os.path.expanduser("~/wfs-office/tasks.db")
-DEMO_TITLE = f"Uji SSE siklus 154"
+RUN = str(int(time.time()))
+DEMO_TITLE = f"Uji SSE siklus 154 run {RUN}"
 
 
 class WS:
@@ -96,6 +97,17 @@ def insert_demo_task() -> int:
         return rid
     finally:
         conn.close()
+
+
+def cleanup_demo_tasks():
+    """Hapus jejak task demo run ini (run sebelumnya TIDAK ikut — judul unik)."""
+    try:
+        conn = sqlite3.connect(DB, timeout=5)
+        conn.execute("DELETE FROM tasks WHERE agent_id='sse154'")
+        conn.commit()
+        conn.close()
+    except Exception as e:  # noqa: BLE001 — cleanup best-effort
+        print("cleanup warning:", e)
 
 
 def main():
@@ -234,6 +246,8 @@ def main():
               and err_after_load == "no-err" and err_final == "no-err")
         print("E2E_EVENTS: OK" if ok else "E2E_EVENTS: FAIL")
     finally:
+        # ES in-page tertutup otomatis saat proses browser di-terminate di bawah.
+        cleanup_demo_tasks()
         p.terminate()
         if xv:
             xv.terminate()
