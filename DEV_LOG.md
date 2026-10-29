@@ -4457,3 +4457,19 @@
   - `e2e_err.py` **0 pesan / 0 error / 0 warning**; `shot.sh` :0 **682.362 B** (>500 KB — scene hidup).
 - Commit: kode+test+probe di commit siklus ini.
 - Sisa backlog: **KOSONG**. Kandidat berikutnya: perbaikan kecil sesuai temuan berikutnya.
+
+## 2026-10-29 08:40 WIB — Siklus 146: Pelapor lantai kamera TERPUSAT per-frame — ekor terakhir keluarga 142–145: FOLLOW kamera ikut agen lintas lantai & klik papan proyek/nexus kini menyinkronkan nav (+13 test, diskriminasi E2E penuh: kode lama 4/4 langkah FAIL, baru OK)
+
+- **Bug (audit rutin pasca-backlog kosong — penutup keluarga siklus 142–145):** semua siklus sebelumnya melaporkan lantai SEKALI di titik klik (onSelectAgent/onCameraFloor). Audit 13 titik `focusGoal=` menemukan 3 jalur yang lolos: (1) **FOLLOW** — kamera mengikuti agen yang BERJALAN lintas lantai (lunch kafe L3, pulang, rapat): nav beku di lantai saat agen diklik; (2) **klik papan proyek** (single + dblclick): goal z=13.2 dinding L3 tanpa laporan — panel proyek terbuka, nav tetap; (3) **dblclick nexus**: goal z=6.1 (L3) tanpa onSelectAgent.
+- **Perubahan:**
+  - `src/scene/parts/kamera_focus.js` (murni, satu sumber kebenaran): `goalFloor(goal, homeT)` — lantai kamera dari TARGET GOAL: `{follow}` → `agentLiveLevel` LIVE (badge 142/143/144), statis → `levelOf(goal.t.z)`; goal reset menuju HOME_TGT & dblclick area kosong (flag `blank` baru) → **null** (kembali ke overview ≠ pindah lantai — tanpa ini kamera di rumah terlapor "L2" palsu). `cameraFloorFrame(goal, last, homeT)` — latch per-frame: callback hanya saat lantai non-null BERUBAH.
+  - `OfficeScene.js`: hook di `animate()` setelah focusStep — mengganti 2 panggilan langsung siklus 145 (focusTeam/focusMeetingRoom kini hanya me-reset latch `__lastCamFloor=null`); dblclick-blank menandai goal `blank:true`.
+- **+13 test (`goal_floor_live.test.js`):** 9 murni goalFloor (BUG UTAMA papan z=13.2→L3, nexus z=6.1→L3, follow peserta rapat→L1 via agentLiveLevel, follow walker lunch→L3, guard korup→null, reset→null, reset target asing→dilaporkan, blank→null 2 varian) + 4 cameraFloorFrame (latch sama/beda, null reset latch, siklus L1→papan→overview→papan: langkah ke-3 HARUS terlapor lagi, walker melewati batas 4.5→changed).
+- **Bukti diskriminasi E2E PENUH (`scripts/e2e_goal_floor_live.py`, di repo):** 4 langkah via scene nyata — klik papan proyek via raycast CDP (Input.dispatchMouseEvent ke proyeksi layar mesh), klik kosong, klik papan lagi, `__focusAgent('be1')` + `__setTime(720)` lunch follow. Kode lama (bak di-deploy ulang) → **FAIL: board=L1 afterBlank=L1 board2=L1 followLunch=L1** (4/4); kode baru → **OK: board=L3 afterBlank=L3 board2=L3 followLunch=L3** (nav TIDAK berubah saat klik kosong = alur lama utuh; follow LIVE L1→L3 tanpa klik baru).
+- **Catatan metodologi:** (1) run #1–2 probe: bug harness — WS rx() `return b` sebelum buffer penuh + `__wfsSelectAgent` ternyata hanya memilih TANPA follow goal (bukan jalur kamera); diganti `__focusAgent` (focusAgent scene: goal follow + onSelectAgent). (2) **Bug desain latch tertangkap sebelum commit**: focusTeam men-set latch = level baru → per-frame `changed=false` → callback tak pernah menyala (terlihat di E2E siklus 145 FAIL `core-be→L1`) — kini latch selalu di-RESET di fokus baru.
+- **Bukti terukur:**
+  - Vitest **2361/2361 (174 file, +13)**; ESLint 0 error 0 warning (file tersentuh + src penuh); build sukses (38 precache 1841.74 KiB) → deploy `dist/*` → `~/wfs-hq/`; `wfs-hq` & `wfs-office` active, :9503 HTTP 200.
+  - `e2e_err.py` **0 pesan / 0 error / 0 warning**; `shot.sh` :0 **675.805 B** (>500 KB — scene hidup).
+  - Regresi E2E siklus 145/144 tetap OK: `e2e_camera_floor_live.py` OK (core-be→L2, qa-gov→L3, meeting→L1), `e2e_select_floor_live.py` OK (DEWI rapat→L1).
+- Commit: kode+test+probe di commit siklus ini.
+- Sisa backlog: **KOSONG**. Kandidat berikutnya: perbaikan kecil sesuai temuan berikutnya.
