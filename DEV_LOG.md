@@ -1,3 +1,25 @@
+## 2026-10-29 20:02 WIB — Siklus 155: REHEARSAL migrasi gateway :8787 ke Docker LULUS penuh — image wfs-office-gw + compose + smoke 10/10 di :8788 (DB salinan), produksi systemd TIDAK disentuh; 3 gap container nyata ditemukan & ditutup
+
+- **Backlog kandidat 154 dikerjakan (user menghendaki semua service long-running terkontainer + auto-restart), dengan cakupan jujur:** aturan siklus melarang menyentuh systemd produksi → siklus ini = **rehearsal penuh** yang bisa diulang kapan pun untuk go-live (ganti port 8788→8787 + stop unit systemd). Produksi :8787/wfs-office TIDAK diubah sedikit pun (guard: health 200 + agents=15 sepanjang siklus).
+- **Audit prasyarat (sebelum build):** gateway = FastAPI 0.143/uvicorn 0.54 (`.venv` tanpa pip → versi dari `dist-info`, 27 paket di-replikasi persis di image); `uvicorn.run` **port hardcoded 8787** di `__main__`; DB = SQLite **journal delete** (AFTER DELETE trigger cron setiap 5 mnt — salinan aman dibaca bersamaan); `tasks.py` (engine berbayar, DIJEDA) **tanpa thread latar saat import** (engine hanya jalan saat endpoint dipanggil → dikontainerkan ≠ engine hidup); endpoint sandbox shell-out `docker ps`/`docker exec` → butuh CLI + socket; default AI dibaca `Path.home()/.hermes/.env`.
+- **Artefak (repo, `deploy/docker/`):**
+  - `Dockerfile.wfs-office-gw` — python:3.11-slim, pip 27 paket versi persis .venv host + **docker CLI statis 29.1.3** (ADD dari download.docker.com) + `HEALTHCHECK` `/api/health` 15s (healthy <20 dtk). Kode **tidak di-COPY** — di-mount ro dari host (satu sumber kebenaran dgn produksi; perubahan server.py host otomatis live di container).
+  - `docker-entrypoint.sh` — **tanpa patch server.py**: `WFS_PORT` override port (rehearsal 8788) + `WFS_HERMES_HOME` mengganti HOME → `.hermes/.env` ditemukan via bind mount file (`:ro`, tidak bocor ke lapisan image).
+  - `compose.rehearsal.yaml` — port 127.0.0.1:8788, restart `unless-stopped`, DB **SALINAN** (`rehearsal-data/*.db`, bukan tasks.db produksi), docker.sock, sandboxes.
+  - `scripts/rehearsal_smoke.sh` — smoke fungsional dapat diulang (exit code = jumlah fail).
+- **3 gap container nyata tertangkap & ditutup (semua terlihat di log, bukan ditebak):**
+  1. `docker` CLI tak ada di slim → `/api/sandboxes` **500** (`FileNotFoundError docker`) → CLI statis host-paritas.
+  2. `sandbox_exec.py` me-expand `~/wfs-office/sandboxes` → `HOME=/hermes-home` di container → **500 FileNotFoundError** → mount sandboxes di path HOME (`/hermes-home/wfs-office/sandboxes`).
+  3. (verifikasi, bukan bug) `kill -9 1` dari exec **diabaikan kernel utk PID1** →RestartCount tetap 0; bukti restart-policy yang jujur: container `on-failure:5` dgn exit-crash → **RestartCount 0→5** (policy bekerja). `docker kill` = manual stop, sengaja TIDAK di-restart (semantik Docker benar).
+- **Bukti terukur:**
+  - Smoke **10/10 PASS** (`rehearsal_smoke.sh` exit 0): health, **default-ai=auto (bukti .env terbaca via HOME mount)**, paritas status.agents **15**, paritas daftar agen **15**, paritas projects, paritas orders, **SSE connected frame <4 dtk di container**, sandboxes **4 wfs-agent** via docker.sock host, **isolasi DB (INSERT di rehearsal TIDAK terlihat di :8787, task dibersihkan)**, **sandbox exec `print(6*7)` → `ok:true` "42"** via gateway container → docker exec → container agent.
+  - `docker ps`: `wfs-office-rehearsal Up (healthy)`; inspect `OOM=false`; smoke pertama **9/10** (exec 500) → fix mount → **10/10** (bukti diskriminasi perbaikan nyata).
+  - Vitest **2427/2427 (178 file)**; `npm run build` sukses (137 modul, 543ms) → deploy `dist/*` → `~/wfs-hq/` (tanpa perubahan frontend — deploy wajib rutin); `e2e_err.py` **0/0/0**; wfs-hq & wfs-office **active**, :9503 & :8787 **200**, agents_prod=15.
+  - Image `wfs-office-gw:latest` **489MB**; container rehearsal tetap berjalan (restart unless-stopped) — bukti tahan-lama, bukan sekali-jalan.
+- **Go-live (2 langkah, siap kapan pun):** (1) `docker compose -f compose.rehearsal.yaml down`; (2) compose produksi = file yang sama dgn port **8787** + DB **asli** (`tasks.db` produksi) + tanpa label rehearsal → `systemctl disable --now wfs-office` → up. Rollback = `systemctl start wfs-office`. Risiko tinggal: pemilik tasks.db berganti (agentuser UID 1002 → root container; trigger AFTER DELETE cron memakai path host — perlu verifikasi tetap tertulis), uji bersamaan SQLite di load nyata, dan `stop_grace_period` saat engine aktif.
+- Commit: `deploy/docker/` (Dockerfile, entrypoint, compose) + `scripts/rehearsal_smoke.sh` di commit siklus ini. **Sisa backlog: KOSONG.**
+- Kandidat berikutnya: (a) eksekusi go-live migrasi :8787 → container (butuh persetujuan user — menyentuh systemd produksi), (b) sinkronisasi penuh generasi server.py deployed ↔ backend/server.py repo (review manual — beda arsitektur chat/orders).
+
 ## 2026-10-29 10:39 WIB — Siklus 148: higiene pengukuran tangga adaptif — anti-FPS palsu pasca-sleep/stall + flag recovering tak lagi permanen + hysteresis recovery PR ditutup
 
 - **Audit lanjutan `perf_quality.js` pasca siklus 147 menemukan 3 cacat nyata:**
