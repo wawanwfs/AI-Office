@@ -35,19 +35,19 @@ services:
       redis:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"  # loopback-only: bypass ufw oleh DNAT Docker (siklus 163)
 
   admin:
     build: ./admin
     depends_on:
       - backend
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"  # loopback-only, diakses publik via :9503/admin/
 
   widget:
     build: ./widget
     ports:
-      - "3001:3001"
+      - "127.0.0.1:3001:3001"  # loopback-only, diakses publik via :9503/cs-widget/
 
 volumes:
   pgdata:
