@@ -4,6 +4,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
 import { useDialogA11y } from '../lib/dialogA11y'
+import { STATUS_HEX } from '../scene/parts/agent_status'
 
 const STYLE = {
   overlay: { position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,.45)' },
@@ -568,6 +569,7 @@ export default function ShConsole({ show, onClose }) {
 
 function Overview({ ov, liveLogs }) {
   if (!ov) return <p style={{ color: '#8fa2c4' }}>Memuat statistik…</p>
+  const live = (liveLogs && liveLogs.length) || 0
   const stats = [
     ['Projects', ov.projects], ['Task total', ov.tasks],
     ['Agent total', ov.agents], ['Subtask jalan', ov.running_subtasks], ['Log event', ov.total_logs],
@@ -597,6 +599,15 @@ function Overview({ ov, liveLogs }) {
       <div style={STYLE.card}>
         <div style={{ fontWeight: 700, marginBottom: 8 }}>Log terbaru <span style={{ color: '#5f6f90', fontWeight: 400, fontSize: 11 }}>(realtime)</span></div>
         <div role="log" aria-live="polite" aria-label="Log realtime">
+          {/* bukti stream hidup: titik hijau + hitung frame log diterima SSE
+              (siklus 154) — hanya saat stream mengirim, bukan angka DB */}
+          {live > 0 && (
+            <div style={{ fontSize: 11, color: '#5f6f90', marginBottom: 6 }} data-testid="live-log-badge">
+              <span aria-hidden="true" style={{ color: STATUS_HEX.work, marginRight: 4 }}>●</span>
+              <span className="sr-only">Log realtime aktif: </span>
+              {live} log diterima realtime
+            </div>
+          )}
           {(liveLogs && liveLogs.length) ? null : (ov.recent_logs || []).length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>Belum ada log.</div>}
           {(liveLogs && liveLogs.length ? liveLogs : (ov.recent_logs || [])).map((l, i) => (
             <div key={i} style={STYLE.logLine}><b>{l.level || 'INFO'}</b> · {l.message} <span style={{ color: '#5f6f90' }}>({l.source || 'system'})</span></div>
