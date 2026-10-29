@@ -1,5 +1,5 @@
 import { wallFadeTick } from './wall_fade.js';
-import { drawWallTex, WALL_NIGHT } from './wall_canvas.js';
+import { drawWallTex, WALL_NIGHT, TRIM_DAY, TRIM_NIGHT, PIER_DAY, PIER_NIGHT } from './wall_canvas.js';
 import { drawWallLogo } from './logo_canvas.js';
 import { drawWelcomeSign } from './sign_canvas.js';
 import { uiTexture, uiMaterial } from './ui_colorspace.js';
@@ -44,6 +44,43 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   const upperB=tex('#E6EAF1','rgba(120,138,165,.48)');upperB.repeat.set(9,1);
   const woodB=tex('#8A6244','rgba(40,25,10,.40)',512,256,32);woodB.repeat.set(9,1);
   const NAVY=0x24304A, GOLD=0xD4AF37, TRIM=0xF4F6FA;
+  // ── Siklus 166: TRIM (crown molding/sill) & PILAR (0x8E9BB0) ikut siang↔malam ──
+  // Dulu warna solid MeshBasicMaterial ini statis: jam malam panel dinding sudah
+  // gelap (palet WALL_NIGHT, siklus 165) tapi lis putih #F4F6FA & pilar abu terang
+  // #8E9BB0 (lum sRGB ~152) tetap menyala — kelas bug sama dgn jendela (164) &
+  // panel dinding (165). Warna solid tanpa map → pola repaint kanvas tak berlaku.
+  // PENTING: mekanisme wall-fade (collect) meng-CLONE material mesh dinding depan/
+  // kanan/belakang/kiri pada tick pertama — klon menyalin NILAI warna, bukan
+  // referensi, jadi set per-material akan melewatkan klon. Karena itu yang dicatat
+  // adalah MESH-nya (userData.__trim = {day,night}): referensi mesh selamat dari
+  // swap material, dan material AKTIF (asli maupun klon) di-resolve saat paint.
+  const trimPaints=[]; // {mat,day,night} — inventaris material asli (introspeksi uji)
+  const note=(mat,day,night)=>{ if(mat) trimPaints.push({mat,day,night}); return mat; };
+  const trimMat=()=>note(new THREE.MeshBasicMaterial({color:TRIM_DAY}),TRIM_DAY,TRIM_NIGHT);
+  const pierMat=()=>note(new THREE.MeshBasicMaterial({color:PIER_DAY}),PIER_DAY,PIER_NIGHT);
+  // Tag SEMUA mesh pemakai material trim/pilar (sekali di akhir createWalls —
+  // sebelum tick fade pertama; userData milik mesh, selamat dari swap material).
+  const tagTrimMeshes=()=>{
+    if(!office || typeof office.traverse!=='function') return 0;
+    const inv=new Map(trimPaints.map(({mat,day,night:nc})=>[mat,{day,night:nc}]));
+    let n=0;
+    office.traverse(o=>{
+      if(o.isMesh && o.material && inv.has(o.material)){ o.userData.__trim=inv.get(o.material); n++; }
+    });
+    return n;
+  };
+  // Set warna via mesh ter-tag → material AKTIF (asli maupun klon wall-fade) ikut.
+  const paintTrimNight=(night)=>{
+    if(!office || typeof office.traverse!=='function') return 0;
+    let n=0;
+    office.traverse(o=>{
+      if(o.isMesh && o.userData && o.userData.__trim && o.material && o.material.color){
+        const t=o.userData.__trim;
+        o.material.color.set(night?t.night:t.day); n++;
+      }
+    });
+    return n;
+  };
   const WX=17, WZ=13.5;            // setengah dimensi kampus 34 x 27 m
   const wallBack=[];
   const WB=(geo,mat,x,y,z)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);office.add(m);wallBack.push(m);return m};
@@ -52,21 +89,25 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   W(B(34,4,.2),lit(upperA),0,2,13.6);
   W(B(34,1.15,.24),lit(woodA),0,.575,13.5);
   W(B(34,.08,.3),new THREE.MeshBasicMaterial({color:NAVY}),0,1.19,13.46);
-  W(B(34,.2,.34),new THREE.MeshBasicMaterial({color:TRIM}),0,3.9,13.44);       // crown molding putih tebal
+  W(B(34,.2,.34),trimMat(),0,3.9,13.44);       // crown molding putih tebal
   W(B(34,.14,.28),new THREE.MeshBasicMaterial({color:NAVY}),0,.07,13.47);      // plint
-  [-16,-12,-8,-4,0,4,8,12,16].forEach(x=>W(B(.3,4,.32),new THREE.MeshBasicMaterial({color:0x8E9BB0}),x,2,13.45));
+  [-16,-12,-8,-4,0,4,8,12,16].forEach(x=>W(B(.3,4,.32),pierMat(),x,2,13.45));
 
   // ---- DINDING KIRI (x=-17), menghadap +X ----
   W(B(.2,4,27),lit(upperB),-17.1,2,0);
   W(B(.24,1.15,27),lit(woodB),-17,.575,0);
   W(B(.3,.08,27),new THREE.MeshBasicMaterial({color:NAVY}),-16.96,1.19,0);
-  W(B(.34,.2,27),new THREE.MeshBasicMaterial({color:TRIM}),-16.94,3.9,0);
+  W(B(.34,.2,27),trimMat(),-16.94,3.9,0);
   W(B(.28,.14,27),new THREE.MeshBasicMaterial({color:NAVY}),-16.97,.07,0);
-  [-12,-7.5,-3,1.5,6,10.5].forEach(z=>W(B(.32,4,.3),new THREE.MeshBasicMaterial({color:0x8E9BB0}),-16.95,2,z));
+  [-12,-7.5,-3,1.5,6,10.5].forEach(z=>W(B(.32,4,.3),pierMat(),-16.95,2,z));
 
   // ---- DINDING DEPAN (z=-13.5) & KANAN (x=+17): solid, memudar otomatis bila kamera ada di sisinya ----
   const fadeMats=[];
-  const FM=(map,color)=>{const m=new THREE.MeshBasicMaterial(map?{map,transparent:true}:{color,transparent:true});fadeMats.push(m);return m};
+  // FM(map,color): bila `color` sudah MATERIAL jadi (siklus 166: trimMat/pierMat —
+  // material tercatat utk repaint malam), pakai LANGSUNG (jangan bungkus material
+  // baru dgn color=material); tetap didaftarkan ke fadeMats + transparent agar
+  // ikut fade dinding depan/kanan.
+  const FM=(map,color)=>{const m=(color&&typeof color==='object')?color:new THREE.MeshBasicMaterial(map?{map,transparent:true}:{color,transparent:true});m.transparent=true;fadeMats.push(m);return m};
   const upperF=tex('#E6EAF1','rgba(120,138,165,.48)');upperF.repeat.set(16,1);
   const woodF=tex('#8A6244','rgba(40,25,10,.40)',512,256,32);woodF.repeat.set(12,1);
   const upperR=tex('#E6EAF1','rgba(120,138,165,.48)');upperR.repeat.set(9,1);
@@ -77,9 +118,9 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   F(wallFront,B(34,4,.2),FM(upperF),0,2,-13.6);
   F(wallFront,B(34,1.15,.24),FM(woodF),0,.575,-13.5);
   F(wallFront,B(34,.08,.3),FM(null,NAVY),0,1.19,-13.46);
-  F(wallFront,B(34,.2,.34),FM(null,TRIM),0,3.9,-13.44);
+  F(wallFront,B(34,.2,.34),FM(null,trimMat()),0,3.9,-13.44);
   F(wallFront,B(34,.14,.28),FM(null,NAVY),0,.07,-13.47);
-  [-16,-12,-8,-4,0,4,8,12,16].forEach(x=>F(wallFront,B(.3,4,.32),FM(null,0x8E9BB0),x,2,-13.45));
+  [-16,-12,-8,-4,0,4,8,12,16].forEach(x=>F(wallFront,B(.3,4,.32),FM(null,pierMat()),x,2,-13.45));
   // jendela di dinding depan
   [-12,-6,-0.5,5,10.5].forEach(x=>{
     const wm=new THREE.MeshBasicMaterial({map:skyTex,transparent:true});fadeMats.push(wm);
@@ -88,15 +129,15 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
     const FR=0x2B3446;
     F(wallFront,B(3.2,.1,.1),FM(null,FR),x,3.5,-13.36);F(wallFront,B(3.2,.1,.1),FM(null,FR),x,1.5,-13.36);
     F(wallFront,B(.1,2.1,.1),FM(null,FR),x-1.55,2.5,-13.36);F(wallFront,B(.1,2.1,.1),FM(null,FR),x+1.55,2.5,-13.36);
-    F(wallFront,B(3.3,.07,.2),FM(null,TRIM),x,1.45,-13.3);
+    F(wallFront,B(3.3,.07,.2),FM(null,trimMat()),x,1.45,-13.3);
   });
   // kanan (x=+17), menghadap -X
   F(wallRight,B(.2,4,27),FM(upperR),17.1,2,0);
   F(wallRight,B(.24,1.15,27),FM(woodR),17,.575,0);
   F(wallRight,B(.3,.08,27),FM(null,NAVY),16.96,1.19,0);
-  F(wallRight,B(.34,.2,27),FM(null,TRIM),16.94,3.9,0);
+  F(wallRight,B(.34,.2,27),FM(null,trimMat()),16.94,3.9,0);
   F(wallRight,B(.28,.14,27),FM(null,NAVY),16.97,.07,0);
-  [-12,-7.5,-3,1.5,6,10.5].forEach(z=>F(wallRight,B(.32,4,.3),FM(null,0x8E9BB0),16.95,2,z));
+  [-12,-7.5,-3,1.5,6,10.5].forEach(z=>F(wallRight,B(.32,4,.3),FM(null,pierMat()),16.95,2,z));
   [-10,-4.5,1,6.5].forEach(z=>{
     const wm=new THREE.MeshBasicMaterial({map:skyTex,transparent:true});fadeMats.push(wm);
     if(skyWinMats)skyWinMats.push(wm);
@@ -107,7 +148,7 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   });
   // ---- Tiang sudut struktural 4 kombinasi (±17, ±13.5) — menyatu dgn glass edge frame structure.js ----
   [[-17,-13.5],[-17,13.5],[17,-13.5],[17,13.5]].forEach(([cx,cz])=>{
-    W(B(.34,4,.34),new THREE.MeshBasicMaterial({color:0x8E9BB0}),cx,2,cz);
+    W(B(.34,4,.34),pierMat(),cx,2,cz);
   });
 
 
@@ -185,7 +226,7 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
     const FR=0x2B3446;
     W(B(3.6,.1,.1),new THREE.MeshBasicMaterial({color:FR}),x,3.6,13.24);WB(B(3.6,.1,.1),new THREE.MeshBasicMaterial({color:FR}),x,1.6,13.24);
     WB(B(.1,2.1,.1),new THREE.MeshBasicMaterial({color:FR}),x-1.75,2.6,13.24);WB(B(.1,2.1,.1),new THREE.MeshBasicMaterial({color:FR}),x+1.75,2.6,13.24);
-    WB(B(3.7,.07,.2),new THREE.MeshBasicMaterial({color:TRIM}),x,1.55,13.24);
+    WB(B(3.7,.07,.2),trimMat(),x,1.55,13.24);
   });
 
   // ---- Papan sambutan di dinding kiri ----
@@ -203,7 +244,7 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
     W(B(.1,.1,3.2),new THREE.MeshBasicMaterial({color:FR}),-16.78,3.5,z);W(B(.1,.1,3.2),new THREE.MeshBasicMaterial({color:FR}),-16.78,1.5,z);
     W(B(.1,2.1,.1),new THREE.MeshBasicMaterial({color:FR}),-16.78,2.5,z-1.55);W(B(.1,2.1,.1),new THREE.MeshBasicMaterial({color:FR}),-16.78,2.5,z+1.55);
     W(B(.1,2.0,.05),new THREE.MeshBasicMaterial({color:FR}),-16.78,2.5,z);
-    W(B(.2,.07,3.3),new THREE.MeshBasicMaterial({color:TRIM}),-16.75,1.45,z);
+    W(B(.2,.07,3.3),trimMat(),-16.75,1.45,z);
   });
 
   // ---- Sheen kaca: overlay pantulan diagonal di semua jendela (tampak seperti kaca sungguhan) ----
@@ -216,5 +257,6 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   [[-10],[-4.5],[1],[6.5]].forEach(([z])=>sh(16.87,2.5,z,-Math.PI/2,3.0,1.9));                                               // kanan
   [[6.6],[10.8]].forEach(([x])=>sh(x,2.6,13.27,Math.PI,3.4,1.9));                                                              // belakang
   [[-3.4],[1.4]].forEach(([z])=>sh(-16.79,2.5,z,Math.PI/2,3.0,1.9));                                                           // kiri
-  return { wallDefs, get collected(){return collected}, paintWallNight, get wallTexCount(){return wallTexPaints.length}, get wallTexPaints(){return wallTexPaints} };
+  tagTrimMeshes();
+  return { wallDefs, get collected(){return collected}, paintWallNight, paintTrimNight, get wallTexCount(){return wallTexPaints.length}, get wallTexPaints(){return wallTexPaints}, get trimCount(){return trimPaints.length}, get trimPaints(){return trimPaints} };
 }

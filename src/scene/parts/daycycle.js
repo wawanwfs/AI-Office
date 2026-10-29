@@ -81,6 +81,23 @@ export function createLighting(ctx) {
     wallRt.paintWallNight(night);
   }
 
+  // ── Siklus 166: TRIM & PILAR dinding ikut siang↔malam ──
+  // Crown molding/sill putih (#F4F6FA) & pilar abu terang (#8E9BB0) = warna solid
+  // MeshBasicMaterial statis — jam malam panel dinding sudah gelap (165) tapi lis &
+  // pilar tetap menyala. paintTrimNight dari createWalls men-set warna semua mesh
+  // tercatat (by reference — klon wall-fade ikut karena berbagi material). Guard
+  // state terpisah, idempoten; ambang SAMA dgn jendela & dinding (d <= 0.55).
+  const trimRt = ctx.trimPainter || null;
+  let trimNight = false;
+  let trimReady = false; // init = warna siang → load siang = 0 set
+  function paintTrims(night) {
+    if (!trimRt || typeof trimRt.paintTrimNight !== 'function') return;
+    if (!trimReady) { trimReady = true; if (!night) return; }
+    if (trimNight === night) return;
+    trimNight = night;
+    trimRt.paintTrimNight(night);
+  }
+
   function apply(min) {
     current = min;
     onTimeUpdate && onTimeUpdate(min);
@@ -101,6 +118,8 @@ export function createLighting(ctx) {
     paintSkyNight(d <= 0.55);
     // Dinding: palet malam saat gelap (siklus 165) — sinkron dgn jendela
     paintWalls(d <= 0.55);
+    // Trim & pilar: ikut malam saat gelap (siklus 166) — ambang sama
+    paintTrims(d <= 0.55);
     onTick && onTick(min);
     // Siklus 120: __setTime (manual) harus meng-update jam simulasi juga — dulu
     // __setTime hanya apply lighting + updateMeeting, tapi __sim.time tidak
@@ -108,7 +127,7 @@ export function createLighting(ctx) {
     // lama. Callback opsional (tanpa mode manual — slider React punya jalurnya).
     onTime && onTime(min);
   }
-  return { apply, get minutes() { return current; }, get skyNight() { return skyNight; }, get wallNight() { return wallNight; } };
+  return { apply, get minutes() { return current; }, get skyNight() { return skyNight; }, get wallNight() { return wallNight; }, get trimNight() { return trimNight; } };
 }
 
 // ── Mode neon: kumpulan "saklar" yang didaftarkan, bukan pemindaian seluruh scene ──

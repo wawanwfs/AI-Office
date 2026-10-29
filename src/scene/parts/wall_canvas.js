@@ -17,6 +17,13 @@ export const WALL_NIGHT = {
   wood: { base: '#3B2B1D', line: 'rgba(20,12,6,0.45)' },     // wainscot kayu: jati gelap, tetap kayu
 };
 
+// ── Palet TRIM & PILAR (siklus 166) — warna solid MeshBasicMaterial ──
+// Dulu crown molding/sill putih #F4F6FA & pilar abu terang #8E9BB0 statis terang
+// meski malam (kelas bug 164/165). Malam: trim jadi abu-biru pucat (tetap terbaca
+// sbg lis, jauh lebih redup dari putih), pilar menyatu dgn panel dinding malam.
+export const TRIM_DAY = 0xF4F6FA, TRIM_NIGHT = 0x8FA0BC;
+export const PIER_DAY = 0x8E9BB0, PIER_NIGHT = 0x3E4A61;
+
 export function drawWallTex(ctx, base, line, wpx = 512, hpx = 256, step = 64) {
   ctx.fillStyle = base;
   ctx.fillRect(0, 0, wpx, hpx);
