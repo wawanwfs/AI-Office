@@ -1131,7 +1131,7 @@ setTimeout(()=>{
   }catch{ /* abaikan: bubble intro opsional */ }
 },1200);
 
-  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
+  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__skyNight=()=>__light.skyNight; window.__skyCv=__skyCv; window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
 window.__renderer=renderer; // debug/e2e: info.memory.textures/geometries (probe kebocoran tekstur)
 window.__spawnBubble=(x,y,z,text,color,anchor)=>createBubble(x,y,z,text,color,anchor); // debug/e2e probe kebocoran (jalur createBubble asli)
   // Badge status real-time: poll gateway tiap 20s, warnai badge dada sesuai status task

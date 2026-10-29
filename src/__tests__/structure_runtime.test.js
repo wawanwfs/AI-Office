@@ -77,9 +77,9 @@ function build(ctx) {
 }
 
 describe('createStructure — struktur dasar kantor 3D', () => {
-  it('mengembalikan refs {fl, cp, skyTex, glassSheen}', () => {
+  it('mengembalikan refs {fl, cp, skyTex, glassSheen, skyCv} (siklus 164: skyCv utk repaint malam)', () => {
     const { refs } = build(makeCtx())
-    expect(Object.keys(refs).sort()).toEqual(['cp', 'fl', 'glassSheen', 'skyTex'])
+    expect(Object.keys(refs).sort()).toEqual(['cp', 'fl', 'glassSheen', 'skyCv', 'skyTex'])
   })
 
   it('strip AO kontak: 4 plane rotasi flat (x=-90°) di y 0.006, renderOrder 1, material transparan depthWrite false', () => {
