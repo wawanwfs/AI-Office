@@ -14,6 +14,20 @@
 // → berhenti; naik ke map 2048 TIDAK otomatis (blokir lonjakan memori GPU —
 // pengguna bisa memuat ulang halaman bila mau full quality). Hysteresis:
 // satu sampel FPS < 28 mereset hitungan recovery (anti on-off saat FPS napas).
+//
+// Siklus 148 — higiene pengukuran & recovery: audit menemukan 3 cacat lanjutan
+// di modul ini:
+//  1. Jendela sampling USANG: tab hidden / laptop sleep / stall rAF panjang
+//     membuat sampel pertama pasca-resume = "1 frame ÷ 60 dtk" → FPS palsu ≈0
+//     yang memicu tangga degradasi di GPU sehat (bayangan mati + resolusi
+//     turun) begitu pengguna kembali, lalu butuh belasan detik pulih. Kini
+//     jendela > 6 dtk dianggap usang: fps tak dihitung, jendela & streak
+//     di-reset, flag `stale` di-set (chip menampilkan "mengukur ulang").
+//  2. Flag `recovering` tertahan `true` SELAMANYA pasca-pemulihan penuh →
+//     chip HUD biru "Kualitas pulih" permanen meski scene sudah ideal.
+//  3. Streak recovery pixelRatio tercemar: sampel jelata apa pun ikut
+//     menghitung (hysteresis bocor) — kini sejajar recovery bayangan: hanya
+//     sampel sehat (fps ≥ 28) yang menghitung, satu sampel jelata mereset.
 
 /**
  * Satu langkah sampling performa. Dipanggil tiap frame dengan waktu nyata.
@@ -40,7 +54,24 @@ export function perfStep(st, nowMs, frame, opts) {
   const r = o.renderer;
   const sun = o.sun;
   if (!s.t0) { s.t0 = nowMs; return s; }
-  if (nowMs - s.t0 < sampleMs) return s;
+  // Siklus 148: jendela sampling USANG (> 6 dtk) → sampel tak valid. Tab
+  // hidden / laptop sleep menghentikan rAF tetapi performance.now() terus
+  // berjalan: sampel pertama pasca-resume = beberapa frame ÷ menit → FPS
+  // palsu ≈0 yang dulu memicu tangga degradasi di GPU sehat begitu pengguna
+  // kembali (bayangan mati, resolusi turun) lalu pulih belasan detik
+  // kemudian. Jendela usang: fps TIDAK dihitung (nilai lama dibiarkan — chip
+  // menandai stale "mengukur ulang"), jendela & streak recovery di-reset,
+  // tangga degradasi dilewati sampel ini. Ambang 6 dtk = 3× sampleMs: tab
+  // hidden tak perlu proteksi (loop berhenti via pageHidden), tapi sleep OS
+  // / stall rAF > sampleMs nyata terjadi.
+  const winMs = nowMs - s.t0;
+  if (winMs > sampleMs * 3) {
+    s.t0 = nowMs; s.lastFrame = frame; s.stale = true;
+    s.goodStreak = 0; s.shadowStreak = 0; s.recovering = false;
+    return s;
+  }
+  if (winMs < sampleMs) return s; // jendela mengisi — flag stale (bila ada) dipertahankan: jujur sampai sampel valid dihitung
+  s.stale = false;
   s.fps = (frame - (s.lastFrame || 0)) / ((nowMs - s.t0) / 1000);
   s.t0 = nowMs;
   s.lastFrame = frame;
@@ -64,15 +95,26 @@ export function perfStep(st, nowMs, frame, opts) {
     if (o.needsShadowUpdate) o.needsShadowUpdate();
   }
   // Recovery: pixelRatio naik bertahap bila FPS sehat stabil (4 cek × 2 dtk = 8 dtk)
+  // Siklus 148: hysteresis diperketat — hanya sampel sehat (fps ≥ 28) yang
+  // menghitung goodStreak; satu sampel jelata (fps < 28) mereset dari nol.
+  // Dulu SEMUA sampel ikut menghitung → hysteresis bocor: streak bisa
+  // terisi oleh campuran sampel 30-20-15-25 fps, recovery "selesai" pada GPU
+  // yang ternyata masih lambat. Sejajar recovery bayangan (shadowStreak).
   if (s.downgraded && !s.shadowLevel) {
     if (!s.basePR && o.basePixelRatio) s.basePR = o.basePixelRatio;
-    s.goodStreak = (s.goodStreak || 0) + 1;
-    // Siklus 147: flag utk chip HUD — pemulihan aktif sejak streak pertama.
-    s.recovering = s.goodStreak > 0 && s.fps >= 28;
-    if (s.goodStreak >= 4 && s.fps >= 28 && r) {
-      const pr = Math.min(s.basePR, r.getPixelRatio() + 0.25);
-      if (pr > r.getPixelRatio()) r.setPixelRatio(pr);
-      if (r.getPixelRatio() >= s.basePR) { s.downgraded = false; s.goodStreak = 0; }
+    if (s.fps >= 28) {
+      s.goodStreak = (s.goodStreak || 0) + 1;
+      // Siklus 147→148: flag chip — aktif hanya saat streak berjalan dan
+      // dibersihkan saat pemulihan selesai (dulu tertahan true selamanya →
+      // chip biru "Kualitas pulih" permanen meski scene sudah ideal).
+      s.recovering = true;
+      if (s.goodStreak >= 4 && r) {
+        const pr = Math.min(s.basePR, r.getPixelRatio() + 0.25);
+        if (pr > r.getPixelRatio()) r.setPixelRatio(pr);
+        if (r.getPixelRatio() >= s.basePR) { s.downgraded = false; s.goodStreak = 0; s.recovering = false; }
+      }
+    } else {
+      s.goodStreak = 0; s.recovering = false;
     }
   }
   // Siklus 147 — recovery bayangan: level shadow pulih BERTAHAP saat GPU sehat
@@ -118,6 +160,13 @@ export function perfChip(p) {
   const fpsTxt = fpsR >= 10 ? String(fpsR) : String(Math.round(p.fps * 10) / 10).replace('.', ',');
   const pr = Number.isFinite(p.pixelRatio) ? Math.round(p.pixelRatio * 100) / 100 : null;
   const prTxt = pr != null ? ` · x${pr}` : '';
+  // Siklus 148: jendela sampling usang (pasca-sleep OS / stall rAF panjang) —
+  // jangan tampilkan FPS palsu ≈0 seolah valid (dulu memicu chip merah "GPU
+  // 0,2 FPS" sesaat begitu pengguna kembali). Chip menyatakan pengukuran
+  // sedang diulang; tangga degradasi dilewati pada sampel ini.
+  if (p.stale) {
+    return { state: 'stale', label: 'GPU mengukur ulang…', detail: 'Kualitas otomatis: pengukuran FPS di-reset (tab tidur / jeda panjang terdeteksi) — mengukur ulang beberapa detik' };
+  }
   if (p.shadowLevel >= 2) {
     return { state: 'down', label: `GPU ${fpsTxt} FPS`, detail: `Kualitas otomatis: bayangan dimatikan (FPS ${fpsTxt}) — pemulihan otomatis bila FPS sehat 16 dtk${prTxt}` };
   }

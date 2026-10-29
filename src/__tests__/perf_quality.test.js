@@ -274,3 +274,124 @@ describe('perfChip — chip kualitas render HUD (siklus 147)', () => {
     expect(c.detail).toContain('pulih');
   });
 });
+
+// ── Siklus 148: higiene pengukuran & recovery ──
+describe('perfStep — jendela sampling usang (siklus 148)', () => {
+  it('jendela > 6 dtk (pasca-sleep/stall) → fps TIDAK dihitung, tangga degradasi dilewati', () => {
+    const r = mockRenderer(1.5); const sun = mockSun();
+    let needsUpdate = 0;
+    // t0=1000, kembali di 61000 (60 dtk tidur) dgn 3 frame saja → dulu fps≈0,05
+    // memicu pixelRatio turun + bayangan mati. Kini: sampel usang diabaikan.
+    const s = perfStep({ ...BASE, t0: 1000 }, 61000, 3, { renderer: r, sun, needsShadowUpdate: () => needsUpdate++ });
+    expect(s.stale).toBe(true);
+    expect(s.fps).toBe(0); // fps lama dipertahankan, tak dihitung dari jendela usang
+    expect(r.current).toBe(1.5); // TIDAK turun
+    expect(sun.castShadow).toBe(true); // bayangan TIDAK mati
+    expect(s.shadowLevel).toBe(0);
+    expect(needsUpdate).toBe(0);
+  });
+
+  it('jendela usang me-reset jendela & streak recovery, lalu sampel berikut normal kembali', () => {
+    const r = mockRenderer(1.5); const sun = mockSun();
+    let s = { ...BASE, t0: 1000, goodStreak: 3, shadowStreak: 5, downgraded: true, shadowLevel: 0 };
+    s = perfStep(s, 61000, 3, { renderer: r, sun });
+    expect(s.stale).toBe(true);
+    expect(s.goodStreak).toBe(0);
+    expect(s.shadowStreak).toBe(0);
+    expect(s.t0).toBe(61000); // jendela baru dimulai dari titik resume
+    expect(s.lastFrame).toBe(3);
+    // sampel valid berikutnya: fps 30 (60 frame / 2 dtk) — berjalan normal, stale bersih
+    s = perfStep(s, 63000, 63, { renderer: r, sun });
+    expect(s.stale).toBe(false);
+    expect(s.fps).toBe(30);
+    expect(r.current).toBe(1.5);
+  });
+
+  it('jendela pasca-degradasi lama TIDAK dianggap usang (fps benar-benar rendah tetap mendegradasi)', () => {
+    const r = mockRenderer(1.5); const sun = mockSun();
+    // SwiftShader nyata: jendela valid 2 dtk, 4 frame → fps 2. Harus tetap
+    // mendegradasi — proteksi usang tak boleh membutakan tangga (6 dtk = 3×
+    // sampleMs, jendela 2 dtk normal jauh di bawah ambang).
+    const s = perfStep({ ...BASE, t0: 1000 }, 3000, 4, { renderer: r, sun });
+    expect(s.stale).toBe(false);
+    expect(s.fps).toBeLessThan(5);
+    expect(r.current).toBe(1.25);
+    expect(sun.castShadow).toBe(false);
+  });
+
+  it('tepat di ambang 3× sampleMs (6 dtk) → TIDAK usang (hanya > ambang)', () => {
+    const r = mockRenderer(1.5); const sun = mockSun();
+    // t0=1000 → 7000 = 6000 ms tepat; bukan >6000 → sampel valid: 90 frame / 6 dtk = fps 15
+    const s = perfStep({ ...BASE, t0: 1000 }, 7000, 90, { renderer: r, sun });
+    expect(s.stale).toBe(false);
+    expect(s.fps).toBe(15);
+    expect(r.current).toBe(1.25); // degradasi sah (fps 15 < 18)
+  });
+});
+
+describe('perfStep — flag recovering bersih pasca-pemulihan (siklus 148)', () => {
+  function degradedState() {
+    // fps 15 → hanya pixelRatio turun (1.5→1.0 dua langkah via downgraded),
+    // shadowLevel TETAP 0 — blok recovery pixelRatio aktif (tanpa tangga shadow).
+    const r = mockRenderer(1.5); const sun = mockSun();
+    let s = { ...BASE, t0: 1000 };
+    s = perfStep(s, 3000, 30, { renderer: r, sun }); // fps 15 → downgraded, PR 1.25
+    s = perfStep(s, 5000, 40, { renderer: r, sun }); // fps 5 → PR 1.0
+    return { s, r, sun };
+  }
+  it('pemulihan penuh (basePR tercapai) → recovering=false + downgraded=false (chip ideal, bukan biru permanen)', () => {
+    const { s, r, sun } = degradedState();
+    let cur = { ...s, basePR: 1.5 };
+    let now = 5000, frame = 150;
+    for (let i = 0; i < 3; i++) { now += 2000; frame += 60; cur = perfStep(cur, now, frame, { renderer: r, sun }); } // streak 1-3
+    expect(cur.recovering).toBe(true);
+    expect(r.current).toBe(1.0);
+    now += 2000; frame += 60; cur = perfStep(cur, now, frame, { renderer: r, sun }); // streak 4 → PR 1.25
+    now += 2000; frame += 60; cur = perfStep(cur, now, frame, { renderer: r, sun }); // streak 5 → PR 1.5 → selesai
+    expect(r.current).toBe(1.5);
+    expect(cur.downgraded).toBe(false);
+    expect(cur.recovering).toBe(false); // dulu: tertahan true selamanya
+  });
+
+  it('sampel jelata di tengah streak → goodStreak & recovering reset (hysteresis kini benar-benar menutup)', () => {
+    const { s, r, sun } = degradedState();
+    let cur = { ...s, basePR: 1.5 };
+    let now = 5000, frame = 150;
+    for (let i = 0; i < 3; i++) { now += 2000; frame += 60; cur = perfStep(cur, now, frame, { renderer: r, sun }); } // streak 3 (fps 30)
+    expect(cur.goodStreak).toBe(3);
+    // sampel jelata: fps 25 (< 28) — dulu streak jadi 4 → recovery maju walau GPU masih jelata
+    now += 2000; frame += 50;
+    cur = perfStep(cur, now, frame, { renderer: r, sun });
+    expect(cur.goodStreak).toBe(0);
+    expect(cur.recovering).toBe(false);
+    expect(r.current).toBe(1.0); // pixelRatio tak naik
+    expect(cur.downgraded).toBe(true); // masih menunggu GPU sehat sungguhan
+  });
+
+  it('sampel campuran 30-20-30-30 TIDAK menyelesaikan pemulihan (bug streak bocor tertangkap)', () => {
+    const { s, r, sun } = degradedState();
+    let cur = { ...s, basePR: 1.5 };
+    let now = 5000, frame = 150;
+    const seq = [60, 40, 60, 60]; // fps 30, 20, 30, 30
+    for (const f of seq) { now += 2000; frame += f; cur = perfStep(cur, now, frame, { renderer: r, sun }); }
+    expect(cur.goodStreak).toBe(1); // hanya 2 sampel sehat terakhir yang hitung (setelah reset)
+    expect(r.current).toBe(1.0); // dulu: streak 4 → PR naik walau GPU napas jelata
+    expect(cur.recovering).toBe(true); // sedang mencoba lagi, belum selesai
+  });
+});
+
+describe('perfChip — chip usang (siklus 148)', () => {
+  it('stale → label "GPU mengukur ulang…", bukan FPS palsu ≈0', () => {
+    const c = perfChip({ fps: 0.03, pixelRatio: 1.5, shadowLevel: 0, downgraded: false, stale: true });
+    expect(c.state).toBe('stale');
+    expect(c.label).toBe('GPU mengukur ulang…');
+    expect(c.label).not.toContain('0,0');
+    expect(c.detail).toContain('mengukur ulang');
+  });
+
+  it('stale TIDAK menimpa degradasi aktif di luar sampel usang (prioritas cabang): shadowLevel 2 tanpa stale tetap down', () => {
+    const c = perfChip({ fps: 2, pixelRatio: 0.75, shadowLevel: 2, downgraded: true });
+    expect(c.state).toBe('down');
+    expect(c.label).toContain('GPU');
+  });
+});
