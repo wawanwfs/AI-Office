@@ -1,0 +1,40 @@
+# Rehearsal migrasi gateway :8787 ke Docker (siklus 155) — PRODUKSI SYSTEMD TIDAK DISCENTUH.
+#   cd deploy/docker && docker compose -f compose.rehearsal.yaml up -d --build
+#   curl -s http://127.0.0.1:8788/api/health
+#   docker compose -f compose.rehearsal.yaml down
+# DB = SALINAN (rehearsal-data/), kode host di-mount ro — container tidak pernah menulis kode produksi.
+name: wfs-office-gw-rehearsal
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.wfs-office-gw
+    image: wfs-office-gw:latest
+    container_name: wfs-office-rehearsal
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:8788:8788"
+    environment:
+      WFS_PORT: "8788"
+      WFS_HERMES_HOME: /hermes-home
+    volumes:
+      # kode host read-only (satu sumber kebenaran dgn produksi)
+      - /home/agentuser/wfs-office/server.py:/app/server.py:ro
+      - /home/agentuser/wfs-office/tasks.py:/app/tasks.py:ro
+      - /home/agentuser/wfs-office/orders.py:/app/orders.py:ro
+      - /home/agentuser/wfs-office/sandbox_exec.py:/app/sandbox_exec.py:ro
+      - /home/agentuser/wfs-office/wfs_events.py:/app/wfs_events.py:ro
+      - /home/agentuser/wfs-office/wfs_sh_console.py:/app/wfs_sh_console.py:ro
+      - /home/agentuser/wfs-office/wfs_dashboard_stats.py:/app/wfs_dashboard_stats.py:ro
+      - /home/agentuser/wfs-office/static:/app/static:ro
+      # data = SALINAN rehearsal (bukan tasks.db produksi)
+      - /home/agentuser/wfs-office/rehearsal-data/tasks.db:/app/tasks.db
+      - /home/agentuser/wfs-office/rehearsal-data/orders.db:/app/orders.db
+      - /home/agentuser/wfs-office/rehearsal-data/config:/app/config
+      # default AI (baca .hermes/.env via HOME=/hermes-home)
+      - /home/agentuser/.hermes/.env:/hermes-home/.hermes/.env:ro
+      # fitur sandbox: exec container agent via socket docker host
+      - /var/run/docker.sock:/var/run/docker.sock
+      # sandbox_exec.py me-expand ~/wfs-office/sandboxes -> HOME=/hermes-home di container
+      - /home/agentuser/wfs-office/sandboxes:/hermes-home/wfs-office/sandboxes
