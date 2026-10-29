@@ -53,6 +53,23 @@ export default function App() {
   // dulu callback ini kosong () => {} sehingga 12 label fase (fokus, rapat,
   // makan siang, shift malam…) tidak pernah tampil di UI.
   const [officePhase, setOfficePhase] = useState(null)
+  // Siklus 159 — deep-link dari landing: #dashboard membuka Dashboard on-mount.
+  // Landing CTA "Lihat Dashboard" menautkan ke /app/#dashboard — tanpa ini
+  // hash hanya dilihat oleh server (404) atau terbuang. Jalur runtime tunggal:
+  // event 'wfs-toggle-dashboard' yang SAMA dgn shortcut D (tak ada duplikat state).
+  useEffect(() => {
+    if (window.location.hash !== '#dashboard') return
+    window.dispatchEvent(new CustomEvent('wfs-toggle-dashboard'))
+    window.history.replaceState(null, '', window.location.pathname + window.location.search)
+  }, [])
+  // Fallback landing → app: hash bisa hilang oleh redirect/pengetikan manual.
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('wfs_open_dashboard') !== '1') return
+      localStorage.removeItem('wfs_open_dashboard')
+      window.dispatchEvent(new CustomEvent('wfs-toggle-dashboard'))
+    } catch { /* storage privat/terblokir — abaikan */ }
+  }, [])
   const [conn, setConn] = useState(() => applyPollResult(null, { ok: false, error: 'init' }, 0))
   const [cyberpunk, setCyberpunk] = useState(() => {
     try { return typeof localStorage !== 'undefined' && localStorage.getItem('wfs_neon') === '1' } catch { return false }
