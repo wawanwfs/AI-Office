@@ -216,5 +216,5 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   [[-10],[-4.5],[1],[6.5]].forEach(([z])=>sh(16.87,2.5,z,-Math.PI/2,3.0,1.9));                                               // kanan
   [[6.6],[10.8]].forEach(([x])=>sh(x,2.6,13.27,Math.PI,3.4,1.9));                                                              // belakang
   [[-3.4],[1.4]].forEach(([z])=>sh(-16.79,2.5,z,Math.PI/2,3.0,1.9));                                                           // kiri
-  return { wallDefs, get collected(){return collected}, paintWallNight, get wallTexCount(){return wallTexPaints.length} };
+  return { wallDefs, get collected(){return collected}, paintWallNight, get wallTexCount(){return wallTexPaints.length}, get wallTexPaints(){return wallTexPaints} };
 }

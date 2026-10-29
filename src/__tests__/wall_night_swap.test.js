@@ -24,17 +24,20 @@ describe('WALL_NIGHT — palet dinding malam', () => {
     expect(WALL_TEX_BOTTOM).toBe('rgba(0,0,0,.08)');
   });
   it('repaint malam = painter parametrik dipanggil dgn warna palet malam (bukan API baru)', () => {
-    const ops = [];
+    const styles = [];
+    const track = (v) => { styles.push(v); return v; };
     const ctx = {
-      fillStyle: '#000', strokeStyle: '#000', lineWidth: 1,
+      get fillStyle() { return this._fs; }, set fillStyle(v) { this._fs = track(v); },
+      get strokeStyle() { return this._ss; }, set strokeStyle(v) { this._ss = track(v); },
+      lineWidth: 1,
       createLinearGradient: () => ({ addColorStop() {} }),
-      fillRect: (...a) => ops.push(['fillRect', a[2]]),
-      beginPath: () => {}, moveTo: () => {}, lineTo: () => {}, stroke: () => {},
+      fillRect: () => {}, beginPath: () => {}, moveTo: () => {}, lineTo: () => {}, stroke: () => {},
     };
     drawWallTex(ctx, WALL_NIGHT.upper.base, WALL_NIGHT.upper.line, 512, 256, 64);
-    // fillRect pertama = warna dasar palet malam (fillRect(x,y,w,h) → cek via fillStyle terakhir sebelum call)
-    expect(ctx.fillStyle).toBe(WALL_NIGHT.upper.base);
-    expect(ops.length).toBeGreaterThan(0);
+    // warna dasar pertama = palet malam (fillRect pertama menutup seluruh kanvas);
+    // warna seam/nat = palet malam (strokeStyle, sebelum loop panel)
+    expect(styles[0]).toBe(WALL_NIGHT.upper.base);
+    expect(styles[1]).toBe(WALL_NIGHT.upper.line);
   });
 });
 
@@ -91,14 +94,23 @@ describe('createLighting — repaint dinding sesuai waktu (siklus 165)', () => {
     L.apply(1100);
     expect(calls).toEqual([true]);
   });
-  it('tanpa wallPainter (harness lama): apply aman tanpa error — sky swap tetap jalan', () => {
+  it('tanpa wallPainter (harness lama): apply aman tanpa error — wallNight tetap false', () => {
     const L = createLighting({
       ambient: { intensity: 1 }, sun: { intensity: 1, color: { set: vi.fn() } },
       renderer: { toneMappingExposure: 1 }, scene: { background: null, fog: { color: null } },
       agentData: [], THREE: { Color: class {} },
     });
     expect(() => L.apply(60)).not.toThrow();
-    expect(L.skyNight).toBe(true);
     expect(L.wallNight).toBe(false);
+    // guard terpisah: sky punya jalurnya sendiri (skyWinCanvas) — cek kontrak lama tak tersentuh
+    const skyCtx = { fillRect() {}, createLinearGradient: () => ({ addColorStop() {} }), createRadialGradient: () => ({ addColorStop() {} }), beginPath() {}, arc() {}, ellipse() {}, fill() {} };
+    const cv = { getContext: () => skyCtx, __needsUpdate: vi.fn() };
+    const L2 = createLighting({
+      ambient: { intensity: 1 }, sun: { intensity: 1, color: { set: vi.fn() } },
+      renderer: { toneMappingExposure: 1 }, scene: { background: null, fog: { color: null } },
+      agentData: [], THREE: { Color: class {} }, skyWinCanvas: cv,
+    });
+    L2.apply(60);
+    expect(L2.skyNight).toBe(true);
   });
 });
