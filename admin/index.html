@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>dibantuin — Admin</title>
+<style>
+  :root { --bg:#0f1115; --card:#1a1d24; --acc:#10E5A0; --txt:#e7eaf0; --mut:#8b93a3; }
+  * { margin:0; box-sizing:border-box; font-family:system-ui,-apple-system,sans-serif; }
+  body { background:var(--bg); color:var(--txt); display:flex; min-height:100vh; }
+  aside { width:220px; background:var(--card); padding:20px; }
+  aside h1 { font-size:18px; color:var(--acc); margin-bottom:24px; }
+  aside a { display:block; padding:10px 12px; border-radius:8px; color:var(--mut); text-decoration:none; margin-bottom:4px; }
+  aside a.active, aside a:hover { background:#242833; color:var(--txt); }
+  main { flex:1; padding:28px; }
+  h2 { margin-bottom:16px; font-size:20px; }
+  .stats { display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:14px; margin-bottom:24px; }
+  .stat { background:var(--card); border-radius:12px; padding:18px; }
+  .stat b { font-size:26px; color:var(--acc); display:block; }
+  .stat span { color:var(--mut); font-size:13px; }
+  table { width:100%; border-collapse:collapse; background:var(--card); border-radius:12px; overflow:hidden; }
+  th,td { padding:12px 14px; text-align:left; font-size:14px; }
+  th { color:var(--mut); font-weight:600; border-bottom:1px solid #2a2e38; }
+  tr+tr td { border-top:1px solid #2a2e38; }
+  input, button { padding:9px 12px; border-radius:8px; border:1px solid #2a2e38; background:#242833; color:var(--txt); font-size:14px; }
+  button { background:var(--acc); color:#0f1115; border:0; font-weight:700; cursor:pointer; }
+  .row { display:flex; gap:8px; margin-bottom:16px; flex-wrap:wrap; }
+  .del { background:#3a2028; color:#f88; padding:6px 10px; }
+  body.light { --bg:#f2f4f8; --card:#ffffff; --txt:#1a1d24; --mut:#5a6472; }
+  body.light input, body.light button.alt { background:#e8ebf1; border-color:#d5dae3; }
+  #theme { position:fixed; top:12px; right:14px; z-index:98; font-size:16px; background:transparent; border:0; cursor:pointer; }
+  /* SIKLUS 161: pembungkus main-app — disembunyikan saat belum login (form login tetap tampil). */
+  #main-app { display:flex; width:100%; }
+</style>
+</head>
+<body>
+<button id="theme" onclick="toggleTheme()" title="Ganti tema">🌙</button>
+<div id="login-screen" style="position:fixed;inset:0;background:var(--bg);display:flex;align-items:center;justify-content:center;z-index:99;">
+  <div style="background:var(--card);padding:32px;border-radius:14px;width:300px;">
+    <h2 style="color:var(--acc);margin-bottom:18px;">dibantuin Admin</h2>
+    <input id="l-user" placeholder="Username" style="width:100%;margin-bottom:10px;">
+    <input id="l-pass" type="password" placeholder="Password" style="width:100%;margin-bottom:10px;">
+    <button onclick="login()" style="width:100%;">Masuk</button>
+    <p id="l-err" style="color:#f66;font-size:13px;margin-top:10px;"></p>
+  </div>
+</div>
+<div id="main-app">
+<aside>
+  <h1>dibantuin</h1>
+  <a class="active" href="#" onclick="show('dash',this)">Dashboard</a>
+  <a href="#" onclick="show('tenants',this)">Tenants</a>
+  <a href="#" onclick="show('convs',this)">Conversations</a>
+  <a href="#" onclick="show('kb',this)">Knowledge Base</a>
+  <a href="#" onclick="show('agenttasks',this)">Agent Tasks</a>
+  <a href="#" onclick="logout()" style="margin-top:20px;color:#f66;">Keluar</a>
+</aside>
+<main>
+  <section id="dash">
+    <h2>Dashboard</h2>
+    <div class="stats">
+      <div class="stat"><b id="s-tenants">–</b><span>Tenants</span></div>
+      <div class="stat"><b id="s-convs">–</b><span>Conversations</span></div>
+      <div class="stat"><b id="s-msgs">–</b><span>Pesan AI</span></div>
+    </div>
+  </section>
+  <section id="tenants" hidden>
+    <h2>Tenants</h2>
+    <div class="row">
+      <input id="t-name" placeholder="Nama toko">
+      <input id="t-slug" placeholder="slug">
+      <button onclick="addTenant()">Tambah</button>
+    </div>
+    <table><thead><tr><th>ID</th><th>Nama</th><th>Slug</th></tr></thead><tbody id="tenant-rows"></tbody></table>
+  </section>
+  <section id="convs" hidden>
+    <h2>Conversations</h2>
+    <div class="row"><input id="c-tenant" placeholder="Tenant ID" style="width:120px"><button onclick="loadConvs()">Muat</button><button style="background:#242833;color:var(--acc);" onclick="exportCSV()">⬇ Export CSV</button></div>
+    <table><thead><tr><th>ID</th><th>Customer</th><th>Status</th></tr></thead><tbody id="conv-rows"></tbody></table>
+    <h2 style="margin-top:24px;font-size:16px;" id="conv-detail-title"></h2>
+    <div id="conv-detail" style="background:var(--card);border-radius:12px;padding:16px;display:none;max-height:400px;overflow-y:auto;"></div>
+  </section>
+  <section id="kb" hidden>
+    <h2>Knowledge Base</h2>
+    <div class="row"><input id="kb-tenant" placeholder="Tenant ID" style="width:110px" value="1"><button onclick="loadKB()">Muat</button></div>
+    <div class="row">
+      <input id="kb-key" placeholder="key (mis: menu)" style="width:180px">
+      <input id="kb-value" placeholder="value (mis: Ayam Geprek Rp15.000)" style="flex:1;min-width:240px">
+      <button onclick="upsertKB()">Simpan</button>
+    </div>
+    <table><thead><tr><th>ID</th><th>Key</th><th>Value</th><th></th></tr></thead><tbody id="kb-rows"></tbody></table>
+  </section>
+  <section id="agenttasks" hidden>
+    <h2>Agent Tasks (Task Engine)</h2>
+    <div class="row"><button onclick="loadTasks()">Muat Status</button><span id="task-sum" style="color:var(--mut);font-size:13px;align-self:center;"></span></div>
+    <table><thead><tr><th>ID</th><th>Agent</th><th>Judul</th><th>Status</th><th>Files</th></tr></thead><tbody id="task-rows"></tbody></table>
+  </section>
+</main>
+<script>
+// SIKLUS 161: same-origin — nginx kontainer proxy /api/ → backend:8000, dan
+// server :9503 mem-proxy /api/admin/* (GET/POST/DELETE + Authorization).
+// Base `localhost:8000` mati bagi browser eksternal (bug kelas sama dgn widget, siklus 160).
+const API = '';
+let TOKEN = sessionStorage.getItem('dib_token') || '';
+// SIKLUS 161: dulu `if (!TOKEN) document.body.style.display='none'` — menyembunyikan
+// SEMUA body termasuk form login (blank page), sementara loadDash() tetap jalan
+// tanpa token → api() 401 → location.reload() berulang = panel tak pernah bisa
+// dipakai. Kini: main-app (aside+main) saja yang disembunyikan; form login selalu
+// tampil; loadDash() hanya saat token ada.
+const MAIN_APP = document.getElementById('main-app');
+if (!TOKEN && MAIN_APP) MAIN_APP.style.display = 'none';
+async function login() {
+  const username = document.getElementById('l-user').value;
+  const password = document.getElementById('l-pass').value;
+  const r = await fetch(API + '/api/auth/login', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({username, password})
+  });
+  if (!r.ok) { document.getElementById('l-err').textContent = 'Login salah'; return; }
+  const d = await r.json();
+  TOKEN = d.access_token;
+  sessionStorage.setItem('dib_token', TOKEN);
+  document.getElementById('login-screen').remove();
+  if (MAIN_APP) MAIN_APP.style.display = '';
+  loadDash();
+}
+async function api(path, opts = {}) {
+  const r = await fetch(API + path, {...opts, headers: {...(opts.headers||{}), 'Authorization': 'Bearer ' + TOKEN}});
+  if (r.status === 401) { sessionStorage.removeItem('dib_token'); location.reload(); return []; }
+  return r.json();
+}
+function logout() {
+  sessionStorage.removeItem('dib_token');
+  location.reload();
+}
+function show(id, el) {
+  document.querySelectorAll('main section').forEach(s => s.hidden = s.id !== id);
+  document.querySelectorAll('aside a').forEach(a => a.classList.remove('active'));
+  el.classList.add('active');
+  if (id === 'dash') loadDash();
+  if (id === 'tenants') loadTenants();
+}
+async function loadDash() {
+  // SIKLUS 161: tanpa token → tampilkan login (jangan 401→reload berulang).
+  if (!TOKEN) return;
+  const s = await api('/api/admin/stats');
+  document.getElementById('s-tenants').textContent = s.tenants;
+  document.getElementById('s-convs').textContent = s.conversations;
+  document.getElementById('s-msgs').textContent = s.messages;
+}
+async function loadTenants() {
+  const t = await api('/api/admin/tenants');
+  document.getElementById('tenant-rows').innerHTML =
+    t.map(x => `<tr><td>${x.id}</td><td>${x.name}</td><td>${x.slug}</td></tr>`).join('');
+}
+async function addTenant() {
+  const name = document.getElementById('t-name').value;
+  const slug = document.getElementById('t-slug').value;
+  await api('/api/admin/tenants', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({name, slug})
+  });
+  loadTenants();
+}
+async function loadConvs() {
+  const tid = document.getElementById('c-tenant').value;
+  const c = await api(`/api/admin/conversations?tenant_id=${tid}`);
+  document.getElementById('conv-rows').innerHTML =
+    c.map(x => `<tr><td><a href="#" onclick="loadConvDetail(${x.id})" style="color:var(--acc)">${x.id}</a></td><td>${x.customer_email || '–'}</td><td>${x.status}</td></tr>`).join('') || '<tr><td colspan=3>Kosong</td></tr>';
+}
+async function loadConvDetail(cid) {
+  const m = await api(`/api/admin/conversations/${cid}/messages`);
+  document.getElementById('conv-detail-title').textContent = `Conversation #${cid}`;
+  const box = document.getElementById('conv-detail');
+  box.style.display = 'block';
+  box.innerHTML = m.map(x =>
+    `<div style="margin-bottom:10px;"><span style="color:var(--mut);font-size:12px;">${x.role} · ${x.created_at}</span><br>${x.content.replace(/</g,'&lt;').replace(/\n/g,'<br>')}</div>`
+  ).join('') || 'Kosong';
+}
+async function loadKB() {
+  const tid = document.getElementById('kb-tenant').value;
+  const k = await api(`/api/admin/knowledge?tenant_id=${tid}`);
+  document.getElementById('kb-rows').innerHTML =
+    k.map(x => `<tr><td>${x.id}</td><td>${x.key}</td><td>${x.value}</td>
+      <td><button class="del" onclick="delKB(${x.id},${tid})">Hapus</button></td></tr>`).join('')
+    || '<tr><td colspan=4>Kosong — AI pakai menu default</td></tr>';
+}
+async function upsertKB() {
+  const tenant_id = parseInt(document.getElementById('kb-tenant').value);
+  const key = document.getElementById('kb-key').value.trim();
+  const value = document.getElementById('kb-value').value.trim();
+  if (!key || !value) return;
+  await api('/api/admin/knowledge', {
+    method: 'POST', headers: {'Content-Type': 'application/json'},
+    body: JSON.stringify({tenant_id, key, value})
+  });
+  document.getElementById('kb-key').value = '';
+  document.getElementById('kb-value').value = '';
+  loadKB();
+}
+async function delKB(id, tid) {
+  await api(`/api/admin/knowledge/${id}`, {method: 'DELETE'});
+  loadKB();
+}
+// SIKLUS 161: same-origin via :9503 → /wfs-api/tasks (proxy → gateway :8787,
+// GET publik). IP Tailscale 100.x mati bagi browser eksternal (di luar VM);
+// panel kanonik kini di :9503/admin/ — bila dibuka langsung dari :3000 (LAN),
+// fetch gagal → baris "Gagal memuat task engine" (jujur, bukan data palsu).
+const TASK_URL = '/wfs-api';
+function toggleTheme() {
+  document.body.classList.toggle('light');
+  const light = document.body.classList.contains('light');
+  document.getElementById('theme').textContent = light ? '☀️' : '🌙';
+  localStorage.setItem('dib_theme', light ? 'light' : 'dark');
+}
+if (localStorage.getItem('dib_theme') === 'light') {
+  document.body.classList.add('light');
+  document.addEventListener('DOMContentLoaded', () => { const t=document.getElementById('theme'); if(t) t.textContent='☀️'; });
+}
+async function loadTasks() {
+  let ts = [];
+  try {
+    const r = await fetch(TASK_URL + '/tasks');
+    const d = await r.json();
+    ts = d.tasks || [];
+  } catch { ts = []; }
+  const col = {done:'#10E5A0', running:'#f59e0b', failed:'#f66', review:'#59a5ff', pending:'#8b93a3'};
+  document.getElementById('task-rows').innerHTML = ts.map(t =>
+    `<tr><td>${t.id}</td><td>${t.agent_id||'–'}</td><td>${t.title}</td>
+     <td style="color:${col[t.status]||'#888'};font-weight:600;">${t.status}</td><td>${(t.files||[]).length}</td></tr>`
+  ).join('') || '<tr><td colspan=5>Gagal memuat task engine</td></tr>';
+  const c = {};
+  ts.forEach(t => c[t.status] = (c[t.status]||0)+1);
+  document.getElementById('task-sum').textContent = ts.length + ' task — ' +
+    Object.entries(c).map(([k,v])=>`${k}:${v}`).join(' · ');
+}
+async function exportCSV() {
+  const tid = document.getElementById('c-tenant').value || '1';
+  const cs = await api(`/api/admin/conversations?tenant_id=${tid}`);
+  let rows = [['conversation_id','customer','role','content','created_at']];
+  for (const c of (cs||[])) {
+    const m = await api(`/api/admin/conversations/${c.id}/messages`);
+    (m||[]).forEach(x => rows.push([c.id, c.customer_email||'', x.role, (x.content||'').replace(/"/g,'""').replace(/\n/g,' '), x.created_at]));
+  }
+  const csv = rows.map(r => r.map(v => `"${v}"`).join(',')).join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.download = `conversations_tenant${tid}.csv`;
+  a.click();
+}
+if (document.getElementById('agenttasks')) loadTasks();
+loadDash();
+</script>
+</div>
+</body>
+</html>

@@ -1,0 +1,17 @@
+# dependencies
+node_modules/
+
+# python
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# secrets & runtime data (jangan pernah commit)
+.env
+db/data/
+redis/data/
+
+# logs & OS
+*.log
+.DS_Store

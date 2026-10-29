@@ -1,0 +1,239 @@
+// ============================================================
+// DBG PROJECT — Skema Database PostgreSQL (Prisma ORM)
+// ============================================================
+// CARA PAKAI:
+//   1) Buat .env: DATABASE_URL="postgresql://user:pass@localhost:5432/dbg?schema=public"
+//   2) Migrasi awal:    npx prisma migrate dev --name init
+//   3) Generate client: npx prisma generate
+//   4) Seeder: simpan blok "prisma/seed.ts" di bagian bawah file ini,
+//      lalu jalankan: npx prisma db seed
+//
+// ERD RINGKAS:
+//   roles 1──N users
+//   users 1──N orders            (petugas pembuat order)
+//   customers 1──N orders
+//   orders 1──N order_items N──1 products
+//   categories 1──N products
+//   orders 1──1 payments
+//
+// INDEKS UNTUK KOLOM SERING DI-QUERY:
+//   users:       email (unique), role_id, is_active
+//   products:    sku (unique), category_id, name, is_active
+//   orders:      order_number (unique), customer_id, user_id, status, created_at
+//   order_items: order_id, product_id, unique(order_id, product_id)
+//   payments:    order_id (unique), status
+//   customers:   email (unique), name, phone
+// ============================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ---------- AUTH & USER MANAGEMENT ----------
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique @db.VarChar(50) // ADMIN | MANAGER | STAFF
+  description String?  @db.Text
+  createdAt   DateTime @default(now()) @map("created_at")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  users User[]
+
+  @@map("roles")
+}
+
+model User {
+  id           Int      @id @default(autoincrement())
+  roleId       Int      @map("role_id")
+  email        String   @unique @db.VarChar(255)
+  passwordHash String   @map("password_hash") @db.VarChar(255)
+  name         String   @db.VarChar(150)
+  phone        String?  @db.VarChar(30)
+  isActive     Boolean  @default(true) @map("is_active")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  role   Role    @relation(fields: [roleId], references: [id], onDelete: Restrict)
+  orders Order[]
+
+  @@index([roleId])
+  @@index([isActive])
+  @@map("users")
+}
+
+// ---------- MASTER DATA ----------
+model Category {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(100)
+  slug      String   @unique @db.VarChar(120)
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  products Product[]
+
+  @@index([name])
+  @@map("categories")
+}
+
+model Product {
+  id         Int      @id @default(autoincrement())
+  sku        String   @unique @db.VarChar(50)
+  name       String   @db.VarChar(200)
+  categoryId Int      @map("category_id")
+  price      Decimal  @db.Decimal(12, 2)
+  stock      Int      @default(0)
+  isActive   Boolean  @default(true) @map("is_active")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  category   Category    @relation(fields: [categoryId], references: [id], onDelete: Restrict)
+  orderItems OrderItem[]
+
+  @@index([categoryId])
+  @@index([name])
+  @@index([isActive])
+  @@map("products")
+}
+
+model Customer {
+  id        Int      @id @default(autoincrement())
+  name      String   @db.VarChar(150)
+  email     String?  @unique @db.VarChar(255)
+  phone     String?  @db.VarChar(30)
+  address   String?  @db.Text
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  orders Order[]
+
+  @@index([name])
+  @@index([phone])
+  @@map("customers")
+}
+
+// ---------- TRANSAKSI ----------
+enum OrderStatus {
+  PENDING
+  CONFIRMED
+  SHIPPED
+  COMPLETED
+  CANCELLED
+
+  @@map("order_status")
+}
+
+model Order {
+  id          Int         @id @default(autoincrement())
+  orderNumber String      @unique @map("order_number") @db.VarChar(30)
+  customerId  Int         @map("customer_id")
+  userId      Int         @map("user_id")
+  status      OrderStatus @default(PENDING)
+  totalAmount Decimal     @db.Decimal(14, 2)
+  note        String?     @db.Text
+  createdAt   DateTime    @default(now()) @map("created_at")
+  updatedAt   DateTime    @updatedAt @map("updated_at")
+
+  customer Customer    @relation(fields: [customerId], references: [id], onDelete: Restrict)
+  user     User        @relation(fields: [userId], references: [id], onDelete: Restrict)
+  items    OrderItem[]
+  payment  Payment?
+
+  @@index([customerId])
+  @@index([userId])
+  @@index([status])
+  @@index([createdAt])
+  @@map("orders")
+}
+
+model OrderItem {
+  id        Int     @id @default(autoincrement())
+  orderId   Int     @map("order_id")
+  productId Int     @map("product_id")
+  quantity  Int
+  unitPrice Decimal @map("unit_price") @db.Decimal(12, 2)
+
+  order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Restrict)
+
+  @@unique([orderId, productId], map: "uq_order_product")
+  @@index([orderId])
+  @@index([productId])
+  @@map("order_items")
+}
+
+enum PaymentMethod {
+  CASH
+  TRANSFER
+  E_WALLET
+  CARD
+
+  @@map("payment_method")
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  FAILED
+  REFUNDED
+
+  @@map("payment_status")
+}
+
+model Payment {
+  id        Int           @id @default(autoincrement())
+  orderId   Int           @unique @map("order_id")
+  amount    Decimal       @db.Decimal(14, 2)
+  method    PaymentMethod
+  status    PaymentStatus @default(PENDING)
+  paidAt    DateTime?     @map("paid_at")
+  createdAt DateTime      @default(now()) @map("created_at")
+  updatedAt DateTime      @updatedAt @map("updated_at")
+
+  order Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+  @@map("payments")
+}
+
+// ============================================================
+// SEEDER DUMMY (prisma/seed.ts) — jalankan: npx prisma db seed
+// ============================================================
+// import { PrismaClient } from "@prisma/client";
+// import bcrypt from "bcryptjs";
+//
+// const prisma = new PrismaClient();
+//
+// async function main() {
+//   const admin   = await prisma.role.upsert({ where: { name: "ADMIN" },   update: {}, create: { name: "ADMIN",   description: "Akses penuh sistem" } });
+//   const manager = await prisma.role.upsert({ where: { name: "MANAGER" }, update: {}, create: { name: "MANAGER", description: "Kelola operasional" } });
+//   await prisma.role.upsert({ where: { name: "STAFF" },   update: {}, create: { name: "STAFF",   description: "Operasional harian" } });
+//
+//   const mkUser = (email: string, name: string, roleId: number) =>
+//     prisma.user.upsert({ where: { email }, update: {}, create: { email, name, roleId, passwordHash: bcrypt.hashSync("password123", 10) } });
+//   await mkUser("admin@dbg.dev", "Admin DBG", admin.id);
+//   await mkUser("manager@dbg.dev", "Manager DBG", manager.id);
+//   const staffUser = await mkUser("staff@dbg.dev", "Staff DBG", staff.id);
+//
+//   const elektronik = await prisma.category.upsert({ where: { slug: "elektronik" }, update: {}, create: { name: "Elektronik", slug: "elektronik" } });
+//   const peralatan  = await prisma.category.upsert({ where: { slug: "peralatan" },  update: {}, create: { name: "Peralatan",  slug: "peralatan" } });
+//   const router = await prisma.product.upsert({ where: { sku: "DBG-ELC-001" }, update: {}, create: { sku: "DBG-ELC-001", name: "Router DBG-100", categoryId: elektronik.id, price: 750000, stock: 50 } });
+//   await prisma.product.upsert({ where: { sku: "DBG-PRL-001" }, update: {}, create: { sku: "DBG-PRL-001", name: "Bor Listrik DBG-200", categoryId: peralatan.id, price: 1250000, stock: 30 } });
+//
+//   const cust = await prisma.customer.upsert({ where: { email: "budi@mail.com" }, update: {}, create: { name: "Budi Santoso", email: "budi@mail.com", phone: "081234567890", address: "Jl. Merdeka No. 1, Jakarta" } });
+//   const order = await prisma.order.create({ data: { orderNumber: "ORD-2024-0001", customerId: cust.id, userId: staffUser.id, status: "PENDING", totalAmount: 1500000, items: { create: [{ productId: router.id, quantity: 2, unitPrice: 750000 }] } } });
+//   await prisma.payment.create({ data: { orderId: order.id, amount: 1500000, method: "TRANSFER", status: "PENDING" } });
+//
+//   console.log("Seed selesai: 3 role, 3 user, 2 kategori, 2 produk, 1 customer, 1 order + payment.");
+// }
+//
+// main().catch((e) => { console.error(e); process.exit(1); }).finally(() => prisma.$disconnect());
+//
+// Tambahkan di package.json:
+//   "prisma": { "seed": "tsx prisma/seed.ts" }
+//   devDependencies: "tsx", "bcryptjs", "@types/bcryptjs"
+// ============================================================

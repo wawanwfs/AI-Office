@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<title>Widget Chat dibantuin</title>
+<style>
+  #dbt-btn { position:fixed; bottom:20px; right:20px; width:56px; height:56px; border-radius:50%;
+    background:#10E5A0; border:0; cursor:pointer; font-size:24px; box-shadow:0 4px 14px rgba(0,0,0,.25); z-index:9999; }
+  #dbt-box { position:fixed; bottom:88px; right:20px; width:320px; height:420px; background:#fff;
+    border-radius:14px; box-shadow:0 8px 30px rgba(0,0,0,.25); display:none; flex-direction:column; overflow:hidden; z-index:9999; font-family:system-ui,sans-serif; }
+  #dbt-head { background:#10E5A0; color:#0f1115; padding:12px 16px; font-weight:700; }
+  #dbt-msgs { flex:1; overflow-y:auto; padding:12px; background:#f6f7f9; }
+  .dbt-m { max-width:80%; padding:8px 12px; border-radius:12px; margin-bottom:8px; font-size:14px; line-height:1.4; white-space:pre-wrap; }
+  .dbt-ai { background:#fff; border:1px solid #e3e6ea; }
+  .dbt-me { background:#10E5A0; color:#0f1115; margin-left:auto; }
+  #dbt-form { display:flex; border-top:1px solid #e3e6ea; }
+  #dbt-in { flex:1; border:0; padding:12px; font-size:14px; outline:0; }
+  #dbt-send { border:0; background:#10E5A0; color:#0f1115; font-weight:700; padding:0 18px; cursor:pointer; }
+</style>
+</head>
+<body style="margin:0;font-family:system-ui">
+<div id="dbt-box">
+  <div id="dbt-head" style="display:flex;justify-content:space-between;align-items:center;"><span id="dbt-brand">dibantuin AI CS</span><button onclick="clearHist()" style="background:transparent;border:0;color:#0f1115;cursor:pointer;font-size:12px;" title="Hapus riwayat">🗑</button></div>
+  <div id="dbt-msgs"></div>
+  <div id="dbt-quick" style="padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid #e3e6ea;background:#fff;"></div>
+  <form id="dbt-form">
+    <input id="dbt-in" placeholder="Tulis pesan..." autocomplete="off">
+    <button id="dbt-send">Kirim</button>
+  </form>
+</div>
+<button id="dbt-btn">💬</button>
+<script>
+const params = new URLSearchParams(location.search);
+const TENANT_ID = parseInt(params.get('tenant') || '1');
+const API = params.get('api') || window.DBT_API || '/api/admin';
+// Judul pakai nama tenant jika diberikan: ?tenant=2&name=Toko%20Aku
+const BRAND = params.get('name') || 'dibantuin AI CS';
+document.getElementById('dbt-brand').textContent = BRAND;
+const box = document.getElementById('dbt-box'), msgs = document.getElementById('dbt-msgs');
+function clearHist() {
+  localStorage.removeItem(HKEY);
+  msgs.innerHTML = '';
+  add('ai', 'Riwayat dihapus. Ada yang bisa dibantu? 😊');
+}
+// Quick replies: klik → langsung kirim sebagai pesan
+const QUICK = ['Cek status pesanan', 'Lihat menu & harga', 'Jam buka?'];
+function renderQuick() {
+  const q = document.getElementById('dbt-quick');
+  q.innerHTML = '';
+  QUICK.forEach(t => {
+    const b = document.createElement('button');
+    b.textContent = t;
+    b.style.cssText = 'border:1px solid #10E5A0;background:#f0fdf9;color:#0f1115;border-radius:14px;padding:5px 10px;font-size:12px;cursor:pointer;';
+    b.onclick = () => {
+      const inp = document.getElementById('dbt-in');
+      inp.value = t;
+      document.getElementById('dbt-form').requestSubmit();
+    };
+    q.appendChild(b);
+  });
+}
+renderQuick();
+document.getElementById('dbt-btn').onclick = () => {
+  box.style.display = box.style.display === 'flex' ? 'none' : 'flex';
+  if (!msgs.children.length) add('ai', 'Halo! 👋 Aku AI CS dibantuin. Ada yang bisa dibantu? (bisa cek status pesanan, sebut nomor order ya)');
+};
+function add(role, text) {
+  const d = document.createElement('div');
+  d.className = 'dbt-m dbt-' + role;
+  d.textContent = text;
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+  // simpan riwayat lokal
+  const hist = JSON.parse(localStorage.getItem(HKEY) || '[]');
+  hist.push({role, text, t: Date.now()});
+  localStorage.setItem('dbt_hist', JSON.stringify(hist.slice(-50)));
+}
+// muat riwayat saat buka pertama (per tenant agar tidak tercampur)
+const HKEY = 'dbt_hist_t' + TENANT_ID;
+(function restore(){
+  const hist = JSON.parse(localStorage.getItem(HKEY) || '[]');
+  hist.forEach(h => addRaw(h.role, h.text));
+})();
+function addRaw(role, text) {
+  const d = document.createElement('div');
+  d.className = 'dbt-m dbt-' + role;
+  d.textContent = text;
+  msgs.appendChild(d);
+  msgs.scrollTop = msgs.scrollHeight;
+}
+document.getElementById('dbt-form').onsubmit = async (e) => {
+  e.preventDefault();
+  const inp = document.getElementById('dbt-in');
+  const text = inp.value.trim();
+  if (!text) return;
+  inp.value = '';
+  add('me', text);
+  add('ai', '…');
+  try {
+    const r = await fetch(API + '/widget/chat', {
+      method: 'POST', headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({tenant_id: TENANT_ID, message: text})
+    });
+    const d = await r.json();
+    msgs.lastChild.textContent = d.reply || 'Maaf, terjadi gangguan.';
+  } catch (err) {
+    msgs.lastChild.textContent = 'Gagal terhubung ke server.';
+  }
+};
+</script>
+</body>
+</html>

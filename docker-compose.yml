@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: dibantuin
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dibantuin_dev}
+      POSTGRES_DB: dibantuin
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dibantuin"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  backend:
+    build: ./backend
+    env_file: .env
+    environment:
+      DATABASE_URL: postgresql+psycopg://dibantuin:${DB_PASSWORD:-dibantuin_dev}@db:5432/dibantuin
+      REDIS_URL: redis://redis:6379/0
+    volumes:
+      - /home/agentuser/wfs-office/orders.db:/wfs-data/orders.db:ro
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    ports:
+      - "8000:8000"
+
+  admin:
+    build: ./admin
+    depends_on:
+      - backend
+    ports:
+      - "3000:3000"
+
+  widget:
+    build: ./widget
+    ports:
+      - "3001:3001"
+
+volumes:
+  pgdata:
