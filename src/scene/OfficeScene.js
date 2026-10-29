@@ -1131,7 +1131,7 @@ setTimeout(()=>{
   }catch{ /* abaikan: bubble intro opsional */ }
 },1200);
 
-  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__skyNight=()=>__light.skyNight; window.__skyCv=__skyCv; window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
+  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__skyNight=()=>__light.skyNight; window.__skyCv=__skyCv; window.__wallNight=()=>__light.wallNight; window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
 window.__renderer=renderer; // debug/e2e: info.memory.textures/geometries (probe kebocoran tekstur)
 window.__spawnBubble=(x,y,z,text,color,anchor)=>createBubble(x,y,z,text,color,anchor); // debug/e2e probe kebocoran (jalur createBubble asli)
   // Badge status real-time: poll gateway tiap 20s, warnai badge dada sesuai status task
@@ -1275,7 +1275,7 @@ office.add(wallTitle);
 // Kamera default ada di sisi z negatif & x positif => dinding LATAR = z=+9.5 (belakang) dan x=-12.5 (kiri).
 // Dinding dekat kamera (z=-9.5, x=+12.5) tetap kaca transparan agar interior terlihat.
 // --- DINDING KANTOR SOLID + LOGO WFS PROJECT (builder murni di parts/walls.js, diuji unit) ---
-createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWinMats:__skyWinMats });
+const __wallsRt=createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWinMats:__skyWinMats });
 
 // ═══ JAM DINDING (modul parts/room.js) ═══
 const __clk=createWallClock({THREE,office,M},-4.6,2.9,13.27,Math.PI);
@@ -1323,7 +1323,7 @@ const drawScreen=(s,i)=>{ if(shouldRedrawScreenAt(frame,i)) drawScreenFrame(s,fr
 let timeOfDay=(()=>{ // mulai dari jam NYATA saat load (biar jam dinding & HUD terasa hidup),
   // dibulatkan ke menit; disinkronkan dgn sim clock (1 hari kerja ≈ 12 mnt nyata)
   const d=new Date();return d.getHours()*60+d.getMinutes();})();
-const __light=createLighting({THREE,scene,renderer,sun,ambient,agentData,skyWinCanvas:__skyCv,onTimeUpdate,onStatusUpdate,onTick:m=>updateMeeting(m),onTime:m=>applySimTime(m,false)});
+const __light=createLighting({THREE,scene,renderer,sun,ambient,agentData,skyWinCanvas:__skyCv,wallPainter:__wallsRt&&__wallsRt.paintWallNight?__wallsRt:null,onTimeUpdate,onStatusUpdate,onTick:m=>updateMeeting(m),onTime:m=>applySimTime(m,false)});
 let __sim={acc:0,last:null,manual:false,lastManualSet:0,time:timeOfDay};
 // Siklus 120: applySimTime = set jam simulasi TANPA re-apply lighting (dipakai
 // onTime dari daycycle.apply — dulu onTime→updateTime→__light.apply→onTime =

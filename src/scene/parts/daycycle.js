@@ -64,6 +64,23 @@ export function createLighting(ctx) {
     if (skyCanvas.__needsUpdate) skyCanvas.__needsUpdate();
   }
 
+  // ── Siklus 165: dinding kantor ikut siang↔malam ──
+  // Dinding atas & wainscot = MeshBasicMaterial (tidak bergantung pencahayaan)
+  // dgn tekstur palet siang — tanpa ini dinding tetap terang penuh saat malam
+  // (kelas bug sama dgn jendela). paintWallNight dari createWalls me-repaint
+  // semua kanvas tekstur dinding dgn palet WALL_NIGHT; guard state terpisah
+  // dgn sky (biar test/harness lama tanpa wallPainter tetap aman), idempoten.
+  const wallRt = ctx.wallPainter || null;
+  let wallNight = false;
+  let wallReady = false; // createWalls menggambar tekstur siang saat init
+  function paintWalls(night) {
+    if (!wallRt || typeof wallRt.paintWallNight !== 'function') return;
+    if (!wallReady) { wallReady = true; if (!night) return; } // sudah siang di kanvas — repaint siang tak perlu
+    if (wallNight === night) return;
+    wallNight = night;
+    wallRt.paintWallNight(night);
+  }
+
   function apply(min) {
     current = min;
     onTimeUpdate && onTimeUpdate(min);
@@ -82,6 +99,8 @@ export function createLighting(ctx) {
     agentData.forEach((a) => { a.dGlow.intensity = 0.15 + (1 - d) * 0.3; });
     // Jendela: langit malam saat gelap (daylight ≤ 0.55), siang saat terang
     paintSkyNight(d <= 0.55);
+    // Dinding: palet malam saat gelap (siklus 165) — sinkron dgn jendela
+    paintWalls(d <= 0.55);
     onTick && onTick(min);
     // Siklus 120: __setTime (manual) harus meng-update jam simulasi juga — dulu
     // __setTime hanya apply lighting + updateMeeting, tapi __sim.time tidak
@@ -89,7 +108,7 @@ export function createLighting(ctx) {
     // lama. Callback opsional (tanpa mode manual — slider React punya jalurnya).
     onTime && onTime(min);
   }
-  return { apply, get minutes() { return current; }, get skyNight() { return skyNight; } };
+  return { apply, get minutes() { return current; }, get skyNight() { return skyNight; }, get wallNight() { return wallNight; } };
 }
 
 // ── Mode neon: kumpulan "saklar" yang didaftarkan, bukan pemindaian seluruh scene ──

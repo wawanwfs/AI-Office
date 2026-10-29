@@ -4,6 +4,19 @@
 export const WALL_TEX_TOP = 'rgba(255,255,255,.12)';
 export const WALL_TEX_BOTTOM = 'rgba(0,0,0,.08)';
 
+// ── Palet dinding MALAM (siklus 165): dulu 8 tekstur dinding (panel atas pucat
+// #E6EAF1 + wainscot kayu #8A6244) digambar SEKALI dgn palet siang via
+// MeshBasicMaterial ("tidak bergantung pencahayaan") — jam malam (daylight 0.3,
+// latar NAVY, lantai Lambert menggelap, jendela malam) dinding tetap terang
+// penuh = kelas bug sama dgn jendela siklus 164. createWalls me-repaint kanvas
+// dgn palet ini saat daylight ≤ 0.55 (lihat daycycle.js).
+// Painter drawWallTex PARAMETRIK (base+line di-inject) → repaint = panggil ulang
+// painter dgn warna malam; urutan & pola panel/nat/bevel identik siang.
+export const WALL_NIGHT = {
+  upper: { base: '#1B2436', line: 'rgba(96,116,150,0.32)' }, // panel atas: biru arsitektural gelap, seam samar
+  wood: { base: '#3B2B1D', line: 'rgba(20,12,6,0.45)' },     // wainscot kayu: jati gelap, tetap kayu
+};
+
 export function drawWallTex(ctx, base, line, wpx = 512, hpx = 256, step = 64) {
   ctx.fillStyle = base;
   ctx.fillRect(0, 0, wpx, hpx);

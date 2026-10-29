@@ -1,5 +1,5 @@
 import { wallFadeTick } from './wall_fade.js';
-import { drawWallTex } from './wall_canvas.js';
+import { drawWallTex, WALL_NIGHT } from './wall_canvas.js';
 import { drawWallLogo } from './logo_canvas.js';
 import { drawWelcomeSign } from './sign_canvas.js';
 import { uiTexture, uiMaterial } from './ui_colorspace.js';
@@ -12,10 +12,31 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   const __wallObjs=[];
   const W=(geo,mat,x,y,z,ry)=>{const m=new THREE.Mesh(geo,mat);m.position.set(x,y,z);if(ry)m.rotation.y=ry;office.add(m);__wallObjs.push(m);return m};
   const B=(w,h,d)=>new THREE.BoxGeometry(w,h,d);
+  // ── Siklus 165: tekstur dinding siang↔malam ──
+  // Dulu tiap tekstur dinding digambar SEKALI dgn palet siang (#E6EAF1/#8A6244)
+  // via MeshBasicMaterial — jam malam dinding tetap terang penuh (kelas bug
+  // jendela siklus 164). Painter drawWallTex parametrik → kanvas kini dicatat
+  // (wallTexPaints) dan bisa di-REPAINT dgn palet malam WALL_NIGHT tanpa
+  // membuat objek baru: semua material (termasuk klon wall-fade) berbagi map
+  // dgn referensi sama, cukup tex.needsUpdate (re-upload GPU).
+  const wallTexPaints=[]; // {cv,tex,base,line,wpx,hpx,step} — referensi utk repaint
   const tex=(base,line,wpx=512,hpx=256,step=64)=>{
     const c=document.createElement('canvas');c.width=wpx;c.height=hpx;
     drawWallTex(c.getContext('2d'),base,line,wpx,hpx,step);
-    const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;return t;
+    const t=new THREE.CanvasTexture(c);t.wrapS=t.wrapT=THREE.RepeatWrapping;
+    wallTexPaints.push({cv:c,tex:t,base,line,wpx,hpx,step});
+    return t;
+  };
+  // paintWallNight(night): repaint SEMUA kanvas dinding dgn palet terpilih.
+  // Guard status ada di pemanggil (daycycle) — fungsi ini murni repaint + flag.
+  const paintWallNight=(night)=>{
+    wallTexPaints.forEach(({cv,tex:t,base,line,wpx,hpx,step})=>{
+      // wainscot kayu (step 32) pakai palet kayu malam; panel atas pakai palet panel.
+      const pal=night?(step===32?WALL_NIGHT.wood:WALL_NIGHT.upper):null;
+      drawWallTex(cv.getContext('2d'),pal?pal.base:base,pal?pal.line:line,wpx,hpx,step);
+      t.needsUpdate=true;
+    });
+    return wallTexPaints.length;
   };
   const lit=(map)=>new THREE.MeshBasicMaterial({map}); // tidak bergantung pencahayaan -> selalu terang & terbaca
   const upperA=tex('#E6EAF1','rgba(120,138,165,.48)');upperA.repeat.set(16,1);
@@ -195,5 +216,5 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   [[-10],[-4.5],[1],[6.5]].forEach(([z])=>sh(16.87,2.5,z,-Math.PI/2,3.0,1.9));                                               // kanan
   [[6.6],[10.8]].forEach(([x])=>sh(x,2.6,13.27,Math.PI,3.4,1.9));                                                              // belakang
   [[-3.4],[1.4]].forEach(([z])=>sh(-16.79,2.5,z,Math.PI/2,3.0,1.9));                                                           // kiri
-  return { wallDefs, get collected(){return collected} };
+  return { wallDefs, get collected(){return collected}, paintWallNight, get wallTexCount(){return wallTexPaints.length} };
 }
