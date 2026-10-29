@@ -336,7 +336,7 @@ describe('perfStep — flag recovering bersih pasca-pemulihan (siklus 148)', () 
     const r = mockRenderer(1.5); const sun = mockSun();
     let s = { ...BASE, t0: 1000 };
     s = perfStep(s, 3000, 30, { renderer: r, sun }); // fps 15 → downgraded, PR 1.25
-    s = perfStep(s, 5000, 40, { renderer: r, sun }); // fps 5 → PR 1.0
+    s = perfStep(s, 5000, 60, { renderer: r, sun }); // fps 15 lagi → PR 1.0 (≥10: tanpa tangga shadow)
     return { s, r, sun };
   }
   it('pemulihan penuh (basePR tercapai) → recovering=false + downgraded=false (chip ideal, bukan biru permanen)', () => {
@@ -374,7 +374,7 @@ describe('perfStep — flag recovering bersih pasca-pemulihan (siklus 148)', () 
     let now = 5000, frame = 150;
     const seq = [60, 40, 60, 60]; // fps 30, 20, 30, 30
     for (const f of seq) { now += 2000; frame += f; cur = perfStep(cur, now, frame, { renderer: r, sun }); }
-    expect(cur.goodStreak).toBe(1); // hanya 2 sampel sehat terakhir yang hitung (setelah reset)
+    expect(cur.goodStreak).toBe(2); // hanya 2 sampel sehat terakhir yang menghitung (streak ketika sampel jelata terakhir di-reset)
     expect(r.current).toBe(1.0); // dulu: streak 4 → PR naik walau GPU napas jelata
     expect(cur.recovering).toBe(true); // sedang mencoba lagi, belum selesai
   });

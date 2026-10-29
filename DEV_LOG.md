@@ -1,3 +1,19 @@
+## 2026-10-29 10:39 WIB — Siklus 148: higiene pengukuran tangga adaptif — anti-FPS palsu pasca-sleep/stall + flag recovering tak lagi permanen + hysteresis recovery PR ditutup
+
+- **Audit lanjutan `perf_quality.js` pasca siklus 147 menemukan 3 cacat nyata:**
+  1. **Jendela sampling USANG picu degradasi palsu:** tab hidden/laptop sleep/stall rAF panjang menghentikan render loop tetapi `performance.now()` terus berjalan — sampel pertama pasca-resume = beberapa frame ÷ menit → FPS palsu ≈0 → tangga langsung mematikan bayangan + menurunkan resolusi di GPU yang SEHAT begitu pengguna kembali, lalu butuh ±40 dtk pulih (di GPU cepat: kilatan "GPU 0,2 FPS" + bayangan hilang tiap kali kembali dari jeda). Fix: jendela > 3× sampleMs (>6 dtk) dianggap usang — fps TIDAK dihitung, tangga degradasi dilewati, jendela & streak di-reset dari titik resume, flag `stale` di-set; chip HUD kini menampilkan "GPU mengukur ulang…" (amber) alih-alih FPS palsu ≈0, dan flag tetap jujur sampai sampel valid pertama dihitung.
+  2. **Flag `recovering` tertahan `true` SELAMANYA** setelah pemulihan penuh → chip HUD biru "Kualitas pulih" permanen meski scene sudah ideal. Fix: flag dibersihkan saat `downgraded` lepas (basePR tercapai) — chip kembali hijau ideal.
+  3. **Hysteresis recovery pixelRatio bocor:** SEMUA sampel ikut menghitung `goodStreak` (termasuk fps 20-25) → streak bisa "selesai" dari campuran sampel jelata; recovery PR naik walau GPU masih lambat, lalu turun-naik. Fix: sejajar recovery bayangan siklus 147 — hanya sampel sehat (fps ≥ 28) yang menghitung; satu sampel jelata mereset dari nol.
+- **Degradasi sah TETAP bekerja** (diskriminasi): jendela valid 2 dtk dgn fps 2 (SwiftShader nyata) tetap memicu tangga penuh; tepat di ambang 6 dtk tidak dianggap usang (hanya >); proteksi tidak membutakan tangga.
+- **Test baru +10** (`perf_quality.test.js`, total file 33): usang skip degradasi & reset streak ×2, degradasi sah tetap jalan, batas ambang tepat 6 dtk, recovering bersih pasca-pemulihan penuh, sampel jelata reset streak, urutan campuran 30-20-30-30 tidak menyelesaikan pemulihan (bug streak bocor tertangkap), chip stale "mengukur ulang…" + prioritas cabang (shadowLevel 2 tanpa stale tetap down).
+- **Bukti terukur:**
+  - **Vitest: 2387/2387 passed (174 file, +10)** — 12 test perfStep lama + 8 test recovery siklus 147 tetap hijau tanpa diubah (perubahan aditif; tangga degradasi & recovery L2→L1 tak tersentuh).
+  - **ESLint: 0 error 0 warning** (file terubah).
+  - **Build:** sukses (38 precache, 1844.83 KiB) → deploy `dist/*` → `~/wfs-hq/`; wfs-hq & wfs-office active, :9503 HTTP 200.
+  - **E2E:** `e2e_perf_chip.py` OK (SwiftShader: `__perf` live fps 0.4, chip down "GPU 0,4 FPS · x0.75", shot 675 KB); `e2e_err.py` **0 error / 0 page error / 0 warning**; `shot.sh` :0 **672.844 bytes** (>500 KB, scene hidup).
+- **Commit:** lihat git log — push origin/main.
+- **Sisa backlog:** verifikasi recovery end-to-end di GPU cepat riil tetap butuh perangkat asli (SwiftShader selalu degraded); sisanya kosong.
+
 ## 2026-10-29 09:49 WIB — Siklus 147: recovery tangga kualitas adaptif + chip kualitas GPU di HUD (perf_quality.js)
 
 - **Audit hot loop pasca-backlog kosong:** render loop sudah rapi (screen stagger, ambient 20×/dtk, shadow refresh 6×/dtk, sim clock throttle, hover 80 ms). Dua kelemahan nyata ditemukan di sistem tangga adaptif (`perf_quality.js`):
