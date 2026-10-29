@@ -240,6 +240,14 @@ describe('perfChip — chip kualitas render HUD (siklus 147)', () => {
     expect(c.detail).toContain('mulus');
   });
 
+  it('FPS < 10 → 1 desimal gaya Indonesia (0,4), bukan "GPU 0 FPS"', () => {
+    const c = perfChip({ fps: 0.42, pixelRatio: 0.75, shadowLevel: 2, downgraded: true });
+    expect(c.label).toBe('GPU 0,4 FPS');
+    expect(c.detail).toContain('(FPS 0,4)');
+    const c2 = perfChip({ fps: 9.96, pixelRatio: 1, shadowLevel: 0, downgraded: true });
+    expect(c2.label).toBe('GPU 10 FPS'); // 9.96 → 10 → format bulat
+  });
+
   it('downgraded (pixelRatio turun) → amber stale dgn detail pulih bertahap', () => {
     const c = perfChip({ fps: 15, pixelRatio: 1, shadowLevel: 0, downgraded: true });
     expect(c.state).toBe('stale');

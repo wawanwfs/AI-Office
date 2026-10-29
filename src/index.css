@@ -284,6 +284,33 @@ button { font-family: inherit; }
   color: #fca5a5;
 }
 .hud .conn-chip.down i { background: #ef4444; box-shadow: 0 0 8px #ef4444; animation: pulse 1.5s infinite; }
+/* Siklus 147: chip kualitas render GPU — ideal (hijau) / degraded stale (amber)
+   / recover (biru, pemulihan berjalan) / down (merah, bayangan dimatikan). */
+.hud .perf-chip {
+  display: flex; align-items: center; gap: 6px;
+  font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600;
+  padding: 3px 10px; border-radius: 999px; letter-spacing: .4px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.05); color: var(--text-secondary);
+  cursor: help; white-space: nowrap;
+}
+.hud .perf-chip i {
+  width: 7px; height: 7px; border-radius: 50%; background: var(--green);
+  box-shadow: 0 0 8px var(--green); flex: none;
+}
+.hud .perf-chip.stale {
+  border-color: rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.10);
+}
+.hud .perf-chip.stale i { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
+.hud .perf-chip.recover {
+  border-color: rgba(96, 165, 250, 0.4); background: rgba(96, 165, 250, 0.10);
+}
+.hud .perf-chip.recover i { background: #60a5fa; box-shadow: 0 0 8px #60a5fa; animation: pulse 1.5s infinite; }
+.hud .perf-chip.down {
+  border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+}
+.hud .perf-chip.down i { background: #ef4444; box-shadow: 0 0 8px #ef4444; animation: pulse 1.5s infinite; }
 .hud input[type=range] {
   -webkit-appearance: none; appearance: none;
   width: 130px; height: 22px; background: transparent; cursor: pointer;

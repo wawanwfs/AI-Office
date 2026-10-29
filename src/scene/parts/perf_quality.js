@@ -110,22 +110,25 @@ export function perfStep(st, nowMs, frame, opts) {
 // degraded (amber — tangga aktif), recovering (biru, pulih berjalan).
 // Tanpa data / perf tak tersedia → null (chip disembunyikan, bukan karangan).
 const R = Math.round;
-export function perfChip(p, nowMs) {
+export function perfChip(p) {
   if (!p || !Number.isFinite(p.fps) || p.fps <= 0) return null;
-  const fps = R(p.fps);
+  // < 10 FPS → 1 desimal gaya Indonesia (0,4); ≥ 10 → bulat (60). Tanpa
+  // toLocaleString (deterministik lintas Node/browser, tanpa ketergantungan ICU).
+  const fpsR = R(p.fps);
+  const fpsTxt = fpsR >= 10 ? String(fpsR) : String(Math.round(p.fps * 10) / 10).replace('.', ',');
   const pr = Number.isFinite(p.pixelRatio) ? Math.round(p.pixelRatio * 100) / 100 : null;
   const prTxt = pr != null ? ` · x${pr}` : '';
   if (p.shadowLevel >= 2) {
-    return { state: 'down', label: `GPU ${fps} FPS`, detail: `Kualitas otomatis: bayangan dimatikan (FPS ${fps}) — pemulihan otomatis bila FPS sehat 16 dtk${prTxt}` };
+    return { state: 'down', label: `GPU ${fpsTxt} FPS`, detail: `Kualitas otomatis: bayangan dimatikan (FPS ${fpsTxt}) — pemulihan otomatis bila FPS sehat 16 dtk${prTxt}` };
   }
   if (p.shadowLevel === 1) {
-    return { state: 'stale', label: `GPU ${fps} FPS`, detail: `Kualitas otomatis: peta bayangan 1024, pixelRatio ${pr ?? '—'} (FPS ${fps}) — pulih bertahap saat FPS ≥ 28${prTxt}` };
+    return { state: 'stale', label: `GPU ${fpsTxt} FPS`, detail: `Kualitas otomatis: peta bayangan 1024, pixelRatio ${pr ?? '—'} (FPS ${fpsTxt}) — pulih bertahap saat FPS ≥ 28${prTxt}` };
   }
   if (p.recovering) {
-    return { state: 'recover', label: `GPU ${fps} FPS`, detail: `Kualitas pulih: pixelRatio ${pr ?? '—'} (FPS ${fps}) — penuh bila FPS tetap sehat${prTxt}` };
+    return { state: 'recover', label: `GPU ${fpsTxt} FPS`, detail: `Kualitas pulih: pixelRatio ${pr ?? '—'} (FPS ${fpsTxt}) — penuh bila FPS tetap sehat${prTxt}` };
   }
   if (p.downgraded) {
-    return { state: 'stale', label: `GPU ${fps} FPS`, detail: `Kualitas otomatis: pixelRatio ${pr ?? '—'} (FPS ${fps}) — pulih bertahap saat FPS ≥ 28${prTxt}` };
+    return { state: 'stale', label: `GPU ${fpsTxt} FPS`, detail: `Kualitas otomatis: pixelRatio ${pr ?? '—'} (FPS ${fpsTxt}) — pulih bertahap saat FPS ≥ 28${prTxt}` };
   }
-  return { state: 'ideal', label: `GPU ${fps} FPS`, detail: `Render mulus: FPS ${fps}${prTxt}` };
+  return { state: 'ideal', label: `GPU ${fpsTxt} FPS`, detail: `Render mulus: FPS ${fpsTxt}${prTxt}` };
 }

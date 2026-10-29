@@ -173,3 +173,36 @@ describe('HUD Chip Sinkronisasi Gateway', () => {
     expect(chip.textContent).toContain('Terputus')
   })
 })
+
+describe('HUD Chip Kualitas Render GPU (siklus 147)', () => {
+  const base = { time: '08:00', timeValue: 480, status: '1 jalan', onTimeChange: () => {} }
+
+  it('tanpa prop perf → chip tidak dirender (scene belum mengukur / UI-only)', () => {
+    render(<HUD {...base} />)
+    expect(document.querySelector('.perf-chip')).toBeNull()
+  })
+
+  it('ideal → chip hijau label GPU FPS dgn tooltip detail', () => {
+    render(<HUD {...base} perf={{ state: 'ideal', label: 'GPU 60 FPS', detail: 'Render mulus: FPS 60 · x1.5' }} />)
+    const chip = document.querySelector('.perf-chip.ideal')
+    expect(chip).toBeTruthy()
+    expect(chip.textContent).toContain('GPU 60 FPS')
+    expect(chip.getAttribute('title')).toBe('Render mulus: FPS 60 · x1.5')
+    expect(chip.getAttribute('aria-label')).toContain('Kualitas render')
+  })
+
+  it('stale → chip amber saat tangga degradasi aktif', () => {
+    render(<HUD {...base} perf={{ state: 'stale', label: 'GPU 15 FPS', detail: 'Kualitas otomatis: pixelRatio x1' }} />)
+    expect(document.querySelector('.perf-chip.stale')).toBeTruthy()
+  })
+
+  it('recover → chip biru berdetak saat pemulihan berjalan', () => {
+    render(<HUD {...base} perf={{ state: 'recover', label: 'GPU 30 FPS', detail: 'Kualitas pulih' }} />)
+    expect(document.querySelector('.perf-chip.recover')).toBeTruthy()
+  })
+
+  it('down → chip merah saat bayangan dimatikan', () => {
+    render(<HUD {...base} perf={{ state: 'down', label: 'GPU 4 FPS', detail: 'Kualitas otomatis: bayangan dimatikan' }} />)
+    expect(document.querySelector('.perf-chip.down')).toBeTruthy()
+  })
+})
