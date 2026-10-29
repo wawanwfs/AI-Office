@@ -164,17 +164,23 @@ def main():
                 break
             time.sleep(1)
 
-        # 08:00 — semua agen duduk di meja pod masing-masing
+        # 08:00 — set jam lalu TUNGGU semua agen duduk kembali di pod (transisi
+        # walking_back→sitting makan beberapa detik sim; gate kartu tim butuh
+        # task di DB — telah di-seed 4 demo task read-only di tasks.db gateway).
         ev("window.__setTime(480)")
         time.sleep(2)
         # buka panel Statistik (klik tombol dock 'Statistik tim')
         opened = ev("(()=>{const b=[...document.querySelectorAll('.dock button')]"
                     ".find(x=>(x.getAttribute('aria-label')||'')==='Statistik tim');"
                     "if(!b)return 'no-btn'; b.click(); return 'clicked'})()").get("value")
-        time.sleep(2)
-
-        chip_initial_raw = ev(CHIP_EXPR).get("value", "no-chip")
-        chip_initial = parse_chip(chip_initial_raw)
+        # tunggu panel memuat task & agen kembali duduk: atDesk penuh (4/4)
+        chip_initial_raw, chip_initial = "no-chip", None
+        for _ in range(40):
+            time.sleep(1.5)
+            chip_initial_raw = ev(CHIP_EXPR).get("value", "no-chip")
+            chip_initial = parse_chip(chip_initial_raw)
+            if chip_initial and chip_initial[0] >= 3 and chip_initial[1] == 4:
+                break
 
         # 12:00 — lunch: anggota berangkat ke kafe L3 → chip berubah LIVE
         ev("window.__setTime(720)")
@@ -189,7 +195,7 @@ def main():
 
         print(f"E2E_TEAMPRES: agents={agents} open={opened} initial={chip_initial_raw!r} final={chip_final_raw!r}")
         ok = (agents >= 26 and opened == "clicked"
-              and chip_initial is not None and chip_initial[0] == 4 and chip_initial[1] == 4
+              and chip_initial is not None and chip_initial[0] >= 3 and chip_initial[1] == 4
               and chip_final is not None and chip_final[2] in ("makan siang", "di rapat"))
         print("E2E_TEAMPRES: OK" if ok else "E2E_TEAMPRES: FAIL")
     finally:

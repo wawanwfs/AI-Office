@@ -4520,3 +4520,20 @@
   - Regresi tetap hijau: ticker.test.jsx eksisting 6/6, agent_live_status/floor & floor_navigator_occupancy 66/66 total dgn file baru.
 - Commit: kode+test+probe di commit siklus ini.
 - Sisa backlog: **KOSONG**. Kandidat berikutnya: perbaikan kecil sesuai temuan berikutnya.
+
+## 2026-10-29 13:45 WIB — Siklus 150: Kehadiran LIVE anggota tim di kartu "Progres Divisi & Pod 3D" TeamStats — keluarga scene→UI kini menutup panel pod: founder lihat "4/4 di pod" atau "0/4 di pod · 4 makan siang" SEBELUM klik Fokus 3D (+15 test, diskriminasi unit 3/15 FAIL kode lama; E2E penuh: kode lama no-chip, baru 3-4/4 → 0/4 · 4 makan siang LIVE)
+
+- **Bug (audit rutin pasca-backlog kosong — kartu tim = satu-satunya panel yang belum live):** siklus 142–149 menyambungkan state scene ke badge inspektur (140/142), okupansi nav (143), sinkron kamera (144–146), Ticker (149) — tapi kartu "Progres Divisi & Pod 3D" di panel Statistik Tim hanya bawa progres TASK statis. Founder yang klik "Fokus 3D" ke pod bisa mendarat di pod KOSONG (semua anggota rapat L1 / makan siang kafe L3 / pulang) tanpa indikasi apa pun.
+- **Perubahan:**
+  - `agent_status.js`: `agentLiveTone(ad)` (murni — tone saja, paritas penuh agentLiveStatus) + `PRESENCE_LABELS` diekspor (Ticker 149 & kartu tim kini satu sumber label; tickerPresenceSummary direfaktor memakainya, perilaku identik).
+  - `team_spec.js`: `teamPresenceSummary(agentData)` (murni) — per tim: total anggota (peta findTeamByAgent — sama dgn agregasi task), `atDesk` = sitting DAN lantai live == lantai pod tim (podCenter.z→levelOf, batas sama agent_status), `awayLabel` dikelompokkan tone ("2 di rapat · 1 makan siang"). Guard anti-poisoning: bukan array → null (chip disembunyikan); entri korup/Founder dilewati; work-di-lantai-lain (visiting) → away TANPA label palsu.
+  - `TeamStats.jsx`: poll `window.__agentData` 4 dtk saat panel terbuka (pola SysMeter; clearInterval di unmount); chip `.team-presence` per kartu — titik hijau STATUS_HEX.work + "N/M di pod" + away label + `.sr-only` utk screen reader; scene absen → baris disembunyikan, alur lama utuh.
+  - `index.css`: gaya `.team-presence` konsisten `.ticker-presence` 149 (DM Sans 10.5px, titik 6px glow currentColor).
+- **+15 test (`team_presence.test.jsx` baru):** 2 agentLiveTone (paritas semua state) + 8 murni teamPresenceSummary (BUG UTAMA 4 rapat → atDesk 0 "4 di rapat"; campuran; tiap lantai pod; visiting tanpa label; lunch/walk; leaving→dim; guard null/korup/Founder; array kosong 6 tim nol) + 5 integrasi komponen (chip "0/4 di pod · 4 di rapat"; "4/4 di pod" tanpa away; polling LIVE rapat→pulang tanpa remount — fake timers HANYA interval, waitFor tetap nyata; scene absen → tak dirender; unmount → clearInterval). **Bukti diskriminasi unit:** TeamStats.jsx LAMA di-deploy ulang → 3/15 FAIL (ketiga integrasi chip); kode BARU → 15/15.
+- **Bukti E2E scene NYATA (`scripts/e2e_team_presence.py` baru, di repo):** Chrome SwiftShader Xvfb :99 → 26 agen → set 480 + buka panel via klik dock → tunggu chip "3-4/4 di pod" (walking_back settle) → `__setTime(720)` lunch → chip berubah LIVE **"0/4 di pod · 4 makan siang"**. **Diskriminasi E2E penuh:** kode lama di-build & deploy ulang → probe sama **FAIL: no-chip**; kode baru → **OK**. Catatan proses: probe pertama gagal karena kartu tim ter-gate `teamStats.length>0` dan DB task gateway kosong → di-seed 4 task demo read-only (status pending/running/done, TIDAK memicu engine berbayar); jam simulasi berjalan wall-clock (1 mnt/5 dtk) → E2E Ticker 149 yang lulus kemarin kini butuh sinkronisasi 480 di awal juga.
+- **Bukti terukur:**
+  - Vitest **2413/2413 (176 file, +15)**; ESLint 0 error 0 warning (src penuh); build sukses (38 precache 1848.62 KiB) → deploy `dist/*` → `~/wfs-hq/`; `wfs-hq` & `wfs-office` active, :9503 HTTP 200.
+  - `e2e_err.py` **0 pesan / 0 error / 0 warning**; `shot.sh` :0 **677.955 B** (>500 KB — scene hidup).
+  - Regresi: team_stats_a11y 11/11 & team_spec lulus — alur lama kartu (progres, Fokus 3D, Kanban) utuh.
+- Commit: kode+test+probe di commit siklus ini.
+- Sisa backlog: **KOSONG**. Kandidat berikutnya: perbaikan kecil sesuai temuan berikutnya.
