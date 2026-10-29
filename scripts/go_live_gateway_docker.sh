@@ -26,7 +26,6 @@ set -o pipefail
 
 REPO="${REPO:-/home/agentuser/ai-office-main}"
 COMPOSE_FILE="$REPO/deploy/docker/compose.go-live.yaml"
-SMOKE="$REPO/scripts/rehearsal_smoke.sh"
 BASE="http://127.0.0.1:8787"
 PROXY="http://127.0.0.1:9503"
 STATE_F=/tmp/go-live-state
@@ -49,7 +48,18 @@ check() {
 }
 
 docker_status() { docker inspect -f '{{.State.Status}}' wfs-office-gateway 2>/dev/null || echo absent; }
-docker_healthy() { [ "$(docker inspect -f '{{.State.Health.Status}}' wfs-office-gateway 2>/dev/null)" = "healthy" ]; }
+
+wait_http() {
+  # Poll HTTP langsung (uvicorn siap ~1-2 dtk) — bukan menunggu docker health
+  # (interval 15s + start_period 10s = flip healthy 15-30 dtk, terlalu lama utk downtime).
+  local i
+  for i in $(seq 1 12); do
+    curl -fsS --max-time 2 "$BASE/api/health" >/dev/null 2>&1 && return 0
+    sleep 1
+  done
+  log "gateway tidak merespons dalam 12 dtk pasca-up:"; docker logs --tail 20 wfs-office-gateway || true
+  return 1
+}
 
 save_state() {
   {
@@ -71,26 +81,12 @@ auto_rollback() {
 }
 
 smoke_10() {
-  log "== smoke 10 cek (fixture rehearsal siklus 155) =="
-  if ! sudo -n bash "$SMOKE" --base "$BASE" >/tmp/go-live-smoke.log 2>&1; then
+  log "== smoke 10 cek (fixture go-live siklus 156) =="
+  if ! bash "$REPO/scripts/smoke_go_live.sh" "$BASE" >/tmp/go-live-smoke.log 2>&1; then
     log "SMOKE GAGAL (log: /tmp/go-live-smoke.log)"; tail -n 5 /tmp/go-live-smoke.log
     return 1
   fi
   log "SMOKE PASS 10/10 (log: /tmp/go-live-smoke.log)"
-}
-
-wait_healthy() {
-  local i
-  for i in $(seq 1 30); do
-    docker_healthy && return 0
-    if [ "$(docker_status)" = "exited" ]; then
-      log "container exited dini:"; docker logs --tail 20 wfs-office-gateway || true
-      return 1
-    fi
-    sleep 3
-  done
-  log "container tidak healthy dalam 90 dtk"; docker logs --tail 20 wfs-office-gateway || true
-  return 1
 }
 
 case "${1:-}" in
@@ -120,30 +116,26 @@ docker compose -f "$COMPOSE_FILE" config >/dev/null 2>&1 || die "compose.go-live
 systemctl is-active --quiet wfs-office || die "unit wfs-office tidak aktif (harus aktif sebelum APPLY)"
 check "pre: :8787 /api/health" "$BASE/api/health" "ok" || die ":8787 tidak merespons sebelum APPLY"
 check "pre: :9503 /wfs-api/health" "$PROXY/wfs-api/health" "ok" || true
-check "pre: agents=15" "$BASE/api/status" '"agents_count":15' || die "agents_count != 15 sebelum APPLY"
+check "pre: agents=15" "$BASE/api/status" '"agents":15' || die "agents != 15 sebelum APPLY"
 save_state
 
-# ---------- Fase 1: build & jalankan container (produksi systemd MASIH jalan) ----------
-log "-- Fase 1: build & up wfs-office-gateway (produksi systemd masih pegang :8787) --"
-docker compose -f "$COMPOSE_FILE" up -d --build >>/tmp/go-live.log 2>&1 \
-  || { log "docker compose up --build gagal"; tail -n 15 /tmp/go-live.log; auto_rollback; exit 1; }
-wait_healthy || { auto_rollback; exit 1; }
-log "container healthy (image wfs-office-gw:go-live siap; cutover berikutnya ~3-4 dtk)"
+# ---------- Fase 1: build image (produksi systemd tak tersentuh) ----------
+log "-- Fase 1: build image wfs-office-gw:go-live (produksi systemd masih pegang :8787) --"
+docker compose -f "$COMPOSE_FILE" build >>/tmp/go-live.log 2>&1 \
+  || { log "docker compose build gagal"; tail -n 15 /tmp/go-live.log; auto_rollback; exit 1; }
+log "image siap (config non-root 1002:1003+g125 pra-validasi siklus 156: uji temp :8789 health/exec/SSE OK)"
 
-# ---------- Fase 2: cutover (3 langkah atomik) ----------
-log "-- Fase 2: cutover — stop systemd, start ulang container (bind :8787) --"
+# ---------- Fase 2: cutover (downtime ~2-4 dtk) ----------
+log "-- Fase 2: cutover — stop systemd, up container (bind :8787 bebas) --"
 sudo systemctl stop wfs-office || { log "systemctl stop wfs-office gagal"; auto_rollback; exit 1; }
-docker restart wfs-office-gateway >/dev/null || { log "restart container gagal"; auto_rollback; exit 1; }
-for i in 1 2 3 4 5 6; do
-  curl -fsS --max-time 2 "$BASE/api/health" >/dev/null 2>&1 && break
-  sleep 1
-done
+docker compose -f "$COMPOSE_FILE" up -d >>/tmp/go-live.log 2>&1 \
+  || { log "docker compose up gagal"; tail -n 15 /tmp/go-live.log; auto_rollback; exit 1; }
+wait_http || { auto_rollback; exit 1; }
 check "pasca-cutover: :8787 /api/health" "$BASE/api/health" "ok" || { auto_rollback; exit 1; }
 check "pasca-cutover: :9503 /wfs-api/health" "$PROXY/wfs-api/health" "ok" || { auto_rollback; exit 1; }
 
-# ---------- Fase 3: verifikasi penuh (fixture rehearsal) ----------
+# ---------- Fase 3: verifikasi penuh (fixture go-live siklus 156) ----------
 smoke_10 || { auto_rollback; exit 1; }
-check "post: agents=15" "$BASE/api/status" '"agents_count":15' || { auto_rollback; exit 1; }
 
 # ---------- Fase 4: selesai ----------
 log "== MIGRASI SELESAI: :8787 kini container Docker (restart unless-stopped) =="

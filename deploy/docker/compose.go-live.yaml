@@ -1,0 +1,70 @@
+# GO-LIVE migrasi gateway :8787 systemd -> Docker (siklus 156, eksekusi via
+#   scripts/go_live_gateway_docker.sh APPLY — WAJIB persetujuan eksplisit user).
+#
+# Beda dgn compose.rehearsal.yaml (siklus 155):
+#   - network_mode: host + WFS_PORT=8787 — container memegang 0.0.0.0:8787 di netns
+#     host, PERSIS server.py produksi (uvicorn.run port=8787 host 0.0.0.0). Wajib:
+#     proxy :9503 hardcode 127.0.0.1:8787 (GATEWAY + SSE passthrough), jadi port
+#     produksi tidak boleh berubah. Bind bentrok dgn systemd dilarang oleh desain:
+#     cutover = stop systemd dulu, baru `docker restart` container.
+#   - DB = tasks.db + orders.db + config/ PRODUKSI langsung (bukan salinan).
+#   - Healthcheck di-override ke :8787 (image punya healthcheck hardcoded :8788
+#     dari context rehearsal — di sini komposisi menang, tanpa menyentuh Dockerfile).
+#   - restart: unless-stopped + docker enabled = auto-restart (preferensi user).
+#
+# Rollback kapan pun: scripts/go_live_gateway_docker.sh ROLLBACK
+#   (docker rm -f gateway lalu systemctl start wfs-office — unit tidak pernah
+#   diubah/disabled, jadi start manual selalu valid).
+name: wfs-office-gw-golive
+
+services:
+  gateway:
+    build:
+      context: .
+      dockerfile: Dockerfile.wfs-office-gw
+    image: wfs-office-gw:go-live
+    container_name: wfs-office-gateway
+    restart: unless-stopped
+    network_mode: host
+    # Harden siklus 156: container jalan sebagai uid/gid agentuser (1002:1003),
+    # BUKAN root — bug rehearsal 155 (container root menulis _task_script.py
+    # root-owned ke bind sandboxes/ -> exec gateway systemd 500 PermissionError)
+    # tidak akan terulang. group_add 125 = gid /var/run/docker.sock di host,
+    # supaya endpoint sandbox (docker CLI via socket) tetap berfungsi non-root.
+    user: "1002:1003"
+    group_add:
+      - "125"
+    environment:
+      WFS_PORT: "8787"
+      WFS_HERMES_HOME: /hermes-home
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8787/api/health', timeout=4).status==200 else 1)"]
+      interval: 15s
+      timeout: 5s
+      start_period: 10s
+      retries: 3
+    volumes:
+      # kode host read-only (satu sumber kebenaran dgn produksi)
+      - /home/agentuser/wfs-office/server.py:/app/server.py:ro
+      - /home/agentuser/wfs-office/tasks.py:/app/tasks.py:ro
+      - /home/agentuser/wfs-office/orders.py:/app/orders.py:ro
+      - /home/agentuser/wfs-office/sandbox_exec.py:/app/sandbox_exec.py:ro
+      - /home/agentuser/wfs-office/wfs_events.py:/app/wfs_events.py:ro
+      - /home/agentuser/wfs-office/wfs_sh_console.py:/app/wfs_sh_console.py:ro
+      - /home/agentuser/wfs-office/wfs_dashboard_stats.py:/app/wfs_dashboard_stats.py:ro
+      - /home/agentuser/wfs-office/static:/app/static:ro
+      # DB + config PRODUKSI (downtime cutover 3-4 dtk; journal=delete aman)
+      - /home/agentuser/wfs-office/tasks.db:/app/tasks.db
+      - /home/agentuser/wfs-office/orders.db:/app/orders.db
+      - /home/agentuser/wfs-office/config:/app/config
+      # default AI (baca .hermes/.env via HOME=/hermes-home)
+      - /home/agentuser/.hermes/.env:/hermes-home/.hermes/.env:ro
+      # fitur sandbox: exec container agent via socket docker host
+      - /var/run/docker.sock:/var/run/docker.sock
+      # sandbox_exec.py me-expand ~/wfs-office/sandboxes -> HOME=/hermes-home di container
+      - /home/agentuser/wfs-office/sandboxes:/hermes-home/wfs-office/sandboxes
+      # tasks.py mkdir ~/wfs-office/saas-dibantuin saat import (REPO agen) —
+      # bind dir asli (agentuser-owned) supaya import sukses sebagai uid 1002
+      # (tanpa bind ini Docker membuat parent /hermes-home/wfs-office sebagai root
+      #  dan container non-root gagal PermissionError saat import tasks.py)
+      - /home/agentuser/wfs-office/saas-dibantuin:/hermes-home/wfs-office/saas-dibantuin
