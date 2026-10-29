@@ -115,10 +115,20 @@ try:
         sys.exit(2)
     t0 = ev("window.__dbg().t")
     a_title = ev("window.__titleNight()")
-    hour0 = int(t0) // 60
-    expect_night = hour0 < 6 or hour0 >= 19
-    ok_a = (a_title == expect_night)
-    print(f"A realtime: t={t0} ({hour0:02d}:xx) titleNight={a_title} expect={expect_night} -> {'OK' if ok_a else 'FAIL'}")
+    a_sky = ev("window.__skyNight()")
+    # ekspektasi dari formula daylight() yang sama (satu sumber kebenaran, ambang 0.55)
+    def smooth(a, b, x):
+        t = min(1, max(0, (x - a) / (b - a)))
+        return t * t * (3 - 2 * t)
+    def daylight(m):
+        if m < 360: return 0.3
+        if m < 480: return 0.3 + 0.7 * smooth(360, 480, m)
+        if m < 1020: return 1
+        if m < 1140: return 1 - 0.7 * smooth(1020, 1140, m)
+        return 0.3
+    expect_night = daylight(int(t0)) <= 0.55
+    ok_a = (a_title == expect_night) and (a_title == a_sky)  # konsisten dgn jendela (ambang sama)
+    print(f"A realtime: t={t0} titleNight={a_title} skyNight={a_sky} expect={expect_night} (daylight={daylight(int(t0)):.2f}) -> {'OK' if ok_a else 'FAIL'}")
     if not ok_a: fails.append("A")
     # B: siang — hook false + kanvas dua-tone terang (W putih 255; PROJECT amber R tertinggi)
     ev("window.__setTime(720)")
@@ -136,9 +146,16 @@ try:
     c_title = ev("window.__titleNight()")
     px_night = ev(PX)
     sz_night = shot(OUT_NIGHT)
-    ok_c = (c_title is True and px_night and px_night["w"][0] < 160 and px_night["p"][0] < 90
-            and px_night["w"][0] > px_night["w"][1])  # silver-biru: R > G
-    print(f"C malam 0:   titleNight={c_title} W={px_night['w']} PROJECT={px_night['p']} (silver-biru+amber redup) -> {'OK' if ok_c else 'FAIL'}; {OUT_NIGHT} {sz_night}B")
+    ok_c = (c_title is True and px_night and px_night["w"] and px_day["w"]
+            and px_night["w"][2] > px_night["w"][1] > px_night["w"][0]      # WFS: silver-biru B>G>R (hue terjaga)
+            and px_night["p"][0] > px_night["p"][1] > px_night["p"][2]      # PROJECT: amber R>G>B (hue terjaga)
+            and px_night["w"][0] < px_day["w"][0] * 0.8                     # jauh lebih redup dari siang
+            and px_night["p"][0] < px_day["p"][0] * 0.75)                   # amber gelap
+    lum = lambda c: 0.2126*c[0] + 0.7152*c[1] + 0.0722*c[2]
+    drop_w = 1 - lum(px_night["w"]) / lum(px_day["w"])
+    drop_p = 1 - lum(px_night["p"]) / lum(px_day["p"])
+    ok_c = ok_c and drop_w > 0.35 and drop_p > 0.35  # lum turun ≥35% di KEDUA kata
+    print(f"C malam 0:   titleNight={c_title} W={px_night['w']} PROJECT={px_night['p']} lumDrop W={drop_w:.0%} P={drop_p:.0%} (hue terjaga, redup ≥35%) -> {'OK' if ok_c else 'FAIL'}; {OUT_NIGHT} {sz_night}B")
     if not ok_c: fails.append("C")
     # sanity scene hidup: kedua screenshot >500KB (standar siklus)
     if sz_day < 500_000 or sz_night < 500_000:

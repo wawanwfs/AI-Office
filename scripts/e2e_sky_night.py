@@ -98,10 +98,21 @@ try:
     # A: kondisi real-time (jam VM saat ini; skrip dijalankan dini hari → night)
     t0 = ev("window.__dbg().t")
     a_night = ev("window.__skyNight()")
-    hour0 = int(t0) // 60
-    expect_night = hour0 < 6 or hour0 >= 19
+    # Ekspektasi dari formula daylight() yang sama dgn daycycle (satu sumber
+    # kebenaran, ambang 0.55) — heuristik jam hour<6|>=19 SALAH saat 06:xx-07:xx
+    # (daylight smoothstep masih ≤0.55 = "malam"; bug tooling tersingkap 168).
+    def _smooth(a, b, x):
+        t = min(1, max(0, (x - a) / (b - a)))
+        return t * t * (3 - 2 * t)
+    def _daylight(m):
+        if m < 360: return 0.3
+        if m < 480: return 0.3 + 0.7 * _smooth(360, 480, m)
+        if m < 1020: return 1
+        if m < 1140: return 1 - 0.7 * _smooth(1020, 1140, m)
+        return 0.3
+    expect_night = _daylight(int(t0)) <= 0.55
     ok_a = (a_night == expect_night)
-    print(f"A realtime: t={t0} ({hour0:02d}:xx) skyNight={a_night} expect={expect_night} -> {'OK' if ok_a else 'FAIL'}")
+    print(f"A realtime: t={t0} skyNight={a_night} expect={expect_night} (daylight={_daylight(int(t0)):.2f}) -> {'OK' if ok_a else 'FAIL'}")
     if not ok_a: fails.append("A")
     # B: siang
     ev("window.__setTime(720)")
