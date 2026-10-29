@@ -104,16 +104,18 @@ function makeCtx() {
 }
 
 // ── integrasi createWalls: material tercatat, mesh ter-tag, paint via mesh ──
-describe('createWalls — trim & pilar ikut malam (siklus 166)', () => {
-  it('material trim/pilar dicatat: trimCount ≥ 40 (crown+sill×13, pilar×34) & inventaris lengkap', () => {
+describe('createWalls — trim & pilar ikut malam (siklus 166, + bunga siklus 167)', () => {
+  it('material trim/pilar/bunga dicatat: trimCount ≥ 76 (crown+sill×13, pilar×34, bunga×36) & inventaris lengkap', () => {
     const refs = createWalls(makeCtx())
-    expect(refs.trimCount).toBeGreaterThanOrEqual(40)
+    expect(refs.trimCount).toBeGreaterThanOrEqual(76)
     expect(refs.trimPaints.length).toBe(refs.trimCount)
-    // semuanya punya pasangan day/night BERBEDA
+    // semuanya punya pasangan day/night BERBEDA (trim/pilar/bunga — palet siklus 167)
+    const daysOk = [TRIM_DAY, PIER_DAY, ...refs.flowerDay]
+    const nightsOk = [TRIM_NIGHT, PIER_NIGHT, ...refs.flowerNight]
     for (const { day, night } of refs.trimPaints) {
       expect(night).not.toBe(day)
-      expect([TRIM_DAY, PIER_DAY]).toContain(day)
-      expect([TRIM_NIGHT, PIER_NIGHT]).toContain(night)
+      expect(daysOk).toContain(day)
+      expect(nightsOk).toContain(night)
     }
   })
   it('mesh pemakai material trim/pilar ter-tag (userData.__trim dgn pasangan warna)', () => {

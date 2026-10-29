@@ -74,6 +74,22 @@ export function createMeetingRoom(ctx, glassMat) {
     if (typeof window !== 'undefined') window.__lastWbDrawAt = Date.now();
   };
   redraw();
+
+  // ── Siklus 167: papan putih ikut meredup malam ──
+  // Latar #fbfbfa (MeshBasicMaterial unlit) = seperti panel lampu saat malam —
+  // kelas bug 164-166. Warna MATERIAL di-tint (pola skyWins mode neon): redraw
+  // live tiap 60 dtk hanya update map (needsUpdate), warna material tak tersentuh
+  // → tint selamat dari redraw. Guard idempoten; material tanpa .set (stub) aman.
+  const WB_TINT_NIGHT = 0x2A3446; // harmonis dgn bingkai jendela FR 0x2B3446
+  let boardTintState = null;
+  const paintBoardNight = (night) => {
+    const c = board && board.material && board.material.color;
+    if (!c || typeof c.set !== 'function') return 0;
+    if (boardTintState === night) return 0;
+    boardTintState = night;
+    c.set(night ? WB_TINT_NIGHT : 0xffffff);
+    return 1;
+  };
   const wbIv = setInterval(redraw, 60000);
   const wbOnVis = () => { if (document.visibilityState === 'visible') redraw() };
   document.addEventListener('visibilitychange', wbOnVis);
@@ -92,6 +108,7 @@ export function createMeetingRoom(ctx, glassMat) {
     boardOnVis: wbOnVis,
     boardMesh: board,
     boardFrame: frame,
+    paintBoardNight,
     destroy,
   };
 }

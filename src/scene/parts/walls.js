@@ -153,14 +153,18 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
 
 
   // ---- Kotak bunga di bawah jendela depan & kanan (kesan hidup & berwarna) ----
+  // Siklus 167: warna bunga masuk inventaris trim (pasangan day/night per warna)
+  // → ikut paintTrimNight — dulu krem #F6F2EA & kuning #F2C14E tetap menyala saat
+  // malam (36 mesh MB statis di bawah jendela, terbaca di audit scene live).
   const FLW=[0xE86A92,0xF2C14E,0x7FC8A9,0xF6F2EA];
+  const FLW_NIGHT=[0x5A2740,0x6B4E1E,0x1F4F3E,0x3A4256];
   [-12,-6,-0.5,5,10.5].forEach(x=>{
     W(B(3.0,.22,.5),new THREE.MeshBasicMaterial({color:0x3A4A5E}),x,1.32,-13.28);
-    [-0.9,-0.3,0.3,0.9].forEach((dx,i)=>W(B(.16,.16,.16),new THREE.MeshBasicMaterial({color:FLW[i]}),x+dx,1.5,-13.28));
+    [-0.9,-0.3,0.3,0.9].forEach((dx,i)=>W(B(.16,.16,.16),note(new THREE.MeshBasicMaterial({color:FLW[i]}),FLW[i],FLW_NIGHT[i]),x+dx,1.5,-13.28));
   });
   [-10,-4.5,1,6.5].forEach(z=>{
     W(B(.5,.22,3.0),new THREE.MeshBasicMaterial({color:0x3A4A5E}),16.7,1.32,z);
-    [-0.9,-0.3,0.3,0.9].forEach((dz,i)=>W(B(.16,.16,.16),new THREE.MeshBasicMaterial({color:FLW[i]}),16.7,1.5,z+dz));
+    [-0.9,-0.3,0.3,0.9].forEach((dz,i)=>W(B(.16,.16,.16),note(new THREE.MeshBasicMaterial({color:FLW[i]}),FLW[i],FLW_NIGHT[i]),16.7,1.5,z+dz));
   });
   // fade: tembus pandang bila kamera berada di luar sisi dinding itu; ikut menyembunyikan saat nyaris tak terlihat
   // Empat dinding: tiap dinding punya daftar objek (dinding + dekor menempel + tiang sudut) dan sisi "luar".
@@ -258,5 +262,5 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   [[6.6],[10.8]].forEach(([x])=>sh(x,2.6,13.27,Math.PI,3.4,1.9));                                                              // belakang
   [[-3.4],[1.4]].forEach(([z])=>sh(-16.79,2.5,z,Math.PI/2,3.0,1.9));                                                           // kiri
   tagTrimMeshes();
-  return { wallDefs, get collected(){return collected}, paintWallNight, paintTrimNight, get wallTexCount(){return wallTexPaints.length}, get wallTexPaints(){return wallTexPaints}, get trimCount(){return trimPaints.length}, get trimPaints(){return trimPaints} };
+  return { wallDefs, get collected(){return collected}, paintWallNight, paintTrimNight, get wallTexCount(){return wallTexPaints.length}, get wallTexPaints(){return wallTexPaints}, get trimCount(){return trimPaints.length}, get trimPaints(){return trimPaints}, get flowerDay(){return FLW}, get flowerNight(){return FLW_NIGHT} };
 }
