@@ -33,17 +33,39 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
 
   const load = useCallback(async (signal) => {
     const rid = ++loadRid.current
-    const [s, t, p, r] = await Promise.allSettled([
+    const [s, t, p, r, st] = await Promise.allSettled([
       api('dashboard/stats', { signal }), api('tasks', { signal }),
       api('projects', { signal }), api('system/resources', { signal }),
+      api('status', { signal }),
     ])
     if (loadRid.current !== rid) return // poll lebih baru / dashboard ditutup — batch basi, abaikan
     // Failed sections are unknown, never zero/empty or silently stale.
-    setStats(s.status === 'fulfilled' ? s.value : null)
-    setTasks(t.status === 'fulfilled' ? t.value.tasks || [] : null)
-    setProjects(p.status === 'fulfilled' ? p.value.projects || [] : null)
-    setRes(r.status === 'fulfilled' ? r.value : null)
-    setErr([s, t, p, r].some(result => result.status === 'rejected'))
+    const tasks = t.status === 'fulfilled' ? t.value.tasks || [] : null
+    const projects = p.status === 'fulfilled' ? p.value.projects || [] : null
+    const res = r.status === 'fulfilled' ? r.value : null
+    const stat = st.status === 'fulfilled' ? st.value : null
+    let sval = s.status === 'fulfilled' ? s.value : null
+    // Siklus 151: gateway produksi (:8787) TIDAK punya /api/dashboard/stats →
+    // proxy 404 permanen → panel sebelumnya hanya banner error selamanya.
+    // Fallback: turunkan angka dari data NYATA endpoint lain (bukan mengarang);
+    // banner err tetap naik bila sumber pengganti pun gagal.
+    if (!sval && (tasks || projects || res || stat)) {
+      sval = {
+        projects_total: projects ? projects.length : undefined,
+        projects_running: projects ? projects.filter(x => x.status === 'running').length : undefined,
+        tasks_total: tasks ? tasks.length : undefined,
+        tasks_running: tasks ? tasks.filter(x => x.status === 'running').length : undefined,
+        tasks_completed: tasks ? tasks.filter(x => x.status === 'done' || x.status === 'completed').length : undefined,
+        agents_count: stat ? stat.agents : undefined,
+        logs: [],
+        derived: true,
+      }
+    }
+    setStats(sval)
+    setTasks(tasks)
+    setProjects(projects)
+    setRes(res)
+    setErr([t, p, r, st].some(result => result.status === 'rejected'))
   }, [])
 
   useEffect(() => {
