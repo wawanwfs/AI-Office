@@ -4553,3 +4553,17 @@
   - `e2e_err.py` **0 pesan / 0 error / 0 warning**; screenshot CDP :99 **678.192 B** (avg brightness 51.2, 1439 warna — scene hidup; shot :0 legacy 246 KB = fallback UI-only karena Xorg pindah :10, bukan scene mati — dipastikan via probe CDP 26 agen & paragraf LIVE).
 - Commit: kode+test+probe di commit siklus ini.
 - Sisa backlog: **KOSONG**. Kandidat berikutnya: sinkronkan `wfs-office/server.py` deployed dgn backend/server.py repo (endpoint dashboard/stats di server, bukan hanya fallback frontend) — perhatian: bukan repo git, perlu deploy terkontrol.
+## 2026-10-29 16:35 WIB — Siklus 152: /api/dashboard/stats LIVE di gateway produksi :8787 (sumber asli server, bukan lagi fallback frontend)
+- **Backlog siklus 151 tuntas:** endpoint `dashboard/stats` kini ADA di server produksi (deploy terkontrol; server.py deployed bukan repo git). Frontend tak perlu diubah — fallback derived (151) otomatis tak terpakai karena endpoint sukses.
+- **Artefak (repo):**
+  - `backend_live/wfs_dashboard_stats.py` — router FastAPI additive READ-ONLY: SQLite `mode=ro` (mustahil menulis/kunci tasks.db), kontrak field = backend/api_service.py (software_house, projects/tasks counts, agents_count, logs[{id,timestamp,message}]+source/level); logs = task terbaru (message "Task #N 'judul' -> status"); agents_count paritas /api/status via sys.modules server/__main__ (AGENTS_META 15 + cfg kustom), fallback distinct agent_id (unit-testable).
+  - `backend_live/test_wfs_dashboard_stats.py` — 3 test (hitungan baris nyata incl. fallback agents, TestClient 200 + path lain tetap 404, missing DB gagal LOUD) — **3/3 PASS** (venv gateway).
+  - `scripts/apply_dashboard_stats.py` — apply/check/rollback terkontrol: backup server.py pra-patch, patch idempoten marker+anchor `# ---------- orders ----------`, compile-check (venv) SEBELUM tulis, restart systemd, health+field check, auto-rollback bila gagal; CHECK mode tanpa perubahan (exit 3 = belum terpasang).
+  - `scripts/e2e_dashboard_stats_grid.py` — E2E produksi CDP :99: ground truth = fetch in-page `/wfs-api/dashboard/stats` dibandingkan dgn kartu .dash-grid + jumlah .dash-log-row; guard regresi .dash-presence.
+- **Bukti terukur:**
+  - `:9503/wfs-api/dashboard/stats` **200** (sebelumnya 404 permanen); `agents_count=15` = paritas /api/status; 4 log nyata; grid E2E: Proyek 3, Task 4, Agen 15, logrows 4, **tanpa banner err**.
+  - **Diskriminasi E2E penuh:** rollback ke backup pra-patch → endpoint 404 → probe **FAIL** (truth tanpa field, logrows 0 — grid cuma fallback derived); apply ulang → **OK**. CHECK mode rc=0/3 benar.
+  - Vitest **2424/2424 (177 file)**; build sukses (1850.25 KiB) → deploy `~/wfs-hq/`; `e2e_err.py` **0/0/0**; wfs-hq & wfs-office active, :9503 & :8787 200.
+  - Bug tooling tertangkap: backup terbuat di tiap apply (rollback ke backup kedua = masih dipatch) → diperbaiki (backup hanya saat patch; rollback = backup tertua); diskriminasi diulang dgn tooling benar.
+- Commit: backend_live + scripts + probe di commit siklus ini. **Sisa backlog: KOSONG.**
+- Kandidat berikutnya (opsional): migrasi gateway :8787 ke Docker dgn healthcheck (user menghendaki semua service long-running terkontainer), atau sinkronisasi penuh generasi server.py deployed ↔ backend/server.py repo (review manual karena beda arsitektur chat/orders).
