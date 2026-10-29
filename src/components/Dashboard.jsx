@@ -5,6 +5,7 @@ import { useDialogA11y } from '../lib/dialogA11y'
 import { IconClose, IconStats } from './Icons'
 import { clip } from '../lib/clip.js'
 import { fileCount } from '../lib/files'
+import { dashboardPresenceSummary } from '../scene/parts/agent_status.js'
 
 /* Dashboard — overview penuh software house: proyek, task, agen, sandbox, host.
    Semua data NYATA dari /api (task engine, docker stats, dashboard stats). */
@@ -61,6 +62,18 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
     window.addEventListener('wfs-toggle-dashboard', h)
     return () => window.removeEventListener('wfs-toggle-dashboard', h)
   }, [])
+
+  // Siklus 151: kehadiran LIVE agen kantor dari scene (window.__agentData) —
+  // poll 4 dtk hanya saat panel terbuka (pola TeamStats 150/Ticker 149; scene
+  // absen/UI-only → null, paragraf disembunyikan, teks fallback task utuh).
+  const [presence, setPresence] = useState(null)
+  useEffect(() => {
+    if (!open) return
+    const read = () => setPresence(dashboardPresenceSummary(window.__agentData))
+    read()
+    const iv = setInterval(read, 4000)
+    return () => clearInterval(iv)
+  }, [open])
 
   const byStatus = {}
   let totalFiles = 0
@@ -141,6 +154,16 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
 
                   <section aria-label="Agen & sandbox">
                     <div className="dash-sec"><span>Agen aktif</span><span className="note">{tasks === null ? 'Status agen tidak tersedia' : agentsBusy.length ? `${agentsBusy.length} mengerjakan task` : 'semua idle'}</span></div>
+                    {/* Siklus 151: kehadiran LIVE agen KANTOR dari scene 3D —
+                        task engine tak tahu siapa yang rapat/makan siang; scene tahu.
+                        null (scene absen) → tak dirender, teks task-engine di atas utuh. */}
+                    {presence && (
+                      <div className="dash-presence" role="status" title="Kehadiran live agen di kantor 3D">
+                        <i style={{ background: '#10E5A0' }} aria-hidden="true" />
+                        <b aria-hidden="true">{presence.total} agen di kantor:</b> {presence.text}
+                        <span className="sr-only">Kehadiran live: {presence.total} agen di kantor — {presence.text}</span>
+                      </div>
+                    )}
                     {!res && <p>Data container tidak tersedia.</p>}
                     {res && (res.containers || []).length === 0 && <div className="skeleton">Tidak ada container.</div>}
                     {(res?.containers || []).filter(c => /wfs-sandbox|sbx|dibantuin|omniroute/.test(c.name)).slice(0, 8).map(c => (

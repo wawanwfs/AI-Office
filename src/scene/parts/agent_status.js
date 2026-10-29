@@ -173,3 +173,32 @@ export const PRESENCE_LABELS = {
   walk: 'berjalan',
   dim: 'pulang/offsite',
 };
+
+// ── Ringkasan kehadiran untuk Dashboard (siklus 151) ───────────────────────
+// Bagian "Agen aktif" dashboard selama ini hanya membaca task engine: tanpa
+// task berjalan ia melaporkan "semua idle" — padahal 26 agen kantor bisa sedang
+// rapat L1, makan siang kafe L3, jalan kampus, atau pulang (founder yang baca
+// dashboard mendapat kesan salah tentang kantor yang jelas hidup di scene).
+// Fix: paragraf kehadiran dari agentLiveStatus (SATU sumber kebenaran dgn
+// badge 140/142, okupansi 143, Ticker 149, kartu tim 150).
+//
+// Guard anti-poisoning (pola 149/150): agentData bukan array → null (teks
+// fallback task-engine dipakai, bukan angka palsu); entri korup/tanpa agent
+// dilewati; array kosong (scene siap, 0 agen) → null JUGA — "0 dari 0 agen di
+// kantor" hanya noise. Paragraf hanya dirender saat scene benar-benar ada.
+export function dashboardPresenceSummary(agentData) {
+  if (!Array.isArray(agentData)) return null;
+  const cnt = { work: 0, meet: 0, lunch: 0, walk: 0, dim: 0 };
+  let total = 0;
+  agentData.forEach((ad) => {
+    if (!ad || !ad.agent) return;
+    const tone = agentLiveTone(ad); // state korup → dim (tetap terwakili)
+    cnt[tone]++;
+    total++;
+  });
+  if (total === 0) return null;
+  const parts = TICKER_PRESENCE_ORDER
+    .filter((k) => cnt[k] > 0)
+    .map((k) => `${cnt[k]} ${PRESENCE_LABELS[k]}`);
+  return { total, text: parts.join(' · ') };
+}
