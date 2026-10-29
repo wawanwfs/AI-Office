@@ -1,9 +1,13 @@
 import React, { useEffect, useState } from 'react'
 import { api } from '../lib/api'
 import { clip } from '../lib/clip.js'
+import { tickerPresenceSummary } from '../scene/parts/agent_status.js'
 
 const FALLBACK = [{ text: 'Gateway belum terhubung — menunggu data…', color: '#8b93a3' }]
 const COL = { done: '#10E5A0', running: '#F59E0B', failed: '#FB7185', review: '#60A5FA', pending: '#9aa3b5' }
+// Titik badge kehadiran — konsisten STATUS_HEX agent_status.js (siklus 140):
+// work hijau, meet biru, lunch amber, walk biru muda, dim abu.
+const STATUS_DOT = { work: '#10E5A0', meet: '#60A5FA', lunch: '#F59E0B', walk: '#4D9FFF', dim: '#8b93a3' }
 
 // Ticker berisi data NYATA dari gateway (task, agent, resource host).
 // Ticker live: lemaribaca screen reader diperbarui via region aria-live polite
@@ -14,6 +18,17 @@ const COL = { done: '#10E5A0', running: '#F59E0B', failed: '#FB7185', review: '#
 // kiri pita, sejajar info gateway yang sudah ada di HUD.
 export default function Ticker({ conn }) {
   const [msgs, setMsgs] = useState(FALLBACK)
+  // Siklus 149: kehadiran agen LIVE dari scene (window.__agentData) — polling
+  // 1 dtk tanpa timer baru terpisah (pola FloorNavigator siklus 143). null =
+  // scene belum siap / 0 agen → baris disembunyikan (bukan teks kosong palsu).
+  const [presence, setPresence] = useState(null)
+
+  useEffect(() => {
+    const read = () => setPresence(tickerPresenceSummary(window.__agentData))
+    read()
+    const iv = setInterval(read, 1000)
+    return () => clearInterval(iv)
+  }, [])
 
   useEffect(() => {
     let stop = false
@@ -49,10 +64,22 @@ export default function Ticker({ conn }) {
 
   const list = [...msgs, ...msgs]
   const liveText = [conn && conn.label, ...msgs.map(m => m.text)].filter(Boolean).join(' · ')
+  const livePresence = presence ? presence.map(s => `${s.count} ${s.label}`).join(' · ') : null
   return (
     <>
-      <div id="ticker-live" role="status" aria-live="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', clipPath: 'inset(50%)', whiteSpace: 'nowrap' }}>{liveText}</div>
+      <div id="ticker-live" role="status" aria-live="polite" style={{ position: 'absolute', width: 1, height: 1, overflow: 'hidden', clip: 'rect(0 0 0 0)', clipPath: 'inset(50%)', whiteSpace: 'nowrap' }}>{[livePresence, liveText].filter(Boolean).join(' · ')}</div>
       <div className="ticker" role="presentation" aria-hidden="true">
+        {presence && presence.length > 0 && (
+          <span className="ticker-presence" role="presentation">
+            {presence.map((s) => (
+              <span key={s.key} className="ticker-presence-item">
+                {!s.first && <span className="ticker-presence-sep" aria-hidden="true">·</span>}
+                <i style={{ background: STATUS_DOT[s.key] }} aria-hidden="true" />
+                {s.count} {s.label}
+              </span>
+            ))}
+          </span>
+        )}
         {conn && (
           <span
             className={`ticker-conn ticker-conn-${conn.tone || 'ok'}`}

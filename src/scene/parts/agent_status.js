@@ -121,3 +121,40 @@ export function floorOccupancy(agentData) {
   });
   return occ;
 }
+
+// ── Ringkasan kehadiran untuk Ticker (siklus 149) ─────────────────────────
+// Pita info teratas selama ini hanya membawa task/host — keadaan agen KANTOR
+// (duduk kerja, rapat, makan siang, berjalan, pulang, offsite) tidak tampak di
+// mana pun kecuali kartu inspektur per-agen. Padahal scene tahu persis via
+// window.__agentData. Fix: ringkasan hitungan per status dari agentLiveStatus
+// (SATU sumber kebenaran dgn badge kartu siklus 140 & okupansi 143) yang
+// dirakit jadi SATU baris teks marquee, dgn badge mini berwarna per status.
+//
+// Guard anti-poisoning (pola siklus 140/142/143): agentData bukan array → null
+// (baris disembunyikan, bukan teks kosong palsu); entri korup/tanpa agent
+// dilewati; array kosong (scene siap, 0 agen) → null JUGA — baris tanpa isi
+// ("0 di meja · 0 rapat…") hanya noise untuk marquee. Label state korup
+// (non-string) dihitung Standby oleh agentLiveStatus — tetap terwakili.
+export const TICKER_PRESENCE_ORDER = ['work', 'meet', 'lunch', 'walk', 'dim'];
+
+export function tickerPresenceSummary(agentData) {
+  if (!Array.isArray(agentData)) return null;
+  const cnt = { work: 0, meet: 0, lunch: 0, walk: 0, dim: 0 };
+  let any = false;
+  agentData.forEach((ad) => {
+    if (!ad || !ad.agent) return;
+    const st = agentLiveStatus(ad);
+    const k = TICKER_PRESENCE_ORDER.includes(st.tone) ? st.tone : 'dim';
+    cnt[k]++;
+    any = true;
+  });
+  if (!any) return null;
+  const label = { work: 'di meja', meet: 'rapat', lunch: 'makan siang', walk: 'berjalan', dim: 'pulang/offsite' };
+  const out = TICKER_PRESENCE_ORDER
+    .map((k) => ({ key: k, label: label[k], count: cnt[k] }))
+    .filter((s) => s.count > 0);
+  // first = item tersisa PERTAMA (bukan index 0 urutan) — pemisah '·' hanya
+  // antar item; tanpa ini pill merender "· 2 pulang" saat tak ada agen kerja.
+  out.forEach((s, i) => { s.first = i === 0; });
+  return out;
+}
