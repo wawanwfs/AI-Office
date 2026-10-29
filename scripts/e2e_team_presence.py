@@ -151,6 +151,10 @@ def main():
 
         cmd("Runtime.enable")
         time.sleep(1)
+        # Sinkron jam dulu: probe nyata memakan ~30 dtk dari page-load; jam
+        # simulasi berjalan dgn wall-clock (tambah 1 menit/dtk) → saat probe
+        # sampai jam sudah lunch/sore. Set 480 (08:00) SEBELUM pengukuran.
+        ev("window.__setTime&&window.__setTime(480)")
 
         agents = -1
         for _ in range(40):
