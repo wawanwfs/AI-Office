@@ -586,6 +586,9 @@ const __ceilPanels=[];const __skyWinMats=[];
 for(let i=-3;i<=3;i++){for(let j=-2;j<=2;j++){
   const p=new THREE.Mesh(new THREE.BoxGeometry(3,.03,1),MB(0xF0F4FF));
   p.position.set(i*4.6,4.23,j*5.2);office.add(p);__ceilObjs.push(p);__ceilPanels.push(p);
+  // Siklus 169: tag pasangan siang↔malam (nilai = warna siang) — paintCeilNight
+  // dari createCeilingFixtures men-set warna material aktif (pola trim 166).
+  p.userData.__ceil=__ceilRt.ceilDay;
   if(j===0){ // hanya 5 point light di jalur tengah — sisanya emissive saja
     const pl=new THREE.PointLight(0xFFFFFF,0.35,12,1.6);
     pl.position.set(i*4.5,3.8,j*5);office.add(pl);
@@ -594,6 +597,7 @@ for(let i=-3;i<=3;i++){for(let j=-2;j<=2;j++){
 
 // ═══ RUANG MEETING (modul parts/room.js) ═══
 const __mr=createMeetingRoom({THREE,office,M,blobMat:__blobMat},Glass());
+const __ceilRt=createCeilingFixtures({THREE,office,M,MB},desks);
 const MRX=__mr.MRX,MRZ=__mr.MRZ,meetSeats=__mr.meetSeats;
 window.__whiteboard = {
   mesh: __mr.boardMesh,
@@ -1131,7 +1135,7 @@ setTimeout(()=>{
   }catch{ /* abaikan: bubble intro opsional */ }
 },1200);
 
-  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__skyNight=()=>__light.skyNight; window.__skyCv=__skyCv; window.__wallNight=()=>__light.wallNight; window.__wallTexCv=()=>(__wallsRt&&__wallsRt.wallTexPaints&&__wallsRt.wallTexPaints[0])?__wallsRt.wallTexPaints[0].cv:null; window.__trimNight=()=>__light.trimNight; window.__trimMat=()=>(__wallsRt&&__wallsRt.trimPaints&&__wallsRt.trimPaints[0])?__wallsRt.trimPaints[0].mat:null; window.__boardNight=()=>__light.boardNight; window.__boardMat=()=>__mr&&__mr.boardMesh?__mr.boardMesh.material:null; window.__titleNight=()=>__light.titleNight; window.__titleCv=()=>wtc; window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
+  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__skyNight=()=>__light.skyNight; window.__skyCv=__skyCv; window.__wallNight=()=>__light.wallNight; window.__wallTexCv=()=>(__wallsRt&&__wallsRt.wallTexPaints&&__wallsRt.wallTexPaints[0])?__wallsRt.wallTexPaints[0].cv:null; window.__trimNight=()=>__light.trimNight; window.__trimMat=()=>(__wallsRt&&__wallsRt.trimPaints&&__wallsRt.trimPaints[0])?__wallsRt.trimPaints[0].mat:null; window.__boardNight=()=>__light.boardNight; window.__boardMat=()=>__mr&&__mr.boardMesh?__mr.boardMesh.material:null; window.__titleNight=()=>__light.titleNight; window.__titleCv=()=>wtc; window.__ceilNight=()=>__light.ceilNight; window.__ceilMat=()=>{let out=null;office.traverse(o=>{if(!out&&o.isMesh&&o.userData&&o.userData.__ceil!==undefined&&o.material&&o.material.color)out=[o.material.color.r,o.material.color.g,o.material.color.b];});return out;}; window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
 window.__renderer=renderer; // debug/e2e: info.memory.textures/geometries (probe kebocoran tekstur)
 window.__spawnBubble=(x,y,z,text,color,anchor)=>createBubble(x,y,z,text,color,anchor); // debug/e2e probe kebocoran (jalur createBubble asli)
   // Badge status real-time: poll gateway tiap 20s, warnai badge dada sesuai status task
@@ -1331,7 +1335,7 @@ const drawScreen=(s,i)=>{ if(shouldRedrawScreenAt(frame,i)) drawScreenFrame(s,fr
 let timeOfDay=(()=>{ // mulai dari jam NYATA saat load (biar jam dinding & HUD terasa hidup),
   // dibulatkan ke menit; disinkronkan dgn sim clock (1 hari kerja ≈ 12 mnt nyata)
   const d=new Date();return d.getHours()*60+d.getMinutes();})();
-const __light=createLighting({THREE,scene,renderer,sun,ambient,agentData,skyWinCanvas:__skyCv,wallPainter:__wallsRt&&__wallsRt.paintWallNight?__wallsRt:null,trimPainter:__wallsRt&&__wallsRt.paintTrimNight?__wallsRt:null,boardPainter:__mr&&__mr.paintBoardNight?{paintBoardNight:__mr.paintBoardNight}:null,titlePainter:{paintTitleNight},onTimeUpdate,onStatusUpdate,onTick:m=>updateMeeting(m),onTime:m=>applySimTime(m,false)});
+const __light=createLighting({THREE,scene,renderer,sun,ambient,agentData,skyWinCanvas:__skyCv,wallPainter:__wallsRt&&__wallsRt.paintWallNight?__wallsRt:null,trimPainter:__wallsRt&&__wallsRt.paintTrimNight?__wallsRt:null,boardPainter:__mr&&__mr.paintBoardNight?{paintBoardNight:__mr.paintBoardNight}:null,titlePainter:{paintTitleNight},ceilPainter:__ceilRt&&__ceilRt.paintCeilNight?__ceilRt:null,onTimeUpdate,onStatusUpdate,onTick:m=>updateMeeting(m),onTime:m=>applySimTime(m,false)});
 let __sim={acc:0,last:null,manual:false,lastManualSet:0,time:timeOfDay};
 // Siklus 120: applySimTime = set jam simulasi TANPA re-apply lighting (dipakai
 // onTime dari daycycle.apply — dulu onTime→updateTime→__light.apply→onTime =

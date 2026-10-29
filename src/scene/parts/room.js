@@ -134,11 +134,42 @@ export function createCeilingFixtures(ctx, deskList) {
   const { THREE, office, M, MB } = ctx;
   const B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
   const put = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); office.add(m); return m; };
+  // ── Siklus 169: panel plafon recessed & bohlam lampu gantung ikut siang↔malam ──
+  // Keduanya MeshBasicMaterial putih hangat (panel 0xF0F4FF n=114 — bidang unlit
+  // TERLUAS di audit scene live; bohlam 0xfff3d6 ×26 meja) — dulu statis: jam malam
+  // panel dinding/judul sudah gelap (165-168) tapi plafon tetap menyala penuh
+  // seperti panel lampu. Pola trim 166: pasangan day/night, MESH ter-tag
+  // (userData.__ceil) → warna material AKTIF ikut (aman dari klon wall-fade).
+  const CEIL_DAY = 0xF0F4FF;
+  const CEIL_NIGHT = 0x2E3A52;   // biru arsitektural gelap — harmonis panel dinding WALL_NIGHT #1B2436
+  const BULB_DAY = 0xFFF3D6;     // bohlam hangat (identik kode lama)
+  const BULB_NIGHT = 0x3A3426;   // amber sangat redup — hue hangat terjaga (R≥G>B), lum ~¼
+  const nightOf = { [CEIL_DAY]: CEIL_NIGHT, [BULB_DAY]: BULB_NIGHT };
+  const dayOf = { [CEIL_NIGHT]: CEIL_DAY, [BULB_NIGHT]: BULB_DAY };
   // Lampu gantung industri di atas tiap meja
   deskList.forEach((d) => {
     put(B(0.02, 0.8, 0.02), M(0x2e3238), d.x, 3.65, d.z);
     put(B(0.4, 0.14, 0.4), M(0x22262b), d.x, 3.2, d.z);
-    put(B(0.12, 0.06, 0.12), MB(0xfff3d6), d.x, 3.11, d.z);
+    const bulb = put(B(0.12, 0.06, 0.12), MB(BULB_DAY), d.x, 3.11, d.z);
+    bulb.userData.__ceil = BULB_DAY; // tag pasangan siang → malam
     const pl = new THREE.PointLight(0xffe8cc, 0.15, 4, 2); pl.position.set(d.x, 3.1, d.z); office.add(pl);
   });
+  return {
+    ceilDay: CEIL_DAY, ceilNight: CEIL_NIGHT, bulbDay: BULB_DAY, bulbNight: BULB_NIGHT,
+    nightOf, dayOf,
+    // paintCeilNight — set warna semua mesh ter-tag (panel plafon diregistrasi
+    // OfficeScene via registerCeilPanels). Idempoten di sisi pemanggil (daycycle).
+    paintCeilNight(night) {
+      if (!office || typeof office.traverse !== 'function') return 0;
+      const map = night ? nightOf : dayOf;
+      let n = 0;
+      office.traverse((o) => {
+        if (o.isMesh && o.userData && o.userData.__ceil !== undefined && o.material && o.material.color) {
+          const day = o.userData.__ceil;
+          o.material.color.set(night ? (map[day] !== undefined ? map[day] : day) : day); n++;
+        }
+      });
+      return n;
+    },
+  };
 }
