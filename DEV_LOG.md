@@ -11,7 +11,7 @@
   - **ESLint: 0 error 0 warning** (file terubah).
   - **Build:** sukses (38 precache, 1844.83 KiB) → deploy `dist/*` → `~/wfs-hq/`; wfs-hq & wfs-office active, :9503 HTTP 200.
   - **E2E:** `e2e_perf_chip.py` OK (SwiftShader: `__perf` live fps 0.4, chip down "GPU 0,4 FPS · x0.75", shot 675 KB); `e2e_err.py` **0 error / 0 page error / 0 warning**; `shot.sh` :0 **672.844 bytes** (>500 KB, scene hidup).
-- **Commit:** lihat git log — push origin/main.
+- **Commit:** `9d60466` (snapshot cron autopush :30 — memuat perf_quality.js +65 & test +121) + `efa713f` (DEV_LOG + koreksi aritmetika test), push sukses ke `origin/main`.
 - **Sisa backlog:** verifikasi recovery end-to-end di GPU cepat riil tetap butuh perangkat asli (SwiftShader selalu degraded); sisanya kosong.
 
 ## 2026-10-29 09:49 WIB — Siklus 147: recovery tangga kualitas adaptif + chip kualitas GPU di HUD (perf_quality.js)
