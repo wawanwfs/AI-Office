@@ -1,6 +1,7 @@
-// Kamera fokus: follow agent + lerp ke target + auto-rotate (murni, diuji unit).
+// parts/kamera_focus.js — Kamera fokus: follow agent + lerp ke target + auto-rotate (murni, diuji unit).
 // Diekstrak dari blok inline di OfficeScene.animate() agar logika lerp/follow/
 // reset dapat diuji tanpa renderer.
+import { levelOf, agentLiveLevel } from './agent_status.js';
 
 // Anchor follow goal utk satu agen: peserta RAPAT (figAnchor terisi — kursi
 // rapat, di-resolve per-frame dari figur) MENANG atas walker/home; agen biasa
@@ -117,4 +118,54 @@ export function resetFocusGoal(homeT, homeRadius, radiusFallback) {
     r: hr ? hr : fb,
     reset: true,
   };
+}
+
+// ── Siklus 146: lantai kamera → FloorNavigator (pelapor terpusat per-frame) ──
+// Keluarga bug siklus 142–145: tiap jalur fokus melaporkan lantai SATU KALI di
+// titik klik (onSelectAgent / onCameraFloor). Tiga jalur lolos:
+//   1. FOLLOW: kamera mengikuti agen yang BERJALAN lintas lantai (rapat→L1,
+//      lunch kafe→L3, pulang) — nav beku di lantai saat agen diklik.
+//   2. Klik papan proyek (single + dblclick): goal z=13.2 (dinding L3) —
+//      panel proyek terbuka, nav tidak ikut.
+//   3. dblclick nexus: goal z=6.1 (L3) tanpa onSelectAgent.
+// Lantai kini dihitung dari TARGET GOAL (bukan titik intersect/posisi orbit —
+// dinding belakang transparan saat zoom-in bisa mengarahkan ray keluar kantor)
+// tiap frame oleh animate(); callback App HANYA dipanggil saat lantai BERUBAH.
+//
+// goalFloor(goal, homeT): lantai kamera utk satu goal — {follow} → lantai LIVE
+// agen via agentLiveLevel (satu sumber kebenaran dgn badge 142/143/144);
+// goal reset (klik kosong/Escape) & dblclick area kosong TIDAK melapor (null) —
+// kembali ke overview bukan perpindahan lantai; goal statis → levelOf(goal.t.z).
+// Guard anti-poisoning: goal korup / lantai korup → null (diam, bukan lantai palsu).
+export function goalFloor(goal, homeT) {
+  if (!goal || !goal.t) return null;
+  const z = goal.t.z;
+  if (typeof z !== 'number' || !Number.isFinite(z)) return null;
+  if (goal.reset) {
+    // Kembali ke HOME_TGT = overview semua lantai — BUKAN pindah lantai.
+    const home = homeT && Number.isFinite(homeT.z) ? homeT.z : null;
+    return (home !== null && z === home) ? null : levelOf(z);
+  }
+  // dblclick area kosong = maju 30% menuju tgt saat ini (zoom idle) — kamera
+  // bisa saja di rumah (tgt z=0.3 → "L2") tanpa niat pindah lantai: JANGAN
+  // dilaporkan. Berbeda dgn dblclick titik objek (fokus sadar-lantai).
+  if (goal.blank) return null;
+  const f = goal.follow;
+  if (f) {
+    const agent = (f.meetIdx != null) ? f.root : f;
+    let lvl = null;
+    try { lvl = agentLiveLevel(agent); } catch { /* state korup → fallback posisi */ }
+    return lvl || levelOf(z);
+  }
+  return levelOf(z);
+}
+
+// cameraFloorFrame(goal, last, homeT): satu langkah pelapor per-frame.
+// Return { level, changed } — level=goalFloor(goal) (null → report null:
+// pemicu reset latch), changed=true hanya bila lantai non-null BERBEDA dari
+// last (latch: callback App hanya menyala saat perpindahan lantai nyata).
+export function cameraFloorFrame(goal, last, homeT) {
+  const lvl = goalFloor(goal, homeT);
+  if (lvl === null || lvl === undefined) return { level: null, changed: false };
+  return { level: lvl, changed: lvl !== last };
 }
