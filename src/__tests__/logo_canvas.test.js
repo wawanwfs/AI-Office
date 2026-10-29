@@ -2,7 +2,7 @@
 // Unit test painter logo WFS Project (parts/logo_canvas.js) — resepsionis & dinding belakang.
 // ctx recorder + gradien palsu; memverifikasi urutan & parameter identik kode inline lama.
 import { describe, it, expect } from 'vitest';
-import { drawResepsiLogo, drawWallLogo, drawWallTitle } from '../scene/parts/logo_canvas.js';
+import { drawResepsiLogo, drawWallLogo, drawWallTitle, TITLE_DAY, TITLE_NIGHT } from '../scene/parts/logo_canvas.js';
 
 function makeCtx(){
   const ops=[]; let gid=0;
@@ -249,5 +249,28 @@ describe('drawWallTitle (judul dinding 1024×200)', ()=>{
     expect(a._ops[0][0]).toBe('clearRect');
     expect(b._ops[0][0]).toBe('clearRect');
     expect(a._ops.filter(o=>o[0]==='fillText').length).toBe(2);
+  });
+
+  // ── Siklus 168: judul ikut siang↔malam — painter parametrik ──
+  it('siklus168: palet parametrik — default siang identik, palet malam hue terjaga & lebih redup', ()=>{
+    expect(TITLE_DAY).toEqual({ w:'#FFFFFF', p:'#F59E0B' }); // kontrak siang lama
+    const lum=(hex)=>{ const v=parseInt(hex.slice(1),16); return 0.2126*(v>>16&255)+0.7152*(v>>8&255)+0.0722*(v&255); };
+    expect(lum(TITLE_NIGHT.w)).toBeLessThan(lum(TITLE_DAY.w)*0.75); // putih → silver-biru redup
+    expect(lum(TITLE_NIGHT.p)).toBeLessThan(lum(TITLE_DAY.p)*0.75); // amber → amber gelap
+    // hue terjaga: kanal teks dominan tetap sama urutan (w: B tertinggi silver-biru; p: R>G>B amber)
+    expect((parseInt(TITLE_NIGHT.w.slice(1),16)>>8&255)).toBeLessThan(parseInt(TITLE_NIGHT.w.slice(1),16)&255);
+    const pn=parseInt(TITLE_NIGHT.p.slice(1),16);
+    expect(pn>>16&255).toBeGreaterThan(pn>>8&255); expect(pn>>8&255).toBeGreaterThan(pn&255);
+    // repaint malam = painter sama dgn palet malam (kontrak posisi/font identik siang)
+    const c=makeCtx(); c.clearRect=(...a)=>c._ops.push(['clearRect',a]);
+    drawWallTitle(c, TITLE_NIGHT);
+    const ops=c._ops;
+    const styleBefore=(idx,key)=>{ for(let j=idx-1;j>=0;j--) if(ops[j][0]===key) return ops[j][1]; };
+    const iW=ops.findIndex(o=>o[0]==='fillText'&&o[1]==='WFS');
+    expect(ops[iW][2]).toEqual([300,100]);
+    expect(styleBefore(iW,'fillStyle')).toBe(TITLE_NIGHT.w);
+    const iP=ops.findIndex(o=>o[0]==='fillText'&&o[1]==='PROJECT');
+    expect(ops[iP][2]).toEqual([730,100]);
+    expect(styleBefore(iP,'fillStyle')).toBe(TITLE_NIGHT.p);
   });
 });

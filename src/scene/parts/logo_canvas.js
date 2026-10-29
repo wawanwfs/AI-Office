@@ -30,12 +30,17 @@ export function drawWallLogo(ctx) {
   ctx.fillStyle='rgba(255,255,255,.75)';ctx.font='600 62px "Segoe UI",Arial,sans-serif';ctx.fillText('SOFTWARE HOUSE  \u00b7  AI TEAM',620,570);
 }
 
-// Judul dinding belakang 1024x200 (teks WFS putih + PROJECT amber, latar transparan)
-export function drawWallTitle(ctx) {
+// Judul dinding 1024x200 (teks WFS + PROJECT, latar transparan). Siklus 168:
+// warna parametrik — default SIANG identik kode lama (putih + amber #F59E0B);
+// malam di-repaint dgn palet TITLE_NIGHT (hue terjaga, lum ~½) oleh daycycle.
+export const TITLE_DAY = { w: '#FFFFFF', p: '#F59E0B' };
+export const TITLE_NIGHT = { w: '#7E90B4', p: '#8A5E1A' }; // silver-biru + amber redup
+export function drawWallTitle(ctx, colors) {
+  const c = colors || TITLE_DAY;
   ctx.clearRect(0,0,1024,200);
   ctx.font='900 130px "Segoe UI",Arial,sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-  ctx.fillStyle='#FFFFFF';
+  ctx.fillStyle=c.w;
   ctx.fillText('WFS',300,100);
-  ctx.fillStyle='#F59E0B';
+  ctx.fillStyle=c.p;
   ctx.fillText('PROJECT',730,100);
 }

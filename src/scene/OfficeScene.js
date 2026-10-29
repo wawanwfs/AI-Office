@@ -19,7 +19,7 @@ import { paintRing } from './parts/ring_canvas.js';
 import { drawSky, drawGlassSheen } from './parts/sky_canvas.js';
 import { drawWoodFloor, drawAoStrip } from './parts/floor_canvas.js';
 import { drawCeiling } from './parts/ceiling_canvas.js';
-import { drawResepsiLogo, drawWallTitle } from './parts/logo_canvas.js';
+import { drawResepsiLogo, drawWallTitle, TITLE_NIGHT, TITLE_DAY } from './parts/logo_canvas.js';
 import { createWalls } from './parts/walls.js';
 import { drawBlobShadow } from './parts/blob_canvas.js';
 import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelScale, drawLabelText } from './parts/label_spec.js';
@@ -1131,7 +1131,7 @@ setTimeout(()=>{
   }catch{ /* abaikan: bubble intro opsional */ }
 },1200);
 
-  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__skyNight=()=>__light.skyNight; window.__skyCv=__skyCv; window.__wallNight=()=>__light.wallNight; window.__wallTexCv=()=>(__wallsRt&&__wallsRt.wallTexPaints&&__wallsRt.wallTexPaints[0])?__wallsRt.wallTexPaints[0].cv:null; window.__trimNight=()=>__light.trimNight; window.__trimMat=()=>(__wallsRt&&__wallsRt.trimPaints&&__wallsRt.trimPaints[0])?__wallsRt.trimPaints[0].mat:null; window.__boardNight=()=>__light.boardNight; window.__boardMat=()=>__mr&&__mr.boardMesh?__mr.boardMesh.material:null; window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
+  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__skyNight=()=>__light.skyNight; window.__skyCv=__skyCv; window.__wallNight=()=>__light.wallNight; window.__wallTexCv=()=>(__wallsRt&&__wallsRt.wallTexPaints&&__wallsRt.wallTexPaints[0])?__wallsRt.wallTexPaints[0].cv:null; window.__trimNight=()=>__light.trimNight; window.__trimMat=()=>(__wallsRt&&__wallsRt.trimPaints&&__wallsRt.trimPaints[0])?__wallsRt.trimPaints[0].mat:null; window.__boardNight=()=>__light.boardNight; window.__boardMat=()=>__mr&&__mr.boardMesh?__mr.boardMesh.material:null; window.__titleNight=()=>__light.titleNight; window.__titleCv=()=>wtc; window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
 window.__renderer=renderer; // debug/e2e: info.memory.textures/geometries (probe kebocoran tekstur)
 window.__spawnBubble=(x,y,z,text,color,anchor)=>createBubble(x,y,z,text,color,anchor); // debug/e2e probe kebocoran (jalur createBubble asli)
   // Badge status real-time: poll gateway tiap 20s, warnai badge dada sesuai status task
@@ -1258,11 +1258,19 @@ addPlant(11.6,-8.5,true);
 addPlant(-11.6,8.8,true);
 
 // --- JUDUL di dinding belakang (big wall text WFS PROJECT) ---
+// Siklus 168: judul ikut siang↔malam — repaint kanvas parametrik (pola 164/165).
+// Kanvas STATIS (tanpa redraw live) → repaint aman; dua-tone brand (putih+amber)
+// terjaga via palet TITLE_DAY/TITLE_NIGHT (tint satu-warna akan meratakan keduanya).
 const wtc=document.createElement('canvas');wtc.width=1024;wtc.height=200;
 const wtx=wtc.getContext('2d');
 drawWallTitle(wtx);
 const wtt=uiTexture(new THREE.CanvasTexture(wtc));
 const wallTitle=new THREE.Mesh(new THREE.PlaneGeometry(4.6,0.9), uiMaterial(new THREE.MeshBasicMaterial({map:wtt,transparent:true})));
+const paintTitleNight=(night)=>{
+  drawWallTitle(wtx, night?TITLE_NIGHT:TITLE_DAY);
+  wtt.needsUpdate=true;
+  return 1;
+};
 // Dipasang di dinding KIRI (x=-16.8, menghadap +X) — spot kosong antara pilar dinding kampus
 // dan jendela z=-3.4 (lebar 4.6 → z -8.8..-4.2, aman dari keduanya). Sebelumnya mesh
 // ini dibuat tapi TIDAK PERNAH di-add ke scene (kode mati).
@@ -1323,7 +1331,7 @@ const drawScreen=(s,i)=>{ if(shouldRedrawScreenAt(frame,i)) drawScreenFrame(s,fr
 let timeOfDay=(()=>{ // mulai dari jam NYATA saat load (biar jam dinding & HUD terasa hidup),
   // dibulatkan ke menit; disinkronkan dgn sim clock (1 hari kerja ≈ 12 mnt nyata)
   const d=new Date();return d.getHours()*60+d.getMinutes();})();
-const __light=createLighting({THREE,scene,renderer,sun,ambient,agentData,skyWinCanvas:__skyCv,wallPainter:__wallsRt&&__wallsRt.paintWallNight?__wallsRt:null,trimPainter:__wallsRt&&__wallsRt.paintTrimNight?__wallsRt:null,boardPainter:__mr&&__mr.paintBoardNight?{paintBoardNight:__mr.paintBoardNight}:null,onTimeUpdate,onStatusUpdate,onTick:m=>updateMeeting(m),onTime:m=>applySimTime(m,false)});
+const __light=createLighting({THREE,scene,renderer,sun,ambient,agentData,skyWinCanvas:__skyCv,wallPainter:__wallsRt&&__wallsRt.paintWallNight?__wallsRt:null,trimPainter:__wallsRt&&__wallsRt.paintTrimNight?__wallsRt:null,boardPainter:__mr&&__mr.paintBoardNight?{paintBoardNight:__mr.paintBoardNight}:null,titlePainter:{paintTitleNight},onTimeUpdate,onStatusUpdate,onTick:m=>updateMeeting(m),onTime:m=>applySimTime(m,false)});
 let __sim={acc:0,last:null,manual:false,lastManualSet:0,time:timeOfDay};
 // Siklus 120: applySimTime = set jam simulasi TANPA re-apply lighting (dipakai
 // onTime dari daycycle.apply — dulu onTime→updateTime→__light.apply→onTime =

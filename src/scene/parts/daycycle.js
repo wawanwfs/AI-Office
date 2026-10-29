@@ -114,6 +114,22 @@ export function createLighting(ctx) {
     boardRt.paintBoardNight(night);
   }
 
+  // ── Siklus 168: JUDUL dinding "WFS PROJECT" ikut meredup malam ──
+  // Teks putih+amber (avgLum 194, MB unlit) = kandidat terang tersisa audit 167.
+  // REPAINT kanvas parametrik (pola 164/165) — kanvas statis, TANPA redraw live,
+  // jadi repaint aman dan dua-tone brand terjaga (tint satu-warna akan meratakan
+  // putih & amber jadi satu). Guard state+ready terpisah, idempoten, ambang sama.
+  const titleRt = ctx.titlePainter || null;
+  let titleNight = false;
+  let titleReady = false; // init = palet siang → load siang = 0 repaint
+  function paintTitle(night) {
+    if (!titleRt || typeof titleRt.paintTitleNight !== 'function') return;
+    if (!titleReady) { titleReady = true; if (!night) return; }
+    if (titleNight === night) return;
+    titleNight = night;
+    titleRt.paintTitleNight(night);
+  }
+
   function apply(min) {
     current = min;
     onTimeUpdate && onTimeUpdate(min);
@@ -138,6 +154,8 @@ export function createLighting(ctx) {
     paintTrims(d <= 0.55);
     // Whiteboard sprint: tint malam saat gelap (siklus 167) — ambang sama
     paintBoard(d <= 0.55);
+    // Judul dinding WFS PROJECT: repaint malam saat gelap (siklus 168) — ambang sama
+    paintTitle(d <= 0.55);
     onTick && onTick(min);
     // Siklus 120: __setTime (manual) harus meng-update jam simulasi juga — dulu
     // __setTime hanya apply lighting + updateMeeting, tapi __sim.time tidak
@@ -145,7 +163,7 @@ export function createLighting(ctx) {
     // lama. Callback opsional (tanpa mode manual — slider React punya jalurnya).
     onTime && onTime(min);
   }
-  return { apply, get minutes() { return current; }, get skyNight() { return skyNight; }, get wallNight() { return wallNight; }, get trimNight() { return trimNight; }, get boardNight() { return boardNight; } };
+  return { apply, get minutes() { return current; }, get skyNight() { return skyNight; }, get wallNight() { return wallNight; }, get trimNight() { return trimNight; }, get boardNight() { return boardNight; }, get titleNight() { return titleNight; } };
 }
 
 // ── Mode neon: kumpulan "saklar" yang didaftarkan, bukan pemindaian seluruh scene ──

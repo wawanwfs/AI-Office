@@ -93,3 +93,84 @@ describe('createLighting — pemicu whiteboard sesuai waktu (siklus 167)', () =>
     expect(L.boardNight).toBe(false)
   })
 })
+
+// ── Siklus 168: pemicu titlePainter (JUDUL dinding WFS PROJECT) — pola boardPainter ──
+function makeTitleHarness(extra = {}) {
+  const titleCalls = []
+  const ctx = {
+    ambient: { intensity: 1 },
+    sun: { intensity: 1, color: { set: vi.fn() } },
+    renderer: { toneMappingExposure: 1 },
+    scene: { background: null, fog: { color: null } },
+    agentData: [{ dGlow: { intensity: 1 } }],
+    THREE: { Color: class {} },
+    titlePainter: { paintTitleNight: (night) => { titleCalls.push(night); return 1 } },
+    ...extra,
+  }
+  return { ctx, titleCalls }
+}
+
+describe('createLighting — pemicu judul dinding sesuai waktu (siklus 168)', () => {
+  it('malam (60): paintTitleNight(true) terpanggil, titleNight=true', () => {
+    const { ctx, titleCalls } = makeTitleHarness()
+    const L = createLighting(ctx)
+    L.apply(60)
+    expect(titleCalls).toEqual([true])
+    expect(L.titleNight).toBe(true)
+  })
+  it('siang (720) setelah malam: balik siang — false terpanggil', () => {
+    const { ctx, titleCalls } = makeTitleHarness()
+    const L = createLighting(ctx)
+    L.apply(60)
+    L.apply(720)
+    expect(titleCalls).toEqual([true, false])
+    expect(L.titleNight).toBe(false)
+  })
+  it('load langsung siang: 0 panggilan (kanvas init = palet siang)', () => {
+    const { ctx, titleCalls } = makeTitleHarness()
+    const L = createLighting(ctx)
+    L.apply(720); L.apply(721)
+    expect(titleCalls).toEqual([])
+    expect(L.titleNight).toBe(false)
+  })
+  it('idempoten: malam terus = 1 panggilan saja (0 biaya per tick)', () => {
+    const { ctx, titleCalls } = makeTitleHarness()
+    const L = createLighting(ctx)
+    L.apply(60); L.apply(61); L.apply(90)
+    expect(titleCalls).toEqual([true])
+  })
+  it('senja (1100): ikut malam — ambang sama dgn jendela/dinding/trim/board', () => {
+    const { ctx, titleCalls } = makeTitleHarness()
+    const L = createLighting(ctx)
+    L.apply(1100)
+    expect(titleCalls).toEqual([true])
+    expect(L.titleNight).toBe(true)
+  })
+  it('tanpa titlePainter (harness lama): apply aman, titleNight tetap false', () => {
+    const { ctx } = makeTitleHarness()
+    delete ctx.titlePainter
+    const L = createLighting(ctx)
+    expect(() => L.apply(60)).not.toThrow()
+    expect(L.titleNight).toBe(false)
+  })
+  it('sinkron: board & title sama-sama true di malam 60 dan sama-sama false di siang (satu ambang)', () => {
+    const titleCalls = []
+    const L = createLighting({
+      ambient: { intensity: 1 },
+      sun: { intensity: 1, color: { set: vi.fn() } },
+      renderer: { toneMappingExposure: 1 },
+      scene: { background: null, fog: { color: null } },
+      agentData: [{ dGlow: { intensity: 1 } }],
+      THREE: { Color: class {} },
+      boardPainter: { paintBoardNight: () => 1 },
+      titlePainter: { paintTitleNight: (n) => { titleCalls.push(n); return 1 } },
+    })
+    L.apply(60)
+    expect(L.boardNight).toBe(true)
+    expect(L.titleNight).toBe(true)
+    L.apply(720)
+    expect(L.boardNight).toBe(false)
+    expect(L.titleNight).toBe(false)
+    expect(titleCalls).toEqual([true, false])
+  })
+})
