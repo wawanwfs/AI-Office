@@ -58,7 +58,7 @@ import { AGENTS, AGENTS_EXTRA, allAgents as allAgentsFn } from './parts/agents_s
 import { EXTENDED_SPECIALISTS } from './parts/extended_desks.js';
 import { DESKS } from './parts/desk_layout.js';
 import { teamPodFocusTarget, findTeamByKey } from './parts/team_spec.js';
-import { cameraFloorFrame } from './parts/kamera_focus.js'; // siklus 146: pelapor lantai kamera per-frame (goalFloor murni — follow LIVE + statis)
+import { levelOf } from './parts/agent_status.js'; // siklus 145: lantai kamera → FloorNavigator (onCameraFloor)
 import { meetingFocusTarget, getWhiteboardTooltipText, isWhiteboardHit } from './parts/whiteboard_spec.js';
 import { isLongHair, STANDING, SITTING, accessoryAnchor } from './parts/character_spec.js';
 import { collectPickTargets, findAgentRoot, isNexusHit, isBoardHit, findMeetingFigureOwner } from './parts/raycast_targets.js';
@@ -140,11 +140,6 @@ let autoRot=autoRotDefault(),autoTmr;
 const __prmListener=(e)=>{if(__userRot===null)autoRot=!e.matches}; // bernama: destroy() bisa melepas (siklus 123)
 __prm&&__prm.addEventListener&&__prm.addEventListener('change',__prmListener);
 let focusGoal=null;const HOME_TGT=new THREE.Vector3(0,1.4,0.3);let homeRadius=null;let nxChar=null,nxAgent=null;
-// Siklus 146: latch lantai kamera — pelapor terpusat per-frame (animate) hanya
-// memanggil onCameraFloor saat lantai goal BERUBAH; latch di-reset di semua jalur
-// kembali ke overview (klik kosong/Escape/resetFocus/setView/fokus baru) agar
-// langkah kembali→pergi ke lantai yang SAMA tetap terlapor.
-let __lastCamFloor=null;
 function updCam(){const p=Math.max(.18,Math.min(Math.PI/2.3,sph.phi));sph.phi=p;camera.position.set(sph.radius*Math.sin(p)*Math.sin(sph.theta)+tgt.x,sph.radius*Math.cos(p)+tgt.y,sph.radius*Math.sin(p)*Math.cos(sph.theta)+tgt.z);camera.lookAt(tgt)}
 const __vo=()=>{const w=Math.max(1,container.clientWidth||1),h=Math.max(1,container.clientHeight||1);const vo=getViewOffsetConfig(w,h);if(vo.enabled)camera.setViewOffset(vo.fullWidth,vo.fullHeight,vo.offsetX,vo.offsetY,vo.width,vo.height);else camera.clearViewOffset()};__vo();
 updCam();
@@ -396,11 +391,8 @@ __onCanvas('dblclick',e=>{
     if(pg)focusGoal={t:new THREE.Vector3(pg.t.x,pg.t.y,pg.t.z),r:pg.r};
   }
   else{
-    // Siklus 146: flag `blank` — goal ini hanya maju 30% dari posisi orbit
-    // saat ini (zoom idle), BUKAN pindah lantai → goalFloor mengabaikannya
-    // (tanpa flag, kamera di rumah terlapor "L2" palsu).
     const bg=dblclickBlankGoal(tgt,sph.radius);
-    if(bg)focusGoal={t:new THREE.Vector3(bg.t.x,bg.t.y,bg.t.z),r:bg.r,blank:true};
+    if(bg)focusGoal={t:new THREE.Vector3(bg.t.x,bg.t.y,bg.t.z),r:bg.r};
   }
 });
 
@@ -618,9 +610,8 @@ function focusMeetingRoom() {
   if (selectedIdx !== -1) { selectedIdx = -1; applySelected(); if (onSelectAgent) onSelectAgent(null); }
   const ft = meetingFocusTarget(MRX, MRZ);
   focusGoal = { t: new THREE.Vector3(ft.x, ft.y, ft.z), r: ft.radius };
-  // Siklus 145→146: ruang rapat selalu di L1 (ROOM_CZ=-3) — nav ikut via
-  // pelapor per-frame terpusat: latch di-reset → frame berikutnya melapor L1.
-  __lastCamFloor = null;
+  // Siklus 145: ruang rapat selalu di L1 (ROOM_CZ=-3) — nav ikut, dulu tetap.
+  if (onCameraFloor) onCameraFloor(levelOf(MRZ));
   return true;
 }
 
@@ -1608,15 +1599,6 @@ function animate(){
     if(focusGoal.reset&&focusStep(tgt,sph,focusGoal.t,focusGoal.r,focusGoal.phi))focusGoal=null;
     else{focusStep(tgt,sph,focusGoal.t,focusGoal.r,focusGoal.phi)}
     updCam();
-    // Siklus 146: pelapor lantai kamera TERPUSAT per-frame — follow agen yang
-    // berjalan lintas lantai (rapat→L1, lunch→L3) & goal statis non-reset
-    // (papan proyek z=13.2, nexus dblclick z=6.1) kini menyinkronkan
-    // FloorNavigator. Goal reset/menuju HOME_TGT = kembali ke overview →
-    // BUKAN pindah lantai: goalFloor null → latch di-reset (null), tanpa
-    // callback. murni (kamera_focus.js) → diuji unit + diskriminasi.
-    const cf=cameraFloorFrame(focusGoal,__lastCamFloor,HOME_TGT);
-    __lastCamFloor=cf.level;
-    if(cf.changed&&onCameraFloor)onCameraFloor(cf.level);
   }
   if(autoRot){autoRotateStep(sph);updCam()}
   screenData.forEach(drawScreen);
@@ -2018,13 +2000,10 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
         __sound.playSelect();
         createBubble(ft.x, ft.y + 1.8, ft.z, '“Pod ' + teamObj.name + ' (Lt. ' + teamObj.floor + ')”', teamObj.hex || teamObj.color || '#10E5A0');
       }
-      // Siklus 145→146: kamera melompat ke pod tim (L1/L2/L3 sesuai spesifikasi
+      // Siklus 145: kamera melompat ke pod tim (L1/L2/L3 sesuai spesifikasi
       // tim) — FloorNavigator harus ikut, dulu nav tetap di lantai lama
-      // (founder melihat pod L3 sementara tombol "L1" tetap aktif). Kini via
-      // latch + pelapor per-frame terpusat: latch di-RESET (null) → frame
-      // berikutnya PASTI melapor (jangan set lantai di sini — latch yang sama
-      // dgn level baru membuat changed=false dan callback tak pernah menyala).
-      __lastCamFloor = null;
+      // (founder melihat pod L3 sementara tombol "L1" tetap aktif).
+      if (onCameraFloor) onCameraFloor(levelOf(ft.z));
       return true;
     },
     focusAgent: (idOrName) => {
