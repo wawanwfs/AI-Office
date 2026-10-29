@@ -5,7 +5,7 @@ import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
 import { fileCount } from '../lib/files'
 import { IconStats, IconClose } from './Icons'
-import { computeTeamStats } from '../scene/parts/team_spec.js'
+import { computeTeamStats, teamPresenceSummary } from '../scene/parts/team_spec.js'
 
 // Animasi angka: lerp dengan easing untuk feedback visual yang hidup (tanpa lib tambahan).
 function useTween(target, ms = 550) {
@@ -67,6 +67,18 @@ export default function TeamStats() {
       // eslint-disable-next-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async), bukan membaca snapshot ref
       loadRid.current++ }
   }, [open, load])
+
+  // Siklus 150: kehadiran LIVE anggota tim dari scene (window.__agentData) —
+  // poll 4 dtk hanya saat panel terbuka (pola sceneAgents SysMeter; scene
+  // absen/UI-only → null, chip kehadiran disembunyikan per kartu).
+  const [presence, setPresence] = useState(null)
+  useEffect(() => {
+    if (!open) return
+    const read = () => setPresence(teamPresenceSummary(window.__agentData))
+    read()
+    const iv = setInterval(read, 4000)
+    return () => clearInterval(iv)
+  }, [open])
 
   const byStatus = {}
   let totalFiles = 0
@@ -170,6 +182,26 @@ export default function TeamStats() {
                             <span className="team-members-sub">Lead: {team.lead} · {(team.members || []).length} agen</span>
                             <b style={{ color: team.pct === 100 ? '#10E5A0' : team.color }}>{team.done}/{team.total} ({team.pct}%)</b>
                           </div>
+                          {/* Siklus 150: kehadiran LIVE anggota di pod — paritas
+                              Ticker 149 (satu sumber agentLiveStatus). null =
+                              scene absen → baris disembunyikan, bukan angka palsu. */}
+                          {(() => {
+                            const pr = presence && presence.find(p => p.key === team.key)
+                            if (!pr || pr.total === 0) return null
+                            return (
+                              <div className="team-presence" title={`Kehadiran live pod ${team.name} dari scene 3D`}>
+                                <span className="team-presence-desk" aria-hidden="true">
+                                  <i style={{ background: '#10E5A0' }} />{pr.atDesk}/{pr.total} di pod
+                                </span>
+                                {pr.away > 0 && pr.awayLabel && (
+                                  <span className="team-presence-away" aria-hidden="true">{pr.awayLabel}</span>
+                                )}
+                                <span className="sr-only">
+                                  Kehadiran live: {pr.atDesk} dari {pr.total} anggota di pod{pr.away > 0 && pr.awayLabel ? ` — ${pr.away} lain: ${pr.awayLabel}` : ''}
+                                </span>
+                              </div>
+                            )
+                          })()}
                         </div>
                       ))}
                     </div>

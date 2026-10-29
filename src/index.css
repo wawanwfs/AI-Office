@@ -803,6 +803,21 @@ button { font-family: inherit; }
   transition: all 0.18s ease;
   cursor: pointer;
 }
+/* Siklus 150: kehadiran LIVE anggota tim di kartu pod — titik hijau =
+   STATUS_HEX.work (satu sumber agent_status.js), konsisten Ticker 149. */
+.team-presence {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  margin-top: 5px; padding: 3px 8px; border-radius: 7px;
+  background: rgba(255, 255, 255, 0.04); border: 1px solid rgba(255, 255, 255, 0.07);
+  font-family: 'DM Sans', sans-serif; font-size: 10.5px; font-weight: 600;
+  color: var(--text-secondary);
+}
+.team-presence-desk { display: inline-flex; align-items: center; gap: 4px; color: #d7e2ee; white-space: nowrap; }
+.team-presence i {
+  width: 6px; height: 6px; border-radius: 50%; flex: none;
+  box-shadow: 0 0 5px currentColor; display: inline-block;
+}
+.team-presence-away { color: var(--text-tertiary); white-space: nowrap; }
 .team-card:hover {
   background: rgba(255, 255, 255, 0.08);
   border-color: rgba(255, 255, 255, 0.18);

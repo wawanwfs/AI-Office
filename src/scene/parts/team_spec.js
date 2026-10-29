@@ -1,5 +1,6 @@
 // parts/team_spec.js — Spesifikasi Pembagian Divisi / Tim Kerja Kantor WFS PROJECT
 // Modul murni (tanpa dependensi THREE/DOM) agar dapat diuji unit 100% deterministik.
+import { agentLiveTone, agentLiveLevel } from './agent_status.js';
 
 export const TEAMS = [
   {
@@ -184,4 +185,78 @@ export function teamPodFocusTarget(teamKey) {
     return { x: 0, y: 1.1, z: 1.5, r: 19, phi: 1.05 };
   }
   return { ...team.podCenter };
+}
+
+/**
+ * Kehadiran LIVE anggota tim dari scene (siklus 150).
+ *
+ * Dulu kartu "Progres Divisi & Pod 3D" TeamStats hanya bawa progres task —
+ * founder yang klik "Fokus 3D" ke pod bisa mendarat di pod KOSONG (semua
+ * anggota sedang rapat L1 / makan siang kafe L3 / pulang) tanpa indikasi apa
+ * pun. Kini kartu membawa keadaan anggota tim SAAT INI dari window.__agentData
+ * (scene = satu sumber kebenaran, paritas tickerPresenceSummary siklus 149).
+ *
+ * agentData = window.__agentData (entri { agent:{name}, state, lunch, ... });
+ * anggota dicocokkan via findTeamByAgent (nama scene uppercase BUDI dst vs
+ * members/agentIds tim — peta yang sama dgn agregasi task).
+ *
+ * Return: array { total, atDesk, away, awayLabel } per tim — atDesk = anggota
+ * yang bisa ditemui di pod (state sitting DAN lantai live == lantai meja tim;
+ * peserta rapat figurnya di L1), away = sisanya dgn label status dominan
+ * ("3 di rapat · 1 makan siang"). Guard anti-poisoning (pola 140/142/143/149):
+ * agentData bukan array → null (chip disembunyikan, bukan angka palsu);
+ * entri korup/tanpa agent dilewati; tim tanpa anggota terwakili tetap muncul
+ * dgn away "0"? TIDAK — entri scene yang tak cocok tim mana pun diabaikan.
+ */
+export function teamPresenceSummary(agentData) {
+  if (!Array.isArray(agentData)) return null;
+  // akumulator per tim: { total, atDesk, awayTone: {meet,lunch,walk,dim,unknown} }
+  const acc = {};
+  for (const team of TEAMS) {
+    acc[team.key] = { total: 0, atDesk: 0, awayTone: {} };
+  }
+  const deskLevelOf = (team) => {
+    // Lantai meja tim dari podCenter.z — batas sama dgn levelOf agent_status
+    // (z < -0.8 → L1, z <= 4.5 → L2, sisanya L3) TANPA import silang: team_spec
+    // murni data, levelOf duplikat di sini dgn komentar peta yang sama.
+    const z = team && team.podCenter ? team.podCenter.z : NaN;
+    if (typeof z !== 'number' || !Number.isFinite(z)) return null;
+    if (z < -0.8) return 1;
+    if (z <= 4.5) return 2;
+    return 3;
+  };
+  const awayLabelOf = (tones) => {
+    const parts = [];
+    if (tones.meet) parts.push(`${tones.meet} di rapat`);
+    if (tones.lunch) parts.push(`${tones.lunch} makan siang`);
+    if (tones.walk) parts.push(`${tones.walk} berjalan`);
+    if (tones.dim) parts.push(`${tones.dim} pulang/offsite`);
+    return parts.join(' · ');
+  };
+  agentData.forEach((ad) => {
+    if (!ad || !ad.agent) return;
+    const team = findTeamByAgent(ad.agent.name);
+    if (!team) return; // Founder/entri di luar TEAMS — bukan anggota pod mana pun
+    const tone = agentLiveTone(ad); // 'work'|'meet'|'lunch'|'walk'|'dim'
+    const a = acc[team.key];
+    a.total += 1;
+    if (tone === 'work' && agentLiveLevel(ad) === deskLevelOf(team)) {
+      // Duduk kerja di lantai pod timnya → bisa ditemui di pod. (agentLiveLevel
+      // null → tak cocok → dihitung away, tanpa label tone palsu.)
+      a.atDesk += 1;
+    } else if (tone === 'meet' || tone === 'lunch' || tone === 'walk' || tone === 'dim') {
+      a.awayTone[tone] = (a.awayTone[tone] || 0) + 1;
+    }
+    // tone work tapi lantai ≠ pod (visiting) → away tanpa label (bukan "berjalan" palsu).
+  });
+  return TEAMS.map((team) => {
+    const a = acc[team.key];
+    return {
+      key: team.key,
+      total: a.total,
+      atDesk: a.atDesk,
+      away: a.total - a.atDesk,
+      awayLabel: awayLabelOf(a.awayTone),
+    };
+  });
 }

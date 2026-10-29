@@ -47,6 +47,12 @@ export function agentLiveStatus(ad) {
   return STANDBY;
 }
 
+// Tone saja (tanpa label/hex) — dipakai agregator yang hanya butuh kelompok
+// (teamPresenceSummary team_spec.js siklus 150). Anti-poisoning sama dgn atas.
+export function agentLiveTone(ad) {
+  return agentLiveStatus(ad).tone;
+}
+
 // Cari entri agentData milik agen berdasarkan nama (case-insensitive — scene
 // memakai nama uppercase BUDI dst, UI membawa nama asli). Return null bila
 // tidak ada (mis. Wahyu FS reception bukan entri agentData).
@@ -149,12 +155,21 @@ export function tickerPresenceSummary(agentData) {
     any = true;
   });
   if (!any) return null;
-  const label = { work: 'di meja', meet: 'rapat', lunch: 'makan siang', walk: 'berjalan', dim: 'pulang/offsite' };
   const out = TICKER_PRESENCE_ORDER
-    .map((k) => ({ key: k, label: label[k], count: cnt[k] }))
+    .map((k) => ({ key: k, label: PRESENCE_LABELS[k], count: cnt[k] }))
     .filter((s) => s.count > 0);
   // first = item tersisa PERTAMA (bukan index 0 urutan) — pemisah '·' hanya
   // antar item; tanpa ini pill merender "· 2 pulang" saat tak ada agen kerja.
   out.forEach((s, i) => { s.first = i === 0; });
   return out;
 }
+
+// Label kehadiran yang dipakai Ticker (149) & kartu tim TeamStats (150) —
+// diekspor agar UI tidak menduplikasi teks (satu sumber kebenaran label).
+export const PRESENCE_LABELS = {
+  work: 'di meja',
+  meet: 'rapat',
+  lunch: 'makan siang',
+  walk: 'berjalan',
+  dim: 'pulang/offsite',
+};
