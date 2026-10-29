@@ -14,6 +14,7 @@ export default function HUD({
   statusKind,
   conn,
   phase,
+  perf,
   onTimeChange,
   ambienceEnabled = false,
   ambienceVolume = 0.35,
@@ -74,6 +75,19 @@ export default function HUD({
           aria-label={`Status sinkronisasi: ${conn.detail}`}
         >
           <i aria-hidden="true" />{conn.label}
+        </span>
+      )}
+
+      {/* Siklus 147: chip kualitas render GPU — FPS live + status tangga adaptif.
+          perf null = scene belum mengukur (2 dtk pertama) / UI-only → disembunyikan. */}
+      {perf && (
+        <span
+          className={`perf-chip ${perf.state}`}
+          role="status"
+          title={perf.detail}
+          aria-label={`Kualitas render: ${perf.detail}`}
+        >
+          <i aria-hidden="true" />{perf.label}
         </span>
       )}
 

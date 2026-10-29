@@ -36,6 +36,7 @@ import {
 } from './scene/parts/sound_spec.js'
 import { resolveShortcutAction } from './scene/parts/shortcut_spec.js'
 import { findAgentLiveEntry, agentLiveLevel } from './scene/parts/agent_status.js'
+import { perfChip } from './scene/parts/perf_quality.js'
 
 const CsWidget = lazy(() => import('./components/CsWidget'))
 
@@ -284,6 +285,26 @@ export default function App() {
     const m = { busy: '● ', off: '⚠ ', '': '' }
     document.title = `${m[statusKind] || ''}${status} — ${base}`
   }, [status, statusKind])
+
+  // Siklus 147: chip kualitas render GPU di HUD — baca window.__perf yang di-set
+  // scene tiap frame (fps/downgraded/shadowLevel/pixelRatio dari tangga adaptif
+  // perf_quality). Polling 2 dtk sejajar rentang sampling FPS scene; chip hanya
+  // tampil setelah sampel pertama (fps > 0), tanpa data → disembunyikan.
+  const [perfChipState, setPerfChipState] = useState(null)
+  useEffect(() => {
+    const read = () => {
+      const p = typeof window !== 'undefined' ? window.__perf : null
+      const chip = perfChip(p)
+      setPerfChipState((prev) => {
+        if (!chip) return null
+        if (prev && prev.label === chip.label && prev.state === chip.state && prev.detail === chip.detail) return prev // hindari re-render sia-sia
+        return chip
+      })
+    }
+    read()
+    const iv = setInterval(read, 2000)
+    return () => clearInterval(iv)
+  }, [])
 
   const [sceneReady, setSceneReady] = useState(false)
   const [sceneErr, setSceneErr] = useState(false)
@@ -607,6 +628,7 @@ export default function App() {
         status={status}
         statusKind={statusKind}
         conn={connBadge}
+        perf={perfChipState}
         onTimeChange={handleTimeChange}
         phase={officePhase}
         ambienceEnabled={ambienceEnabled}
