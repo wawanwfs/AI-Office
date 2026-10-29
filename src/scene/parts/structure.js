@@ -43,10 +43,12 @@ export function createStructure({ THREE, office, M, drawAoStrip, drawWoodFloor, 
     trim.position.set(wx+(wx<0?.06:-.06),1.12,wz);trim.castShadow=true;office.add(trim);
   });
   // Jendela dengan pemandangan langit (dinding belakang & depan, atas wainscot)
-  const skyTex=(()=>{const c=document.createElement('canvas');c.width=256;c.height=128;
-    const x=c.getContext('2d');
-    drawSky(x);
-    return new THREE.CanvasTexture(c);})();
+  // Siklus 164: kanvas skyTex dipertahankan sebagai referensi (skyCv) —
+  // createLighting me-repaint-nya siang↔malam via skyCv.__needsUpdate().
+  const skyCv=document.createElement('canvas');skyCv.width=256;skyCv.height=128;
+  const skyTex=new THREE.CanvasTexture(skyCv);
+  drawSky(skyCv.getContext('2d'));
+  skyCv.__needsUpdate=()=>{skyTex.needsUpdate=true;}; // repaint → re-upload GPU
   // sheen kaca: pantulan diagonal + tint biru — overlay plane di tiap jendela
   const glassSheen=(()=>{const c=document.createElement('canvas');c.width=256;c.height=128;
     const x=c.getContext('2d');
@@ -59,5 +61,5 @@ export function createStructure({ THREE, office, M, drawAoStrip, drawWoodFloor, 
     f.position.set(x,2,z);office.add(f);
   });
 
-  return { fl, cp, skyTex, glassSheen };
+  return { fl, cp, skyTex, glassSheen, skyCv };
 }

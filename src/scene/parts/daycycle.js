@@ -1,5 +1,6 @@
 // Waktu, pencahayaan, mode neon, dan pergantian shift WFS Project.
 import * as shiftSpec from './shift_spec.js';
+import { drawSky, drawSkyNight } from './sky_canvas.js';
 import { floorElevationAt } from './floor_elevation.js';
 
 // ── Kurva waktu: menit → status teks & faktor siang (0 malam … 1 siang) ──
@@ -46,6 +47,23 @@ export function createLighting(ctx) {
   const NAVY = 0x010a28;
   let current = 660;
 
+  // ── Siklus 164: swap tekstur langit jendela siang↔malam ──
+  // Dulu skyTex digambar sekali (siang): saat malam jendela tetap biru terang
+  // + awan putih — kontras salah dgn latar NAVY. Canvas skyTex di-REPAINT dgn
+  // langit malam/siang sesuai daylight → semua material (MeshBasicMaterial
+  // map skyTex) ikut tanpa menyentuh scene graph. Opsional via ctx.skyWinCanvas
+  // (dari structure.js); tanpa itu (unit test lama) swap dilewati, tanpa error.
+  const skyCanvas = ctx.skyWinCanvas || null;
+  let skyNight = false; // status paint aktif — hindari repaint di tiap tick
+  function paintSkyNight(night) {
+    if (!skyCanvas) return;
+    if (skyNight === night) return;
+    skyNight = night;
+    const c2 = skyCanvas.getContext('2d');
+    if (night) drawSkyNight(c2); else drawSky(c2);
+    if (skyCanvas.__needsUpdate) skyCanvas.__needsUpdate();
+  }
+
   function apply(min) {
     current = min;
     onTimeUpdate && onTimeUpdate(min);
@@ -62,6 +80,8 @@ export function createLighting(ctx) {
     else if (min > 300 && min < 420) tint = mixHex(0xfff8f0, 0xffcc88, 1 - (min - 300) / 120);
     sun.color = new THREE.Color(tint);
     agentData.forEach((a) => { a.dGlow.intensity = 0.15 + (1 - d) * 0.3; });
+    // Jendela: langit malam saat gelap (daylight ≤ 0.55), siang saat terang
+    paintSkyNight(d <= 0.55);
     onTick && onTick(min);
     // Siklus 120: __setTime (manual) harus meng-update jam simulasi juga — dulu
     // __setTime hanya apply lighting + updateMeeting, tapi __sim.time tidak

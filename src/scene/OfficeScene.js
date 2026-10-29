@@ -552,7 +552,7 @@ function addBlobShadow(obj,r=0.55){
 // builder murni di parts/structure.js (diuji unit); di sini tinggal injek konteks.
 // (jendela sky-view dinding belakang & kiri dibangun di blok dinding __wallFade di bawah)
 const __st=createStructure({ THREE, office, M, drawAoStrip, drawWoodFloor, drawSky, drawGlassSheen });
-const fl=__st.fl, cp=__st.cp, skyTex=__st.skyTex, glassSheen=__st.glassSheen;
+const fl=__st.fl, cp=__st.cp, skyTex=__st.skyTex, glassSheen=__st.glassSheen, __skyCv=__st.skyCv;
 // Sembunyikan lantai dasar lama agar tidak tumpang-tindih (eliminasi 100% z-fighting & flicker)
 if(fl)fl.visible=false;
 if(cp)cp.visible=false;
@@ -1323,7 +1323,7 @@ const drawScreen=(s,i)=>{ if(shouldRedrawScreenAt(frame,i)) drawScreenFrame(s,fr
 let timeOfDay=(()=>{ // mulai dari jam NYATA saat load (biar jam dinding & HUD terasa hidup),
   // dibulatkan ke menit; disinkronkan dgn sim clock (1 hari kerja ≈ 12 mnt nyata)
   const d=new Date();return d.getHours()*60+d.getMinutes();})();
-const __light=createLighting({THREE,scene,renderer,sun,ambient,agentData,onTimeUpdate,onStatusUpdate,onTick:m=>updateMeeting(m),onTime:m=>applySimTime(m,false)});
+const __light=createLighting({THREE,scene,renderer,sun,ambient,agentData,skyWinCanvas:__skyCv,onTimeUpdate,onStatusUpdate,onTick:m=>updateMeeting(m),onTime:m=>applySimTime(m,false)});
 let __sim={acc:0,last:null,manual:false,lastManualSet:0,time:timeOfDay};
 // Siklus 120: applySimTime = set jam simulasi TANPA re-apply lighting (dipakai
 // onTime dari daycycle.apply — dulu onTime→updateTime→__light.apply→onTime =
