@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
+import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 
 // Siklus 158: guard deploy — scripts/deploy.py harus (1) menyalin dist/ sinkron,
@@ -7,7 +8,8 @@ import { resolve } from 'node:path'
 // index.html / landing.html / sw.js), (3) mengarsipkan — bukan rm permanen.
 // Sumber kebenaran = teks deploy.py (unit nyata butuh menulis ke ~/wfs-hq produksi).
 
-const src = readFileSync(resolve(__dirname, '../../scripts/deploy.py'), 'utf-8')
+const here = fileURLToPath(new URL('.', import.meta.url))
+const src = readFileSync(resolve(here, '../../scripts/deploy.py'), 'utf-8')
 
 describe('deploy.py — sinkronisasi + pemangkasan aset orphan', () => {
   it('menghapus assets/ lama sebelum salin ulang dari dist (tidak menumpuk)', () => {
