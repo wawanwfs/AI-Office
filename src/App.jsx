@@ -23,6 +23,7 @@ import SettingsModal from './components/SettingsModal'
 import { IconVolume, IconVolumeMute, IconScroll, IconHelp, IconGear } from './components/Icons'
 import { api } from './lib/api'
 import { anyModalOpen, wfsRefreshModalFlag, wfsSetAppModalBase } from './lib/modal'
+import { watchDockHeight } from './lib/dock_h.js'
 import { createWakeLockManager } from './lib/wakelock.js'
 import { applyPollResult, nextPollDelay, connectionBadge, STALE_AFTER_MS } from './lib/connection_spec.js'
 import {
@@ -472,6 +473,16 @@ export default function App() {
     els.forEach(el => { if (chromeModal) el.setAttribute('inert', ''); else el.removeAttribute('inert') })
     return () => els.forEach(el => el.removeAttribute('inert'))
   }, [chromeModal])
+
+  // Siklus 184 — tinggi dock mobile ADAPTIF: ukur .dock live (ResizeObserver)
+  // → CSS var --dock-h di documentElement; index.css ≤560px memakai
+  // calc(var(--dock-h)+inset) utk offset HUD/toast. Dulu offset statis
+  // 148/200px + clamp max-height 120px: baris ke-3/4 dock (24 tombol
+  // pasca-178/182/183) meluap keluar kapsul, bahkan terpotong viewport 360px.
+  useEffect(() => {
+    const stop = watchDockHeight()
+    return () => { if (stop) stop() }
+  }, [])
 
   const zoom = useCallback((dir) => {
     const s = sceneRef.current

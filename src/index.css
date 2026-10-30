@@ -744,15 +744,23 @@ button { font-family: inherit; }
   input, select, textarea { font-size: 16px !important; }
 }
 @media (max-width: 560px) {
-  /* The wrapped dock is up to 120px tall plus its 18px bottom inset. */
-  .hud { bottom: calc(148px + var(--safe-b)); }
-  .toast { bottom: calc(200px + var(--safe-b)); }
+  /* Siklus 184 — dock mobile ADAPTIF: tombol dock kini 24 (siklus 178/182/183
+     menambah FOTO/AGEN/MUNDUR) → membungkus hingga 4 baris di layar sempit.
+     Dulu tinggi di-CLAMP `max-height: 120px` (era 2 baris) + offset HUD/toast
+     statis 148/200px: baris terakhir meluap keluar kapsul kaca, bahkan
+     TERPOTONG viewport di 360px (tak bisa diklik), dan HUD menempel dock.
+     Kini: tanpa clamp (kapsul tumbuh mengikuti isi) dan App menulis --dock-h
+     (px, diukur ResizeObserver) → offset HUD/toast = tinggi dock + inset,
+     benar di SEMUA jumlah baris. Fallback CSS 130px dipakai sebelum App
+     mengukur (SSR/JS mati) — tidak pernah lebih kecil dari era lama. */
+  .hud { bottom: calc(var(--dock-h, 130px) + 28px + var(--safe-b)); }
+  .toast { bottom: calc(var(--dock-h, 130px) + 80px + var(--safe-b)); }
   .ibtn span.lb { display: none; }
   .ibtn { min-width: 0; flex: 1 1 0; min-height: 44px; padding: 4px; }
   .dock { gap: 0; width: calc(100vw - 16px); overflow-x: auto; padding: 3px; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
   .dock::-webkit-scrollbar { display: none; }
   .dock .sep { display: none; }
-  .dock { flex-wrap: wrap; justify-content: center; overflow-x: visible; max-height: 120px; }
+  .dock { flex-wrap: wrap; justify-content: center; overflow-x: visible; }
   .dock .ibtn { flex: 0 1 auto; min-width: 44px; }
   .kanban-col {
     min-width: 240px;
