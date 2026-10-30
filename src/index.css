@@ -480,7 +480,9 @@ button { font-family: inherit; }
 
 .toast {
   position: fixed; left: 0; right: 0; margin: 0 auto; width: max-content;
-  bottom: calc(84px + var(--safe-b)); top: auto;
+  /* Siklus 185 — offset adaptif: dock kini bisa 2 baris di 1000-1519px (wrap
+     universal). Fallback 85px-1px = era statis 84px eksak saat dock 1 baris. */
+  bottom: calc(var(--dock-h-raw, 85px) - 1px + var(--safe-b)); top: auto;
   z-index: var(--z-toast); background: #fff; color: #111; font-weight: 600;
   padding: 10px 20px; border-radius: 14px; font-size: 13.5px; box-shadow: 0 10px 36px rgba(0,0,0,.6);
   max-width: calc(100vw - 24px); text-align: center; animation: fadeUp .25s cubic-bezier(0.16, 1, 0.3, 1) both;
@@ -712,12 +714,15 @@ button { font-family: inherit; }
 .ticker .ticker-presence-sep { color: rgba(255, 255, 255, 0.28); margin: 0 1px; }
 
 @media (max-width: 760px) {
-  /* Siklus 185 — offset ADAPTIF: dock kini bisa membungkus multi-baris di semua
-     lebar (flex-wrap global), jadi HUD/toast memakai tinggi dock terukur live
-     (var --dock-h-raw, tanpa clamp) + inset era-eksak: 85px dock + 3px inset =
-     88px (persis offset lama saat dock 1 baris — nol lompatan visual), toast 87px
-     era lama → +3px inset = 90px ≈ 140px lama (masih jauh di atas dock). */
-  .hud { top: auto !important; bottom: calc(var(--dock-h-raw, 85px) + 3px + var(--safe-b)); left: 0; right: 0; margin: 0 auto; width: max-content; padding: 5px 14px; }
+  /* Siklus 185 — offset ADAPTIF era-eksak: dock kini bisa 2 baris di 561-760px
+     (24 tombol × 44px tak muat 1 baris) → offset statis 88/140px salah semua.
+     Geometri era nowrap terukur: dock bottom 18px, tinggi 62px, HUD statis 88
+     (= 18 + 62 + gap 8), toast statis 140 (= 18 + 62 + gap 60). Rumus baru
+     memakai tinggi dock TERUKUR live (var --dock-h-raw) + offset tetap
+     (dock-bottom + gap): HUD = raw + 26, toast = raw + 78 — saat dock 1 baris
+     62px hasilnya PERSIS era statis (88/140), saat 2 baris ikut naik otomatis.
+     Fallback var 62px = tinggi dock era nowrap (tanpa JS tetap era-eksak). */
+  .hud { top: auto !important; bottom: calc(var(--dock-h-raw, 62px) + 26px + var(--safe-b)); left: 0; right: 0; margin: 0 auto; width: max-content; padding: 5px 14px; }
   .dock { gap: 2px; padding: 4px; border-radius: 20px; bottom: calc(18px + var(--safe-b)); }
   .ibtn { min-width: 44px; padding: 4px 4px; font-size: 10px; }
   .ibtn .ic { font-size: 18px; }
@@ -751,8 +756,9 @@ button { font-family: inherit; }
     flex-shrink: 0;
   }
   /* Keep transient feedback above the HUD, not over interactive controls.
-     Siklus 185: offset ADAPTIF dgn var mentah (sama pola .hud di atas). */
-  .toast { bottom: calc(var(--dock-h-raw, 87px) + 3px + var(--safe-b)); top: auto; }
+     Siklus 185: ADAPTIF (dock bisa 2 baris) — era statis 140 = dock-bottom 18 +
+     dock 62 + gap 60 → raw + 78; fallback 62 = era eksak. */
+  .toast { bottom: calc(var(--dock-h-raw, 62px) + 78px + var(--safe-b)); top: auto; }
   .pop { left: 0; }
   input, select, textarea { font-size: 16px !important; }
 }

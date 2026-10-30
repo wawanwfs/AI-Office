@@ -62,9 +62,9 @@ describe('kontrak statis index.css — dock wrap universal', () => {
     expect(base).toContain('max-width: calc(100vw - 20px)');
   });
 
-  it('breakpoint 760px: HUD/toast offset memakai var mentah dgn fallback era-eksak', () => {
-    expect(css).toMatch(/\.hud \{ top: auto !important; bottom: calc\(var\(--dock-h-raw, 85px\) \+ 3px \+ var\(--safe-b\)\)/);
-    expect(css).toMatch(/\.toast \{ bottom: calc\(var\(--dock-h-raw, 87px\) \+ 3px \+ var\(--safe-b\)\)/);
+  it('breakpoint 760px: HUD/toast offset memakai var mentah dgn fallback era-eksak (62px dock era nowrap)', () => {
+    expect(css).toMatch(/\.hud \{ top: auto !important; bottom: calc\(var\(--dock-h-raw, 62px\) \+ 26px \+ var\(--safe-b\)\)/);
+    expect(css).toMatch(/\.toast \{ bottom: calc\(var\(--dock-h-raw, 62px\) \+ 78px \+ var\(--safe-b\)\)/);
   });
 
   it('offset statis 88px/140px SUDAH DIHAPUS dari breakpoint 760px (akar lompatan)', () => {
@@ -109,8 +109,9 @@ describe('kontrak statis App.jsx — HUD ikut di-inert saat panel dock terbuka',
     expect(app).toContain('p.getClientRects().length > 0');
   });
 
-  it('selector inert: chromeModal || hudDockPanelOpen → header, .hud, .ticker (dulu tanpa kondisi)', () => {
-    expect(app).toMatch(/chromeModal \|\| hudDockPanelOpen \? 'header, \.hud, \.ticker' : 'header, \.ticker'/);
+  it('selector inert: saat panel dock terbuka HANYA .hud dikunci (header/ticker bebas), chromeModal → semua', () => {
+    expect(app).toMatch(/const lock = chromeModal \|\| \(hudDockPanelOpen && el\.classList\.contains\('hud'\)\)/);
+    expect(app).toMatch(/if \(lock\) el\.setAttribute\('inert', ''\); else el\.removeAttribute\('inert'\)/);
   });
 
   it('deps effect menyertakan hudDockPanelOpen (re-run saat panel buka/tutup)', () => {

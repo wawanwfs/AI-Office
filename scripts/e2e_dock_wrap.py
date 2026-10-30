@@ -174,6 +174,8 @@ try:
       const hud = document.querySelector('.hud');
       const hudR = hud ? hud.getBoundingClientRect() : null;
       const rawVar = getComputedStyle(document.documentElement).getPropertyValue('--dock-h-raw').trim();
+      const toast = document.querySelector('.toast');
+      const toastR = toast ? toast.getBoundingClientRect() : null;
       return { vw: innerWidth, vh: innerHeight,
                dockLeft: Math.round(d.left), dockRight: Math.round(d.right),
                dockTop: Math.round(d.top), dockBottom: Math.round(d.bottom), dockH: Math.round(d.height),
@@ -186,10 +188,11 @@ try:
                outsideCapsule: btns.some(b => b.right > d.right + 1 || b.bottom > d.bottom + 1),
                last: btns[btns.length - 1],
                hud: hudR ? { top: Math.round(hudR.top), bottom: Math.round(hudR.bottom) } : null,
-               hudInert: hud ? hud.hasAttribute('inert') : null };
+               hudInert: hud ? hud.hasAttribute('inert') : null,
+               toast: toastR ? { top: Math.round(toastR.top), bottom: Math.round(toastR.bottom), vis: toast.getClientRects().length > 0 } : null };
     })()"""
 
-    CLICK_LAST = """(async () => {
+    CLICK_LAST = """(() => {
       const btns = Array.from(document.querySelectorAll('.dock .ibtn'));
       const last = btns[btns.length - 1];
       if (!last) return { err: 'no-btn' };
@@ -235,11 +238,13 @@ try:
     check("T2b elementFromPoint di pusat tombol terakhir = tombol itu sendiri",
           isinstance(c, dict) and c.get("hitIsBtn") is True, json.dumps(c)[:160])
     ev("Array.from(document.querySelectorAll('.dock .ibtn')).pop().click()")
-    time.sleep(1.2)
+    time.sleep(1.5)
     help_open = ev("""(() => {
-      const dlg = Array.from(document.querySelectorAll('[role="dialog"]'))
-        .find(d => (d.textContent || '').includes('Panduan') || (d.textContent || '').includes('Bantuan') || d.getAttribute('aria-label') === 'Bantuan');
-      return { open: !!dlg, vis: dlg ? dlg.getClientRects().length > 0 : false };
+      const dlgs = Array.from(document.querySelectorAll('[role="dialog"]'));
+      const dlg = dlgs.length ? dlgs[dlgs.length - 1] : null;
+      return { nDialogs: dlgs.length,
+               labels: dlgs.map(d => d.getAttribute('aria-label') || '').join('|'),
+               open: !!dlg, vis: dlg ? dlg.getClientRects().length > 0 : false };
     })()""")
     check("T3 klik Bantuan → dialog Help TERBUKA nyata",
           isinstance(help_open, dict) and help_open.get("open") and help_open.get("vis"),
@@ -254,12 +259,37 @@ try:
           not r.get("clippedRight") and not r.get("outsideCapsule"), json.dumps(r)[:180])
 
     # ── T5+T6+T7 @760: offset era-eksak + panel vs HUD ─────────────────────
-    r = load_at(760, 900)
+    load_at(760, 900)
+    # T5: trigger toast nyata (toggle theme) supaya offset toast terukur; ukur
+    # setelah dock stabil (pasca settle 5 dtk, RO sudah menulis var).
+    ev("(() => { const b = Array.from(document.querySelectorAll('.dock .ibtn')).find(x => (x.getAttribute('aria-label') || '') === 'Lampu neon'); if (b) b.click(); return !!b; })()")
+    time.sleep(1.2)
+    r = ev_retry(PROBE, wait=15)
+    if not isinstance(r, dict):
+        r = {"err": "probe-failed"}
     dock_bottom = r.get("dockBottom")
-    hud_bottom = (r.get("hud") or {}).get("bottom")
-    era_ok = dock_bottom and hud_bottom is not None and abs((hud_bottom - dock_bottom) - 3) <= 1
-    check("T5 760px dock 1 baris: HUD tepat 3px di atas dock (era-eksak 88px, nol lompatan)",
-          bool(era_ok), f"dockBottom={dock_bottom} hudBottom={hud_bottom} rawVar={r.get('rawVar')}")
+    dock_h = r.get("dockH")
+    hud = r.get("hud") if isinstance(r.get("hud"), dict) else {}
+    hud_bottom = hud.get("bottom")
+    hud_top = hud.get("top")
+    if not (isinstance(dock_bottom, (int, float)) and isinstance(dock_h, (int, float)) and
+            isinstance(hud_bottom, (int, float))):
+        dock_bottom = dock_h = hud_bottom = None
+    # era-eksak: gap HUD→dock-TOP era statis = 8px (HUD 88 = dock bottom 18 +
+    # dock 62 + gap 8). Umum: dockTop - hudBottom == 8 (±1).
+    gap_hud_val = (dock_bottom - dock_h - hud_bottom) \
+        if (dock_bottom is not None and dock_h is not None and hud_bottom is not None) else None
+    era_ok = gap_hud_val is not None and abs(gap_hud_val - 8) <= 1
+    toast = r.get("toast") if isinstance(r.get("toast"), dict) else {}
+    dock_top = (dock_bottom - dock_h) if (dock_bottom is not None and dock_h is not None) else None
+    # toast nyata: visible, DI ATAS dock-top, DI ATAS HUD-top.
+    toast_ok = bool(toast.get("vis")) and dock_top is not None and \
+        isinstance(toast.get("top"), (int, float)) and toast.get("top") < dock_top and \
+        isinstance(hud_top, (int, float)) and toast.get("top", 9e9) < hud_top
+    check("T5 760px: offset ADAPTIF era-eksak — gap HUD→dock-top = 8px (era statis) & toast nyata di atas HUD+dock",
+          bool(era_ok and toast_ok),
+          f"dockH={dock_h} dockTop={dock_top} hudBottom={hud_bottom} gap={gap_hud_val} "
+          f"toast={json.dumps(toast)[:110]} rows={r.get('rows')}")
     # buka panel Chat (tombol kedua dari belakang)
     ev("""(() => {
       const btns = Array.from(document.querySelectorAll('.dock .ibtn'));

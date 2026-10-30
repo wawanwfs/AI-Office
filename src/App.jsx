@@ -478,9 +478,14 @@ export default function App() {
     // HEADER/HUD/TICKER; di dalam dock cukup scrim (pointer-events) + fokus-trap
     // per-dialog (dialogA11y) yang sudah mengunci Tab — tombol dock tersembunyi
     // di balik scrim tidak bisa diklik maupun difokus (tak ada di urutan trap).
-    const els = Array.from(document.querySelectorAll(
-      chromeModal || hudDockPanelOpen ? 'header, .hud, .ticker' : 'header, .ticker'))
-    els.forEach(el => { if (chromeModal) el.setAttribute('inert', ''); else el.removeAttribute('inert') })
+    const els = Array.from(document.querySelectorAll('header, .hud, .ticker'))
+    // Siklus 185: saat panel dock terbuka HANYA .hud yang dikunci (header/ticker
+    // tetap bebas); selector TETAP lengkap supaya inert basi tak menempel saat
+    // keadaan berubah (elemen yang keluar daftar tak pernah dibersihkan).
+    els.forEach(el => {
+      const lock = chromeModal || (hudDockPanelOpen && el.classList.contains('hud'))
+      if (lock) el.setAttribute('inert', ''); else el.removeAttribute('inert')
+    })
     return () => els.forEach(el => el.removeAttribute('inert'))
   }, [chromeModal, hudDockPanelOpen])
 
