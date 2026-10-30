@@ -145,7 +145,7 @@ try:
 
     def check(name, cond, detail=""):
         print(("PASS — " if cond else "FAIL — ") + name + (f" [{detail}]" if detail else ""))
-        return bool(cond)
+        return (name, bool(cond), detail)
 
     cmd("Runtime.enable")
     cmd("Page.enable")
@@ -211,8 +211,9 @@ try:
                    f"shot={shot} dl={fn0}"))
 
     # TES 3: fokus agen (profil modal via onSelectAgent) → scene.resetFocus()
-    # langsung (jalur yang dulu menyisakan flag basi) → tekanan panah BERIKUTNYA
-    # tetap menggerakkan kamera + flag bersih.
+    # langsung → profil tertutup (base false), panel chat internal (wfs-panel,
+    # role=dialog) mungkin TETAP terbuka = modal sah (flag true benar!) → tutup
+    # via tombol ✕ → flag false + orbit panah tetap hidup (tekanan berikutnya).
     orb3 = ev("""(async () => {
       const sleep = (ms) => new Promise(r => setTimeout(r, ms));
       const C = window.__wfsSceneControls; if (!C || !C.focusAgent || !C.resetFocus) return {skip:true};
@@ -224,42 +225,52 @@ try:
         if (window.__wfsModalOpen === true) { modalSeen = true; break; } }
       C.resetFocus();
       await sleep(700);
+      const baseAfterReset = window.__wfsAppModalBase;
+      const panelOpen = !!document.getElementById('wfs-panel');
+      const x = document.querySelector('#wfs-panel button[aria-label*="Tutup panel chat"]');
+      if (x) x.click();
+      let flagClean = false;
+      for (let i = 0; i < 16; i++) { await sleep(150);
+        if (window.__wfsModalOpen === false) { flagClean = true; break; } }
       const cam0 = JSON.stringify(window.__dbg());
       const press = (k) => document.dispatchEvent(
         new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
       for (let i = 0; i < 5; i++) { press('ArrowLeft'); await sleep(80); }
       const cam1 = JSON.stringify(window.__dbg());
       return { skip: false, focused, modalSeen,
-        flagAfter: window.__wfsModalOpen,
+        baseAfterReset, panelOpen, flagClean,
         escAfter: window.__escModalAtDispatch,
         orbitMoved: cam0 !== cam1 };
     })()""", wait=60, await_promise=True)
     r3 = orb3 if isinstance(orb3, dict) else {}
-    T.append(check("TES3 focusAgent→resetFocus→flag tidak basi, orbit tetap hidup",
+    T.append(check("TES3 focusAgent→resetFocus→tutup panel chat→flag bersih & orbit hidup",
                    r3.get("skip") is False and r3.get("focused") is True
-                   and r3.get("modalSeen") is True and r3.get("flagAfter") is False
-                   and r3.get("escAfter") is False and r3.get("orbitMoved") is True,
-                   str(orb3)[:180]))
+                   and r3.get("modalSeen") is True and r3.get("baseAfterReset") is False
+                   and r3.get("flagClean") is True and r3.get("escAfter") is False
+                   and r3.get("orbitMoved") is True,
+                   str(orb3)[:200]))
 
-    # TES 4: Escape tanpa modal → kamera tetap reset (kontrak lama utuh).
+    # TES 4: Escape tanpa modal terbuka saat dispatch → kamera tetap reset
+    # (kontrak 176/lama — pola TES6 e2e_orbit_keys): focusAgent disinkron lalu
+    # Escape SEBELUM React selesai render profil → snapshot escModal=false →
+    # scene me-reset kamera; flag esc bersih (false) sesudahnya.
     orb4 = ev("""(async () => {
       const sleep = (ms) => new Promise(r => setTimeout(r, ms));
       const C = window.__wfsSceneControls;
-      if (C && C.focusAgent) {
-        const ag = (window.__agentData || []).find(a => a && a.agent && a.agent.name);
-        if (ag) C.focusAgent(ag.agent.name);
-      }
-      await sleep(700);
-      const cam0 = JSON.stringify(window.__dbg());
+      if (!C || !C.focusAgent) return {skip:true};
+      const ag = (window.__agentData || []).find(a => a && a.agent && a.agent.name);
+      if (!ag) return {skip:true};
+      C.focusAgent(ag.agent.name);
+      const g0 = window.__dbg && window.__dbg().focus;
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
-      await sleep(900);
-      const cam1 = JSON.stringify(window.__dbg());
-      return { moved: cam0 !== cam1,
-        flag: window.__wfsModalOpen, esc: window.__escModalAtDispatch };
+      const g1 = window.__dbg && window.__dbg().focus;
+      await sleep(700);
+      return { had0: !!g0, reset: !!(g1 && g1.reset),
+        esc: window.__escModalAtDispatch };
     })()""", wait=40, await_promise=True)
     r4 = orb4 if isinstance(orb4, dict) else {}
     T.append(check("TES4 Escape tanpa modal tetap reset kamera (kontrak 176 utuh)",
-                   r4.get("moved") is True and r4.get("flag") is False and r4.get("esc") is False,
+                   r4.get("had0") is True and r4.get("reset") is True and r4.get("esc") is False,
                    str(orb4)[:180]))
 
     T.append(check("TES5 error window = 0", len(errs) == 0 and len(excs) == 0,
