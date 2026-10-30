@@ -196,8 +196,11 @@ __onCanvas('touchmove',e=>{
   if(e.touches.length===2&&pinchDist!==null){
     e.preventDefault();
     const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    const __r0=sph.radius;
     sph.radius=pinchRadius(sph.radius,pinchDist,d);
-    if(focusGoal)zoomFocusGoal(focusGoal,zoomRadius(sph.radius,0)-sph.radius);
+    // Zoom jujur (siklus 121→174): delta radius EKSAK (termasuk efek clamp)
+    // diteruskan ke goal — follow/lantai/titik tetap hidup, radius goal ikut.
+    if(focusGoal)zoomFocusGoal(focusGoal,sph.radius-__r0);
     updCam();pinchDist=d;
   }
 },{passive:false});

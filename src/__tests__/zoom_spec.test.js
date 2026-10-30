@@ -130,7 +130,7 @@ describe('sumber — kontrak statis wiring pinch-zoom (siklus 174)', () => {
   });
 
   it('pinch zoom JUJUR: goal TIDAK dibatalkan — radius goal ikut digeser via zoomFocusGoal', () => {
-    expect(scene).toContain('if(focusGoal)zoomFocusGoal(focusGoal,zoomRadius(sph.radius,0)-sph.radius)');
+    expect(scene).toContain('if(focusGoal)zoomFocusGoal(focusGoal,sph.radius-__r0)');
     expect(scene).not.toContain('if(focusGoal&&!focusGoal.reset)focusGoal=null');
   });
 
