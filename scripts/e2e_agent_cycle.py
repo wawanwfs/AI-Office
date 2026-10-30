@@ -227,37 +227,61 @@ try:
     T.append(check("TES3 Shift+C mundur lalu C maju: bolak-balik ke agen yang sama",
                    r3.get("roundTrip") is True, json.dumps(r3)[:200]))
 
-    # TES 4: Help mencantumkan kartu C; C saat Help terbuka TIDAK memutar (guard);
-    # pasca-Escape orbit panah tetap hidup (regresi siklus 180).
+    # TES 4: tutup inspector dulu (Escape) — guard modal: 'h' TIDAK membuka Help
+    # selagi inspector agen terbuka (kontrak standar). Lalu Help mencantumkan
+    # kartu C; C saat Help terbuka TIDAK memutar (guard); pasca-Escape orbit
+    # panah tetap hidup (regresi siklus 180).
+    # Catatan tooling (pelajaran 179): frame SwiftShader dgn goal-follow aktif
+    # lambat (tiap await bisa tersendat ~2 dtk) — poll jarang + wait panjang.
     t4 = ev("""(async () => {
       const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-      const press = (k) => document.dispatchEvent(
-        new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
+      const press = (k, sh) => document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: k, shiftKey: !!sh, bubbles: true, cancelable: true }));
+      press('Escape');
+      let insp = true;
+      for (let i = 0; i < 8; i++) { await sleep(400);
+        insp = !!document.querySelector('[aria-label^="Profil"]');
+        if (!insp) break; }
       press('h');
-      let card = null;
-      for (let i = 0; i < 20; i++) { await sleep(200);
-        const grids = Array.from(document.querySelectorAll('h3'));
-        if (grids.length) {
-          const txt = document.body.textContent || '';
-          if (txt.includes('Siklus Fokus Agent')) { card = true; break; }
-        } }
+      let card = false, ncards = 0;
+      // Pola terbukti e2e_snapshot_key: Help = wizard — kartu shortcut ada di
+      // langkah terakhir; klik "Berikutnya" sampai .help-shortcut-grid muncul.
+      const helpDlg = () => Array.from(document.querySelectorAll('[role="dialog"]'))
+        .find(x => Array.from(x.querySelectorAll('button'))
+          .some(b => (b.textContent || '').includes('Berikutnya')));
+      for (let i = 0; i < 14 && !card; i++) {
+        const g = document.querySelector('.help-shortcut-grid');
+        if (g) {
+          const cards = Array.from(g.querySelectorAll('.help-shortcut-card'))
+            .map(c => c.textContent || '');
+          ncards = cards.length;
+          card = cards.some(c => c.includes('C') && c.toLowerCase().includes('siklus fokus agent'));
+          break;
+        }
+        const dlg = helpDlg();
+        const b = dlg && Array.from(dlg.querySelectorAll('button'))
+          .find(x => (x.textContent || '').includes('Berikutnya'));
+        if (!b) { await sleep(300); continue; }
+        b.click(); await sleep(250);
+      }
       const nBefore = window.__agentCycle();
       press('c');
-      await sleep(400);
+      await sleep(800);
       const nGuard = window.__agentCycle();
       press('Escape');
       let closed = false;
-      for (let i = 0; i < 16; i++) { await sleep(150);
+      for (let i = 0; i < 10; i++) { await sleep(300);
         if (window.__wfsModalOpen === false) { closed = true; break; } }
       const cam0 = JSON.stringify(window.__dbg());
-      for (let i = 0; i < 5; i++) { press('ArrowLeft'); await sleep(80); }
+      for (let i = 0; i < 5; i++) { press('ArrowLeft'); await sleep(100); }
       const cam1 = JSON.stringify(window.__dbg());
-      return { card, guarded: nGuard === nBefore, closed, orbitMoved: cam0 !== cam1 };
-    })()""", wait=50, await_promise=True)
+      return { inspClosed: !insp, card, ncards, guarded: nGuard === nBefore, closed, orbitMoved: cam0 !== cam1 };
+    })()""", wait=90, await_promise=True)
     r4 = t4 if isinstance(t4, dict) else {}
-    T.append(check("TES4 Help tampil kartu C + guard modal + pasca-Escape orbit panah hidup",
-                   r4.get("card") is True and r4.get("guarded") is True
-                   and r4.get("closed") is True and r4.get("orbitMoved") is True,
+    T.append(check("TES4 guard 'h' saat inspector + Help tampil kartu C + C diblokir + pasca-Escape orbit hidup",
+                   r4.get("inspClosed") is True and r4.get("card") is True
+                   and r4.get("guarded") is True and r4.get("closed") is True
+                   and r4.get("orbitMoved") is True,
                    json.dumps(r4)[:220]))
 
     # TES 5: Escape menutup fokus agen — probe null + goal follow hilang.
@@ -265,20 +289,29 @@ try:
       const sleep = (ms) => new Promise(r => setTimeout(r, ms));
       const press = (k) => document.dispatchEvent(
         new KeyboardEvent('keydown', { key: k, bubbles: true, cancelable: true }));
-      const n0 = window.__agentCycle();
+      press('c');
+      let n0 = null;
+      for (let i = 0; i < 8; i++) { await sleep(300); n0 = window.__agentCycle(); if (n0) break; }
+      const gFollow = window.__dbg().focus;
       press('Escape');
       let name = n0, goal = window.__dbg().focus, insp = true;
-      for (let i = 0; i < 20; i++) { await sleep(200);
+      for (let i = 0; i < 10; i++) { await sleep(400);
         name = window.__agentCycle();
         goal = window.__dbg().focus;
         insp = !!document.querySelector('[aria-label^="Profil"]');
         if (name === null && goal === null && !insp) break; }
-      return { n0, cleared: name === null, goalCleared: goal === null, inspClosed: !insp };
-    })()""", wait=40, await_promise=True)
+      // Kontrak resetFocusGoal (kamera_focus.js): goal reset = {reset:true, r≈42.5}
+      // — kamera MELUNCUR balik ke rumah (bukan null instan). Goal follow agen
+      // (dgn follow/root) HILANG diganti goal reset itu.
+      const wasFollow = !!(gFollow && gFollow.reset !== true);
+      const isReset = !!(goal && goal.reset === true);
+      return { n0, wasFollow, cleared: name === null, isReset,
+               inspClosed: !insp };
+    })()""", wait=90, await_promise=True)
     r5 = t5 if isinstance(t5, dict) else {}
-    T.append(check("TES5 Escape menutup fokus agen: probe null + goal follow hilang + inspector tertutup",
-                   r5.get("cleared") is True and r5.get("goalCleared") is True
-                   and r5.get("inspClosed") is True, json.dumps(r5)[:200]))
+    T.append(check("TES5 Escape menutup fokus agen: probe null + goal follow diganti goal reset + inspector tertutup",
+                   r5.get("wasFollow") is True and r5.get("cleared") is True
+                   and r5.get("isReset") is True and r5.get("inspClosed") is True, json.dumps(r5)[:200]))
 
     pump(2)
     T.append(check("TES6 error window = 0 (console error & exception)", len(errs) == 0 and len(excs) == 0,
