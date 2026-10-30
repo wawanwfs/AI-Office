@@ -11,7 +11,7 @@ import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { perfStep } from './parts/perf_quality.js';
 import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam, resetFocusGoal, agentFocusPos } from './parts/kamera_focus.js';
-import { dblclickPointGoal, dblclickBlankGoal } from './parts/dblclick_spec.js';
+import { dblclickPointGoal, dblclickBlankGoal, tapCandidate, isDoubleTap, dtapRadius, DTAP_ZOOM_STEP } from './parts/dblclick_spec.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
 import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent, ringFloorY, hoverRingPos, meetingFigureAnchor } from './parts/ring_spec.js';
@@ -185,11 +185,31 @@ let downXY=null;
 // diam-diam: follow patah + __saved yatim, bug UX persis jalur wheel lama).
 let pinchDist=null;
 let pinchActive=false; // siklus 174: 2 jari = pinch, BUKAN drag putar (dulu kamera ikut berputar saat pinch)
+// Siklus 175: penanda "gestur jari ini pernah jadi pinch". Gerbang klik pointerup
+// membaca penanda ini — dulu mengangkat SATU jari dari pinch (jari-1 masih
+// menyentuh) memicu jalur klik normal: downXY jari-1 + pointerup di tengah
+// pinch = "klik" → bila raycast meleset, focusGoal di-reset ke rumah + seleksi
+// dihapus (kamera user melompat tak sengaja tepat setelah pinch). Penanda
+// dibersihkan saat SEMUA jari terangkat.
+let pinchGuard=false;
+let dtapLast=null; // siklus 175: tap terakhir {x0,y0,x1,y1,t0,t1} utk double-tap
+// Siklus 175: double-tap = padanan mobile dblclick mouse (browser tak memicu
+// dblclick utk touch; tap ganda di sana jatuh ke aksi zoom-halaman). Kini satu
+// jari tap-ganda = zoom in bertahap; goal dijaga (zoom jujur siklus 121).
+// touch-action:none pada kanvas = syaratnya: tanpa itu Chrome membatalkan
+// pointer/touch lanjutan untuk gesture zoom halaman & memicu zoom bawaan.
+if(renderer.domElement.style)renderer.domElement.style.touchAction='none';
+let __tapDown=null;
 __onCanvas('touchstart',e=>{
   if(e.touches.length===2){
     pinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
     pinchActive=true;
+    pinchGuard=true; // gerbang klik: gestur ini BUKAN klik
+    dtapLast=null;   // tap-1 yang terlanjur tercatat tak boleh berpasangan dgn tap pasca-pinch
     isDrag=false; // batal drag putar yang terlanjur set oleh pointerdown jari pertama
+  } else if(e.touches.length===1){
+    const t0=e.touches[0];
+    __tapDown={x0:t0.clientX,y0:t0.clientY,t0:(typeof performance!=='undefined'?performance.now():Date.now())};
   }
 },{passive:true});
 __onCanvas('touchmove',e=>{
@@ -209,6 +229,34 @@ __onCanvas('touchend',e=>{
   // Drag putar TIDAK dilanjutkan dgn jari sisa (isDrag sudah false): basis `prev`
   // basi dari midpoint pinch → putaran liar. Sentuh ulang 1 jari = drag normal.
   if(pinchActive&&e.touches.length<2){pinchDist=null;if(e.touches.length<=1)pinchActive=false;}
+  // Siklus 175: penanda pinch baru dilepas saat SEMUA jari terangkat — selama
+  // satu jari pinch masih menempel, pointerup-nya tidak boleh jadi klik.
+  if(e.touches.length===0)pinchGuard=false;
+  // ── double-tap (siklus 175) ──
+  const ct=e.changedTouches&&e.changedTouches[0];
+  if(ct&&__tapDown&&e.touches.length===0&&!pinchGuard){
+    const tNow=(typeof performance!=='undefined'?performance.now():Date.now());
+    const cand={x0:__tapDown.x0,y0:__tapDown.y0,x1:ct.clientX,y1:ct.clientY,t0:__tapDown.t0,t1:tNow};
+    if(tapCandidate(cand)){
+      if(dtapLast&&isDoubleTap(dtapLast,cand)){
+        dtapLast=null;
+        const __r0=sph.radius;
+        sph.radius=dtapRadius(sph.radius,DTAP_ZOOM_STEP,1,zoomRadius);
+        if(focusGoal)zoomFocusGoal(focusGoal,sph.radius-__r0);
+        updCam();
+      }else{
+        dtapLast=cand;
+      }
+    }else{
+      dtapLast=null; // tap meleset/geser = bukan kandidat (drag putar)
+    }
+  }
+  __tapDown=null;
+},{passive:true});
+__onCanvas('touchcancel',e=>{
+  // Siklus 175: OS membatalkan gestur (telepon masuk, notifikasi) → jangan
+  // tinggalkan pinchDist/pinchGuard basi yang mematikan klik & pinch berikutnya.
+  pinchDist=null;pinchActive=false;pinchGuard=false;dtapLast=null;__tapDown=null;
 },{passive:true});
 // ═══════════════════════════════════════════════════
 // SOUND SYSTEM — Web Audio API (runtime di parts/sound_engine.js, teruji unit)
@@ -314,6 +362,13 @@ __onCanvas('pointerdown',e=>{isDrag=true;prev={x:e.clientX,y:e.clientY};autoRot=
 __onCanvas('pointerdown',e=>{downXY={x:e.clientX,y:e.clientY}});
 __onCanvas('pointerup',e=>{
   if(!downXY)return;
+  // Siklus 175: jari yang pernah menjadi bagian pinch BUKAN klik — dulu
+  // mengangkat jari-1 dari pinch (jari-2 masih menempel, pointerup jari-1)
+  // memicu jalur klik: downXY jari-1 + "pointerup" di tengah pinch = klik
+  // → raycast meleset → kamera di-reset ke rumah & seleksi dihapus saat user
+  // hanya selesai mencubit. pinchGuard dilepas hanya saat SEMUA jari terangkat;
+  // downXY ikut dibuang (tak ada klik hantu dari pointerup tanpa pointerdown).
+  if(pinchGuard){downXY=null;return;}
   const moved=Math.hypot(e.clientX-downXY.x,e.clientY-downXY.y);
   downXY=null;
   if(moved>6)return; // drag, bukan click
