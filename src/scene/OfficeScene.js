@@ -198,7 +198,24 @@ let dtapLast=null; // siklus 175: tap terakhir {x0,y0,x1,y1,t0,t1} utk double-ta
 // jari tap-ganda = zoom in bertahap; goal dijaga (zoom jujur siklus 121).
 // touch-action:none pada kanvas = syaratnya: tanpa itu Chrome membatalkan
 // pointer/touch lanjutan untuk gesture zoom halaman & memicu zoom bawaan.
-if(renderer.domElement.style)renderer.domElement.style.touchAction='none';
+// Siklus 176 — tepi input pointer yang dulu bocor:
+// (1) contextmenu: klik-kanan desktop & long-press Android memunculkan menu
+//     browser MENUTUPI scene 3D (kanvas fullscreen tanpa teks yang bisa
+//     di-copy — menu itu murni noise di sini).
+// (2) auxclick/pointerup tombol bukan-kiri: tombol tengah = autoscroll (jika
+//     tidak dicegah), tombol kanan/kanan-atas dulu dihitung "klik" jalur
+//     raycast — kamera ikut reset/fokus tanpa niat user.
+// (3) pointercancel: OS membatalkan pointer (stylus tersangkut, palm
+//     rejection, gesture sistem) — dulu isDrag tetap true + prev basi →
+//     pointermove SETELAH cancel (tanpa tombol tertekan) tetap memutar
+//     kamera ("drag hantu"); cursor ikut terkunci 'grabbing'.
+// (4) pointermove tanpa tombol (mouse: kursor masuk kanvas dgn tombol diangkat
+//     DI LUAR window, mis. lepas di atas HUD) dulu juga memutar kamera.
+if(renderer.domElement.style)renderer.domElement.style.touchAction='none'; // (siklus 175)
+__onCanvas('contextmenu',e=>e.preventDefault());
+__onCanvas('pointercancel',()=>{isDrag=false;downXY=null;__tapDown=null;dtapLast=null;pinchDist=null;pinchActive=false;pinchGuard=false;if(renderer.domElement&&renderer.domElement.style.cursor==='grabbing')renderer.domElement.style.cursor='';});
+__onCanvas('pointerup',e=>{if(e.button!==0){downXY=null;e.preventDefault();}}); // klik hantu tombol non-kiri
+__onCanvas('pointermove',e=>{if(e.buttons===0&&isDrag){isDrag=false;}}); // tombol lepas di luar window — jangan memutar kamera
 let __tapDown=null;
 __onCanvas('touchstart',e=>{
   if(e.touches.length===2){

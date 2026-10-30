@@ -60,6 +60,15 @@ export function IconIso({ className, size = 18 }) {
   )
 }
 
+export function IconHome({ className, size = 18 }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M3 10.5 12 3l9 7.5" />
+      <path d="M5 9.5V21h5v-6h4v6h5V9.5" />
+    </svg>
+  )
+}
+
 export function IconFront({ className, size = 18 }) {
   return (
     <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
