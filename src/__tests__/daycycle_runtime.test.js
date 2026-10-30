@@ -1,7 +1,7 @@
 // Unit test createNeonMode & createShift (daycycle.js) — bagian runtime yang
 // belum tercakup daycycle.test.js (statusAt/daylight/mixHex sudah ada di sana).
 import { describe, it, expect, vi, afterEach } from 'vitest';
-import { createNeonMode, createShift, createLighting, statusAt } from '../scene/parts/daycycle.js';
+import { createNeonMode, createShift, createLighting, statusAt, NEON } from '../scene/parts/daycycle.js';
 import { SHIFT, CAMPUS_LUNCH_SPOT } from '../scene/parts/shift_spec.js';
 
 // ── Stub scene objects: objek dengan properti yang diubah enable/disable ──
@@ -39,22 +39,24 @@ describe('createNeonMode — toggle mode cyberpunk', () => {
   });
 
   it('enable: gelapkan ambient/sun/exposure, tubelight & screen menyala cyan, glow agent maksimal', () => {
+    // Siklus 171: nilai = palet NEON (satu-satunya sumber, dipakai toggle
+    // OfficeScene juga) — look yang sudah diterima user (eks-inline 4e17450).
     const ctx = neonCtx();
     const neon = createNeonMode(ctx);
     neon.toggle(); // on
-    expect(ctx.ambient.intensity).toBe(0.14);
-    expect(ctx.sun.intensity).toBe(0.06);
-    expect(ctx.renderer.toneMappingExposure).toBe(0.62);
+    expect(ctx.ambient.intensity).toBe(0.58);
+    expect(ctx.sun.intensity).toBe(1.25);
+    expect(ctx.renderer.toneMappingExposure).toBe(1.15);
     ctx.tubeLights.forEach((l) => {
-      expect(l.intensity).toBe(0.55);
-      expect(l.color.set).toHaveBeenCalledWith(0x0E7490);
+      expect(l.intensity).toBe(0.85);
+      expect(l.color.set).toHaveBeenCalledWith(0x00F0FF);
     });
     ctx.agentData.forEach((a) => {
       expect(a.dGlow.intensity).toBe(0.9);
       expect(a.dGlow.distance).toBe(4.5);
     });
-    expect(ctx.reception.intensity).toBe(0.7);
-    expect(ctx.floor.material.color.set).toHaveBeenCalledWith(0x060c18);
+    expect(ctx.reception.intensity).toBe(0.9);
+    expect(ctx.floor.material.color.set).toHaveBeenCalledWith(0x1a2638);
   });
 
   it('enable: panel plafon & jendela sky ikut digelapkan (tidak ada bolong terang)', () => {
@@ -85,6 +87,61 @@ describe('createNeonMode — toggle mode cyberpunk', () => {
       // dGlow tidak direset di disable — biarkan restoreTime yang mengembalikan waktu
       expect(a.dGlow.intensity).toBe(0.9);
     });
+  });
+});
+
+// ── Siklus 171: NEON = satu-satunya palet neon (toggle OfficeScene mendelegasi
+// ke createNeonMode — tak ada lagi dua palet berdampingan / kode mati) ──
+describe('NEON — single source of truth palet mode neon', () => {
+  it('nilai enable = look yang sudah diterima user (eks-toggle inline 4e17450)', () => {
+    expect(NEON.ambient).toBe(0.58);
+    expect(NEON.sun).toBe(1.25);
+    expect(NEON.exposure).toBe(1.15);
+    expect(NEON.floor).toBe(0x1a2638);
+    expect(NEON.carpet).toBe(0x142033);
+    expect(NEON.ceilOpacity).toBe(0.75);
+    expect(NEON.tubeLight).toEqual({ intensity: 0.85, color: 0x00F0FF });
+    expect(NEON.tubeMesh).toEqual({ color: 0x18E0FF, opacity: 0.95 });
+    expect(NEON.ceilPanel).toBe(0x0A1526);
+    expect(NEON.skyWin).toBe(0x14213F);
+    expect(NEON.screenLight).toBe(0.6);
+    expect(NEON.reception).toBe(0.9);
+    expect(NEON.pendBulb).toBe(0x16243D);
+    expect(NEON.pendLight).toEqual({ intensity: 0.06, color: 0x1E3A5F });
+    expect(NEON.panelLight).toBe(0.03);
+  });
+
+  it('restore = basis siang (persis nilai OFF toggle inline) & restoreTime tetap dipanggil', () => {
+    const ctx = neonCtx();
+    ctx.ceilPanels = [{ material: mat() }];
+    ctx.skyWins = [mat()];
+    const neon = createNeonMode(ctx);
+    neon.toggle(); // on
+    neon.toggle(); // off
+    expect(ctx.restoreTime).toHaveBeenCalledTimes(1);
+    expect(ctx.floor.material.color.set).toHaveBeenLastCalledWith(NEON.restore.floor);
+    expect(ctx.carpet.material.color.set).toHaveBeenLastCalledWith(NEON.restore.carpet);
+    expect(ctx.reception.intensity).toBe(0.4);
+    ctx.panelLights.forEach((l) => expect(l.intensity).toBe(0.25));
+    ctx.tubeLights.forEach((l) => expect(l.intensity).toBe(0));
+    ctx.skyWins.forEach((m) => expect(m.color.set).toHaveBeenLastCalledWith(0xffffff));
+    ctx.ceilPanels.forEach((m) => expect(m.material.color.set).toHaveBeenLastCalledWith(0xF0F4FF));
+  });
+
+  it('enable menutup SEMUA kelompok yang dulu ditangani toggle inline (tanpa bolong)', () => {
+    const ctx = neonCtx();
+    ctx.ceilPanels = [{ material: mat() }];
+    ctx.skyWins = [mat()];
+    ctx.pendants.bulbs = [{ material: mat() }];
+    ctx.pendants.lights = [light()];
+    const neon = createNeonMode(ctx);
+    neon.toggle();
+    // Jendela + panel plafon + pendant + panel-light — pasangan eksak siklus 170
+    ctx.skyWins.forEach((m) => expect(m.color.set).toHaveBeenLastCalledWith(NEON.skyWin));
+    ctx.ceilPanels.forEach((m) => expect(m.material.color.set).toHaveBeenLastCalledWith(NEON.ceilPanel));
+    ctx.pendants.bulbs.forEach((m) => expect(m.material.color.set).toHaveBeenLastCalledWith(NEON.pendBulb));
+    ctx.pendants.lights.forEach((l) => { expect(l.intensity).toBe(NEON.pendLight.intensity); expect(l.color.set).toHaveBeenCalledWith(NEON.pendLight.color); });
+    ctx.panelLights.forEach((l) => expect(l.intensity).toBe(NEON.panelLight));
   });
 });
 

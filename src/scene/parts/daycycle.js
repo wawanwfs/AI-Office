@@ -224,12 +224,11 @@ export const NEON = {
   pendBulb: 0x16243D,
   pendLight: { intensity: 0.06, color: 0x1E3A5F },
   panelLight: 0.03,
-  // Restore (pasca-OFF): angka siang dasar daycycle — pencahayaan waktu & palet
-  // painter 164-169 dipulihkan resync() (dipanggil toggleCyberpunk OfficeScene).
+  // Restore (pasca-OFF): palet siang dasar. Pencahayaan global (ambient/sun/
+  // exposure) TIDAK disetel di sini — restoreTime()→apply() daycycle yang
+  // memulihkannya sesuai jam, lalu resync() (toggleCyberpunk OfficeScene)
+  // memaksa painter 164-169 repaint sesuai jam NOW.
   restore: {
-    ambient: 0.52,
-    sun: 1.35,
-    exposure: 1.15,
     floor: 0xffffff,
     carpet: 0xd0d8e0,
     ceilOpacity: 0.45,

@@ -1392,50 +1392,21 @@ const __neon=createNeonMode({ambient,sun,renderer,floor:fl,carpet:cp,ceiling:cei
   panelLights:panelLightsArr,
   restoreTime:()=>updateTime(timeOfDay)});
 function toggleCyberpunk() {
-  cyberpunkMode = !cyberpunkMode;
+  // ── Siklus 171: DELEGASI ke createNeonMode (single source of truth) ──
+  // Dulu fungsi ini ditulis ulang inline (commit 4e17450) dgn palet sendiri —
+  // createNeonMode jadi kode mati; siklus 170 menambal inline-nya (jendela/
+  // panel/pendant) tapi dua palet tetap hidup berdampingan. Kini satu-satunya
+  // implementasi = NEON (daycycle) + enable/disable di atas; nilai lama
+  // (ambient 0.58/sun 1.25/tube 0.85 — look yang sudah diterima user) pindah
+  // utuh ke konstanta NEON.
+  cyberpunkMode = __neon.toggle();
   if (cyberpunkMode) {
-    // ── MODE GELAP MEWAH (Cyberpunk Night Studio) ──
-    tubeLights.forEach(l => { l.intensity = 0.85; l.color.set(0x00F0FF); });
-    tubeMeshes.forEach(m => { m.material.color.set(0x18E0FF); m.material.opacity = 0.95; });
-    ambient.intensity = 0.58;
-    sun.intensity = 1.25;
-    renderer.toneMappingExposure = 1.15;
-    fl.material.color.set(0x1a2638);
-    cp.material.color.set(0x142033);
-    if (ceil && ceil.material) ceil.material.opacity = 0.75;
-    agentData.forEach(a => { if (a.dGlow) { a.dGlow.intensity = 0.9; a.dGlow.distance = 4.5; } });
-    screenLights.forEach(l => { l.intensity = 0.6; });
-    if (rcLight) rcLight.intensity = 0.9;
-    // Siklus 170: jendela sky-view & panel plafon ikut gelap (dulu tertinggal
-    // saat toggle ditulis ulang inline — createNeonMode jadi kode mati, 13 jendela
-    // tetap putih menyala di ruangan neon gelap; terbukti probe live)
-    __ceilPanels.forEach(p => { if (p && p.material && p.material.color) p.material.color.set(0x0A1526); });
-    __skyWinMats.forEach(m => { if (m && m.color) m.color.set(0x14213F); });
-    pendBulbs.forEach(m => { m.material.color.set(0x16243D); });
-    pendLights.forEach(l => { l.intensity = 0.06; l.color.set(0x1E3A5F); });
-    panelLightsArr.forEach(l => { l.intensity = 0.03; });
     // SINKRONISASI SEMUA LANTAI KE MODE GELAP
     if (__terraces && __terraces.setMode) __terraces.setMode(true);
   } else {
-    // ── MODE TERANG (Daylight Architectural Studio) ──
-    tubeLights.forEach(l => { l.intensity = 0; });
-    tubeMeshes.forEach(m => { m.material.color.set(0x334466); m.material.opacity = 0.3; });
-    ambient.intensity = 0.52;
-    sun.intensity = 1.35;
-    renderer.toneMappingExposure = 1.15;
-    fl.material.color.set(0xffffff);
-    cp.material.color.set(0xd0d8e0);
-    if (ceil && ceil.material) ceil.material.opacity = 0.45;
-    agentData.forEach(a => { if (a.dGlow) { a.dGlow.intensity = 0.25; a.dGlow.distance = 3.0; } });
-    screenLights.forEach(l => { l.intensity = 0; });
-    if (rcLight) rcLight.intensity = 0.4;
-    // Siklus 170: hapus tint neon jendela + pulihkan panel/bohlam via resync
-    // painter day/night (state painter di-invalidate → repaint sesuai jam NOW —
-    // dulu restore keras memaksa warna siang walau malam, dan skyWins tak
-    // dipulihkan sama sekali karena jalurnya mati).
-    __skyWinMats.forEach(m => { if (m && m.color) m.color.set(0xffffff); });
-    pendLights.forEach(l => { l.intensity = 0.15; l.color.set(0xffe8cc); });
-    panelLightsArr.forEach(l => { l.intensity = 0.25; });
+    // Palet painter day/night 164-169 & pencahayaan waktu pulih via restoreTime
+    // (di dalam disable) + resync — dulu restore keras memaksa warna siang
+    // walau malam, dan skyWins tak dipulihkan sama sekali (jalurnya mati).
     if (__light && __light.resync) __light.resync();
     // SINKRONISASI SEMUA LANTAI KE MODE TERANG
     if (__terraces && __terraces.setMode) __terraces.setMode(false);

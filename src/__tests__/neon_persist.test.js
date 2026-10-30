@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createNeonMode } from '../scene/parts/daycycle.js';
+import { createNeonMode, NEON } from '../scene/parts/daycycle.js';
 
 describe('Neon persist & toggle contract', () => {
   let store = {};
@@ -59,7 +59,8 @@ describe('Neon persist & toggle contract', () => {
     toggleCyberpunk();
     expect(cyberpunkMode).toBe(true);
     expect(localStorage.setItem).toHaveBeenCalledWith('wfs_neon', '1');
-    expect(ctx.floor.material.color.set).toHaveBeenCalledWith(0x060c18);
+    // Siklus 171: palet NEON tunggal — nilai lama 0x060c18 = kode mati
+    expect(ctx.floor.material.color.set).toHaveBeenCalledWith(NEON.floor);
 
     // Toggle off
     toggleCyberpunk();
@@ -75,8 +76,9 @@ describe('Neon persist & toggle contract', () => {
     if (cyberpunkMode) neon.toggle();
 
     expect(neon.on).toBe(true);
-    expect(ctx.ambient.intensity).toBe(0.14);
-    expect(ctx.sun.intensity).toBe(0.06);
-    expect(ctx.renderer.toneMappingExposure).toBe(0.62);
+    // Siklus 171: palet NEON tunggal (eks-nilai toggle inline yang diterima user)
+    expect(ctx.ambient.intensity).toBe(0.58);
+    expect(ctx.sun.intensity).toBe(1.25);
+    expect(ctx.renderer.toneMappingExposure).toBe(1.15);
   });
 });
