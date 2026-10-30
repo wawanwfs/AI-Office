@@ -22,7 +22,7 @@ import FloorNavigator from './components/FloorNavigator'
 import SettingsModal from './components/SettingsModal'
 import { IconVolume, IconVolumeMute, IconScroll, IconHelp, IconGear } from './components/Icons'
 import { api } from './lib/api'
-import { anyModalOpen } from './lib/modal'
+import { anyModalOpen, wfsRefreshModalFlag, wfsSetAppModalBase } from './lib/modal'
 import { createWakeLockManager } from './lib/wakelock.js'
 import { applyPollResult, nextPollDelay, connectionBadge, STALE_AFTER_MS } from './lib/connection_spec.js'
 import {
@@ -428,16 +428,30 @@ export default function App() {
   // Set saat render (bukan useEffect): update discrete-event React di-flush sinkron
   // sebelum listener window scene jalan, jadi flag pasti sudah benar saat Escape dicek.
   const modalActive = !!(showTask || confirm || ask || showHelp || showSettings || showLog || selectedAgent) || anyModalOpen()
-  window.__wfsModalOpen = modalActive
+  // Siklus 180: SATU rumus (base App-state + count panel internal) ditulis saat
+  // render DAN di-refresh saat konsumsi (listener capture di bawah) — flag tak
+  // lagi basi: count panel internal dibaca live, jalur tanpa render tersapu.
+  wfsSetAppModalBase(!!(showTask || confirm || ask || showHelp || showSettings || showLog || selectedAgent))
+  wfsRefreshModalFlag()
   window.__openSettings = () => setShowSettings(true)
 
   // Snapshot flag di fase CAPTURE (window capture jalan sebelum semua bubble handler):
   // handler Escape overlay menutup modal & React flush sinkron, sehingga saat handler
   // window scene (bubble) jalan flag sudah false lagi — scene wajib baca snapshot ini.
+  // SIKLUS 180: listener yang sama REFRESH flag (wfsRefreshModalFlag) di fase capture
+  // utk keydown/pointerdown/mousedown/pointerup. __escModalAtDispatch hanya bermakna
+  // SELAMA dispatch Escape: snapshot prae-penutupan saat capture Escape, dan kini
+  // DIBERSIHKAN di event non-Escape (perbaikan: dulu tertinggal true setelah Escape
+  // menutup modal → guard scene memblokir orbit/shortcut sampai Escape berikutnya).
   useEffect(() => {
-    const snap = (e) => { if (e.key === 'Escape') window.__escModalAtDispatch = window.__wfsModalOpen || anyModalOpen() }
-    window.addEventListener('keydown', snap, true)
-    return () => window.removeEventListener('keydown', snap, true)
+    const snap = (e) => {
+      if (e.key === 'Escape') window.__escModalAtDispatch = window.__wfsModalOpen || anyModalOpen()
+      else window.__escModalAtDispatch = false
+      return wfsRefreshModalFlag()
+    }
+    const events = ['keydown', 'pointerdown', 'mousedown', 'pointerup']
+    events.forEach((ev) => window.addEventListener(ev, snap, { capture: true }))
+    return () => events.forEach((ev) => window.removeEventListener(ev, snap, { capture: true }))
   }, [])
 
   // ---- fokus trap: saat modal/panel App terbuka, chrome lain (HUD, Header, Ticker,

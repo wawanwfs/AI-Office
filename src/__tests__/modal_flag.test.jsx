@@ -3,7 +3,7 @@
 // dipakai TaskBoard/ProjectPanel/WfsPanel/TeamStats/CsWidget/TaskModal supaya
 // scene TIDAK me-reset kamera saat Escape menutup overlay. window.__wfsModalOpen
 // di App hanya mencakup modal yang state-nya di App; panel internal memakai hook
-// ini. Modul ini belum punya test langsung.
+// ini. Test langsung modul: modal_refresh.test.js (siklus 180).
 import React from 'react'
 import { describe, it, expect, afterEach } from 'vitest'
 import { render, cleanup } from '@testing-library/react'
