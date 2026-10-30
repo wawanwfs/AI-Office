@@ -29,6 +29,7 @@ export const KEYBOARD_SHORTCUTS = [
   { key: 'R', action: 'toggle_rotate', label: 'Putar Otomatis', desc: 'Putar kamera 3D perlahan mengelilingi kantor', category: 'tampilan' },
   { key: 'F', action: 'toggle_fullscreen', label: 'Layar Penuh', desc: 'Beralih ke mode layar penuh browser', category: 'tampilan' },
   { key: 'G', action: 'take_snapshot', label: 'Foto Kantor (PNG)', desc: 'Simpan foto kantor sebagai PNG — sama dengan tombol FOTO di dock (unduh langsung, resolusi penuh)', category: 'tampilan' },
+  { key: 'C', action: 'cycle_agent', label: 'Siklus Fokus Agent', desc: 'Fokus kamera ke agen berikutnya (Shift+C = sebelumnya) — setara klik agen, tanpa mouse', category: 'navigasi' },
   { key: 'Esc', action: 'escape', label: 'Tutup / Batal', desc: 'Tutup dialog / panel atau batalkan fokus seleksi agent', category: 'panel' },
 ];
 
@@ -78,6 +79,13 @@ export function resolveShortcutAction(event, context = {}) {
     if (activeModal === 'help' && (k === 'h' || k === '?')) return { type: 'TOGGLE_HELP' };
     if (activeModal === 'settings' && k === 'o') return { type: 'TOGGLE_SETTINGS' };
     if (activeModal === 'log' && k === 'l') return { type: 'TOGGLE_LOG' };
+    // Siklus 181 — EXCEPTION agent-cycle: modalOpen true TAPI agentCycleBlocked
+    // false berarti satu-satunya "modal" adalah inspector agen hasil siklus C
+    // sendiri (App menghitung ulang tanpa selectedAgent) → C tetap jalan, bila
+    // ikut diblokir C kedua mati. Modal nyata (agentCycleBlocked=true) → null.
+    if (k === 'c' && context.agentCycleBlocked === false) {
+      return { type: 'CYCLE_AGENT', backward: event.shiftKey === true };
+    }
     return null;
   }
 
@@ -106,6 +114,16 @@ export function resolveShortcutAction(event, context = {}) {
   if (k === 'f') return { type: 'TOGGLE_FULLSCREEN' };
   // Siklus 179: G = FOTO (snapshot PNG) — paritas tombol dgn tombol FOTO dock
   if (k === 'g') return { type: 'TAKE_SNAPSHOT' };
+  // Siklus 181: C = siklus fokus agen (Shift+C = mundur) — paritas dgn klik agen.
+  // Kontrak context AGENT-CYCLE: App mengirim `agentCycleBlocked` = ada modal NYATA
+  // terbuka (task-board/project-panel/help/settings/log/confirm/ask/panel internal)
+  // — inspector agen (selectedAgent) SENGAJA tidak dihitung: inspector adalah
+  // bagian dari siklus C sendiri, bila ikut memblokir maka C kedua mati. Guard
+  // mengetik (isEditableTarget) & ctrl/meta/alt tetap berlaku via jalur standar.
+  if (k === 'c') {
+    if (context.agentCycleBlocked) return null;
+    return { type: 'CYCLE_AGENT', backward: event.shiftKey === true };
+  }
   if (k === '[' || k === '{') return { type: 'CYCLE_FLOOR_PREV' };
   if (k === ']' || k === '}') return { type: 'CYCLE_FLOOR_NEXT' };
   if (k === '1') return { type: 'SET_VIEW', view: 'iso' };
@@ -139,6 +157,7 @@ export function formatShortcutHelpSummary() {
     '+ / − = zoom',
     'F = fullscreen',
     'G = foto kantor (PNG)',
+    'C = agen berikutnya (Shift+C = sebelumnya)',
     'Esc = tutup panel.',
   ].join(' · ');
 }

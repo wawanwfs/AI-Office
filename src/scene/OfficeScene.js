@@ -11,6 +11,7 @@ import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { perfStep } from './parts/perf_quality.js';
 import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam, resetFocusGoal, agentFocusPos } from './parts/kamera_focus.js';
+import { nextAgentIndex } from './parts/agent_cycle.js';
 import { orbitStep, orbitFocusGoal, ORBIT_KEY_STEP, ORBIT_KEY_STEP_FAST } from './parts/orbit_spec.js';
 import { snapshotDataUrl, snapshotFilename } from './parts/snapshot_spec.js';
 import { dblclickPointGoal, dblclickBlankGoal, tapCandidate, isDoubleTap, dtapRadius, DTAP_ZOOM_STEP } from './parts/dblclick_spec.js';
@@ -331,9 +332,15 @@ const agentFollowGoal=(root,rf)=>{
 };
 const focusAgentRoot=(root,opts={})=>{
   if(!root)return false;
-  const {bubble=true,rf=24}=opts;
+  // Siklus 181: suppressSync = JANGAN buka panel chat (window.__wfsSelectAgent).
+  // Dipakai siklus agen C/Shift+C: panel itu modal (aria-modal + useModalFlag)
+  // → bila tiap langkah membukanya, C berikutnya terblokir guard modal. Klik
+  // agen & dblclick TETAP membuka panel (paritas perilaku lama); dari siklus C,
+  // jalur chat tetap tersedia via tombol Chat di inspector agen. Fokus kamera/
+  // ring/bubble/onSelectAgent tak terpengaruh.
+  const {bubble=true,rf=24,suppressSync=false}=opts;
   __sound.playSelect();
-  if(window.__wfsSelectAgent){
+  if(window.__wfsSelectAgent&&!suppressSync){
     const idMap={}; window.__wfsAgentIdList&&window.__wfsAgentIdList.forEach(x=>idMap[x.name]=x.id);
     window.__wfsSelectAgent(idMap[root.agent.name]||root.agent.name);
   }
@@ -2263,6 +2270,21 @@ window.addEventListener('keydown',onKey);
     focusMeetingRoom: () => {
       return focusMeetingRoom();
     },
+    // Siklus 181 — C = siklus fokus agen (Shift+C = mundur): satu-satunya jalur
+    // fokus agen yang masih butuh mouse (klik). Konvensi D/Shift+D (preset divisi).
+    // SATU SUMBER: delegasi focusAgentRoot — paritas EKSAK dgn klik agen
+    // (goal follow + saveCam + ring + bubble + onSelectAgent/inspector).
+    // Panel chat SENGAJA TIDAK dibuka dari siklus (suppressSync): panel itu
+    // modal (aria-modal + useModalFlag) → C berikutnya terblokir guard modal.
+    // Jalur chat tetap utuh: klik agen, atau tombol Chat di inspector agen.
+    cycleAgent: (backward) => {
+      if (!agentData.length) return false;
+      const next = nextAgentIndex(selectedIdx, agentData.length, backward === true);
+      if (next < 0) return false;
+      const root = agentData[next];
+      if (!root) return false;
+      return focusAgentRoot(root, { suppressSync: true, rf: 20 });
+    },
     setView: (name) => {
       const targetPhi = (sph.phi < 0.7 || sph.phi > 1.35) ? 1.05 : undefined;
       if(name==='l1'||name==='floor1'){ focusGoal={t:new THREE.Vector3(0,0.5,-3.0),r:18,phi:targetPhi}; return true; }
@@ -2431,6 +2453,14 @@ window.addEventListener('keydown',onKey);
   window.__wfsSceneControls=__sceneControls; // jembatan destroy/probe E2E (siklus 123): App.jsx tetap pakai sceneRef internal
   window.__focusTeam = (k) => sceneControls.focusTeam(k);
   window.__focusAgent = (k) => sceneControls.focusAgent(k);
+  // Siklus 181 — probe E2E siklus agen: nama agen terpilih saat ini (null bila
+  // tidak ada) + panggil langkah maju/mundur. Bacaan selectedIdx dinormalisasi
+  // (indeks -2 nexus → null). Murni pembacaan + delegasi sceneControls.
+  window.__agentCycle = (backward) => {
+    if (backward !== undefined) return sceneControls.cycleAgent(backward);
+    const i = sceneControls.getSelected();
+    return (i >= 0 && i < agentData.length) ? agentData[i].agent.name : null;
+  };
   window.__focusMeetingRoom = () => sceneControls.focusMeetingRoom();
   return sceneControls;
 }

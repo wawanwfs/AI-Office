@@ -516,7 +516,11 @@ export default function App() {
       else if (typeof document !== 'undefined' && document.getElementById('project-panel')) activeModal = 'project_panel'
 
       const modalOpen = Boolean(showTask || confirm || ask || showHelp || showSettings || showLog || selectedAgent || anyModalOpen())
-      const action = resolveShortcutAction(e, { modalOpen, activeModal })
+      // Siklus 181: blokir siklus agen (C) bila modal NYATA terbuka — apa pun
+      // KECUALI inspector agen (selectedAgent): inspector adalah bagian dari
+      // siklus C sendiri; bila ikut dihitung, C kedua terblokir guard modal.
+      const agentCycleBlocked = Boolean(showTask || confirm || ask || showHelp || showSettings || showLog || activeModal || anyModalOpen())
+      const action = resolveShortcutAction(e, { modalOpen, activeModal, agentCycleBlocked })
       if (!action) return
 
       const actType = typeof action === 'string' ? action : action.type
@@ -611,6 +615,13 @@ export default function App() {
         setShowLog(false)
         setShowHelp(false)
         setShowSettings(false)
+      } else if (actType === 'CYCLE_AGENT') {
+        // Siklus 181: C/Shift+C — delegasi satu sumber sceneControls.cycleAgent
+        // (goal follow + ring + bubble + inspector; panel chat sengaja tidak
+        // dibuka — modal → mematikan C berikutnya; chat tetap via inspector).
+        e.preventDefault()
+        const s = sceneRef.current
+        if (s && s.cycleAgent) s.cycleAgent(action.backward)
       }
     }
     window.addEventListener('keydown', onKey)

@@ -34,6 +34,8 @@ export const SCENE_HOOKS = [
   '__sceneSelRing', '__sceneRing',
   // aksi dari UI React / debug API
   '__focusTeam', '__focusAgent', '__focusMeetingRoom', '__setTime',
+  // siklus fokus agen keyboard C/Shift+C (siklus 181 — probe utk e2e)
+  '__agentCycle',
   '__toggleNeon', '__openTaskBoard', '__whiteboard', '__projectBoard',
   // status debug & poll
   '__dbg', '__meet', '__lunch', '__pollBadges', '__wfsAgentIdMap',
