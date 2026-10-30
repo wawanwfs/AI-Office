@@ -207,26 +207,29 @@ try:
           isinstance(r3, dict) and r3.get("ok") and r3.get("changed"), str(r3)[:200])
 
     # TES 4: Escape menutup fokus — kontrak resetFocusGoal (pola TES5 siklus
-    # 181): goal follow HILANG diganti goal reset {reset:true, r≈42.5} + probe
-    # null + inspector tertutup.
+    # 181): goal follow {r:20} HILANG diganti goal reset {reset:true, r≈42.5} +
+    # probe null + inspector tertutup. Bacaan fixed-delay (terbukti: perubahan
+    # terjadi <2 dtk pasca-Escape; loop polling panjang terbukti flaky di CDP).
     r4 = ev("""(async () => {
       const sleep = (ms) => new Promise(r => setTimeout(r, ms));
       const gFollow = window.__dbg().focus;
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true, cancelable: true }));
-      let name = window.__agentCycle(), goal = gFollow, insp = true;
-      for (let i = 0; i < 20; i++) { await sleep(400);
-        name = window.__agentCycle();
-        goal = window.__dbg().focus;
-        insp = !!document.querySelector('[aria-label^="Profil"]');
-        if (name === null && goal === null && !insp) break; }
+      await sleep(1500);
+      const name = window.__agentCycle();
+      const goal = window.__dbg().focus;
+      const insp = !!document.querySelector('[aria-label^="Profil"]');
+      await sleep(3000);
+      const goalLate = window.__dbg().focus;
       const wasFollow = !!(gFollow && gFollow.reset !== true);
-      const isReset = !!(goal && goal.reset === true);
-      return { wasFollow, cleared: name === null, isReset, inspClosed: !insp,
-               goalR: goal ? goal.r : null };
+      return { wasFollow, gFollowR: gFollow ? gFollow.r : null,
+               cleared: name === null,
+               isReset: !!(goal && goal.reset === true),
+               stillReset: !!(goalLate && goalLate.reset === true),
+               inspClosed: !insp };
     })()""", wait=90, await_promise=True)
     check("TES4 Escape → fokus lepas (probe null) + goal reset (kontrak resetFocusGoal)",
-          isinstance(r4, dict) and r4.get("wasFollow") and r4.get("cleared")
-          and r4.get("isReset") and r4.get("inspClosed"), str(r4)[:200])
+          isinstance(r4, dict) and r4.get("wasFollow") and r4.get("gFollowR") == 20
+          and r4.get("cleared") and r4.get("isReset") and r4.get("inspClosed"), str(r4)[:200])
 
     # TES 5: error window = 0.
     check("TES5 error window = 0", not errs and not excs, f"errs={len(errs)} excs={len(excs)}")
