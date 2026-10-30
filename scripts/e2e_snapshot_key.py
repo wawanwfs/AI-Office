@@ -5,12 +5,17 @@ document → bubble ke window → resolveShortcutAction → TAKE_SNAPSHOT → Ap
 handleSnapshot (SATU sumber dgn tombol dock) → snapshot PNG + unduh + flash.
 Tes:
 (1) dokumentasi: dialog Help (H) mencantumkan entri "G = foto kantor (PNG)" di
-    grid shortcut langkah terakhir (+2b Escape menutup);
-(2) G saat goal follow aktif → snapshot sukses & goal TETAP hidup (kontrak: foto
-    tidak mengganggu fokus — jalur keyboard sama persis dgn tombol);
-(3) G → Page.downloadWillBegin nyata (unduhan PNG kantor-wfs-*.png) + flash
-    "Foto tersimpan";
+    grid shortcut langkah terakhir (+1b Escape menutup);
+(2) G → Page.downloadWillBegin nyata (unduhan PNG kantor-wfs-*.png) + flash
+    "Foto tersimpan" (toast di-poll async — flash hidup 3,5 dtk);
+(3) G saat goal follow aktif → snapshot sukses (unduhan nyata) & goal TETAP
+    hidup (kontrak: foto tidak mengganggu fokus — jalur keyboard sama persis
+    dgn tombol) — dijalankan paling akhir (state agen disentuh terakhir);
 (4) error window = 0.
+Urutan tes disengaja: state agen (focusAgent/resetFocus) PALING AKHIR —
+pelajaran siklus: resetFocus menyisakan flag modal __wfsModalOpen=true yang
+mematikan shortcut keyboard untuk tekanan berikutnya (temuan utk siklus depan;
+produksi tak terpapar karena resetFocus selalu diikuti Escape/tutup dialog).
 """
 import base64, json, os, socket, struct, subprocess, time, urllib.request
 from urllib.parse import urlparse
@@ -156,47 +161,90 @@ try:
     # TES 1 (dokumentasi dulu — sebelum state agen disentuh): dialog Help
     # mencantumkan "G = foto kantor (PNG)". Grid shortcut hanya ada di langkah
     # TERAKHIR dialog → buka lalu klik "Berikutnya" sampai grid muncul.
-    ev("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'h', bubbles: true }))", wait=6)
-    help_open = ev_until("!!document.querySelector('[role=\"dialog\"]')", wait_total=8)
-    for _ in range(8):
-        grid = ev("!!document.querySelector('.help-shortcut-grid')", wait=3)
-        if grid is True:
-            break
-        ev("""(() => {
-          const dlg = document.querySelector('[role="dialog"]');
-          if (!dlg) return 'NODIALOG';
-          const b = Array.from(dlg.querySelectorAll('button'))
-            .find(x => (x.textContent || '').includes('Berikutnya'));
-          if (!b) return 'NOBTN';
-          b.click();
-          return 'CLICKED';
-        })()""", wait=3)
-        pump(1)
-    help_txt = ev("""(() => {
-      const g = document.querySelector('.help-shortcut-grid');
-      const cards = g ? Array.from(g.querySelectorAll('.help-shortcut-card')).map(c => c.textContent) : [];
-      return { cards, summary: g ? g.textContent : '' };
-    })()""", wait=6)
-    ht = help_txt if isinstance(help_txt, dict) else {}
-    raw_cards = ht.get('cards')
-    cards = raw_cards if isinstance(raw_cards, list) else []
-    raw_sum = ht.get('summary')
-    summary = raw_sum if isinstance(raw_sum, str) else ''
-    has_g = bool(help_open) and (
-        any('G' in c and 'foto' in c.lower() for c in cards)
-        or 'G = foto kantor (PNG)' in summary)
-    check("TES2 dialog Help mencantumkan shortcut G = foto kantor (PNG)", has_g,
-          f"open={help_open} cards={[c[:40] for c in cards][:3]}")
-    ev("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }))", wait=4)
-    pump(2)
-    help_closed = ev("!document.querySelector('.help-shortcut-grid')", wait=4)
+    # Pelajaran (2) siklus ini: React 18 mem-batch setState dari event native —
+    # flush terjadi SETELAH tugas JS sinkron berakhir; busy-loop Date.now()
+    # memblokir flush → dialog tak pernah muncul di tengah tari sinkron, dan
+    # evaluasi CDP terpisah sering >1-3 dtk (SwiftShader sibuk) → flaky.
+    # Solusi: tari ASINKRON dalam SATU evaluate (awaitPromise + await sleep —
+    # benar-benar memberi jeda ke event loop antar langkah).
+    help_res = ev("""(async () => {
+      const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+      const helpDlg = () => Array.from(document.querySelectorAll('[role="dialog"]'))
+        .find(x => Array.from(x.querySelectorAll('button'))
+          .some(b => (b.textContent || '').includes('Berikutnya')));
+      const press = (k) => document.dispatchEvent(
+        new KeyboardEvent('keydown', { key: k, bubbles: true }));
+      let opened = false;
+      for (let a = 0; a < 3 && !opened; a++) {
+        press('h');
+        for (let i = 0; i < 16; i++) { await sleep(150); if (helpDlg()) { opened = true; break; } }
+      }
+      if (!opened) return { open: false };
+      let ncards = 0, hasG = false, gridSeen = false;
+      for (let i = 0; i < 14; i++) {
+        const g = document.querySelector('.help-shortcut-grid');
+        if (g) {
+          gridSeen = true;
+          const cards = Array.from(g.querySelectorAll('.help-shortcut-card'))
+            .map(c => c.textContent || '');
+          ncards = cards.length;
+          hasG = cards.some(c => c.includes('G') && c.toLowerCase().includes('foto'));
+          break;
+        }
+        const dlg = helpDlg();
+        const b = dlg && Array.from(dlg.querySelectorAll('button'))
+          .find(x => (x.textContent || '').includes('Berikutnya'));
+        if (!b) { await sleep(200); continue; }
+        b.click();
+        await sleep(150);
+      }
+      press('Escape');
+      let closed = false;
+      for (let i = 0; i < 16; i++) { await sleep(150); if (!helpDlg()) { closed = true; break; } }
+      return { open: true, gridSeen, ncards, hasG, closed };
+    })()""", wait=60, await_promise=True)
+    hr = help_res if isinstance(help_res, dict) else {}
+    check("TES2 dialog Help mencantumkan shortcut G = foto kantor (PNG)",
+          hr.get("open") is True and hr.get("gridSeen") is True and hr.get("hasG") is True,
+          str(hr))
     check("TES2b Escape menutup Help (modal guard tetap utuh setelah entri baru)",
-          help_closed is True)
+          hr.get("open") is True and hr.get("closed") is True, str(hr))
 
-    # TES 3: G saat goal follow aktif → snapshot sukses & goal tetap hidup
-    # (jalur keyboard identik tombol FOTO; snapshot via SwiftShader bisa >6 dtk
-    # → wait panjang, pelajaran 178). Dijalankan SETELAH tes Help supaya state
-    # agen (dialog seleksi) tidak menghalangi guard modal saat 'h' ditekan.
+    # TES 3: G → unduhan nyata + flash "Foto tersimpan" (kondisi awal, tanpa
+    # menyentuh state agen — pelajaran siklus: resetFocus menyisakan flag modal
+    # __wfsModalOpen=true yang mematikan shortcut keyboard untuk tekanan
+    # berikutnya; urutan tes disusun agar state agen disentuh PALING AKHIR).
+    n0 = len(downloads)
+    # Pelajaran (3) siklus ini: flash toast hilang dalam 3,5 dtk — jendela tunggu
+    # pasca-tekan (snapshot SwiftShader bisa 15-25 dtk) hampir pasti melewatkannya.
+    # Solusi: satu evaluasi ASYNC yang menekan 'g' lalu POLL toast tiap 200ms selama
+    # maks 60 dtk — flash tertangkap di momen muncul (bukan setelah fakta).
+    shot = ev("""(async () => {
+      const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+      document.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', bubbles: true }));
+      const t0 = Date.now();
+      let toast = null;
+      while (Date.now() - t0 < 60000) {
+        const t = document.querySelector('.toast');
+        if (t && t.textContent) { toast = t.textContent; break; }
+        await sleep(200);
+      }
+      return { toast };
+    })()""", wait=70, await_promise=True)
+    pump(10)  # beri waktu event Page.downloadWillBegin mengantre & terkirim
+    fn = downloads[n0] if len(downloads) > n0 else ""
+    check("TES3 G memicu unduhan PNG kantor-wfs-*.png (Page.downloadWillBegin)",
+          shot is not None and len(downloads) > n0 and fn.startswith("kantor-wfs-"),
+          f"shot={shot} downloads={downloads[n0:n0+2]}")
+    check("TES3b flash 'Foto tersimpan: ...' tampil (bukan flash gagal)",
+          isinstance(shot, dict) and str(shot.get("toast", "")).startswith("Foto tersimpan: "),
+          str(shot))
+
+    # TES 4 (PALING AKHIR — menyentuh state agen): G saat goal follow aktif →
+    # snapshot sukses (unduhan nyata) & goal tetap hidup (jalur keyboard identik
+    # tombol FOTO; snapshot via SwiftShader bisa >6 dtk → wait panjang, pelajaran
+    # 178). Tidak memanggil resetFocus (melihat catatan TES3 di atas).
+    n1 = len(downloads)
     goal = ev("""(() => {
       const C = window.__wfsSceneControls; if(!C||!C.focusAgent) return {skip:true};
       const ag = (window.__agentData||[])[0]; if(!ag) return {skip:true};
@@ -205,28 +253,18 @@ try:
       const g0 = window.__dbg && window.__dbg().focus;
       document.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', bubbles: true }));
       const g1 = window.__dbg && window.__dbg().focus;
-      try { C.resetFocus(); } catch(e){}
       return { res0, had0: !!g0, had1: !!g1 };
     })()""", wait=90)
+    pump(10)  # event unduhan mengantre selama main thread diblokir snapshot
+    dl_follow = downloads[n1] if len(downloads) > n1 else ""
     if isinstance(goal, dict) and not goal.get("skip"):
-        check("TES3 G saat follow: snapshot sukses & goal TETAP hidup (kontrak foto)",
-              goal.get("res0") is True and goal.get("had0") is True and goal.get("had1") is True,
-              str(goal))
+        check("TES4 G saat follow: snapshot sukses (unduhan nyata) & goal TETAP hidup",
+              goal.get("res0") is True and goal.get("had0") is True
+              and goal.get("had1") is True and dl_follow.startswith("kantor-wfs-"),
+              f"{goal} dl={dl_follow}")
     else:
-        check("TES3 G saat follow (fokus agen tidak tersedia — skip cek goal)",
+        check("TES4 G saat follow (fokus agen tidak tersedia — skip cek goal)",
               isinstance(goal, dict) and bool(goal.get("skip")), str(goal)[:120])
-
-    # TES 4: G → unduhan nyata + flash "Foto tersimpan".
-    n0 = len(downloads)
-    press = ev("document.dispatchEvent(new KeyboardEvent('keydown', { key: 'g', bubbles: true }))", wait=30)
-    toast = ev("(() => { const t = document.querySelector('.toast'); return t ? t.textContent : null; })()", wait=4)
-    pump(8)
-    fn = downloads[n0] if len(downloads) > n0 else ""
-    check("TES4 G memicu unduhan PNG kantor-wfs-*.png (Page.downloadWillBegin)",
-          press is True and len(downloads) > n0 and fn.startswith("kantor-wfs-"),
-          f"press={press} downloads={downloads[n0:n0+2]}")
-    check("TES4b flash 'Foto tersimpan: ...' tampil (bukan flash gagal)",
-          isinstance(toast, str) and toast.startswith("Foto tersimpan: "), str(toast))
 
     check("TES5 error window = 0", len(errs) == 0 and len(excs) == 0,
           f"errs={errs[:2]} excs={excs[:2]}")
