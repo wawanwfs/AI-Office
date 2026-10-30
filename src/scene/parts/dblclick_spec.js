@@ -64,8 +64,13 @@ export function isDoubleTap(c1, c2, { window = TAP_WINDOW_MS, out = TAP_OUT_PX }
 
 // Radius berikutnya setelah double-tap: satu sumber utk zoom-IN tap-ganda
 // (delegasi zoomRadius — clamp 12..130 & anti-poisoning sama dgn wheel/pinch).
-// `dtapDir` (dari arah tap kedua, lazimnya 'y') opsional utk zoom keluar.
+// zoomRadius MENJUMLAH delta, jadi langkah majemuk `step` = delta cur*(step-1)
+// (42.5 → ×0.82 ≈ 34.85 per tap-ganda — terasa setara wheel). `dir` = arah
+// (1 masuk, -1 keluar) — tanpa sumber → no-op aman (bukan crash / NaN).
 export function dtapRadius(current, step = DTAP_ZOOM_STEP, dir = 1, zoomRadiusFn) {
-  if (typeof zoomRadiusFn !== 'function') return current; // tanpa sumber → no-op aman
-  return zoomRadiusFn(current, dir * Math.log(step));
+  if (typeof zoomRadiusFn !== 'function') return current;
+  // Anti-poisoning: state teracuni (NaN) pulih ke BASIS 42.5 tanpa delta —
+  // langkah tak boleh diturunkan dari radius yang tidak valid.
+  if (!(typeof current === 'number' && Number.isFinite(current))) return zoomRadiusFn(42.5, 0);
+  return zoomRadiusFn(current, dir * current * (step - 1));
 }

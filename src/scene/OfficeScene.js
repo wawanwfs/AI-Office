@@ -253,7 +253,7 @@ __onCanvas('touchend',e=>{
   }
   __tapDown=null;
 },{passive:true});
-__onCanvas('touchcancel',e=>{
+__onCanvas('touchcancel',()=>{
   // Siklus 175: OS membatalkan gestur (telepon masuk, notifikasi) → jangan
   // tinggalkan pinchDist/pinchGuard basi yang mematikan klik & pinch berikutnya.
   pinchDist=null;pinchActive=false;pinchGuard=false;dtapLast=null;__tapDown=null;
