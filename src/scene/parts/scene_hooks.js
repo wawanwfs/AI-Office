@@ -25,6 +25,8 @@ export const SCENE_HOOKS = [
   '__animFrames', '__perf', '__labelFrac',
   // kamera & renderer
   '__cam', '__camCam', '__renderer', '__spawnBubble', '__resizeScene',
+  // orbit keyboard (siklus 177 — probe murni utk e2e, tanpa mutasi scene)
+  '__orbitStep',
   // pilihan & cincin
   '__sceneSelRing', '__sceneRing',
   // aksi dari UI React / debug API

@@ -11,6 +11,7 @@ import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { perfStep } from './parts/perf_quality.js';
 import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam, resetFocusGoal, agentFocusPos } from './parts/kamera_focus.js';
+import { orbitStep, orbitFocusGoal, ORBIT_KEY_STEP, ORBIT_KEY_STEP_FAST } from './parts/orbit_spec.js';
 import { dblclickPointGoal, dblclickBlankGoal, tapCandidate, isDoubleTap, dtapRadius, DTAP_ZOOM_STEP } from './parts/dblclick_spec.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
@@ -2058,7 +2059,33 @@ if (typeof ResizeObserver !== 'undefined' && container) {
 }
 window.addEventListener('resize', onResize);
 window.__resizeScene = onResize;
-const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&focusGoal){focusGoal=resetFocusGoal(HOME_TGT,homeRadius,sph.radius);selectedIdx=-1;applySelected();if(onSelectAgent)onSelectAgent(null);delete sph.__saved;} };window.addEventListener('keydown',onKey);
+const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&focusGoal){focusGoal=resetFocusGoal(HOME_TGT,homeRadius,sph.radius);selectedIdx=-1;applySelected();if(onSelectAgent)onSelectAgent(null);delete sph.__saved;} };
+// Siklus 177 — orbit kamera via KEYBOARD (panah): satu-satunya jalur input
+// kamera yang belum ada (audit 174/175/176 menutup semua tepi pointer, tapi
+// PUTAR kamera hanya bisa drag pointer — tanpa mouse tak ada cara memutar
+// kantor). Kontrak murni di orbit_spec.js (satu sumber, dgn zoom/pinch/dtap):
+// langkah 0.12 rad (Shift = 0.36), clamp phi eksak dgn updCam (0.18..π/2.3 —
+// panah berulang tak menembus lantai/membalik kamera), anti-poisoning (state
+// NaN pulih ke basis isometrik tanpa langkah). Orbit TIDAK menyentuh goal
+// (orbitFocusGoal — kontrak eksplisit): follow agen/figur rapat & goal statis
+// UTUH — orbit memutar SEKELILING target, tidak mengubah target/radius.
+// Tombol ditekan-terus = repeat OS otomatis (setiap keydown) — halus tanpa
+// timer tambahan. Untuk tes: window.__orbitStep (pure, tanpa mutasi scene).
+const __onOrbitKey=(e)=>{
+  if(window.__wfsModalOpen||window.__escModalAtDispatch){return;} // modal terbuka → keyboard milik modal
+  const isArrow=e.key==='ArrowLeft'||e.key==='ArrowRight'||e.key==='ArrowUp'||e.key==='ArrowDown';
+  if(!isArrow)return;
+  const t=e.target; if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable))return; // sedang mengetik
+  e.preventDefault(); // panah = orbit, bukan scroll halaman
+  const n=orbitStep(sph,e.key,e.shiftKey?ORBIT_KEY_STEP_FAST:ORBIT_KEY_STEP);
+  sph.theta=n.theta;sph.phi=n.phi;
+  orbitFocusGoal(focusGoal); // kontrak: goal utuh (diuji eksplisit test)
+  updCam();
+};
+const __orbitStepProbe=(key)=>orbitStep({theta:sph.theta,phi:sph.phi},key); // probe murni utk e2e
+window.__orbitStep=__orbitStepProbe; // hook terdaftar SCENE_HOOKS (purge destroy)
+window.addEventListener('keydown',__onOrbitKey);
+window.addEventListener('keydown',onKey);
 
   // Return controls for React UI
   // ── Kontrol aksi tim (dipakai menu React) ──
@@ -2332,6 +2359,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       document.removeEventListener('visibilitychange', onVis);
       if(rafId){cancelAnimationFrame(rafId);rafId=null;}
       window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keydown', __onOrbitKey);
       window.removeEventListener('pointerup', onDragUp);
       window.removeEventListener('pointermove', onDragMove);
       window.removeEventListener('keydown', __ensureAudio);
