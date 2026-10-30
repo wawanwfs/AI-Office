@@ -28,6 +28,7 @@ export const KEYBOARD_SHORTCUTS = [
   { key: 'D', action: 'cycle_div_preset', label: 'Siklus Preset Divisi', desc: 'Papan task terbuka: pindah preset divisi berikutnya (Shift+D = sebelumnya)', category: 'panel' },
   { key: 'R', action: 'toggle_rotate', label: 'Putar Otomatis', desc: 'Putar kamera 3D perlahan mengelilingi kantor', category: 'tampilan' },
   { key: 'F', action: 'toggle_fullscreen', label: 'Layar Penuh', desc: 'Beralih ke mode layar penuh browser', category: 'tampilan' },
+  { key: 'G', action: 'take_snapshot', label: 'Foto Kantor (PNG)', desc: 'Simpan foto kantor sebagai PNG — sama dengan tombol FOTO di dock (unduh langsung, resolusi penuh)', category: 'tampilan' },
   { key: 'Esc', action: 'escape', label: 'Tutup / Batal', desc: 'Tutup dialog / panel atau batalkan fokus seleksi agent', category: 'panel' },
 ];
 
@@ -103,6 +104,8 @@ export function resolveShortcutAction(event, context = {}) {
   if (k === 'k') return { type: 'TOGGLE_NAMES' };
   if (k === 'r') return { type: 'TOGGLE_ROTATE' };
   if (k === 'f') return { type: 'TOGGLE_FULLSCREEN' };
+  // Siklus 179: G = FOTO (snapshot PNG) — paritas tombol dgn tombol FOTO dock
+  if (k === 'g') return { type: 'TAKE_SNAPSHOT' };
   if (k === '[' || k === '{') return { type: 'CYCLE_FLOOR_PREV' };
   if (k === ']' || k === '}') return { type: 'CYCLE_FLOOR_NEXT' };
   if (k === '1') return { type: 'SET_VIEW', view: 'iso' };
@@ -135,6 +138,7 @@ export function formatShortcutHelpSummary() {
     'Panah = orbit kamera (Shift = cepat)',
     '+ / − = zoom',
     'F = fullscreen',
+    'G = foto kantor (PNG)',
     'Esc = tutup panel.',
   ].join(' · ');
 }

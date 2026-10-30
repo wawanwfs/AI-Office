@@ -465,6 +465,20 @@ export default function App() {
     dir > 0 ? s.zoomIn() : s.zoomOut()
   }, [flash])
 
+  // Siklus 179: FOTO — SATU sumber untuk tombol FOTO dock & shortcut G.
+  // Snapshot PNG kanvas 3D via sceneControls.takeSnapshot (render sinkron +
+  // toDataURL dalam satu tugas; hasil tak valid = flash gagal, bukan file
+  // rusak diunduh diam-diam). Return true bila unduhan terpicu.
+  const handleSnapshot = useCallback(() => {
+    const s = sceneRef.current
+    if (!s || !s.takeSnapshot) { flash('Scene 3D tidak aktif (WebGL tidak tersedia)', true); return false }
+    const r = s.takeSnapshot()
+    if (!r || !r.ok) { flash('Foto gagal: ' + ((r && r.error) || 'tidak diketahui'), true); return false }
+    const name = triggerSnapshotDownload(r)
+    if (name) flash('Foto tersimpan: ' + name)
+    return Boolean(name)
+  }, [flash])
+
   const handleFloorSelect = useCallback((floorNum, floorId) => {
     setCurrentFloor(floorNum)
     const s = sceneRef.current
@@ -575,6 +589,10 @@ export default function App() {
         zoom(1)
       } else if (actType === 'ZOOM_OUT') {
         zoom(-1)
+      } else if (actType === 'TAKE_SNAPSHOT') {
+        // Siklus 179: G = FOTO — delegasi ke satu sumber handleSnapshot
+        // (render sinkron + unduh + flash; guards identik tombol FOTO dock)
+        handleSnapshot()
       } else if (actType === 'ESCAPE') {
         setShowLog(false)
         setShowHelp(false)
@@ -583,7 +601,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [showTask, confirm, ask, showHelp, showSettings, showLog, selectedAgent, handleCyberpunk, handleFloorSelect, zoom, flash, amRef, toggleAmbience, cycleAmbienceVolume])
+  }, [showTask, confirm, ask, showHelp, showSettings, showLog, selectedAgent, handleCyberpunk, handleFloorSelect, zoom, flash, amRef, toggleAmbience, cycleAmbienceVolume, handleSnapshot])
 
   // ---- Pause / Resume nyata (konfirmasi dulu) ----
   // Guard rid (pola siklus 132/135): dialog konfirmasi bisa dibuka ulang kapan
@@ -678,15 +696,8 @@ export default function App() {
             setSelectedAgent(null)
           }}
           onSnapshot={() => {
-            // Siklus 178: FOTO — snapshot PNG kanvas 3D via sceneControls.takeSnapshot
-            // (render sinkron + toDataURL dalam satu tugas; hasil tak valid = flash
-            // gagal, bukan file rusak diunduh diam-diam).
-            const s = sceneRef.current
-            if (!s || !s.takeSnapshot) return flash('Scene 3D tidak aktif (WebGL tidak tersedia)', true)
-            const r = s.takeSnapshot()
-            if (!r || !r.ok) return flash('Foto gagal: ' + ((r && r.error) || 'tidak diketahui'), true)
-            const name = triggerSnapshotDownload(r)
-            if (name) flash('Foto tersimpan: ' + name)
+            // Siklus 179: delegasi satu sumber handleSnapshot (sama dgn shortcut G)
+            handleSnapshot()
           }}
           onSetView={(v) => {
             const s = sceneRef.current
