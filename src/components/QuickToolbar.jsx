@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
 import {
   IconPlus, IconPlay, IconPause, IconZoomOut, IconZoomIn, IconHome, IconCamera,
-  IconIso, IconFront, IconTop, IconNeon, IconMoon, IconSun
+  IconIso, IconFront, IconTop, IconNeon, IconMoon, IconSun, IconUserNext
 } from './Icons'
 
 // Menu kecil untuk zoom + pencahayaan + preset sudut kamera (popover di atas dock)
-export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onToggleTheme, theme, onZoomIn, onZoomOut, onSetView, onGoHome, onSnapshot, paused }) {
+export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onToggleTheme, theme, onZoomIn, onZoomOut, onSetView, onGoHome, onSnapshot, onCycleAgent, paused }) {
   const [open, setOpen] = useState(false)
   useModalFlag(open)
   const ref = useRef(null)
@@ -56,6 +56,14 @@ export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onTog
         <button className="ibtn" onClick={onSnapshot} title="Simpan foto kantor sebagai PNG (screenshot 3D bersih tanpa tombol)" aria-label="Simpan foto kantor">
           <span className="ic"><IconCamera size={19} /><span className="sr-only">📷</span></span>
           <span className="lb">Foto</span>
+        </button>
+      )}
+      {/* Siklus 182: AGEN — paritas tombol dgn shortcut C (siklus fokus agen).
+          Paritas pola G↔FOTO (179): prop opsional — tanpa prop tak dirender. */}
+      {onCycleAgent && (
+        <button className="ibtn" onClick={() => onCycleAgent(false)} title="Fokus ke agen berikutnya (shortcut C)" aria-label="Agen berikutnya">
+          <span className="ic"><IconUserNext size={19} /><span className="sr-only">👤</span></span>
+          <span className="lb">Agen</span>
         </button>
       )}
       {['iso', 'front', 'top'].map(v => (

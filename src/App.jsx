@@ -724,6 +724,12 @@ export default function App() {
             // Siklus 179: delegasi satu sumber handleSnapshot (sama dgn shortcut G)
             handleSnapshot()
           }}
+          onCycleAgent={(backward) => {
+            // Siklus 182: tombol AGEN — delegasi satu sumber sceneControls.cycleAgent
+            // (sama dgn shortcut C; goal follow + ring + bubble + inspector).
+            const s = sceneRef.current
+            if (s && s.cycleAgent) s.cycleAgent(backward === true)
+          }}
           onSetView={(v) => {
             const s = sceneRef.current
             if (!s || !s.setView) return flash('Scene 3D tidak aktif (WebGL tidak tersedia)', true)
