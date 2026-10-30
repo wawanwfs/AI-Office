@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
 import {
   IconPlus, IconPlay, IconPause, IconZoomOut, IconZoomIn, IconHome, IconCamera,
-  IconIso, IconFront, IconTop, IconNeon, IconMoon, IconSun, IconUserNext
+  IconIso, IconFront, IconTop, IconNeon, IconMoon, IconSun, IconUserNext, IconUserPrev
 } from './Icons'
 
 // Menu kecil untuk zoom + pencahayaan + preset sudut kamera (popover di atas dock)
-export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onToggleTheme, theme, onZoomIn, onZoomOut, onSetView, onGoHome, onSnapshot, onCycleAgent, paused }) {
+export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onToggleTheme, theme, onZoomIn, onZoomOut, onSetView, onGoHome, onSnapshot, onCycleAgent, onCycleAgentBack, paused }) {
   const [open, setOpen] = useState(false)
   useModalFlag(open)
   const ref = useRef(null)
@@ -64,6 +64,14 @@ export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onTog
         <button className="ibtn" onClick={() => onCycleAgent(false)} title="Fokus ke agen berikutnya (shortcut C)" aria-label="Agen berikutnya">
           <span className="ic"><IconUserNext size={19} /><span className="sr-only">👤</span></span>
           <span className="lb">Agen</span>
+        </button>
+      )}
+      {/* Siklus 183: AGEN MUNDUR — paritas tombol dgn Shift+C (pola pasangan
+          Jauh/Dekat & Iso/Depan/Atas). Prop opsional — tanpa prop tak dirender. */}
+      {onCycleAgentBack && (
+        <button className="ibtn" onClick={() => onCycleAgentBack(true)} title="Fokus ke agen sebelumnya (shortcut Shift+C)" aria-label="Agen sebelumnya">
+          <span className="ic"><IconUserPrev size={19} /><span className="sr-only">👤</span></span>
+          <span className="lb">Mundur</span>
         </button>
       )}
       {['iso', 'front', 'top'].map(v => (

@@ -730,6 +730,12 @@ export default function App() {
             const s = sceneRef.current
             if (s && s.cycleAgent) s.cycleAgent(backward === true)
           }}
+          onCycleAgentBack={(backward) => {
+            // Siklus 183: tombol MUNDUR — delegasi satu sumber (sama dgn Shift+C);
+            // formula indeks tetap satu sumber di parts/agent_cycle.js.
+            const s = sceneRef.current
+            if (s && s.cycleAgent) s.cycleAgent(backward === true)
+          }}
           onSetView={(v) => {
             const s = sceneRef.current
             if (!s || !s.setView) return flash('Scene 3D tidak aktif (WebGL tidak tersedia)', true)

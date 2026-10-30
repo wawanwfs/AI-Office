@@ -231,6 +231,19 @@ export function IconUserNext({ className, size = 18 }) {
   )
 }
 
+// Siklus 183: cermin horizontal IconUserNext (kepala + panah kiri) — tombol dock
+// AGEN MUNDUR (paritas Shift+C, pola pasangan Iso/Depan/Atas & Jauh/Dekat).
+export function IconUserPrev({ className, size = 18 }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14 15v-1a3.5 3.5 0 0 0-3.5-3.5h-4A3.5 3.5 0 0 0 3 14v1" />
+      <circle cx="8.5" cy="5.5" r="3.5" />
+      <path d="M8 9L4 12l4 3" />
+      <path d="M4 12h9" />
+    </svg>
+  )
+}
+
 export function IconClose({ className, size = 18 }) {
   return (
     <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
