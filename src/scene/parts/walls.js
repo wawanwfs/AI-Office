@@ -194,7 +194,15 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
       if(m.position.z>13)wallDefs.back.objs.push(m); else if(m.position.x<-16.5)wallDefs.left.objs.push(m)}});
     // semua material dinding belakang/kiri jadi transparan-bisa-diatur (klon agar tak bocor ke objek lain)
     ['back','left'].forEach(k=>wallDefs[k].objs.forEach(m=>{
-      if(m.material&&!Array.isArray(m.material)&&!m.userData.__fm){m.material=m.material.clone();m.material.transparent=true;m.userData.__fm=1}}));
+      if(m.material&&!Array.isArray(m.material)&&!m.userData.__fm){
+        const old=m.material;
+        m.material=old.clone();m.material.transparent=true;m.userData.__fm=1;
+        // Siklus 170: registry neon skyWinMats memegang material ASLI — remap ke
+        // klon agar tint jendela mode neon tetap kena. Dulu 4 jendela belakang/kiri
+        // meleset: registry pegang material basi, tint di-set ke objek mati dan
+        // jendela tetap putih terang di tengah ruangan neon gelap.
+        if(skyWinMats){const ix=skyWinMats.indexOf(old);if(ix>=0)skyWinMats[ix]=m.material;}
+      }}));
     // tiang sudut mengikuti dinding yang lebih terlihat
     window.__corners=office.children.filter(m=>m.isMesh&&Math.abs(Math.abs(m.position.x)-17)<.1&&Math.abs(Math.abs(m.position.z)-13.5)<.1&&Math.abs(m.position.y-2)<.01);
   };

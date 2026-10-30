@@ -158,6 +158,26 @@ describe('createWalls — struktur dinding kantor 3D', () => {
       expect(Math.abs(Math.abs(c.position.z) - 13.5)).toBeLessThan(0.1)
     }
   })
+  it('siklus 170: setelah clone wall-fade, SEMUA material jendela sky-view masih terdaftar di skyWinMats (remap)', () => {
+    const ctx = makeCtx()
+    build(ctx)
+    window.__wallFade({ x: 0, y: 2, z: 0 }) // tick pertama → collect + clone back/left
+    const wins = ctx.office.children.filter((m) => m.isMesh && m.material && m.material.map && m.material.map.src === 'sky')
+    expect(wins.length).toBe(13)
+    // tiap mesh jendela memakai material yang TERDAFTAR (klon back/left ikut)
+    for (const w of wins) expect(ctx.skyWinMats).toContain(w.material)
+    // tanpa duplikat — remap in-place, panjang tetap 13
+    expect(new Set(ctx.skyWinMats).size).toBe(13)
+  })
+  it('siklus 170: jendela depan/kanan tidak diklon — material asli tetap identik di registry', () => {
+    const ctx = makeCtx()
+    const { refs } = build(ctx)
+    const frontWin = refs.wallDefs.front.objs.find((m) => m.material && m.material.map && m.material.map.src === 'sky')
+    const mat0 = frontWin.material
+    window.__wallFade({ x: 0, y: 2, z: 0 })
+    expect(frontWin.material).toBe(mat0)
+    expect(ctx.skyWinMats).toContain(mat0)
+  })
   it('collect hanya sekali: panggilan __wallFade berikutnya tidak menduplikasi objek fade', () => {
     const ctx = makeCtx()
     const { refs } = build(ctx)

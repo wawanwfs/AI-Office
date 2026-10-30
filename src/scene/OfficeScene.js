@@ -1380,13 +1380,16 @@ agentData.forEach(ad=>{
   if(ad.screenLight)screenLights.push(ad.screenLight);
 });
 
+// ── Siklus 170: hoist filter pendant/panel-light — dipakai __neon & toggleCyberpunk ──
+const pendBulbs=office.children.filter(c=>c.isMesh&&c.material&&c.material.isMeshBasicMaterial&&c.position.y>3.1&&c.position.y<3.15);
+const pendLights=office.children.filter(c=>c.isPointLight&&c.position.y>3.0&&c.position.y<3.15);
+const panelLightsArr=office.children.filter(c=>c.isPointLight&&c.position.y>3.5&&c.position.y<3.95);
+
 const __neon=createNeonMode({ambient,sun,renderer,floor:fl,carpet:cp,ceiling:ceil,tubes:tubeMeshes,tubeLights,agentData,screenLights,
   reception:rcLight,
   ceilPanels:__ceilPanels,skyWins:__skyWinMats,
-  pendants:{
-    bulbs:office.children.filter(c=>c.isMesh&&c.material&&c.material.isMeshBasicMaterial&&c.position.y>3.1&&c.position.y<3.15),
-    lights:office.children.filter(c=>c.isPointLight&&c.position.y>3.0&&c.position.y<3.15)},
-  panelLights:office.children.filter(c=>c.isPointLight&&c.position.y>3.5&&c.position.y<3.95),
+  pendants:{bulbs:pendBulbs,lights:pendLights},
+  panelLights:panelLightsArr,
   restoreTime:()=>updateTime(timeOfDay)});
 function toggleCyberpunk() {
   cyberpunkMode = !cyberpunkMode;
@@ -1403,6 +1406,14 @@ function toggleCyberpunk() {
     agentData.forEach(a => { if (a.dGlow) { a.dGlow.intensity = 0.9; a.dGlow.distance = 4.5; } });
     screenLights.forEach(l => { l.intensity = 0.6; });
     if (rcLight) rcLight.intensity = 0.9;
+    // Siklus 170: jendela sky-view & panel plafon ikut gelap (dulu tertinggal
+    // saat toggle ditulis ulang inline — createNeonMode jadi kode mati, 13 jendela
+    // tetap putih menyala di ruangan neon gelap; terbukti probe live)
+    __ceilPanels.forEach(p => { if (p && p.material && p.material.color) p.material.color.set(0x0A1526); });
+    __skyWinMats.forEach(m => { if (m && m.color) m.color.set(0x14213F); });
+    pendBulbs.forEach(m => { m.material.color.set(0x16243D); });
+    pendLights.forEach(l => { l.intensity = 0.06; l.color.set(0x1E3A5F); });
+    panelLightsArr.forEach(l => { l.intensity = 0.03; });
     // SINKRONISASI SEMUA LANTAI KE MODE GELAP
     if (__terraces && __terraces.setMode) __terraces.setMode(true);
   } else {
@@ -1418,6 +1429,14 @@ function toggleCyberpunk() {
     agentData.forEach(a => { if (a.dGlow) { a.dGlow.intensity = 0.25; a.dGlow.distance = 3.0; } });
     screenLights.forEach(l => { l.intensity = 0; });
     if (rcLight) rcLight.intensity = 0.4;
+    // Siklus 170: hapus tint neon jendela + pulihkan panel/bohlam via resync
+    // painter day/night (state painter di-invalidate → repaint sesuai jam NOW —
+    // dulu restore keras memaksa warna siang walau malam, dan skyWins tak
+    // dipulihkan sama sekali karena jalurnya mati).
+    __skyWinMats.forEach(m => { if (m && m.color) m.color.set(0xffffff); });
+    pendLights.forEach(l => { l.intensity = 0.15; l.color.set(0xffe8cc); });
+    panelLightsArr.forEach(l => { l.intensity = 0.25; });
+    if (__light && __light.resync) __light.resync();
     // SINKRONISASI SEMUA LANTAI KE MODE TERANG
     if (__terraces && __terraces.setMode) __terraces.setMode(false);
   }

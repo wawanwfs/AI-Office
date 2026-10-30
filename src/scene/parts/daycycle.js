@@ -145,6 +145,23 @@ export function createLighting(ctx) {
     ceilRt.paintCeilNight(night);
   }
 
+  // ── Siklus 170: resync painter day/night pasca mode neon OFF ──
+  // toggleCyberpunk(false) menyetel sebagian warna keras (jendela, lampu) tapi
+  // palet painter 164-169 (langit jendela, dinding, trim, papan, judul, plafon)
+  // harus kembali sesuai jam NOW. Guard ready painter mengasumsikan "init = palet
+  // siang" — setelah neon itu tak benar → reset state + paksa repaint semua.
+  function resync() {
+    const night = daylight(current) <= 0.55;
+    // Set state ke KEBALIKAN target → paint() berikutnya pasti repaint sekali,
+    // dan berakhir dgn state = target (getter tetap boolean, apply() lanjutan no-op).
+    if (skyCanvas) { skyNight = !night; paintSkyNight(night); }
+    if (wallRt) { wallReady = true; wallNight = !night; paintWalls(night); }
+    if (trimRt) { trimReady = true; trimNight = !night; paintTrims(night); }
+    if (boardRt) { boardReady = true; boardNight = !night; paintBoard(night); }
+    if (titleRt) { titleReady = true; titleNight = !night; paintTitle(night); }
+    if (ceilRt) { ceilReady = true; ceilNight = !night; paintCeils(night); }
+  }
+
   function apply(min) {
     current = min;
     onTimeUpdate && onTimeUpdate(min);
@@ -180,7 +197,7 @@ export function createLighting(ctx) {
     // lama. Callback opsional (tanpa mode manual — slider React punya jalurnya).
     onTime && onTime(min);
   }
-  return { apply, get minutes() { return current; }, get skyNight() { return skyNight; }, get wallNight() { return wallNight; }, get trimNight() { return trimNight; }, get boardNight() { return boardNight; }, get titleNight() { return titleNight; }, get ceilNight() { return ceilNight; } };
+  return { apply, resync, get minutes() { return current; }, get skyNight() { return skyNight; }, get wallNight() { return wallNight; }, get trimNight() { return trimNight; }, get boardNight() { return boardNight; }, get titleNight() { return titleNight; }, get ceilNight() { return ceilNight; } };
 }
 
 // ── Mode neon: kumpulan "saklar" yang didaftarkan, bukan pemindaian seluruh scene ──
