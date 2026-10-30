@@ -15,6 +15,10 @@ export const DOCK_H_VAR = '--dock-h';
 // di bawahnya (jendela tanpa JS/saat pertama render tetap tidak lebih sempit
 // dari era statis).
 export const DOCK_H_MIN = 130;
+// Siklus 185 — var PENDAMPING tinggi dock MENTAH (tanpa clamp): dipakai CSS
+// 561–760px utk offset HUD/toast era-eksak (85px dock + inset = persis posisi
+// era nowrap, tak ada lompatan). Var utk ≤560px tetap di-clamp DOCK_H_MIN.
+export const DOCK_H_RAW_VAR = '--dock-h-raw';
 
 /**
  * Hitung nilai var dari tinggi dock terukur.
@@ -29,6 +33,12 @@ export function dockHValue(dockH) {
   return `${Math.max(DOCK_H_MIN, px)}px`;
 }
 
+/** Siklus 185: nilai MENTAH (ceil, tanpa clamp DOCK_H_MIN) — null bila tak valid. */
+export function dockHRawValue(dockH) {
+  if (typeof dockH !== 'number' || !Number.isFinite(dockH) || dockH <= 0) return null;
+  return `${Math.ceil(dockH)}px`;
+}
+
 /**
  * Tulis `--dock-h` ke target style. Aman dipanggil ulang (idempoten).
  * @param {number|null} dockH  tinggi terukur, atau null utk tidak melakukan apa pun
@@ -39,6 +49,10 @@ export function setDockHVar(dockH, target) {
   if (!t || !t.style) return false;
   const v = dockHValue(dockH);
   if (!v) return false;
+  // Siklus 185: var pendamping MENTAH (tanpa clamp) ditulis serempak — CSS
+  // 561–760px (offset HUD/toast era-eksak) & fallback CSS lain memakainya.
+  const raw = dockHRawValue(dockH);
+  if (raw) t.style.setProperty(DOCK_H_RAW_VAR, raw);
   t.style.setProperty(DOCK_H_VAR, v);
   return true;
 }

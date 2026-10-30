@@ -429,6 +429,15 @@ export default function App() {
   // Set saat render (bukan useEffect): update discrete-event React di-flush sinkron
   // sebelum listener window scene jalan, jadi flag pasti sudah benar saat Escape dicek.
   const modalActive = !!(showTask || confirm || ask || showHelp || showSettings || showLog || selectedAgent) || anyModalOpen()
+  // Siklus 185: panel chat #wfs-panel (dan panel Dock-y lain) kini bisa berada
+  // DI BAWAH HUD — HUD (z 20) tumpuk dock (z 25) & tombol ⚙ panel tak terklik.
+  // App modal = modal nyata + panel dock terbuka (visible & position fixed)
+  // → HUD ikut di-inert saat panel terbuka (aturan chromeModal: header/hud/
+  // ticker inert) → pointer & Tab ke HUD diblokir penuh (juga a11y benar:
+  // HUD di balik scrim modal).
+  const hudDockPanelOpen = Array.from(document.querySelectorAll('.dock .panel'))
+    .some(p => p.getClientRects().length > 0 &&
+      getComputedStyle(p).position === 'fixed' && p.offsetHeight > 0)
   // Siklus 180: SATU rumus (base App-state + count panel internal) ditulis saat
   // render DAN di-refresh saat konsumsi (listener capture di bawah) — flag tak
   // lagi basi: count panel internal dibaca live, jalur tanpa render tersapu.
@@ -469,10 +478,11 @@ export default function App() {
     // HEADER/HUD/TICKER; di dalam dock cukup scrim (pointer-events) + fokus-trap
     // per-dialog (dialogA11y) yang sudah mengunci Tab — tombol dock tersembunyi
     // di balik scrim tidak bisa diklik maupun difokus (tak ada di urutan trap).
-    const els = Array.from(document.querySelectorAll('header, .hud, .ticker'))
+    const els = Array.from(document.querySelectorAll(
+      chromeModal || hudDockPanelOpen ? 'header, .hud, .ticker' : 'header, .ticker'))
     els.forEach(el => { if (chromeModal) el.setAttribute('inert', ''); else el.removeAttribute('inert') })
     return () => els.forEach(el => el.removeAttribute('inert'))
-  }, [chromeModal])
+  }, [chromeModal, hudDockPanelOpen])
 
   // Siklus 184 — tinggi dock mobile ADAPTIF: ukur .dock live (ResizeObserver)
   // → CSS var --dock-h di documentElement; index.css ≤560px memakai
