@@ -112,6 +112,18 @@ try:
                " window.__loseExt.restoreContext(); return 'RESTORED'; })()")
     CHIP = ("(() => { const el = document.querySelector('.perf-chip');"
             " return el ? [el.className, el.textContent] : null; })()")
+    SAMPLING = "window.__perf.stale === false && window.__perf.fps > 0"
+
+    def wait_sampling(timeout_s=15.0):
+        """Tunggu sampel perfStep valid pasca-restore. Pada SwiftShader ~0.3-3
+        FPS (frame tiap ~3 dtk), sampel ≥2 dtk hanya dihitung DI ATAS frame —
+        cek waktu-tetap race; polling tiap 0.5 dtk sampai timeout."""
+        t_end = time.time() + timeout_s
+        while time.time() < t_end:
+            if ev(SAMPLING):
+                return True
+            time.sleep(0.5)
+        return False
 
     fails = []
     cmd("Page.navigate", url="http://127.0.0.1:9503/app/")
@@ -152,15 +164,17 @@ try:
 
     # C) RESTORE
     how = ev(RESTORE)
-    time.sleep(2.5)  # restore event + jendela sampel baru
+    time.sleep(1.0)  # event restore dieksekusi
     c1 = ev("window.__glLost()")
     pf2 = ev("window.__perf.glLost === undefined || window.__perf.glLost === false")
     chip2 = ev(CHIP)
-    time.sleep(2.5)  # sampel valid pertama pasca-restore
-    c2 = ev("window.__perf.stale === false && window.__perf.fps > 0")
+    c2 = wait_sampling()  # sampel valid pertama pasca-restore (polling anti-race)
     sz_ok = shot(OUT_OK)
+    # chip pasca-restore: status "terputus" WAJIB hilang. State lain (down/stale
+    # "GPU x FPS") sah — chip tetap jujur soal tangga adaptif di GPU nyata
+    # (SwiftShader ~0,4 FPS saat boot → tangga degradasi memang aktif).
     ok_c = (c1 is False and pf2 is True and c2 is True and sz_ok > 500_000
-            and (chip2 is None or "down" not in chip2[0]))
+            and (chip2 is None or "terputus" not in chip2[1]))
     print(f"C restored ({how}): glLost={c1} perf bersih={pf2} sampling hidup={c2} "
           f"chip={chip2} {sz_ok}B (scene hidup) -> {'OK' if ok_c else 'FAIL'}")
     if not ok_c: fails.append("C")
@@ -168,9 +182,9 @@ try:
     # D) idempoten: siklus ke-2 lose→restore
     ev(LOSE); time.sleep(1.0)
     d1 = ev("window.__glLost()")
-    ev(RESTORE); time.sleep(2.5)
+    ev(RESTORE); time.sleep(1.0)
     d2 = ev("window.__glLost()")
-    d3 = ev("window.__perf.stale === false && window.__perf.fps > 0")
+    d3 = wait_sampling()
     ok_d = (d1 is True and d2 is False and d3 is True)
     print(f"D siklus ke-2: lost={d1} restored={d2} sampling={d3} -> {'OK' if ok_d else 'FAIL'}")
     if not ok_d: fails.append("D")
