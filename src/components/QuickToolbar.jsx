@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
 import {
-  IconPlus, IconPlay, IconPause, IconZoomOut, IconZoomIn, IconHome,
+  IconPlus, IconPlay, IconPause, IconZoomOut, IconZoomIn, IconHome, IconCamera,
   IconIso, IconFront, IconTop, IconNeon, IconMoon, IconSun
 } from './Icons'
 
 // Menu kecil untuk zoom + pencahayaan + preset sudut kamera (popover di atas dock)
-export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onToggleTheme, theme, onZoomIn, onZoomOut, onSetView, onGoHome, paused }) {
+export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onToggleTheme, theme, onZoomIn, onZoomOut, onSetView, onGoHome, onSnapshot, paused }) {
   const [open, setOpen] = useState(false)
   useModalFlag(open)
   const ref = useRef(null)
@@ -48,6 +48,14 @@ export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onTog
         <button className="ibtn" onClick={onGoHome} title="Kembali ke tampilan awal (shortcut Esc)" aria-label="Kembali ke tampilan awal">
           <span className="ic"><IconHome size={19} /><span className="sr-only">🏠</span></span>
           <span className="lb">Rumah</span>
+        </button>
+      )}
+      {/* Siklus 178: FOTO — unduh PNG kanvas 3D (snapshot satu klik; dulu satu-satunya
+          cara = screenshot browser. Prop opsional — tanpa prop tak dirender, kompat). */}
+      {onSnapshot && (
+        <button className="ibtn" onClick={onSnapshot} title="Simpan foto kantor sebagai PNG (screenshot 3D bersih tanpa tombol)" aria-label="Simpan foto kantor">
+          <span className="ic"><IconCamera size={19} /><span className="sr-only">📷</span></span>
+          <span className="lb">Foto</span>
         </button>
       )}
       {['iso', 'front', 'top'].map(v => (

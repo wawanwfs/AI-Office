@@ -27,6 +27,9 @@ export const SCENE_HOOKS = [
   '__cam', '__camCam', '__renderer', '__spawnBubble', '__resizeScene',
   // orbit keyboard (siklus 177 — probe murni utk e2e, tanpa mutasi scene)
   '__orbitStep',
+  // snapshot PNG (siklus 178 — probe metadata utk e2e; UI React memakai
+  // sceneControls.takeSnapshot — bukan hook ini)
+  '__takeSnapshot',
   // pilihan & cincin
   '__sceneSelRing', '__sceneRing',
   // aksi dari UI React / debug API

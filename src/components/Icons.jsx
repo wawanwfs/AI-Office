@@ -69,6 +69,17 @@ export function IconHome({ className, size = 18 }) {
   )
 }
 
+// Siklus 178: kamera foto — badan + lensa + titik flash (pola ikon garis 1.75)
+export function IconCamera({ className, size = 18 }) {
+  return (
+    <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 8h3l2-3h6l2 3h3v12H4z" />
+      <circle cx="12" cy="13" r="3.5" />
+      <circle cx="17.2" cy="10.6" r="0.6" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 export function IconFront({ className, size = 18 }) {
   return (
     <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">

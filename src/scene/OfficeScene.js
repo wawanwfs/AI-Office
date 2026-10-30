@@ -12,6 +12,7 @@ import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulate
 import { perfStep } from './parts/perf_quality.js';
 import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam, resetFocusGoal, agentFocusPos } from './parts/kamera_focus.js';
 import { orbitStep, orbitFocusGoal, ORBIT_KEY_STEP, ORBIT_KEY_STEP_FAST } from './parts/orbit_spec.js';
+import { snapshotDataUrl, snapshotFilename } from './parts/snapshot_spec.js';
 import { dblclickPointGoal, dblclickBlankGoal, tapCandidate, isDoubleTap, dtapRadius, DTAP_ZOOM_STEP } from './parts/dblclick_spec.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
@@ -2084,6 +2085,9 @@ const __onOrbitKey=(e)=>{
 };
 const __orbitStepProbe=(key)=>orbitStep({theta:sph.theta,phi:sph.phi},key); // probe murni utk e2e
 window.__orbitStep=__orbitStepProbe; // hook terdaftar SCENE_HOOKS (purge destroy)
+// Siklus 178: probe snapshot utk e2e — kembalikan METADATA saja (bytes/filename,
+// tanpa dataUrl puluhan ribu char agar probe CDP tetap ringan).
+window.__takeSnapshot=()=>{const r=snapshotDataUrl(renderer?renderer.domElement:null,()=>{if(renderer)renderer.render(scene,camera);},snapshotFilename(new Date()));return r.ok?{ok:true,bytes:r.bytes,filename:r.filename}:{ok:false,error:r.error};};
 window.addEventListener('keydown',__onOrbitKey);
 window.addEventListener('keydown',onKey);
 
@@ -2134,6 +2138,16 @@ window.addEventListener('keydown',onKey);
     setAutoRotate: (v) => { autoRot=!!v; __userRot=!!v; try{localStorage.setItem('wfs_autorot',autoRot?'1':'0')}catch{/* abaikan */} },
     isAutoRotate: () => autoRot,
     setTime: (minutes) => updateTime(minutes),
+    // Siklus 178 — FOTO: snapshot PNG kanvas 3D (tombol QuickToolbar).
+    // Kontrak anti-buffer-kosong: renderer tanpa preserveDrawingBuffer →
+    // toDataURL WAJIB dipanggil setelah render sinkron (dalam satu tugas) —
+    // renderFn = renderer.render(scene,camera) dengan STATE kamera/scene
+    // UTUH (bukan menunggu rAF berikutnya). Hasil tak valid (png-kosong /
+    // mime salah / canvas hilang) → {ok:false,error} — UI menampilkan flash
+    // gagal, TIDAK mengunduh file rusak diam-diam.
+    takeSnapshot: () => snapshotDataUrl(renderer ? renderer.domElement : null, () => {
+      if (renderer) renderer.render(scene, camera);
+    }, snapshotFilename(new Date())),
     toggleCyberpunk: () => toggleCyberpunk(),
     isCyberpunk: () => cyberpunkMode,
     zoomIn: () => {

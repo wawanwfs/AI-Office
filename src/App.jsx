@@ -37,6 +37,7 @@ import {
 import { resolveShortcutAction } from './scene/parts/shortcut_spec.js'
 import { findAgentLiveEntry, agentLiveLevel } from './scene/parts/agent_status.js'
 import { perfChip } from './scene/parts/perf_quality.js'
+import { triggerSnapshotDownload } from './scene/parts/snapshot_spec.js'
 
 const CsWidget = lazy(() => import('./components/CsWidget'))
 
@@ -675,6 +676,17 @@ export default function App() {
             const s = sceneRef.current
             if (s && s.resetFocus) s.resetFocus()
             setSelectedAgent(null)
+          }}
+          onSnapshot={() => {
+            // Siklus 178: FOTO — snapshot PNG kanvas 3D via sceneControls.takeSnapshot
+            // (render sinkron + toDataURL dalam satu tugas; hasil tak valid = flash
+            // gagal, bukan file rusak diunduh diam-diam).
+            const s = sceneRef.current
+            if (!s || !s.takeSnapshot) return flash('Scene 3D tidak aktif (WebGL tidak tersedia)', true)
+            const r = s.takeSnapshot()
+            if (!r || !r.ok) return flash('Foto gagal: ' + ((r && r.error) || 'tidak diketahui'), true)
+            const name = triggerSnapshotDownload(r)
+            if (name) flash('Foto tersimpan: ' + name)
           }}
           onSetView={(v) => {
             const s = sceneRef.current
