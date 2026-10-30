@@ -312,6 +312,9 @@ export default function App() {
     const read = () => {
       const p = typeof window !== 'undefined' ? window.__perf : null
       const chip = perfChip(p)
+      // Siklus 172: bila konteks WebGL hilang → chip TETAP tampil ("GPU
+      // terputus…", state 'down') walau fps 0/kosong — perfChip menangani
+      // ini di atas guard fps.
       setPerfChipState((prev) => {
         if (!chip) return null
         if (prev && prev.label === chip.label && prev.state === chip.state && prev.detail === chip.detail) return prev // hindari re-render sia-sia

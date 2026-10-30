@@ -28,6 +28,16 @@
 //  3. Streak recovery pixelRatio tercemar: sampel jelata apa pun ikut
 //     menghitung (hysteresis bocor) — kini sejajar recovery bayangan: hanya
 //     sampel sehat (fps ≥ 28) yang menghitung, satu sampel jelata mereset.
+//
+// Siklus 172 — konteks WebGL hilang (GPU reset / driver crash / tab mobile
+// dibuang OS): sampling FPS jadi TAK BERMAKNA — rAF tetap hidup dan render()
+// three (r183, _isContextLost) no-op seketika → frame tetap terhitung pada
+// kecepatan display (≈60) di GPU apa pun. Tanpa guard: chip HUD berbohong
+// "GPU 60 FPS · Render mulus" di atas kanvas hitam; recovery tangga bisa
+// terisi streak palsu dan menghidupkan ulang bayangan (L2→L1) di TENGAH
+// kegagalan GPU. State `glLost` (di-set listener webglcontextlost di
+// OfficeScene): sampel dianggap jelata — fps tak dihitung, jendela & streak
+// di-reset (pola stale 148); perfChip menampilkan status "GPU terputus…".
 
 /**
  * Satu langkah sampling performa. Dipanggil tiap frame dengan waktu nyata.
@@ -51,9 +61,29 @@ export function perfStep(st, nowMs, frame, opts) {
   if (!Number.isFinite(s.fps)) s.fps = 0;
   if (!Number.isFinite(s.goodStreak)) s.goodStreak = 0;
   if (!Number.isFinite(s.shadowStreak)) s.shadowStreak = 0;
+  // Siklus 172: flag konteks WebGL hilang disuntikkan dari pemilik listener
+  // (opts.glLost — OfficeScene, sumber kebenaran event) agar chip HUD tetap
+  // membaca SATU objek state (bukan renderer). Null/ketiadaan opts → nilai
+  // state lama dipertahankan (spread). Injeksi SEBELUM guard t0: konteks bisa
+  // hilang sebelum sampel pertama sekalipun, chip tetap harus tampil.
+  if (o.glLost) s.glLost = !!o.glLost();
   const r = o.renderer;
   const sun = o.sun;
   if (!s.t0) { s.t0 = nowMs; return s; }
+  // ── Siklus 172: konteks WebGL hilang → sampling HARUS diam. rAF tetap
+  // hidup dan render() three no-op seketika (_isContextLost) → frame terus
+  // terhitung di kecepatan display (≈60) padahal kanvas kosong: tanpa guard,
+  // chip HUD berbohong "GPU 60 FPS · Render mulus" dan recovery tangga bisa
+  // mengisi streak dari sampel semu (bayangan menyala ulang di tengah
+  // kegagalan GPU). Sampel dianggap jelata: fps TIDAK dihitung (nilai lama
+  // dibiarkan), jendela & streak di-reset — pola identik jendela usang
+  // (>6 dtk) siklus 148. Flag tetap true sampai webglcontextrestored
+  // (listener OfficeScene) → frame pertama pasca-restore punya jendela baru.
+  if (s.glLost) {
+    s.t0 = nowMs; s.lastFrame = frame; s.stale = true;
+    s.goodStreak = 0; s.shadowStreak = 0; s.recovering = false;
+    return s;
+  }
   // Siklus 148: jendela sampling USANG (> 6 dtk) → sampel tak valid. Tab
   // hidden / laptop sleep menghentikan rAF tetapi performance.now() terus
   // berjalan: sampel pertama pasca-resume = beberapa frame ÷ menit → FPS
@@ -153,7 +183,17 @@ export function perfStep(st, nowMs, frame, opts) {
 // Tanpa data / perf tak tersedia → null (chip disembunyikan, bukan karangan).
 const R = Math.round;
 export function perfChip(p) {
-  if (!p || !Number.isFinite(p.fps) || p.fps <= 0) return null;
+  if (!p) return null;
+  // Siklus 172: konteks WebGL hilang — status ini MENIMPA semuanya (termasuk
+  // flag stale yang ikut di-set perfStep saat konteks hilang): yang mati bukan
+  // kecepatan GPU, melainkan konteksnya. Dikirim walau fps belum ada sama
+  // sekali (konteks bisa hilang sebelum sampel pertama) → cek sebelum guard
+  // fps. Redup + pulsing (kelas .down) = pengguna tahu kanvas sedang kosong
+  // bukan karena scene rusak, dan pemulihan otomatis sedang berjalan.
+  if (p.glLost) {
+    return { state: 'down', label: 'GPU terputus…', detail: 'Konteks WebGL hilang (GPU reset / hemat daya perangkat) — kanvas memulihkan diri otomatis begitu konteks kembali' };
+  }
+  if (!Number.isFinite(p.fps) || p.fps <= 0) return null;
   // < 10 FPS → 1 desimal gaya Indonesia (0,4); ≥ 10 → bulat (60). Tanpa
   // toLocaleString (deterministik lintas Node/browser, tanpa ketergantungan ICU).
   const fpsR = R(p.fps);

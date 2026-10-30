@@ -122,6 +122,35 @@ scene.name = 'Office3D';
   const __canvasAbort=new AbortController();
   const __onCanvas=(ev,fn,opts)=>renderer.domElement.addEventListener(ev,fn,Object.assign({signal:__canvasAbort.signal},opts||{}));
 
+  // ── Siklus 172: ketahanan konteks WebGL — GPU reset / driver crash / tab
+  // mobile dibuang OS memicu webglcontextlost. Three r183 pulih sendiri
+  // (listener internal: _isContextLost → render() no-op; restore →
+  // initGLContext + reupload resource), TAPI lapisan aplikasi buta total:
+  //  • perfStep menghitung frame no-op di kecepatan display → chip HUD
+  //    "GPU 60 FPS · Render mulus" berbohong di atas kanvas hitam, dan
+  //    recovery tangga bisa mengisi streak dari sampel semu;
+  //  • ambience Web Audio terus berjalan dari "konteks mati";
+  //  • pasca-restore, peta bayangan lama gugur → frame pertama kosong tanpa
+  //    refresh paksa.
+  // preventDefault() di listener lost: spesifikasi WebGL mensyaratkan minimal
+  // satu listener memanggilnya, tanpa itu browser TIDAK PERNAH memicu
+  // webglcontextrestored. Three punya listener internal yang juga memanggil
+  // preventDefault — pun kita memasang milik sendiri agar jaminan pemulihan
+  // tidak bergantung pada detail internal library.
+  // destroy() sudah __canvasAbort.abort() SEBELUM forceContextLoss() →
+  // scene mati tak pernah mengangkat flag; __glLost di-reset utk kebersihan.
+  let __glLost=false;
+  __onCanvas('webglcontextlost',(ev)=>{
+    ev.preventDefault();
+    __glLost=true;
+    try{__sound.suspend()}catch{/* abaikan */}
+  });
+  __onCanvas('webglcontextrestored',()=>{
+    __glLost=false;
+    if(renderer)renderer.shadowMap.needsUpdate=true; // peta lama gugur saat lost
+    try{if(document.visibilityState!=='hidden')__sound.resume()}catch{/* abaikan */}
+  });
+
 // ─── ORBIT ─────────────────────────────────────────
 let isDrag=false,prev={x:0,y:0};
 let namesVisible=(function(){try{return localStorage.getItem('wfs_names')!=='0'}catch{return true}})();
@@ -1138,7 +1167,8 @@ setTimeout(()=>{
   }catch{ /* abaikan: bubble intro opsional */ }
 },1200);
 
-  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__skyNight=()=>__light.skyNight; window.__skyCv=__skyCv; window.__wallNight=()=>__light.wallNight; window.__wallTexCv=()=>(__wallsRt&&__wallsRt.wallTexPaints&&__wallsRt.wallTexPaints[0])?__wallsRt.wallTexPaints[0].cv:null; window.__trimNight=()=>__light.trimNight; window.__trimMat=()=>(__wallsRt&&__wallsRt.trimPaints&&__wallsRt.trimPaints[0])?__wallsRt.trimPaints[0].mat:null; window.__boardNight=()=>__light.boardNight; window.__boardMat=()=>__mr&&__mr.boardMesh?__mr.boardMesh.material:null; window.__titleNight=()=>__light.titleNight; window.__titleCv=()=>wtc; window.__ceilNight=()=>__light.ceilNight; window.__ceilMat=()=>{let out=null;office.traverse(o=>{if(!out&&o.isMesh&&o.userData&&o.userData.__ceil!==undefined&&o.material&&o.material.color)out=[o.material.color.r,o.material.color.g,o.material.color.b];});return out;}; window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
+  window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__skyNight=()=>__light.skyNight; window.__skyCv=__skyCv; window.__wallNight=()=>__light.wallNight; window.__wallTexCv=()=>(__wallsRt&&__wallsRt.wallTexPaints&&__wallsRt.wallTexPaints[0])?__wallsRt.wallTexPaints[0].cv:null; window.__trimNight=()=>__light.trimNight; window.__trimMat=()=>(__wallsRt&&__wallsRt.trimPaints&&__wallsRt.trimPaints[0])?__wallsRt.trimPaints[0].mat:null; window.__boardNight=()=>__light.boardNight; window.__boardMat=()=>__mr&&__mr.boardMesh?__mr.boardMesh.material:null; window.__titleNight=()=>__light.titleNight; window.__titleCv=()=>wtc; window.__ceilNight=()=>__light.ceilNight; window.__ceilMat=()=>{let out=null;office.traverse(o=>{if(!out&&o.isMesh&&o.userData&&o.userData.__ceil!==undefined&&o.material&&o.material.color)out=[o.material.color.r,o.material.color.g,o.material.color.b];});return out;}; window.__glLost=()=>__glLost; // siklus 172: status konteks WebGL utk probe E2E
+ window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
 window.__renderer=renderer; // debug/e2e: info.memory.textures/geometries (probe kebocoran tekstur)
 window.__spawnBubble=(x,y,z,text,color,anchor)=>createBubble(x,y,z,text,color,anchor); // debug/e2e probe kebocoran (jalur createBubble asli)
   // Badge status real-time: poll gateway tiap 20s, warnai badge dada sesuai status task
@@ -1881,6 +1911,7 @@ function animate(){
       sun,
       needsShadowUpdate: () => { renderer.shadowMap.needsUpdate = true; },
       basePixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
+      glLost: () => __glLost, // siklus 172: konteks WebGL hilang → sampling jelata + chip "GPU terputus…"
     });
     window.__perf = __perfWin; // hook debug: ikut reassign tiap frame (fps/downgraded live, tidak stale)
   }
@@ -2192,6 +2223,7 @@ const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&foc
       // listener tersisa = seluruh dunia lama terkunci di heap (+26 MB
       // per remount, terukur snapshot hs_a vs hs_b).
       try { __canvasAbort.abort(); } catch { /* abaikan */ }
+      __glLost=false; // siklus 172: forceContextLoss() di bawah memicu event lost — listener sudah gugur, flag tak boleh ikut terangkat
       __intervals.forEach(clearInterval);
       __timeouts.forEach(clearTimeout);
       if (resizeObserver) {

@@ -35,6 +35,8 @@ export const SCENE_HOOKS = [
   '__wfsRunningTasks',
   // audio
   '__officeSound', '__audio',
+  // konteks WebGL (siklus 172 — status glLost utk probe E2E)
+  '__glLost',
   // dinding & zona (parts/walls.js, parts/flooring.js)
   '__wallFade', '__wallState', '__wallLast', '__corners',
   '__zoneLabels', '__zoneBase',
