@@ -583,6 +583,10 @@ const __ceilObjs=[];
 // Panel plafon recessed & material jendela sky-view — diregistrasi agar mode neon
 // bisa menggelapkan/mengembalikannya (dulu dibiarkan terang saat neon → jelek).
 const __ceilPanels=[];const __skyWinMats=[];
+// Siklus 169: createCeilingFixtures dipanggil SEBELUM loop panel (loop butuh
+// __ceilRt.ceilDay utk tag userData.__ceil); argument meja = import DESKS
+// langsung (const desks dideklarasikan belakangan — TDZ).
+const __ceilRt=createCeilingFixtures({THREE,office,M,MB},DESKS);
 for(let i=-3;i<=3;i++){for(let j=-2;j<=2;j++){
   const p=new THREE.Mesh(new THREE.BoxGeometry(3,.03,1),MB(0xF0F4FF));
   p.position.set(i*4.6,4.23,j*5.2);office.add(p);__ceilObjs.push(p);__ceilPanels.push(p);
@@ -597,7 +601,6 @@ for(let i=-3;i<=3;i++){for(let j=-2;j<=2;j++){
 
 // ═══ RUANG MEETING (modul parts/room.js) ═══
 const __mr=createMeetingRoom({THREE,office,M,blobMat:__blobMat},Glass());
-const __ceilRt=createCeilingFixtures({THREE,office,M,MB},desks);
 const MRX=__mr.MRX,MRZ=__mr.MRZ,meetSeats=__mr.meetSeats;
 window.__whiteboard = {
   mesh: __mr.boardMesh,

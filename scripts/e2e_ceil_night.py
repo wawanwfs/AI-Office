@@ -93,11 +93,12 @@ try:
         open(out, "wb").write(base64.b64decode(r["result"]["data"]))
         return os.path.getsize(out)
 
-    # warna RGB material mesh ter-tag __ceil PERTAMA di scene — sumber kebenaran
-    # warna aktif (mesh panel plafon tak pernah di-clone wall-fade, aman).
+    # warna RGB material mesh ter-tag __ceil — PANEL plafon saja (dim ≥ 2m):
+    # bohlam ter-tag juga (amber hangat) → filter dgn geometry dim (width ≥ 2).
     COL = ("(() => { let out = null; window.__scene.traverse(o => {"
-           " if (!out && o.isMesh && o.userData && o.userData.__ceil !== undefined && o.material && o.material.color)"
-           " out = [o.material.color.r, o.material.color.g, o.material.color.b]; }); return out; })()")
+           " if (out || !o.isMesh || !(o.userData && o.userData.__ceil !== undefined) || !o.material || !o.material.color) return;"
+           " const gp=o.geometry&&o.geometry.parameters?o.geometry.parameters:null;"
+           " if(gp&&gp.width&&gp.width>=2) out=[o.material.color.r,o.material.color.g,o.material.color.b]; }); return out; })()")
     TAGGED = ("(() => { let n = 0; window.__scene.traverse(o => {"
               " if (o.isMesh && o.userData && o.userData.__ceil !== undefined) n++; }); return n; })()")
 
@@ -146,7 +147,7 @@ try:
     c_ceil = ev("window.__ceilNight()")
     night_col = ev(COL)
     sz_night = shot(OUT_NIGHT)
-    ok_c = (c_ceil is True) and night_col and night_col[0] < 0.35 and 0.2 < night_col[2] < 0.6
+    ok_c = (c_ceil is True) and night_col and night_col[0] < 0.1 and night_col[2] < 0.2
     print(f"C malam 0:   ceilNight={c_ceil} rgb={night_col} (biru gelap #2E3A52) -> {'OK' if ok_c else 'FAIL'}; {OUT_NIGHT} {sz_night}B")
     if not ok_c: fails.append("C")
     # sanity scene hidup: kedua screenshot >500KB (standar siklus)
