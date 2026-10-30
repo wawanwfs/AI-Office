@@ -201,6 +201,49 @@ export function createLighting(ctx) {
 }
 
 // ── Mode neon: kumpulan "saklar" yang didaftarkan, bukan pemindaian seluruh scene ──
+// Siklus 171: NEON = SATU-SATUNYA palet neon (single source of truth). Dulu toggle
+// inline OfficeScene memakai angka sendiri (ambient 0.58/sun 1.25/tube 0.85) dan
+// createNeonMode versi lama (0.14/0.06/0.55) jadi kode mati — dua palet berbeda
+// untuk look yang sama = sumber drift. Nilai di bawah = look inline yang SUDAH
+// diterima user (siklus 170, terverifikasi probe live) — enable/disable kini
+// membaca dari sini, tak ada lagi pasangan angka kembar di OfficeScene.
+export const NEON = {
+  ambient: 0.58,
+  sun: 1.25,
+  exposure: 1.15,
+  floor: 0x1a2638,
+  carpet: 0x142033,
+  ceilOpacity: 0.75,
+  tubeLight: { intensity: 0.85, color: 0x00F0FF },
+  tubeMesh: { color: 0x18E0FF, opacity: 0.95 },
+  ceilPanel: 0x0A1526,
+  skyWin: 0x14213F,
+  dGlow: { intensity: 0.9, distance: 4.5 },
+  screenLight: 0.6,
+  reception: 0.9,
+  pendBulb: 0x16243D,
+  pendLight: { intensity: 0.06, color: 0x1E3A5F },
+  panelLight: 0.03,
+  // Restore (pasca-OFF): angka siang dasar daycycle — pencahayaan waktu & palet
+  // painter 164-169 dipulihkan resync() (dipanggil toggleCyberpunk OfficeScene).
+  restore: {
+    ambient: 0.52,
+    sun: 1.35,
+    exposure: 1.15,
+    floor: 0xffffff,
+    carpet: 0xd0d8e0,
+    ceilOpacity: 0.45,
+    tubeLight: 0,
+    tubeMesh: { color: 0x334466, opacity: 0.3 },
+    dGlow: { intensity: 0.25, distance: 3.0 },
+    screenLight: 0,
+    reception: 0.4,
+    pendBulb: 0xffffff,
+    pendLight: { intensity: 0.15, color: 0xffe8cc },
+    panelLight: 0.25,
+  },
+};
+
 export function createNeonMode(ctx) {
   const { ambient, sun, renderer, floor, carpet, ceiling, tubes, tubeLights, agentData, screenLights, reception, pendants, panelLights, restoreTime } = ctx;
   const ceilPanels = ctx.ceilPanels || [];   // panel plafon recessed (MB putih) — ikut digelapkan
@@ -209,31 +252,33 @@ export function createNeonMode(ctx) {
   const set = (list, fn) => list.forEach(fn);
 
   function enable() {
-    ambient.intensity = 0.14; sun.intensity = 0.06; renderer.toneMappingExposure = 0.62;
-    set(tubeLights, (l) => { l.intensity = 0.55; l.color.set(0x0E7490); });
-    set(tubes, (m) => { m.material.color.set(0x18E0FF); m.material.opacity = 0.85; });
-    set(ceilPanels, (m) => { m.material.color.set(0x0A1526); });
-    set(skyWins, (m) => { m.color.set(0x14213F); });
-    set(agentData, (a) => { a.dGlow.intensity = 0.9; a.dGlow.distance = 4.5; });
-    set(screenLights, (l) => { l.intensity = 0.5; });
-    floor.material.color.set(0x060c18); carpet.material.color.set(0x0a1220); ceiling.material.opacity = 0.65;
-    set(panelLights, (l) => { l.intensity = 0.03; });
-    set(pendants.bulbs, (m) => m.material.color.set(0x16243D));
-    set(pendants.lights, (l) => { l.intensity = 0.06; l.color.set(0x1E3A5F); });
-    reception.intensity = 0.7;
+    ambient.intensity = NEON.ambient; sun.intensity = NEON.sun;
+    renderer.toneMappingExposure = NEON.exposure;
+    set(tubeLights, (l) => { l.intensity = NEON.tubeLight.intensity; l.color.set(NEON.tubeLight.color); });
+    set(tubes, (m) => { m.material.color.set(NEON.tubeMesh.color); m.material.opacity = NEON.tubeMesh.opacity; });
+    set(ceilPanels, (m) => { m.material.color.set(NEON.ceilPanel); });
+    set(skyWins, (m) => { m.color.set(NEON.skyWin); });
+    set(agentData, (a) => { a.dGlow.intensity = NEON.dGlow.intensity; a.dGlow.distance = NEON.dGlow.distance; });
+    set(screenLights, (l) => { l.intensity = NEON.screenLight; });
+    floor.material.color.set(NEON.floor); carpet.material.color.set(NEON.carpet); ceiling.material.opacity = NEON.ceilOpacity;
+    set(panelLights, (l) => { l.intensity = NEON.panelLight; });
+    set(pendants.bulbs, (m) => m.material.color.set(NEON.pendBulb));
+    set(pendants.lights, (l) => { l.intensity = NEON.pendLight.intensity; l.color.set(NEON.pendLight.color); });
+    reception.intensity = NEON.reception;
   }
   function disable() {
+    const R = NEON.restore;
     restoreTime();
-    floor.material.color.set(0xffffff); carpet.material.color.set(0xd0d8e0); ceiling.material.opacity = 0.45;
+    floor.material.color.set(R.floor); carpet.material.color.set(R.carpet); ceiling.material.opacity = R.ceilOpacity;
     set(ceilPanels, (m) => { m.material.color.set(0xF0F4FF); });
     set(skyWins, (m) => { m.color.set(0xffffff); });
-    set(tubeLights, (l) => { l.intensity = 0; });
-    set(tubes, (m) => { m.material.color.set(0x334466); m.material.opacity = 0.3; });
-    set(screenLights, (l) => { l.intensity = 0; });
-    reception.intensity = 0.4;
-    set(panelLights, (l) => { l.intensity = 0.25; });
-    set(pendants.bulbs, (m) => m.material.color.set(0xfff8e0));
-    set(pendants.lights, (l) => { l.intensity = 0.15; l.color.set(0xffe8cc); });
+    set(tubeLights, (l) => { l.intensity = R.tubeLight; });
+    set(tubes, (m) => { m.material.color.set(R.tubeMesh.color); m.material.opacity = R.tubeMesh.opacity; });
+    set(screenLights, (l) => { l.intensity = R.screenLight; });
+    reception.intensity = R.reception;
+    set(panelLights, (l) => { l.intensity = R.panelLight; });
+    set(pendants.bulbs, (m) => m.material.color.set(R.pendBulb));
+    set(pendants.lights, (l) => { l.intensity = R.pendLight.intensity; l.color.set(R.pendLight.color); });
   }
   return { toggle() { on = !on; on ? enable() : disable(); return on; }, get on() { return on; } };
 }
