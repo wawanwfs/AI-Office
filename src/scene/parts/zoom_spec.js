@@ -16,6 +16,23 @@ export function zoomRadius(current, delta) {
   return Math.max(12, Math.min(130, cur + d));
 }
 
+// (Siklus 174) Pinch-zoom mobile: langkah radius dari perubahan jarak dua jari.
+// Dulu OfficeScene memakai clamp inline mentah Math.max(12, Math.min(130,
+// sph.radius-(d-pinchDist)*.05)) — duplikat formula yang bisa menggurdy bila
+// clamp berubah (mis. NaN menular ke sph.radius tanpa anti-poisoning).
+// Kini satu sumber: delegasi ke zoomRadius (clamp 12..130 + anti-poisoning).
+// currentDist/dist non-finite → delta 0 (pinch gegabah tidak menggeser kamera).
+// scale default 0.05 = eksak konstanta handler pinch lama (nilai terasa sama);
+// param opsional untuk eksperimen sensitivitas tanpa sentuh OfficeScene.
+export function pinchRadius(current, currentDist, dist, scale = 0.05) {
+  const ok = (v) => typeof v === 'number' && Number.isFinite(v);
+  // Salah satu jarak tidak terukur (NaN/undefined) → delta 0: pinch gegabah
+  // tidak menggeser kamera (dulu bila di-0-kan salah satu sisi, selisih dgn
+  // sisi utuh malah menjadi delta raksasa).
+  const d = (ok(currentDist) && ok(dist)) ? -(dist - currentDist) * (ok(scale) ? scale : 0.05) : 0;
+  return zoomRadius(current, d);
+}
+
 // (Siklus 121) Zoom saat goal kamera aktif: zoom JUJUR —
 // 1. goal follow (agen berjalan / figur rapat) TIDAK dibatalkan: radius
 //    goal ikut diubah (clamp 12..130) sehingga lerp per-frame membawa

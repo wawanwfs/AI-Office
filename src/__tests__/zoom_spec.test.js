@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { zoomRadius, zoomFocusGoal } from '../scene/parts/zoom_spec.js';
+import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { dirname, join } from 'node:path';
+import { zoomRadius, zoomFocusGoal, pinchRadius } from '../scene/parts/zoom_spec.js';
 
 describe('zoomRadius', () => {
   it('langkah normal: current + delta (mirror eksak formula wheel lama)', () => {
@@ -78,5 +81,66 @@ describe('zoomFocusGoal', () => {
     const g = mkGoal(8);
     zoomFocusGoal(g, -4, 6, 20);
     expect(g.r).toBe(6);
+  });
+});
+
+// Siklus 174 — pinch-zoom mobile menyatu ke kontrak zoom jujur & satu sumber
+// radius (dulu jalur lama: clamp inline mentah + focusGoal=null diam-diam).
+describe('pinchRadius (siklus 174 — satu sumber radius pinch)', () => {
+  it('jari melebar (dist naik) → radius mengecil = zoom IN (mirror formula lama .05)', () => {
+    expect(pinchRadius(42.5, 100, 110)).toBe(42);   // 42.5 − 10×0.05
+  });
+
+  it('jari merapat (dist turun) → radius membesar = zoom OUT', () => {
+    expect(pinchRadius(42.5, 100, 90)).toBe(43);    // 42.5 + 10×0.05
+  });
+
+  it('clamp bawah 12 & atas 130 (satu sumber dgn zoomRadius)', () => {
+    expect(pinchRadius(12.2, 100, 200)).toBe(12);   // 12.2 − 5 → clamp
+    expect(pinchRadius(129.8, 200, 100)).toBe(130); // 129.8 + 5 → clamp
+  });
+
+  it('current non-finite → fallback 42.5 (anti-poisoning, NaN tak menular ke sph.radius)', () => {
+    expect(pinchRadius(NaN, 100, 110)).toBe(42);
+  });
+
+  it('jarak jari non-finite → delta 0 (pinch gegabah tak menggeser kamera, bukan delta raksasa)', () => {
+    expect(pinchRadius(42.5, NaN, 110)).toBe(42.5);
+    expect(pinchRadius(42.5, 100, NaN)).toBe(42.5);
+  });
+
+  it('scale custom diteruskan (sensitivitas eksperimen tanpa sentuh OfficeScene)', () => {
+    expect(pinchRadius(42.5, 100, 110, 0.1)).toBe(41.5);  // 42.5 − 10×0.1
+  });
+
+  it('delta 0 (jarak tetap) → nilai tetap', () => {
+    expect(pinchRadius(42.5, 100, 100)).toBe(42.5);
+  });
+});
+
+// Siklus 174 — kontrak statis wiring handler pinch OfficeScene (pola kontrak
+// statis siklus 172: wiring nyata di-diverifikasi live via e2e CDP).
+describe('sumber — kontrak statis wiring pinch-zoom (siklus 174)', () => {
+  const here = dirname(fileURLToPath(import.meta.url));
+  const scene = readFileSync(join(here, '../scene/OfficeScene.js'), 'utf8');
+
+  it('radius pinch lewat satu sumber pinchRadius — clamp inline mentah tidak ada lagi', () => {
+    expect(scene).toContain('sph.radius=pinchRadius(sph.radius,pinchDist,d)');
+    expect(scene).not.toContain('Math.max(12,Math.min(130,sph.radius');
+  });
+
+  it('pinch zoom JUJUR: goal TIDAK dibatalkan — radius goal ikut digeser via zoomFocusGoal', () => {
+    expect(scene).toContain('if(focusGoal)zoomFocusGoal(focusGoal,zoomRadius(sph.radius,0)-sph.radius)');
+    expect(scene).not.toContain('if(focusGoal&&!focusGoal.reset)focusGoal=null');
+  });
+
+  it('2 jari = pinch, bukan drag: pinchActive menahan drag putar (handler & onDragMove)', () => {
+    expect(scene).toContain('pinchActive=true');
+    expect(scene).toContain('isDrag=false; // batal drag putar');
+    expect(scene).toContain('if(!isDrag||pinchActive)return');
+  });
+
+  it('pinch ditutup bersih: touchend membaca e.touches (dulu pinchDist=null tanpa syarat)', () => {
+    expect(scene).toContain("if(pinchActive&&e.touches.length<2)");
   });
 });

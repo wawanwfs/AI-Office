@@ -42,7 +42,7 @@ import { createReception } from './parts/reception.js';
 import { createCafe } from './parts/cafe.js';
 import { createDecor } from './parts/decor.js';
 import { computeAspect, isPortraitViewport, getResponsiveFov, getResponsiveRadius, getViewOffsetConfig, getCanvasPointerNdc, getMaxBubbles } from './parts/viewport_spec.js';
-import { zoomRadius, zoomFocusGoal } from './parts/zoom_spec.js';
+import { zoomRadius, zoomFocusGoal, pinchRadius } from './parts/zoom_spec.js';
 import { createServerRoom } from './parts/serverroom.js';
 import { createLounge } from './parts/lounge.js';
 import { createStructure } from './parts/structure.js';
@@ -178,23 +178,35 @@ function updCam(){const p=Math.max(.18,Math.min(Math.PI/2.3,sph.phi));sph.phi=p;
 const __vo=()=>{const w=Math.max(1,container.clientWidth||1),h=Math.max(1,container.clientHeight||1);const vo=getViewOffsetConfig(w,h);if(vo.enabled)camera.setViewOffset(vo.fullWidth,vo.fullHeight,vo.offsetX,vo.offsetY,vo.width,vo.height);else camera.clearViewOffset()};__vo();
 updCam();
 let downXY=null;
-// Touch pinch-zoom untuk mobile
+// Touch pinch-zoom untuk mobile — siklus 174: satu sumber radius (pinchRadius,
+// clamp 12..130 + anti-poisoning sama dgn wheel/tombol) & zoom JUJUR (siklus
+// 121): focusGoal TIDAK dibatalkan — radius goal ikut digeser sehingga kamera
+// tetap mengikuti agen berjalan/figur rapat saat di-pin (dulu focusGoal=null
+// diam-diam: follow patah + __saved yatim, bug UX persis jalur wheel lama).
 let pinchDist=null;
+let pinchActive=false; // siklus 174: 2 jari = pinch, BUKAN drag putar (dulu kamera ikut berputar saat pinch)
 __onCanvas('touchstart',e=>{
   if(e.touches.length===2){
     pinchDist=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
+    pinchActive=true;
+    isDrag=false; // batal drag putar yang terlanjur set oleh pointerdown jari pertama
   }
 },{passive:true});
 __onCanvas('touchmove',e=>{
   if(e.touches.length===2&&pinchDist!==null){
     e.preventDefault();
     const d=Math.hypot(e.touches[0].clientX-e.touches[1].clientX,e.touches[0].clientY-e.touches[1].clientY);
-    sph.radius=Math.max(12,Math.min(130,sph.radius-(d-pinchDist)*.05));
-    if(focusGoal&&!focusGoal.reset)focusGoal=null;
+    sph.radius=pinchRadius(sph.radius,pinchDist,d);
+    if(focusGoal)zoomFocusGoal(focusGoal,zoomRadius(sph.radius,0)-sph.radius);
     updCam();pinchDist=d;
   }
 },{passive:false});
-__onCanvas('touchend',()=>{pinchDist=null},{passive:true});
+__onCanvas('touchend',e=>{
+  // Siklus 174: angkat SATU jari dari pinch → tutup gestur pinch dengan bersih.
+  // Drag putar TIDAK dilanjutkan dgn jari sisa (isDrag sudah false): basis `prev`
+  // basi dari midpoint pinch → putaran liar. Sentuh ulang 1 jari = drag normal.
+  if(pinchActive&&e.touches.length<2){pinchDist=null;if(e.touches.length<=1)pinchActive=false;}
+},{passive:true});
 // ═══════════════════════════════════════════════════
 // SOUND SYSTEM — Web Audio API (runtime di parts/sound_engine.js, teruji unit)
 // ═══════════════════════════════════════════════════
@@ -360,7 +372,7 @@ __onCanvas('pointerup',e=>{
 });
 let onDragUp=null, onDragMove=null;
 onDragUp=()=>{isDrag=false;autoTmr=setTimeout(()=>{if(autoRotDefault())autoRot=true},6000);if(renderer.domElement&&renderer.domElement.style.cursor==='grabbing')renderer.domElement.style.cursor=''};
-onDragMove=(e)=>{if(!isDrag)return;sph.theta-=(e.clientX-prev.x)*.005;sph.phi+=(e.clientY-prev.y)*.005;prev={x:e.clientX,y:e.clientY};updCam()};
+onDragMove=(e)=>{if(!isDrag||pinchActive)return;sph.theta-=(e.clientX-prev.x)*.005;sph.phi+=(e.clientY-prev.y)*.005;prev={x:e.clientX,y:e.clientY};updCam()};
 addEventListener('pointerup',onDragUp);
 addEventListener('pointermove',onDragMove);
 // double-click: zoom ke titik (agent/papan = fokus, kosong = maju 30%)
