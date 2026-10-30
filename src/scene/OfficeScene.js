@@ -213,6 +213,7 @@ let dtapLast=null; // siklus 175: tap terakhir {x0,y0,x1,y1,t0,t1} utk double-ta
 //     DI LUAR window, mis. lepas di atas HUD) dulu juga memutar kamera.
 if(renderer.domElement.style)renderer.domElement.style.touchAction='none'; // (siklus 175)
 __onCanvas('contextmenu',e=>e.preventDefault());
+__onCanvas('pointerdown',e=>{if(e.button===1)e.preventDefault();}); // klik-tengah = autoscroll Chrome (compat mousedown disupresi; sentuh aman)
 __onCanvas('pointercancel',()=>{isDrag=false;downXY=null;__tapDown=null;dtapLast=null;pinchDist=null;pinchActive=false;pinchGuard=false;if(renderer.domElement&&renderer.domElement.style.cursor==='grabbing')renderer.domElement.style.cursor='';});
 __onCanvas('pointerup',e=>{if(e.button!==0){downXY=null;e.preventDefault();}}); // klik hantu tombol non-kiri
 __onCanvas('pointermove',e=>{if(e.buttons===0&&isDrag){isDrag=false;}}); // tombol lepas di luar window — jangan memutar kamera

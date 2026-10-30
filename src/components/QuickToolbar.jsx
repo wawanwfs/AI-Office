@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
 import {
-  IconPlus, IconPlay, IconPause, IconZoomOut, IconZoomIn,
+  IconPlus, IconPlay, IconPause, IconZoomOut, IconZoomIn, IconHome,
   IconIso, IconFront, IconTop, IconNeon, IconMoon, IconSun
 } from './Icons'
 
 // Menu kecil untuk zoom + pencahayaan + preset sudut kamera (popover di atas dock)
-export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onToggleTheme, theme, onZoomIn, onZoomOut, onSetView, paused }) {
+export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onToggleTheme, theme, onZoomIn, onZoomOut, onSetView, onGoHome, paused }) {
   const [open, setOpen] = useState(false)
   useModalFlag(open)
   const ref = useRef(null)
@@ -42,6 +42,14 @@ export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onTog
         <span className="ic"><IconZoomIn size={19} /><span className="sr-only">🔎</span></span>
         <span className="lb">Dekat</span>
       </button>
+      {/* Siklus 176: padanan mobile tombol Escape — kamera balik ke overview &
+          seleksi dihapus (kontrak resetFocus scene; dulu hanya ada di keyboard). */}
+      {onGoHome && (
+        <button className="ibtn" onClick={onGoHome} title="Kembali ke tampilan awal (shortcut Esc)" aria-label="Kembali ke tampilan awal">
+          <span className="ic"><IconHome size={19} /><span className="sr-only">🏠</span></span>
+          <span className="lb">Rumah</span>
+        </button>
+      )}
       {['iso', 'front', 'top'].map(v => (
         <button key={v} className="ibtn" onClick={() => onSetView(v)} title={'Kamera ' + (v === 'iso' ? 'isometrik (shortcut 1)' : v === 'front' ? 'samping (shortcut 2)' : 'dari atas (shortcut 3)')} aria-label={'Kamera ' + v}>
           <span className="ic">

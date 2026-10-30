@@ -670,6 +670,12 @@ export default function App() {
           theme={!cyberpunk}
           onZoomIn={() => zoom(1)}
           onZoomOut={() => zoom(-1)}
+          onGoHome={() => {
+            // Siklus 176: padanan mobile Escape — reset fokus + hapus seleksi.
+            const s = sceneRef.current
+            if (s && s.resetFocus) s.resetFocus()
+            setSelectedAgent(null)
+          }}
           onSetView={(v) => {
             const s = sceneRef.current
             if (!s || !s.setView) return flash('Scene 3D tidak aktif (WebGL tidak tersedia)', true)

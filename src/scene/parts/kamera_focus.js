@@ -32,11 +32,6 @@ export function updateFollowGoal(goal, homeRadius, radiusFallback, homeT = { x: 
   // Follow figur rapat ({meetIdx, root}) → agen ada di .root; follow biasa →
   // objek follow itu sendiri (walker/home langsung).
   const agent = (f && f.meetIdx != null) ? f.root : f;
-  // Siklus 176 — goal yatim: follow TANPA agen valid (null/undefined/rusak)
-  // tidak lagi jadi no-op diam-diam (kamera beku menatap titik lama selamanya,
-  // kontrol selanjutnya terasa mati) — jatuh ke goal reset rumah, kontrak SAMA
-  // dgn offsite. Kasus nyata: follow agen yang dihapus/never-bound.
-  if (!agent) return resetFocusGoal(homeT, homeRadius, radiusFallback);
   const fp = followAnchor(agent, figAnchor);
   if (!fp) return goal; // agen valid tapi belum punya anchor → pertahankan goal
   goal.t.set(fp.x, fp.y, fp.z);
