@@ -1568,7 +1568,16 @@ function checkConversations(){
   const pairs=nearbyPairsPure(agentData.map(a=>({
     a, visible:a.walker.visible, x:a.walker.position.x, z:a.walker.position.z, cooldown:a._chatCooldown||0
   })), CHAT_RADIUS);
-  for(const [a,b] of pairs){
+  for(const [pa,pb] of pairs){
+    // Siklus 172 (bugfix): pasangan dari nearbyPairsPure adalah OBJEK PEMBUNGKUS
+    // {a, visible, x, z, cooldown} — dulu kode membaca .walker/.home LANGSUNG di
+    // pembungkus (selalu undefined) → `a.home.y` melempar TypeError begitu DUA agen
+    // terlihat saling berdekatan (< CHAT_RADIUS). Efek nyata (repro live 2×):
+    // animate() crash per-frame → KANTOR BEKU TOTAL sepanjang jam makan siang
+    // 12:00-13:00 (agen mengerumuni kafe dlm radius bicara) + setiap kumpulan
+    // obrolan dekat. Sekarang: bongkar agen asli dari pembungkus dulu.
+    const a=pa.a, b=pb.a;
+    if(!a||!b)continue; // hardening: pembungkus tanpa agen asli diabaikan
     const phrase=chatPhrases[Math.floor(Math.random()*chatPhrases.length)];
     const bay=(a.walker&&a.walker.visible?a.walker.position.y:a.home.y)||0;
     const anc={get x(){return a.walker.position.x},get z(){return a.walker.position.z},y:bay+1.3};
