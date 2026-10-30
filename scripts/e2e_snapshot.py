@@ -156,15 +156,17 @@ try:
         print(("PASS" if cond else "FAIL") + f" — {name}" + (f" [{detail}]" if detail else ""))
 
     # TES 1+2+3+4: probe metadata snapshot dalam SATU evaluate sinkron.
+    # Catatan performa: render sinkron + toDataURL di SwiftShader bisa >6 dtk →
+    # evaluasi ber-snapshot memakai wait panjang (90 dtk).
     probe = ev("""(() => {
-      const cam = window.__camCam || window.__cam;
-      const before = { t: Math.round(cam.theta*1e9)/1e9, p: Math.round(cam.phi*1e9)/1e9, r: Math.round(cam.radius*1e9)/1e9 };
-      const goalBefore = (function(){ try { return window.__wfsSceneControls && window.__wfsSceneControls.__goalProbe ? window.__wfsSceneControls.__goalProbe() : null; } catch(e){ return null; } })();
+      const sp = (window.__cam && window.__cam.sph) ? window.__cam.sph : null;
+      const rd = (v) => (typeof v === 'number' && isFinite(v)) ? Math.round(v*1e9)/1e9 : v;
+      const before = sp ? { t: rd(sp.theta), p: rd(sp.phi), r: rd(sp.radius) } : null;
       const res = window.__takeSnapshot();
-      const after = { t: Math.round(cam.theta*1e9)/1e9, p: Math.round(cam.phi*1e9)/1e9, r: Math.round(cam.radius*1e9)/1e9 };
+      const after = sp ? { t: rd(sp.theta), p: rd(sp.phi), r: rd(sp.radius) } : null;
       return { res, before, after,
                agentCount: (window.__agentData||[]).length };
-    })()""")
+    })()""", wait=90)
     if isinstance(probe, dict) and "res" in probe:
         res = probe["res"]
         check("TES1 snapshot PNG nyata (ok:true, bytes >> ambang kosong)",
@@ -186,13 +188,14 @@ try:
     goal = ev("""(() => {
       const C = window.__wfsSceneControls; if(!C||!C.focusAgent) return {skip:true};
       const ag = (window.__agentData||[])[0]; if(!ag) return {skip:true};
-      C.focusAgent(ag.name);
+      const nm = (ag.agent && ag.agent.name) || ag.name; if(!nm) return {skip:true};
+      const res0 = C.focusAgent(nm);
       const g0 = window.__dbg && window.__dbg().focus;
       const r = window.__takeSnapshot();
       const g1 = window.__dbg && window.__dbg().focus;
       try { C.resetFocus(); } catch(e){}
-      return { had0: !!g0, had1: !!g1, ok: r.ok };
-    })()""")
+      return { res0, had0: !!g0, had1: !!g1, ok: r.ok };
+    })()""", wait=90)
     if isinstance(goal, dict) and not goal.get("skip"):
         check("TES4 goal follow TETAP hidup saat snapshot (foto tak mengganggu fokus)",
               goal.get("ok") is True and goal.get("had0") is True and goal.get("had1") is True,
