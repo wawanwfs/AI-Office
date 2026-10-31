@@ -2,13 +2,17 @@
 """shot.py — pengganti permanen scratch shot.sh (hilang diprune TMPDIR 24 jam,
 siklus 185). Screenshot halaman :9503 via CDP chrome-headless-shell di Xvfb :99.
 
-Pemakaian: python3 scripts/shot.py W H out.png
-  W/H  ukuran window (mis. 1366 768; mobile: 390 800)
+Pemakaian: python3 scripts/shot.py W H out.png [mobile]
+  W/H  ukuran window (mis. 1366 768; mobile: 390 844)
   out  path PNG keluaran
+  mobile  viewport HP 390x844 dsf=2 dari awal init scene (siklus 187 —
+          paritas mode mobile e2e_err_probe.py 186): dulu "screenshot mobile"
+          cuma window-size kecil TANPA device-metrics override, jadi layout/
+          dsf berbeda dari HP nyata (tes visual dock/HUD mobile menyesatkan).
 
 Ambang kesehatan scene tetap diperiksa PEMAKAI (file > 500 KB = scene hidup;
 lebih kecil = scene mati — JANGAN push). Untuk gate otomatis penuh
-(0 error + hooks + ambang) pakai scripts/e2e_err_probe.py.
+(0 error + hooks + ambang + gate dock) pakai scripts/e2e_err_probe.py.
 """
 import subprocess, os, time, urllib.request, json, socket, struct, base64, sys
 
@@ -16,6 +20,9 @@ CHROME = os.path.expanduser(
     "~/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell")
 PORT = 9462
 URL = "http://127.0.0.1:9503/"
+# Mode mobile (siklus 187, paritas e2e_err_probe.py): viewport HP 390x844 dsf=2
+# diterapkan SEBELUM init scene via Emulation.setDeviceMetricsOverride + reload.
+MOBILE_W, MOBILE_H, MOBILE_DSF = 390, 844, 2
 
 
 class WS:
@@ -65,9 +72,12 @@ def x99_alive():
 
 
 def main():
-    W = int(sys.argv[1]) if len(sys.argv) > 1 else 1366
-    H = int(sys.argv[2]) if len(sys.argv) > 2 else 768
-    out = sys.argv[3] if len(sys.argv) > 3 else "ck.png"
+    args = [a for a in sys.argv[1:] if a != "-"]
+    mobile = "mobile" in args
+    args = [a for a in args if a != "mobile"]
+    W = int(args[0]) if len(args) > 0 else (MOBILE_W if mobile else 1366)
+    H = int(args[1]) if len(args) > 1 else (MOBILE_H if mobile else 768)
+    out = args[2] if len(args) > 2 else "ck.png"
     env = dict(os.environ, DISPLAY=":99")
     xv = None
     if not x99_alive():
@@ -97,11 +107,18 @@ def main():
                 if r.get("id") == mid[0]: return r
 
         cmd("Page.enable")
+        if mobile:
+            # Viewport HP dari AWAL init scene (paritas e2e_err_probe.py 186):
+            # override metrik + reload — bukan cuma window-size kecil.
+            cmd("Emulation.setDeviceMetricsOverride", width=MOBILE_W, height=MOBILE_H,
+                deviceScaleFactor=MOBILE_DSF, mobile=True)
+            cmd("Page.reload", ignoreCache=False)
         time.sleep(18)  # scene init + settle visual (paritas shot.sh)
         shot = cmd("Page.captureScreenshot", format="png")
         data = base64.b64decode(str((shot.get("result") or {}).get("data") or ""))
         open(out, "wb").write(data)
-        print(f"SHOT {out}: {len(data)} bytes")
+        mode = f"mobile {MOBILE_W}x{MOBILE_H}@{MOBILE_DSF}x" if mobile else "desktop"
+        print(f"SHOT {out}: {len(data)} bytes ({mode})")
         sys.exit(0 if len(data) > 0 else 1)
     finally:
         p.terminate()
