@@ -3,6 +3,7 @@ import React from 'react'
 import { describe, it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup } from '@testing-library/react'
 import AgentInspector from '../components/AgentInspector'
+import { taskBoardGateReset, taskBoardGateFlush } from '../lib/taskboard_gate.js'
 
 afterEach(() => { cleanup(); document.body.innerHTML = '' })
 
@@ -126,6 +127,10 @@ describe('AgentInspector — kartu profil agen 3D', () => {
   })
 
   it('mengklik kartu task aktif atau tombol papan kanban memicu event wfs-open-task-board', () => {
+    // Siklus 189: dispatch papan lewat gerbang lazy (taskboard_gate). Mode
+    // produksi umum = chunk sudah siap (passthrough) → spy dispatchEvent
+    // melihat jalur yang sama dulu: CustomEvent + detail eksak.
+    taskBoardGateReset(); taskBoardGateFlush()
     window.__wfsRunningTasks = {
       byAgent: {
         be1: { id: 88, title: 'Optimasi Cache Redis' }

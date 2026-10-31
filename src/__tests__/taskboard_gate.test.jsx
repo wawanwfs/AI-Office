@@ -1,7 +1,8 @@
+// @vitest-environment jsdom
 import { describe, it, expect, beforeEach } from 'vitest'
 import { readFileSync } from 'node:fs'
+import { dirname, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { resolve } from 'node:path'
 import {
   TASKBOARD_GATE_LIMIT,
   taskBoardGateReceive,
@@ -23,13 +24,14 @@ import {
 // TASKBOARD_GATE_LIMIT (buang terua, simpan terbaru — setiap event set state
 // final, bukan delta, jadi replay terakhir cukup).
 
-const here = fileURLToPath(new URL('.', import.meta.url))
-const appSrc = readFileSync(resolve(here, '../App.jsx'), 'utf-8')
-const tbSrc = readFileSync(resolve(here, '../components/TaskBoard.jsx'), 'utf-8')
-const sceneSrc = readFileSync(resolve(here, '../scene/OfficeScene.js'), 'utf-8')
-const ppSrc = readFileSync(resolve(here, '../components/ProjectPanel.jsx'), 'utf-8')
-const aiSrc = readFileSync(resolve(here, '../components/AgentInspector.jsx'), 'utf-8')
-const tsSrc = readFileSync(resolve(here, '../components/TeamStats.jsx'), 'utf-8')
+const here = fileURLToPath(import.meta.url)
+const dir = dirname(here)
+const appSrc = readFileSync(resolve(dir, '../App.jsx'), 'utf-8')
+const tbSrc = readFileSync(resolve(dir, '../components/TaskBoard.jsx'), 'utf-8')
+const sceneSrc = readFileSync(resolve(dir, '../scene/OfficeScene.js'), 'utf-8')
+const ppSrc = readFileSync(resolve(dir, '../components/ProjectPanel.jsx'), 'utf-8')
+const aiSrc = readFileSync(resolve(dir, '../components/AgentInspector.jsx'), 'utf-8')
+const tsSrc = readFileSync(resolve(dir, '../components/TeamStats.jsx'), 'utf-8')
 
 describe('taskboard_gate — unit murni (buffer/replay/anti-poisoning)', () => {
   beforeEach(() => { taskBoardGateReset() })

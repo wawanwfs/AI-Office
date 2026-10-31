@@ -16,6 +16,7 @@ import ErrorBoundary from '../components/ErrorBoundary'
 import ActionMenu from '../components/ActionMenu'
 import QuickToolbar from '../components/QuickToolbar'
 import ProjectPanel from '../components/ProjectPanel'
+import { taskBoardGateReset, taskBoardGateFlush } from '../lib/taskboard_gate.js'
 
 let apiMock
 vi.mock('../lib/api', () => ({ api: (...a) => apiMock(...a) }))
@@ -237,6 +238,9 @@ describe('ProjectPanel', () => {
     expect(screen.getByText(/qa1/)).toBeTruthy()
 
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+    // Siklus 189: dispatch papan lewat gerbang lazy — mode passthrough
+    // (chunk siap) = jalur produksi umum, detail eksak tetap kontrak.
+    taskBoardGateReset(); taskBoardGateFlush()
 
     // Klik tombol kanban sprint di bawah task
     const sprintBtn = screen.getByRole('button', { name: 'Buka seluruh task di Papan Kanban Sprint' })

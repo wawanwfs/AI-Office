@@ -6,6 +6,7 @@ import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/re
 import { useRef, useState } from 'react'
 import { useDialogA11y } from '../lib/dialogA11y'
 import TeamStats from '../components/TeamStats'
+import { taskBoardGateReset, taskBoardGateFlush } from '../lib/taskboard_gate.js'
 
 // ── useDialogA11y ──────────────────────────────────────────────────────────
 function Harness({ open, onClose }) {
@@ -182,6 +183,9 @@ describe('TeamStats', () => {
   it('tombol Kanban divisi dan item task terkini memicu event wfs-open-task-board', async () => {
     mockFetchOk()
     const dispatchSpy = vi.spyOn(window, 'dispatchEvent')
+    // Siklus 189: dispatch papan lewat gerbang lazy — mode passthrough
+    // (chunk siap) = jalur produksi umum, detail eksak tetap kontrak.
+    taskBoardGateReset(); taskBoardGateFlush()
     render(<TeamStats />)
     fireEvent.click(screen.getByRole('button', { name: 'Statistik tim' }))
     await waitFor(() => expect(screen.getByRole('region', { name: 'Progres per divisi kerja' })).toBeTruthy())
