@@ -24,6 +24,19 @@ export const TASKBOARD_GATE_LIMIT = 16
 
 let ready = false
 let buffer = []
+let mountCb = null
+
+/**
+ * Daftarkan callback "papan dibutuhkan" (dipanggil App): saat event papan
+ * datang SEBELUM chunk siap, papan harus di-mount agar chunk lazy terunduh;
+ * pasca mount komponen memanggil taskBoardGateFlush → replay event.
+ * @param {Function} cb callback tanpa argumen (App: setTbMounted(true))
+ * @returns {Function} unsubscribe
+ */
+export function onTaskBoardMount(cb) {
+  mountCb = cb
+  return () => { if (mountCb === cb) mountCb = null }
+}
 
 /** True bila chunk TaskBoard sudah siap (gate tak lagi membuffer). */
 export function isTaskBoardGateReady() {
@@ -40,6 +53,9 @@ export function isTaskBoardGateReady() {
 export function taskBoardGateReceive(type, detail) {
   const d = (detail && typeof detail === 'object') ? detail : {}
   if (ready) return true
+  // Ada yang menginginkan papan → pastikan komponen ter-mount (chunk lazy
+  // terunduh). Callback dipanggil tiap event terbuffer (idempoten di App).
+  if (mountCb) { try { mountCb() } catch { /* App belum siap: buffer tetap aman */ } }
   if (buffer.length >= TASKBOARD_GATE_LIMIT) buffer.shift() // buang terua, simpan terbaru
   buffer.push({ type, detail: d })
   return false
@@ -59,6 +75,7 @@ export function taskBoardGateFlush() {
 export function taskBoardGateReset() {
   ready = false
   buffer = []
+  mountCb = null
 }
 
 /**

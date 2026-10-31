@@ -10,6 +10,7 @@ import {
   taskBoardGateReset,
   isTaskBoardGateReady,
   dispatchTaskBoardEvent,
+  onTaskBoardMount,
 } from '../lib/taskboard_gate.js'
 
 // Siklus 189: TaskBoard lazy — gerbang buffer+replay event papan.
@@ -70,6 +71,20 @@ describe('taskboard_gate — unit murni (buffer/replay/anti-poisoning)', () => {
     }
   })
 
+  it('onTaskBoardMount: callback terpanggil saat event datang sebelum siap (mount-on-demand)', () => {
+    const cbs = []
+    const un = onTaskBoardMount(() => cbs.push(1))
+    expect(taskBoardGateReceive('wfs-open-task-board', { view: 'kanban' })).toBe(false)
+    expect(cbs.length).toBe(1) // App harus menaikkan tbWanted → chunk lazy terunduh
+    un() // unsubscribe menghentikan pemanggilan
+    expect(taskBoardGateReceive('wfs-open-task-board', { view: 'list' })).toBe(false)
+    expect(cbs.length).toBe(1)
+    // pasca flush: callback TIDAK dipanggil lagi (passthrough jalur lama)
+    taskBoardGateFlush()
+    expect(taskBoardGateReceive('wfs-open-task-board', { x: 1 })).toBe(true)
+    expect(cbs.length).toBe(1)
+  })
+
   it('anti-poisoning: detail non-object (undefined/number/string) dibungkus {} — tak pernah throw', () => {
     expect(() => taskBoardGateReceive('wfs-open-task-board', undefined)).not.toThrow()
     expect(() => taskBoardGateReceive('wfs-open-task-board', 42)).not.toThrow()
@@ -116,9 +131,14 @@ describe('taskboard_gate — unit murni (buffer/replay/anti-poisoning)', () => {
 })
 
 describe('taskboard_gate — kontrak statis wiring (satu titik dispatch)', () => {
-  it('App: TaskBoard lazy + router SATU TITIK (tanpa dispatch open langsung di App)', () => {
+  it('App: TaskBoard lazy + MOUNT ON-DEMAND (tbWanted) + router SATU TITIK', () => {
     expect(appSrc).toContain("const TaskBoard = lazy(() => import('./components/TaskBoard'))")
     expect(appSrc).toContain('from \'./lib/taskboard_gate.js\'')
+    // mount-on-demand: tanpa keinginan membuka, chunk TIDAK diunduh (bukti
+    // diag 189: dulu <TaskBoard/> tanpa syarat → modulepreload t=0)
+    expect(appSrc).toContain('{tbWanted && <Suspense fallback={null}><TaskBoard')
+    expect(appSrc).toContain('const [tbWanted, setTbWanted] = useState(isTaskBoardGateReady())')
+    expect(appSrc).toContain('onTaskBoardMount(() => setTbWanted(true))')
     // semua pemicu App lewat router gate — bukan window.dispatchEvent langsung
     expect(appSrc).toContain("dispatchTaskBoardEvent('wfs-toggle-task-board')")
     expect(appSrc).toContain("dispatchTaskBoardEvent('wfs-cycle-div-preset', { backward: false })")
@@ -130,9 +150,11 @@ describe('taskboard_gate — kontrak statis wiring (satu titik dispatch)', () =>
     expect(appSrc).not.toContain("window.dispatchEvent(new CustomEvent('wfs-toggle-task-board'")
   })
 
-  it('TaskBoard: onChunkReady dipanggil sekali di mount (useEffect kosong) + prop opsional', () => {
+  it('TaskBoard: onChunkReady DITUNDA satu tick (flush pasca semua listener terpasang) + prop opsional', () => {
     expect(tbSrc).toContain('onChunkReady')
-    expect(tbSrc).toContain('if (typeof onChunkReady === \'function\') onChunkReady()')
+    // race 189: flush langsung di mount = replay SEBELUM listener papan terpasang → open hilang
+    expect(tbSrc).toContain('const t = setTimeout(() => onChunkReady(), 0)')
+    expect(tbSrc).toContain('if (typeof onChunkReady !== \'function\') return undefined')
   })
 
   it('SEMUA pemicu lain (scene/panel/inspector/stats) lewat router gate', () => {

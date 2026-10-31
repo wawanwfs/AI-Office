@@ -72,10 +72,14 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
   // Siklus 189: gate lazy-load — komponen ini SATU-SATUNYA pemasang listener
   // 'wfs-open-task-board' (App mengalirkan dispatch lewat lib taskboard_gate.js).
   // Pasca-mount, event yang terbuffer saat chunk dimuat di-replay oleh gate:
-  // onChunkReady dipanggil SEKALI di mount (idempoten; prop opsional — pemanggil
-  // lama tanpa prop tetap kompatibel).
+  // onChunkReady DITUNDA satu tick (setTimeout 0) — effect ini berjalan SEBELUM
+  // effect listener papan di bawah terpasang; replay tanpa jeda = event open
+  // hilang (tidak ada pendengar) — race yang justru diyakini dihindari gate.
+  // Prop opsional: pemanggil lama tanpa prop tetap kompatibel.
   useEffect(() => {
-    if (typeof onChunkReady === 'function') onChunkReady()
+    if (typeof onChunkReady !== 'function') return undefined
+    const t = setTimeout(() => onChunkReady(), 0)
+    return () => clearTimeout(t)
     // eslint-disable-next-line react-hooks/exhaustive-deps -- sekali per mount; flush idempoten
   }, [])
   const [tasks, setTasks] = useState(null)

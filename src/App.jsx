@@ -37,7 +37,10 @@ import {
 import { resolveShortcutAction } from './scene/parts/shortcut_spec.js'
 // Siklus 189: TaskBoard lazy — SATU TITIK dispatch papan (router gerbang).
 // Semua pemicu (shortcut T, tombol dock, klik kartu, whiteboard 3D) lewat sini.
-import { dispatchTaskBoardEvent, taskBoardGateFlush, isTaskBoardGateReady } from './lib/taskboard_gate.js'
+// Mount-on-demand: TaskBoard hanya ter-render setelah ada keinginan membuka
+// papan (event via gerbang) — tanpa itu React.lazy memuat chunk di render
+// pertama juga (bukti diag siklus 189: modulepreload + entry 'script' t=0).
+import { dispatchTaskBoardEvent, taskBoardGateFlush, isTaskBoardGateReady, onTaskBoardMount } from './lib/taskboard_gate.js'
 const TaskBoard = lazy(() => import('./components/TaskBoard'))
 import { findAgentLiveEntry, agentLiveLevel } from './scene/parts/agent_status.js'
 import { perfChip } from './scene/parts/perf_quality.js'
@@ -92,6 +95,11 @@ export default function App() {
   const [toast, setToast] = useState(null)          // {msg, err}
   const connRef = useRef(conn); connRef.current = conn
   const [showLog, setShowLog] = useState(false)
+  // Siklus 189: papan task di-mount ON-DEMAND (chunk lazy ~76K tak diunduh
+  // sampai ada keinginan membuka papan). Gerbang (taskboard_gate) memicu
+  // setTbWanted saat event papan pertama datang; TaskBoard ter-mount lalu
+  // memanggil taskBoardGateFlush → event terbuffer di-replay.
+  const [tbWanted, setTbWanted] = useState(isTaskBoardGateReady())
   const [muted, setMuted] = useState(() => {
     try { return typeof localStorage !== 'undefined' && localStorage.getItem('wfs_audio_muted') === '1' } catch { return false }
   })
@@ -140,6 +148,14 @@ export default function App() {
     setToast({ msg, err })
     clearTimeout(toastTimer.current)
     toastTimer.current = setTimeout(() => setToast(null), 3500)
+  }, [])
+
+  // Siklus 189: langganan gerbang papan — event pertama (shortcut T, tombol,
+  // klik kartu, whiteboard 3D) menaikkan tbWanted → chunk lazy terunduh;
+  // pasca mount TaskBoard, gerbang me-replay event terbuffer (flush).
+  useEffect(() => {
+    const un = onTaskBoardMount(() => setTbWanted(true))
+    return un
   }, [])
 
   useEffect(() => {
@@ -772,7 +788,8 @@ export default function App() {
           }} />
         <span className="sep" />
         <ActionMenu sceneRef={sceneRef} onFlash={flash} actionMenuRef={actionMenuApi} onOpenSettings={() => setShowSettings(true)} />
-        <TaskBoard onFlash={flash} onAsk={setAsk} onChunkReady={isTaskBoardGateReady() ? undefined : taskBoardGateFlush} />
+        {tbWanted && <Suspense fallback={null}><TaskBoard onFlash={flash} onAsk={setAsk} onChunkReady={isTaskBoardGateReady() ? undefined : taskBoardGateFlush} /></Suspense>}
+
         <Dashboard onOpenBoard={() => dispatchTaskBoardEvent('wfs-open-task-board', { view: 'kanban' })} onOpenProjects={() => window.dispatchEvent(new CustomEvent('wfs-open-project-panel', { detail: {} }))} />
         <ProjectPanel />
         <TeamStats />

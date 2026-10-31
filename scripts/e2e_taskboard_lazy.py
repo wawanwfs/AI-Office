@@ -79,7 +79,10 @@ def main():
         time.sleep(1)
     p = subprocess.Popen([CHROME, "--no-sandbox", f"--remote-debugging-port={PORT}",
                           "--enable-unsafe-swiftshader", "--window-size=1366,768",
-                          "--disable-dev-shm-usage", URL],
+                          "--disable-dev-shm-usage",
+                          # Profil sekali-pakai: service worker SW + HTTP cache dari run
+                          # sebelumnya bisa menyembunyikan efek lazy (preload/entry lama)
+                          "--user-data-dir=/tmp/wfs-e2e-tb-profile", URL],
                          env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     res = {"errors": [], "tests": {}}
     try:
