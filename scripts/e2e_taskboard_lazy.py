@@ -31,7 +31,8 @@ URL = "http://127.0.0.1:9503/"
 class WS:
     def __init__(s, u):
         pr = urlparse(u)
-        s.sock = socket.create_connection((pr.hostname, pr.port))
+        s.sock = socket.create_connection((pr.hostname, pr.port), timeout=10)
+        s.sock.settimeout(10)  # berlaku SEJAK handshake — tanpa ini recv bisa menggantung selamanya
         s.sock.sendall((f"GET {pr.path} HTTP/1.1\r\nHost: {pr.hostname}:{pr.port}\r\n"
                         "Upgrade: websocket\r\nConnection: Upgrade\r\n"
                         f"Sec-WebSocket-Key: {base64.b64encode(os.urandom(16)).decode()}\r\n"
@@ -39,7 +40,6 @@ class WS:
         buf = b""
         while b"\r\n\r\n" not in buf:
             buf += s.sock.recv(1)
-        s.sock.settimeout(10)
     def send(s, m):
         d = m.encode(); h = b"\x81"; n = len(d); mask = os.urandom(4)
         if n < 126: h += bytes([0x80 | n])
@@ -83,19 +83,36 @@ def main():
                          env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     res = {"errors": [], "tests": {}}
     try:
-        time.sleep(2)
-        tabs = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{PORT}/json/list", timeout=5).read())
-        ws = WS([t["webSocketDebuggerUrl"] for t in tabs if t.get("type") == "page"][0])
+        # chrome siap: poll /json/list (di bawah beban memori, start bisa > 5 dtk)
+        tabs = []
+        for _ in range(20):
+            time.sleep(1)
+            try:
+                tabs = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{PORT}/json/list", timeout=5).read())
+                pages = [t for t in tabs if t.get("type") == "page" and t.get("webSocketDebuggerUrl")]
+                if pages:
+                    tabs = pages
+                    break
+            except Exception:
+                continue
+        if not tabs:
+            print("E2E_TASKBOARD_LAZY: FAIL {\"error\": \"chrome-no-page-tab\"}", flush=True)
+            sys.exit(1)
+        print("PROG: chrome-ready", flush=True)
+        time.sleep(2)  # target siap (paritas err_probe: jangan WS-connect ke target yang baru lahir)
+        ws = WS(tabs[0]["webSocketDebuggerUrl"])
+        print("PROG: ws-open", flush=True)
         mid = [0]
         def cmd(method, **params):
             mid[0] += 1
             ws.send(json.dumps({"id": mid[0], "method": method, "params": params}))
-            for _ in range(600):
+            for _ in range(30):  # 30×10 dtk = batas tunggu per perintah; melebihi = gagal keras
                 try:
                     r = json.loads(ws.recv_text())
                 except (socket.timeout, ConnectionError, OSError):
                     continue  # jaringan lambat / drain event scene: coba baca lagi
                 if r.get("id") == mid[0]: return r
+            raise TimeoutError(f"no CDP reply: {method}")
         def ev(expr, await_p=False):
             r = cmd("Runtime.evaluate", expression=expr, returnByValue=True,
                     awaitPromise=await_p)
@@ -103,44 +120,54 @@ def main():
             try: return json.loads(v) if isinstance(v, str) else v
             except Exception: return v
         cmd("Runtime.enable"); cmd("Page.enable")
-        time.sleep(18)  # scene init (SwiftShader lambat) + sampling pertama
+        print("PROG: enabled", flush=True)
+        time.sleep(18)
+        print("PROG: settled", flush=True)  # scene init (SwiftShader lambat) + sampling pertama
 
-        # TES1: lazy benar — chunk TaskBoard BELUM dimuat di awal
+        # TES1: lazy benar — chunk TaskBoard BELUM diunduh di awal (bukti
+        # resource timing, bukan tag <script>: bundler modern boleh memuat
+        # dynamic import tanpa tag yang tampak; yang kontrak = JARINGAN)
         t1 = ev("""JSON.stringify({
-          tb: !!document.querySelector('script[src*="TaskBoard"]'),
+          res: performance.getEntriesByType('resource').some(e => /TaskBoard/.test(e.name)),
           dialog: !!document.querySelector('[role="dialog"]')
         })""")
         res["tests"]["tes1_initial_lazy"] = t1
-        ok1 = (t1 or {}).get("tb") is False
+        print("PROG: tes1", flush=True)
+        ok1 = (t1 or {}).get("res") is False
 
         # TES2: buka papan via API scene (__openTaskBoard → gerbang → replay) —
-        # chunk lazy terunduh + dialog 'Papan task' terbuka
-        t2 = ev("""(async () => {
-          window.__openTaskBoard({ view: 'kanban' });
-          for (let i = 0; i < 40; i++) {
-            await new Promise(r2 => setTimeout(r2, 250));
-            const dlg = document.querySelector('[role="dialog"]');
-            const tb = document.querySelector('script[src*="TaskBoard"]');
-            if (dlg && tb) return { ok: true, ms: (i + 1) * 250,
-              label: (dlg.getAttribute('aria-label') || dlg.textContent || '').slice(0, 30) };
-          }
-          return { ok: false, tb: !!document.querySelector('script[src*="TaskBoard"]'),
-                   dialog: !!document.querySelector('[role="dialog"]') };
-        })()""", await_p=True)
+        # chunk lazy terunduh + dialog 'Papan task' terbuka.
+        # Pelajaran 182/183: jangan polling-loop panjang di evaluate (frame WS
+        # bisa desync saat socket.timeout) — fire-and-forget lalu baca
+        # fixed-delay dari Python (pola terbukti andal).
+        ev("window.__openTaskBoard({ view: 'kanban' }); 1")
+        t2 = {"ok": False}
+        for i in range(8):
+            time.sleep(2.5)
+            t2 = ev("""JSON.stringify({
+              res: performance.getEntriesByType('resource').some(e => /TaskBoard/.test(e.name)),
+              dlg: !!document.querySelector('[role="dialog"]'),
+              label: (document.querySelector('[role="dialog"]')?.getAttribute('aria-label') || '').slice(0, 40)
+            })""") or {}
+            if t2.get("res") and t2.get("dlg"):
+                t2["ok"] = True; t2["ms"] = (i + 1) * 2500
+                break
         res["tests"]["tes2_open_lazy"] = t2
-        ok2 = bool((t2 or {}).get("ok"))
+        print("PROG: tes2", flush=True)
+        ok2 = bool(t2.get("ok"))
 
         # TES3: toggle pasca-flush (passthrough) menutup panel — aliran 1:1
-        t3 = ev("""(async () => {
-          window.dispatchEvent(new CustomEvent('wfs-toggle-task-board'));
-          for (let i = 0; i < 20; i++) {
-            await new Promise(r2 => setTimeout(r2, 250));
-            if (!document.querySelector('[role="dialog"]')) return { ok: true, ms: (i + 1) * 250 };
-          }
-          return { ok: false, stillOpen: true };
-        })()""", await_p=True)
+        ev("window.dispatchEvent(new CustomEvent('wfs-toggle-task-board')); 1")
+        t3 = {"ok": False}
+        for i in range(6):
+            time.sleep(1.5)
+            t3 = ev("JSON.stringify({ dlg: !!document.querySelector('[role=\"dialog\"]') })") or {}
+            if not t3.get("dlg"):
+                t3["ok"] = True; t3["ms"] = (i + 1) * 1500
+                break
         res["tests"]["tes3_toggle_close"] = t3
-        ok3 = bool((t3 or {}).get("ok"))
+        print("PROG: tes3", flush=True)
+        ok3 = bool(t3.get("ok"))
 
         # TES4: error console halus — tak boleh ada chunk-load error / exception
         drain_id = 10 ** 6
@@ -172,6 +199,7 @@ def main():
           controls: !!window.__wfsSceneControls,
           wall: !!window.__wallFade })""")
         res["tests"]["tes5_hooks"] = t5
+        print("PROG: tes5", flush=True)
         ok5 = bool((t5 or {}).get("agents", -1) == 26 and (t5 or {}).get("controls") and (t5 or {}).get("wall"))
 
         res["ok"] = bool(ok1 and ok2 and ok3 and ok5 and not res["errors"])
