@@ -12,6 +12,7 @@ import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulate
 import { perfStep } from './parts/perf_quality.js';
 import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam, resetFocusGoal, agentFocusPos } from './parts/kamera_focus.js';
 import { nextAgentIndex } from './parts/agent_cycle.js';
+import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js';
 import { orbitStep, orbitFocusGoal, ORBIT_KEY_STEP, ORBIT_KEY_STEP_FAST } from './parts/orbit_spec.js';
 import { snapshotDataUrl, snapshotFilename } from './parts/snapshot_spec.js';
 import { dblclickPointGoal, dblclickBlankGoal, tapCandidate, isDoubleTap, dtapRadius, DTAP_ZOOM_STEP } from './parts/dblclick_spec.js';
@@ -431,7 +432,7 @@ __onCanvas('pointerup',e=>{
     focusMeetingRoom();
     const tip=getWhiteboardTooltipText(typeof window !== 'undefined' ? window.__tvData?.tasks : undefined, typeof __meet !== 'undefined' && __meet.active);
     createBubble(MRX, 2.2 + 0.75, MRZ - 2.52, '“' + tip + '”', '#F59E0B');
-    try { window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { view: 'kanban', source: 'whiteboard' } })); } catch { /* ignore */ }
+    try { dispatchTaskBoardEvent('wfs-open-task-board', { view: 'kanban', source: 'whiteboard' }); } catch { /* ignore */ }
     selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null);
     return;
   }
@@ -475,7 +476,7 @@ __onCanvas('dblclick',e=>{
   if(hits.length&&isWhiteboardHit(hits[0].object,wbm,wbf)){
     __sound.playSelect();
     focusMeetingRoom();
-    try { window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { view: 'kanban', source: 'whiteboard' } })); } catch { /* ignore */ }
+    try { dispatchTaskBoardEvent('wfs-open-task-board', { view: 'kanban', source: 'whiteboard' }); } catch { /* ignore */ }
     return;
   }
   // REGRESI siklus 119: dblclick figur peserta rapat → jalur fokus peserta
@@ -734,12 +735,12 @@ window.__whiteboard = {
   redraw: __mr.boardRedraw,
   focus: () => focusMeetingRoom(),
   openSprintBoard: () => {
-    try { window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { view: 'kanban', source: 'whiteboard' } })); return true; } catch { return false; }
+    try { dispatchTaskBoardEvent('wfs-open-task-board', { view: 'kanban', source: 'whiteboard' }); return true; } catch { return false; }
   },
 };
 window.__openTaskBoard = (opts) => {
   try {
-    window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: opts || { view: 'kanban' } }));
+    dispatchTaskBoardEvent('wfs-open-task-board', opts || { view: 'kanban' });
     return true;
   } catch {
     return false;

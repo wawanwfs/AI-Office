@@ -67,8 +67,17 @@ const ST = { done: ['Selesai', '#10E5A0'], running: ['Jalan', '#F59E0B'], review
 const FILTERS = [['all', 'Semua'], ['pending', 'Antri'], ['running', 'Jalan'], ['done', 'Selesai'], ['failed', 'Gagal']]
 
 // Papan Task: daftar nyata dari task engine, filter divisi/status, kanban view, detail, jalankan per task.
-export default function TaskBoard({ onFlash, onAsk }) {
+export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
   const [open, setOpen] = useState(false)
+  // Siklus 189: gate lazy-load — komponen ini SATU-SATUNYA pemasang listener
+  // 'wfs-open-task-board' (App mengalirkan dispatch lewat lib taskboard_gate.js).
+  // Pasca-mount, event yang terbuffer saat chunk dimuat di-replay oleh gate:
+  // onChunkReady dipanggil SEKALI di mount (idempoten; prop opsional — pemanggil
+  // lama tanpa prop tetap kompatibel).
+  useEffect(() => {
+    if (typeof onChunkReady === 'function') onChunkReady()
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sekali per mount; flush idempoten
+  }, [])
   const [tasks, setTasks] = useState(null)
   const [err, setErr] = useState(false)
   const [filter, setFilter] = useState('all')

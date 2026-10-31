@@ -2,6 +2,7 @@ import { clip } from '../lib/clip.js'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
+import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js'
 import { useDialogA11y } from '../lib/dialogA11y'
 import { fileCount } from '../lib/files'
 import { IconStats, IconClose } from './Icons'
@@ -151,7 +152,7 @@ export default function TeamStats() {
                                 className="team-kanban-btn"
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { division: team.key, view: 'kanban' } }))
+                                  dispatchTaskBoardEvent('wfs-open-task-board', { division: team.key, view: 'kanban' })
                                 }}
                                 aria-label={`Buka kanban divisi ${team.name}`}
                                 title={`Buka papan kanban sprint untuk divisi ${team.name}`}
@@ -226,7 +227,7 @@ export default function TeamStats() {
                         fontFamily: 'inherit',
                       }}
                       onClick={() => {
-                        window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { taskId: t.id, view: 'kanban' } }))
+                        dispatchTaskBoardEvent('wfs-open-task-board', { taskId: t.id, view: 'kanban' })
                       }}
                       title={`Buka detail task #${t.id} di papan kanban`}
                       aria-label={`Task #${t.id}: ${t.title}`}

@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
+import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js'
 import { useDialogA11y } from '../lib/dialogA11y'
 import { IconRocket, IconClose } from './Icons'
 import { normalizeTaskStatus, formatTaskId } from '../scene/parts/projectboard_data'
@@ -129,7 +130,7 @@ export default function ProjectPanel() {
                           fontFamily: 'inherit',
                         }}
                         onClick={() => {
-                          window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { taskId: x.id, view: 'kanban' } }))
+                          dispatchTaskBoardEvent('wfs-open-task-board', { taskId: x.id, view: 'kanban' })
                         }}
                         title={`Buka task ${displayId} di papan sprint kanban`}
                         aria-label={`Task ${displayId}: ${x.title}`}
@@ -144,7 +145,7 @@ export default function ProjectPanel() {
                     className="btn"
                     style={{ marginTop: 4, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: 6, fontSize: 12 }}
                     onClick={() => {
-                      window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { view: 'kanban' } }))
+                      dispatchTaskBoardEvent('wfs-open-task-board', { view: 'kanban' })
                     }}
                     title="Buka seluruh task di Papan Kanban Sprint"
                     aria-label="Buka seluruh task di Papan Kanban Sprint"

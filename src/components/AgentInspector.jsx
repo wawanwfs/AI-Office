@@ -4,6 +4,7 @@ import { getAgentCompetency } from '../scene/parts/agent_competencies.js'
 import { resolveAgentId } from '../scene/parts/running_tasks.js'
 import { findTeamByAgent } from '../scene/parts/team_spec.js'
 import { agentLiveStatus, findAgentLiveEntry, agentLiveLevel, floorZoneName } from '../scene/parts/agent_status.js'
+import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js'
 
 // Kartu Inspektur Agen Interaktif — Tampil saat agen 3D diklik di ruangan
 export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloor, onOpenConsole }) {
@@ -167,9 +168,7 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
             className="agent-active-task-btn"
             onClick={() => {
               try {
-                window.dispatchEvent(new CustomEvent('wfs-open-task-board', {
-                  detail: { taskId: activeTask.id, view: 'kanban' }
-                }))
+                dispatchTaskBoardEvent('wfs-open-task-board', { taskId: activeTask.id, view: 'kanban' })
               } catch { /* ignore */ }
               onClose()
             }}
@@ -293,9 +292,7 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
           onClick={() => {
             const team = findTeamByAgent(agent.name)
             try {
-              window.dispatchEvent(new CustomEvent('wfs-open-task-board', {
-                detail: { view: 'kanban', division: team?.key || 'all' }
-              }))
+              dispatchTaskBoardEvent('wfs-open-task-board', { view: 'kanban', division: team?.key || 'all' })
             } catch { /* ignore */ }
             onClose()
           }}

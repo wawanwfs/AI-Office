@@ -36,6 +36,10 @@ import {
   formatAmbiencePercent,
 } from './scene/parts/sound_spec.js'
 import { resolveShortcutAction } from './scene/parts/shortcut_spec.js'
+// Siklus 189: TaskBoard lazy — SATU TITIK dispatch papan (router gerbang).
+// Semua pemicu (shortcut T, tombol dock, klik kartu, whiteboard 3D) lewat sini.
+import { dispatchTaskBoardEvent, taskBoardGateFlush, isTaskBoardGateReady } from './lib/taskboard_gate.js'
+const TaskBoard = lazy(() => import('./components/TaskBoard'))
 import { findAgentLiveEntry, agentLiveLevel } from './scene/parts/agent_status.js'
 import { perfChip } from './scene/parts/perf_quality.js'
 import { triggerSnapshotDownload } from './scene/parts/snapshot_spec.js'
@@ -568,13 +572,13 @@ export default function App() {
         handleCyberpunk()
       } else if (actType === 'TOGGLE_TASK_BOARD') {
         e.preventDefault()
-        window.dispatchEvent(new CustomEvent('wfs-toggle-task-board'))
+        dispatchTaskBoardEvent('wfs-toggle-task-board')
       } else if (actType === 'CYCLE_DIV_PRESET') {
         e.preventDefault()
-        window.dispatchEvent(new CustomEvent('wfs-cycle-div-preset', { detail: { backward: false } }))
+        dispatchTaskBoardEvent('wfs-cycle-div-preset', { backward: false })
       } else if (actType === 'CYCLE_DIV_PRESET_BACKWARD') {
         e.preventDefault()
-        window.dispatchEvent(new CustomEvent('wfs-cycle-div-preset', { detail: { backward: true } }))
+        dispatchTaskBoardEvent('wfs-cycle-div-preset', { backward: true })
       } else if (actType === 'TOGGLE_DASHBOARD') {
         e.preventDefault()
         window.dispatchEvent(new CustomEvent('wfs-toggle-dashboard'))
@@ -769,8 +773,8 @@ export default function App() {
           }} />
         <span className="sep" />
         <ActionMenu sceneRef={sceneRef} onFlash={flash} actionMenuRef={actionMenuApi} onOpenSettings={() => setShowSettings(true)} />
-        <TaskBoard onFlash={flash} onAsk={setAsk} />
-        <Dashboard onOpenBoard={() => window.dispatchEvent(new CustomEvent('wfs-open-task-board', { detail: { view: 'kanban' } }))} onOpenProjects={() => window.dispatchEvent(new CustomEvent('wfs-open-project-panel', { detail: {} }))} />
+        <TaskBoard onFlash={flash} onAsk={setAsk} onChunkReady={isTaskBoardGateReady() ? undefined : taskBoardGateFlush} />
+        <Dashboard onOpenBoard={() => dispatchTaskBoardEvent('wfs-open-task-board', { view: 'kanban' })} onOpenProjects={() => window.dispatchEvent(new CustomEvent('wfs-open-project-panel', { detail: {} }))} />
         <ProjectPanel />
         <TeamStats />
         <button className="ibtn" onClick={toggleMute} onContextMenu={(e) => { e.preventDefault(); setShowSettings(true) }} title={muted ? 'Nyalakan suara notifikasi (shortcut M) — Klik kanan untuk opsi volume' : 'Bisukan suara notifikasi (shortcut M) — Klik kanan untuk opsi volume'} aria-label={muted ? 'Nyalakan suara' : 'Bisukan suara'} aria-pressed={muted}>
