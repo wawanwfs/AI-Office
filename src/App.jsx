@@ -699,7 +699,7 @@ export default function App() {
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [showTask, confirm, ask, showHelp, showSettings, showLog, selectedAgent, handleCyberpunk, handleFloorSelect, zoom, flash, amRef, toggleAmbience, cycleAmbienceVolume, handleSnapshot])
+  }, [showTask, confirm, ask, showHelp, showSettings, showLog, selectedAgent, handleCyberpunk, handleFloorSelect, zoom, flash, amRef, toggleAmbience, cycleAmbienceVolume, handleSnapshot, setShowSettings])
 
   // ---- Pause / Resume nyata (konfirmasi dulu) ----
   // Guard rid (pola siklus 132/135): dialog konfirmasi bisa dibuka ulang kapan
