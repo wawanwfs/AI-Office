@@ -211,7 +211,7 @@ def main():
             refs = deploy_mod.referenced_assets()
             hashed = [n for n in os.listdir(hq_assets)
                       if deploy_mod.HASHED_RE.match(n)] if os.path.isdir(hq_assets) else []
-            orphans = sorted(n for n in hashed if n not in refs)
+            orphans = sorted(n for n in hashed if not deploy_mod._is_referenced(n, refs))
             res["hygiene"] = {"hashed": len(hashed), "refs": len(refs), "orphans": orphans}
             res["hygiene_ok"] = len(hashed) <= 15 and not orphans
         except Exception as e:  # gate tak boleh menutup probe bila env aneh

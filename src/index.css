@@ -489,6 +489,23 @@ button { font-family: inherit; }
 }
 .toast.err { background: #ef4444; color: #fff; }
 
+/* Siklus 192 — banner pembaruan PWA (SW menunggu, mode prompt). Posisi atas-
+   tengah agar tidak menabrak toast bawah / dock; tombol aksi jelas. */
+.sw-update {
+  position: fixed; top: 14px; left: 50%; transform: translateX(-50%);
+  z-index: var(--z-toast); display: flex; align-items: center; gap: 12px;
+  background: #fff; color: #111; font-weight: 600; font-size: 13.5px;
+  padding: 10px 12px 10px 20px; border-radius: 14px;
+  box-shadow: 0 10px 36px rgba(0,0,0,.6);
+  max-width: calc(100vw - 24px);
+  animation: fadeUp .25s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+.sw-update button {
+  background: #111; color: #fff; border: 0; font-weight: 700; font-size: 13px;
+  padding: 7px 14px; border-radius: 10px; cursor: pointer; white-space: nowrap;
+}
+.sw-update button:hover { background: #333; }
+
 .modal-scrim {
   position: fixed; inset: 0; z-index: var(--z-modal); background: rgba(0, 0, 0, .72);
   backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; padding: 12px;

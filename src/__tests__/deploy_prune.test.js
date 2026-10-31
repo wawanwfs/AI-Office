@@ -23,8 +23,9 @@ describe('deploy.py — sinkronisasi + pemangkasan aset orphan', () => {
     // pola hashed Vite/Rolldown
     expect(src).toMatch(/HASHED_RE\s*=\s*re\.compile/)
     expect(src).toContain("'index.html', 'landing.html', 'sw.js'")
-    // file yang direferensikan tidak boleh dipangkas
-    expect(src).toContain('name in refs')
+    // file yang direferensikan tidak boleh dipangkas — nama lengkap ATAU
+    // stem tanpa ekstensi (siklus 192: sw.js meng-import "./workbox-<hash8>")
+    expect(src).toContain('_is_referenced(name, refs)')
   })
 
   it('mengarsipkan ke .pruned-assets — tidak ada rm permanen file basi', () => {

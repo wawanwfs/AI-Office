@@ -27,8 +27,10 @@ describe('e2e_err_probe.py — gate hygiene anti re-akumulasi assets/', () => {
   it('gate menghitung orphan dari referensi nyata dan FAIL bila menumpuk', () => {
     expect(probe).toContain('deploy_mod.referenced_assets()')
     expect(probe).toContain('deploy_mod.HASHED_RE.match(n)')
-    // orphan = hashed yang tidak direferensikan index/landing/sw
-    expect(probe).toContain('n not in refs')
+    // orphan = hashed yang tidak direferensikan index/landing/sw — cek via
+    // _is_referenced (nama lengkap ATAU stem; siklus 192: sw.js meng-import
+    // workbox sebagai sibling tanpa ekstensi)
+    expect(probe).toContain('deploy_mod._is_referenced(n, refs)')
     // ambang akumulasi: >15 file hashed = FAIL (build sehat = 11)
     expect(probe).toContain('15')
     expect(probe).toContain('hygiene_ok')

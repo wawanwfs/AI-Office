@@ -8,7 +8,13 @@ export default defineConfig({
   plugins: [
     react(),
     VitePWA({
-      registerType: 'autoUpdate',
+      // Siklus 192: mode 'prompt' — SW baru TIDAK skipWaiting bake-in; versi
+      // baru menunggu sampai pengguna klik "Muat ulang" (banner App). Dulu
+      // 'autoUpdate' + registrasi injeksi naif: SW baru mengambil alih tanpa
+      // reload sesi lama → tab basi memakai chunk hashed lama (prune deploy.py
+      // bisa membuat import() lazy-nya 404) tanpa pemberitahuan apa pun.
+      registerType: 'prompt',
+      injectRegister: null,
       includeAssets: ['favicon.svg', 'wfs-logo.svg', 'fonts/fonts.css', 'og-image.png', 'apple-touch-icon.png'],
       manifest: {
         name: 'WFS Project HQ — Kantor AI 3D',

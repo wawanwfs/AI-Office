@@ -50,6 +50,7 @@ import { resolveShortcutAction } from './scene/parts/shortcut_spec.js'
 // papan (event via gerbang) — tanpa itu React.lazy memuat chunk di render
 // pertama juga (bukti diag siklus 189: modulepreload + entry 'script' t=0).
 import { dispatchTaskBoardEvent, taskBoardGateFlush, isTaskBoardGateReady, onTaskBoardMount } from './lib/taskboard_gate.js'
+import { setupServiceWorkerUpdates } from './lib/sw_update'
 const TaskBoard = lazy(() => import('./components/TaskBoard'))
 import { findAgentLiveEntry, agentLiveLevel } from './scene/parts/agent_status.js'
 import { perfChip } from './scene/parts/perf_quality.js'
@@ -93,6 +94,20 @@ export default function App() {
   })
   const [inMeeting, setInMeeting] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
+  // Siklus 192: versi baru PWA menunggu (SW waiting) → banner "Muat ulang".
+  const [swUpdateReady, setSwUpdateReady] = useState(false)
+  const swUpdateApiRef = useRef(null)
+  useEffect(() => {
+    // Registrasi SW + deteksi versi menunggu (mode prompt — vite.config.js).
+    // dispose(): hanya lepas listener; registrasi SW biarkan bertahan.
+    swUpdateApiRef.current = setupServiceWorkerUpdates({ onUpdateReady: () => setSwUpdateReady(true) })
+    return () => swUpdateApiRef.current && swUpdateApiRef.current.dispose()
+  }, [])
+  const applySwUpdate = useCallback(() => {
+    const api = swUpdateApiRef.current
+    if (!api) return Promise.resolve(false)
+    return api.applyUpdate()
+  }, [])
   // Siklus 190: lazy mount-on-demand ShConsole & SettingsModal — komponen modal
   // POLLED (show via prop dari App-state, BUKAN CustomEvent) sehingga TIDAK
   // butuh gerbang buffer ala taskboard_gate: flag "wanted" naik BERSAMA show
@@ -897,6 +912,14 @@ export default function App() {
         onConfirm={() => { const f = ask.onOk; setAsk(null); f() }} onCancel={() => setAsk(null)} />
 
       {toast && <div className={'toast' + (toast.err ? ' err' : '')} role={toast.err ? 'alert' : 'status'} aria-live={toast.err ? 'assertive' : 'polite'}>{toast.msg}</div>}
+      {swUpdateReady && (
+        // Siklus 192: SW baru MENUNGGU (mode prompt) — versi baru tidak
+        // dipaksakan; satu klik memuat ulang seluruh tab ke versi terkini.
+        <div className="sw-update" role="alert" data-testid="sw-update-banner">
+          <span className="sw-update-msg">Versi baru kantor tersedia</span>
+          <button type="button" onClick={() => { applySwUpdate() }}>Muat ulang</button>
+        </div>
+      )}
     </>
   )
 }
