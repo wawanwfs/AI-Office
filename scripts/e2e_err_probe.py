@@ -78,6 +78,11 @@ def x99_alive():
 
 
 def main():
+    args = [a for a in sys.argv[1:] if a != "-"]
+    mobile = "mobile" in args
+    out = args[0] if args and args[0] != "mobile" else (
+        args[1] if len(args) > 1 and args[1] != "mobile" else "/tmp/e2e_err_probe.png")
+    w, h = (MOBILE_W, MOBILE_H) if mobile else (1366, 768)
     env = dict(os.environ, DISPLAY=":99")
     xv = None
     if not x99_alive():
@@ -90,10 +95,11 @@ def main():
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         time.sleep(1)
     p = subprocess.Popen([CHROME, "--no-sandbox", f"--remote-debugging-port={PORT}",
-                          "--enable-unsafe-swiftshader", "--window-size=1366,768",
+                          "--enable-unsafe-swiftshader", f"--window-size={w},{h}",
                           "--disable-dev-shm-usage", URL],
                          env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    res = {"console_errors": [], "page_errors": [], "init_failed": False}
+    res = {"mode": "mobile" if mobile else "desktop",
+           "console_errors": [], "page_errors": [], "init_failed": False}
     try:
         time.sleep(2)
         tabs = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{PORT}/json/list", timeout=5).read())
@@ -108,6 +114,12 @@ def main():
                 if r.get("id") == mid[0]: return r
 
         cmd("Runtime.enable"); cmd("Log.enable"); cmd("Page.enable")
+        if mobile:
+            # Viewport HP dari awal init scene (bukan emulasi setelahnya):
+            # override metrik + reload, error console tetap terkumpul di socket.
+            cmd("Emulation.setDeviceMetricsOverride", width=MOBILE_W, height=MOBILE_H,
+                deviceScaleFactor=MOBILE_DSF, mobile=True)
+            cmd("Page.reload", ignoreCache=False)
         # Kumpulkan console/pageerror SELAMA scene init + beberapa detik hidup.
         # Bacaan non-blocking: kirim evaluate setelah 22 dtk, console menumpuk
         # di socket dan dibaca di loop cmd berikutnya (paritas e2e lain).
@@ -147,15 +159,36 @@ def main():
         res["hooks"] = st
         res["hooks_ok"] = bool(st.get("agents", -1) > 0 and st.get("cam") and st.get("renderer")
                                and st.get("controls") and st.get("zone", -1) == 5 and st.get("wall"))
-        # 4) scene hidup: screenshot > 300 KB
+        # 4) scene hidup: screenshot > ambang (desktop 300KB / mobile 200KB)
         shot = cmd("Page.captureScreenshot", format="png")
         data = base64.b64decode((shot.get("result") or {}).get("data", ""))
-        out = sys.argv[1] if len(sys.argv) > 1 else "/tmp/e2e_err_probe.png"
         open(out, "wb").write(data)
         res["shot_bytes"] = len(data)
-        res["shot_ok"] = res["shot_bytes"] > 300000
+        res["shot_ok"] = res["shot_bytes"] > (MOBILE_MIN_SHOT_BYTES if mobile else MIN_SHOT_BYTES)
+        # 5) gate mobile: dock tak menyunat tombol (kelas bug siklus 184) —
+        #    label + kotak tombol terakhir dinilai LIVE dari DOM, bukan tebak.
+        if mobile:
+            r = cmd("Runtime.evaluate", expression="""JSON.stringify((() => {
+              const dock = document.querySelector('.dock');
+              if (!dock) return { err: 'no-dock' };
+              const btns = Array.from(dock.querySelectorAll('.ibtn'));
+              if (!btns.length) return { err: 'no-btns' };
+              const d = dock.getBoundingClientRect();
+              const r = btns[btns.length - 1].getBoundingClientRect();
+              return { nBtn: btns.length, vw: innerWidth, vh: innerHeight,
+                       dockRight: Math.round(d.right), dockBottom: Math.round(d.bottom),
+                       lastRight: Math.round(r.right), lastBottom: Math.round(r.bottom) };
+            })())""", returnByValue=True)
+            dk = json.loads((((r or {}).get("result") or {}).get("result") or {}).get("value", "{}"))
+            res["dock"] = dk
+            res["dock_ok"] = (not dk.get("err")
+                              and dk.get("lastRight", 9e9) <= dk.get("vw", 0) + 1
+                              and dk.get("lastBottom", 9e9) <= dk.get("vh", 0) + 1
+                              and dk.get("lastRight", 0) <= dk.get("dockRight", -1) + 1
+                              and dk.get("lastBottom", 0) <= dk.get("dockBottom", -1) + 1)
         clean = (not res["console_errors"] and not res["page_errors"]
-                 and not res["init_failed"] and res["hooks_ok"] and res["shot_ok"])
+                 and not res["init_failed"] and res["hooks_ok"] and res["shot_ok"]
+                 and (res.get("dock_ok", True)))
         print("E2E_ERR_PROBE:", "OK" if clean else "FAIL", json.dumps(res, ensure_ascii=False))
         sys.exit(0 if clean else 1)
     finally:
