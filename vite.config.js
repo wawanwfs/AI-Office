@@ -35,15 +35,16 @@ export default defineConfig({
   ],
   build: {
     chunkSizeWarningLimit: 800,
-    // Siklus 189: TaskBoard lazy (lazy() di App) HARUS benar-benar ditunda —
-    // dulu Vite menyuntik <link rel=modulepreload> untuk dynamic import, yang
-    // membuat browser mengunduh+eksekusi chunk DI AWAL juga (lazy hanya di
-    // grafik modul, bukan di jaringan — bukti diag: initiatorType 'script'
-    // pasca reload, node LINK preload). resolveDependencies membuang preload
-    // chunk TaskBoard; preload aset statis lain tetap utuh.
+    // Siklus 189-190: TaskBoard, ShConsole & SettingsModal lazy (lazy() di App)
+    // HARUS benar-benar ditunda — dulu Vite menyuntik <link rel=modulepreload>
+    // untuk dynamic import, yang membuat browser mengunduh+eksekusi chunk DI
+    // AWAL juga (lazy hanya di grafik modul, bukan di jaringan — bukti diag:
+    // initiatorType 'script' pasca reload, node LINK preload).
+    // resolveDependencies membuang preload chunk lazy tersebut; preload aset
+    // statis lain tetap utuh.
     modulePreload: {
       resolveDependencies(filename, deps) {
-        return (deps || []).filter((f) => !/TaskBoard/.test(f))
+        return (deps || []).filter((f) => !/TaskBoard|ShConsole|SettingsModal/.test(f))
       },
     },
     rollupOptions: {

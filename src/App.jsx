@@ -16,9 +16,18 @@ import ConfirmModal from './components/ConfirmModal'
 import ProjectPanel from './components/ProjectPanel'
 import ActivityLog from './components/ActivityLog'
 import AgentInspector from './components/AgentInspector'
-import ShConsole from './components/ShConsole'
+// Siklus 190: ShConsole (38K) & SettingsModal (22K) kini lazy + mount-on-demand
+// juga — komponen modal POLLED (show via prop dari App-state, BUKAN CustomEvent)
+// sehingga TIDAK butuh gerbang buffer ala taskboard_gate: membuka = menaikkan
+// flag wanted + show sekaligus (satu batch React) → komponen di-mount SUDAH
+// dalam keadaan terbuka. Kontrak ShConsole "tidak pernah unmount" tetap utuh:
+// pasca open pertama komponen terus ter-render (show=false hanya render null).
+const ShConsole = lazy(() => import('./components/ShConsole'))
+const SettingsModal = lazy(() => import('./components/SettingsModal'))
+// Mount-on-demand: TaskBoard hanya ter-render setelah ada keinginan membuka
+// papan (event via gerbang) — tanpa itu React.lazy memuat chunk di render
+// pertama juga (bukti diag siklus 189: modulepreload + entry 'script' t=0).
 import FloorNavigator from './components/FloorNavigator'
-import SettingsModal from './components/SettingsModal'
 import { IconVolume, IconVolumeMute, IconScroll, IconHelp, IconGear } from './components/Icons'
 import { api } from './lib/api'
 import { anyModalOpen, wfsRefreshModalFlag, wfsSetAppModalBase } from './lib/modal'
@@ -84,8 +93,27 @@ export default function App() {
   })
   const [inMeeting, setInMeeting] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
-  const [showSettings, setShowSettings] = useState(false)
-  const [showConsole, setShowConsole] = useState(false)
+  // Siklus 190: lazy mount-on-demand ShConsole & SettingsModal — komponen modal
+  // POLLED (show via prop dari App-state, BUKAN CustomEvent) sehingga TIDAK
+  // butuh gerbang buffer ala taskboard_gate: flag "wanted" naik BERSAMA show
+  // di SEMUA jalur buka (satu batch React → render lazy dgn show=true langsung;
+  // event buka TIDAK mungkin hilang). Menutup TIDAK menurunkan wanted:
+  // komponen tetap ter-render (show=false → null) — kontrak ShConsole "tidak
+  // pernah unmount" (state riwayat persist) tetap utuh.
+  const [scWanted, setScWanted] = useState(false)
+  const [smWanted, setSmWanted] = useState(false)
+  const [showConsoleS, setShowConsoleS] = useState(false)
+  const [showSettingsS, setShowSettingsS] = useState(false)
+  const setShowConsole = useCallback((v) => {
+    if (v) setScWanted(true)
+    setShowConsoleS(v)
+  }, [])
+  const setShowSettings = useCallback((v) => {
+    if (v) setSmWanted(true)
+    setShowSettingsS(v)
+  }, [])
+  const showConsole = showConsoleS
+  const showSettings = showSettingsS
   const [showTask, setShowTask] = useState(false)
   const [confirm, setConfirm] = useState(null)      // 'pause' | 'resume' | null
   const [confirmBusy, setConfirmBusy] = useState(false)
@@ -836,17 +864,23 @@ export default function App() {
       />
 
       <ActivityLog show={showLog} items={logItems} onClose={() => setShowLog(false)} onClear={clearLog} />
-      <ShConsole show={showConsole} onClose={() => setShowConsole(false)} />
-      <SettingsModal
-        show={showSettings}
-        onClose={() => setShowSettings(false)}
-        sceneRef={sceneRef}
-        muted={muted}
-        onToggleMute={toggleMute}
-        cyberpunk={cyberpunk}
-        onToggleTheme={handleCyberpunk}
-        onFlash={flash}
-      />
+      {/* Siklus 190: mount-on-demand — pasca open pertama tetap ter-render
+          (show=false → null; kontrak ShConsole tanpa unmount tetap utuh). */}
+      {(scWanted || showConsoleS) && <Suspense fallback={null}><ShConsole show={showConsole} onClose={() => setShowConsole(false)} /></Suspense>}
+      {(smWanted || showSettingsS) && (
+        <Suspense fallback={null}>
+          <SettingsModal
+            show={showSettings}
+            onClose={() => setShowSettings(false)}
+            sceneRef={sceneRef}
+            muted={muted}
+            onToggleMute={toggleMute}
+            cyberpunk={cyberpunk}
+            onToggleTheme={handleCyberpunk}
+            onFlash={flash}
+          />
+        </Suspense>
+      )}
       <OverlayHelp show={showHelp} onClose={() => setShowHelp(false)} />
       <TaskModal show={showTask} onClose={() => setShowTask(false)} onDone={(m) => { flash(m); refreshStatus() }} />
       <ConfirmModal

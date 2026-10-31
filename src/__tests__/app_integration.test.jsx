@@ -125,29 +125,32 @@ describe('App — integrasi UI', () => {
     expect(screen.getByRole('dialog')).toBeTruthy()
   })
 
-  it('shortcut "o" membuka modal pengaturan (SettingsModal) & tombol Atur membuka pengaturan', () => {
+  it('shortcut "o" membuka modal pengaturan (SettingsModal) & tombol Atur membuka pengaturan', async () => {
+    // Siklus 190: SettingsModal lazy + mount-on-demand → konten muncul ASYNC
+    // (chunk diunduh saat pertama dibuka); pakai waitFor, bukan asersi langsung.
     stubFetch([])
     render(<App />)
     expect(screen.queryByText('Pengaturan Kantor 3D')).toBeNull()
     fireEvent.keyDown(window, { key: 'o' })
-    expect(screen.getByText('Pengaturan Kantor 3D')).toBeTruthy()
+    await waitFor(() => expect(screen.getByText('Pengaturan Kantor 3D')).toBeTruthy())
 
     // Tutup modal
     fireEvent.click(screen.getByRole('button', { name: 'Tutup pengaturan' }))
-    expect(screen.queryByText('Pengaturan Kantor 3D')).toBeNull()
+    await waitFor(() => expect(screen.queryByText('Pengaturan Kantor 3D')).toBeNull())
 
-    // Buka via tombol dock 'Atur'
+    // Buka via tombol dock 'Atur' — mount-on-demand: komponen tetap ada pasca
+    // close pertama (show=false → null), open kedua sinkron via state.
     fireEvent.click(screen.getByRole('button', { name: 'Pengaturan' }))
     expect(screen.getByText('Pengaturan Kantor 3D')).toBeTruthy()
   })
 
-  it('klik kanan (contextmenu) pada tombol Suara membuka modal pengaturan', () => {
+  it('klik kanan (contextmenu) pada tombol Suara membuka modal pengaturan', async () => {
     stubFetch([])
     render(<App />)
     expect(screen.queryByText('Pengaturan Kantor 3D')).toBeNull()
     const muteBtn = screen.getByRole('button', { name: 'Bisukan suara' })
     fireEvent.contextMenu(muteBtn)
-    expect(screen.getByText('Pengaturan Kantor 3D')).toBeTruthy()
+    await waitFor(() => expect(screen.getByText('Pengaturan Kantor 3D')).toBeTruthy())
   })
 
   it('shortcut "m" toggle mute → tombol dock berubah jadi "Suara Mati"', () => {
