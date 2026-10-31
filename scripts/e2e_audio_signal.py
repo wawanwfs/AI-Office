@@ -15,7 +15,13 @@ Karena itu probe mengukur sinyal KONTINU yang kebal fast-forward:
   D. CHIME: playMeetingChime() dipanggil (counter naik; penjadwalan & envelope
      nada sudah diverifikasi unit test sound_engine)
   E. MUTE-CHECK: setMuted(true) → RMS jebol ke ~0 meski osc kontinu mengalir —
-     anti-false-positive (tap benar-benar mendengarkan masterGain yang dibisukan)
+     anti-false-positive (tap benar-benar mendengarkan masterGain yang dibisukan).
+     Hardening siklus 188 (MUTE-LEAK palsu ~1 dari 4 run): buffer analyser
+     2048 sampel (~46 ms audio) masih berisi sinyal CHAIN saat poll pertama —
+     null-sink fast-forward + hanya ~2 poll/span → best teracuni data PRA-mute
+     (diag: rms 0.123 padahal mgGain=0 di poll yang sama). Perbaikan: flush
+     buffer 2× sebelum loop + poll#0 dikecualikan dari best + mgMin dicatat
+     (mgMin>0 saat mute_rms tinggi = bug produk nyata, bukan basi).
   F. TIME: ctx.currentTime maju (graph hidup)
 Keputusan: RMS>=1e-3 & peak>=0.01 (B), RMS>=1e-2 & peak>=0.05 (C), chime naik (D),
 mute<1e-4 (E), advanced (F) → E2E_AUDIO OK.
@@ -199,20 +205,31 @@ window.__muteRun = () => new Promise(res => {
   g.gain.value = 0.2;
   osc.connect(g); g.connect(eng.masterGainNode());
   osc.start();
+  // Flush buffer basi (siklus 188): analyser 2048 sampel (~46 ms audio @44.1k)
+  // masih menyimpan sinyal tes sebelumnya (CHAIN rms~0.14). Null-sink
+  // fast-forward + main thread sibuk → poll pertama bisa membaca audio PRA-mute
+  // → best teracuni → MUTE-LEAK palsu (terbukti diag: rms 0.123 padahal
+  // mgGain=0 di poll yang sama). Flush 2×: bacaan berikut = data fresh post-mute.
+  an.getFloatTimeDomainData(buf);
+  an.getFloatTimeDomainData(buf);
   const t0 = ctx.currentTime;
-  let best = 0, polls = 0;
+  let best = 0, polls = 0, mgMin = 1;
   const span = 1.0;
   const tick = () => {
     an.getFloatTimeDomainData(buf);
     let s = 0;
     for (let i = 0; i < buf.length; i++) { const v = buf[i]; s += v * v; }
     const rms = Math.sqrt(s / buf.length);
-    if (rms > best) best = rms;
+    // Poll#0 DILEWATI dari best (bukan anti-false-positive melemah — kebocoran
+    // mute sungguhan menetap sepanjang span, sementara basi cuma window ~46 ms
+    // = poll pertama). mgMin = bukti masterGain memang 0 selama sampling.
+    if (polls > 0) best = Math.max(best, rms);
+    mgMin = Math.min(mgMin, eng.masterGainNode().gain.value);
     polls++;
     if (ctx.currentTime > t0 + span) {
       try { osc.stop(); osc.disconnect(); g.disconnect(); } catch (e) {}
       eng.setMuted(false);          // pulihkan
-      res(JSON.stringify({ best, polls, mutedNow: eng.isMuted(),
+      res(JSON.stringify({ best, polls, mgMin, mutedNow: eng.isMuted(),
                            mgGain: eng.masterGainNode().gain.value }));
       return;
     }
@@ -382,8 +399,15 @@ def main():
             sys.exit(1)
         mc = jload(evp("window.__muteRun()"))
         mute_rms = mc.get("best", -1)
-        print(f"MUTE-CHECK: best_rms={mute_rms:.2e} (harus < 1e-4) mgGain={mc.get('mgGain')}")
+        print(f"MUTE-CHECK: best_rms={mute_rms:.2e} (harus < 1e-4) polls={mc.get('polls')} "
+              f"mgMin={mc.get('mgMin')} mgGain(post)={mc.get('mgGain')}")
         mute_ok = 0 <= mute_rms < 1e-4
+        # Bukti anti-basi (siklus 188): selama span sampling, masterGain HARUS
+        # benar-benar 0 — mgMin>0 saat mute_rms tinggi = ada yang unmute di
+        # tengah span (bug produk nyata), bukan buffer basi.
+        if not mute_ok and (mc.get("mgMin") or 1) > 0:
+            print("MUTE-CHECK: mgMin>0 saat mute_rms tinggi → indikasi bug produk "
+                  "(gain unmute di tengah span), bukan basi")
 
         # 8. TIME — ctx.currentTime maju
         t1 = jload(ev("JSON.stringify({ct: window.__officeSound.rawCtx().currentTime})")).get("ct", 0)
