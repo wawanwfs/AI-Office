@@ -11,11 +11,23 @@ diprune TMPDIR 24 jam, siklus 185). Smoketest kesehatan scene di browser nyata:
  5. Mode MOBILE (arg "mobile"): viewport 390x844 dsf=2 (HP umum user) +
     gate tambahan dock: .dock .ibbtn tidak ada yang terpotong viewport —
     kelas bug siklus 184 (dock 3-4 baris meluap kapsul/viewport).
+ 6. Gate HYGIENE deploy (siklus 191): ~/wfs-hq/assets TIDAK menumpuk file
+    hashed orphan (>15 file = FAIL) — bug siklus 157 sempat mengulang karena
+    SOP `cp -r dist/*` tak menghapus bundle lama; kini tiap probe wajib
+    mendeteksi re-akumulasi. Referensi satu sumber = scripts/deploy.py.
 
 Pemakaian: uv run --with websocket-client scripts/e2e_err_probe.py [mobile] [out.png]
 Transport: salinan e2e_perf_chip.py (Xvfb :99 + chrome-headless-shell + CDP WS).
 """
 import subprocess, os, time, urllib.request, json, socket, struct, base64, sys
+import importlib.util as _ilu  # noqa: E402
+# Satu sumber HASHED_RE + referenced_assets = scripts/deploy.py (dimuat by path:
+# nama generik "deploy" rawan resolve ke package lain di search path Pyright).
+_spec_deploy = _ilu.spec_from_file_location(
+    "wfs_deploy", os.path.join(os.path.dirname(os.path.abspath(__file__)), "deploy.py"))
+assert _spec_deploy is not None and _spec_deploy.loader is not None  # file statis repo
+deploy_mod = _ilu.module_from_spec(_spec_deploy)
+_spec_deploy.loader.exec_module(deploy_mod)
 
 CHROME = os.path.expanduser(
     "~/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell")
@@ -189,6 +201,23 @@ def main():
         clean = (not res["console_errors"] and not res["page_errors"]
                  and not res["init_failed"] and res["hooks_ok"] and res["shot_ok"]
                  and (res.get("dock_ok", True)))
+        # 6) Gate hygiene deploy (siklus 191): assets/ ~/wfs-hq tidak menumpuk
+        #    file hashed orphan. Referensi dibaca dari index.html/landing.html/
+        #    sw.js yang SUDAH dideploy (satu sumber: deploy.referenced_assets);
+        #    pola hashed juga satu sumber (deploy.HASHED_RE). Ambang 15:
+        #    build sehat = 11 file; 15 = batah aman, kelebihan itu = akumulasi.
+        try:
+            hq_assets = os.path.join(deploy_mod.DST_HQ, "assets")
+            refs = deploy_mod.referenced_assets()
+            hashed = [n for n in os.listdir(hq_assets)
+                      if deploy_mod.HASHED_RE.match(n)] if os.path.isdir(hq_assets) else []
+            orphans = sorted(n for n in hashed if n not in refs)
+            res["hygiene"] = {"hashed": len(hashed), "refs": len(refs), "orphans": orphans}
+            res["hygiene_ok"] = len(hashed) <= 15 and not orphans
+        except Exception as e:  # gate tak boleh menutup probe bila env aneh
+            res["hygiene"] = {"err": str(e)}
+            res["hygiene_ok"] = False
+        clean = clean and res["hygiene_ok"]
         print("E2E_ERR_PROBE:", "OK" if clean else "FAIL", json.dumps(res, ensure_ascii=False))
         sys.exit(0 if clean else 1)
     finally:

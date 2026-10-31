@@ -9,6 +9,12 @@ audit). Sekarang: salin sinkron (hapus dulu, salin ulang) + pemangkasan file
 hashed orphan di assets/ yang tidak direferensikan index.html / landing.html /
 sw.js — diarsipkan ke ~/wfs-hq/.pruned-assets/ (bukan rm permanen) dan bisa
 dipulihkan. File tanpa hash (favicon.svg, og-image.png, dsb) tidak disentuh.
+
+Siklus 191: logika dipindah ke fungsi `deploy()` dengan guard `__main__` agar
+AMAN di-import (tanpa efek samping saat import) — e2e_err_probe.py memakai
+modul ini sebagai SATU SUMBER HASHED_RE + referenced_assets() untuk gate
+hygiene anti-re-akumulasi (bug siklus 157 sempat mengulang: SOP cp -r masih
+dipakai cron hingga assets/ kembali menumpuk 75 file vs 11 hidup).
 """
 import os, re, shutil, urllib.request
 
@@ -51,29 +57,37 @@ def prune_orphan_assets() -> list:
     return pruned
 
 
-# Salin aset baru — sinkron penuh: assets/ dihapus lalu disalin ulang dari dist/
-src_assets = os.path.join(SRC_DIST, 'assets')
-dst_assets = os.path.join(DST_HQ, 'assets')
-if os.path.isdir(src_assets):
-    if os.path.isdir(dst_assets):
-        shutil.rmtree(dst_assets)
-    shutil.copytree(src_assets, dst_assets)
+def sync_dist_to_hq():
+    """Salin dist/ → ~/wfs-hq sinkron penuh (assets/ dihapus dulu, salin ulang)."""
+    src_assets = os.path.join(SRC_DIST, 'assets')
+    dst_assets = os.path.join(DST_HQ, 'assets')
+    if os.path.isdir(src_assets):
+        if os.path.isdir(dst_assets):
+            shutil.rmtree(dst_assets)
+        shutil.copytree(src_assets, dst_assets)
+    for item in os.listdir(SRC_DIST):
+        s = os.path.join(SRC_DIST, item)
+        d = os.path.join(DST_HQ, item)
+        if os.path.isdir(s):
+            if os.path.exists(d):
+                shutil.rmtree(d)
+            shutil.copytree(s, d)
+        else:
+            shutil.copy2(s, d)
 
-for item in os.listdir(SRC_DIST):
-    s = os.path.join(SRC_DIST, item)
-    d = os.path.join(DST_HQ, item)
-    if os.path.isdir(s):
-        if os.path.exists(d):
-            shutil.rmtree(d)
-        shutil.copytree(s, d)
-    else:
-        shutil.copy2(s, d)
 
-pruned = prune_orphan_assets()
+def deploy():
+    """Deploy penuh + prune. Return jumlah orphan yang dipangkas."""
+    sync_dist_to_hq()
+    return prune_orphan_assets()
 
-# Test koneksi
-try:
-    with urllib.request.urlopen('http://127.0.0.1:9503/', timeout=3) as r:
-        print(f"deployed, 9503: {r.status}, pruned {len(pruned)} orphan asset(s)")
-except Exception as e:
-    print(f"deployed (service restart needed): {e}, pruned {len(pruned)} orphan asset(s)")
+
+if __name__ == '__main__':
+    pruned = deploy()
+
+    # Test koneksi
+    try:
+        with urllib.request.urlopen('http://127.0.0.1:9503/', timeout=3) as r:
+            print(f"deployed, 9503: {r.status}, pruned {len(pruned)} orphan asset(s)")
+    except Exception as e:
+        print(f"deployed (service restart needed): {e}, pruned {len(pruned)} orphan asset(s)")
