@@ -6,10 +6,13 @@ diprune TMPDIR 24 jam, siklus 185). Smoketest kesehatan scene di browser nyata:
  2. Tanpa 'Scene init failed' di console.
  3. Hook inti scene terpasang: __agentData (agen > 0), __camCam, __renderer,
     __wfsSceneControls, __zoneLabels (5 zona), __wallFade.
- 4. Scene HIDUP: screenshot PNG > 300 KB (kanvas hitam/halusut = file kecil).
+ 4. Scene HIDUP: screenshot PNG > ambang (kanvas hitam/halusut = file kecil).
     (Pola ambang sama dgn e2e_perf_chip siklus 147.)
+ 5. Mode MOBILE (arg "mobile"): viewport 390x844 dsf=2 (HP umum user) +
+    gate tambahan dock: .dock .ibbtn tidak ada yang terpotong viewport —
+    kelas bug siklus 184 (dock 3-4 baris meluap kapsul/viewport).
 
-Pemakaian: uv run --with websocket-client scripts/e2e_err_probe.py [out.png]
+Pemakaian: uv run --with websocket-client scripts/e2e_err_probe.py [mobile] [out.png]
 Transport: salinan e2e_perf_chip.py (Xvfb :99 + chrome-headless-shell + CDP WS).
 """
 import subprocess, os, time, urllib.request, json, socket, struct, base64, sys
@@ -18,6 +21,13 @@ CHROME = os.path.expanduser(
     "~/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell")
 PORT = 9461
 URL = "http://127.0.0.1:9503/"
+
+# Ambang "scene hidup": PNG > ambang. Desktop 1366x768 terukur 640-690 KB
+# saat sehat; mobile 390x844@2x (780x1688) diukur siklus 186 — dilihat
+# MOBILE_MIN_SHOT_BYTES di bawah. Kanvas mati = puluhan KB.
+MIN_SHOT_BYTES = 300000
+MOBILE_MIN_SHOT_BYTES = 200000
+MOBILE_W, MOBILE_H, MOBILE_DSF = 390, 844, 2
 
 HOOKS_EXPECT = ["__agentData", "__camCam", "__renderer", "__wfsSceneControls",
                 "__zoneLabels", "__wallFade"]
