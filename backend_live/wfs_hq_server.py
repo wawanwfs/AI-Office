@@ -35,7 +35,13 @@ try:
 except Exception as _e:
     print(f"[API Service Import Error] {_e}")
     api_service = None
-import static_serve
+try:
+    import static_serve  # deploy: static_serve.py di direktori yang sama
+except ImportError:
+    # repo: static_serve.py ter-track di backend/ (backend_live/test_wfs_hq_server.py)
+    import sys as _sys, pathlib as _pl
+    _sys.path.insert(0, str(_pl.Path(__file__).resolve().parent.parent / "backend"))
+    import static_serve
 os.chdir(os.path.dirname(os.path.abspath(__file__)))
 GATEWAY = "http://127.0.0.1:8787/api/"
 TOKEN_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".wfs_ui_token")
