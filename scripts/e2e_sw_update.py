@@ -195,35 +195,75 @@ def main():
         ok2 = bool(t2.get("ok")) and (t2 or {}).get("txt") == "Versi baru kantor tersedia"
 
         # TES3: klik 'Muat ulang' → SKIP_WAITING → aktivasi → controllerchange → reload
-        ev("""(() => { const b = [...document.querySelectorAll('.sw-update button')]
+        # Hardening 193 (flaky ~1/run di 192): tiga vektor ditutup, kriteria sukses
+        # TIDAK diubah (ctrlUrl = skrip fake):
+        #  v1 reply CDP bisa hilang saat navigasi reload (evaluate awaitPromise vs
+        #     context destroyed) → TimeoutError membunuh seluruh run → poll body
+        #     dibungkus try/except; bacaan gagal = inkonklusif, loop lanjut.
+        #  v2 klik dibuang diam-diam ('no-btn' tak tercatat) → hasil klik dicatat
+        #     + klik diulang sampai terkonfirmasi 'clicked' (maks 8 poll / 12 dtk;
+        #     applyUpdate tanpa reg.waiting = no-op aman, idempoten).
+        #  v3 bacaan transien pra-claim (ctrl masih sw.js) adalah NORMAL → loop
+        #     hanya sukses saat ctrlUrl fake yang bertahan pasca claim+reload.
+        # Pola fixed-delay 182/183 dipertahankan (sleep di Python, tanpa polling
+        # loop di evaluate). Setiap poll dicatat (t3["polls"]) — auditability pola
+        # mgMin 188: flake berikutnya terdiagnosis dari output, bukan teori.
+        # Selector tanpa tanda kutip ([data-testid=...]) setara — bebas escape.
+        CLICK_JS = """(() => { const b = [...document.querySelectorAll('.sw-update button')]
           .find(x => x.textContent.trim() === 'Muat ulang')
-          if (!b) return 'no-btn'; b.click(); return 'clicked' })()""")
+          if (!b) return 'no-btn'; b.click(); return 'clicked' })()"""
+        T3_JS = """(async () => {
+          const r = (await navigator.serviceWorker.getRegistrations())[0]
+          const url = r && r.active ? r.active.scriptURL : null
+          return JSON.stringify({
+            ctrlUrl: navigator.serviceWorker.controller ? navigator.serviceWorker.controller.scriptURL : null,
+            activeUrl: url,
+            banner: !!document.querySelector('[data-testid=sw-update-banner]')
+          })
+        })()"""
         t3 = {"ok": False}
-        for i in range(15):
+        clicks, last_click, polls = 0, None, []
+        for i in range(20):
             time.sleep(1.5)
-            t3 = ev(f"""(async () => {{
-              const r = (await navigator.serviceWorker.getRegistrations())[0]
-              const url = r && r.active ? r.active.scriptURL : null
-              return JSON.stringify({{
-                ctrlUrl: navigator.serviceWorker.controller ? navigator.serviceWorker.controller.scriptURL : null,
-                activeUrl: url,
-                banner: !!document.querySelector('[data-testid=\"sw-update-banner\"]')
-              }})
-            }})()""", await_p=True) or {}
-            if str(t3.get("ctrlUrl", "")).endswith("e2e-sw-fake.js"):
+            if clicks == 0 and i < 18:
+                try:
+                    last_click = ev(CLICK_JS)
+                except Exception as e:
+                    last_click = "ev-err:" + type(e).__name__
+                if last_click == "clicked":
+                    clicks += 1
+            try:
+                r3 = ev(T3_JS, await_p=True) or {}
+            except Exception as e:
+                r3 = {"ev_err": type(e).__name__}
+            polls.append(str(r3.get("ctrlUrl") or r3.get("ev_err") or "?"))
+            if str(r3.get("ctrlUrl", "")).endswith("e2e-sw-fake.js"):
                 t3["ok"] = True; t3["ms"] = (i + 1) * 1500
+                t3["ctrlUrl"] = r3.get("ctrlUrl")
                 break
+        t3["clicks"] = clicks; t3["last_click"] = last_click; t3["polls"] = polls
         res["tests"]["tes3_reload_to_new"] = t3
         print("PROG: tes3", flush=True)
         ok3 = bool(t3.get("ok"))
 
         # TES4+TES5: pasca reload — scene hidup (hooks 26) + ringkas error
         time.sleep(15)
-        t5 = ev("""(async () => {
-          await new Promise(r => setTimeout(r, 2000))
-          const n = (window.__agentData || []).length
-          return JSON.stringify({ agents: n, banner2: !!document.querySelector('[data-testid=\"sw-update-banner\"]') })
-        })()""", await_p=True)
+        # Hardening 193: TES3 bisa sukses PERSIS di jendela navigasi (claim
+        # mendahului reload) → evaluate di sini bisa kehilangan reply (context
+        # destroyed) → crash mematikan run padahal alur benar. Satu retry
+        # setelah 5 dtk; bacaan tetap gagal = FAIL bersih, bukan traceback.
+        t5 = None
+        for attempt in range(2):
+            try:
+                t5 = ev("""(async () => {
+                  await new Promise(r => setTimeout(r, 2000))
+                  const n = (window.__agentData || []).length
+                  return JSON.stringify({ agents: n, banner2: !!document.querySelector('[data-testid=sw-update-banner]') })
+                })()""", await_p=True)
+                break
+            except Exception:
+                if attempt == 0:
+                    time.sleep(5)
         res["tests"]["tes5_hooks_after"] = t5
         print("PROG: tes5", flush=True)
         ok5 = (t5 or {}).get("agents") == 26
@@ -241,6 +281,14 @@ def main():
               json.dumps({"tes1": ok1, "tes1b": ok1b, "tes2": ok2, "tes3": ok3,
                           "tes4_errors": len(res["errors"]), "tes5_agents": (t5 or {}).get("agents")},
                          ensure_ascii=False), flush=True)
+        if not verdict:
+            # Hardening 193b: diagnosis dari DATA (pola mgMin 188), bukan teori —
+            # detail tes3 (clicks/last_click/polls) + tes5 tercetak saat FAIL.
+            print("E2E_SW_UPDATE_DETAIL:", json.dumps(
+                {"tes3": res["tests"].get("tes3_reload_to_new"),
+                 "tes2": res["tests"].get("tes2_banner"),
+                 "tes5": res["tests"].get("tes5_hooks_after"),
+                 "errors": res["errors"][:3]}, ensure_ascii=False), flush=True)
         sys.exit(0 if verdict else 1)
     finally:
         try: p.kill()
