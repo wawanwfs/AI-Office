@@ -27,14 +27,19 @@ class WS:
     def __init__(s, u):
         from urllib.parse import urlparse
         pr = urlparse(u)
-        s.sock = socket.create_connection((pr.hostname, pr.port))
+        WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
+        s.sock = socket.create_connection((pr.hostname, pr.port), timeout=WS_TIMEOUT_S)
         s.sock.sendall((f"GET {pr.path} HTTP/1.1\r\nHost: {pr.hostname}:{pr.port}\r\n"
                         "Upgrade: websocket\r\nConnection: Upgrade\r\n"
                         f"Sec-WebSocket-Key: {base64.b64encode(os.urandom(16)).decode()}\r\n"
                         "Sec-WebSocket-Version: 13\r\n\r\n").encode())
         buf = b""
+        s.sock.settimeout(WS_TIMEOUT_S)  # d1: handshake tanpa deadline = hang selamanya
         while b"\r\n\r\n" not in buf:
-            buf += s.sock.recv(1)
+            c = s.sock.recv(1)
+            if not c:  # chrome mati di tengah handshake -> EOF, dulu loop selamanya
+                raise ConnectionResetError("EOF saat handshake WS")
+            buf += c
 
     def send(s, m):
         d = json.dumps(m).encode()

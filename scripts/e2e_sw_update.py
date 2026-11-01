@@ -40,7 +40,8 @@ self.addEventListener('fetch', () => {})  // passthrough — jangan ganggu app
 class WS:
     def __init__(s, u):
         pr = urlparse(u)
-        s.sock = socket.create_connection((pr.hostname, pr.port), timeout=10)
+        WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
+        s.sock = socket.create_connection((pr.hostname, pr.port), timeout=WS_TIMEOUT_S)
         s.sock.settimeout(10)  # berlaku SEJAK handshake — pelajaran 183
         s.sock.sendall((f"GET {pr.path} HTTP/1.1\r\nHost: {pr.hostname}:{pr.port}\r\n"
                         "Upgrade: websocket\r\nConnection: Upgrade\r\n"
@@ -48,7 +49,10 @@ class WS:
                         "Sec-WebSocket-Version: 13\r\n\r\n").encode())
         buf = b""
         while b"\r\n\r\n" not in buf:
-            buf += s.sock.recv(1)
+            c = s.sock.recv(1)
+            if not c:  # chrome mati di tengah handshake -> EOF, dulu loop selamanya
+                raise ConnectionResetError("EOF saat handshake WS")
+            buf += c
     def send(s, m):
         d = m.encode(); h = b"\x81"; n = len(d); mask = os.urandom(4)
         if n < 126: h += bytes([0x80 | n])

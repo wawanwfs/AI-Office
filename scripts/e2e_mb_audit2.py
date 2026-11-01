@@ -23,14 +23,19 @@ try:
     tabs = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{PORT}/json/list", timeout=5).read())
     wsu = [t["webSocketDebuggerUrl"] for t in tabs if t.get("type") == "page"][0]
     pr = urlparse(wsu)
-    s = socket.create_connection((pr.hostname, pr.port))
+    WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
+    s = socket.create_connection((pr.hostname, pr.port), timeout=WS_TIMEOUT_S)
     s.sendall((f"GET {pr.path} HTTP/1.1\r\nHost: {pr.hostname}:{pr.port}\r\n"
                "Upgrade: websocket\r\nConnection: Upgrade\r\n"
                f"Sec-WebSocket-Key: {base64.b64encode(os.urandom(16)).decode()}\r\n"
                "Sec-WebSocket-Version: 13\r\n\r\n").encode())
     buf = b""
+    s.settimeout(WS_TIMEOUT_S)  # d1: handshake tanpa deadline = hang selamanya
     while b"\r\n\r\n" not in buf:
-        buf += s.recv(1)
+        c = s.recv(1)
+        if not c:  # chrome mati di tengah handshake -> EOF, dulu loop selamanya
+            raise ConnectionResetError("EOF saat handshake WS")
+        buf += c
     mid = [0]
 
     def cmd(method, **params):

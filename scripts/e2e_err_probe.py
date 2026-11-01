@@ -60,14 +60,19 @@ class WS:
     def __init__(s, u):
         from urllib.parse import urlparse
         pr = urlparse(u)
-        s.sock = socket.create_connection((pr.hostname, pr.port))
+        WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
+        s.sock = socket.create_connection((pr.hostname, pr.port), timeout=WS_TIMEOUT_S)
         s.sock.sendall((f"GET {pr.path} HTTP/1.1\r\nHost: {pr.hostname}:{pr.port}\r\n"
                         "Upgrade: websocket\r\nConnection: Upgrade\r\n"
                         f"Sec-WebSocket-Key: {base64.b64encode(os.urandom(16)).decode()}\r\n"
                         "Sec-WebSocket-Version: 13\r\n\r\n").encode())
         buf = b""
+        s.sock.settimeout(WS_TIMEOUT_S)  # d1: handshake tanpa deadline = hang selamanya
         while b"\r\n\r\n" not in buf:
-            buf += s.sock.recv(1)
+            c = s.sock.recv(1)
+            if not c:  # chrome mati di tengah handshake -> EOF, dulu loop selamanya
+                raise ConnectionResetError("EOF saat handshake WS")
+            buf += c
 
     def send(s, m):
         d = m.encode(); h = b"\x81"; n = len(d); mask = os.urandom(4)
@@ -133,9 +138,12 @@ def main():
             mid[0] += 1
             ws.send(json.dumps({"id": mid[0], "method": method, "params": params}))
             for _ in range(600):
-                r = json.loads(ws.recv_text())
+                try:
+                    r = json.loads(ws.recv_text())
+                except socket.timeout:
+                    return None  # siklus 197: reply macet/hilang -> None tercatat (bukan hang)
                 if r.get("id") == mid[0]: return r
-
+            return None  # siklus 197: batas loop habis -> None tercatat
         cmd("Runtime.enable"); cmd("Log.enable"); cmd("Page.enable")
         if mobile:
             # Viewport HP dari awal init scene (bukan emulasi setelahnya):
