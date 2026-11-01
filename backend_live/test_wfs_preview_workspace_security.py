@@ -1,10 +1,21 @@
-"""Preview and workspace security regressions; no production data/network."""
+"""Preview and workspace security regressions; no production data/network.
+
+Migrasi backend/test_preview_workspace_security.py (siklus 208) — pengujian
+menarget server.py repo + modul superset wfs_tasks/wfs_orders (satu sumber
+produksi :8787, pola 206/207).
+"""
 import asyncio
 import subprocess
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
+
 import httpx
 import pytest
 from starlette.requests import Request
-from test_execution_guards import isolated, server
+from test_wfs_execution_guards import isolated, server
 
 
 def test_preview_only_forwards_application_headers(server, monkeypatch):

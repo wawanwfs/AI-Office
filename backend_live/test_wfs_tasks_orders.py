@@ -1,14 +1,23 @@
-"""Unit test untuk modul tasks.py & orders.py (backend WFS AI-Office).
+"""Test wfs_tasks.py & wfs_orders.py — SATU SUMBER engine produksi :8787 (siklus 208).
+
+Migrasi backend/test_tasks_orders.py (pola 206/207); modul superset =
+hardening eksekusi (approval gate + pause persisten + claim fcntl) +
+fitur live (~/.hermes/.env default AI).
 
 Sengaja memakai DB SQLite sementara (tmp_path) via monkeypatch variabel
 global `DB`, supaya TIDAK menyentuh tasks.db / orders.db produksi.
 """
 import json
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))            # modul superset backend_live
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))  # database.py repo
 
 import pytest
 
-import tasks
-import orders
+import wfs_tasks as tasks
+import wfs_orders as orders
 
 
 @pytest.fixture

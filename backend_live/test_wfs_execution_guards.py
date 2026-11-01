@@ -1,8 +1,18 @@
-"""Regression tests: all data and runtime dependencies are isolated."""
+"""Regression tests: all data and runtime dependencies are isolated.
+
+Migrasi backend/test_execution_guards.py (siklus 208) — target modul superset
+wfs_tasks.py (satu sumber engine produksi :8787, pola 206/207).
+"""
 import asyncio
+import sys
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).resolve().parent))            # modul superset backend_live
+sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))  # database.py repo
+
 import pytest
 import database
-import tasks
+import wfs_tasks as tasks
 
 
 @pytest.fixture
@@ -34,6 +44,11 @@ def server(isolated, monkeypatch):
     monkeypatch.setattr(fastapi.staticfiles.StaticFiles, 'check_config', lambda self: None)
     import pathlib
     pathlib.Path(__file__).with_name('static').mkdir(exist_ok=True)
+    # server.py (repo) mengimpor flat `tasks` / `orders` — alias ke modul
+    # superset backend_live agar pengujian menarget SATU SUMBER yang sama
+    # dengan produksi :8787 (siklus 208).
+    sys.modules.setdefault('tasks', tasks)
+    sys.modules.setdefault('orders', sys.modules['wfs_orders'])
     import server
     server._bg_tasks.clear()
     return server

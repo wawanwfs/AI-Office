@@ -3,6 +3,25 @@ WFS TASK ENGINE — orchestrator nyata.
 PM memecah project → task dispatch ke agent sesuai role → agent kerja via LLM
 (masing-masing dengan API config-nya sendiri) → output file nyata di repo
 saas-dibantuin → QA review → status board.
+
+SATU SUMBER tasks.py produksi gateway :8787 (wfs-office) — siklus 208 (pola 206/207).
+
+Latar belakang (audit drift siklus 208):
+- backend/tasks.py (repo) punya hardening eksekusi (require_launch_approval +
+  is_paused/set_paused persisten + claim_task fcntl + recover_interrupted +
+  _execution_llm guard paused/approval per-call) TAPI TANPA fitur live:
+  load_default memakai env WFS_AI_* (default openai) bukan ~/.hermes/.env.
+- ~/wfs-office/tasks.py (produksi :8787) memakai ~/.hermes/.env tapi TANPA
+  semua hardening itu — plus BUG PRODUKSI: jalur retry QA-revise memanggil
+  asyncio.sleep tanpa import asyncio dalam scope (NameError di produksi),
+  dan pause engine in-memory (_PAUSED di server) hilang saat restart.
+- File ini = SUPERSET keduanya: fitur live eksak + hardening hidup.
+  Ter-track di git, dites backend_live/test_wfs_tasks_orders.py +
+  test_wfs_execution_guards.py dan drift-gate src/__tests__/tasks_drift.test.js.
+
+DEPLOY: python3 scripts/apply_wfs_tasks.py --apply
+(backup → compile-check → restart wfs-office → smoke → auto-rollback).
+JANGAN mengedit ~/wfs-office/tasks.py langsung — drift gate vitest akan FAIL.
 """
 import sqlite3, json, os, time, threading, httpx
 from pathlib import Path
@@ -86,10 +105,26 @@ def set_status(tid, status, result=None, files=None, review=None):
 
 # ---------- LLM execution ----------
 def load_default():
-    """Konfigurasi AI default dari environment: WFS_AI_BASE, WFS_AI_KEY, WFS_AI_MODEL."""
-    return {"base": os.environ.get("WFS_AI_BASE", "https://api.openai.com/v1").rstrip("/"),
-            "key": os.environ.get("WFS_AI_KEY", ""),
-            "model": os.environ.get("WFS_AI_MODEL", "gpt-4o-mini")}
+    """Konfigurasi AI default gateway (fitur live produksi, eksak siklus 200):
+
+    Baca ~/.hermes/.env (CUSTOM_BASE_URL + CUSTOM_API_KEY, model 'auto') —
+    fallback kosong jujur bila file absen. Override env WFS_AI_* tetap
+    didukung untuk test/isolasi.
+    """
+    env = {}
+    try:
+        with open(os.path.expanduser("~/.hermes/.env")) as f:
+            for line in f:
+                if "=" in line and not line.strip().startswith("#"):
+                    k, _, v = line.strip().partition("=")
+                    env[k] = v
+    except Exception:
+        pass
+    return {
+        "base": os.environ.get("WFS_AI_BASE") or env.get("CUSTOM_BASE_URL", "https://token.lightvela.ai/v1").rstrip("/"),
+        "key": os.environ.get("WFS_AI_KEY") or env.get("CUSTOM_API_KEY", ""),
+        "model": os.environ.get("WFS_AI_MODEL") or "auto",
+    }
 
 DEFAULT_AI = load_default()
 ROLE_SYS = {
@@ -241,9 +276,29 @@ def write_output_files(task_id, output):
     return written
 
 def require_launch_approval(project):
-    import database
+    """Approval gate eksekusi task (hardening siklus 186) — DB approvals.
+
+    Lokasi DB software house: modul `database` repo bila tersedia (git
+    checkout / backend_live dgn sys.path), fallback produksi ~/wfs-hq/
+    database.py (gateway :8787 tidak memuat database.py — path eksplisit,
+    pola import 3-tingkat wfs_api_service.py). DB absen = FAIL LOUD
+    (PermissionError jelas, bukan lolos diam-diam): mesin berbayar tidak
+    pernah eksekusi tanpa approval terbaca.
+    """
     from contextlib import closing
-    with closing(database.get_db()) as conn:
+    try:
+        import database  # noqa: F401  (repo / backend_live via sys.path)
+        conn_cm = closing(database.get_db())
+    except ImportError:
+        import importlib.util
+        _db_py = os.path.expanduser("~/wfs-hq/database.py")
+        spec = importlib.util.spec_from_file_location("wfs_database_live", _db_py)
+        if spec is None or spec.loader is None:
+            raise PermissionError('project_launch approval required (database.py tidak ditemukan)')
+        _dbm = importlib.util.module_from_spec(spec)
+        spec.loader.exec_module(_dbm)
+        conn_cm = closing(_dbm.get_db())
+    with conn_cm as conn:
         row = conn.execute(
             "SELECT status FROM approvals WHERE project_id=? AND action_type='project_launch' "
             "ORDER BY created_at DESC, rowid DESC LIMIT 1", (str(project),)).fetchone()
