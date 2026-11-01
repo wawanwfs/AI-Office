@@ -3,6 +3,7 @@
 // meja majalah, TV info dgn dashboard live dari /wfs-project.
 // Builder berbasis konteks (THREE, office, M, MB, drawTvDashboard) — pola sama dgn cafe.js.
 import { applyPollResult, nextPollDelay } from '../../lib/connection_spec.js'
+import { fetchWithTimeout } from '../../lib/fetch_timeout.js'
 import { uiTexture, uiMaterial } from './ui_colorspace.js'
 
 export function createLounge(ctx) {
@@ -98,7 +99,7 @@ export function createLounge(ctx) {
     if (!force && document.visibilityState === 'hidden') return;
     if (tvStopped) return; // destroy sudah jalan (remount/HMR) — jangan mulai siklus baru
     try {
-      const r = await fetch('/wfs-project');
+      const r = await fetchWithTimeout('/wfs-project');
       // Siklus 125: scene bisa dimusnahkan selama fetch berjalan (remount/HMR).
       // Dulu await selesai SETELAH purge destroy → window.__tvData/__lastTvDrawAt
       // "bangkit" kembali menunjuk scene mati + drawTv() menggambar canvas mati

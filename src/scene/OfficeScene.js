@@ -13,6 +13,7 @@ import { perfStep } from './parts/perf_quality.js';
 import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam, resetFocusGoal, agentFocusPos } from './parts/kamera_focus.js';
 import { nextAgentIndex } from './parts/agent_cycle.js';
 import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js';
+import { fetchWithTimeout } from '../lib/fetch_timeout.js';
 import { orbitStep, orbitFocusGoal, ORBIT_KEY_STEP, ORBIT_KEY_STEP_FAST } from './parts/orbit_spec.js';
 import { snapshotDataUrl, snapshotFilename } from './parts/snapshot_spec.js';
 import { dblclickPointGoal, dblclickBlankGoal, tapCandidate, isDoubleTap, dtapRadius, DTAP_ZOOM_STEP } from './parts/dblclick_spec.js';
@@ -1282,7 +1283,7 @@ window.__spawnBubble=(x,y,z,text,color,anchor)=>createBubble(x,y,z,text,color,an
     if(pageHidden||pollStopped) return; // hemat fetch saat tab tidak dilihat
     window.__pollBadges=pollStatus; // diekspos utk refresh instan onVis
     try{
-          const r=await fetch('/wfs-api/agents/status');
+          const r=await fetchWithTimeout('/wfs-api/agents/status');
           // Siklus 124: scene bisa dimusnahkan selama fetch berjalan (remount/HMR).
           // Dulu penulisan window.__wfsAgentIdMap/__wfsRunningTasks + aksi badge/
           // bubble pada graph mati tetap jalan SETELAH purge destroy → hook
@@ -1294,7 +1295,7 @@ window.__spawnBubble=(x,y,z,text,color,anchor)=>createBubble(x,y,z,text,color,an
           window.__wfsAgentIdMap=im;
           // SATU fetch utk badge + bangun + alert + task running (dulu 2 interval fetch terpisah)
           try{
-            const r2=await fetch('/wfs-api/tasks');
+            const r2=await fetchWithTimeout('/wfs-api/tasks');
             const t2=await r2.json();
             const tasks=Array.isArray(t2)?t2:(t2.tasks||[]);
             // gabung data via parts/running_tasks.js (murni, diuji unit) — dipakai autoTalk

@@ -5,6 +5,7 @@
 
 import { computePct, clip, cardY, CARD_H, subtitle as subLine, bannerParts, bannerLayout, columnItems, cardMeta, stripLayout, STRIP_GAP, STRIP_LEFT, STRIP_RIGHT } from './projectboard_data.js'
 import { applyPollResult, connectionBadge, nextPollDelay } from '../../lib/connection_spec.js'
+import { fetchWithTimeout } from '../../lib/fetch_timeout.js'
 import { uiTexture, uiMaterial } from './ui_colorspace.js'
 
 // Polling adaptif papan 3D: cadence sehat tetap 60 dtk (perilaku lama), tapi
@@ -174,7 +175,7 @@ export function createProjectBoard(office, THREE) {
     if (document.visibilityState === 'hidden') return
     if (pollStopped) return // destroy sudah jalan (remount/HMR) — jangan mulai siklus baru
     try {
-      const r = await fetch('/wfs-project')
+      const r = await fetchWithTimeout('/wfs-project')
       // Siklus 125: scene bisa dimusnahkan selama fetch berjalan (remount/HMR).
       // Dulu await selesai SETELAH purge destroy → draw() menggambar canvas papan
       // scene mati + tracker koneksi terus di-update (pola bug sama dgn tvPull,

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
 import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js'
 import { useDialogA11y } from '../lib/dialogA11y'
+import { fetchWithTimeout } from '../lib/fetch_timeout.js'
 import { IconRocket, IconClose } from './Icons'
 import { normalizeTaskStatus, formatTaskId } from '../scene/parts/projectboard_data'
 
@@ -30,7 +31,8 @@ export default function ProjectPanel() {
   const load = useCallback(async (signal) => {
     const rid = ++loadRid.current
     try {
-      const r = await fetch('/wfs-project', { signal })
+      // siklus 203: deadline 20 dtk — dulu sinyal mati (ac tak pernah di-abort)
+      const r = await fetchWithTimeout('/wfs-project', { signal, timeoutMs: 20000 })
       if (rid !== loadRid.current) return // poll lebih baru / panel ditutup — basi, abaikan
       if (!r.ok) throw new Error('HTTP ' + r.status)
       setD(await r.json()); setErr(false)
