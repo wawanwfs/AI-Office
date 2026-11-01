@@ -1,13 +1,39 @@
-"""
-API Service & Reverse Proxy Router for WFS PROJECT — Autonomous AI Software House.
+"""API Service & Reverse Proxy Router for WFS PROJECT - Autonomous AI Software House.
 Provides full REST API endpoints and reverse proxy for live container previews.
+
+SATU SUMBER api_service produksi wfs-hq (:9503) — siklus 207 (pola 206).
+
+Latar belakang (audit drift siklus 207):
+- backend/api_service.py (repo) punya hardening 2026-10-28 (_content_length
+  toleran + MAX_API_BODY 5MB → 413) TAPI TANPA fitur live: endpoint DELETE
+  /api/tasks (reset bersih) + DELETE /api/tasks/{id} yang hidup di produksi.
+- ~/wfs-hq/api_service.py (produksi) punya fitur DELETE reset tersebut tapi
+  TANPA hardening → int() telanjang Content-Length + read(ln) tanpa cap di
+  jalur POST /api/* (header malformed = ValueError bunuh handler; body
+  raksasa dibaca ke RAM).
+- File ini = SUPERSET keduanya: fitur live eksak + hardening hidup di jalur
+  POST. Ter-track di git, dites backend_live/test_wfs_api_service.py dan
+  drift-gate src/__tests__/hq_api_service_drift.test.js.
+
+DEPLOY: python3 scripts/apply_wfs_api_service.py --apply
+(backup → compile-check → restart wfs-hq → smoke → auto-rollback).
+JANGAN mengedit ~/wfs-hq/api_service.py langsung — drift gate vitest akan FAIL.
 """
 
 import json
 import os
+import sys
 import urllib.request
 import urllib.error
 import urllib.parse
+
+# Jalur import 3-tingkat (pola wfs_sh_console.py): (1) paket (git checkout
+# produksi), (2) flat di backend_live (pytest superset) — database.py repo
+# disediakan via sys.path, (3) flat di ~/wfs-hq (produksi).
+_REPO_BACKEND = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "backend")
+if _REPO_BACKEND not in sys.path:
+    sys.path.append(_REPO_BACKEND)
+
 try:
     from .database import (
         list_projects, get_project, save_project, get_db, list_agents, get_recent_logs, log_event
@@ -273,6 +299,35 @@ def handle_api_request(handler, method, path):
             plan = TaskOrchestrator.plan_task(instr, project_name=pname, task_type=ptype)
             send_json(plan, status=201)
             return True
+
+    # ── RESET / BERSIHKAN TASK (fitur live produksi, siklus 207) ──
+    if api_path == "tasks" and method == "DELETE":
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("SELECT COUNT(*) FROM tasks")
+        n = cur.fetchone()[0]
+        with conn:
+            conn.execute("DELETE FROM subtasks")
+            conn.execute("DELETE FROM tasks")
+            conn.execute("DELETE FROM projects")
+            conn.execute("DELETE FROM execution_logs")
+            conn.execute("UPDATE agents SET status='idle', current_task_id=NULL")
+        conn.close()
+        log_event(f"Reset data: {n} task dibersihkan — sistem siap tugas nyata baru", level="INFO", source="system")
+        send_json({"ok": True, "cleared_tasks": n, "message": f"{n} task + project + log dibersihkan. Sistem siap untuk tugas nyata."})
+        return True
+
+    if api_path.startswith("tasks/") and api_path.count("/") == 1 and method == "DELETE":
+        tid = api_path.split("/")[1]
+        conn = get_db()
+        cur = conn.cursor()
+        cur.execute("DELETE FROM subtasks WHERE task_id = ?", (tid,))
+        cur.execute("DELETE FROM tasks WHERE id = ?", (tid,))
+        conn.commit()
+        left = cur.execute("SELECT COUNT(*) FROM tasks").fetchone()[0]
+        conn.close()
+        send_json({"ok": True, "remaining": left})
+        return True
 
     if api_path.startswith("tasks/") and api_path.endswith("/execute") and method == "POST":
         tid = api_path.split("/")[1]
