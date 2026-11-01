@@ -186,12 +186,18 @@ def main():
         threading.Thread(target=pump, daemon=True).start()
 
         def wait_id(myid, tries=600):
+            # siklus 200: tries×timeout=20 dtk = worst case 200 MENIT TANPA deadline
+            # total (reply hilang tapi socket tetap hidup) → probe/cron menggantung.
+            # Kelas cacat sama dgn office_phase di 199, tersisa di 13 probe lain.
+            # Deadline TOTAL 60 dtk: reply yang tak datang = None tercatat jujur.
+            deadline = time.time() + 60
             for _ in range(tries):
+                remaining = deadline - time.time()
+                if remaining <= 0:
+                    return None
                 try:
-                    m = msgq.get(timeout=20)
+                    m = msgq.get(timeout=min(20, remaining))
                 except queue.Empty:
-                    # Scene init berat bisa memblokir main thread JS belasan detik;
-                    # 20 dtk tanpa balasan → anggap tidak akan datang (caller punya fallback).
                     return None
                 if m is None:
                     raise ConnectionResetError("CDP socket tertutup")
@@ -208,6 +214,11 @@ def main():
         def ev(expr):
             r = cmd("Runtime.evaluate", expression=expr, returnByValue=True, awaitPromise=True)
             res = (r or {}).get("result") or {}
+            # siklus 200: exceptionDetails tidak lagi ditelan senyap (pola b2
+            # office_phase 199) — kontrak return value tetap, diagnosis ke stderr
+            if res.get("exceptionDetails"):
+                print("E2E_SCENE_HOOKS _exc:",
+                      json.dumps(res["exceptionDetails"])[:300], file=sys.stderr)
             return (res.get("result") or {}).get("value")
 
         cmd("Page.enable"); cmd("Runtime.enable")
