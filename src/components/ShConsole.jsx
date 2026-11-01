@@ -66,6 +66,7 @@ export default function ShConsole({ show, onClose }) {
   const [bulkBusy, setBulkBusy] = useState(false)
   const bulkInFlight = useRef(false)
   const [liveLogs, setLiveLogs] = useState([])
+  const [esState, setEsState] = useState('connecting') // siklus 204: connecting|open|error — liveness SSE jujur
   const drawerRef = useRef(null)
   // Guard jalur async poll overview (siklus 127): satu rid untuk seluruh tab
   // overview — respons poll LAMA (interval 10 dtk overlap saat gateway lambat)
@@ -230,9 +231,16 @@ export default function ShConsole({ show, onClose }) {
       const iv = setInterval(loadOverview, 10000)
       let es = null
       let esAlive = true // pesan EventSource yang disetel setelah cleanup tak menulis state
+      setEsState('connecting') // masuk tab overview = handshake baru
       if (typeof EventSource !== 'undefined') {
         try {
           es = new EventSource('/wfs-api/events')
+          // Liveness jujur (siklus 204): tanpa onopen/onerror, stream mati
+          // (proxy/gateway down) membiarkan badge "● N log diterima realtime"
+          // tampil selamanya + log stale tetap disajikan sbg "realtime" —
+          // kelas sama dgn badge live palsu siklus 203.
+          es.onopen = () => { if (esAlive) setEsState('open') }
+          es.onerror = () => { if (esAlive) setEsState('error') } // EventSource auto-reconnect → onopen berikut memulihkan state
           es.onmessage = (ev) => {
             try {
               const j = JSON.parse(ev.data)
@@ -240,7 +248,7 @@ export default function ShConsole({ show, onClose }) {
             } catch { /* abaikan */ }
           }
         } catch { /* EventSource tidak tersedia */ }
-      }
+      } else { setEsState('error') }
       return () => {
         clearInterval(iv)
         // eslint-disable-next-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async), bukan membaca snapshot ref
@@ -378,7 +386,7 @@ export default function ShConsole({ show, onClose }) {
         </div>
         <div style={STYLE.body}>
           {err && <div style={STYLE.err} role="alert">⚠ {err}</div>}
-          {tab === 'overview' && <Overview ov={ov} liveLogs={liveLogs} />}
+          {tab === 'overview' && <Overview ov={ov} liveLogs={liveLogs} esState={esState} />}
           {tab === 'projects' && <Projects projects={projects} onRefresh={loadProjects} onOpenWorkspace={(pid) => { setTab('ws'); selectWsProject(pid) }} />}
           {tab === 'tasks' && (
             <div>
@@ -567,9 +575,17 @@ export default function ShConsole({ show, onClose }) {
   )
 }
 
-function Overview({ ov, liveLogs }) {
+function Overview({ ov, liveLogs, esState }) {
   if (!ov) return <p style={{ color: '#8fa2c4' }}>Memuat statistik…</p>
   const live = (liveLogs && liveLogs.length) || 0
+  // Siklus 204 — liveness SSE jujur: badge "realtime" HANYA saat stream
+  // benar-benar terbuka (onopen). error = stream mati/putus (log stale),
+  // connecting = handshake belum selesai. Log stale tetap tampil tapi dgn
+  // label jujur, bukan klaim "realtime" palsu.
+  const streamOpen = esState === 'open'
+  const streamMeta = streamOpen ? 'realtime'
+    : esState === 'error' ? 'terputus — menampilkan log terakhir'
+    : 'menyambungkan…'
   const stats = [
     ['Projects', ov.projects], ['Task total', ov.tasks],
     ['Agent total', ov.agents], ['Subtask jalan', ov.running_subtasks], ['Log event', ov.total_logs],
@@ -597,15 +613,21 @@ function Overview({ ov, liveLogs }) {
         ))}
       </div>
       <div style={STYLE.card}>
-        <div style={{ fontWeight: 700, marginBottom: 8 }}>Log terbaru <span style={{ color: '#5f6f90', fontWeight: 400, fontSize: 11 }}>(realtime)</span></div>
+        <div style={{ fontWeight: 700, marginBottom: 8 }}>Log terbaru <span style={{ color: '#5f6f90', fontWeight: 400, fontSize: 11 }}>({streamMeta})</span></div>
         <div role="log" aria-live="polite" aria-label="Log realtime">
           {/* bukti stream hidup: titik hijau + hitung frame log diterima SSE
-              (siklus 154) — hanya saat stream mengirim, bukan angka DB */}
-          {live > 0 && (
+              (siklus 154) — hanya saat stream TERBUKA & mengirim, bukan angka
+              DB; siklus 204: state koneksi stream ikut ditampilkan jujur */}
+          {streamOpen && live > 0 && (
             <div style={{ fontSize: 11, color: '#5f6f90', marginBottom: 6 }} data-testid="live-log-badge">
               <span aria-hidden="true" style={{ color: STATUS_HEX.work, marginRight: 4 }}>●</span>
               <span className="sr-only">Log realtime aktif: </span>
               {live} log diterima realtime
+            </div>
+          )}
+          {esState === 'error' && (
+            <div style={{ fontSize: 11, color: '#c2884e', marginBottom: 6 }} data-testid="live-log-stale" role="status">
+              ⚠ Stream log terputus — daftar di bawah adalah log terakhir, bukan realtime.
             </div>
           )}
           {(liveLogs && liveLogs.length) ? null : (ov.recent_logs || []).length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>Belum ada log.</div>}

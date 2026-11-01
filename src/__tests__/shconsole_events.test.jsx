@@ -7,7 +7,7 @@
 // (`j.type==='log' && j.data` → prepended, maks 30) — replay murni dari pesan
 // server nyata (frame tersimpan dari stream produksi, tanpa EventSource global).
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, cleanup, waitFor } from '@testing-library/react'
+import { render, screen, cleanup, waitFor, act } from '@testing-library/react'
 import ShConsole from '../components/ShConsole'
 
 // Frame SSE tercatat dari gateway produksi (probe raw siklus 154):
@@ -71,6 +71,7 @@ describe('SSE events — kontrak payload → liveLogs ShConsole', () => {
     expect(await screen.findByText('Task total')).toBeTruthy() // tab Overview default
     // frontend membuka stream saat tab Overview terbuka
     expect(instances.length).toBeGreaterThan(0)
+    await act(async () => { instances[0].onopen?.() }) // siklus 204: badge hanya saat stream open
     // kirim frame log (persis seperti es.onmessage menerima data server)
     instances[0].onmessage({ data: JSON.stringify(FRAME_LOG) })
     await waitFor(() => {
@@ -86,6 +87,7 @@ describe('SSE events — kontrak payload → liveLogs ShConsole', () => {
     stubFetch({ '/wfs-api/sh/overview': OV })
     render(<ShConsole show onClose={() => {}} />)
     expect(await screen.findByText('Task total')).toBeTruthy()
+    await act(async () => { instances[0].onopen?.() }) // siklus 204
     instances[0].onmessage({ data: JSON.stringify(FRAME_CONNECTED) })
     // frame connected bukan log — baris historis tetap, tak ada baris live
     expect(screen.getByText(/onboarding/)).toBeTruthy()
@@ -98,6 +100,7 @@ describe('SSE events — kontrak payload → liveLogs ShConsole', () => {
     stubFetch({ '/wfs-api/sh/overview': OV })
     render(<ShConsole show onClose={() => {}} />)
     expect(await screen.findByText('Task total')).toBeTruthy()
+    await act(async () => { instances[0].onopen?.() }) // siklus 204
     for (let i = 1; i <= 32; i++) {
       instances[0].onmessage({ data: JSON.stringify({
         type: 'log',
