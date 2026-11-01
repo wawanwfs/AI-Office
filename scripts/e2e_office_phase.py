@@ -107,9 +107,16 @@ def main():
         threading.Thread(target=pump, daemon=True).start()
 
         def wait_id(myid, tries=200):
+            # siklus 199: tries×timeout=20 dtk = worst case 66 MENIT tanpa deadline
+            # total (reply hilang tapi socket hidup). Deadline total 60 dtk — reply
+            # yang tak datang = None tercatat jujur, bukan cron menggantung.
+            deadline = time.time() + 60
             for _ in range(tries):
+                remaining = deadline - time.time()
+                if remaining <= 0:
+                    return None
                 try:
-                    m = msgq.get(timeout=20)
+                    m = msgq.get(timeout=min(20, remaining))
                 except queue.Empty:
                     return None
                 if m is None:
@@ -129,7 +136,13 @@ def main():
             for _ in range(tries):
                 r = cmd("Runtime.evaluate", expression=expr, returnByValue=True)
                 if r:
-                    return (r.get("result", {}).get("result", {}) or {})
+                    res = (r.get("result", {}).get("result", {}) or {})
+                    # siklus 199: exceptionDetails di-surface (dulu ditelan senyap
+                    # → FAIL "chip tidak muncul" tanpa diagnosis; pola 198 log-5-run)
+                    if r.get("result", {}).get("exceptionDetails"):
+                        res["_exc"] = json.dumps(
+                            r["result"]["exceptionDetails"])[:300]
+                    return res
                 time.sleep(0.5)
             return {}
 

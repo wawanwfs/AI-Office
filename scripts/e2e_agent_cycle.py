@@ -54,6 +54,7 @@ try:
         buf += c
     mid = [0]
     errs, excs = [], []
+    TIMES_OK = 0  # siklus 199: eval one-shot besar yang kehabisan budget wait
 
     def send_raw(d):
         h = b"\x81"; n = len(d); mask = os.urandom(4)
@@ -114,6 +115,7 @@ try:
             handle(m)
 
     def ev(expr, wait=6.0, await_promise=False):
+        global TIMES_OK  # siklus 199
         mid[0] += 1
         myid = mid[0]
         send_raw(json.dumps({"id": myid, "method": "Runtime.evaluate",
@@ -121,7 +123,16 @@ try:
                                         "awaitPromise": await_promise}}).encode())
         r = pump(wait, want_id=myid)
         if r is None:
-            return {"TIMEOUT": True}
+            # siklus 199: budget habis ≠ hasil. Cek sisa: eval one-shot besar bisa
+            # SUDAH selesai di halaman tapi reply meleset dari budget pump (scene
+            # SwiftShader lambat; komentar TES4: tiap await bisa tersendat ~2 dtk).
+            # Sisa = read-msg SATU kali dgn deadline longgar — side-effect-free.
+            late = pump(15, want_id=myid)
+            if late is not None:
+                TIMES_OK += 1
+                r = late
+            else:
+                return {"TIMEOUT": True}
         r = r.get("result", {})
         if "exceptionDetails" in r:
             return {"EXC": json.dumps(r["exceptionDetails"])[:500]}
@@ -162,6 +173,11 @@ try:
     pump(1)
 
     # TES 1: C pertama → agen pertama; panel chat TIDAK terbuka (suppressSync).
+    # siklus 199: budget one-shot TES1-3 dinaikkan 40→75 dtk (paritas TES4/5=90):
+    # IIFE 2×16×200ms = 6.4 dtk ideal TAPI tiap await bisa tersendat ~2 dtk di
+    # SwiftShader (komentar TES4) + guard Help 14 iter × 300ms = 4.2 dtk lagi →
+    # 40 dtk habis saat VM load berat (pola FAIL 197 zoom_follow); deadline
+    # ev() kini WAJIB > worst-case loop in-page, bukan sama dengannya.
     t1 = ev("""(async () => {
       const sleep = (ms) => new Promise(r => setTimeout(r, ms));
       const press = (k, sh) => document.dispatchEvent(
@@ -180,7 +196,7 @@ try:
       panel = !!document.getElementById('wfs-panel');
       return { before, name, ring, goalR: goal ? goal.r : null,
                insp, panel, escAfter: window.__escModalAtDispatch };
-    })()""", wait=40, await_promise=True)
+    })()""", wait=75, await_promise=True)
     r1 = t1 if isinstance(t1, dict) else {}
     T.append(check("TES1 C pertama: agen terfokus + goal follow r=20 + ring + inspector, TANPA panel chat",
                    r1.get("before") is None and r1.get("name") is not None
@@ -209,7 +225,7 @@ try:
       const goal = window.__dbg().focus;
       return { n0, n1, n2, modal0, panel, inspName,
                goalR: goal ? goal.r : null, moved: n1 !== n0 && n2 !== n1 && n2 !== n0 };
-    })()""", wait=40, await_promise=True)
+    })()""", wait=75, await_promise=True)
     r2 = t2 if isinstance(t2, dict) else {}
     T.append(check("TES2 C kedua & ketiga: nama agen berubah tiap langkah (exception inspector) + tanpa panel chat",
                    r2.get("moved") is True and r2.get("panel") is False
@@ -229,7 +245,7 @@ try:
       let fwd = back;
       for (let i = 0; i < 16; i++) { await sleep(200); fwd = window.__agentCycle(); if (fwd !== back) break; }
       return { n2, back, fwd, roundTrip: fwd === n2 && back !== n2 };
-    })()""", wait=40, await_promise=True)
+    })()""", wait=75, await_promise=True)
     r3 = t3 if isinstance(t3, dict) else {}
     T.append(check("TES3 Shift+C mundur lalu C maju: bolak-balik ke agen yang sama",
                    r3.get("roundTrip") is True, json.dumps(r3)[:200]))
@@ -325,6 +341,8 @@ try:
                    f"errs={errs[:2]} excs={excs[:2]}"))
 
     npass = sum(1 for _, okk, _ in T if okk)
+    if TIMES_OK:
+        print(f"TIMES_OK: {TIMES_OK} eval one-shot terselamatkan lewat sisa-read (siklus 199)")
     print(f"===> {'OK' if npass == len(T) else 'GAGAL'} {npass}/{len(T)}")
     ok = npass == len(T)
     for name, okk, d in T:
