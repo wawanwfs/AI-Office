@@ -44,11 +44,38 @@ def _seed(tmp: str) -> Path:
     return p
 
 
+import contextlib
+
+
+@contextlib.contextmanager
+def _no_server_module():
+    """Isolasi fallback test: lepas modul 'server' & '__main__' palsu/bawaan
+    selama test memverifikasi jalur fallback distinct agent_id.
+
+    Sejak siklus 208 run gabungan backend+backend_live sah mengimpor server.py
+    (test_wfs_server_args) — test fallback TIDAK boleh bergantung pada urutan
+    import; keduanya harus benar di SEMUA urutan (pola hardening 195: audit
+    asumsi, bukan asal tempel). Modul dipulihkan persis setelah test.
+    """
+    saved = {k: sys.modules.get(k) for k in ("server", "__main__")}
+    for k in ("server", "__main__"):
+        sys.modules.pop(k, None)
+    try:
+        yield
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                sys.modules.pop(k, None)
+            else:
+                sys.modules[k] = v
+
+
 def test_overview_from_real_rows():
     tmp = tempfile.mkdtemp()
     os.environ["WFS_TASKS_DB"] = str(_seed(tmp))
     # tanpa modul 'server' → fallback distinct agent_id = 4 (be1,fe1,sec1,qa1)
-    o = m.build_overview()
+    with _no_server_module():
+        o = m.build_overview()
     assert o["projects"] == 2 and o["tasks"] == 5
     assert o["task_by_status"] == {"done": 2, "running": 1, "pending": 2}
     assert o["agents"] == 4 and o["agent_by_status"] == {"idle": 4}  # fallback

@@ -19,6 +19,28 @@ import wfs_dashboard_stats as m  # noqa: E402
 NOW = time.time()
 
 
+import contextlib
+
+
+@contextlib.contextmanager
+def _no_server_module():
+    """Isolasi fallback test: lepas modul 'server' & '__main__' selama test
+    memverifikasi jalur fallback distinct agent_id (siklus 208 — run gabungan
+    backend+backend_live sah mengimpor server.py via test_wfs_server_args;
+    test fallback wajib benar di SEMUA urutan import)."""
+    saved = {k: sys.modules.get(k) for k in ("server", "__main__")}
+    for k in ("server", "__main__"):
+        sys.modules.pop(k, None)
+    try:
+        yield
+    finally:
+        for k, v in saved.items():
+            if v is None:
+                sys.modules.pop(k, None)
+            else:
+                sys.modules[k] = v
+
+
 def _seed(tmp: str) -> Path:
     p = Path(tmp) / "tasks.db"
     c = sqlite3.connect(p)
@@ -46,7 +68,8 @@ def _seed(tmp: str) -> Path:
 def test_counts_from_real_rows():
     tmp = tempfile.mkdtemp()
     os.environ["WFS_TASKS_DB"] = str(_seed(tmp))
-    s = m.build_stats()
+    with _no_server_module():
+        s = m.build_stats()
     assert s["projects_total"] == 2 and s["projects_running"] == 1
     assert s["tasks_total"] == 5 and s["tasks_running"] == 1 and s["tasks_completed"] == 2
     assert s["agents_count"] == 4  # fallback: distinct agent_id (be1,fe1,sec1,qa1)
@@ -66,7 +89,8 @@ def test_endpoint_via_testclient():
     app = FastAPI()
     app.include_router(m.router)
     cl = TestClient(app)
-    r = cl.get("/api/dashboard/stats")
+    with _no_server_module():
+        r = cl.get("/api/dashboard/stats")
     assert r.status_code == 200
     s = r.json()
     assert s["tasks_total"] == 5 and s["agents_count"] == 4
