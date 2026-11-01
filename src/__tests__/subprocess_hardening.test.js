@@ -119,11 +119,11 @@ describe('subprocess_hardening siklus 202 — scanner self-test', () => {
 })
 
 describe('subprocess_hardening siklus 202 — census', () => {
-  it('census: 62 file .py dgn subprocess.run sinkron, >=70 call-site', () => {
+  it('census: 63 file .py dgn subprocess.run sinkron, >=71 call-site (siklus 206: +1 apply_wfs_hq_server.py)', () => {
     expect(PY_ALL.length).toBeGreaterThan(70)
-    expect(RUN_FILES.length).toBe(62)
+    expect(RUN_FILES.length).toBe(63)
     const total = RUN_FILES.reduce((n, f) => n + sites(f).length, 0)
-    expect(total).toBeGreaterThanOrEqual(70)
+    expect(total).toBeGreaterThanOrEqual(71)
   })
 })
 
