@@ -25,23 +25,49 @@
 // jsdom tanpa mock virtual module; injectRegister: null mematikan injeksi
 // registerSW.js otomatis plugin (tak ada double-registrasi).
 
-export function setupServiceWorkerUpdates({ onUpdateReady } = {}) {
+export function setupServiceWorkerUpdates({ onUpdateReady, pollMs = 10000 } = {}) {
   if (typeof navigator === 'undefined' || !('serviceWorker' in navigator)) {
     return { applyUpdate: () => Promise.resolve(false), dispose: () => {} }
   }
   const wasControlled = !!navigator.serviceWorker.controller
   let disposed = false
   let reg = null
+  let pollTimer = null
+  // Debug/ops hook (pola hooks window.__* repo): bukti event terlihat di e2e.
+  if (typeof window !== 'undefined') {
+    window.__swUpdateDebug = { updateFound: 0, stateInstalled: 0, notified: false, waitingUrl: null }
+  }
 
-  const notify = () => { if (!disposed && onUpdateReady) onUpdateReady() }
+  const notify = () => {
+    if (disposed || !onUpdateReady) return
+    if (typeof window !== 'undefined' && window.__swUpdateDebug) window.__swUpdateDebug.notified = true
+    onUpdateReady()
+  }
+
+  const checkWaiting = () => {
+    // Polling lapis kedua: event updatefound bisa terlewat (listener terlambat,
+    // wrapper registrasi berbeda antar pemanggilan register) — cek state eksplisit.
+    if (reg && reg.waiting && (wasControlled || navigator.serviceWorker.controller)) {
+      if (typeof window !== 'undefined' && window.__swUpdateDebug) {
+        window.__swUpdateDebug.waitingUrl = reg.waiting.scriptURL
+      }
+      notify()
+      return true
+    }
+    return false
+  }
 
   const onStateChange = () => {
     const sw = reg && reg.installing
+    if (typeof window !== 'undefined' && window.__swUpdateDebug && sw && sw.state === 'installed') {
+      window.__swUpdateDebug.stateInstalled += 1
+    }
     // Hanya bila halaman SUDAH dikontrol: install pertama (kunjugan baru)
     // tidak boleh menaikkan banner — tidak ada versi lama yang digantikan.
     if (sw && sw.state === 'installed' && navigator.serviceWorker.controller) notify()
   }
   const onUpdateFound = () => {
+    if (typeof window !== 'undefined' && window.__swUpdateDebug) window.__swUpdateDebug.updateFound += 1
     if (reg && reg.installing) {
       try { reg.installing.addEventListener('statechange', onStateChange) } catch { /* SW sudah gone */ }
     }
@@ -60,9 +86,13 @@ export function setupServiceWorkerUpdates({ onUpdateReady } = {}) {
     .then((r) => {
       if (disposed || !r) return
       reg = r
-      // Jebakan 1: SW sudah waiting saat kita mendengar (kunjungan kedua dst).
-      if (r.waiting && r.active) notify()
       try { r.addEventListener('updatefound', onUpdateFound) } catch { /* no-op */ }
+      // Jebakan 1 + lapis kedua — SATU JALUR: cek waiting eksplisit saat mount
+      // (kunjungan kedua: waiting sudah terisi), lalu poll berkala (event
+      // updatefound bisa terlewat — bukti diag 192: notified via poll).
+      if (pollMs > 0 && !checkWaiting()) {
+        pollTimer = setInterval(() => { if (checkWaiting()) clearInterval(pollTimer) }, pollMs)
+      }
     })
     .catch(() => { /* sw.js tak terjangkau / konteks non-secure — app tetap jalan */ })
   try { navigator.serviceWorker.addEventListener('controllerchange', onControllerChange) } catch { /* no-op */ }
@@ -78,6 +108,7 @@ export function setupServiceWorkerUpdates({ onUpdateReady } = {}) {
     dispose() {
       disposed = true
       reg = null
+      if (pollTimer) { clearInterval(pollTimer); pollTimer = null }
       try { navigator.serviceWorker.removeEventListener('controllerchange', onControllerChange) } catch { /* no-op */ }
     },
   }

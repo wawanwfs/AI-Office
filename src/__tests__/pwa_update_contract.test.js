@@ -40,8 +40,11 @@ describe('App.jsx — wiring banner pembaruan', () => {
     expect(app).toContain('applySwUpdate()')
   })
 
-  it('lib: dua jebakan klasik tertutup (waiting-saat-mount + wasControlled)', () => {
-    expect(swUpdate).toContain('r.waiting && r.active')
+  it('lib: dua jebakan klasik tertutup (poll waiting eksplisit + wasControlled)', () => {
+    // waiting dicek EKSPLISIT (bukan bergantung event updatefound — bukti diag
+    // 192: event menyala sebelum listener terpasang; poll yang menyelamatkan)
+    expect(swUpdate).toContain('reg.waiting &&')
+    expect(swUpdate).toContain('setInterval')
     expect(swUpdate).toContain('wasControlled')
   })
 })

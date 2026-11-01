@@ -1,0 +1,253 @@
+#!/usr/bin/env python3
+"""E2E siklus 192: alur pembaruan PWA (mode prompt) — banner + Muat ulang.
+
+Skenario mengikuti perjalanan pengguna nyata, di browser CDP nyata (Xvfb :99,
+transport salinan e2e_lazy_modals.py — fixed-delay dari Python):
+  TES1  Kunjungan pertama (profil sekali-pakai): SW terpasang aktif, TIDAK ada
+        waiting, TIDAK ada banner (jebakan #2 — install pertama tak menaikkan).
+  TES1b Reload → halaman kini TERKONTROL SW (prompt-mode tanpa clientsClaim:
+        kontrol baru efektif setelah reload).
+  TES2  Versi baru: register skrip fake berbeda utk scope yang sama (= update
+        nyata: install → statechange installed → controller ada) → banner
+        'Versi baru kantor tersedia' MUNCUL (jebakan #1 — updatefound jalan).
+  TES3  Klik 'Muat ulang' → postMessage SKIP_WAITING → fake aktif →
+        controllerchange → app me-reload diri → controller baru = skrip fake.
+  TES4  0 console/page error sepanjang seluruh alur (termasuk reload).
+  TES5  Hooks inti utuh pasca reload (26 agen) — scene tak terganggu.
+  Cleanup: SW di-unregister + file fake dihapus (profil sekali-pakai = tanpa
+        efek ke pengguna nyata; sw.js produksi TIDAK disentuh).
+Exit non-zero bila ada bukti yang gagal.
+"""
+import base64, json, os, shutil, socket, struct, subprocess, sys, time, urllib.request
+from urllib.parse import urlparse
+
+CHROME = os.path.expanduser(
+    "~/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell")
+PORT = 9495
+URL = "http://127.0.0.1:9503/app/"
+PROFILE = "/tmp/wfs-e2e-swu-profile"
+FAKE_SRC = os.path.expanduser("~/wfs-hq/e2e-sw-fake.js")
+FAKE_URL = "/e2e-sw-fake.js"
+FAKE_JS = """// Fake SW e2e siklus 192 — perilaku persis sw.js mode prompt:
+// menunggu sampai pesan SKIP_WAITING (TIDAK auto-skip di install).
+self.addEventListener('message', (e) => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting()
+})
+self.addEventListener('activate', (e) => { e.waitUntil(self.clients.claim()) })
+self.addEventListener('fetch', () => {})  // passthrough — jangan ganggu app
+"""
+
+class WS:
+    def __init__(s, u):
+        pr = urlparse(u)
+        s.sock = socket.create_connection((pr.hostname, pr.port), timeout=10)
+        s.sock.settimeout(10)  # berlaku SEJAK handshake — pelajaran 183
+        s.sock.sendall((f"GET {pr.path} HTTP/1.1\r\nHost: {pr.hostname}:{pr.port}\r\n"
+                        "Upgrade: websocket\r\nConnection: Upgrade\r\n"
+                        f"Sec-WebSocket-Key: {base64.b64encode(os.urandom(16)).decode()}\r\n"
+                        "Sec-WebSocket-Version: 13\r\n\r\n").encode())
+        buf = b""
+        while b"\r\n\r\n" not in buf:
+            buf += s.sock.recv(1)
+    def send(s, m):
+        d = m.encode(); h = b"\x81"; n = len(d); mask = os.urandom(4)
+        if n < 126: h += bytes([0x80 | n])
+        else: h += bytes([0x80 | 126]) + struct.pack(">H", n)
+        s.sock.sendall(h + mask + bytes(b ^ mask[i % 4] for i, b in enumerate(d)))
+    def recv(s):
+        def rx(n):
+            b = b""
+            while len(b) < n:
+                c = s.sock.recv(n - len(b))
+                if not c: raise ConnectionResetError()
+                b += c
+            return b
+        def frame():
+            hdr = rx(2); op = hdr[0] & 0xf; n = hdr[1] & 0x7f
+            if n == 126: n = struct.unpack(">H", rx(2))[0]
+            elif n == 127: n = struct.unpack(">Q", rx(8))[0]
+            return op, rx(n)
+        op, d = frame()
+        while op == 0:
+            op, d2 = frame(); d += d2
+            if op != 0: break
+        return d.decode("utf-8", "replace")
+    def recv_text(s):
+        return s.recv()
+
+def x99_alive():
+    return subprocess.run(["xdpyinfo", "-display", ":99"],
+                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+
+def main():
+    shutil.rmtree(PROFILE, ignore_errors=True)
+    with open(FAKE_SRC, "w") as f:
+        f.write(FAKE_JS)
+    env = dict(os.environ, DISPLAY=":99")
+    xv = None
+    if not x99_alive():
+        xv = subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x768x24"],
+                              stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        time.sleep(1)
+    p = subprocess.Popen([CHROME, "--no-sandbox", f"--remote-debugging-port={PORT}",
+                          "--enable-unsafe-swiftshader", "--window-size=1366,768",
+                          "--disable-dev-shm-usage", f"--user-data-dir={PROFILE}", URL],
+                         env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    res = {"errors": [], "tests": {}}
+    try:
+        tabs = []
+        for _ in range(20):
+            time.sleep(1)
+            try:
+                tabs = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{PORT}/json/list", timeout=5).read())
+                pages = [t for t in tabs if t.get("type") == "page" and t.get("webSocketDebuggerUrl")]
+                if pages:
+                    tabs = pages
+                    break
+            except Exception:
+                continue
+        if not tabs:
+            print("E2E_SW_UPDATE: FAIL {\"error\": \"chrome-no-page-tab\"}", flush=True)
+            sys.exit(1)
+        print("PROG: chrome-ready", flush=True)
+        time.sleep(2)
+        ws = WS(tabs[0]["webSocketDebuggerUrl"])
+        mid = [0]
+        def cmd(method, **params):
+            mid[0] += 1
+            ws.send(json.dumps({"id": mid[0], "method": method, "params": params}))
+            for _ in range(30):
+                try:
+                    r = json.loads(ws.recv_text())
+                except (socket.timeout, ConnectionError, OSError):
+                    continue
+                if r.get("id") == mid[0]: return r
+            raise TimeoutError(f"no CDP reply: {method}")
+        def ev(expr, await_p=False):
+            r = cmd("Runtime.evaluate", expression=expr, returnByValue=True,
+                    awaitPromise=await_p)
+            v = ((r.get("result") or {}).get("result") or {}).get("value")
+            try: return json.loads(v) if isinstance(v, str) else v
+            except Exception: return v
+        cmd("Runtime.enable"); cmd("Page.enable")
+
+        def on_exc(params):
+            d = params.get("exceptionDetails") or {}
+            res["errors"].append(str(d.get("exception", {}).get("description") or d.get("text")))
+        cmd("Runtime.enable")  # events mengalir; recv di cmd() membuang non-match
+        # Pemungut exception sederhana: interleave recv di antara cmd via polling
+        def drain_events(sec):
+            end = time.time() + sec
+            ws.sock.settimeout(0.3)
+            while time.time() < end:
+                try:
+                    m = json.loads(ws.recv_text())
+                    if m.get("method") == "Runtime.exceptionThrown":
+                        on_exc(m.get("params") or {})
+                except (socket.timeout, OSError):
+                    pass
+                except Exception:
+                    pass
+            ws.sock.settimeout(10)
+
+        time.sleep(18)  # scene init (SwiftShader lambat)
+        print("PROG: settled-1", flush=True)
+
+        # TES1: kunjungan pertama — SW aktif, tanpa waiting, tanpa banner
+        t1 = ev("""(async () => {
+          const rs = await navigator.serviceWorker.getRegistrations()
+          const r = rs[0]
+          return JSON.stringify({
+            count: rs.length,
+            scope: r ? r.scope : null,
+            active: !!(r && r.active),
+            waiting: !!(r && r.waiting),
+            controlled: !!navigator.serviceWorker.controller,
+            banner: !!document.querySelector('[data-testid="sw-update-banner"]')
+          })
+        })()""", await_p=True)
+        res["tests"]["tes1_first_visit"] = t1
+        print("PROG: tes1", flush=True)
+        ok1 = (t1 or {}).get("count") == 1 and (t1 or {}).get("active") \
+            and not (t1 or {}).get("waiting") and not (t1 or {}).get("banner")
+
+        # TES1b: reload → halaman terkontrol (prompt-mode: kontrol efektif pasca reload)
+        cmd("Page.reload")
+        time.sleep(15)
+        t1b = ev("JSON.stringify({ controlled: !!navigator.serviceWorker.controller,"
+                 "  banner: !!document.querySelector('[data-testid=\"sw-update-banner\"]') })")
+        res["tests"]["tes1b_controlled"] = t1b
+        print("PROG: tes1b", flush=True)
+        ok1b = bool((t1b or {}).get("controlled")) and not (t1b or {}).get("banner")
+
+        # TES2: versi baru (skrip fake, scope sama) → banner naik
+        ev(f"navigator.serviceWorker.register('{FAKE_URL}', {{ scope: '/' }}); 1")
+        t2 = {"ok": False}
+        for i in range(10):
+            time.sleep(1.5)
+            t2 = ev("JSON.stringify({ banner: !!document.querySelector('[data-testid=\"sw-update-banner\"]'),"
+                    "  txt: (document.querySelector('.sw-update-msg')||{}).textContent || null })") or {}
+            if t2.get("banner"):
+                t2["ok"] = True; t2["ms"] = (i + 1) * 1500
+                break
+        res["tests"]["tes2_banner"] = t2
+        print("PROG: tes2", flush=True)
+        ok2 = bool(t2.get("ok")) and (t2 or {}).get("txt") == "Versi baru kantor tersedia"
+
+        # TES3: klik 'Muat ulang' → SKIP_WAITING → aktivasi → controllerchange → reload
+        ev("""(() => { const b = [...document.querySelectorAll('.sw-update button')]
+          .find(x => x.textContent.trim() === 'Muat ulang')
+          if (!b) return 'no-btn'; b.click(); return 'clicked' })()""")
+        t3 = {"ok": False}
+        for i in range(15):
+            time.sleep(1.5)
+            t3 = ev(f"""(async () => {{
+              const r = (await navigator.serviceWorker.getRegistrations())[0]
+              const url = r && r.active ? r.active.scriptURL : null
+              return JSON.stringify({{
+                ctrlUrl: navigator.serviceWorker.controller ? navigator.serviceWorker.controller.scriptURL : null,
+                activeUrl: url,
+                banner: !!document.querySelector('[data-testid=\"sw-update-banner\"]')
+              }})
+            }})()""", await_p=True) or {}
+            if str(t3.get("ctrlUrl", "")).endswith("e2e-sw-fake.js"):
+                t3["ok"] = True; t3["ms"] = (i + 1) * 1500
+                break
+        res["tests"]["tes3_reload_to_new"] = t3
+        print("PROG: tes3", flush=True)
+        ok3 = bool(t3.get("ok"))
+
+        # TES4+TES5: pasca reload — scene hidup (hooks 26) + ringkas error
+        time.sleep(15)
+        t5 = ev("""(async () => {
+          await new Promise(r => setTimeout(r, 2000))
+          const n = (window.__agentData || []).length
+          return JSON.stringify({ agents: n, banner2: !!document.querySelector('[data-testid=\"sw-update-banner\"]') })
+        })()""", await_p=True)
+        res["tests"]["tes5_hooks_after"] = t5
+        print("PROG: tes5", flush=True)
+        ok5 = (t5 or {}).get("agents") == 26
+
+        drain_events(2)
+        res["tests"]["tes4_errors"] = {"count": len(res["errors"]), "first": res["errors"][:2]}
+        ok4 = len(res["errors"]) == 0
+
+        # Cleanup: unregister + hapus fake (profil sekali-pakai; produksi utuh)
+        ev("(async () => { const rs = await navigator.serviceWorker.getRegistrations();"
+           " await Promise.all(rs.map(r => r.unregister())); return 'cleaned' })()", await_p=True)
+
+        verdict = all([ok1, ok1b, ok2, ok3, ok4, ok5])
+        print("E2E_SW_UPDATE:", "OK" if verdict else "FAIL",
+              json.dumps({"tes1": ok1, "tes1b": ok1b, "tes2": ok2, "tes3": ok3,
+                          "tes4_errors": len(res["errors"]), "tes5_agents": (t5 or {}).get("agents")},
+                         ensure_ascii=False), flush=True)
+        sys.exit(0 if verdict else 1)
+    finally:
+        try: p.kill()
+        except Exception: pass
+        shutil.rmtree(PROFILE, ignore_errors=True)
+        try: os.remove(FAKE_SRC)
+        except Exception: pass
+
+if __name__ == "__main__":
+    main()
