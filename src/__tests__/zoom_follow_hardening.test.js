@@ -4,6 +4,9 @@ import { fileURLToPath } from 'node:url'
 import { resolve } from 'node:path'
 
 // Siklus 198: perbaikan flakiness e2e_zoom_follow.py (kandidat (c) 197).
+// Siklus 205 (v3): hardening flakiness tersisa — f1 ambang re-expand 22→24,
+// f2 follow-poll 15→30 dtk, f3 fallback ketat goal terjepit clamp, f4 init
+// adaptif hooks (bukan sleep(15) rigid); detail lihat docstring V3 probe.
 //
 // BUKTI (log 5-run 197 + run live siklus ini), bukan teori:
 //  f1 EARLY-READ — v1 tidur 1.5 dtk setelah wheel lalu membaca radius sekali.
@@ -36,7 +39,7 @@ import { resolve } from 'node:path'
 const here = fileURLToPath(new URL('.', import.meta.url))
 const src = readFileSync(resolve(here, '../../scripts/e2e_zoom_follow.py'), 'utf-8')
 
-describe('e2e_zoom_follow.py v2 — anti early-read & clamp-stuck (siklus 198)', () => {
+describe('e2e_zoom_follow.py v3 — hardening flakiness tersisa (siklus 205)', () => {
   it('f1: radius & goal di-POLL konvergensi (maks 30 dtk), bukan sleep tunggal 1.5 dtk', () => {
     // poll loop sesudah wheel
     const wheelIdx = src.lastIndexOf('wheel(-1000)')
@@ -50,17 +53,40 @@ describe('e2e_zoom_follow.py v2 — anti early-read & clamp-stuck (siklus 198)',
     expect(poll).not.toContain('time.sleep(1.5)  # lerp radius (beberapa frame)')
   })
 
-  it('f2: re-expand radius sebelum tiap attempt (wheel bawah + poll ≥22) — anti clamp-stuck', () => {
+  it('f2: re-expand radius sebelum tiap attempt (wheel bawah + poll ≥24) — anti clamp-stuck', () => {
     const body = src.split('for attempt in range(6):')[1]
     expect(body).toContain('rad_pre = json.loads(ev(RADIUS_EXPR) or "null")')
-    expect(body).toContain('if isinstance(rad_pre, (int, float)) and rad_pre < 22:')
+    // f1 (205): ambang 22→24 — diskriminator goal_ok butuh r_goal0 > 14
+    // (clamp bawah 12); 22 lama bisa mendarat 20-21.x → pembeda mustahil.
+    expect(body).toContain('if isinstance(rad_pre, (int, float)) and rad_pre < 24:')
     expect(body).toContain('wheel(1000)')
-    expect(body).toContain('r_now >= 22')
+    expect(body).toContain('r_now >= 24')
     // re-expand berada SEBELUM klik agen (urutan benar)
     const reIdx = body.indexOf('rad_pre = json.loads')
     const clickIdx = body.indexOf('pj = json.loads(ev(proj_expr(')
     expect(reIdx).toBeGreaterThan(-1)
     expect(clickIdx).toBeGreaterThan(reIdx)
+  })
+
+  it('f3 (205): fallback ketat r_goal0 terjepit clamp — wheel-didengar dgn rentang habis tetap terdeteksi OK', () => {
+    // goal follow utuh + goal.r EKSAK di clamp bawah 12 + radius aktual ikut
+    // turun ≥2 + pre-kondisi rentang habis (r_goal0-12 ≤ 3) — tanpa ini,
+    // diskriminator -2 mustahil saat goal sudah dekat clamp → FAIL berantai.
+    expect(src).toContain('new_r <= 12.001')
+    expect(src).toContain('r_goal0 - 12.0 <= 3.0')
+    expect(src).toContain('and rad_ok)')
+    expect(src).toContain('fallback clamp')
+  })
+
+  it('f4 (205): init adaptif — hooks scene di-poll (maks 30 dtk), bukan sleep(15) rigid', () => {
+    expect(src).not.toContain('time.sleep(15)')
+    expect(src).toContain('for _ in range(20):')
+    expect(src).toContain('if st0.get("agents", -1) > 0 and st0.get("ws") and st0.get("cam") and st0.get("dbg"):')
+    // urutan: cmd Page/Runtime.enable SEBELUM polling hooks
+    const enIdx = src.indexOf('cmd("Page.enable"); cmd("Runtime.enable")')
+    const pollIdx = src.indexOf('for _ in range(20):')
+    expect(enIdx).toBeGreaterThan(-1)
+    expect(pollIdx).toBeGreaterThan(enIdx)
   })
 
   it('f3: TANPA gate layar angular — wheel sah tanpa raycast (handler L636 tanpa raycaster)', () => {
@@ -73,13 +99,15 @@ describe('e2e_zoom_follow.py v2 — anti early-read & clamp-stuck (siklus 198)',
 
   it('poll konvergensi follow: tgt kamera dgn agen < 2 sebelum wheel', () => {
     expect(src).toContain('TGT_DIST_EXPR')
-    expect(src).toContain('while time.time() - t0 < 15:')
+    // f2 (205): deadline 15→30 dtk — lerp .06/frame di SwiftShader ~1.5 FPS
+    // butuh ±22-26 dtk utk dist awal HOME→kafe (±16 unit).
+    expect(src).toContain('while time.time() - t0 < 30:')
     expect(src).toContain('d < 2.0')
     // interpolasi koordinat WAJIB berkurung — `t.x-%f` pada koordinat negatif
     // menghasilkan `t.x--8.0` (postfix-decrement) → SyntaxError → None senyap
     expect(src).toContain('Math.hypot(t.x-(%f),t.y-(%f),t.z-(%f))')
     // urutan: follow poll SEBELUM wheel(-1000)
-    const followIdx = src.indexOf('while time.time() - t0 < 15:')
+    const followIdx = src.indexOf('while time.time() - t0 < 30:')
     const wheelIdx = src.indexOf('wheel(-1000)')
     expect(followIdx).toBeGreaterThan(-1)
     expect(wheelIdx).toBeGreaterThan(followIdx)

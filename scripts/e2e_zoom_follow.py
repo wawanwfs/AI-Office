@@ -46,6 +46,22 @@ V2 (siklus 198 — perbaikan flakiness, bukti log 5-run 197 + run live):
     tetap sah TANPA raycaster (handler OfficeScene L636 langsung
     zoomRadius dari deltaY); gate justru menutup attempt valid (arah
     vektor terbalik) dan menggantung run saat agen tak di dead-zone.
+
+V3 (siklus 205 — hardening flakiness tersisa, bukti baseline 2× OK
+sendirian di 204 + catatan FAIL 197 saat VM berat):
+  - f1 re-expand ambang 22→24: diskriminator goal_ok butuh new_r <
+    r_goal0-2 dgn clamp bawah 12 → r_goal0 > 14 WAJIB; 22 lama bisa
+    mendarat 20-21.x (lerp belum selesai saat poll berhenti) → wheel
+    berikut d=-40 → goal.r=12=r_goal0 → pembeda mustahil → FAIL
+    berantai attempt sisa.
+  - f2 follow-poll deadline 15→30 dtk: lerp .06/frame di SwiftShader
+    ~1.5 FPS butuh ±22-26 dtk utk dist awal HOME→kafe (±16 unit).
+  - f3 fallback ketat r_goal0 terjepit clamp: bila goal tak bisa turun
+    lagi (r_goal0-12 ≤ 3), terima bukti minimal wheel-didengar: goal
+    follow utuh + goal.r EKSAK di clamp 12 + radius aktual turun ≥2.
+  - f4 init adaptif: sleep(15) rigid → polling hooks (maks 30 dtk);
+    VM berat membuat scene belum siap → FAIL "scene tidak siap" palsu.
+  - Bug print re-expand (rad_pre vs r_now) diperbaiki sekalian.
 Pemakaian: uv run scripts/e2e_zoom_follow.py
 """
 import subprocess, os, time, urllib.request, json, socket, struct, base64, sys, math
@@ -179,11 +195,21 @@ def main():
                 x=683, y=384, deltaX=0, deltaY=delta_y)
 
         cmd("Page.enable"); cmd("Runtime.enable")
-        time.sleep(15)  # scene init + beberapa frame animasi
-
-        st0 = json.loads(ev(
-            "JSON.stringify({agents: window.__agentData ? window.__agentData.length : -1,"
-            " cam: !!window.__camCam, ws: !!window.__wallState, dbg: !!window.__dbg})") or "{}")
+        # f4 (205): tunggu hooks scene siap — polling adaptif (maks 30 dtk)
+        # menggantikan sleep(15) rigid: VM berat → render belum jalan & hooks
+        # belum terpasang → dulu FAIL "scene tidak siap" palsu.
+        st0 = {}
+        for _ in range(20):
+            time.sleep(1.5)
+            raw = ev(
+                "JSON.stringify({agents: window.__agentData ? window.__agentData.length : -1,"
+                " cam: !!window.__camCam, ws: !!window.__wallState, dbg: !!window.__dbg})")
+            try:
+                st0 = json.loads(raw or "{}")
+            except Exception:
+                st0 = {}
+            if st0.get("agents", -1) > 0 and st0.get("ws") and st0.get("cam") and st0.get("dbg"):
+                break
         print("STATE0:", json.dumps(st0))
         if st0.get("agents", -1) <= 0 or not st0.get("ws") or not st0.get("cam") or not st0.get("dbg"):
             print("E2E_ZOOMFOLLOW: FAIL (scene tidak siap)")
@@ -207,16 +233,21 @@ def main():
             # ── f2 RE-EXPAND: bila radius terjepit clamp (wheel attempt lalu),
             # wheel BAWAH dulu sampai ≥22 — dulu attempt berikutnya r_goal0 =
             # min(12,24)=12 → pembeda mustahil → FAIL berantai.
+            # f1 (205): ambang 22 → 24. Diskriminator goal_ok butuh new_r <
+            # r_goal0-2 & clamp bawah 12 → r_goal0 > 14 WAJIB; 22 lama bisa
+            # mendarat 20-21.x (lerp belum selesai) → wheel berikut d=-40 →
+            # goal.r=12 = r_goal0 → pembeda mustahil (FAIL berantai "radius
+            # tidak bergeser", log 197).
             rad_pre = json.loads(ev(RADIUS_EXPR) or "null")
-            if isinstance(rad_pre, (int, float)) and rad_pre < 22:
+            if isinstance(rad_pre, (int, float)) and rad_pre < 24:
                 wheel(1000)
                 r_now = rad_pre
                 for _ in range(10):
                     time.sleep(1.5)
                     r_now = json.loads(ev(RADIUS_EXPR) or "null")
-                    if isinstance(r_now, (int, float)) and r_now >= 22:
+                    if isinstance(r_now, (int, float)) and r_now >= 24:
                         break
-                print("  attempt[%d]: re-expand radius %s→%s" % (attempt, rad_pre, r_now if isinstance(rad_pre, (int, float)) else "?"))
+                print("  attempt[%d]: re-expand radius %s→%s" % (attempt, rad_pre, r_now if isinstance(r_now, (int, float)) else "?"))
             if attempt and attempt % 2 == 0:
                 walkers = json.loads(ev(WALKERS_EXPR) or "[]")  # walker bisa usai — refresh
                 if not walkers:
@@ -253,10 +284,15 @@ def main():
 
             # ── poll konvergensi FOLLOW: tgt kamera mengejar agen (lerp .06/
             # frame lambat di SwiftShader) — dulu tidur 2.0 dtk tunggal.
+            # f2 (205): deadline 15→30 dtk. Lerp .06/frame dgn frame rate
+            # SwiftShader ~1.5 FPS saat VM berat butuh ±22-26 dtk utk
+            # menempuh dist awal HOME→kafe (±16 unit); wheel tetap sah
+            # (tanpa raycast) tapi makin konvergen makin deterministik
+            # proyeksi klik & framing attempt.
             t0 = time.time()
             tgt_ok = False
             d_last = None
-            while time.time() - t0 < 15:
+            while time.time() - t0 < 30:
                 d = json.loads(ev(TGT_DIST_EXPR % (w["x"], (w["y"] or 0) + 1.5, w["z"])) or "null")
                 d_last = d
                 if isinstance(d, (int, float)) and d < 2.0:
@@ -309,6 +345,20 @@ def main():
                 if ok_this or (goal_ok and rad_ok):
                     print("ZOOM_FOLLOW[%d]: OK (goal follow dipertahankan r=%.2f→%.2f, radius=%.1f→%.1f)"
                           % (attempt, r_goal0, new_r, rad0, rad1))
+                    ok = True
+                    break
+                # f3 (205): fallback ketat u/ r_goal0 terjepit clamp. Bila goal
+                # tak bisa turun lagi (r_goal0-12 ≤ 3 → diskriminator -2 mustahil
+                # meski wheel 100% mendarat), terima bukti geser MINIMAL: goal
+                # follow utuh + goal.r bergerak turun EKSAK ke clamp 12 + radius
+                # aktual ikut ≥2 — wheel DIDENGAR goal & radius, hanya rentangnya
+                # yang habis. (r=12 persis = clamp bawah; tanda alami wheel d=-40
+                # ter-min-max-kan.) Tanpa ini: FAIL berantai attempt sisa meski
+                # behavior-nya BENAR.
+                elif (isinstance(new_r, (int, float)) and new_r <= 12.001
+                      and r_goal0 - 12.0 <= 3.0 and rad_ok):
+                    print("ZOOM_FOLLOW[%d]: OK (fallback clamp: goal.r %.2f terjepit 12, radius %.1f→%.1f — wheel didengar goal+radius)"
+                          % (attempt, r_goal0, rad0, rad1))
                     ok = True
                     break
                 print("  (goal ada tapi radius tidak bergeser: goal %.2f→%s rad %s→%s)"
