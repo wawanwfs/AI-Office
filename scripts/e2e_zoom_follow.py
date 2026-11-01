@@ -19,34 +19,33 @@ Perbaikan siklus 121 (zoom JUJUR, parts/zoom_spec.js):
 Langkah probe (input mouse/wheel NYATA via CDP, jalur UI asli):
   1. __setTime(720) → fase makan siang; agen berjalan ke kafe.
   2. KLIK badan agen berjalan (proyeksi ulang tiap langkah) → goal follow
-     (window.__dbg().focus = {r, reset:false}).
+     (window.__dbg().focus = {r, reset:false}); poll sampai lerp target
+     kamera konvergen ke agen (dist(__cam.tgt, agen) < 2).
   3. Scroll wheel ke ATAS (deltaY=-1000) di tengah canvas.
   4. Pembeda ganda (kode baru): focus MASIH ADA (follow dipertahankan)
      DAN goal.r berkurang (terdorong clamp 12) — radius aktual sph.radius
      ikut berkurang. Bug lama: focus = null (follow mati).
 
-V2 (siklus 198 — perbaikan flakiness, pelajaran run 197):
-  Defek v1 yang bikin flaky: wheel ditembakkan BLIND di (683,384) segera
-  setelah goal follow aktif. Saat VM berat (SwiftShader ~1.5 FPS + lerp
-  follow .06/frame + auto-rotate theta .0012/frame), kamera belum
-  benar-benar "memegang" agen di tengah layar → raycast di tengah canvas
-  meleset → jalur klik-kosong: focusGoal=resetFocusGoal (reset:true) →
-  pembeda (a) focus2.reset=gagal & (b) goal.r TIDAK berkurang (goal reset
-  r = homeRadius ≥24 > r_goal0) → FAIL palsu.
-  Wheel itu sendiri tidak butuh hit (handler langsung zoomRadius dari
-  deltaY) — syaratnya hanya goal follow benar-benar AKTIF saat wheel:
-  - GATE LAYAR per attempt (screen_gate, murni + diuji unit): hitung arah
-    angular kamera dari posisi EKSAK updCam — camera.position = tgt +
-    r·sinφ·(sinθ,·,cosθ) → arah pandang XZ = atan2(dx,dz) dengan
-    (dx,dz) = cam.position − tgt. Agen di dead-zone angular <25° DAN
-    lebih dekat ke kamera daripada tgt (dist < 0.75·dist(tgt,kamera)) →
-    konjungsi itu menjamin proyeksi agen jatuh dekat pusat layar
-    (proyeksi perspektif) → raycast tengah canvas kena agen.
-  - Gate dievaluasi SETELAH goal follow aktif; wheel HANYA ditembakkan
-    bila gate True — tanpa gate, attempt diulang (bukan FAIL palsu).
-  - Tanpa reset kamera paksa antar-attempt (auto-rotate theta lanjut
-    alami — sisi orbit berubah sendiri tiap attempt); max attempt 6;
-    daftar walker di-refresh saat attempt genap (walker bisa usai).
+V2 (siklus 198 — perbaikan flakiness, bukti log 5-run 197 + run live):
+  Wheel TIDAK butuh raycast hit (handler OfficeScene L636 langsung
+  zoomRadius(sph.radius, e.deltaY*.04) — tanpa raycaster) sehingga wheel
+  aman kapan pun; yang flaky adalah PENGUKURANNYA:
+  - f1 EARLY-READ: v1 tidur 1.5 dtk setelah wheel lalu membaca radius.
+    Lerp radius .06/frame di SwiftShader ~1.5 FPS butuh ±26 dtk utk
+    42→12 (95%) → rad1 terbaca saat lerp baru mulai → pembeda (c)
+    rad1 < rad0-2 gagal palsu ("radius tidak bergeser" di log 197).
+    Kini radius di-POLL tiap 1.5 dtk (maks 30 dtk) sampai konvergen.
+  - f2 CLAMP-STUCK: setelah satu wheel sukses, sph.radius = 12 (clamp).
+    Attempt berikutnya r_goal0 = min(sph.radius,24) = 12 → d =
+    zoomRadius(12,-40)-12 = 0 → goal.r & radius TIDAK bisa turun lagi →
+    kedua pembeda mustahil → FAIL berantai attempt sisa. Kini tiap
+    attempt diawali re-expand: bila radius < 22, wheel BAWAH
+    (deltaY=+1000) + poll sampai ≥ 22 (maks 15 dtk).
+  - f3 (koreksi diri draft v2): gate layar angular DIHAPUS — bukti live
+    run menunjukkan tgt EKSAK di posisi agen saat follow aktif dan wheel
+    tetap sah TANPA raycaster (handler OfficeScene L636 langsung
+    zoomRadius dari deltaY); gate justru menutup attempt valid (arah
+    vektor terbalik) dan menggantung run saat agen tak di dead-zone.
 Pemakaian: uv run scripts/e2e_zoom_follow.py
 """
 import subprocess, os, time, urllib.request, json, socket, struct, base64, sys, math
@@ -126,46 +125,9 @@ def proj_expr(x, y, z):
 FOCUS_EXPR = "JSON.stringify(window.__dbg?window.__dbg().focus:null)"
 RADIUS_EXPR = "JSON.stringify(window.__cam?window.__cam.sph.radius:null)"
 
-# Posisi kamera+target eksak utk gate layar v2 (mirror data updCam):
-# camera.position & window.__cam.tgt (tgt belum dilerp = posisi follow saat itu).
-CAM_EXPR = ("JSON.stringify((()=>{const c=window.__camCam;if(!c||!window.__cam)return null;"
-            "return {cx:c.position.x,cy:c.position.y,cz:c.position.z,"
-            "tx:window.__cam.tgt.x,ty:window.__cam.tgt.y,tz:window.__cam.tgt.z};})())")
-
-
-def _wrap_pi(a):
-    """Bungkus sudut ke [-π, π]."""
-    while a > math.pi:
-        a -= 2 * math.pi
-    while a < -math.pi:
-        a += 2 * math.pi
-    return a
-
-
-def screen_gate(cam, agent):
-    """Gate layar v2 (murni, diuji di zoom_follow_hardening.test.js):
-    True BILA agen di dead-zone angular (<25° dari arah pandang kamera di
-    bidang XZ) DAN lebih dekat ke kamera daripada titik target (dist <
-    0.75·dist(tgt,kamera)) → proyeksi perspektifnya jatuh dekat pusat
-    layar → raycast tengah canvas kena agen. False bila data tak lengkap
-    (None/korup) — aman-fail: wheel tidak ditembakkan."""
-    if not cam or agent is None:
-        return False
-    try:
-        dx, dz = cam["cx"] - cam["tx"], cam["cz"] - cam["tz"]
-        dc = math.hypot(dx, dz)
-        if dc < 1e-6:
-            return False
-        ax, az = agent["x"] - cam["tx"], agent["z"] - cam["tz"]
-        # sudut arah PANDANG kamera dari tgt: mirror eksak updCam (sinθ, cosθ)
-        a = math.atan2(dx, dz)
-        b = math.atan2(ax, az)
-        angular_ok = abs(_wrap_pi(a - b)) < math.radians(25.0)
-        dist_agent = math.hypot(cam["cx"] - agent["x"], cam["cz"] - agent["z"])
-        radial_ok = dist_agent < 0.75 * dc
-        return angular_ok and radial_ok
-    except (KeyError, TypeError):
-        return False
+# jarak Euclid 3D tgt kamera vs titik (utk poll konvergensi follow & re-expand)
+TGT_DIST_EXPR = ("JSON.stringify((()=>{const t=window.__cam&&window.__cam.tgt;if(!t)return null;"
+                 "return Math.hypot(t.x-%f,t.y-%f,t.z-%f);})())")
 
 
 def _x99_alive():
@@ -209,6 +171,10 @@ def main():
             val = (res.get("result") or {}).get("value")
             return val
 
+        def wheel(delta_y):
+            cmd("Input.dispatchMouseEvent", type="mouseWheel",
+                x=683, y=384, deltaX=0, deltaY=delta_y)
+
         cmd("Page.enable"); cmd("Runtime.enable")
         time.sleep(15)  # scene init + beberapa frame animasi
 
@@ -235,6 +201,19 @@ def main():
 
         ok = False
         for attempt in range(6):
+            # ── f2 RE-EXPAND: bila radius terjepit clamp (wheel attempt lalu),
+            # wheel BAWAH dulu sampai ≥22 — dulu attempt berikutnya r_goal0 =
+            # min(12,24)=12 → pembeda mustahil → FAIL berantai.
+            rad_pre = json.loads(ev(RADIUS_EXPR) or "null")
+            if isinstance(rad_pre, (int, float)) and rad_pre < 22:
+                wheel(1000)
+                r_now = rad_pre
+                for _ in range(10):
+                    time.sleep(1.5)
+                    r_now = json.loads(ev(RADIUS_EXPR) or "null")
+                    if isinstance(r_now, (int, float)) and r_now >= 22:
+                        break
+                print("  attempt[%d]: re-expand radius %s→%s" % (attempt, rad_pre, r_now if isinstance(rad_pre, (int, float)) else "?"))
             if attempt and attempt % 2 == 0:
                 walkers = json.loads(ev(WALKERS_EXPR) or "[]")  # walker bisa usai — refresh
                 if not walkers:
@@ -261,7 +240,6 @@ def main():
                     w = dict(w, **cur)
             if not got:
                 continue
-            time.sleep(2.0)  # lerp goal + seleksi (SwiftShader ~1.5 FPS)
             focus = json.loads(ev(FOCUS_EXPR) or "null")
             rad0 = json.loads(ev(RADIUS_EXPR) or "null")
             # pre-condition: goal follow aktif (reset:false) hasil klik agen
@@ -270,30 +248,49 @@ def main():
                 continue
             r_goal0 = focus["r"]
 
-            # ── 2b. GATE LAYAR v2: wheel hanya bila agen benar-benar di
-            # dead-zone layar (angular <25° DAN lebih dekat dari tgt) —
-            # dulu wheel ditembak BLIND → raycast tengah meleset saat lerp
-            # belum tuntas → jalur klik-kosong me-reset goal → FAIL palsu.
-            cam = json.loads(ev(CAM_EXPR) or "null")
-            gate = screen_gate(cam, w)
-            print("  attempt[%d]: gate=%s (cam=%s agent=(%.1f,%.1f))"
-                  % (attempt, gate, json.dumps(cam), w["x"], w["z"]))
-            if not gate:
-                continue  # ulang attempt lain — JANGAN wheel blind
+            # ── poll konvergensi FOLLOW: tgt kamera mengejar agen (lerp .06/
+            # frame lambat di SwiftShader) — dulu tidur 2.0 dtk tunggal.
+            t0 = time.time()
+            tgt_ok = False
+            while time.time() - t0 < 15:
+                d = json.loads(ev(TGT_DIST_EXPR % (w["x"], (w["y"] or 0) + 1.5, w["z"])) or "null")
+                if isinstance(d, (int, float)) and d < 2.0:
+                    tgt_ok = True
+                    break
+                time.sleep(1.0)
+            print("  attempt[%d]: follow konvergen=%s (goal r=%s rad0=%s)"
+                  % (attempt, tgt_ok, r_goal0, rad0))
 
             # ── 3. scroll wheel NYATA ke atas (mendekat) di tengah canvas ──
             # deltaY=-1000 → d = zoomRadius(rad0, -40) - rad0 = 12 - rad0 →
-            # sph.radius & goal.r terdorong ke CLAMP 12. Lerp follow hanya
-            # bisa menarik radius menuju goal.r (≥12 tapi ≥ lama bila tanpa
-            # wheel) — mencapai ~12 BUKTI wheel benar-benar mendarat.
-            cmd("Input.dispatchMouseEvent", type="mouseWheel",
-                x=683, y=384, deltaX=0, deltaY=-1000)
-            time.sleep(1.5)  # lerp radius (beberapa frame)
+            # sph.radius & goal.r terdorong ke CLAMP 12.
+            wheel(-1000)
 
-            focus2 = json.loads(ev(FOCUS_EXPR) or "null")
-            rad1 = json.loads(ev(RADIUS_EXPR) or "null")
+            # ── f1 POLL KONVERGENSI: radius lerp .06/frame butuh ±26 dtk di
+            # SwiftShader — dulu tidur 1.5 dtk tunggal → rad1 early-read →
+            # pembeda (c) gagal palsu. Poll sampai pembeda terpenuhi/timeout.
+            focus2 = None
+            rad1 = None
+            ok_this = False
+            t0 = time.time()
+            while time.time() - t0 < 30:
+                time.sleep(1.5)
+                focus2 = json.loads(ev(FOCUS_EXPR) or "null")
+                rad1 = json.loads(ev(RADIUS_EXPR) or "null")
+                if focus2 and not focus2.get("reset"):
+                    new_r = focus2.get("r")
+                    rad_ok = (isinstance(rad0, (int, float)) and isinstance(rad1, (int, float))
+                              and rad1 < rad0 - 2.0)
+                    goal_ok = isinstance(new_r, (int, float)) and new_r < r_goal0 - 2.0
+                    if goal_ok and rad_ok:
+                        ok_this = True
+                        break
+                elif focus2 and focus2.get("reset"):
+                    # goal berubah jadi reset saat poll = klik-kosong/ESC nyata —
+                    # tunggu pun sia-sia; catat & keluar poll (regresi nyata!)
+                    break
             print("AFTER_WHEEL[%d]:" % attempt, json.dumps(focus2), "rad1=", rad1)
-            # ── 4. pembeda ganda kode baru ──
+            # ── 4. pembeda ganda kode baru (KRITERIA INTI 121, tak berubah) ──
             # (a) goal follow MASIH ADA (kode lama: focusGoal=null → null)
             # (b) goal.r BERKURANG signifikan (terdorong clamp 12 — bukti wheel
             #     mendarat; dulu goal dibuang sekalian)
@@ -303,7 +300,7 @@ def main():
                 rad_ok = (isinstance(rad0, (int, float)) and isinstance(rad1, (int, float))
                           and rad1 < rad0 - 2.0)
                 goal_ok = isinstance(new_r, (int, float)) and new_r < r_goal0 - 2.0
-                if goal_ok and rad_ok:
+                if ok_this or (goal_ok and rad_ok):
                     print("ZOOM_FOLLOW[%d]: OK (goal follow dipertahankan r=%.2f→%.2f, radius=%.1f→%.1f)"
                           % (attempt, r_goal0, new_r, rad0, rad1))
                     ok = True
@@ -311,7 +308,7 @@ def main():
                 print("  (goal ada tapi radius tidak bergeser: goal %.2f→%s rad %s→%s)"
                       % (r_goal0, new_r, rad0, rad1))
             else:
-                print("  (focus hilang setelah wheel — perilaku lama terdeteksi)")
+                print("  (focus hilang/ter-reset setelah wheel — perilaku lama terdeteksi)")
         if not ok:
             print("E2E_ZOOMFOLLOW: FAIL")
             sys.exit(1)
