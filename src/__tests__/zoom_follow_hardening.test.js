@@ -75,6 +75,9 @@ describe('e2e_zoom_follow.py v2 — anti early-read & clamp-stuck (siklus 198)',
     expect(src).toContain('TGT_DIST_EXPR')
     expect(src).toContain('while time.time() - t0 < 15:')
     expect(src).toContain('d < 2.0')
+    // interpolasi koordinat WAJIB berkurung — `t.x-%f` pada koordinat negatif
+    // menghasilkan `t.x--8.0` (postfix-decrement) → SyntaxError → None senyap
+    expect(src).toContain('Math.hypot(t.x-(%f),t.y-(%f),t.z-(%f))')
     // urutan: follow poll SEBELUM wheel(-1000)
     const followIdx = src.indexOf('while time.time() - t0 < 15:')
     const wheelIdx = src.indexOf('wheel(-1000)')

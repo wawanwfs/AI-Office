@@ -126,8 +126,11 @@ FOCUS_EXPR = "JSON.stringify(window.__dbg?window.__dbg().focus:null)"
 RADIUS_EXPR = "JSON.stringify(window.__cam?window.__cam.sph.radius:null)"
 
 # jarak Euclid 3D tgt kamera vs titik (utk poll konvergensi follow & re-expand)
+# Kurung (%f) WAJIB: koordinat negatif tanpa kurung = `t.x--8.0` → lexer JS
+# membaca `t.x--` (postfix-decrement) + literal tanpa operator → SyntaxError
+# → evaluate selalu None (bug tersembunyi run 1-4: konvergen selalu False).
 TGT_DIST_EXPR = ("JSON.stringify((()=>{const t=window.__cam&&window.__cam.tgt;if(!t)return null;"
-                 "return Math.hypot(t.x-%f,t.y-%f,t.z-%f);})())")
+                 "return Math.hypot(t.x-(%f),t.y-(%f),t.z-(%f));})())")
 
 
 def _x99_alive():
@@ -252,14 +255,17 @@ def main():
             # frame lambat di SwiftShader) — dulu tidur 2.0 dtk tunggal.
             t0 = time.time()
             tgt_ok = False
+            d_last = None
             while time.time() - t0 < 15:
                 d = json.loads(ev(TGT_DIST_EXPR % (w["x"], (w["y"] or 0) + 1.5, w["z"])) or "null")
+                d_last = d
                 if isinstance(d, (int, float)) and d < 2.0:
                     tgt_ok = True
                     break
                 time.sleep(1.0)
-            print("  attempt[%d]: follow konvergen=%s (goal r=%s rad0=%s)"
-                  % (attempt, tgt_ok, r_goal0, rad0))
+            print("  attempt[%d]: follow dist=%.1f konvergen=%s (False wajar bila agen"
+                  " masih berjalan — lag lerp; wheel tetap sah tanpa raycast)"
+                  % (attempt, d_last if isinstance(d_last, (int, float)) else -1, tgt_ok))
 
             # ── 3. scroll wheel NYATA ke atas (mendekat) di tengah canvas ──
             # deltaY=-1000 → d = zoomRadius(rad0, -40) - rad0 = 12 - rad0 →
