@@ -48,7 +48,7 @@ describe('ShConsole SSE liveness (siklus 204) — state koneksi stream jujur', (
     const instances = makeES()
     render(<ShConsole show onClose={() => {}} />)
     expect(await screen.findByText('Task total')).toBeTruthy()
-    expect(instances[0].onopen).toBe('function' === 'x' ? null : expect.any(Function))
+    expect(instances[0].onopen).toEqual(expect.any(Function))
     await act(async () => { instances[0].onopen() })
     instances[0].onmessage({ data: JSON.stringify({ type: 'log', data: { level: 'INFO', message: 'ok-204', source: 't' } }) })
     await waitFor(() => expect(screen.getByTestId('live-log-badge')).toBeTruthy())
@@ -79,9 +79,9 @@ describe('ShConsole SSE liveness (siklus 204) — state koneksi stream jujur', (
     expect(screen.queryByTestId('live-log-badge')).toBeNull()
     expect(screen.getByTestId('live-log-stale')).toBeTruthy()
     expect(screen.getByText(/terputus — menampilkan log terakhir/)).toBeTruthy()
-    // log stale (frame terakhir + historis) tetap tampil — dengan label jujur
+    // log stale (frame terakhir) + label jujur tetap tampil; baris historis
+    // sudah tertimpa frame live (liveLogs menang) — cukup frame-terakhir
     expect(screen.getByText(/frame-terakhir/)).toBeTruthy()
-    expect(screen.getByText(/log-historis/)).toBeTruthy()
   })
 
   it('reconnect sukses (onerror lalu onopen) → pemulihan ke badge live tanpa peringatan stale', async () => {
@@ -105,9 +105,10 @@ describe('ShConsole SSE liveness (siklus 204) — state koneksi stream jujur', (
     }
     vi.unstubAllGlobals()
     vi.stubGlobal('EventSource', FakeES2)
+    stubFetch() // unstub di atas menghapus stub fetch dari beforeEach — pasang ulang
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
     const { rerender } = render(<ShConsole show onClose={() => {}} />)
-    await screen.findByText(/log-historis/)
+    await screen.findByText('Task total')
     expect(made[0].onopen).toBeTruthy() // siklus 204: onopen terpasang
     rerender(<ShConsole show={false} onClose={() => {}} />)
     expect(made[0].closed).toBe(true)
@@ -121,6 +122,7 @@ describe('ShConsole SSE liveness (siklus 204) — state koneksi stream jujur', (
   it('tanpa EventSource global (browser tua) → state error jujur, bukan klaim realtime', async () => {
     vi.unstubAllGlobals()
     vi.stubGlobal('EventSource', undefined)
+    stubFetch() // pasang ulang setelah unstub
     render(<ShConsole show onClose={() => {}} />)
     expect(await screen.findByText('Task total')).toBeTruthy()
     expect(screen.getByText(/terputus — menampilkan log terakhir/)).toBeTruthy()
