@@ -167,7 +167,7 @@ def main():
         results["chip_ok"] = bool(chip and "GPU" in chip.get("label", "") and "FPS" in chip.get("label", ""))
         # 3) degradasi SwiftShader: dibaca dari state __perf (shadowLevel>0 atau
         #    downgraded) — sun scene TIDAK diubah oleh probe (fungsi murni diuji
-        #    di unit test; dulu ada blok evaluate __debugSun yang SELALU return
+        #    di unit test; dulu ada blok evaluate hook sun yang SELALU return
         #    null = kode mati, dihapus siklus 195).
         results["degraded_seen"] = bool(perf and (perf.get("shadowLevel", 0) > 0 or perf.get("downgraded")))
         results["chip_state"] = (chip or {}).get("cls", "").replace("perf-chip ", "")
