@@ -23,5 +23,15 @@ for p in (str(HERE), str(REPO_BACKEND)):
 import wfs_tasks  # noqa: E402
 import wfs_orders  # noqa: E402
 
-sys.modules.setdefault("tasks", wfs_tasks)
-sys.modules.setdefault("orders", wfs_orders)
+# Alias WAJIB terpasang SEBELUM wfs_server diimpor: wfs_server mengimpor flat
+# `tasks`/`orders` — tanpa alias, Python jatuh ke salinan lain (modul objek
+# beda) dan test yang mempatch wfs_tasks.DB tidak terlihat oleh server.
+sys.modules["tasks"] = wfs_tasks
+sys.modules["orders"] = wfs_orders
+
+# Siklus 209: server.py produksi :8787 = superset backend_live/wfs_server.py
+# (pola 206/207/208). backend/server.py dihapus dari repo; test yang mengimpor
+# `server` melihat SATU SUMBER yang sama dengan produksi.
+import wfs_server  # noqa: E402
+
+sys.modules["server"] = wfs_server

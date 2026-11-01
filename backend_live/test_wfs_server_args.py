@@ -1,7 +1,8 @@
 """Unit test helper _clamp_int di server.py (parsing arg numerik toleran).
 
-Migrasi backend/test_server_args.py (siklus 208) — server.py repo kini
-mengimpor superset backend_live/wfs_tasks.py (satu sumber produksi :8787).
+Migrasi backend/test_server_args.py (siklus 208, adaptasi 209) — server
+produksi :8787 kini = superset backend_live/wfs_server.py (satu sumber,
+pola 206/207/208); test mengimpor superset itu langsung.
 """
 import sys
 from pathlib import Path
@@ -9,7 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 
-import server
+import wfs_server as server
 
 
 def test_clamp_int_default_untuk_input_invalid():

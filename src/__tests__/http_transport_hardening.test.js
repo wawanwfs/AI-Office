@@ -118,9 +118,9 @@ describe('http_transport_hardening siklus 201 — scanner self-test', () => {
 })
 
 describe('http_transport_hardening siklus 201 — census', () => {
-  it('census: 80 file .py dgn call-site urlopen, >=90 call-site, 3 file .sh curl (siklus 208: +1 apply_wfs_tasks.py)', () => {
+  it('census: 81 file .py dgn call-site urlopen, >=90 call-site, 3 file .sh curl (siklus 209: +1 apply_wfs_server.py (80→81))', () => {
     expect(PY_ALL.length).toBeGreaterThan(70)
-    expect(PY_HTTP.length).toBe(80)
+    expect(PY_HTTP.length).toBe(81)
     const total = PY_HTTP.reduce((n, f) => n + pySites(f).length, 0)
     expect(total).toBeGreaterThanOrEqual(90)
     expect(SH_ALL.length).toBe(3)

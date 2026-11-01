@@ -1,8 +1,8 @@
 """Preview and workspace security regressions; no production data/network.
 
-Migrasi backend/test_preview_workspace_security.py (siklus 208) — pengujian
-menarget server.py repo + modul superset wfs_tasks/wfs_orders (satu sumber
-produksi :8787, pola 206/207).
+Migrasi backend/test_preview_workspace_security.py (siklus 208, adaptasi 209) —
+pengujian menarget superset wfs_server (satu sumber server produksi :8787,
+pola 206/207/208): state SH diakses lewat atribut SH_DB.
 """
 import asyncio
 import subprocess
@@ -19,7 +19,7 @@ from test_wfs_execution_guards import isolated, server
 
 
 def test_preview_only_forwards_application_headers(server, monkeypatch):
-    monkeypatch.setattr(server.sh_db, 'get_project', lambda _: {'preview_port': 32001})
+    monkeypatch.setattr(server.SH_DB, 'get_project', lambda _: {'preview_port': 32001})
     seen = []
     real_client = httpx.AsyncClient
     def respond(request):
@@ -44,7 +44,7 @@ def test_preview_only_forwards_application_headers(server, monkeypatch):
 @pytest.mark.parametrize('location', ['http://169.254.169.254/latest/meta-data/',
                                      'http://127.0.0.1:8787/api/status', '/next'])
 def test_preview_never_follows_redirects(server, monkeypatch, location):
-    monkeypatch.setattr(server.sh_db, 'get_project', lambda _: {'preview_port': 32001})
+    monkeypatch.setattr(server.SH_DB, 'get_project', lambda _: {'preview_port': 32001})
     seen = []
     real_client = httpx.AsyncClient
     def respond(request):
