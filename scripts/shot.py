@@ -10,11 +10,23 @@ Pemakaian: python3 scripts/shot.py W H out.png [mobile]
           cuma window-size kecil TANPA device-metrics override, jadi layout/
           dsf berbeda dari HP nyata (tes visual dock/HUD mobile menyesatkan).
 
-Ambang kesehatan scene tetap diperiksa PEMAKAI (file > 500 KB = scene hidup;
-lebih kecil = scene mati — JANGAN push). Untuk gate otomatis penuh
-(0 error + hooks + ambang + gate dock) pakai scripts/e2e_err_probe.py.
+Ambang kesehatan scene kini OTOMATIS (siklus 194 — dulu "PEMAKAI harus cek
+file > 500 KB"): statistik piksel via scripts/png_stats.py — warna unik
+>= 1500 & nonbg >= 4% = ALIVE (exit 0); kanvas polos/langit-saja = DEAD
+(exit 1, JANGAN push). Jebakan kalibrasi: gradien 378 KB lolos cek byte
+tapi DEAD piksel (616 warna). Untuk gate otomatis penuh (0 error + hooks +
+ambang + gate dock + hygiene) pakai scripts/e2e_err_probe.py.
 """
 import subprocess, os, time, urllib.request, json, socket, struct, base64, sys
+import importlib.util as _ilu
+
+# Statistik piksel (gate ALIVE/DEAD, siklus 194): png_stats.py by path —
+# pola e2e_err_probe.py (nama generik rawan resolve ke package lain).
+_spec_png = _ilu.spec_from_file_location(
+    "wfs_png_stats", os.path.join(os.path.dirname(os.path.abspath(__file__)), "png_stats.py"))
+assert _spec_png is not None and _spec_png.loader is not None  # file statis repo
+png_stats_mod = _ilu.module_from_spec(_spec_png)
+_spec_png.loader.exec_module(png_stats_mod)
 
 CHROME = os.path.expanduser(
     "~/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell")
@@ -118,8 +130,15 @@ def main():
         data = base64.b64decode(str((shot.get("result") or {}).get("data") or ""))
         open(out, "wb").write(data)
         mode = f"mobile {MOBILE_W}x{MOBILE_H}@{MOBILE_DSF}x" if mobile else "desktop"
-        print(f"SHOT {out}: {len(data)} bytes ({mode})")
-        sys.exit(0 if len(data) > 0 else 1)
+        # Gate piksel (siklus 194): ALIVE/DEAD dari ISI gambar, bukan byte.
+        try:
+            px = png_stats_mod.png_stats(data)
+            alive, why = png_stats_mod.alive_verdict(px)
+        except Exception as e:  # decode gagal = scene tidak terbukti hidup
+            px, alive, why = {"err": str(e)}, False, "decode gagal"
+        print(f"SHOT {out}: {len(data)} bytes ({mode}) "
+              f"{'ALIVE' if alive else 'DEAD'} [px: {why}]")
+        sys.exit(0 if (len(data) > 0 and alive) else 1)
     finally:
         p.terminate()
         try: p.wait(3)

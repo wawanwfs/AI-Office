@@ -6,7 +6,10 @@ diprune TMPDIR 24 jam, siklus 185). Smoketest kesehatan scene di browser nyata:
  2. Tanpa 'Scene init failed' di console.
  3. Hook inti scene terpasang: __agentData (agen > 0), __camCam, __renderer,
     __wfsSceneControls, __zoneLabels (5 zona), __wallFade.
- 4. Scene HIDUP: screenshot PNG > ambang (kanvas hitam/halusut = file kecil).
+ 4. Scene HIDUP: gate byte (PNG > ambang) + gate PIKSEL (siklus 194):
+    warna unik >= 1500 & nonbg >= 4% via scripts/png_stats.py — byte-size
+    hanya proksi; jebakan "langit-saja" (gradien 378 KB) lolos byte tapi
+    DEAD piksel.
     (Pola ambang sama dgn e2e_perf_chip siklus 147.)
  5. Mode MOBILE (arg "mobile"): viewport 390x844 dsf=2 (HP umum user) +
     gate tambahan dock: .dock .ibbtn tidak ada yang terpotong viewport —
@@ -21,6 +24,14 @@ Transport: salinan e2e_perf_chip.py (Xvfb :99 + chrome-headless-shell + CDP WS).
 """
 import subprocess, os, time, urllib.request, json, socket, struct, base64, sys
 import importlib.util as _ilu  # noqa: E402
+
+# Satu sumber statistik piksel (gate #7, siklus 194): png_stats.py by path —
+# pola sama dgn deploy.py di atas (nama generik rawan resolve ke package lain).
+_spec_png = _ilu.spec_from_file_location(
+    "wfs_png_stats", os.path.join(os.path.dirname(os.path.abspath(__file__)), "png_stats.py"))
+assert _spec_png is not None and _spec_png.loader is not None  # file statis repo
+png_mod = _ilu.module_from_spec(_spec_png)
+_spec_png.loader.exec_module(png_mod)
 # Satu sumber HASHED_RE + referenced_assets = scripts/deploy.py (dimuat by path:
 # nama generik "deploy" rawan resolve ke package lain di search path Pyright).
 _spec_deploy = _ilu.spec_from_file_location(
@@ -171,12 +182,23 @@ def main():
         res["hooks"] = st
         res["hooks_ok"] = bool(st.get("agents", -1) > 0 and st.get("cam") and st.get("renderer")
                                and st.get("controls") and st.get("zone", -1) == 5 and st.get("wall"))
-        # 4) scene hidup: screenshot > ambang (desktop 300KB / mobile 200KB)
+        # 4) scene hidup: gate byte (desktop 300KB / mobile 200KB) + gate PIKSEL
+        #    (siklus 194, png_stats.py): warna unik >= 1500 DAN nonbg >= 4% —
+        #    byte-size hanya proksi: jebakan "langit-saja" (gradien 378 KB,
+        #    616 warna) lolos byte tapi DEAD piksel. Keduanya wajib lolos.
         shot = cmd("Page.captureScreenshot", format="png")
         data = base64.b64decode((shot.get("result") or {}).get("data", ""))
         open(out, "wb").write(data)
         res["shot_bytes"] = len(data)
         res["shot_ok"] = res["shot_bytes"] > (MOBILE_MIN_SHOT_BYTES if mobile else MIN_SHOT_BYTES)
+        try:
+            px = png_mod.png_stats(data)
+            px_ok, px_why = png_mod.alive_verdict(px)
+        except Exception as e:  # decode gagal = verdict DEAD (bukan crash probe)
+            px, px_ok, px_why = {"err": str(e)}, False, "decode gagal"
+        res["pixels"] = px
+        res["pixels_ok"] = px_ok
+        res["pixels_why"] = px_why
         # 5) gate mobile: dock tak menyunat tombol (kelas bug siklus 184) —
         #    label + kotak tombol terakhir dinilai LIVE dari DOM, bukan tebak.
         if mobile:
@@ -200,6 +222,7 @@ def main():
                               and dk.get("lastBottom", 0) <= dk.get("dockBottom", -1) + 1)
         clean = (not res["console_errors"] and not res["page_errors"]
                  and not res["init_failed"] and res["hooks_ok"] and res["shot_ok"]
+                 and res["pixels_ok"]
                  and (res.get("dock_ok", True)))
         # 6) Gate hygiene deploy (siklus 191): assets/ ~/wfs-hq tidak menumpuk
         #    file hashed orphan. Referensi dibaca dari index.html/landing.html/
