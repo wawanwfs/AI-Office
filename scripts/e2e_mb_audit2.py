@@ -3,6 +3,9 @@
 import base64, json, os, socket, struct, subprocess, sys, time, urllib.request
 from urllib.parse import urlparse
 
+WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
+
+
 CHROME = os.path.expanduser(
     "~/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell")
 PORT = 9463
@@ -23,7 +26,6 @@ try:
     tabs = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{PORT}/json/list", timeout=5).read())
     wsu = [t["webSocketDebuggerUrl"] for t in tabs if t.get("type") == "page"][0]
     pr = urlparse(wsu)
-    WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
     s = socket.create_connection((pr.hostname, pr.port), timeout=WS_TIMEOUT_S)
     s.sendall((f"GET {pr.path} HTTP/1.1\r\nHost: {pr.hostname}:{pr.port}\r\n"
                "Upgrade: websocket\r\nConnection: Upgrade\r\n"
@@ -45,36 +47,39 @@ try:
         h += bytes([0x80 | n]) if n < 126 else bytes([0x80 | 126]) + struct.pack(">H", n)
         s.sendall(h + mask + bytes(b ^ mask[i % 4] for i, b in enumerate(d)))
         s.settimeout(60)
+        try:
 
-        def rx(k):
-            b = b""
-            while len(b) < k:
-                c = s.recv(k - len(b))
-                if not c:
-                    raise ConnectionResetError()
-                b += c
-            return b
+            def rx(k):
+                b = b""
+                while len(b) < k:
+                    c = s.recv(k - len(b))
+                    if not c:
+                        raise ConnectionResetError()
+                    b += c
+                return b
 
-        while True:
-            hdr = rx(2); op = hdr[0] & 0xF; n = hdr[1] & 0x7F
-            if n == 126:
-                n = struct.unpack(">H", rx(2))[0]
-            elif n == 127:
-                n = struct.unpack(">Q", rx(8))[0]
-            d2 = rx(n)
-            while op == 0:
-                h2 = rx(2); op2 = h2[0] & 0xF; n2 = h2[1] & 0x7F
-                if n2 == 126:
-                    n2 = struct.unpack(">H", rx(2))[0]
-                d2 += rx(n2)
-                break
-            r = json.loads(d2)
-            if r.get("id") == mid[0]:
-                return r
+            while True:
+                hdr = rx(2); op = hdr[0] & 0xF; n = hdr[1] & 0x7F
+                if n == 126:
+                    n = struct.unpack(">H", rx(2))[0]
+                elif n == 127:
+                    n = struct.unpack(">Q", rx(8))[0]
+                d2 = rx(n)
+                while op == 0:
+                    h2 = rx(2); op2 = h2[0] & 0xF; n2 = h2[1] & 0x7F
+                    if n2 == 126:
+                        n2 = struct.unpack(">H", rx(2))[0]
+                    d2 += rx(n2)
+                    break
+                r = json.loads(d2)
+                if r.get("id") == mid[0]:
+                    return r
+        except socket.timeout:
+            return None  # siklus 197: reply macet/hilang -> None tercatat (bukan hang)
 
     def ev(expr):
         r = cmd("Runtime.evaluate", expression=expr, returnByValue=True)
-        res = r.get("result", {}).get("result", {})
+        res = ((r or {}).get("result") or {}).get("result") or {}  # siklus 197: r=None aman
         if "exceptionDetails" in r.get("result", {}):
             raise RuntimeError(f"eval gagal: {json.dumps(r['result']['exceptionDetails'])[:400]}")
         return res.get("value")

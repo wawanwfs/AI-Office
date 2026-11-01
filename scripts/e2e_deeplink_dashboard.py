@@ -24,11 +24,13 @@ PORT = 9455
 BASE = "http://127.0.0.1:9503"
 
 
+WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
+
+
 class WS:
     def __init__(s, u):
         from urllib.parse import urlparse
         pr = urlparse(u)
-        WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
         s.sock = socket.create_connection((pr.hostname, pr.port), timeout=WS_TIMEOUT_S)
         s.sock.sendall((f"GET {pr.path} HTTP/1.1\r\nHost: {pr.hostname}:{pr.port}\r\n"
                         "Upgrade: websocket\r\nConnection: Upgrade\r\n"
@@ -117,7 +119,7 @@ def main():
             r = cmd("Runtime.evaluate",
                     expression="!!document.querySelector('div#dashboard[role=dialog]')",
                     returnByValue=True)
-            return r["result"]["result"].get("value") is True
+            return bool(((r or {}).get("result") or {}).get("result", {}).get("value")) is True
 
         # A. deep-link hash
         nav(BASE + "/app/#dashboard")

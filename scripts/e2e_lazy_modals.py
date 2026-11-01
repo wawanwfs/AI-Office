@@ -31,10 +31,12 @@ CHROME = os.path.expanduser(
 PORT = 9487
 URL = "http://127.0.0.1:9503/"
 
+WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
+
+
 class WS:
     def __init__(s, u):
         pr = urlparse(u)
-        WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
         s.sock = socket.create_connection((pr.hostname, pr.port), timeout=WS_TIMEOUT_S)
         s.sock.settimeout(10)  # berlaku SEJAK handshake — tanpa ini recv bisa menggantung selamanya
         s.sock.sendall((f"GET {pr.path} HTTP/1.1\r\nHost: {pr.hostname}:{pr.port}\r\n"
@@ -117,6 +119,7 @@ def main():
             for _ in range(30):
                 try:
                     r = json.loads(ws.recv_text())
+                    if not isinstance(r, dict): continue  # siklus 197: event malformed diabaikan
                 except (socket.timeout, ConnectionError, OSError):
                     continue
                 if r.get("id") == mid[0]: return r
@@ -232,6 +235,8 @@ def main():
                 r = json.loads(ws.recv_text())
             except (socket.timeout, ConnectionError):
                 break
+            if not isinstance(r, dict):
+                continue  # siklus 197: event malformed diabaikan
             m = r.get("method", "")
             if m == "Runtime.consoleAPICalled" and r["params"].get("type") == "error":
                 for a in r["params"].get("args", []):

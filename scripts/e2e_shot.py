@@ -7,11 +7,13 @@ CHROME = os.path.expanduser(
 PORT = 9453
 URL = "http://127.0.0.1:9503/"
 
+WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
+
+
 class WS:
     def __init__(s, u):
         from urllib.parse import urlparse
         pr = urlparse(u)
-        WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
         s.sock = socket.create_connection((pr.hostname, pr.port), timeout=WS_TIMEOUT_S)
         s.sock.sendall((f"GET {pr.path} HTTP/1.1\r\nHost: {pr.hostname}:{pr.port}\r\n"
                         "Upgrade: websocket\r\nConnection: Upgrade\r\n"
@@ -94,6 +96,8 @@ def main():
         cmd("Page.enable"); cmd("Runtime.enable")
         time.sleep(25)  # scene init + beberapa frame animasi (SwiftShader lambat saat VM load)
         r = cmd("Page.captureScreenshot", format="png")
+        if r is None or not (r.get("result") or {}).get("data"):
+            raise RuntimeError("siklus 197: reply captureScreenshot hilang (r=None)")
         data = base64.b64decode(r["result"]["data"])
         open(out, "wb").write(data)
         print("SHOT:", out, len(data), "bytes")

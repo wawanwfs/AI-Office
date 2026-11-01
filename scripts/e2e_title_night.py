@@ -115,7 +115,7 @@ try:
         r = cmd("Page.captureScreenshot", format="png")
         if r is None:
             raise RuntimeError("CDP reply hilang (timeout) — screenshot")
-        if "result" not in r:
+        if r is None or "result" not in r:
             raise RuntimeError(f"captureScreenshot gagal: {json.dumps(r)[:300]}")
         open(out, "wb").write(base64.b64decode(r["result"]["data"]))
         return os.path.getsize(out)

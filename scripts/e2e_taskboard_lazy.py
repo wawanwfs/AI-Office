@@ -28,10 +28,12 @@ CHROME = os.path.expanduser(
 PORT = 9475
 URL = "http://127.0.0.1:9503/"
 
+WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
+
+
 class WS:
     def __init__(s, u):
         pr = urlparse(u)
-        WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
         s.sock = socket.create_connection((pr.hostname, pr.port), timeout=WS_TIMEOUT_S)
         s.sock.settimeout(10)  # berlaku SEJAK handshake — tanpa ini recv bisa menggantung selamanya
         s.sock.sendall((f"GET {pr.path} HTTP/1.1\r\nHost: {pr.hostname}:{pr.port}\r\n"

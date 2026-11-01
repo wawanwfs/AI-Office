@@ -16,6 +16,9 @@ error window = 0.
 import base64, json, os, socket, struct, subprocess, time, urllib.request
 from urllib.parse import urlparse
 
+WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
+
+
 CHROME = os.path.expanduser(
     "~/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell")
 PORT = 9477
@@ -37,7 +40,6 @@ try:
     tabs = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{PORT}/json/list", timeout=5).read())
     wsu = [t["webSocketDebuggerUrl"] for t in tabs if t.get("type") == "page"][0]
     pr = urlparse(wsu)
-    WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
     s = socket.create_connection((pr.hostname, pr.port), timeout=WS_TIMEOUT_S)
     s.sendall((f"GET {pr.path} HTTP/1.1\r\nHost: {pr.hostname}:{pr.port}\r\n"
                "Upgrade: websocket\r\nConnection: Upgrade\r\n"

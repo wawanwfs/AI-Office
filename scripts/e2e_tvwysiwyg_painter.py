@@ -16,11 +16,13 @@ PAINTER = (16, 229, 160)
 TOL = 12
 
 
+WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
+
+
 class WS:
     def __init__(s, u):
         from urllib.parse import urlparse
         pr = urlparse(u)
-        WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
         s.sock = socket.create_connection((pr.hostname, pr.port), timeout=WS_TIMEOUT_S)
         s.sock.sendall((f"GET {pr.path} HTTP/1.1\r\nHost: {pr.hostname}:{pr.port}\r\n"
                         "Upgrade: websocket\r\nConnection: Upgrade\r\n"
@@ -170,13 +172,16 @@ def main():
             time.sleep(0.5)
             r = cmd("Runtime.evaluate", expression="JSON.stringify({a: window.__agentData?window.__agentData.length:-1, tv: !!window.__tvCanvas, sc: !!window.__scene})")
             try:
-                st = json.loads(r["result"]["result"].get("value", "{}"))
+                st = json.loads((((r or {}).get("result") or {}).get("result") or {}).get("value") or "{}")  # siklus 197: r=None aman
             except Exception:
                 st = {}
             if st.get("a", -1) > 0 and st.get("tv") and st.get("sc"):
                 break
         r = cmd("Runtime.evaluate", expression=AIM, returnByValue=True)
-        val = r["result"]["result"].get("value")
+        val = (((r or {}).get("result") or {}).get("result") or {}).get("value")  # siklus 197: r=None aman
+        if val is None:
+            print("siklus 197: reply evaluate hilang (r=None) -> verdict FAIL")
+            raise SystemExit(1)
         if not val or val in ("no-scene", "no-mesh"):
             print("PROBE_FAIL:", val); sys.exit(1)
         v = json.loads(val)

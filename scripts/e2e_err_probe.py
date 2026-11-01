@@ -56,11 +56,13 @@ HOOKS_EXPECT = ["__agentData", "__camCam", "__renderer", "__wfsSceneControls",
                 "__zoneLabels", "__wallFade"]
 
 
+WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
+
+
 class WS:
     def __init__(s, u):
         from urllib.parse import urlparse
         pr = urlparse(u)
-        WS_TIMEOUT_S = 60  # siklus 197: tanpa timeout koneksi bisa menggantung tanpa batas
         s.sock = socket.create_connection((pr.hostname, pr.port), timeout=WS_TIMEOUT_S)
         s.sock.sendall((f"GET {pr.path} HTTP/1.1\r\nHost: {pr.hostname}:{pr.port}\r\n"
                         "Upgrade: websocket\r\nConnection: Upgrade\r\n"
@@ -164,6 +166,8 @@ def main():
                 r = json.loads(ws.recv_text())
             except (socket.timeout, ConnectionError):
                 break
+            if not isinstance(r, dict):
+                continue  # siklus 197: event malformed diabaikan
             m = r.get("method", "")
             if m == "Runtime.consoleAPICalled" and r["params"].get("type") == "error":
                 for a in r["params"].get("args", []):

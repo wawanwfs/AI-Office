@@ -137,6 +137,8 @@ def main():
                 r = json.loads(ws.recv_text())
             except (socket.timeout, ConnectionError):
                 break
+            if not isinstance(r, dict):
+                continue  # siklus 197: event malformed diabaikan
             m = r.get("method", "")
             if m == "Runtime.consoleAPICalled" and r["params"].get("type") == "error":
                 for a in r["params"].get("args", []):
