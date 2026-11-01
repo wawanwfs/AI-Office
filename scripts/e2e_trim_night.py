@@ -10,6 +10,7 @@ Bukti 5 keadaan (state hook + warna material LIVE = sumber kebenaran):
   E) sinkron trim == wall == sky di semua keadaan
 Exit non-zero bila ada keadaan yang gagal."""
 import base64, json, os, socket, struct, subprocess, sys, time, urllib.request
+import importlib.util as _ilu
 from urllib.parse import urlparse
 
 CHROME = os.path.expanduser(
@@ -17,6 +18,17 @@ CHROME = os.path.expanduser(
 PORT = 9464
 OUT_DAY = os.path.expanduser("~/.hermes/cache/scratch/ck166_day.png")
 OUT_NIGHT = os.path.expanduser("~/.hermes/cache/scratch/ck166_night.png")
+
+# Gate piksel siklus 196: satu sumber statistik piksel = scripts/png_stats.py
+# dimuat by path (pola e2e_err_probe/perf_chip — nama generik rawan resolve ke
+# package lain). Byte-size hanya proksi.
+_spec_png = _ilu.spec_from_file_location(
+    "wfs_png_stats", os.path.join(os.path.dirname(os.path.abspath(__file__)), "png_stats.py"))
+assert _spec_png is not None and _spec_png.loader is not None  # file statis repo
+png_mod = _ilu.module_from_spec(_spec_png)
+_spec_png.loader.exec_module(png_mod)
+
+WS_TIMEOUT_S = 60  # siklus 196: tanpa timeout koneksi bisa menggantung tanpa batas
 
 env = dict(os.environ, DISPLAY=":99")
 xv = None
@@ -34,14 +46,18 @@ try:
     tabs = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{PORT}/json/list", timeout=5).read())
     wsu = [t["webSocketDebuggerUrl"] for t in tabs if t.get("type") == "page"][0]
     pr = urlparse(wsu)
-    s = socket.create_connection((pr.hostname, pr.port))
+    s = socket.create_connection((pr.hostname, pr.port), timeout=WS_TIMEOUT_S)
     s.sendall((f"GET {pr.path} HTTP/1.1\r\nHost: {pr.hostname}:{pr.port}\r\n"
                "Upgrade: websocket\r\nConnection: Upgrade\r\n"
                f"Sec-WebSocket-Key: {base64.b64encode(os.urandom(16)).decode()}\r\n"
                "Sec-WebSocket-Version: 13\r\n\r\n").encode())
     buf = b""
+    s.settimeout(WS_TIMEOUT_S)  # d1: handshake tanpa deadline = hang selamanya
     while b"\r\n\r\n" not in buf:
-        buf += s.recv(1)
+        c = s.recv(1)
+        if not c:  # chrome mati di tengah handshake -> EOF, dulu loop selamanya
+            raise ConnectionResetError("EOF saat handshake WS")
+        buf += c
     mid = [0]
 
     def cmd(method, **params):
@@ -50,7 +66,7 @@ try:
         h = b"\x81"; n = len(d); mask = os.urandom(4)
         h += bytes([0x80 | n]) if n < 126 else bytes([0x80 | 126]) + struct.pack(">H", n)
         s.sendall(h + mask + bytes(b ^ mask[i % 4] for i, b in enumerate(d)))
-        s.settimeout(60)
+        s.settimeout(WS_TIMEOUT_S)  # per-permintaan CDP
 
         def rx(k):
             b = b""
@@ -61,17 +77,23 @@ try:
                 b += c
             return b
 
-        while True:
-            hdr = rx(2); op = hdr[0] & 0xF; n = hdr[1] & 0x7F
+        while True:  # reply CDP; timeout socket -> socket.timeout = reply hilang
+            try:
+                hdr = rx(2)
+            except socket.timeout:
+                return None  # siklus 196: reply hilang/macet -> None (bukan hang)
+            op = hdr[0] & 0xF; n = hdr[1] & 0x7F
             if n == 126:
                 n = struct.unpack(">H", rx(2))[0]
             elif n == 127:
                 n = struct.unpack(">Q", rx(8))[0]
             d2 = rx(n)
-            while op == 0:
+            while op == 0:  # continuation frame (reply >64KB, varian board/title)
                 h2 = rx(2); op2 = h2[0] & 0xF; n2 = h2[1] & 0x7F
                 if n2 == 126:
                     n2 = struct.unpack(">H", rx(2))[0]
+                elif n2 == 127:
+                    n2 = struct.unpack(">Q", rx(8))[0]
                 d2 += rx(n2)
                 break
             r = json.loads(d2)
@@ -80,6 +102,8 @@ try:
 
     def ev(expr):
         r = cmd("Runtime.evaluate", expression=expr, returnByValue=True)
+        if r is None:
+            raise RuntimeError(f"CDP reply hilang (timeout) utk {expr!r}")
         res = r.get("result", {}).get("result", {})
         if "exceptionDetails" in r.get("result", {}):
             raise RuntimeError(f"eval gagal {expr!r}: {json.dumps(r['result']['exceptionDetails'])[:300]}")
@@ -87,6 +111,8 @@ try:
 
     def shot(out):
         r = cmd("Page.captureScreenshot", format="png")
+        if r is None:
+            raise RuntimeError("CDP reply hilang (timeout) — screenshot")
         if "result" not in r:
             raise RuntimeError(f"captureScreenshot gagal: {json.dumps(r)[:300]}")
         open(out, "wb").write(base64.b64decode(r["result"]["data"]))
@@ -151,6 +177,17 @@ try:
     if sz_day < 500_000 or sz_night < 500_000:
         print("FAIL: screenshot <500KB — scene mati")
         fails.append("size")
+    # Gate piksel siklus 196 (paritas 194/195): byte-size hanya proksi —
+    # jebakan "langit-saja" (gradien) lolos byte tapi DEAD piksel.
+    for tag, path in (("day", OUT_DAY), ("night", OUT_NIGHT)):
+        try:
+            st = png_mod.png_stats(open(path, "rb").read())
+            px_ok, px_why = png_mod.alive_verdict(st)
+        except Exception as e:  # decode gagal = DEAD (bukan crash probe)
+            px_ok, px_why = False, f"decode gagal: {e}"
+        print(f"F piksel {tag}: {'OK' if px_ok else 'FAIL'} ({px_why})")
+        if not px_ok:
+            fails.append(f"pixels_{tag}")
     # D: flip-flop 5× berakhir siang — konsisten tanpa error
     for m in [720, 0, 720, 0, 720]:
         ev(f"window.__setTime({m})")
