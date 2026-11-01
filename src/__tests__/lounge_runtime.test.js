@@ -190,7 +190,7 @@ describe('createLounge — welcome & lounge kantor 3D', () => {
   it('tvPull: fetch /wfs-project, update __tvData + needsUpdate, dan interval 60 dtk', async () => {
     const { refs } = await build()
     await vi.runOnlyPendingTimersAsync()
-    expect(fetch).toHaveBeenCalledWith('/wfs-project')
+    expect(fetch).toHaveBeenCalledWith('/wfs-project', expect.objectContaining({ signal: expect.any(AbortSignal) }))
     expect(window.__tvData.project).toBe('WFS PROJECT')
     expect(window.__tvData.at).toBeGreaterThan(0)
     // interval berikutnya memicu fetch lagi

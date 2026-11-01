@@ -80,12 +80,16 @@ function runTvCode(opts) {
   const code = extractTvSource()
   // fungsi + const dievaluasi via new Function; window.__tvData diakses via win.
   // Helper tracker koneksi di-inject (import ES modul tidak terlihat new Function).
-  const fn = new Function('window', 'THREE', 'document', 'lounge', 'fetch', 'drawTvDashboard',
+  const fn = new Function('window', 'THREE', 'document', 'lounge', 'fetch', 'fetchWithTimeout', 'drawTvDashboard',
     'applyPollResult', 'nextPollDelay', 'uiTexture', 'uiMaterial', code + `
     ;return tvPull(true).then(() =>
       ({ drawTv, tvPull, tvC, tvTex, tvIv: tvPollTimer, tvSchedule, tvDestroy, tvOnVis, tvScr, connTick }))`)
   const lounge = { add() {}, children: [] }
-  return fn(win, THREE, document, lounge, fetchMock, drawTvDashboard, applyPollResult, nextPollDelay, uiTexture, uiMaterial)
+  // siklus 203: lounge.js kini mem-fetch via fetchWithTimeout (deadline) — di sandbox
+  // unit ini cukup passthrough ke fetchMock (perilaku deadline diuji nyata di
+  // fetch_timeout_hardening.test.js dgn timer asli, bukan di sini).
+  const fetchWithTimeout = (path, opts) => fetchMock(path, opts)
+  return fn(win, THREE, document, lounge, fetchMock, fetchWithTimeout, drawTvDashboard, applyPollResult, nextPollDelay, uiTexture, uiMaterial)
 }
 
 beforeEach(() => {

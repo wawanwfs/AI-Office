@@ -105,8 +105,9 @@ describe('fetch_timeout_hardening siklus 203 — perilaku nyata wrapper', () => 
 })
 
 describe('fetch_timeout_hardening siklus 203 — census transport frontend (6 file)', () => {
-  it('census: 6 file produksi memakai fetch', () => {
-    expect(FILES.filter((f) => FILE1(read(f)) > 0)).toEqual(FILES)
+  it('census: 5 file produksi memakai fetch + App.jsx konsumen api()', () => {
+    expect(FILES.filter((f) => FILE1(read(f)) > 0)).toEqual(FILES.filter((f) => f !== 'src/App.jsx'))
+    expect(read('src/App.jsx')).toContain("from './lib/api'")
   })
 
   it.each(FILES)('%s — tidak ada fetch polos di luar wrapper', (f) => {

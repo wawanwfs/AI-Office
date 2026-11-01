@@ -8,8 +8,9 @@ export async function api(path, { method = 'GET', body, signal, timeoutMs } = {}
   // Deadline default siklus 203 (fetch tanpa signal TIDAK punya timeout di
   // browser): endpoint komputasi (sh/exec, git) 60 dtk, tulis 30 dtk —
   // `signal` pemanggil tetap menang (abort panel/komponen didukung penuh).
-  const t = timeoutMs ?? (method === 'GET' &&
-    /^(sh\/exec|projects\/[^/]+\/(git|exec))/.test(path) ? FETCH_TIMEOUT.POLL_LONG : FETCH_TIMEOUT.POST)
+  const t = timeoutMs ?? (method === 'GET'
+    ? (/^(sh\/exec|projects\/[^/]+\/(git|exec))/.test(path) ? FETCH_TIMEOUT.POLL_LONG : FETCH_TIMEOUT.GET)
+    : FETCH_TIMEOUT.POST)
   const headers = { 'Content-Type': 'application/json' }
   if (method !== 'GET') headers['X-WFS-Token'] = uiToken()
   const r = await fetchWithTimeout('/wfs-api/' + path.replace(/^\//, ''), {

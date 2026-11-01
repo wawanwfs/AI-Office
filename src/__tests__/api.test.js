@@ -44,7 +44,15 @@ describe('api', () => {
     mock(200, {})
     const ac = new AbortController()
     await api('x', { signal: ac.signal })
-    expect(fetch.mock.calls[0][1].signal).toBe(ac.signal)
+    // siklus 203: signal kini GABUNGAN deadline+caller (AbortSignal.any) — abort
+    // pemanggil terpropagasi (event abort pada signal gabungan), bukan identitas.
+    const o = fetch.mock.calls[0][1]
+    expect(o.signal).toBeInstanceOf(AbortSignal)
+    await expect(new Promise((res, rej) => {
+      if (o.signal.aborted) return rej(new DOMException('aborted', 'AbortError'))
+      o.signal.addEventListener('abort', () => rej(new DOMException('aborted', 'AbortError')))
+      ac.abort()
+    })).rejects.toMatchObject({ name: 'AbortError' })
   })
   it('respons sukses non-JSON (mis. 204) → null, tanpa throw', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 204, json: async () => { throw new Error('no body') } })))
