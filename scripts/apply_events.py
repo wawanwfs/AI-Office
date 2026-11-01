@@ -39,7 +39,7 @@ ANCHOR_PX = "    def _proxy(self):"
 
 
 def sh(*cmd):
-    return subprocess.run(cmd, capture_output=True, text=True)
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
 
 def get(url, timeout=5):

@@ -99,7 +99,7 @@ def _x99_alive():
     """Cek X server :99 hidup (bukan cuma socket basi — pelajaran siklus 127/
     128: probe sebelumnya men-terminate Xvfb-nya sendiri di finally dan socket
     basi membuat auto-start run berikutnya skip → probe 'scene tidak siap')."""
-    return subprocess.run(["xdpyinfo", "-display", ":99"],
+    return subprocess.run(["xdpyinfo", "-display", ":99"], timeout=10,
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
 
 def main():

@@ -103,7 +103,7 @@ class WS:
 
 
 def x99_alive():
-    return subprocess.run(["xdpyinfo", "-display", ":99"],
+    return subprocess.run(["xdpyinfo", "-display", ":99"], timeout=10,
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
 
 

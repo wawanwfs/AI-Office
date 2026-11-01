@@ -79,4 +79,4 @@ finally:
             process.wait(timeout=10)
         except subprocess.TimeoutExpired:
             process.kill()
-            process.wait()
+            process.wait(timeout=10)

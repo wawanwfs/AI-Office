@@ -68,7 +68,7 @@ def jval(v):
 
 
 def _x99():
-    return subprocess.run(["xdpyinfo", "-display", ":99"],
+    return subprocess.run(["xdpyinfo", "-display", ":99"], timeout=10,
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
 
 

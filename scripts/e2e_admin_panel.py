@@ -98,7 +98,7 @@ class WS:
 def main():
     env = dict(os.environ, DISPLAY=":99")
     xv = None
-    if subprocess.run(["xdpyinfo", "-display", ":99"], stdout=subprocess.DEVNULL,
+    if subprocess.run(["xdpyinfo", "-display", ":99"], timeout=10, stdout=subprocess.DEVNULL,
                       stderr=subprocess.DEVNULL).returncode != 0:
         xv = subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x768x24"],
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -115,9 +115,9 @@ def main():
         # ---------- B. kontrol dulu: admin LAMA terdeteksi (kode lama) ----------
         b_ok = None
         if OLD_HTML:
-            subprocess.run(["pkill", "-f", f"http.server {CTRL_PORT}"], check=False)
+            subprocess.run(["pkill", "-f", f"http.server {CTRL_PORT}"], check=False, timeout=10)
             os.makedirs("/tmp/admin-old-serve", exist_ok=True)
-            subprocess.run(["cp", OLD_HTML, "/tmp/admin-old-serve/index.html"], check=True)
+            subprocess.run(["cp", OLD_HTML, "/tmp/admin-old-serve/index.html"], check=True, timeout=10)
             httpd = subprocess.Popen([sys.executable, "-m", "http.server", str(CTRL_PORT)],
                                      cwd="/tmp/admin-old-serve",
                                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -20,7 +20,7 @@ PORT = 9473
 APP = "http://127.0.0.1:9503/app/"
 
 env = dict(os.environ, DISPLAY=":99")
-if subprocess.run(["xdpyinfo", "-display", ":99"], stdout=subprocess.DEVNULL,
+if subprocess.run(["xdpyinfo", "-display", ":99"], timeout=10, stdout=subprocess.DEVNULL,
                   stderr=subprocess.DEVNULL).returncode != 0:
     subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x768x24"],
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -240,4 +240,5 @@ try:
     print("===> OK" if ok else "===> FAIL")
 finally:
     p.kill()
-    os.system(f"pkill -f 'remote-debugging-port={PORT}' 2>/dev/null")
+    subprocess.run(["pkill", "-f", f"remote-debugging-port={PORT}"],
+                   check=False, capture_output=True, timeout=10)

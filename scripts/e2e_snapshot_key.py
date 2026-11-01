@@ -29,7 +29,7 @@ PORT = 9476
 APP = "http://127.0.0.1:9503/app/"
 
 env = dict(os.environ, DISPLAY=":99")
-if subprocess.run(["xdpyinfo", "-display", ":99"], stdout=subprocess.DEVNULL,
+if subprocess.run(["xdpyinfo", "-display", ":99"], timeout=10, stdout=subprocess.DEVNULL,
                   stderr=subprocess.DEVNULL).returncode != 0:
     subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x768x24"],
                      stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

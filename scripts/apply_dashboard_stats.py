@@ -33,7 +33,7 @@ NEED_KEYS = ("projects_total", "tasks_total", "agents_count", "logs")
 
 
 def sh(*cmd):
-    return subprocess.run(cmd, capture_output=True, text=True)
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
 
 def health() -> bool:

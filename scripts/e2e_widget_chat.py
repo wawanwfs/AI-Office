@@ -84,7 +84,7 @@ class WS:
 def main():
     env = dict(os.environ, DISPLAY=":99")
     xv = None
-    if subprocess.run(["xdpyinfo", "-display", ":99"], stdout=subprocess.DEVNULL,
+    if subprocess.run(["xdpyinfo", "-display", ":99"], timeout=10, stdout=subprocess.DEVNULL,
                       stderr=subprocess.DEVNULL).returncode != 0:
         xv = subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x768x24"],
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -153,7 +153,7 @@ def main():
         docker_run = subprocess.run(
             ["docker", "run", "-d", "--rm", "--name", "wfs-widget-old-ctl", "-p",
              "127.0.0.1:3999:3001", old_img],
-            capture_output=True, text=True)
+            capture_output=True, text=True, timeout=30)
         try:
             if docker_run.returncode == 0:
                 for _ in range(10):
@@ -166,7 +166,7 @@ def main():
                         continue
         finally:
             subprocess.run(["docker", "rm", "-f", "wfs-widget-old-ctl"],
-                           capture_output=True, text=True)
+                           capture_output=True, text=True, timeout=30)
         old_has_local = bool(old_html) and "localhost:8000" in old_html
         old_has_chat_ep = bool(old_html) and "API + '/chat'" in old_html
         prod_html = urllib.request.urlopen(BASE + "/cs-widget/", timeout=5).read().decode()

@@ -11,7 +11,7 @@ OUT_LND = sys.argv[2] if len(sys.argv) > 2 else os.path.expanduser("~/.hermes/ca
 
 env = dict(os.environ, DISPLAY=":99")
 xv = None
-if subprocess.run(["xdpyinfo", "-display", ":99"], stdout=subprocess.DEVNULL,
+if subprocess.run(["xdpyinfo", "-display", ":99"], timeout=10, stdout=subprocess.DEVNULL,
                   stderr=subprocess.DEVNULL).returncode != 0:
     xv = subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x768x24"],
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)

@@ -32,7 +32,7 @@ ANCHOR = "# === wfs dashboard/stats (additive, read-only) — siklus 152 ==="
 
 
 def sh(*cmd):
-    return subprocess.run(cmd, capture_output=True, text=True)
+    return subprocess.run(cmd, capture_output=True, text=True, timeout=120)
 
 
 def health() -> bool:

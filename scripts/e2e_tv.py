@@ -75,7 +75,7 @@ import struct  # noqa: E402  (dipakai WS.send untuk payload > 125 byte)
 def _x99_alive():
     """Cek X server :99 hidup (bukan cuma socket basi — pelajaran siklus 127/
     128: socket basi membuat Xvfb baru gagal bind → chrome tak punya display)."""
-    return subprocess.run(["xdpyinfo", "-display", ":99"],
+    return subprocess.run(["xdpyinfo", "-display", ":99"], timeout=10,
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
 
 def main():
