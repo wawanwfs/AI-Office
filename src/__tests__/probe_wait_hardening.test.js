@@ -77,9 +77,10 @@ describe('siklus 200 — exceptionDetails tidak ditelan senyap (kelas b2 199)', 
 })
 
 describe('siklus 200 — kriteria inti probe TIDAK berubah (spot-check per kelompok)', () => {
-  it('team_presence: dock panel + transisi kehadiran pod', () => {
+  it('team_presence: dock panel + transisi chip kehadiran pod', () => {
     expect(src['e2e_team_presence']).toContain("==='Statistik tim'")
-    expect(src['e2e_team_presence']).toContain('Kehadiran live')
+    expect(src['e2e_team_presence']).toContain("di pod")
+    expect(src['e2e_team_presence']).toContain("'.team-presence'")
   })
 
   it('stats_grid + sh_console_overview + events_stream (awaitPromise): kartu stats & stream', () => {
