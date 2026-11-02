@@ -168,4 +168,19 @@ describe('drift-gate server produksi wfs-hq (siklus 206)', () => {
     expect(s).toContain('JANGAN mengedit ~/wfs-hq/server.py langsung')
     expect(s).toContain('drift_gate.test.js akan FAIL')
   })
+
+  it('SIKLUS 228: disconnect klien senyap — ClientGone + helper tulis + jaring handle_error', () => {
+    const s = readFileSync(SRC, 'utf-8')
+    // Penanda disconnect eksplisit + helper tulis aman + jaring server ada.
+    expect(s).toContain('class ClientGone(Exception):')
+    expect(s).toContain('def _wfs_write_or_client_gone(handler, data):')
+    expect(s).toContain('def _hq_handle_error(request, client_address, exc_info=None):')
+    expect(s).toContain('s.handle_error = _hq_handle_error')
+    // Anti-pola DILARANG kembali: fallback 502 menulis langsung ke wfile
+    // (rantai "During handling" jurnald 228) — _reply_json wajib via helper.
+    expect(s).not.toMatch(/_reply_json\(self, 502[\s\S]{0,400}?self\.wfile\.write/)
+    // exc_info opsional: sys.exc_info() mati di luar blok except (3.11+) —
+    // benteng wajib bisa diuji unit tanpa server sungguhan.
+    expect(s).toContain('info = exc_info or sys.exc_info()')
+  })
 })

@@ -8,7 +8,9 @@ H._proxy langsung tanpa server sungguhan.
 
 import io
 import json
+import os
 import pathlib
+import sys
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -786,6 +788,95 @@ class TestWfsHqServer(unittest.TestCase):
         H.do_POST(fake)
         self.assertEqual(sent, ["/api/auth/login"])
         self.assertIsNone(fake._status)
+
+    # --- SIKLUS 228: hygiene log disconnect klien ---
+    def test_client_gone_raised_from_write_helper(self):
+        # BrokenPipeError saat menulis body → ClientGone (dari None: rantai
+        # "During handling of the above exception" tidak boleh terbentuk).
+        fake = FakeH()
+        fake.wfile = _BoomWFile()
+        with self.assertRaises(wfs_hq_server.ClientGone):
+            wfs_hq_server._wfs_write_or_client_gone(fake, b"x")
+        fake.wfile = _ResetWFile()
+        with self.assertRaises(wfs_hq_server.ClientGone):
+            wfs_hq_server._wfs_write_or_client_gone(fake, b"x")
+        fake.wfile = _TimeoutWFile()
+        with self.assertRaises(wfs_hq_server.ClientGone):
+            wfs_hq_server._wfs_write_or_client_gone(fake, b"x")
+        # OSError lain (mis. ENOSPC/EPIPE dari layer bawah yang berbeda) TIDAK
+        # ditelan sebagai disconnect — kegagalan sistem tetap terlihat.
+        fake.wfile = _OSErrorWFile()
+        with self.assertRaises(OSError):
+            wfs_hq_server._wfs_write_or_client_gone(fake, b"x")
+
+    def test_hq_handle_error_silent_for_client_disconnects(self):
+        # ClientGone/BrokenPipe/ConnectionReset → SATU baris INFO, TANPA
+        # traceback (stdout; systemd menangkap stdout+stderr).
+        for exc in (wfs_hq_server.ClientGone(),
+                    BrokenPipeError(32, "Broken pipe"),
+                    ConnectionResetError()):
+            buf = io.StringIO()
+            old = sys.stdout
+            sys.stdout = buf
+            try:
+                wfs_hq_server._hq_handle_error(
+                    None, ("127.0.0.1", 55555),
+                    exc_info=(type(exc), exc, None))
+            finally:
+                sys.stdout = old
+            out = buf.getvalue()
+            self.assertNotIn("Traceback", out)
+            self.assertIn("memutus koneksi", out)
+
+    def test_hq_handle_error_loud_for_real_failures(self):
+        # ValueError (bug server sungguhan) → traceback PENUH tetap dicetak.
+        buf = io.StringIO()
+        old = sys.stderr
+        sys.stderr = buf
+        try:
+            try:
+                raise ValueError("bug nyata server")
+            except ValueError:
+                wfs_hq_server._hq_handle_error(None, ("127.0.0.1", 55556))
+        finally:
+            sys.stderr = old
+        out = buf.getvalue()
+        self.assertIn("Traceback", out)
+        self.assertIn("ValueError", out)
+
+    def test_write_helper_used_at_all_proxy_body_sites(self):
+        # Kontrak sumber: SEMUA titik tulis body proxy/error JSON lewat helper
+        # 228 (regresi = traceback jurnald kembali).
+        s = open(wfs_hq_server.__file__, encoding="utf-8").read()
+        # 4 situs proxy/stream: SSE chunk + _proxy GET + HTTPError + bantuin.
+        self.assertEqual(s.count("_wfs_write_or_client_gone(self,"), 4)
+        self.assertIn("_wfs_write_or_client_gone(handler, msg)", s)     # _reply_json
+        self.assertIn("s.handle_error = _hq_handle_error", s)           # jaring server
+        # handle_project re-raise disconnect (tidak lagi balas 500 ke socket mati)
+        pa = os.path.join(os.path.dirname(wfs_hq_server.__file__), "..", "backend", "project_api.py")
+        src_pa = open(pa, encoding="utf-8").read()
+        self.assertIn("except (BrokenPipeError, ConnectionResetError):", src_pa)
+        self.assertIn("raise", src_pa.split("except (BrokenPipeError, ConnectionResetError):")[1][:600])
+
+
+class _BoomWFile:
+    def write(self, b):
+        raise BrokenPipeError(32, "Broken pipe")
+
+
+class _ResetWFile:
+    def write(self, b):
+        raise ConnectionResetError()
+
+
+class _TimeoutWFile:
+    def write(self, b):
+        raise TimeoutError()
+
+
+class _OSErrorWFile:
+    def write(self, b):
+        raise OSError(5, "Input/output error")
 
 
 if __name__ == "__main__":

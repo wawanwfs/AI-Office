@@ -106,13 +106,18 @@ describe('siklus 214 — dokumentasi & SOP di sumber', () => {
     expect(src).toContain('.wfs_ui_token');
   });
 
-  it('apply script smoke 12 poin (212 + 222 + 223 + 224 + 225: CORS/HEAD/aset/proxy/api/gw/project) — siklus ini menambah cakupan via pytest+vitest+smoke, bukan mem-bypass smoke', () => {
+  it('apply script smoke 13 poin (212 + 222 + 223 + 224 + 225 + 228: CORS/HEAD/aset/proxy/api/gw/project/hygiene-log) — siklus ini menambah cakupan via pytest+vitest+smoke, bukan mem-bypass smoke', () => {
     const a = readFileSync(join(ROOT, 'scripts', 'apply_wfs_hq_server.py'), 'utf8');
     expect(a).toContain('def smoke(');
-    expect(a).toContain('smoke 12/12');
+    expect(a).toContain('smoke 13/13');
     expect(a).toContain('SIKLUS 223');
     expect(a).toContain('SIKLUS 224');
     expect(a).toContain('SIKLUS 225');
+    // SIKLUS 228: smoke wajib menguji hygiene log — 3 disconnect RST beruntun,
+    // jurnal wajib bebas traceback BrokenPipe baru (regresi = rollback).
+    expect(a).toContain('SIKLUS 228');
+    expect(a).toContain('SO_LINGER');
+    expect(a).toContain('traceback BrokenPipe');
     expect(a).toContain('max-age=31536000, immutable');
   });
 });

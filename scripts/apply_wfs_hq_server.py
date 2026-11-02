@@ -245,6 +245,33 @@ def smoke():
                 why.append(f"HEAD {pp} Content-Length {cl!r} (harap panjang GET)")
     except Exception as e:
         why.append(f"HEAD jalur 225 exc: {e}")
+    # 13. SIKLUS 228: hygiene log disconnect klien — GET lalu putus paksa (RST)
+    #     di tengah respons; jurnal wfs-hq TIDAK boleh mendapat traceback baru.
+    #     Dulu tiap disconnect = 1-2 traceback BrokenPipe (+ rantai "During
+    #     handling") → noise yang mengubur error sungguhan (118/24 jam).
+    try:
+        import socket as _sk
+        import subprocess as _sp
+        import time as _t
+        before = _sp.run(["journalctl", "-u", "wfs-hq", "--since", "-10 min", "--no-pager", "-q"],
+                         capture_output=True, text=True, timeout=20).stdout.count("BrokenPipeError")
+        for _ in range(3):  # 3 disconnect beruntun: peluang teknis menembus jaring
+            s = _sk.create_connection(("127.0.0.1", 9503), timeout=5)
+            s.sendall(b"GET /wfs-project HTTP/1.1\r\nHost: 127.0.0.1\r\nConnection: close\r\n\r\n")
+            try:
+                s.recv(64)  # baca sedikit, lalu RST (SO_LINGER 0)
+            except OSError:
+                pass
+            s.setsockopt(_sk.SOL_SOCKET, _sk.SO_LINGER, b"\x01\x00\x00\x00\x00\x00\x00\x00")
+            s.close()
+        _t.sleep(1.5)  # beri thread handler waktu menyelesaikan tulis
+        after = _sp.run(["journalctl", "-u", "wfs-hq", "--since", "-10 min", "--no-pager", "-q"],
+                        capture_output=True, text=True, timeout=20).stdout.count("BrokenPipeError")
+        if after > before:
+            why.append(f"disconnect klien memunculkan {after - before} traceback BrokenPipe "
+                       f"(health log 228 regresi: helper/handle_error tidak aktif?)")
+    except Exception as e:
+        why.append(f"hygiene log 228 exc: {e}")
     return (not why), why
 
 
@@ -297,7 +324,7 @@ def do_apply():
         print("smoke GAGAL — rollback:", why)
         _rollback_to(bak)
         return 2
-    print("DEPLOY OK — live == sumber", sha(SRC)[:12], "; smoke 12/12 (keamanan 212 + CORS/HEAD 222 + HEAD aset 223 + HEAD proxy 224 + HEAD api/gw/project 225)")
+    print("DEPLOY OK — live == sumber", sha(SRC)[:12], "; smoke 13/13 (keamanan 212 + CORS/HEAD 222 + HEAD aset 223 + HEAD proxy 224 + HEAD api/gw/project 225 + hygiene log disconnect 228)")
     return 0
 
 
@@ -327,7 +354,7 @@ def do_check():
     print("live   :", sha(DST)[:12], DST)
     if same:
         ok, why = smoke()
-        print("IDENTIK; smoke 12/12:", "OK" if ok else f"GAGAL {why}")
+        print("IDENTIK; smoke 13/13:", "OK" if ok else f"GAGAL {why}")
         return 0 if ok else 2
     print("DRIFT: live != sumber — jalankan scripts/apply_wfs_hq_server.py --apply")
     return 3

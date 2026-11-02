@@ -73,19 +73,26 @@ def _wfs_write_or_client_gone(handler, data):
         raise ClientGone() from None
 
 
-def _hq_handle_error(request, client_address):
+def _hq_handle_error(request, client_address, exc_info=None):
     """socketserver.handle_error: benteng terakhir thread handler.
 
     Disconnect klien (ClientGone/BrokenPipe/ConnectionReset mid-response) =
     peristiwa normal → SATU baris INFO, tanpa traceback. Exception lain tetap
     dicetak penuh (kegagalan server tidak boleh hilang).
+
+    exc_info opsional (uji unit: sys.exc_info() hanya hidup DI DALAM blok
+    except — Python 3.11+ membersihkannya saat frame except selesai).
     """
     import sys, traceback
-    etype = sys.exc_info()[0]
+    info = exc_info or sys.exc_info()
+    etype = info[0]
     if etype is ClientGone or etype in (BrokenPipeError, ConnectionResetError):
-        print(f"wfs-hq: klien {client_address} memutus koneksi (disconnect normal, senyap)")
+        print(f"wfs-hq: klien {client_address} memutus koneksi (disconnect normal, senyap)",
+              flush=True)  # stdout ter-buffer penuh di systemd — flush agar segera terlihat
         return
-    traceback.print_exc()
+    if etype is None or info[1] is None:
+        return  # tanpa exception aktif: tidak ada yang bisa dicetak
+    traceback.print_exception(etype, info[1], info[2])
 try:
     import project_api  # hanya ada di direktori deploy (~/wfs-hq)
 except ImportError:  # pragma: no cover - dev/CI tanpa project_api
