@@ -227,8 +227,12 @@ export default function ShConsole({ show, onClose }) {
   useEffect(() => {
     if (!show) return
     if (tab === 'overview') {
+      // Guard visibilitas (pola Dashboard 151/TaskBoard 203): tab drawer terbuka
+      // tapi tab browser disembunyikan → interval tetap menghantam /api/sh/overview
+      // tiap 10 dtk tanpa ada yang melihat hasilnya. Mount tick pertama tetap jalan
+      // (data awal dibutuhkan saat tab kembali); hanya tick interval yang digerbang.
       loadOverview()
-      const iv = setInterval(loadOverview, 10000)
+      const iv = setInterval(() => { if (document.visibilityState === 'visible') loadOverview() }, 10000)
       let es = null
       let esAlive = true // pesan EventSource yang disetel setelah cleanup tak menulis state
       setEsState('connecting') // masuk tab overview = handshake baru

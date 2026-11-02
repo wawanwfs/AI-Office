@@ -58,6 +58,9 @@ export default function Ticker({ conn }) {
       }
     }
     load()
+    // Guard visibilitas (pola Dashboard 151/SysMeter): tab disembunyikan → ticker
+    // tetap menghantam 3 endpoint (tasks+agents+status) tiap 20 dtk tanpa penonton.
+    // Mount load() tetap jalan; hanya tick interval yang digerbang.
     const iv = setInterval(() => { if (document.visibilityState === 'visible') load() }, 20000)
     return () => { stop = true; clearInterval(iv) }
   }, [])
