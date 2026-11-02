@@ -605,6 +605,12 @@ def _plan_project_tasks(pid: int, name: str, brief: str):
     eksak _schedule(): referensi kuat di _bg_tasks + done-callback discard,
     guard pause SEBELUM call LLM berbayar (project dikembalikan 'pending'
     agar bisa di-resume, tidak menggantung 'planning').
+
+    Siklus 230 — sisa jalur STUCK terakhir ditutup: LLM gagal (HTTP/timeout)
+    atau respons tak bisa di-parse tidak lagi membiarkan project menggantung
+    status 'planning' selamanya (dulu except-umum hanya print tanpa UPDATE).
+    Sekarang project dikembalikan 'failed' — terlihat founder di UI & bisa
+    di-retry (project baru / resume), tanpa jejak 'planning' mati.
     """
     async def _plan():
         try:
@@ -630,7 +636,18 @@ def _plan_project_tasks(pid: int, name: str, brief: str):
             c.commit(); c.close()
             raise
         except Exception as e:
+            # Siklus 230 — JANGAN biarkan project STUCK 'planning' selamanya:
+            # LLM gagal (HTTP/timeout) ATAU respons tak bisa di-parse tidak
+            # boleh menggantung status 'planning' tanpa jejak. Kembalikan
+            # 'failed' (bisa dilihat founder & di-retry via project baru/
+            # resume), lalu LOUD di stdout untuk jurnald.
             print("plan err:", e)
+            try:
+                c = taskengine.db()
+                c.execute("UPDATE projects SET status='failed' WHERE id=?", (pid,))
+                c.commit(); c.close()
+            except Exception as dberr:
+                print("plan err (status write):", dberr)
     plan_t = asyncio.create_task(_plan())
     _bg_tasks.add(plan_t)
     plan_t.add_done_callback(lambda t: _bg_tasks.discard(plan_t))

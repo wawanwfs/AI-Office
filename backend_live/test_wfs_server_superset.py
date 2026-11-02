@@ -309,3 +309,67 @@ def test_plan_project_tasks_pause_and_gc_contract_behavior(tmp_path, monkeypatch
         assert n == 1
 
     asyncio.run(scenario())
+
+
+def test_plan_project_tasks_llm_failure_marks_failed_not_stuck(tmp_path, monkeypatch):
+    """Siklus 230 — sisa jalur STUCK 'planning' terakhir ditutup.
+
+    LLM gagal (HTTP/timeout) ATAU respons tak bisa di-parse: dulu except-umum
+    HANYA print tanpa UPDATE -> project menggantung status 'planning' tanpa
+    jejak selamanya (founder melihat 'planning' mayat). Kini project WAJIB
+    dikembalikan 'failed' — terlihat di UI & bisa di-retry. Dua varian:
+    (a) call_llm raise; (b) respons sukses tapi tanpa array JSON.
+    """
+    monkeypatch.setattr(taskengine, "DB", str(tmp_path / "tasks.db"))
+    taskengine.set_paused(False)
+
+    def _status_of(pid):
+        c = taskengine.db()
+        st = c.execute("SELECT status FROM projects WHERE id=?", (pid,)).fetchone()[0]
+        c.close()
+        return st
+
+    async def _drain():
+        await asyncio.gather(*server._bg_tasks, return_exceptions=True)
+
+    def _spawn_and_drain(pid, name, brief):
+        async def scenario():
+            server._plan_project_tasks(pid, name, brief)
+            await asyncio.gather(*server._bg_tasks, return_exceptions=True)
+        asyncio.run(scenario())
+
+    # (a) call_llm melempar exception (HTTP 500 / timeout dari provider).
+    pid_a = taskengine.add_project("P230a", "brief gagal")
+
+    async def boom(*a, **k):
+        raise RuntimeError("provider HTTP 503")
+
+    monkeypatch.setattr(taskengine, "call_llm", boom)
+    server._bg_tasks.clear()
+    _spawn_and_drain(pid_a, "P230a", "brief gagal")
+    assert _status_of(pid_a) == "failed", (
+        f"project STUCK {_status_of(pid_a)!r} setelah LLM gagal — bug siklus 229 tersisa")
+    n = taskengine.db().execute(
+        "SELECT COUNT(*) FROM tasks WHERE project=?", (str(pid_a),)).fetchone()[0]
+    assert n == 0, "task tidak boleh ter-add saat LLM gagal"
+
+    # (b) LLM sukses tapi respons TIDAK mengandung array JSON → parse gagal
+    #     (json.loads / regex [..] tak menemukan apa pun) → tetap 'failed'.
+    pid_b = taskengine.add_project("P230b", "brief jawaban aneh")
+
+    async def garbage(*a, **k):
+        return "Maaf, saya tidak bisa membuat rencana saat ini."
+
+    monkeypatch.setattr(taskengine, "call_llm", garbage)
+    server._bg_tasks.clear()
+    server._plan_project_tasks(pid_b, "P230b", "brief jawaban aneh")
+    asyncio.run(_drain())
+    assert _status_of(pid_b) == "failed", (
+        f"project STUCK {_status_of(pid_b)!r} pada respons tak ter-parse")
+
+    # Anti-STUCK permanen: seluruh jalur exit _plan() menulis status non-'planning'.
+    src = Path(server.__file__).read_text()
+    body = src[src.index("async def _plan():"):src.index("plan_t = asyncio.create_task")]
+    assert "UPDATE projects SET status='failed' WHERE id=?" in body
+    assert "UPDATE projects SET status='backlog' WHERE id=?" in body
+    assert "UPDATE projects SET status='pending' WHERE id=?" in body
