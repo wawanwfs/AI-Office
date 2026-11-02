@@ -101,6 +101,16 @@ describe('drift-gate server produksi wfs-hq (siklus 206)', () => {
     expect(s).toContain('if self._allowed_rel() is not None:\n            super().do_HEAD()')
   })
 
+  it('SIKLUS 223: HEAD aset statis = metadata GET (cache policy + gzip), bukan stdlib no-store/raw CL', () => {
+    const s = readFileSync(SRC, 'utf-8')
+    // helper _serve_head_static ada & dipasang di do_HEAD sebelum fallback stdlib.
+    expect(s).toContain('def _serve_head_static(self):')
+    expect(s).toContain('if self._serve_head_static():')
+    // cache policy + kompresi konsisten GET (bukan no-store + CL mentah stdlib).
+    expect(s).toContain('static_serve.maybe_gzip(')
+    expect(s.match(/_serve_head_static/g)?.length).toBeGreaterThanOrEqual(3)
+  })
+
   it('apply script deploy terkontrol: backup + compile-check + smoke + auto-rollback', () => {
     const a = readFileSync(APPLY, 'utf-8')
     expect(a).toContain('server.py.bak-')

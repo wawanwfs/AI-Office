@@ -505,6 +505,39 @@ class H(http.server.SimpleHTTPRequestHandler):
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
 
+    # SIKLUS 223: HEAD aset statis kini konsisten dgn GET — dulu via
+    # super().do_HEAD() stdlib yang TIDAK tahu cache policy & kompresi:
+    # Content-Length = ukuran mentah file (GET gzip = ukuran terkompres)
+    # dan Cache-Control = no-store (GET /assets/* = immutable 1 tahun).
+    # Monitor/cache-probe berbasis HEAD menerima metadata palsu.
+    # Kontrak: status 200, headers IDENTIK dgn GET (CC policy, Content-Encoding
+    # + Vary bila gzip), Content-Length = panjang payload GET, TANPA body.
+    def _serve_head_static(self):
+        rel = self._allowed_rel()
+        if rel is None:
+            return False
+        path = self.translate_path(self.path)
+        if os.path.basename(path) in ("index.html",):
+            return False  # index.html lewat jalur khusus (injeksi token)
+        if not os.path.isfile(path):
+            return False
+        try:
+            data = open(path, "rb").read()
+            data, gz = static_serve.maybe_gzip(
+                data, self.path, self.headers.get("Accept-Encoding", ""))
+            self._wfs_cc = static_serve.cache_control_for(self.path)
+            self.send_response(200)
+            ctype = self.guess_type(path) or "application/octet-stream"
+            if gz:
+                self.send_header("Content-Encoding", "gzip")
+                self.send_header("Vary", "Accept-Encoding")
+            self.send_header("Content-Type", ctype)
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            return True
+        except Exception:
+            return False
+
     def do_HEAD(self):
         path_only = self.path.split("?")[0]
         if path_only in ("/", "/index.html"):
@@ -515,6 +548,10 @@ class H(http.server.SimpleHTTPRequestHandler):
             return self._serve_head_html("landing.html")
         # Siklus 214: HEAD statis juga kena allowlist (stdlib do_HEAD menyaji
         # metadata file apa pun — probing path tanpa body tetap kebocoran).
+        # SIKLUS 223: aset allowlist kini lewat _serve_head_static (cache
+        # policy + kompresi konsisten GET); fallback stdlib hanya sisa.
+        if self._serve_head_static():
+            return
         if self._allowed_rel() is not None:
             super().do_HEAD()
         else:

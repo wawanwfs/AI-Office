@@ -89,6 +89,12 @@ class FakeH:
         self._allowed_rel = lambda: H._allowed_rel(self)
         self._inject_token = lambda data: H._inject_token(self, data)
         self._serve_head_html = lambda fname, inject=False: H._serve_head_html(self, fname, inject=inject)
+        # SIKLUS 223: do_HEAD memanggil _serve_head_static pada instance.
+        self._serve_head_static = lambda: H._serve_head_static(self)  # type: ignore[arg-type]
+        # _serve_head_static memakai self.guess_type (SimpleHTTPRequestHandler)
+        # yang butuh extensions_map — delegasikan + salin map kelas.
+        self.extensions_map = dict(H.extensions_map)
+        self.guess_type = lambda p: H.guess_type(self, p)  # type: ignore[arg-type]
         self.translate_path = lambda p: H.translate_path(self, p)
         import os as _os
         self.directory = _os.getcwd()  # SimpleHTTPRequestHandler.translate_path
@@ -358,6 +364,66 @@ class TestWfsHqServer(unittest.TestCase):
             self.assertEqual(fake.wfile.data, b"")
             self.assertEqual(dict(fake._headers).get("Content-Length"),
                              str(len(injected)))
+        finally:
+            os.chdir(outer)
+
+    def _head_static_env(self):
+        """Tmpdir + assets/ dgn JS besar (>=1KB, kena gzip) + CSS + chdir."""
+        import os
+        import tempfile
+        outer = os.getcwd()
+        tmp = tempfile.mkdtemp(prefix="wfs-head-static-")
+        os.makedirs(os.path.join(tmp, "assets"))
+        js = ("const x=" + "a" * 2048 + ";\n").encode()  # >= MIN_GZ → gzip path
+        with open(os.path.join(tmp, "assets", "index-BzSlm-bb.js"), "wb") as f:
+            f.write(js)
+        with open(os.path.join(tmp, "assets", "icon-192.png"), "wb") as f:
+            f.write(b"\x89PNG\r\n\x1a\n" + b"0" * 24)  # binary, tak kena gzip
+        os.chdir(tmp)
+        return tmp, outer, js
+
+    def test_head_static_assets_match_get_metadata(self):
+        # SIKLUS 223: HEAD aset statis kini konsisten dgn GET — dulu via
+        # super().do_HEAD() stdlib: Content-Length = ukuran mentah (GET gzip
+        # lebih kecil) dan Cache-Control no-store (GET /assets/* immutable).
+        # Monitor/cache-probe berbasis HEAD menerima metadata palsu.
+        import os
+        tmp, outer, js = self._head_static_env()
+        try:
+            # (1) JS besar + Accept-Encoding gzip → headers identik GET:
+            #     CC immutable, Content-Encoding gzip + Vary, CL = panjang gzip.
+            fake = FakeH(path="/assets/index-BzSlm-bb.js", command="HEAD",
+                         headers={"Accept-Encoding": "gzip"}, wfs_cc="stale")
+            H.do_HEAD(fake)
+            self.assertEqual(fake._status, 200)
+            self.assertEqual(fake.wfile.data, b"")  # HEAD tanpa body
+            hdrs = dict(fake._headers)
+            self.assertEqual(hdrs.get("Content-Encoding"), "gzip")
+            self.assertEqual(hdrs.get("Vary"), "Accept-Encoding")
+            self.assertEqual(fake._wfs_cc, "public, max-age=31536000, immutable")
+            self.assertLess(int(hdrs["Content-Length"]), len(js))
+            self.assertGreater(int(hdrs["Content-Length"]), 0)
+            self.assertNotEqual(hdrs.get("Content-Length"), str(len(js)))
+            self.assertTrue(fake._ended)
+            # (2) Tanpa Accept-Encoding → tanpa Content-Encoding, CL = raw.
+            fake2 = FakeH(path="/assets/index-BzSlm-bb.js", command="HEAD",
+                          headers={"Accept-Encoding": "identity"}, wfs_cc="stale")
+            H.do_HEAD(fake2)
+            hdrs2 = dict(fake2._headers)
+            self.assertEqual(fake2._status, 200)
+            self.assertNotIn("Content-Encoding", hdrs2)
+            self.assertEqual(hdrs2.get("Content-Length"), str(len(js)))
+            self.assertEqual(fake2._wfs_cc, "public, max-age=31536000, immutable")
+            self.assertEqual(fake2.wfile.data, b"")
+            # (3) Binary (png) → tanpa gzip, CC immutable (di /assets/).
+            fake3 = FakeH(path="/assets/icon-192.png", command="HEAD",
+                          headers={"Accept-Encoding": "gzip"}, wfs_cc="stale")
+            H.do_HEAD(fake3)
+            hdrs3 = dict(fake3._headers)
+            self.assertEqual(fake3._status, 200)
+            self.assertNotIn("Content-Encoding", hdrs3)
+            self.assertEqual(fake3._wfs_cc, "public, max-age=31536000, immutable")
+            self.assertEqual(fake3.wfile.data, b"")
         finally:
             os.chdir(outer)
 

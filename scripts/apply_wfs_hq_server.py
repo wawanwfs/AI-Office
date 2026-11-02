@@ -27,6 +27,7 @@ SOP: edit backend_live/wfs_hq_server.py di repo, commit, lalu jalankan
 import argparse
 import hashlib
 import pathlib
+import re
 import shutil
 import subprocess
 import sys
@@ -174,6 +175,34 @@ def smoke():
                 why.append(f"HEAD {hp} Content-Length {ln!r} (harap panjang GET)")
         except Exception as e:
             why.append(f"HEAD {hp} exc: {e}")
+    # 10. SIKLUS 223: HEAD aset statis = metadata GET — cache policy immutable
+    #     (bukan no-store stdlib) dan, bila client kirim Accept-Encoding gzip,
+    #     Content-Encoding: gzip + Content-Length = payload TERKOMPRES
+    #     (dulu CL = ukuran mentah file). Aset dipilih dari GET /app/.
+    try:
+        app_html = get("/app/")[1].decode("utf-8", "replace")
+        m = re.search(r'/assets/[A-Za-z0-9._-]+\.js', app_html)
+        asset = m.group(0) if m else None
+        if not asset:
+            why.append("smoke 223: tidak menemukan aset JS di /app/")
+        else:
+            req = urllib.request.Request(BASE + asset, method="HEAD",
+                                         headers={"Accept-Encoding": "gzip"})
+            with urllib.request.urlopen(req, timeout=5) as r:
+                h = {k.lower(): v for k, v in r.headers.items()}
+            if r.status != 200:
+                why.append(f"HEAD {asset} status {r.status}")
+            if h.get("cache-control") != "public, max-age=31536000, immutable":
+                why.append(f"HEAD {asset} cache-control {h.get('cache-control')!r} "
+                           f"(harap immutable — stdlib no-store berarti regresi)")
+            if h.get("content-encoding") != "gzip":
+                why.append(f"HEAD {asset} content-encoding {h.get('content-encoding')!r} (harap gzip)")
+            elif not h.get("content-length") or int(h["content-length"]) <= 0:
+                why.append(f"HEAD {asset} content-length {h.get('content-length')!r}")
+    except urllib.error.HTTPError as e:
+        why.append(f"HEAD aset statis HTTP {e.code}")
+    except Exception as e:
+        why.append(f"HEAD aset statis exc: {e}")
     return (not why), why
 
 
@@ -226,7 +255,7 @@ def do_apply():
         print("smoke GAGAL — rollback:", why)
         _rollback_to(bak)
         return 2
-    print("DEPLOY OK — live == sumber", sha(SRC)[:12], "; smoke 9/9 (termasuk keamanan 212 + CORS/HEAD 222)")
+    print("DEPLOY OK — live == sumber", sha(SRC)[:12], "; smoke 10/10 (keamanan 212 + CORS/HEAD 222 + HEAD aset 223)")
     return 0
 
 
@@ -256,7 +285,7 @@ def do_check():
     print("live   :", sha(DST)[:12], DST)
     if same:
         ok, why = smoke()
-        print("IDENTIK; smoke 9/9:", "OK" if ok else f"GAGAL {why}")
+        print("IDENTIK; smoke 10/10:", "OK" if ok else f"GAGAL {why}")
         return 0 if ok else 2
     print("DRIFT: live != sumber — jalankan scripts/apply_wfs_hq_server.py --apply")
     return 3
