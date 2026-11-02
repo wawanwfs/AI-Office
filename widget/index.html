@@ -216,7 +216,10 @@ document.getElementById('dbt-form').onsubmit = async (e) => {
   inp.value = '';
   add('me', text);
   const send = document.getElementById('dbt-send'); send.disabled = true;
-  const pending = bubble('ai', ''); pending.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
+  const pending = bubble('ai', '');
+  // Ganti ISI bubble dengan typing-indicator, JANGAN seluruh innerHTML (menghapus .dbt-t).
+  const bodyEl0 = pending.querySelector('.dbt-m > div:first-child');
+  if (bodyEl0) bodyEl0.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
   const t0 = Date.now();
   try {
     const r = await fetch(API + '/widget/chat', {
@@ -224,13 +227,16 @@ document.getElementById('dbt-form').onsubmit = async (e) => {
       body: JSON.stringify({tenant_id: TENANT_ID, message: text})
     });
     const d = await r.json();
+    // InnerHTML di-replace saat menampilkan typing-indicator → query ulang elemen.
+    const bodyEl = pending.querySelector('.dbt-m > div:first-child') || pending.firstElementChild;
     pending.querySelector('.dbt-t').textContent = now();
-    pending.querySelector('div:first-child').textContent = d.reply || 'Maaf, terjadi gangguan.';
+    if (bodyEl) bodyEl.textContent = d.reply || 'Maaf, terjadi gangguan.';
     setStatus(true, 'online · balas ' + ((Date.now()-t0)/1000).toFixed(1) + ' dtk');
   } catch (err) {
     pending.classList.add('dbt-err');
     pending.querySelector('.dbt-t').textContent = now();
-    pending.querySelector('div:first-child').textContent = 'Gagal terhubung ke server. Coba lagi sebentar ya.';
+    const bodyEl = pending.querySelector('.dbt-m > div:first-child') || pending.firstElementChild;
+    if (bodyEl) bodyEl.textContent = 'Gagal terhubung ke server. Coba lagi sebentar ya.';
     setStatus(false, 'kembali offline');
   } finally {
     send.disabled = false;
