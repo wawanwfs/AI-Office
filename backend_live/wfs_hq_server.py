@@ -37,7 +37,55 @@
 #   default-TOLAK; hanya jalur dist/ eksak (PWA shell + aset ber-hash + font +
 #   ikon) yang dilayani. Dulu web root menyajikan *.py (source disclosure),
 #   *.db, backups/*.bak, bahkan .wfs_ui_token (token UI ASLI) ke publik.
+# Siklus 228 — HYGIENE LOG: BrokenPipeError/ConnectionResetError (klien memutus
+#   koneksi di tengah respons: tab ditutup, fetch di-abort via rid-bump saat
+#   ganti tab/drawer, EventSource reconnect) ADALAH peristiwa normal — bukti
+#   jurnald 24 jam: 118 traceback BrokenPipe (59 _proxy, 31 do_GET, 2
+#   handle_project) + rantai sekunder "During handling ... _reply_json 502"
+#   menulis lagi ke socket yang sama yang sudah mati. Noise ini mengubur error
+#   sungguhan di journald (65 MB). Kini: tulisan respons lewat
+#   _wfs_write_or_client_gone (ClientGone ditelan senyap di SEMUA titik tulis
+#   proxy/HTML/JSON), _reply_json & handle_project tidak lagi menulis ke socket
+#   mati, dan _hq_handle_error (handle_error server class) menjaring sisanya —
+#   disconnect klien TIDAK lagi memuntahkan traceback; kegagalan lain tetap LOUD.
 import http.server, socketserver, os, urllib.request, urllib.error, json, secrets, re
+
+
+class ClientGone(Exception):
+    """Klien memutus koneksi saat respons sedang ditulis (siklus 228).
+
+    Ditandai eksplisit agar handle_error bisa membedakan disconnect normal
+    (senyap) dari kegagalan server sungguhan (traceback LOUD tetap).
+    """
+
+
+def _wfs_write_or_client_gone(handler, data):
+    """Tulis body respons; klien yang pergi → ClientGone (jangan ditulis lagi).
+
+    Dipakai SEMUA titik tulis body utama (proxy GET/POST bantuin+gateway, SSE,
+    api_service/project_api delegasi, static/index/landing). Fallback error
+    (502/500) kini juga lewat sini: menulis ke socket mati dulu memicu rantai
+    sekunder "During handling of the above exception" di journald (bukti 228).
+    """
+    try:
+        handler.wfile.write(data)
+    except (BrokenPipeError, ConnectionResetError, TimeoutError):
+        raise ClientGone() from None
+
+
+def _hq_handle_error(request, client_address):
+    """socketserver.handle_error: benteng terakhir thread handler.
+
+    Disconnect klien (ClientGone/BrokenPipe/ConnectionReset mid-response) =
+    peristiwa normal → SATU baris INFO, tanpa traceback. Exception lain tetap
+    dicetak penuh (kegagalan server tidak boleh hilang).
+    """
+    import sys, traceback
+    etype = sys.exc_info()[0]
+    if etype is ClientGone or etype in (BrokenPipeError, ConnectionResetError):
+        print(f"wfs-hq: klien {client_address} memutus koneksi (disconnect normal, senyap)")
+        return
+    traceback.print_exc()
 try:
     import project_api  # hanya ada di direktori deploy (~/wfs-hq)
 except ImportError:  # pragma: no cover - dev/CI tanpa project_api
@@ -117,13 +165,18 @@ def _parse_content_length(raw):
 
 
 def _reply_json(handler, code, obj):
-    """Kirim JSON kecil dengan Content-Length eksak (pola semua jalur 4xx/502)."""
+    """Kirim JSON kecil dengan Content-Length eksak (pola semua jalur 4xx/502).
+
+    SIKLUS 228: tulis via _wfs_write_or_client_gone — fallback 401/502/413 ke
+    socket yang sudah mati (klien pergi sebelum balasan) tidak lagi memicu
+    rantai "During handling of the above exception" di journald.
+    """
     msg = json.dumps(obj).encode()
     handler.send_response(code)
     handler.send_header("Content-Type", "application/json")
     handler.send_header("Content-Length", str(len(msg)))
     handler.end_headers()
-    handler.wfile.write(msg)
+    _wfs_write_or_client_gone(handler, msg)
 
 
 def _reject_oversize(handler):
@@ -268,7 +321,9 @@ class H(http.server.SimpleHTTPRequestHandler):
                 chunk = r.read1(4096)
                 if not chunk:
                     break
-                self.wfile.write(chunk)
+                # SIKLUS 228: klien EventSource pergi di tengah stream →
+                # ClientGone (senyap via handle_error), bukan traceback.
+                _wfs_write_or_client_gone(self, chunk)
                 self.wfile.flush()
         except Exception:
             try:
@@ -301,14 +356,14 @@ class H(http.server.SimpleHTTPRequestHandler):
                 self.send_header("Content-Type", "application/json")
                 self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
-                self.wfile.write(data)
+                _wfs_write_or_client_gone(self, data)  # SIKLUS 228
         except urllib.error.HTTPError as e:
             data = e.read()
             self.send_response(e.code)
             self.send_header("Content-Type", "application/json")
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
-            self.wfile.write(data)
+            _wfs_write_or_client_gone(self, data)  # SIKLUS 228
         except Exception as e:
             _reply_json(self, 502, {"error": str(e)})
 
@@ -349,7 +404,7 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-Type", r.getheader("Content-Type", "application/json"))
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
-            self.wfile.write(data)
+            _wfs_write_or_client_gone(self, data)  # SIKLUS 228
             conn.close()
         except Exception:
             try:
@@ -818,4 +873,7 @@ if __name__ == "__main__":
         allow_reuse_address = True
 
     with ThreadingTCPServer(("0.0.0.0", 9503), H) as s:
+        # SIKLUS 228: jaring disconnect klien di level server (thread handler
+        # mati tanpa traceback); kegagalan lain tetap LOUD (traceback penuh).
+        s.handle_error = _hq_handle_error
         s.serve_forever()

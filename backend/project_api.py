@@ -89,6 +89,14 @@ def handle_project(self):
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
         self.wfile.write(data)
+    except (BrokenPipeError, ConnectionResetError):
+        # SIKLUS 228: klien (poll ProjectPanel/kanban 3D/TV) pergi saat body
+        # ditulis = peristiwa normal, BUKAN error server. Dulu jatuh ke blok
+        # except umum di bawah → balasan 500 ke socket mati + 2 traceback
+        # jurnald per kejadian ("During handling of the above exception").
+        # Re-raise saja: disaring handle_error server (_hq_handle_error di
+        # :9503 — satu baris INFO; jaring setempat di mode-repo lain).
+        raise
     except Exception as e:
         msg = _json.dumps({"error": str(e)}).encode()
         self.send_response(500)
