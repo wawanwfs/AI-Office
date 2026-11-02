@@ -234,6 +234,76 @@ class TestWfsHqServer(unittest.TestCase):
             mock.call("Referrer-Policy", "same-origin"),
         ])
 
+    # --- SIKLUS 218: gerbang token jalur legacy /api/* (api_service) ---
+
+    def _legacy_api(self, method, path, token=None):
+        """FakeH-style: objek duck-typed, do_POST/do_DELETE dipanggil langsung."""
+        fake = FakeH(path=path, command=method,
+                     headers={"X-WFS-Token": token} if token else {},
+                     body=b"{}" if method != "GET" else b"")
+        called = {"api": False, "method": None}
+
+        class _Api:
+            @staticmethod
+            def handle_api_request(hd, m, p):
+                called.update(api=True, method=m)
+                return True
+
+        orig_api, orig_proj = wfs_hq_server.api_service, wfs_hq_server.project_api
+        wfs_hq_server.api_service = _Api()
+        wfs_hq_server.project_api = None
+        try:
+            (H.do_POST if method == "POST" else H.do_DELETE)(fake)
+        finally:
+            wfs_hq_server.api_service = orig_api
+            wfs_hq_server.project_api = orig_proj
+        return fake, called
+
+    def test_legacy_api_post_without_token_is_401_and_not_dispatched(self):
+        # Bukti insiden 218: POST /api/tasks tanpa token dulu MENCAPAI
+        # api_service (task dibuat). Kini 401 sebelum dispatch.
+        h, called = self._legacy_api("POST", "/api/tasks")
+        self.assertEqual(h._status, 401)
+        self.assertFalse(called["api"])
+        self.assertIn(b"unauthorized", h.wfile.data)
+
+    def test_legacy_api_delete_without_token_is_401_and_not_dispatched(self):
+        # DELETE /api/tasks = reset DB UI yang menghapus 20 task di insiden 218.
+        h, called = self._legacy_api("DELETE", "/api/tasks")
+        self.assertEqual(h._status, 401)
+        self.assertFalse(called["api"])
+
+    def test_legacy_api_post_with_valid_token_dispatched(self):
+        h, called = self._legacy_api("POST", "/api/tasks", token=wfs_hq_server.UI_TOKEN)
+        self.assertTrue(called["api"])
+        self.assertEqual(called["method"], "POST")
+
+    def test_legacy_api_delete_with_valid_token_dispatched(self):
+        h, called = self._legacy_api("DELETE", "/api/tasks/25", token=wfs_hq_server.UI_TOKEN)
+        self.assertTrue(called["api"])
+        self.assertEqual(called["method"], "DELETE")
+
+    def test_api_token_ok_get_is_open_and_mutations_require_exact_match(self):
+        # GET read-only tetap terbuka (smoke apply_wfs_api_service memakai
+        # /api/agents & /api/dashboard/stats via urllib TANPA header token).
+        h = FakeH(command="GET", headers={})
+        self.assertTrue(wfs_hq_server._api_token_ok(h))
+        h = FakeH(command="DELETE", headers={"X-WFS-Token": "TOKEN-SALAH"})
+        self.assertFalse(wfs_hq_server._api_token_ok(h))
+        h = FakeH(command="DELETE", headers={"X-WFS-Token": wfs_hq_server.UI_TOKEN})
+        self.assertTrue(wfs_hq_server._api_token_ok(h))
+
+    def test_admin_and_auth_login_stay_outside_legacy_gate(self):
+        # /api/admin/* & /api/auth/login punya otentikasi sendiri (backend
+        # :8000) — tetap diproxy, TIDAK kena 401 gerbang legacy.
+        fake = FakeH(path="/api/auth/login", command="POST", body=b"{}", headers={})
+        sent = []
+        # Monkey-patch di INSTANCE (lookup atribut terjadi di FakeH, bukan H).
+        fake._proxy_bantuin = lambda: sent.append(fake.path)
+        H.do_POST(fake)
+        self.assertEqual(sent, ["/api/auth/login"])
+        self.assertIsNone(fake._status)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

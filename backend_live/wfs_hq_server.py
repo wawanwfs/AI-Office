@@ -144,6 +144,23 @@ def _security_headers():
     )
 
 
+def _api_token_ok(handler):
+    """SIKLUS 218: gerbang token UI untuk jalur legacy /api/* (api_service).
+
+    Temuan audit 218: api_service TANPA otentikasi sendiri, frontend UI 100%
+    lewat /wfs-api (src/lib/api.js — satu gerbang api()), dan probe nyata
+    siklus ini membuktikan POST /api/tasks + DELETE /api/tasks (reset DB)
+    diterima tanpa token dari jaringan publik (9503 bind 0.0.0.0, ufw ALLOW).
+    Kerusakan: 20 task + 76 log + 3 proyek DB UI terhapus.
+
+    Kebijakan: GET read-only tetap terbuka (smoke apply_wfs_api_service +
+    dashboard stats); SEMUA mutasi (POST/PUT/PATCH/DELETE) wajib X-WFS-Token
+    == UI_TOKEN — ditolak 401 tanpa membaca body (permukaan parse/ram jalur
+    mutasi ikut tertutup bagi pemanggil tak berwenang).
+    """
+    return handler.command == "GET" or handler.headers.get("X-WFS-Token") == UI_TOKEN
+
+
 class H(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         if not hasattr(self, "_wfs_cc"):
@@ -331,7 +348,13 @@ class H(http.server.SimpleHTTPRequestHandler):
         # Dibatasi persis endpoint login; sisanya tetap 404.
         if self.path == "/api/auth/login":
             return self._proxy_bantuin()
+        # SIKLUS 218: mutasi jalur legacy /api/* wajib token UI (probe nyata
+        # 218: POST /api/tasks + DELETE reset diterima tanpa token → DB UI
+        # terhapus). /api/admin/* & /api/auth/login di atas tetap di luar
+        # gerbang ini (punya otentikasi sendiri di backend :8000).
         if api_service and self.path.startswith("/api/"):
+            if not _api_token_ok(self):
+                return _reply_json(self, 401, {"error": "unauthorized"})
             if api_service.handle_api_request(self, "POST", self.path):
                 return
         if self.path.startswith("/wfs-api/"):
@@ -470,6 +493,8 @@ class H(http.server.SimpleHTTPRequestHandler):
         if self.path.startswith("/api/admin/"):
             return self._proxy_bantuin()
         if api_service and self.path.startswith("/api/"):
+            if not _api_token_ok(self):
+                return _reply_json(self, 401, {"error": "unauthorized"})
             if api_service.handle_api_request(self, "DELETE", self.path):
                 return
         self.send_response(404); self.end_headers()

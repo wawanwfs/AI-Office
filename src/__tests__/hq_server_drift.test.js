@@ -75,6 +75,14 @@ describe('drift-gate server produksi wfs-hq (siklus 206)', () => {
     expect(s).toContain('do_DELETE')                        // 161
   })
 
+  it('SIKLUS 218: mutasi legacy /api/* wajib token UI (gerbang _api_token_ok)', () => {
+    const s = readFileSync(SRC, 'utf-8')
+    expect(s).toContain('def _api_token_ok(handler):')
+    expect(s).toContain('return handler.command == "GET" or handler.headers.get("X-WFS-Token") == UI_TOKEN')
+    // Gerbang terpasang TEPAT 2×: do_POST & do_DELETE (GET tetap terbuka).
+    expect(s.match(/if not _api_token_ok\(self\):/g)?.length).toBe(2)
+  })
+
   it('apply script deploy terkontrol: backup + compile-check + smoke + auto-rollback', () => {
     const a = readFileSync(APPLY, 'utf-8')
     expect(a).toContain('server.py.bak-')

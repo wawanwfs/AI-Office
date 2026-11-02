@@ -41,6 +41,7 @@ SRC = pathlib.Path(__file__).resolve().parent.parent / "backend_live" / "wfs_api
 DST = pathlib.Path("/home/agentuser/wfs-hq/api_service.py")
 BACKUPS = pathlib.Path("/home/agentuser/wfs-hq/backups")
 TMP = pathlib.Path("/home/agentuser/wfs-hq/.api_service.compiledcheck")
+TOKEN_FILE = pathlib.Path("/home/agentuser/wfs-hq/.wfs_ui_token")
 BASE = "http://127.0.0.1:9503"
 
 
@@ -68,10 +69,17 @@ def get(path, timeout=5):
         return e.code, e.read()
 
 
-def post_raw(path, body=b"x", cl_header=None, timeout=6):
+def ui_token():
+    """SIKLUS 218: token UI untuk smoke POST/DELETE (gerbang token legacy /api/*)."""
+    return TOKEN_FILE.read_text().strip() if TOKEN_FILE.exists() else ""
+
+
+def post_raw(path, body=b"x", cl_header=None, timeout=6, token=None):
     """POST HTTP murni dgn Content-Length yang KITA kontrol (bisa malformed).
 
     Return (status|None, body) — status None = koneksi mati/timeout.
+    SIKLUS 218: header X-WFS-Token opsional — smoke hardening wajib pakai
+    token sah agar menguji jalur hardening, bukan ditolak 401 di gerbang.
     """
     try:
         s = socket.create_connection(("127.0.0.1", 9503), timeout=timeout)
@@ -81,6 +89,8 @@ def post_raw(path, body=b"x", cl_header=None, timeout=6):
             "Host: 127.0.0.1:9503",
             "Connection: close",
         ]
+        if token:
+            hdrs.append(f"X-WFS-Token: {token}")
         if cl_header is not None:
             hdrs.append(f"Content-Length: {cl_header}")
         else:
@@ -137,26 +147,33 @@ def smoke():
     # 4. Hardening live: POST + Content-Length "abc" -> handler TIDAK mati:
     #    koneksi tetap hidup (superset parse toleran -> body={} -> 404 path
     #    smoke). Server LAMA: ValueError int() -> koneksi putus.
+    #    SIKLUS 218: kirim token sah — poin ini menguji hardening CL, bukan
+    #    gerbang token (tanpa token kini 401 sebelum jalur hardening).
+    TOK = ui_token()
     try:
-        st, body = post_raw("/api/__smoke207cl", cl_header="abc")
+        st, body = post_raw("/api/__smoke207cl", cl_header="abc", token=TOK)
         if st is None:
             why.append(f"POST CL-malformed koneksi mati (hardening tidak hidup): {body[:120]!r}")
         elif st == 500:
             why.append(f"POST CL-malformed 500: {body[:120]!r}")
+        elif st == 401:
+            why.append("POST CL-malformed 401 — gerbang token 218 menolak smoke (token salah/hilang)")
     except Exception as e:
         why.append(f"POST CL-malformed exc: {e}")
     # 5. Hardening cap: POST + Content-Length raksasa -> 413 JSON TANPA
     #    membaca body ke RAM (dulu: read(1TB) -> gantung/OOM).
     try:
-        st, body = post_raw("/api/__smoke207cap", cl_header=str(5 * 1024 * 1024 + 1))
+        st, body = post_raw("/api/__smoke207cap", cl_header=str(5 * 1024 * 1024 + 1), token=TOK)
         if st != 413 or b"payload terlalu besar" not in body:
             why.append(f"POST CL-raksasa status {st} (harap 413): {body[:80]!r}")
     except Exception as e:
         why.append(f"POST CL-raksasa exc: {e}")
     # 6. DELETE path yang TIDAK match tak boleh merusak data (404 handler
     #    produksi menangkap do_DELETE -> handle_api_request False).
+    #    SIKLUS 218: token sah via header standar (urllib) — dulu tanpa token.
     try:
-        req = urllib.request.Request(BASE + "/api/__smoke207del", method="DELETE")
+        req = urllib.request.Request(BASE + "/api/__smoke207del", method="DELETE",
+                                     headers={"X-WFS-Token": TOK} if TOK else {})
         with urllib.request.urlopen(req, timeout=5) as r:
             st = r.status
     except urllib.error.HTTPError as e:

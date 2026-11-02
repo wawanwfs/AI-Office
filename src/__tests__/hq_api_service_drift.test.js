@@ -16,6 +16,7 @@ import { describe, it, expect } from 'vitest'
 const here = fileURLToPath(new URL('.', import.meta.url))
 const REPO = resolve(here, '../..')
 const SRC = resolve(REPO, 'backend_live/wfs_api_service.py')
+const SRC2 = resolve(REPO, 'backend_live/wfs_hq_server.py')
 const SRC_TEST = resolve(REPO, 'backend_live/test_wfs_api_service.py')
 const APPLY = resolve(REPO, 'scripts/apply_wfs_api_service.py')
 const DST = '/home/agentuser/wfs-hq/api_service.py'
@@ -80,6 +81,21 @@ describe('drift-gate api_service produksi wfs-hq (siklus 207)', () => {
     // smoke wajib mengetes jalur hardening yang DULU mati (HTTP murni, tanpa chrome)
     expect(a).toContain('cl_header="abc"')
     expect(a).toContain('payload terlalu besar')
+  })
+
+  it('SIKLUS 218: gerbang token legacy /api/* hidup di server + smoke bawa token', () => {
+    const s = readFileSync(SRC2, 'utf-8')
+    // Fungsi gate + pemakaian eksak di do_POST & do_DELETE (mutasi wajib token).
+    expect(s).toContain('def _api_token_ok(handler):')
+    expect(s).toContain('return handler.command == "GET" or handler.headers.get("X-WFS-Token") == UI_TOKEN')
+    expect(s.match(/if not _api_token_ok\(self\):/g)?.length).toBe(2)
+    // Smoke apply_wfs_api_service wajib kirim token sah (kalau tidak, smoke
+    // akan salah menyalahkan server padahal ditolak gerbang sendiri).
+    const a = readFileSync(APPLY, 'utf-8')
+    expect(a).toContain('def ui_token():')
+    expect(a).toContain('post_raw("/api/__smoke207cl", cl_header="abc", token=TOK)')
+    expect(a).toContain('post_raw("/api/__smoke207cap", cl_header=str(5 * 1024 * 1024 + 1), token=TOK)')
+    expect(a).toContain('headers={"X-WFS-Token": TOK} if TOK else {}')
   })
 
   it('SOP anti-drift terdokumentasi di sumber (JANGAN edit live langsung)', () => {
