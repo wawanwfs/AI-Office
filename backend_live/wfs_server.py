@@ -611,6 +611,11 @@ def _plan_project_tasks(pid: int, name: str, brief: str):
     status 'planning' selamanya (dulu except-umum hanya print tanpa UPDATE).
     Sekarang project dikembalikan 'failed' — terlihat founder di UI & bisa
     di-retry (project baru / resume), tanpa jejak 'planning' mati.
+
+    Siklus 231 — celah tersisa keluarga yang sama: array JSON valid tapi
+    SEMUA entri tanpa title dulu lolos guard 230b (len>0) lalu loop for
+    menolak semua → project 'backlog' dengan 0 TASK. Kini dihitung dulu:
+    0 entri valid → raise → 'failed'.
     """
     async def _plan():
         try:
@@ -630,9 +635,18 @@ def _plan_project_tasks(pid: int, name: str, brief: str):
                 # (dead-end senyap). Lempar -> jalur except -> 'failed'.
                 raise ValueError(
                     "planning: respons LLM tanpa array task ter-parse (len=0)")
-            for t in tasks[:10]:
-                if isinstance(t, dict) and t.get("title"):
-                    taskengine.add_task(pid, t.get("title", "task"), t.get("role", "backend"), t.get("prompt", ""))
+            valid = [t for t in tasks[:10]
+                     if isinstance(t, dict) and t.get("title")]
+            if not valid:
+                # Siklus 231 — array JSON valid tapi SEMUA entri tanpa title
+                # sama-sama menghasilkan 0 task: dulu loop for melewati semua
+                # lalu project ditulis 'backlog' dengan 0 TASK (dead-end senyap
+                # yang lolos guard 230b karena len>0). Lempar -> 'failed'.
+                raise ValueError(
+                    "planning: respons LLM tanpa SATU PUN entri bertitle "
+                    f"(len={len(tasks)}) — 0 task valid")
+            for t in valid:
+                taskengine.add_task(pid, t.get("title", "task"), t.get("role", "backend"), t.get("prompt", ""))
             c = taskengine.db()
             c.execute("UPDATE projects SET status='backlog' WHERE id=?", (pid,))
             c.commit(); c.close()

@@ -366,6 +366,21 @@ def test_plan_project_tasks_llm_failure_marks_failed_not_stuck(tmp_path, monkeyp
     assert _status_of(pid_b) == "failed", (
         f"project STUCK {_status_of(pid_b)!r} pada respons tak ter-parse")
 
+    # (c) Siklus 231 — LLM sukses, respons berupa array JSON VALID, tapi SEMUA
+    #     entri tanpa title ([{"role":"backend"}]) → guard parse-kosong 230b
+    #     lolos (len>0) namun loop for menolak semua → 0 task ter-add → project
+    #     ditulis 'backlog' dengan 0 TASK — dead-end senyap yang sama.
+    pid_c = taskengine.add_project("P231c", "brief entri tanpa title")
+
+    async def no_title(*a, **k):
+        return '[{"role":"backend","prompt":"buat API"},{"desc":"tanpa title"}]'
+
+    monkeypatch.setattr(taskengine, "call_llm", no_title)
+    server._bg_tasks.clear()
+    _spawn_and_drain(pid_c, "P231c", "brief entri tanpa title")
+    assert _status_of(pid_c) == "failed", (
+        f"project STUCK {_status_of(pid_c)!r} pada array tanpa title valid")
+
     # Anti-STUCK permanen: seluruh jalur exit _plan() menulis status non-'planning'.
     src = Path(server.__file__).read_text()
     body = src[src.index("async def _plan():"):src.index("plan_t = asyncio.create_task")]
