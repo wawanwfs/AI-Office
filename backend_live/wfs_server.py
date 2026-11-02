@@ -1033,12 +1033,17 @@ class TaskIn(BaseModel):
 
 @app.post("/api/tasks")
 async def api_add_task(body: TaskIn):
-    """Tambah satu task manual (status pending)."""
+    """Tambah satu task manual (status pending).
+
+    Siklus 232 — role dinormalisasi via taskengine.normalize_role (satu sumber
+    dgn engine): role bebas dari UI/manual juga tak pernah jatuh ke fallback
+    senyap; title di-truncate sebelum masuk DB (kontrak lama utuh).
+    """
     title = body.title.strip()
     if not title:
         raise HTTPException(400, "title wajib")
     tid = taskengine.add_task(body.project, title[:200], body.role, (body.prompt or title)[:4000])
-    return {"ok": True, "task_id": tid}
+    return {"ok": True, "task_id": tid, "role": taskengine.normalize_role(body.role)}
 
 def _check_task(tid):
     task = taskengine.get_task(tid)

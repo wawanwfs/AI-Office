@@ -52,10 +52,55 @@ def test_add_task_maps_role_agent(tmp_tasks_db):
     assert int(row["project"]) == pid     # kolom project ber-tipe TEXT
 
 
-def test_add_task_default_agent_unknown_role(tmp_tasks_db):
+def test_add_task_normalizes_unknown_role_to_backend(tmp_tasks_db):
+    """Siklus 232 — role tak dikenal TIDAK lagi jatuh diam-diam ke pm1.
+
+    Dulu: ROLE_AGENT.get(role, "pm1") → task teknis dari planning dieksekusi
+    SARI (PM) dgn system prompt backend — identitas salah + QA-review &
+    sinkron sandbox meleset. Kini dinormalisasi ke 'backend' (be1) — koheren
+    dgn ROLE_SYS.get(role, ROLE_SYS["backend"]) di _execute_task.
+    """
     pid = tasks.add_project("P", "b")
     tid = tasks.add_task(pid, "T", "role-aneh", "x")
-    assert tasks.get_task(tid)["agent_id"] == "pm1"
+    row = tasks.get_task(tid)
+    assert row["role"] == "backend"
+    assert row["agent_id"] == "be1"
+
+
+def test_add_task_normalizes_llm_role_family_to_canonical(tmp_tasks_db):
+    """Siklus 232 — keluarga role bebas dari LLM (prompt pm lama tak membatasi
+    daftar) dipetakan ke kunci kanonik ROLE_AGENT/ROLE_SYS. Bukti hidup:
+    tasks.db produksi punya task 27 role='security' yang TIDAK ADA di
+    ROLE_AGENT → dulu agent_id pm1. Kini 'security' → devops (Toni, tim
+    DevOps & Security sesuai team_spec UI) → QA-review tuple & sandbox
+    sync kena."""
+    pid = tasks.add_project("P", "b")
+    cases = [
+        # (role mentah dari LLM, role kanonik, agent_id)
+        ("security", "devops", "devops1"),
+        ("Security Engineer", "devops", "devops1"),
+        ("Frontend Engineer", "frontend", "fe1"),
+        ("UI/UX Designer", "design", "ux1"),
+        ("Payment gateway specialist", "backend2", "be2"),
+        ("QA", "qa", "qa1"),
+        ("Test Engineer", "qa", "qa1"),
+        ("Mobile dev", "mobile", "mob1"),
+        ("Project Manager", "pm", "pm1"),
+        ("Growth marketing", "marketing", "mkt1"),
+        ("Integration WhatsApp API", "integration", "integ"),
+        ("Customer support", "cs", "cs-h"),
+        ("ML Engineer", "ai", "ai-train"),
+        ("Database engineer", "backend", "be1"),
+        ("", "backend", "be1"),
+        (None, "backend", "be1"),
+    ]
+    for raw, canon, agent in cases:
+        tid = tasks.add_task(pid, f"T-{raw}", raw, "x")
+        row = tasks.get_task(tid)
+        assert row["role"] == canon, (
+            f"role {raw!r} → {row['role']!r}, harusnya {canon!r}")
+        assert row["agent_id"] == agent, (
+            f"role {raw!r} → agent {row['agent_id']!r}, harusnya {agent!r}")
 
 
 def test_list_tasks_filter_by_project(tmp_tasks_db):

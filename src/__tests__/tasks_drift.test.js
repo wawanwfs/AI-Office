@@ -126,6 +126,24 @@ describe('drift-gate tasks engine produksi gateway :8787 (siklus 208)', () => {
     expect(s).toContain('~/wfs-office/saas-dibantuin')
   })
 
+  it('siklus 232: normalize_role — role mentah dari LLM/API dinormalisasi, fallback senyap pm1 DIHAPUS', () => {
+    const s = readFileSync(SRC, 'utf-8')
+    // Fungsi normalisasi ada + dipanggil di add_task SEBELUM insert DB.
+    expect(s).toContain('def normalize_role(role)')
+    expect(s).toMatch(/def add_task\(project, title, role, prompt\):\s*\n\s*role = normalize_role\(role\)/)
+    // Fallback diam-diam lama DIHAPUS (dulu: .get(role, "pm1") — task teknis
+    // dieksekusi PM).
+    expect(s).not.toContain('ROLE_AGENT.get(role, "pm1")')
+    // Fallback .get() tersisa harus be1 (tapi normalize membuatnya tak tersentuh).
+    expect(s).toContain('ROLE_AGENT.get(role, "be1")')
+    // Prompt PM membatasi daftar role (pencegahan di sumber).
+    expect(s).toContain('role HANYA salah satu dari: backend, backend2, frontend')
+    // Guard pytest perilaku nyata ter-track.
+    const t = readFileSync(resolve(REPO, 'backend_live/test_wfs_tasks_orders.py'), 'utf-8')
+    expect(t).toContain('def test_add_task_normalizes_unknown_role_to_backend')
+    expect(t).toContain('def test_add_task_normalizes_llm_role_family_to_canonical')
+  })
+
   it('backend/tasks.py duplikat mati TIDAK kembali (satu sumber, pola 207)', () => {
     let exists = true
     try { readFileSync(resolve(REPO, 'backend/tasks.py')) } catch { exists = false }

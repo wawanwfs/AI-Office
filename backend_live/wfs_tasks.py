@@ -52,6 +52,70 @@ ROLE_AGENT = {  # role task -> agent executor
     "cs": "cs-h", "ceo": "ceo",
 }
 
+# Siklus 232 — keluarga role bebas dari LLM → kunci kanonik ROLE_AGENT/ROLE_SYS.
+# Prompt PM dulu TIDAK membatasi daftar role; LLM bisa balas "security",
+# "Frontend Engineer", "Database engineer", dst. → dulu .get(role, "pm1")
+# menjatuhkannya diam-diam ke pm1 (SARI, PM) sebagai pelaksana task teknis:
+# identitas salah di kanban/UI, QA-review (tuple backend/frontend/devops) &
+# sandbox sync meleset. Bukti hidup: task 27 produksi ber-role 'security'
+# → dulu agent_id pm1.
+_ROLE_KEYWORD_RULES = [
+    # (kata-kunci, role kanonik) — dievaluasi berurutan, spesifik dulu
+    (("payment", "webhook", "billing", "midtrans", "xendit"), "backend2"),
+    (("database", "sql", "postgres", "mysql", "redis"), "backend"),
+    (("security", "secops", "pentest", "vulnerab"), "devops"),
+    (("infra", "sre", "ci/cd", "kubernetes", "docker", "cloud", "devops"), "devops"),
+    (("frontend", "front-end", "react", "vue", "css", "html"), "frontend"),
+    (("mobile", "android", "ios", "flutter"), "mobile"),
+    (("design", "ui/ux", "figma"), "design"),
+    (("qa", "test", "quality"), "qa"),
+    (("integration", "integrasi", "whatsapp", "instagram", "marketplace"), "integration"),
+    (("marketing", "growth", "seo", "ads"), "marketing"),
+    (("support", "customer"), "cs"),
+    (("train", "knowledge", "machine learning"), "ai"),
+    (("project manager", "manajer proyek", "scrum", "product owner"), "pm"),
+]
+_ROLE_ALIAS = {  # alias pendek & gaya UI (be/fe/ops/sec/ml) + judul umum LLM
+    "be": "backend", "fe": "frontend", "ops": "devops", "sec": "devops",
+    "ml": "ai", "dev": "backend", "eng": "backend", "tech": "backend",
+    "programmer": "backend", "developer": "backend", "fullstack": "backend",
+    "full-stack": "backend", "full stack": "backend",
+    "tester": "qa", "qa engineer": "qa", "qa lead": "qa",
+    "ui": "design", "uiux": "design", "ux": "design", "designer": "design",
+    "devops engineer": "devops", "sysadmin": "devops",
+    "backend engineer": "backend", "frontend engineer": "frontend",
+    "front end": "frontend", "mobile engineer": "mobile", "mobile dev": "mobile",
+    "database engineer": "backend", "data engineer": "backend",
+    "product": "pm", "product owner": "pm",
+    "growth marketing": "marketing", "digital marketing": "marketing",
+    "customer support": "cs", "integration engineer": "integration",
+    "integrator": "integration", "ai engineer": "ai", "machine learning": "ai",
+    "ml engineer": "ai", "ml specialist": "ai", "ml": "ai",
+}
+_ROLE_CANON = set(ROLE_AGENT.keys())  # kunci sah = kunci ROLE_SYS juga
+
+
+def normalize_role(role):
+    """Siklus 232 — role mentah (dari LLM/manual/API) → kunci kanonik engine.
+
+    Kembalikan PERSIS salah satu kunci ROLE_AGENT/ROLE_SYS, agar:
+    - ROLE_AGENT.get(role) SELALU kena (tidak ada fallback senyap), dan
+    - ROLE_SYS.get(t["role"], ROLE_SYS["backend"]) di _execute_task memakai
+      system prompt yang koheren dgn agent eksekutor (dulu dua keputusan dari
+      dua map berbeda bisa tidak konsisten: agent pm1 + prompt backend).
+    Fallback terakhir 'backend' (bukan 'pm'): task teknis dikerjakan engineer.
+    """
+    r = str(role or "").strip().lower()
+    if r in _ROLE_CANON:
+        return r
+    if r in _ROLE_ALIAS:
+        return _ROLE_ALIAS[r]
+    # heuristic kata-kunci utk frasa bebas dari LLM ("Security Engineer", dst.)
+    for keys, canon in _ROLE_KEYWORD_RULES:
+        if any(k in r for k in keys):
+            return canon
+    return "backend"
+
 def add_project(name, brief):
     c = db()
     cur = c.execute("INSERT INTO projects(name,brief,status,created) VALUES(?,?, 'planning',?)",
@@ -67,10 +131,11 @@ def list_projects():
     return [{"id":r[0],"name":r[1],"status":r[2]} for r in rows]
 
 def add_task(project, title, role, prompt):
+    role = normalize_role(role)  # siklus 232: tanpa role liar masuk DB
     c = db()
     cur = c.execute("""INSERT INTO tasks(project,title,role,agent_id,status,prompt,created,updated)
         VALUES(?,?,?,?, 'pending',?,?,?)""",
-        (project, title, role, ROLE_AGENT.get(role, "pm1"), prompt, time.time(), time.time()))
+        (project, title, role, ROLE_AGENT.get(role, "be1"), prompt, time.time(), time.time()))
     tid = cur.lastrowid
     c.commit(); c.close()
     return tid
@@ -134,7 +199,7 @@ ROLE_SYS = {
     "frontend2": 'Kamu Andi, Frontend performa/PWA. Balas HANYA JSON object {"files":[{"path":"...","code":"..."}]}. Minimal 3 file, kode lengkap. Tanpa teks lain.',
     "devops": 'Kamu Toni, DevOps. Balas HANYA JSON object {"files":[{"path":"Dockerfile","code":"..."},{"path":"docker-compose.yml","code":"..."}]}. Kode lengkap. Tanpa teks lain.',
     "qa": "Kamu Rina, QA. Review kode task ini: jawab mulai dengan 'VERDICT: pass' atau 'VERDICT: revise' lalu 1-3 kalimat alasan singkat.",
-    "pm": "Kamu Sari, Product Manager. Pecah brief menjadi daftar task teknis. Jawab HANYA JSON valid array, tiap item: role, title, desc. Mulai dengan '[' langsung.",
+    "pm": "Kamu Sari, Product Manager. Pecah brief menjadi daftar task teknis. Jawab HANYA JSON valid array, tiap item WAJIB ada key: role, title, desc. role HANYA salah satu dari: backend, backend2, frontend, frontend2, mobile, design, devops, qa, ai, integration, marketing, cs, pm (jangan buat role lain). Mulai dengan '[' langsung.",
     "default": "Kamu anggota tim engineering WFS. Jawab langsung, padat, teknis."
 }
 
