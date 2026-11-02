@@ -96,6 +96,12 @@ class FakeH:
         self._serve_head_admin = lambda: H._serve_head_admin(self)  # type: ignore[arg-type]
         self._serve_head_cs_widget = lambda: H._serve_head_cs_widget(self)  # type: ignore[arg-type]
         self._serve_head_admin_api = lambda: H._serve_head_admin_api(self)  # type: ignore[arg-type]
+        # SIKLUS 225: do_HEAD memanggil helper proxy HEAD baru pada instance.
+        self._serve_head_api_service = lambda: H._serve_head_api_service(self)  # type: ignore[arg-type]
+        self._serve_head_gateway = lambda: H._serve_head_gateway(self)  # type: ignore[arg-type]
+        self._serve_head_project = lambda: H._serve_head_project(self)  # type: ignore[arg-type]
+        # _head_body_sink = kelas nested (non-binding): panggil langsung dgn handler.
+        self._head_body_sink = lambda h: H._head_body_sink(h)  # type: ignore[arg-type]
         # _serve_head_static memakai self.guess_type (SimpleHTTPRequestHandler)
         # yang butuh extensions_map — delegasikan + salin map kelas.
         self.extensions_map = dict(H.extensions_map)
@@ -555,6 +561,131 @@ class TestWfsHqServer(unittest.TestCase):
         self.assertEqual(rec["headers"].get("Authorization"), "Bearer jwttest")
         hdrs = dict(fake._headers)
         self.assertEqual(hdrs.get("Content-Length"), "12")
+
+    # --- SIKLUS 225: HEAD api_service /api/* + gateway /wfs-api/* + project ---
+
+    def test_head_api_service_tasks_matches_get(self):
+        # HEAD /api/tasks dulu 404 stdlib tanpa CT (GET = 200 JSON api_service);
+        # kini replay GET dgn wfile penangkap: status + CT + CL identik GET,
+        # tanpa body. api_service di-patch agar tak menyentuh DB sungguhan.
+        from unittest import mock
+        payload = b'{"tasks": [{"id": 1}]}'
+
+        class _Api:
+            @staticmethod
+            def handle_api_request(hd, m, p):
+                hd.send_response(200)
+                hd.send_header("Content-Type", "application/json")
+                hd.send_header("Content-Length", str(len(payload)))
+                hd.end_headers()
+                hd.wfile.write(payload)
+                return True
+
+        with mock.patch.object(wfs_hq_server, "api_service", _Api):
+            fake = FakeH(path="/api/tasks", command="HEAD", wfs_cc="stale")
+            H.do_HEAD(fake)
+        self.assertEqual(fake._status, 200)
+        self.assertEqual(fake.wfile.data, b"")  # HEAD tanpa body
+        hdrs = dict(fake._headers)
+        self.assertEqual(hdrs.get("Content-Type"), "application/json")
+        self.assertEqual(hdrs.get("Content-Length"), str(len(payload)))
+        self.assertTrue(fake._ended)
+
+    def test_head_api_service_sse_events_stays_404(self):
+        # /api/events = SSE streaming (GET tak berujung) — replay akan
+        # menggantung; kontrak lama tetap: HEAD 404 stdlib tanpa body.
+        from unittest import mock
+
+        class _Api:
+            @staticmethod
+            def handle_api_request(hd, m, p):
+                raise AssertionError("SSE tidak boleh direplay utk HEAD")
+
+        with mock.patch.object(wfs_hq_server, "api_service", _Api):
+            fake = FakeH(path="/api/events", command="HEAD", wfs_cc="stale")
+            H.do_HEAD(fake)
+        self.assertEqual(fake._status, 404)
+        self.assertEqual(fake.wfile.data, b"")
+
+    def test_head_gateway_wfs_api_tasks_matches_get(self):
+        # HEAD /wfs-api/tasks dulu 404 tanpa CT (GET = 200 JSON gateway :8787
+        # via _proxy); kini HEAD→GET rewrite loopback, status + CT + CL
+        # identik GET, tanpa body.
+        rec, patcher = self._head_proxy_conn(resp_status=200,
+                                             ct="application/json",
+                                             body=b'{"agents": []}')
+        with patcher:
+            fake = FakeH(path="/wfs-api/tasks", command="HEAD", wfs_cc="stale")
+            H.do_HEAD(fake)
+        self.assertEqual(fake._status, 200)
+        self.assertEqual(fake.wfile.data, b"")
+        hdrs = dict(fake._headers)
+        self.assertEqual(hdrs.get("Content-Type"), "application/json")
+        self.assertEqual(hdrs.get("Content-Length"), "14")
+        self.assertEqual(rec["port"], 8787)
+        self.assertEqual(rec["method"], "GET")  # HEAD→GET rewrite loopback
+        self.assertEqual(rec["path"], "/api/tasks")
+
+    def test_head_gateway_sse_events_stays_404(self):
+        # /wfs-api/events = SSE streaming — replay akan menggantung koneksi;
+        # kontrak lama tetap: HEAD 404 stdlib.
+        fake = FakeH(path="/wfs-api/events", command="HEAD", wfs_cc="stale")
+        H.do_HEAD(fake)
+        self.assertEqual(fake._status, 404)
+        self.assertEqual(fake.wfile.data, b"")
+
+    def test_head_project_matches_get(self):
+        # HEAD /wfs-project dulu 404 (GET = 200 JSON snapshot project_api);
+        # kini replay GET dgn sink: status + CT json + CL payload GET,
+        # tanpa body. project_api di-patch (tak ada di env CI).
+        from unittest import mock
+        payload = b'{"projects": [], "agents": []}'
+
+        class _Proj:
+            @staticmethod
+            def handle_project(hd):
+                hd.send_response(200)
+                hd.send_header("Content-Type", "application/json")
+                hd.send_header("Cache-Control", "no-store")
+                hd.send_header("Content-Length", str(len(payload)))
+                hd.end_headers()
+                hd.wfile.write(payload)
+
+        with mock.patch.object(wfs_hq_server, "project_api", _Proj):
+            fake = FakeH(path="/wfs-project", command="HEAD", wfs_cc="stale")
+            H.do_HEAD(fake)
+        self.assertEqual(fake._status, 200)
+        self.assertEqual(fake.wfile.data, b"")
+        hdrs = dict(fake._headers)
+        self.assertEqual(hdrs.get("Content-Type"), "application/json")
+        self.assertEqual(hdrs.get("Content-Length"), str(len(payload)))
+        self.assertTrue(fake._ended)
+
+    def test_head_api_service_preview_paths_covered(self):
+        # Cabang replay mencakup /preview/* juga (mirror persis do_GET);
+        # project tak dikenal → api_service membalas 404 HTML — status + CT
+        # + CL diteruskan tanpa body.
+        from unittest import mock
+        msg = b"<h1>Preview Unavailable</h1><p>Project sandbox is not running.</p>"
+
+        class _Api:
+            @staticmethod
+            def handle_api_request(hd, m, p):
+                hd.send_response(404)
+                hd.send_header("Content-Type", "text/html; charset=utf-8")
+                hd.send_header("Content-Length", str(len(msg)))
+                hd.end_headers()
+                hd.wfile.write(msg)
+                return True
+
+        with mock.patch.object(wfs_hq_server, "api_service", _Api):
+            fake = FakeH(path="/preview/abc/", command="HEAD", wfs_cc="stale")
+            H.do_HEAD(fake)
+        self.assertEqual(fake._status, 404)
+        self.assertEqual(fake.wfile.data, b"")
+        hdrs = dict(fake._headers)
+        self.assertEqual(hdrs.get("Content-Type"), "text/html; charset=utf-8")
+        self.assertEqual(hdrs.get("Content-Length"), str(len(msg)))
 
     def test_head_proxy_upstream_down_is_502_no_body(self):
         # Upstream mati → 502 + tanpa body (konsisten dgn GET proxy yang

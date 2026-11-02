@@ -161,6 +161,21 @@ def _api_token_ok(handler):
     return handler.command == "GET" or handler.headers.get("X-WFS-Token") == UI_TOKEN
 
 
+class _HeadCaptureWriter:
+    """SIKLUS 225: penelan body saat replay HEAD.
+
+    handle_api_request/handle_project menulis body via handler.wfile.write()
+    SETELAH end_headers; saat replay HEAD semua tulisan ini dibuang — status +
+    header ditangkap terpisah oleh sink (intersep logis), bukan dari byte.
+    """
+
+    def write(self, b):
+        return len(b)
+
+    def flush(self):
+        return None
+
+
 class H(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         if not hasattr(self, "_wfs_cc"):
@@ -619,6 +634,130 @@ class H(http.server.SimpleHTTPRequestHandler):
                 pass
         return True
 
+    # SIKLUS 225: HEAD /api/* + /preview/* (api_service), /wfs-api/* (gateway
+    # :8787), /wfs-project (project_api) kini konsisten dgn GET — sisa jalur
+    # proxy terakhir yang masih 404 stdlib palsu (temuan live: HEAD
+    # /api/tasks & /wfs-api/tasks & /wfs-project = 404 tanpa CT, GET = 200
+    # JSON). Teknik: REPLAY cabang GET asli dengan wfile penangkap — status +
+    # header blok dipancarkan byte-identik dgn GET (CT + CL payload GET),
+    # body dibuang, tanpa duplikasi logika. KECUALI endpoint SSE streaming
+    # (/api/events, /wfs-api/events): kontrak lama tetap (404 stdlib) karena
+    # GET-nya tak berujung — replay akan menggantung koneksi.
+    class _head_body_sink:
+        """SIKLUS 225: intersep status+header saat replay GET untuk HEAD.
+
+        Selama replay: send_response/send_header/end_headers diganti stub
+        logis (status + daftar header ditangkap), wfile diganti penelan body.
+        Saat keluar (sukses): metode ASLI dipulihkan lalu dipakai re-emit —
+        jalur kirim persis GET (termasuk Cache-Control + security headers
+        dari override end_headers), TANPA body. Gagal replay: tidak ada yang
+        di-emit (pemanggil membalas 500/502 sendiri).
+        """
+
+        def __init__(self, handler):
+            self._h = handler
+            self._saved = None
+            self.status = None
+            self.hdrs = []
+
+        def __enter__(self):
+            h = self._h
+            self._saved = (h.wfile, h.send_response, h.send_header, h.end_headers)
+            cap = self
+            h.wfile = _HeadCaptureWriter()
+            h.send_response = lambda code: setattr(cap, "status", code)
+            h.send_header = lambda n, v: cap.hdrs.append((n, v))
+            h.end_headers = lambda: None
+            return self
+
+        def __exit__(self, *exc):
+            h = self._h
+            if self._saved is None:
+                return False
+            h.wfile, h.send_response, h.send_header, h.end_headers = self._saved
+            if exc[0] is None and self.status is not None:
+                try:
+                    h.send_response(self.status)
+                    for n, v in self.hdrs:
+                        h.send_header(n, v)
+                    h.end_headers()
+                except Exception:
+                    pass
+            return False
+
+    def _serve_head_api_service(self):
+        # Cerminkan cabang do_GET: api_service.handle_api_request(handler,
+        # "GET", path) untuk /api/* dan /preview/* (project_api punya cabang
+        # sendiri). /api/events (SSE streaming) dikecualikan — HEAD tetap
+        # 404 stdlib (kontrak lama; GET-nya tak berujung).
+        p = self.path.split("?")[0]
+        if api_service is None or not (
+                self.path.startswith("/api/") or self.path.startswith("/preview/")):
+            return False
+        if p == "/api/events":
+            return False
+        try:
+            with self._head_body_sink(self):
+                handled = api_service.handle_api_request(self, "GET", self.path)
+        except Exception:
+            try:
+                self.send_response(500)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+            except Exception:
+                pass
+            return True
+        return bool(handled)
+
+    def _serve_head_gateway(self):
+        # Cerminkan cabang do_GET /wfs-api/* → _proxy() (gateway :8787,
+        # timeout 120, CT json). HEAD → GET rewrite loopback (gateway bebas
+        # menolak HEAD), body dibuang — status + CT + CL identik GET.
+        # /wfs-api/events (SSE streaming) dikecualikan — kontrak 404 tetap.
+        if not self.path.startswith("/wfs-api/"):
+            return False
+        if self.path.split("?")[0] == "/wfs-api/events":
+            return False
+        sub = self.path[len("/wfs-api/"):]
+        import http.client
+        try:
+            conn = http.client.HTTPConnection("127.0.0.1", 8787, timeout=120)
+            conn.request("GET", "/api/" + sub)
+            r = conn.getresponse()
+            data = r.read()  # dibaca lalu dibuang — koneksi rapi ditutup
+            conn.close()
+            self.send_response(r.status)
+            self.send_header("Content-Type",
+                             r.getheader("Content-Type", "application/json"))
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+        except Exception:
+            try:
+                self.send_response(502)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+            except Exception:
+                pass
+        return True
+
+    def _serve_head_project(self):
+        # Cerminkan cabang do_GET /wfs-project → project_api.handle_project
+        # (snapshot JSON). Replay dgn sink: status 200/500 + CT json + CL
+        # payload GET, tanpa body.
+        if project_api is None or self.path.split("?")[0] != "/wfs-project":
+            return False
+        try:
+            with self._head_body_sink(self):
+                project_api.handle_project(self)
+        except Exception:
+            try:
+                self.send_response(500)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+            except Exception:
+                pass
+        return True
+
     def do_HEAD(self):
         path_only = self.path.split("?")[0]
         if path_only in ("/", "/index.html"):
@@ -630,7 +769,16 @@ class H(http.server.SimpleHTTPRequestHandler):
         # SIKLUS 224: jalur proxy di atas dulu jatuh ke 404 stdlib — HEAD
         # /admin/ dan /api/admin/* membaca "page down" palsu. Kini mirror
         # cabang GET yang eksak (status + Content-Type + CL payload GET).
+        # SIKLUS 225: sisa jalur proxy (api_service /api/* + /preview/*,
+        # gateway /wfs-api/*, project_api /wfs-project) ikut disemakanikan;
+        # SSE (/api/events, /wfs-api/events) sengaja tetap 404 (streaming).
         if self._serve_head_admin_api():
+            return
+        if self._serve_head_api_service():
+            return
+        if self._serve_head_gateway():
+            return
+        if self._serve_head_project():
             return
         if self._serve_head_admin():
             return

@@ -223,6 +223,28 @@ def smoke():
                 why.append(f"HEAD {pp} Content-Length {cl!r} (harap panjang GET)")
     except Exception as e:
         why.append(f"HEAD jalur proxy exc: {e}")
+    # 12. SIKLUS 225: HEAD sisa jalur proxy mirror GET — dulu 404 stdlib
+    #     tanpa CT: /api/tasks (api_service), /wfs-api/tasks (gateway),
+    #     /wfs-project (project_api). Status + CT wajib sama GET; CL > 0.
+    #     SSE (/api/events, /wfs-api/events) sengaja TIDAK dicek (kontrak
+    #     lama tetap 404 — GET-nya streaming tanpa ujung).
+    try:
+        import http.client as _hc
+        for pp in ("/api/tasks", "/wfs-api/tasks", "/wfs-project"):
+            c = _hc.HTTPConnection("127.0.0.1", 9503, timeout=8)
+            c.request("HEAD", pp)
+            r = c.getresponse()
+            r.read()
+            ct, cl = r.getheader("Content-Type"), r.getheader("Content-Length")
+            c.close()
+            if r.status != 200:
+                why.append(f"HEAD {pp} status {r.status} (harap 200, konsisten GET)")
+            elif not ct:
+                why.append(f"HEAD {pp} tanpa Content-Type (stdlib 404 palsu?)")
+            elif not cl or int(cl) <= 0:
+                why.append(f"HEAD {pp} Content-Length {cl!r} (harap panjang GET)")
+    except Exception as e:
+        why.append(f"HEAD jalur 225 exc: {e}")
     return (not why), why
 
 
@@ -275,7 +297,7 @@ def do_apply():
         print("smoke GAGAL — rollback:", why)
         _rollback_to(bak)
         return 2
-    print("DEPLOY OK — live == sumber", sha(SRC)[:12], "; smoke 11/11 (keamanan 212 + CORS/HEAD 222 + HEAD aset 223 + HEAD proxy 224)")
+    print("DEPLOY OK — live == sumber", sha(SRC)[:12], "; smoke 12/12 (keamanan 212 + CORS/HEAD 222 + HEAD aset 223 + HEAD proxy 224 + HEAD api/gw/project 225)")
     return 0
 
 
@@ -305,7 +327,7 @@ def do_check():
     print("live   :", sha(DST)[:12], DST)
     if same:
         ok, why = smoke()
-        print("IDENTIK; smoke 11/11:", "OK" if ok else f"GAGAL {why}")
+        print("IDENTIK; smoke 12/12:", "OK" if ok else f"GAGAL {why}")
         return 0 if ok else 2
     print("DRIFT: live != sumber — jalankan scripts/apply_wfs_hq_server.py --apply")
     return 3

@@ -127,6 +127,30 @@ describe('drift-gate server produksi wfs-hq (siklus 206)', () => {
     expect(s).toContain('conn.request("GET", path)')
   })
 
+  it('SIKLUS 225: HEAD sisa jalur proxy (/api/*, /preview/*, /wfs-api/*, /wfs-project) mirror GET via replay; SSE dikecualikan', () => {
+    const s = readFileSync(SRC, 'utf-8')
+    // helper replay ada: penelan body + intersep status/header.
+    expect(s).toContain('class _HeadCaptureWriter')
+    expect(s).toContain('class _head_body_sink')
+    for (const fn of ['_serve_head_api_service', '_serve_head_gateway', '_serve_head_project']) {
+      expect(s).toContain(`def ${fn}(`)
+    }
+    // replay memanggil cabang GET asli (bukan duplikasi logika).
+    expect(s).toContain('api_service.handle_api_request(self, "GET", self.path)')
+    expect(s).toContain('project_api.handle_project(self)')
+    // HEAD→GET rewrite loopback untuk gateway (persis pola 224).
+    expect(s).toContain('conn.request("GET", "/api/" + sub)')
+    // SSE streaming dikecualikan dari replay (GET tak berujung → kontrak 404).
+    expect(s).toContain('if p == "/api/events":')
+    expect(s).toContain('if self.path.split("?")[0] == "/wfs-api/events":')
+    // ketiga cabang baru dipasang di do_HEAD SEBELUM fallback stdlib/404.
+    const head = s.slice(s.indexOf('def do_HEAD('))
+    for (const fn of ['_serve_head_api_service', '_serve_head_gateway', '_serve_head_project']) {
+      expect(head.indexOf(`self.${fn}()`)).toBeGreaterThan(-1)
+      expect(head.indexOf(`self.${fn}()`)).toBeLessThan(head.indexOf('self._allowed_rel() is not None'))
+    }
+  })
+
   it('apply script deploy terkontrol: backup + compile-check + smoke + auto-rollback', () => {
     const a = readFileSync(APPLY, 'utf-8')
     expect(a).toContain('server.py.bak-')
