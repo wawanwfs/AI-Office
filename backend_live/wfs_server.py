@@ -150,6 +150,124 @@ app = FastAPI(
 )
 
 
+# ---------- HEAD mirror (siklus 227, pola 226) ----------
+# FastAPI APIRoute tidak mendaftarkan HEAD otomatis — SEMUA endpoint GET
+# menjawab HEAD 405 Method Not Allowed (bukti live siklus 227:
+# HEAD /api/health = 405 allow: GET padahal GET 200 json). Monitor/uptime
+# berbasis HEAD menerima "service down" palsu. Pola replay yang sama dengan
+# saas-dibantuin :8000 (siklus 226, backend/app/http_head_mirror.py) —
+# ditanam langsung di superset karena deploy gateway = SATU file (server.py).
+#
+# - HEAD pada path ber-rute-GET di-REPLAY: scope diberi method GET, dijalankan
+#   lewat app asli (melewati router + middleware berikutnya), body ditelan,
+#   lalu status + header dipancarkan ulang dengan Content-Length = panjang
+#   body GET eksak dan body kosong.
+# - Path tanpa rute GET (POST-only /api/tasks/{tid}/run) TIDAK di-mirror ->
+#   405 `allow: POST` asli; path asing tetap 404 asli.
+# - Rute yang memang mendaftarkan HEAD dihormati (tidak dioverride).
+# - /api/events (SSE streaming) DIKECUALIKAN eksplisit: GET replay akan
+#   di-buffer tanpa ujung oleh mirror (streaming tanpa selesai) — HEAD
+#   di situ tetap 405 asli, kontrak sama dengan :9503 (SSE dikecualikan).
+_STRIP_OUT = (b"content-length", b"transfer-encoding")
+
+
+class HeadMirrorMiddleware:
+    def __init__(self, app) -> None:
+        self.app = app
+
+    def _routes(self, scope):
+        # scope["app"] di-set Starlette sebelum middleware stack jalan —
+        # itu instance FastAPI yang punya .routes lengkap (termasuk router).
+        app = scope.get("app")
+        if app is not None and hasattr(app, "routes"):
+            return list(app.routes)
+        # fallback: gulung rantai middleware sampai Router (.routes)
+        inner = self.app
+        while inner is not None and not hasattr(inner, "routes"):
+            inner = getattr(inner, "app", None)
+        return list(getattr(inner, "routes", []) or [])
+
+    def _has_get_route(self, scope) -> bool:
+        from starlette.routing import Match
+
+        probe = dict(scope)
+        probe["method"] = "GET"
+        for route in self._routes(scope):
+            try:
+                if route.matches(probe)[0] == Match.FULL:
+                    return True
+            except Exception:  # rute eksotis — jangan bunuh request HEAD
+                continue
+        return False
+
+    def _has_native_head_route(self, scope) -> bool:
+        from starlette.routing import Match
+
+        for route in self._routes(scope):
+            try:
+                if route.matches(scope)[0] == Match.FULL:
+                    return True
+            except Exception:
+                continue
+        return False
+
+    async def __call__(self, scope, receive, send):
+        if scope["type"] != "http" or scope["method"] != "HEAD":
+            await self.app(scope, receive, send)
+            return
+        # SSE dikecualikan eksplisit SEBELUM replay (GET streaming tanpa ujung).
+        if scope.get("path", "").split("?")[0] == "/api/events":
+            await self.app(scope, receive, send)
+            return
+        if self._has_native_head_route(scope) or not self._has_get_route(scope):
+            await self.app(scope, receive, send)
+            return
+
+        # PENTING: receive asli TIDAK di-drain. Transport ASGI (uvicorn &
+        # TestClient) mem-block receive berikutnya sampai response selesai —
+        # loop "await receive()" di sini = deadlock (bukti siklus 226 di
+        # :8000). App dalam diberi replay_receive terpisah di bawah; receive
+        # asli cukup dibiarkan tak terpakai (request HEAD tanpa body).
+
+        get_scope = dict(scope)
+        get_scope["method"] = "GET"
+        get_scope["headers"] = [
+            (k, v) for (k, v) in scope.get("headers", []) if k.lower() != b"content-length"
+        ]
+
+        async def replay_receive():
+            # GET replay tidak boleh menggantung menunggu body —
+            # balas disconnect instan (semantik body kosong).
+            return {"type": "http.disconnect"}
+
+        status = 500
+        headers = []
+        body = bytearray()
+
+        async def capture(message):
+            nonlocal status, headers
+            if message["type"] == "http.response.start":
+                status = message["status"]
+                headers = [
+                    (k, v)
+                    for (k, v) in message.get("headers", [])
+                    if k.lower() not in _STRIP_OUT
+                ]
+            elif message["type"] == "http.response.body":
+                body.extend(message.get("body", b"") or b"")
+            # http.response.pathsend / .stream dicerna sebagai tanpa body
+
+        await self.app(get_scope, replay_receive, capture)
+
+        out = list(headers)
+        out.append((b"content-length", str(len(body)).encode("ascii")))
+        await send({"type": "http.response.start", "status": status, "headers": out})
+        await send({"type": "http.response.body", "body": b""})
+
+
+app.add_middleware(HeadMirrorMiddleware)
+
+
 # ---------- config per agent ----------
 def load_cfg() -> dict:
     if CFG_FILE.exists():

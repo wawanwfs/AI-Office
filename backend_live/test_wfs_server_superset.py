@@ -173,4 +173,55 @@ def test_schedule_hardening_claim_and_rollback_alive():
     assert "taskengine.require_launch_approval(task['project'])" in src
     # Rollback reservasi saat konflik.
     assert "for tid, claim in claims.items():" in src
+
+
+# ---------- HEAD mirror (siklus 227, pola 226) ----------
+
+def test_head_mirror_replays_get_routes():
+    # FastAPI APIRoute tidak mendaftarkan HEAD otomatis: tanpa mirror, HEAD
+    # /api/health = 405 allow: GET (bukti live siklus 227) — monitor berbasis
+    # HEAD menerima "service down" palsu. Middleware REPLAY HEAD -> GET lewat
+    # app asli: status + Content-Type + Content-Length == GET, body kosong.
+    with TestClient(server.app) as cl:
+        g = cl.get("/api/health")
+        h = cl.head("/api/health")
+        assert h.status_code == g.status_code == 200
+        assert h.headers["content-type"] == g.headers["content-type"]
+        assert h.headers["content-length"] == g.headers["content-length"]
+        assert h.content == b""
+        # Rute router: paused (persisten) & agents (15 agen).
+        for path in ("/api/tasks/paused", "/api/agents", "/api/status"):
+            g = cl.get(path)
+            h = cl.head(path)
+            assert h.status_code == g.status_code == 200, path
+            assert h.headers["content-length"] == g.headers["content-length"], path
+            assert h.content == b"", path
+
+
+def test_head_mirror_keeps_post_only_and_unknown_as_is():
+    # Path tanpa rute GET TIDAK di-mirror: POST-only /api/tasks/999999/run
+    # dan path asing sama-sama jatuh ke catch-all "not built" (repo checkout
+    # tanpa backend/static: 503 jujur) — status HEAD persis GET, bukan hasil
+    # replay rute GET lain (mirror tidak menambah status palsu).
+    with TestClient(server.app) as cl:
+        for path in ("/api/tasks/999999/run", "/path/tidak/ada"):
+            g = cl.get(path)
+            h = cl.head(path)
+            assert g.status_code == h.status_code in (404, 405, 422, 503), path
+            assert h.content == b""
+
+
+def test_head_mirror_sse_excluded_and_replay_contract_in_source():
+    src = Path(server.__file__).read_text()
+    # SSE /api/events DIKECUALIKAN eksplisit SEBELUM cek replay (GET streaming
+    # tanpa ujung akan di-buffer tanpa selesai oleh mirror).
+    assert 'scope.get("path", "").split("?")[0] == "/api/events"' in src
+    # Pola replay eksak (anti-deadlock terukur siklus 226: receive asli
+    # TIDAK di-drain — transport mem-block receive sampai response selesai).
+    assert 'get_scope["method"] = "GET"' in src
+    assert "await self.app(get_scope, replay_receive, capture)" in src
+    assert "receive asli TIDAK di-drain" in src
+    # Header hop-by-hop dilucuti lalu CL diisi ulang dari panjang body GET.
+    assert '_STRIP_OUT = (b"content-length", b"transfer-encoding")' in src
+    assert "app.add_middleware(HeadMirrorMiddleware)" in src
     assert "recover_interrupted" in src

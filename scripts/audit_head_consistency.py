@@ -7,9 +7,14 @@ Latar (audit live 2026-11-02):
   konsisten native.
 - :8000 (backend saas-dibantuin, FastAPI) TIDAK: setiap rute GET
   menjawab HEAD 405 (FastAPI APIRoute tak mendaftarkan HEAD otomatis),
-  padahal GET /api/health = 200 json 51 B. Monitor/uptime berbasis HEAD
+  padahal GET /api/health = 200 json 51 B. Monitor/uptime-probe berbasis HEAD
   menerima "service down" palsu. Diperbaiki di sisi app
   (backend/app/http_head_mirror.py: replay HEAD -> GET).
+- :8787 (gateway produksi wfs-office, superset backend_live/wfs_server.py)
+  punya defek yang SAMA (FastAPI) — ditemukan & diperbaiki siklus 227
+  dgn HeadMirrorMiddleware langsung di superset; SSE /api/events
+  dikecualikan (GET streaming tanpa ujung — kontrak 404 :9503 tidak
+  berlaku di sini, HEAD = 405 asli).
 
 Script ini READ-ONLY (tak menulis apa pun ke layanan) dan memeriksa
 invarian: untuk setiap path, HEAD harus memberi status + Content-Type +
@@ -35,6 +40,14 @@ TARGETS = [
     ("http://127.0.0.1:9503", "/admin/", "panel :3000 via :9503"),
     ("http://127.0.0.1:9503", "/api/admin/stats", "backend :8000 via :9503 (401)"),
     ("http://127.0.0.1:9503", "/server.py", "kontrak allowlist: tetap 404"),
+    ("http://127.0.0.1:8787", "/api/health", "gateway :8787 (HEAD mirror siklus 227)"),
+    ("http://127.0.0.1:8787", "/api/status", "status gateway (disk/mem anti-poisoning)"),
+    ("http://127.0.0.1:8787", "/api/agents", "daftar 15 agen"),
+    ("http://127.0.0.1:8787", "/api/tasks", "daftar task engine"),
+    ("http://127.0.0.1:8787", "/api/tasks/paused", "pause persisten (harus 200)"),
+    ("http://127.0.0.1:8787", "/api/orders", "router orders (dibantuin)"),
+    ("http://127.0.0.1:8787", "/api/dashboard/stats", "router dashboard stats"),
+    ("http://127.0.0.1:8787", "/nope", "path asing tetap 404 asli"),
     ("http://127.0.0.1:8000", "/api/health", "health backend saas-dibantuin"),
     ("http://127.0.0.1:8000", "/docs", "swagger native Starlette"),
     ("http://127.0.0.1:8000", "/openapi.json", "skema OpenAPI"),

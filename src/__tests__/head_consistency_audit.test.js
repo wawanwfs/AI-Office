@@ -25,7 +25,9 @@ import { describe, it, expect } from 'vitest'
 //   rute GET tetap 405/404 asli; rute ber-HEAD native dihormati.
 //
 // Guard ini memastikan: (1) script audit ada & executable, (2) cakupan
-// ceknya tidak menyusut, (3) middleware mirror tetap memakai pola replay
+// ceknya tidak menyusut (siklus 227: front ke-5 = gateway :8787 — defek
+// FastAPI yang sama ditemukan di sana & diperbaiki via HeadMirrorMiddleware
+// di superset wfs_server.py), (3) middleware mirror tetap memakai pola replay
 // (bukan duplikasi logika), (4) audit live benar-benar lulus.
 
 const here = fileURLToPath(new URL('.', import.meta.url))
@@ -41,9 +43,9 @@ describe('audit konsistensi HEAD vs GET (siklus 226)', () => {
     expect(st.mode & 0o111).not.toBe(0)
   })
 
-  it('cakupan audit tidak menyusut (4 front + kontrak allowlist + rute auth-only)', () => {
+  it('cakupan audit tidak menyusut (5 front + kontrak allowlist + rute auth-only)', () => {
     const s = readFileSync(AUDIT, 'utf-8')
-    for (const port of ['127.0.0.1:9503', '127.0.0.1:8000', '127.0.0.1:3000', '127.0.0.1:3001']) {
+    for (const port of ['127.0.0.1:9503', '127.0.0.1:8000', '127.0.0.1:3000', '127.0.0.1:3001', '127.0.0.1:8787']) {
       expect(s).toContain(port)
     }
     // kontrak lama yang TIDAK boleh berubah
@@ -54,6 +56,11 @@ describe('audit konsistensi HEAD vs GET (siklus 226)', () => {
     expect(s).toContain('/wfs-api/tasks')
     expect(s).toContain('/wfs-project')
     expect(s).toContain('/admin/')
+    // gateway :8787 (siklus 227): rute inti + path asing
+    expect(s).toContain('/api/tasks/paused')
+    expect(s).toContain('/api/agents')
+    expect(s).toContain('/api/orders')
+    expect(s).toContain('/api/dashboard/stats')
     // SSE dikecualikan eksplisit (GET streaming tanpa ujung)
     expect(s).toContain('/api/events')
     expect(s).toContain('/wfs-api/events')
@@ -88,8 +95,8 @@ describe('audit konsistensi HEAD vs GET (siklus 226)', () => {
       expect(stdout).toContain('PASS')
       expect(stdout).not.toContain('[FAIL]')
       expect(stdout).not.toContain('CONN-FAIL')
-      // jumlah PASS tidak boleh menyusut (15 target saat ditulis)
-      expect(stdout).toContain('15/15 PASS')
+      // jumlah PASS tidak boleh menyusut (23 target saat siklus 227: 15 + 8 gateway :8787)
+      expect(stdout).toContain('23/23 PASS')
     } catch (e) {
       throw new Error(`audit gagal: ${e.message}\n${e.stdout ?? ''}\n${e.stderr ?? ''}`)
     }
