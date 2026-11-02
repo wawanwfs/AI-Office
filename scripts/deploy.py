@@ -122,10 +122,37 @@ def prune_root_stale() -> list:
     return pruned
 
 
+def prune_root_png() -> list:
+    """Siklus 215: PNG artefak di ROOT ~/wfs-hq yang tidak di-ship dist/
+    (og-image/apple-touch-icon/icon-192/icon-512 adalah 4 PNG sah — sisanya
+    screenshot eksperimen era Okt yang menumpuk ±7MB di web root produksi dan
+    pernah tersaji publik 200 via :9503, ditutup allowlist 214). Invarian:
+    SETIAP .png di root WAJIB berasal dari dist/ — yang bukan diarsipkan ke
+    .pruned-assets (bukan rm permanen, bisa dipulihkan), sehingga higiene web
+    root ditegakkan tiap deploy, bukan sekali bersih lalu menumpuk lagi."""
+    dist_png = {n for n in os.listdir(SRC_DIST) if n.lower().endswith('.png')}
+    pruned = []
+    for name in sorted(os.listdir(DST_HQ)):
+        p = os.path.join(DST_HQ, name)
+        if not name.lower().endswith('.png') or not os.path.isfile(p):
+            continue
+        if name in dist_png:
+            continue
+        os.makedirs(PRUNE_DIR, exist_ok=True)
+        dst = os.path.join(PRUNE_DIR, name)
+        if os.path.exists(dst):
+            os.remove(p)
+        else:
+            shutil.move(p, dst)
+        pruned.append(name)
+    return pruned
+
+
 def deploy():
     """Deploy penuh + prune. Return jumlah orphan yang dipangkas."""
     sync_dist_to_hq()
-    return len(prune_orphan_assets()) + len(prune_root_stale())
+    return (len(prune_orphan_assets()) + len(prune_root_stale())
+            + len(prune_root_png()))
 
 
 if __name__ == '__main__':

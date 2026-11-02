@@ -33,3 +33,26 @@ describe('deploy.py — sinkronisasi + pemangkasan aset orphan', () => {
     expect(src).toContain('shutil.move(src, dst)')
   })
 })
+
+describe('siklus 215 — higiene PNG root web (deploy_prune_png)', () => {
+  it('prune_root_png ada & dipanggil di deploy() — invarian tiap deploy', () => {
+    expect(src).toContain('def prune_root_png()')
+    expect(src).toMatch(/prune_root_png\(\)/)
+    // deploy() menjumlahkan TIGA sumber prune (assets, root hashed, root png)
+    expect(src).toMatch(/len\(prune_orphan_assets\(\)\).*len\(prune_root_stale\(\)\).*len\(prune_root_png\(\)\)/s)
+  })
+
+  it('PNG root wajib berasal dari dist/ — whitelist dibaca dari SRC_DIST, bukan daftar tulangan', () => {
+    // invarian: keputusan sah = keanggotaan dist/, bukan hardcoded — dist yang
+    // menambah ikon baru otomatis sah, artefak screenshot otomatis dipangkas
+    expect(src).toMatch(/dist_png\s*=\s*\{n for n in os\.listdir\(SRC_DIST\) if n\.lower\(\)\.endswith\('\.png'\)\}/)
+    expect(src).toContain('if name in dist_png:')
+  })
+
+  it('arsip reversibel (move ke .pruned-assets / rm hanya jika sudah ada)', () => {
+    const block = src.match(/def prune_root_png\(\) -> list:[\s\S]*?\n\n\ndef deploy/)[0]
+    expect(block).toContain('os.makedirs(PRUNE_DIR, exist_ok=True)')
+    expect(block).toContain('shutil.move(p, dst)')
+    expect(block).toContain('if os.path.exists(dst):')
+  })
+})
