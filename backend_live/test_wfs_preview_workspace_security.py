@@ -5,6 +5,7 @@ pengujian menarget superset wfs_server (satu sumber server produksi :8787,
 pola 206/207/208): state SH diakses lewat atribut SH_DB.
 """
 import asyncio
+import shutil
 import subprocess
 import sys
 from pathlib import Path
@@ -91,6 +92,15 @@ def test_workspace_hides_secret_and_external_symlink_targets(server, tmp_path, m
     assert server.api_project_file(1, 'main.py')['content'] == 'print(1)'
 
 
+# Siklus 213: 4 test commit di bawah ini shell-out ke binary `git` nyata.
+# Runner `ubuntu-latest` punya git preinstalled; image Python minimal (docker
+# python:3.11-slim) TIDAK — pytest di lingkungan tanpa git = 4 fail kering,
+# bukan regresi. Skip jujur saat binary absen (kondisi identik antar lingkungan).
+_git_binary = shutil.which("git")
+_requires_git = pytest.mark.skipif(
+    _git_binary is None, reason="binary git tidak tersedia di lingkungan ini")
+
+
 def git(base, *args):
     return subprocess.run(['git', '-C', str(base), *args], capture_output=True,
                           text=True, check=True).stdout
@@ -102,6 +112,7 @@ def init_repo(base):
     git(base, 'config', 'user.email', 'test@example.invalid')
 
 
+@_requires_git
 def test_commit_stages_only_safe_files(server, tmp_path, monkeypatch):
     init_repo(tmp_path)
     (tmp_path / '.env').write_text('secret')
@@ -113,6 +124,7 @@ def test_commit_stages_only_safe_files(server, tmp_path, monkeypatch):
     assert git(tmp_path, 'ls-tree', '-r', '--name-only', 'HEAD').splitlines() == ['main.py']
 
 
+@_requires_git
 def test_commit_rejects_pre_staged_secrets(server, tmp_path, monkeypatch):
     init_repo(tmp_path)
     (tmp_path / '.env').write_text('secret')
@@ -124,6 +136,7 @@ def test_commit_rejects_pre_staged_secrets(server, tmp_path, monkeypatch):
     assert git(tmp_path, 'diff', '--cached', '--name-only').strip() == '.env'
 
 
+@_requires_git
 def test_commit_never_uses_parent_repository(server, tmp_path, monkeypatch):
     init_repo(tmp_path)
     base = tmp_path / 'child'
@@ -136,6 +149,7 @@ def test_commit_never_uses_parent_repository(server, tmp_path, monkeypatch):
     assert git(tmp_path, 'diff', '--cached', '--name-only') == ''
 
 
+@_requires_git
 def test_commit_supports_safe_dotfiles_deletions_and_literal_names(server, tmp_path, monkeypatch):
     init_repo(tmp_path)
     (tmp_path / '.gitignore').write_text('ignored.txt\n')

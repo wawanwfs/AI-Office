@@ -1,0 +1,13 @@
+# Dependensi pytest backend/ + backend_live (siklus 213).
+# Ter-track agar job CI GitHub Actions bisa menjalankan pytest backend —
+# sebelumnya 141 test backend sepenuhnya buta di CI (ci.yml hanya
+# npm ci / npm test / npm run build; lihat .github/workflows/ci.yml).
+# Pin eksak = versi yang teruji di venv VM (~/pytest-venv, uv) — semua
+# diverifikasi ada di registry.npmjs.org-pendant pypi.org (HTTP 200, siklus 213),
+# jadi runner GitHub dapat resolusi identik tanpa mirror internal Tencent.
+pytest==9.2.0
+fastapi==0.162.0
+httpx==0.28.1
+starlette==1.10.0
+pydantic==2.14.2
+uvicorn==0.54.0

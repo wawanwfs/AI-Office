@@ -10,3 +10,15 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+
+  # Siklus 213: backend pytest tidak lagi buta di CI (141 test backend_live+backend).
+  # Semua file produksi yang diuji ter-track; test full-mock (tanpa Docker
+  # daemon, tanpa file produksi /home/agentuser — diverifikasi siklus 213).
+  pytest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with: { python-version: '3.11' }
+      - run: pip install --no-cache-dir -r requirements-pytest.txt
+      - run: python -m pytest backend_live backend -q
