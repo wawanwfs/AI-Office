@@ -110,8 +110,9 @@ const TEST_FILES = [
 ];
 
 describe('census file test backend (dijalankan job pytest CI)', () => {
-  it('10 file test backend_live + 5 file test backend ada & ter-track', () => {
-    expect(TEST_FILES.filter((f) => existsSync(join(ROOT, 'backend_live', f))).length).toBe(10);
+  // Siklus 214: +1 backend_live (test_wfs_static_allowlist.py — allowlist statis).
+  it('11 file test backend_live + 5 file test backend ada & ter-track', () => {
+    expect(TEST_FILES.filter((f) => existsSync(join(ROOT, 'backend_live', f))).length).toBe(11);
     expect(TEST_FILES.filter((f) => existsSync(join(ROOT, 'backend', f))).length).toBe(5);
   });
 

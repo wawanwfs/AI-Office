@@ -33,6 +33,10 @@
 #       * index.html fallback / landing 500 jelas (sebelumnya exception kosong
 #         tanpa respons = koneksi menggantung).
 #       * ThreadingTCServer di __main__ kini SATU class yang sama dgn produksi.
+# Siklus 214 — ALLOWLIST statis (anti source-disclosure): _serve_static kini
+#   default-TOLAK; hanya jalur dist/ eksak (PWA shell + aset ber-hash + font +
+#   ikon) yang dilayani. Dulu web root menyajikan *.py (source disclosure),
+#   *.db, backups/*.bak, bahkan .wfs_ui_token (token UI ASLI) ke publik.
 import http.server, socketserver, os, urllib.request, urllib.error, json, secrets, re
 try:
     import project_api  # hanya ada di direktori deploy (~/wfs-hq)
@@ -66,6 +70,37 @@ def get_token():
 UI_TOKEN = get_token()
 
 MAX_PROXY_BODY = 5 * 1024 * 1024
+
+# === Siklus 214: ALLOWLIST statis (anti source-disclosure) ==================
+# Web root produksi juga berisi file NON-aset: source code (*.py), database
+# (*.db), backup *.bak, .wfs_ui_token (token UI ASLI 32 byte), dan artefak
+# screenshot verifikasi. Dulu SEMUA tersaji publik via SimpleHTTPRequestHandler
+# (_serve_static) — source disclosure + bocor token UI (bukti live siklus 214:
+# GET /.wfs_ui_token 200 size 32 = nilai asli; GET /server.py 200 19008 byte;
+# GET /backups/server.py.bak-* 200). Kini default = TOLAK: hanya jalur eksak
+# hasil build dist/ (PWA shell, aset ber-hash, font, ikon PWA) yang dilayani.
+# Aturan: (1) direktori eksak — semua isi dilayani; (2) file eksak per-nama.
+STATIC_ALLOW_DIRS = frozenset(("assets", "fonts"))
+STATIC_ALLOW_FILES = frozenset((
+    "index.html", "landing.html", "manifest.webmanifest",
+    "sw.js", "registerSW.js", "workbox-2fbc6a65.js",
+    "favicon.svg", "wfs-logo.svg",
+    "og-image.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png",
+))
+
+
+def _static_allowed(rel):
+    """True bila jalur relatif (vs cwd web root) ada di allowlist statis.
+
+    rel tanpa './' awalan (os.path.relpath). Sub-direktori dari allow-dir
+    sah (assets/xxx.js, fonts/a.woff2); traversal (..) ditolak pemanggil
+    sebelum fungsi ini (rel diawali '..' → False via startswith pemanggil).
+    """
+    rel = (rel or "").lstrip("./")
+    if not rel or "/" not in rel:
+        return rel in STATIC_ALLOW_FILES
+    top = rel.split("/", 1)[0]
+    return top in STATIC_ALLOW_DIRS
 
 
 def _parse_content_length(raw):
@@ -119,8 +154,29 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.send_header(name, value)
         super().end_headers()
 
+    def _allowed_rel(self):
+        """Siklus 214: jalur statis tersaring allowlist, atau None (TOLAK).
+
+        Satu gerbang untuk SEMUA jalur penyajian file statis: _serve_static,
+        fallback super().do_GET() (SimpleHTTPRequestHandler.send_head — sumber
+        disclosure sebenarnya: _serve_static menolak tapi super tetap menyaji),
+        dan super().do_HEAD(). Traversal & non-allowlist → None.
+        """
+        path = self.translate_path(self.path)
+        rel = os.path.relpath(path, os.getcwd())
+        if rel.startswith(("..", ".")):
+            return None
+        return rel if _static_allowed(rel) else None
+
     def _serve_static(self):
-        """Serve file statis dengan cache policy + gzip (backend/static_serve.py)."""
+        """Serve file statis dgn cache policy + gzip (backend/static_serve.py)."""
+        # Siklus 214: ALLOWLIST statis — web root produksi juga berisi file NON-aset
+        # (source code *.py, *.db, backups/, .wfs_ui_token, artefak screenshot) yang
+        # dulu tersaji publik via _serve_static (source disclosure + bocor token UI).
+        # Default = TOLAK; hanya jalur dist/ eksak yang dilayani.
+        rel = self._allowed_rel()
+        if rel is None:
+            return False
         path = self.translate_path(self.path)
         if os.path.basename(path) in ("index.html",):
             return False  # index.html lewat jalur khusus (injeksi token)
@@ -388,7 +444,26 @@ class H(http.server.SimpleHTTPRequestHandler):
                 return
             except Exception:
                 pass
-        super().do_GET()
+        # Siklus 214: fallback super().do_GET() HANYA untuk allowlist (sumber
+        # disclosure sebenarnya: SimpleHTTPRequestHandler.send_head menyaji
+        # SEMUA file web root — dulu /server.py, /.wfs_ui_token, /backups/*
+        # lolos via jalur ini saat _serve_static menolak).
+        if self._allowed_rel() is not None:
+            super().do_GET()
+        else:
+            self.send_response(404)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+    def do_HEAD(self):
+        # Siklus 214: HEAD statis juga kena allowlist (stdlib do_HEAD menyaji
+        # metadata file apa pun — probing path tanpa body tetap kebocoran).
+        if self._allowed_rel() is not None:
+            super().do_HEAD()
+        else:
+            self.send_response(404)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
 
     def do_DELETE(self):
         # SIKLUS 161: DELETE /api/admin/* (knowledge base admin panel) → backend.
