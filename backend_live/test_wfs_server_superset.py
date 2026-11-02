@@ -362,8 +362,7 @@ def test_plan_project_tasks_llm_failure_marks_failed_not_stuck(tmp_path, monkeyp
 
     monkeypatch.setattr(taskengine, "call_llm", garbage)
     server._bg_tasks.clear()
-    server._plan_project_tasks(pid_b, "P230b", "brief jawaban aneh")
-    asyncio.run(_drain())
+    _spawn_and_drain(pid_b, "P230b", "brief jawaban aneh")
     assert _status_of(pid_b) == "failed", (
         f"project STUCK {_status_of(pid_b)!r} pada respons tak ter-parse")
 

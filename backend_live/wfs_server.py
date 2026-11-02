@@ -624,6 +624,12 @@ def _plan_project_tasks(pid: int, name: str, brief: str):
                 f"Project: {name}\nBrief: {brief}\nBuat 6-10 task teknis untuk membangun project ini.")
             m = re.search(r"\[.*\]", plan, re.S)
             tasks = json.loads(m.group(0)) if m else []
+            if not tasks:
+                # Siklus 230b — parse kosong (tanpa array / semua entri tak
+                # valid) BUKAN sukses: dulu jatuh ke 'backlog' dgn 0 task
+                # (dead-end senyap). Lempar -> jalur except -> 'failed'.
+                raise ValueError(
+                    "planning: respons LLM tanpa array task ter-parse (len=0)")
             for t in tasks[:10]:
                 if isinstance(t, dict) and t.get("title"):
                     taskengine.add_task(pid, t.get("title", "task"), t.get("role", "backend"), t.get("prompt", ""))
