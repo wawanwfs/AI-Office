@@ -229,3 +229,83 @@ def test_head_mirror_sse_excluded_and_replay_contract_in_source():
     assert '_STRIP_OUT = (b"content-length", b"transfer-encoding")' in src
     assert "app.add_middleware(HeadMirrorMiddleware)" in src
     assert "recover_interrupted" in src
+
+
+# ---------- siklus 229: background LLM planning TIDAK boleh tanpa referensi ----------
+
+def test_plan_project_tasks_holds_strong_ref_and_pausable():
+    """Pitfall asyncio resmi: loop hanya menyimpan WEAK ref ke task —
+    `asyncio.create_task(coro)` tanpa menyimpan result-nya bisa di-GC di
+    tengah jalan (planning LLM berbayar mati diam-diam, project STUCK
+    status 'planning' selamanya). Kontrak _plan_project_tasks:
+
+    1. Referensi kuat disimpan (set _bg_tasks) SEBELUM handler kembali.
+    2. Done-callback membuang task dari set itu (anti-kebocoran memori,
+       pola eksak _schedule() baris 1024-1030).
+    3. Pause engine menghentikan planning SEBELUM call LLM berbayar
+       (CancelledError -> project dikembalikan 'pending', bukan menggantung
+       'planning' tanpa task) — pause_all yang mengcancel via _bg_tasks
+       kini MENEMBUK planning juga (dulu: tidak terlacak).
+    4. Anti-pola telanjang dilarang: `create_task(` tanpa penugasan.
+    """
+    src = Path(server.__file__).read_text()
+    # (1)+(2): pola _schedule harus ada di _plan_project_tasks juga.
+    assert "_bg_tasks.add(plan_t)" in src
+    assert "plan_t.add_done_callback" in src
+    assert "_bg_tasks.discard(plan_t)" in src
+    # Anti-pola: create_task hasilnya WAJIB di-assign (tidak ada pemanggilan
+    # telanjang create_task(...) tanpa penugasan di seluruh superset).
+    assert "    asyncio.create_task(" not in src
+    # (3): guard pause sebelum LLM berbayar + status kembali 'pending'.
+    assert "taskengine.is_paused()" in src
+    assert "UPDATE projects SET status='pending' WHERE id=?" in src
+    # Jaring exception tetap ada (print "plan err") — kegagalan plan LOUD di log.
+    assert 'print("plan err:", e)' in src
+
+
+def test_plan_project_tasks_pause_and_gc_contract_behavior(tmp_path, monkeypatch):
+    """Perilaku nyata, bukan cuma source: (a) pause -> tak ada call LLM,
+    project kembali 'pending'; (b) referensi kuat terlihat di server._bg_tasks
+    selama coroutine hidup — GC weakref-loop tidak bisa membuangnya; (c) task
+    dibersihkan dari _bg_tasks setelah selesai (tidak bocor)."""
+    monkeypatch.setattr(taskengine, "DB", str(tmp_path / "tasks.db"))
+    pid = taskengine.add_project("P229", "brief uji")
+    assert pid is not None
+    called = {"n": 0}
+
+    async def fake_llm(*a, **k):
+        called["n"] += 1
+        await asyncio.sleep(0.05)
+        return '[{"title":"t1","role":"backend","prompt":"x"}]'
+
+    monkeypatch.setattr(taskengine, "call_llm", fake_llm)
+
+    async def scenario():
+        # (a) pause: planning dibatalkan SEBELUM LLM berbayar.
+        taskengine.set_paused(True)
+        server._bg_tasks.clear()
+        server._plan_project_tasks(pid, "P229", "brief uji")
+        await asyncio.gather(*server._bg_tasks, return_exceptions=True)
+        assert called["n"] == 0, "LLM berbayar dipanggil saat paused!"
+        c = taskengine.db()
+        st = c.execute("SELECT status FROM projects WHERE id=?", (pid,)).fetchone()[0]
+        c.close()
+        assert st == "pending", f"project menggantung {st!r}, bukan 'pending'"
+        # (b) tanpa pause: referensi kuat ada di _bg_tasks selama hidup.
+        taskengine.set_paused(False)
+        server._bg_tasks.clear()
+        server._plan_project_tasks(pid, "P229", "brief uji")
+        assert len(server._bg_tasks) == 1, "task planning TIDAK dipegang kuat"
+        await asyncio.gather(*server._bg_tasks, return_exceptions=True)
+        # (c) selesai -> bersih, tak bocor.
+        assert len(server._bg_tasks) == 0, "_bg_tasks bocor"
+        c = taskengine.db()
+        row = c.execute(
+            "SELECT status FROM projects WHERE id=?", (pid,)).fetchone()[0]
+        n = c.execute("SELECT COUNT(*) FROM tasks WHERE project=?",
+                      (str(pid),)).fetchone()[0]
+        c.close()
+        assert row == "backlog"
+        assert n == 1
+
+    asyncio.run(scenario())

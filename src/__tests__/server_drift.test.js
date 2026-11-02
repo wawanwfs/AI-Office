@@ -146,4 +146,25 @@ describe('drift-gate server gateway produksi :8787 (siklus 209)', () => {
     expect(t).toContain('def test_head_mirror_replays_get_routes')
     expect(t).toContain('def test_head_mirror_sse_excluded_and_replay_contract_in_source')
   })
+
+  it('siklus 229: planning LLM background dipegang kuat (anti-GC) + pausable — tidak ada create_task telanjang', () => {
+    const s = src()
+    // Referensi kuat di _bg_tasks + done-callback discard (pola eksak _schedule):
+    // loop asyncio hanya menyimpan weak-ref — task planning berdurasi puluhan
+    // detik bisa di-GC diam-diam -> project STUCK 'planning'.
+    expect(s).toContain('_bg_tasks.add(plan_t)')
+    expect(s).toContain('plan_t.add_done_callback')
+    expect(s).toContain('_bg_tasks.discard(plan_t)')
+    // Anti-pola: pemanggilan create_task tanpa penugasan dilarang keras.
+    expect(s).not.toMatch(/^\s+asyncio\.create_task\(/m)
+    // Guard pause SEBELUM LLM berbayar + project kembali 'pending' (bisa resume),
+    // bukan menggantung 'planning' tanpa task saat pause_all mengcancel.
+    expect(s).toContain('if taskengine.is_paused():')
+    expect(s).toContain("UPDATE projects SET status='pending' WHERE id=?")
+    expect(s).toContain('except asyncio.CancelledError:')
+    // Guard pytest perilaku nyata (pause + GC kontrak) ter-track.
+    const t = readFileSync(resolve(REPO, 'backend_live/test_wfs_server_superset.py'), 'utf-8')
+    expect(t).toContain('def test_plan_project_tasks_holds_strong_ref_and_pausable')
+    expect(t).toContain('def test_plan_project_tasks_pause_and_gc_contract_behavior')
+  })
 })

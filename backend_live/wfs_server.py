@@ -597,9 +597,22 @@ def _plan_project_tasks(pid: int, name: str, brief: str):
 
     Menjadwalkan coroutine-nya sendiri via asyncio.create_task (pemanggil
     tidak perlu tahu detail — API balik cepat, pola live).
+
+    Siklus 229 — FIX pitfall asyncio resmi: hasil create_task dulu DIBUANG
+    (loop hanya menyimpan weak-ref -> task planning LLM berdurasi puluhan
+    detik bisa di-GC di tengah jalan, project STUCK 'planning' tanpa jejak),
+    dan pause_all tidak menembus planning (tidak ada di _bg_tasks). Kini pola
+    eksak _schedule(): referensi kuat di _bg_tasks + done-callback discard,
+    guard pause SEBELUM call LLM berbayar (project dikembalikan 'pending'
+    agar bisa di-resume, tidak menggantung 'planning').
     """
     async def _plan():
         try:
+            if taskengine.is_paused():
+                c = taskengine.db()
+                c.execute("UPDATE projects SET status='pending' WHERE id=?", (pid,))
+                c.commit(); c.close()
+                return
             plan = await taskengine.call_llm(
                 "pm1", taskengine.ROLE_SYS["pm"],
                 f"Project: {name}\nBrief: {brief}\nBuat 6-10 task teknis untuk membangun project ini.")
@@ -611,9 +624,16 @@ def _plan_project_tasks(pid: int, name: str, brief: str):
             c = taskengine.db()
             c.execute("UPDATE projects SET status='backlog' WHERE id=?", (pid,))
             c.commit(); c.close()
+        except asyncio.CancelledError:
+            c = taskengine.db()
+            c.execute("UPDATE projects SET status='pending' WHERE id=?", (pid,))
+            c.commit(); c.close()
+            raise
         except Exception as e:
             print("plan err:", e)
-    asyncio.create_task(_plan())
+    plan_t = asyncio.create_task(_plan())
+    _bg_tasks.add(plan_t)
+    plan_t.add_done_callback(lambda t: _bg_tasks.discard(plan_t))
 
 
 @app.get("/api/projects")
