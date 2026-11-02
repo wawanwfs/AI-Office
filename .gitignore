@@ -16,6 +16,10 @@ backend/config
 backend/.wfs_ui_token
 __pycache__
 ck.png
+ck0.png
+ck57.png
+recep_ck.png
+/*.png
 backend/static/
 backend/assets
 backend/index.html
@@ -27,6 +31,4 @@ backend/og-image.png
 backend/manifest.webmanifest
 backend/apple-touch-icon.png
 backend/registerSW.js
-ck0.png dihapus
-ck57.png
 backend_live/*.db

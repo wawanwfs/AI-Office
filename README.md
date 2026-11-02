@@ -12,6 +12,7 @@
   <img src="https://img.shields.io/badge/Vite-8-646cff?style=flat-square&logo=vite" />
   <img src="https://img.shields.io/badge/Backend-FastAPI-009688?style=flat-square&logo=fastapi" />
   <img src="https://img.shields.io/badge/License-MIT-green?style=flat-square" />
+  [![CI](https://github.com/wawanwfs/AI-Office/actions/workflows/ci.yml/badge.svg)](https://github.com/wawanwfs/AI-Office/actions/workflows/ci.yml)
 </p>
 
 ---
@@ -50,6 +51,11 @@ backend/server.py     (:8787)  -> FastAPI: agent, chat, task, order
    `-- sandbox_exec.py eksekusi terbatas di sandbox
 ```
 
+Satu sumber kebenaran: `tasks.py`, `orders.py`, dan `server.py` produksi disalin
+dari superset `backend_live/wfs_tasks.py`, `wfs_orders.py`, dan `wfs_server.py`
+(siklus 208-209). Salin ketiganya flat ke `backend/` sebelum menjalankan gateway;
+tanpa `backend/database.py` gateway masuk mode LIVE read-only (tanpa workspace SH).
+
 ## Menjalankan
 
 ### Frontend
@@ -65,6 +71,9 @@ npm test           # vitest
 cd backend
 python3 -m venv .venv && . .venv/bin/activate
 pip install fastapi uvicorn httpx
+cp ../backend_live/wfs_tasks.py tasks.py
+cp ../backend_live/wfs_orders.py orders.py
+cp ../backend_live/wfs_server.py server.py
 export WFS_AI_BASE=... WFS_AI_KEY=... WFS_AI_MODEL=...   # lihat .env.example
 python3 server.py        # :8787
 python3 hq_proxy.py      # :9503 (menyajikan dist/)
