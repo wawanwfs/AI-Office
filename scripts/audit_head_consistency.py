@@ -60,6 +60,17 @@ TARGETS = [
 # Rute streaming: HEAD sengaja bukan cermin GET (GET tak pernah selesai).
 SKIP_PREFIX = ("/api/events", "/wfs-api/events")
 
+# Rute dgn body DINAMIS (timestamp dsb.): CL berubah antar request —
+# invarian CL-persis tidak bisa ditegakkan dua request terpisah. Di target
+# ini CL HEAD hanya wajib > 0 (mirror mengisi CL dari body GET replay-nya
+# sendiri; bukti siklus 227: /api/health :8787 CL 111 vs 110 milidetik beda).
+CL_DYNAMIC = {
+    ("http://127.0.0.1:8787", "/api/health"),
+    ("http://127.0.0.1:8787", "/api/status"),
+    ("http://127.0.0.1:9503", "/api/tasks"),
+    ("http://127.0.0.1:9503", "/wfs-api/tasks"),
+}
+
 
 def fetch(base, path, method):
     req = urllib.request.Request(base + path, method=method)
@@ -98,7 +109,11 @@ def main():
             continue
         ok_status = gs == hs
         ok_ct = norm_ct(gh) == norm_ct(hh)
-        ok_cl = norm_cl(gh) == norm_cl(hh)
+        dynamic = (base, path) in CL_DYNAMIC
+        if dynamic:
+            ok_cl = (norm_cl(gh) or 0) > 0 and (norm_cl(hh) or 0) > 0
+        else:
+            ok_cl = norm_cl(gh) == norm_cl(hh)
         ok_nobody = hb == b""
         ok = ok_status and ok_ct and ok_cl and ok_nobody
         detail = []
@@ -107,7 +122,10 @@ def main():
         if not ok_ct:
             detail.append(f"CT GET={norm_ct(gh)!r} HEAD={norm_ct(hh)!r}")
         if not ok_cl:
-            detail.append(f"CL GET={norm_cl(gh)} HEAD={norm_cl(hh)}")
+            if dynamic:
+                detail.append(f"CL dinamis harus >0: GET={norm_cl(gh)} HEAD={norm_cl(hh)}")
+            else:
+                detail.append(f"CL GET={norm_cl(gh)} HEAD={norm_cl(hh)}")
         if not ok_nobody:
             detail.append(f"HEAD membawa body {len(hb)} B")
         rows.append(

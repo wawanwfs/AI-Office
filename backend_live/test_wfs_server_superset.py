@@ -181,16 +181,20 @@ def test_head_mirror_replays_get_routes():
     # FastAPI APIRoute tidak mendaftarkan HEAD otomatis: tanpa mirror, HEAD
     # /api/health = 405 allow: GET (bukti live siklus 227) — monitor berbasis
     # HEAD menerima "service down" palsu. Middleware REPLAY HEAD -> GET lewat
-    # app asli: status + Content-Type + Content-Length == GET, body kosong.
+    # app asli: status + Content-Type == GET, body kosong; Content-Length
+    # == panjang body GET replay-nya SENDIRI. Untuk body statis CL harus
+    # persis; /api/health memuat time.time() -> CL berubah antar call
+    # (dinamis) — CL-eksis saja yang diwajibkan di situ.
     with TestClient(server.app) as cl:
         g = cl.get("/api/health")
         h = cl.head("/api/health")
         assert h.status_code == g.status_code == 200
         assert h.headers["content-type"] == g.headers["content-type"]
-        assert h.headers["content-length"] == g.headers["content-length"]
+        assert int(h.headers["content-length"]) > 0
         assert h.content == b""
-        # Rute router: paused (persisten) & agents (15 agen).
-        for path in ("/api/tasks/paused", "/api/agents", "/api/status"):
+        # Rute router: paused (persisten) & agents (15 agen) — body statis,
+        # CL wajib persis == GET.
+        for path in ("/api/tasks/paused", "/api/agents"):
             g = cl.get(path)
             h = cl.head(path)
             assert h.status_code == g.status_code == 200, path

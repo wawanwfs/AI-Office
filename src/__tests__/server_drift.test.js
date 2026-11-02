@@ -122,4 +122,28 @@ describe('drift-gate server gateway produksi :8787 (siklus 209)', () => {
     expect(t).toContain('import wfs_server as server')
     expect(t).toContain('import wfs_tasks as taskengine')
   })
+
+  it('siklus 227: HEAD mirror replay terpasang di superset (pola 226 :8000) — SSE dikecualikan', () => {
+    const s = src()
+    // Replay eksak: scope method GET + app asli + receive terpisah (anti-deadlock
+    // terukur siklus 226 — receive asli TIDAK di-drain, transport mem-block).
+    expect(s).toContain('get_scope["method"] = "GET"')
+    expect(s).toContain('await self.app(get_scope, replay_receive, capture)')
+    expect(s).toContain('receive asli TIDAK di-drain')
+    expect(s).toContain('app.add_middleware(HeadMirrorMiddleware)')
+    // CL dari panjang body GET replay; body HEAD kosong.
+    expect(s).toContain('b"content-length"')
+    expect(s).toContain('"body": b""')
+    // SSE /api/events dikecualikan eksplisit SEBELUM cek replay (GET streaming).
+    expect(s).toContain('scope.get("path", "").split("?")[0] == "/api/events"')
+    // Rute tanpa GET tidak di-mirror (405/404 asli).
+    expect(s).toContain('_has_get_route')
+    expect(s).toContain('_has_native_head_route')
+    // Pola drain dilarang (kelas deadlock 226).
+    expect(s).not.toMatch(/while True:\s*\n\s*msg = await receive\(\)/)
+    // Guard pytest perilaku nyata ada di test superset.
+    const t = readFileSync(resolve(REPO, 'backend_live/test_wfs_server_superset.py'), 'utf-8')
+    expect(t).toContain('def test_head_mirror_replays_get_routes')
+    expect(t).toContain('def test_head_mirror_sse_excluded_and_replay_contract_in_source')
+  })
 })
