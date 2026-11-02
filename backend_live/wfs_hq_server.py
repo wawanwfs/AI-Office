@@ -538,6 +538,84 @@ class H(http.server.SimpleHTTPRequestHandler):
         except Exception:
             return False
 
+    # SIKLUS 224: HEAD jalur proxy /admin/ & /cs-widget/ kini konsisten dgn
+    # GET — dulu do_HEAD tidak mengenal rute proxy sama sekali: HEAD /admin/
+    # = 404 palsu (GET = 200 panel admin) dan HEAD /api/admin/* = 404 tanpa
+    # Content-Type (GET = 401 JSON). Monitor uptime berbasis HEAD menerima
+    # "page down" untuk layanan yang sebenarnya hidup.
+    # Strategi: rewrite HEAD → GET pada koneksi loopback upstream, lalu
+    # buang body — konsisten dengan GET apa pun perilaku upstream (upstream
+    # boleh saja tidak mendukung HEAD; :8000 bahkan menjawab 405 untuk HEAD).
+    def _head_proxy_helper(self, port, path, timeout=30):
+        """HEAD proxy loopback: GET ke upstream, kirim status+headers, tanpa body."""
+        import http.client
+        try:
+            conn = http.client.HTTPConnection("127.0.0.1", port, timeout=timeout)
+            conn.request("GET", path)
+            r = conn.getresponse()
+            data = r.read()  # dibaca lalu dibuang — koneksi rapi ditutup
+            conn.close()
+            self.send_response(r.status)
+            self.send_header("Content-Type",
+                             r.getheader("Content-Type", "text/html"))
+            self._wfs_cc = "no-store"  # GET proxy: tanpa CC eksplisit → no-store
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+        except Exception:
+            self.send_response(502)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+
+    def _serve_head_admin(self):
+        # Cerminkan cabang GET /admin(/) eksak (panel admin :3000, timeout=30).
+        if self.path.split("?")[0] in ("/admin", "/admin/"):
+            self._head_proxy_helper(3000, "/")
+            return True
+        return False
+
+    def _serve_head_cs_widget(self):
+        # Cerminkan cabang GET /cs-widget/* (widget :3001, timeout=30).
+        if self.path.startswith("/cs-widget/"):
+            sub = self.path[len("/cs-widget/"):] or ""
+            self._head_proxy_helper(3001, "/" + sub)
+            return True
+        return False
+
+    def _serve_head_admin_api(self):
+        # Cerminkan do_GET/do_POST/do_DELETE /api/admin/* → _proxy_bantuin
+        # (backend :8000, timeout=120, Content-Type JSON, Authorization
+        # diteruskan). HEAD → GET rewrite karena upstream menjawab 405 untuk
+        # HEAD; status 401/403/200 konsisten dengan GET tetap tersampaikan.
+        if not self.path.startswith("/api/admin/"):
+            return False
+        import http.client
+        try:
+            fwd_headers = {"Content-Type": "application/json"}
+            auth = self.headers.get("Authorization")
+            if auth:
+                fwd_headers["Authorization"] = auth
+            conn = http.client.HTTPConnection("127.0.0.1", 8000, timeout=120)
+            conn.request("GET", self.path, headers=fwd_headers)
+            r = conn.getresponse()
+            data = r.read()
+            conn.close()
+            self.send_response(r.status)
+            self.send_header("Content-Type",
+                             r.getheader("Content-Type", "application/json"))
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+        except Exception:
+            try:
+                self.send_response(502)
+            except Exception:
+                pass
+            try:
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+            except Exception:
+                pass
+        return True
+
     def do_HEAD(self):
         path_only = self.path.split("?")[0]
         if path_only in ("/", "/index.html"):
@@ -546,6 +624,15 @@ class H(http.server.SimpleHTTPRequestHandler):
             return self._serve_head_html("index.html", inject=True)
         if path_only in ("/landing", "/landing/"):
             return self._serve_head_html("landing.html")
+        # SIKLUS 224: jalur proxy di atas dulu jatuh ke 404 stdlib — HEAD
+        # /admin/ dan /api/admin/* membaca "page down" palsu. Kini mirror
+        # cabang GET yang eksak (status + Content-Type + CL payload GET).
+        if self._serve_head_admin_api():
+            return
+        if self._serve_head_admin():
+            return
+        if self._serve_head_cs_widget():
+            return
         # Siklus 214: HEAD statis juga kena allowlist (stdlib do_HEAD menyaji
         # metadata file apa pun — probing path tanpa body tetap kebocoran).
         # SIKLUS 223: aset allowlist kini lewat _serve_head_static (cache
