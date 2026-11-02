@@ -2,92 +2,212 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>Widget Chat dibantuin</title>
 <style>
-  #dbt-btn { position:fixed; bottom:20px; right:20px; width:56px; height:56px; border-radius:50%;
-    background:#10E5A0; border:0; cursor:pointer; font-size:24px; box-shadow:0 4px 14px rgba(0,0,0,.25); z-index:9999; }
-  #dbt-box { position:fixed; bottom:88px; right:20px; width:320px; height:420px; background:#fff;
-    border-radius:14px; box-shadow:0 8px 30px rgba(0,0,0,.25); display:none; flex-direction:column; overflow:hidden; z-index:9999; font-family:system-ui,sans-serif; }
-  #dbt-head { background:#10E5A0; color:#0f1115; padding:12px 16px; font-weight:700; }
-  #dbt-msgs { flex:1; overflow-y:auto; padding:12px; background:#f6f7f9; }
-  .dbt-m { max-width:80%; padding:8px 12px; border-radius:12px; margin-bottom:8px; font-size:14px; line-height:1.4; white-space:pre-wrap; }
-  .dbt-ai { background:#fff; border:1px solid #e3e6ea; }
-  .dbt-me { background:#10E5A0; color:#0f1115; margin-left:auto; }
-  #dbt-form { display:flex; border-top:1px solid #e3e6ea; }
-  #dbt-in { flex:1; border:0; padding:12px; font-size:14px; outline:0; }
-  #dbt-send { border:0; background:#10E5A0; color:#0f1115; font-weight:700; padding:0 18px; cursor:pointer; }
+  :root {
+    --navy: #010A28; --navy2: #0A1638; --royal: #0A3A9C; --blue: #4D9FFF;
+    --ice: #ADDBF2; --text: #E8F1FA; --muted: #8FA3C0; --panel: #0D1B3E;
+    --ok: #2BD98A; --err: #FF6B6B;
+  }
+  * { box-sizing: border-box; }
+  #dbt-btn { position:fixed; bottom:20px; right:20px; width:58px; height:58px; border-radius:50%;
+    background:linear-gradient(135deg,#0A3A9C,#4D9FFF); border:0; cursor:pointer; font-size:24px;
+    box-shadow:0 6px 20px rgba(10,58,156,.45), 0 0 0 3px rgba(77,159,255,.18); z-index:9999;
+    transition:transform .18s ease, box-shadow .18s ease; }
+  #dbt-btn:hover { transform:scale(1.07); box-shadow:0 8px 26px rgba(10,58,156,.6), 0 0 0 4px rgba(77,159,255,.25); }
+  #dbt-btn .dot { position:absolute; top:2px; right:2px; width:13px; height:13px; border-radius:50%;
+    background:var(--ok); border:2px solid #fff; }
+  #dbt-box { position:fixed; bottom:90px; right:20px; width:min(360px, calc(100vw - 24px)); height:min(500px, calc(100vh - 130px));
+    background:var(--navy); border:1px solid rgba(77,159,255,.28); border-radius:18px;
+    box-shadow:0 14px 44px rgba(1,10,40,.65); display:none; flex-direction:column; overflow:hidden;
+    z-index:9999; font-family:system-ui,-apple-system,sans-serif; color:var(--text);
+    animation:pop .22s cubic-bezier(.2,.9,.3,1.2); }
+  @keyframes pop { from { opacity:0; transform:translateY(14px) scale(.97); } to { opacity:1; transform:none; } }
+  #dbt-head { background:linear-gradient(135deg,var(--navy2),#10265C); color:var(--text); padding:13px 14px;
+    display:flex; justify-content:space-between; align-items:center; border-bottom:1px solid rgba(77,159,255,.25); }
+  #dbt-head .who { display:flex; align-items:center; gap:9px; }
+  #dbt-head .ava { width:34px; height:34px; border-radius:50%; background:linear-gradient(135deg,var(--royal),var(--blue));
+    display:flex; align-items:center; justify-content:center; font-size:17px; box-shadow:0 0 0 2px rgba(77,159,255,.35); }
+  #dbt-head .nm { font-weight:700; font-size:14px; letter-spacing:.2px; }
+  #dbt-head .st { font-size:11px; color:var(--muted); display:flex; align-items:center; gap:5px; }
+  #dbt-head .st .s { width:7px; height:7px; border-radius:50%; background:var(--muted); transition:background .3s; }
+  #dbt-head .st.on .s { background:var(--ok); box-shadow:0 0 6px var(--ok); }
+  #dbt-head .hbtns { display:flex; gap:4px; }
+  #dbt-head .hbtns button { background:rgba(77,159,255,.12); border:1px solid rgba(77,159,255,.22); color:var(--ice);
+    border-radius:8px; padding:5px 8px; cursor:pointer; font-size:13px; line-height:1; transition:background .15s; }
+  #dbt-head .hbtns button:hover { background:rgba(77,159,255,.28); }
+  #dbt-msgs { flex:1; overflow-y:auto; padding:14px 12px; background:
+    radial-gradient(1200px 500px at 85% -10%, rgba(10,58,156,.35), transparent 60%),
+    radial-gradient(900px 420px at -10% 110%, rgba(77,159,255,.14), transparent 55%), var(--navy); }
+  #dbt-msgs::-webkit-scrollbar { width:5px; }
+  #dbt-msgs::-webkit-scrollbar-thumb { background:rgba(77,159,255,.35); border-radius:4px; }
+  .dbt-row { display:flex; gap:7px; margin-bottom:10px; animation:rise .25s ease; align-items:flex-end; }
+  @keyframes rise { from { opacity:0; transform:translateY(8px); } to { opacity:1; transform:none; } }
+  .dbt-row.me { flex-direction:row-reverse; }
+  .dbt-av { width:26px; height:26px; border-radius:50%; flex:0 0 26px; display:flex; align-items:center;
+    justify-content:center; font-size:13px; background:linear-gradient(135deg,var(--royal),var(--blue)); }
+  .dbt-row.me .dbt-av { background:linear-gradient(135deg,#274a76,#3b6291); }
+  .dbt-m { max-width:78%; padding:9px 13px; border-radius:14px; font-size:13.5px; line-height:1.5;
+    white-space:pre-wrap; word-break:break-word; }
+  .dbt-ai { background:rgba(255,255,255,.055); border:1px solid rgba(77,159,255,.22); color:var(--text);
+    border-bottom-left-radius:5px; }
+  .dbt-me { background:linear-gradient(135deg,var(--royal),var(--blue)); color:#fff; margin-left:auto;
+    border-bottom-right-radius:5px; box-shadow:0 3px 10px rgba(10,58,156,.4); }
+  .dbt-t { font-size:9.5px; opacity:.55; margin-top:3px; }
+  .dbt-err { background:rgba(255,107,107,.12); border-color:rgba(255,107,107,.4); color:#ffb3b3; }
+  .typing { display:inline-flex; gap:4px; padding:4px 2px; }
+  .typing i { width:6px; height:6px; border-radius:50%; background:var(--ice); opacity:.5;
+    animation:blink 1.2s infinite; }
+  .typing i:nth-child(2) { animation-delay:.2s; } .typing i:nth-child(3) { animation-delay:.4s; }
+  @keyframes blink { 0%,80%,100% { opacity:.25; transform:translateY(0); } 40% { opacity:1; transform:translateY(-3px); } }
+  /* Panel menu (bisa tampil / disembunyikan) */
+  #dbt-menu { border-top:1px solid rgba(77,159,255,.22); background:rgba(13,27,62,.85); padding:8px 10px;
+    display:flex; gap:6px; flex-wrap:wrap; max-height:132px; overflow-y:auto; }
+  #dbt-menu::-webkit-scrollbar { width:5px; }
+  #dbt-menu::-webkit-scrollbar-thumb { background:rgba(77,159,255,.35); border-radius:4px; }
+  #dbt-menu.hidden { display:none; }
+  .dbt-cat { border:1px solid rgba(77,159,255,.4); background:linear-gradient(135deg,rgba(10,58,156,.35),rgba(77,159,255,.16));
+    color:var(--ice); border-radius:16px; padding:6px 12px; font-size:12px; cursor:pointer; font-weight:600;
+    transition:all .15s; }
+  .dbt-cat:hover { background:rgba(77,159,255,.32); transform:translateY(-1px); }
+  .dbt-item { border:1px solid rgba(141,163,192,.3); background:rgba(255,255,255,.05); color:var(--text);
+    border-radius:16px; padding:6px 11px; font-size:12px; cursor:pointer; transition:all .15s; }
+  .dbt-item:hover { border-color:var(--blue); background:rgba(77,159,255,.15); }
+  .dbt-back { border:1px dashed rgba(141,163,192,.45); background:transparent; color:var(--muted);
+    border-radius:16px; padding:6px 10px; font-size:12px; cursor:pointer; }
+  #dbt-form { display:flex; border-top:1px solid rgba(77,159,255,.22); background:var(--navy2); }
+  #dbt-in { flex:1; border:0; padding:13px 14px; font-size:13.5px; outline:0; background:transparent; color:var(--text); }
+  #dbt-in::placeholder { color:var(--muted); }
+  #dbt-send { border:0; background:linear-gradient(135deg,var(--royal),var(--blue)); color:#fff; font-weight:700;
+    padding:0 20px; cursor:pointer; font-size:13.5px; transition:filter .15s; }
+  #dbt-send:hover { filter:brightness(1.12); }
+  #dbt-send:disabled { filter:grayscale(.5) brightness(.8); cursor:wait; }
 </style>
 </head>
-<body style="margin:0;font-family:system-ui">
+<body style="margin:0">
 <div id="dbt-box">
-  <div id="dbt-head" style="display:flex;justify-content:space-between;align-items:center;"><span id="dbt-brand">dibantuin AI CS</span><button onclick="clearHist()" style="background:transparent;border:0;color:#0f1115;cursor:pointer;font-size:12px;" title="Hapus riwayat">🗑</button></div>
+  <div id="dbt-head">
+    <div class="who">
+      <div class="ava">🤖</div>
+      <div>
+        <div class="nm" id="dbt-brand">dibantuin AI CS</div>
+        <div class="st" id="dbt-status"><span class="s"></span><span id="dbt-status-t">menghubungkan…</span></div>
+      </div>
+    </div>
+    <div class="hbtns">
+      <button onclick="toggleMenu()" id="dbt-menu-btn" title="Tampilkan / sembunyikan menu">☰</button>
+      <button onclick="clearHist()" title="Hapus riwayat">🗑</button>
+    </div>
+  </div>
   <div id="dbt-msgs"></div>
-  <div id="dbt-quick" style="padding:8px 12px;display:flex;gap:6px;flex-wrap:wrap;border-top:1px solid #e3e6ea;background:#fff;"></div>
+  <div id="dbt-menu"></div>
   <form id="dbt-form">
-    <input id="dbt-in" placeholder="Tulis pesan..." autocomplete="off">
+    <input id="dbt-in" placeholder="Tulis pesan…" autocomplete="off">
     <button id="dbt-send">Kirim</button>
   </form>
 </div>
-<button id="dbt-btn">💬</button>
+<button id="dbt-btn">💬<span class="dot"></span></button>
 <script>
 const params = new URLSearchParams(location.search);
 const TENANT_ID = parseInt(params.get('tenant') || '1');
 const API = params.get('api') || window.DBT_API || '/api/admin';
-// Judul pakai nama tenant jika diberikan: ?tenant=2&name=Toko%20Aku
 const BRAND = params.get('name') || 'dibantuin AI CS';
-document.getElementById('dbt-brand').textContent = BRAND;
+// Menu panel: '1' tampil, '0' disembunyikan (default tampil). Bisa dipaksa via ?menu=0/1,
+// preferensi pengunjung diingat di localStorage per tenant.
+const MKEY = 'dbt_menu_t' + TENANT_ID;
+const MENU_FORCE = params.get('menu');
 const box = document.getElementById('dbt-box'), msgs = document.getElementById('dbt-msgs');
+document.getElementById('dbt-brand').textContent = BRAND;
+let menuOpen = (MENU_FORCE === '0') ? false : (MENU_FORCE === '1') ? true : (localStorage.getItem(MKEY) !== '0');
+function applyMenu() {
+  document.getElementById('dbt-menu').classList.toggle('hidden', !menuOpen);
+  localStorage.setItem(MKEY, menuOpen ? '1' : '0');
+}
+function toggleMenu() { menuOpen = !menuOpen; applyMenu(); if (menuOpen) renderMenu(0); }
+applyMenu();
+
+// ---- Menu bertingkat (variasi menu; klik = kirim pesan nyata ke AI) ----
+const MENU_TREE = [
+  { icon: '👋', label: 'Bantuan', items: ['Halo, kamu siapa?', 'Kamu bisa bantu apa saja?', 'Cara hubungi admin?'] },
+  { icon: '📦', label: 'Pesanan', items: ['Cek status pesanan', 'Bagaimana cara lacak kiriman?', 'Saya mau komplain pesanan'] },
+  { icon: '💰', label: 'Harga & Promo', items: ['Lihat menu & harga', 'Ada promo hari ini?', 'Metode pembayaran apa saja?'] },
+  { icon: 'ℹ️', label: 'Info Toko', items: ['Jam buka?', 'Lokasi toko di mana?', 'Bisa COD?'] },
+];
+let menuLevel = 0, activeCat = -1;
+function renderMenu(level) {
+  const m = document.getElementById('dbt-menu');
+  m.innerHTML = '';
+  if (level === 0) {
+    MENU_TREE.forEach((c, i) => {
+      const b = document.createElement('button');
+      b.className = 'dbt-cat'; b.textContent = c.icon + ' ' + c.label;
+      b.onclick = () => { menuLevel = 1; activeCat = i; renderMenu(1); };
+      m.appendChild(b);
+    });
+  } else {
+    const back = document.createElement('button');
+    back.className = 'dbt-back'; back.textContent = '‹ Menu';
+    back.onclick = () => { menuLevel = 0; renderMenu(0); };
+    m.appendChild(back);
+    MENU_TREE[activeCat].items.forEach(t => {
+      const b = document.createElement('button');
+      b.className = 'dbt-item'; b.textContent = t;
+      b.onclick = () => {
+        const inp = document.getElementById('dbt-in');
+        inp.value = t;
+        document.getElementById('dbt-form').requestSubmit();
+      };
+      m.appendChild(b);
+    });
+  }
+}
+renderMenu(menuOpen ? menuLevel : 0);
+
+// ---- Indikator status koneksi (nyata: menyala setelah kirim/terima sukses) ----
+function setStatus(on, text) {
+  const st = document.getElementById('dbt-status');
+  st.classList.toggle('on', on);
+  document.getElementById('dbt-status-t').textContent = text;
+}
+setStatus(false, 'siap dijawab AI');
+
+document.getElementById('dbt-btn').onclick = () => {
+  const open = box.style.display === 'flex';
+  box.style.display = open ? 'none' : 'flex';
+  if (!open && !msgs.children.length) add('ai', 'Halo! 👋 Aku AI CS ' + BRAND + '. Pilih menu di bawah atau langsung ketik pertanyaanmu ya.');
+};
 function clearHist() {
   localStorage.removeItem(HKEY);
   msgs.innerHTML = '';
   add('ai', 'Riwayat dihapus. Ada yang bisa dibantu? 😊');
 }
-// Quick replies: klik → langsung kirim sebagai pesan
-const QUICK = ['Cek status pesanan', 'Lihat menu & harga', 'Jam buka?'];
-function renderQuick() {
-  const q = document.getElementById('dbt-quick');
-  q.innerHTML = '';
-  QUICK.forEach(t => {
-    const b = document.createElement('button');
-    b.textContent = t;
-    b.style.cssText = 'border:1px solid #10E5A0;background:#f0fdf9;color:#0f1115;border-radius:14px;padding:5px 10px;font-size:12px;cursor:pointer;';
-    b.onclick = () => {
-      const inp = document.getElementById('dbt-in');
-      inp.value = t;
-      document.getElementById('dbt-form').requestSubmit();
-    };
-    q.appendChild(b);
-  });
-}
-renderQuick();
-document.getElementById('dbt-btn').onclick = () => {
-  box.style.display = box.style.display === 'flex' ? 'none' : 'flex';
-  if (!msgs.children.length) add('ai', 'Halo! 👋 Aku AI CS dibantuin. Ada yang bisa dibantu? (bisa cek status pesanan, sebut nomor order ya)');
-};
-function add(role, text) {
-  const d = document.createElement('div');
-  d.className = 'dbt-m dbt-' + role;
-  d.textContent = text;
-  msgs.appendChild(d);
+function now() { const d = new Date(); return String(d.getHours()).padStart(2,'0') + ':' + String(d.getMinutes()).padStart(2,'0'); }
+function bubble(role, text) {
+  const row = document.createElement('div');
+  row.className = 'dbt-row ' + (role === 'me' ? 'me' : 'ai');
+  const av = document.createElement('div'); av.className = 'dbt-av'; av.textContent = role === 'me' ? '🙂' : '🤖';
+  const d = document.createElement('div'); d.className = 'dbt-m dbt-' + role;
+  const body = document.createElement('div'); body.textContent = text;
+  const t = document.createElement('div'); t.className = 'dbt-t'; t.textContent = now();
+  d.appendChild(body); d.appendChild(t);
+  row.appendChild(av); row.appendChild(d);
+  msgs.appendChild(row);
   msgs.scrollTop = msgs.scrollHeight;
-  // simpan riwayat lokal
+  return d;
+}
+function add(role, text) {
+  const d = bubble(role, text);
   const hist = JSON.parse(localStorage.getItem(HKEY) || '[]');
   hist.push({role, text, t: Date.now()});
-  localStorage.setItem('dbt_hist', JSON.stringify(hist.slice(-50)));
+  localStorage.setItem(HKEY, JSON.stringify(hist.slice(-50)));
 }
 // muat riwayat saat buka pertama (per tenant agar tidak tercampur)
 const HKEY = 'dbt_hist_t' + TENANT_ID;
 (function restore(){
   const hist = JSON.parse(localStorage.getItem(HKEY) || '[]');
-  hist.forEach(h => addRaw(h.role, h.text));
+  hist.forEach(h => bubble(h.role, h.text));
 })();
-function addRaw(role, text) {
-  const d = document.createElement('div');
-  d.className = 'dbt-m dbt-' + role;
-  d.textContent = text;
-  msgs.appendChild(d);
-  msgs.scrollTop = msgs.scrollHeight;
-}
 document.getElementById('dbt-form').onsubmit = async (e) => {
   e.preventDefault();
   const inp = document.getElementById('dbt-in');
@@ -95,16 +215,26 @@ document.getElementById('dbt-form').onsubmit = async (e) => {
   if (!text) return;
   inp.value = '';
   add('me', text);
-  add('ai', '…');
+  const send = document.getElementById('dbt-send'); send.disabled = true;
+  const pending = bubble('ai', ''); pending.innerHTML = '<span class="typing"><i></i><i></i><i></i></span>';
+  const t0 = Date.now();
   try {
     const r = await fetch(API + '/widget/chat', {
       method: 'POST', headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({tenant_id: TENANT_ID, message: text})
     });
     const d = await r.json();
-    msgs.lastChild.textContent = d.reply || 'Maaf, terjadi gangguan.';
+    pending.querySelector('.dbt-t').textContent = now();
+    pending.querySelector('div:first-child').textContent = d.reply || 'Maaf, terjadi gangguan.';
+    setStatus(true, 'online · balas ' + ((Date.now()-t0)/1000).toFixed(1) + ' dtk');
   } catch (err) {
-    msgs.lastChild.textContent = 'Gagal terhubung ke server.';
+    pending.classList.add('dbt-err');
+    pending.querySelector('.dbt-t').textContent = now();
+    pending.querySelector('div:first-child').textContent = 'Gagal terhubung ke server. Coba lagi sebentar ya.';
+    setStatus(false, 'kembali offline');
+  } finally {
+    send.disabled = false;
+    msgs.scrollTop = msgs.scrollHeight;
   }
 };
 </script>
