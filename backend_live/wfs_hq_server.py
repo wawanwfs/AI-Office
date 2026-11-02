@@ -304,6 +304,13 @@ class H(http.server.SimpleHTTPRequestHandler):
         memanggil GET /api/admin/stats, tenants, conversations, knowledge via
         same-origin :9503), dan header Authorization diteruskan (JWT login
         admin). Widget chat (siklus 160) tetap jalan via jalur ini.
+
+        SIKLUS 222: header "Access-Control-Allow-Origin: *" DIHAPUS. Semua
+        konsumen /api/admin/* adalah same-origin :9503 (panel admin diproxy
+        /admin/), dan CORS backend :8000 sendiri sudah allow_origins ["*"]
+        sehingga tidak ada klien lintas origin yang bergantung pada ACAO dari
+        proxy ini. ACAO * pada respons auth/admin hanya memperluas permukaan
+        baca lintas-origin bagi halaman arbitrer — tanpa manfaat apa pun.
         """
         import http.client
         try:
@@ -325,7 +332,6 @@ class H(http.server.SimpleHTTPRequestHandler):
             data = r.read()
             self.send_response(r.status)
             self.send_header("Content-Type", r.getheader("Content-Type", "application/json"))
-            self.send_header("Access-Control-Allow-Origin", "*")
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             self.wfile.write(data)
@@ -478,7 +484,35 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-Length", "0")
             self.end_headers()
 
+    # SIKLUS 222: HEAD /app/, /landing, / kini 200 — konsisten dgn GET.
+    # Dulu 404 (semua halaman HTML hanya di do_GET) padahal HEAD /index.html
+    # statis = 200 via allowlist; monitor uptime / health-check berbasis HEAD
+    # menerima jawaban palsu "page down" untuk halaman yang sebenarnya hidup.
+    # Kontrak: jawab status sama dgn GET, headers identik, TANPA body.
+    def _serve_head_html(self, fname, inject=False):
+        try:
+            data = open(fname, "rb").read()
+        except Exception:
+            self.send_response(500)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
+            return
+        if inject:
+            data = self._inject_token(data)
+        self._wfs_cc = "no-store"
+        self.send_response(200)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(data)))
+        self.end_headers()
+
     def do_HEAD(self):
+        path_only = self.path.split("?")[0]
+        if path_only in ("/", "/index.html"):
+            return self._serve_head_html("index.html", inject=True)
+        if path_only in ("/app", "/app/"):
+            return self._serve_head_html("index.html", inject=True)
+        if path_only in ("/landing", "/landing/"):
+            return self._serve_head_html("landing.html")
         # Siklus 214: HEAD statis juga kena allowlist (stdlib do_HEAD menyaji
         # metadata file apa pun — probing path tanpa body tetap kebocoran).
         if self._allowed_rel() is not None:

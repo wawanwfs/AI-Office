@@ -146,6 +146,34 @@ def smoke():
             why.append(f"security headers hilang: { {k: hdrs.get(k) for k in ('x-content-type-options','referrer-policy')} }")
     except Exception as e:
         why.append(f"security headers exc: {e}")
+    # 8. SIKLUS 222a: proxy admin TANPA Access-Control-Allow-Origin lagi —
+    #    konsumen semuanya same-origin; ACAO * hanya memperluas permukaan
+    #    baca lintas-origin. Regresi (header kembali) = rollback.
+    try:
+        req = urllib.request.Request(BASE + "/api/admin/__smoke222")
+        with urllib.request.urlopen(req, timeout=8) as r:
+            acao = r.headers.get("Access-Control-Allow-Origin")
+        if acao is not None:
+            why.append(f"ACAO wildcard kembali muncul di proxy admin: {acao!r}")
+    except urllib.error.HTTPError as e:
+        # Status apa pun (termasuk 401/404) sah — yang dicek hanya header CORS.
+        if e.headers.get("Access-Control-Allow-Origin") is not None:
+            why.append(f"ACAO wildcard kembali muncul di proxy admin: {e.headers.get('Access-Control-Allow-Origin')!r}")
+    except Exception as e:
+        why.append(f"smoke ACAO exc: {e}")
+    # 9. SIKLUS 222b: HEAD /, /app/, /landing harus 200 (konsisten GET) —
+    #    dulu 404; monitor uptime berbasis HEAD menerima jawaban palsu.
+    for hp in ("/", "/app/", "/landing"):
+        try:
+            req = urllib.request.Request(BASE + hp, method="HEAD")
+            with urllib.request.urlopen(req, timeout=5) as r:
+                st, ln = r.status, r.headers.get("Content-Length")
+            if st != 200:
+                why.append(f"HEAD {hp} status {st} (harap 200, konsisten GET)")
+            elif not ln or int(ln) <= 0:
+                why.append(f"HEAD {hp} Content-Length {ln!r} (harap panjang GET)")
+        except Exception as e:
+            why.append(f"HEAD {hp} exc: {e}")
     return (not why), why
 
 
@@ -198,7 +226,7 @@ def do_apply():
         print("smoke GAGAL — rollback:", why)
         _rollback_to(bak)
         return 2
-    print("DEPLOY OK — live == sumber", sha(SRC)[:12], "; smoke 7/7 (termasuk header keamanan siklus 212)")
+    print("DEPLOY OK — live == sumber", sha(SRC)[:12], "; smoke 9/9 (termasuk keamanan 212 + CORS/HEAD 222)")
     return 0
 
 
@@ -228,7 +256,7 @@ def do_check():
     print("live   :", sha(DST)[:12], DST)
     if same:
         ok, why = smoke()
-        print("IDENTIK; smoke 7/7:", "OK" if ok else f"GAGAL {why}")
+        print("IDENTIK; smoke 9/9:", "OK" if ok else f"GAGAL {why}")
         return 0 if ok else 2
     print("DRIFT: live != sumber — jalankan scripts/apply_wfs_hq_server.py --apply")
     return 3

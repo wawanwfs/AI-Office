@@ -83,6 +83,24 @@ describe('drift-gate server produksi wfs-hq (siklus 206)', () => {
     expect(s.match(/if not _api_token_ok\(self\):/g)?.length).toBe(2)
   })
 
+  it('SIKLUS 222: CORS wildcard proxy admin dihapus + HEAD halaman HTML = status GET', () => {
+    const s = readFileSync(SRC, 'utf-8')
+    // (a) Tidak ada lagi Access-Control-Allow-Origin "*" di proxy /api/admin/*
+    //     (semua konsumen same-origin :9503 — panel /admin/ diproxy; CORS
+    //     backend :8000 sendiri sudah allow_origins ["*"]).
+    expect(s.replace(/\n#.*/g, '')).not.toContain('"Access-Control-Allow-Origin"')
+    // (b) HEAD /, /app/, /landing kini 200 via _serve_head_html — dulu 404
+    //     (monitor uptime berbasis HEAD menerima "page down" palsu), padahal
+    //     HEAD /index.html statis sudah 200 via allowlist.
+    expect(s).toContain('def _serve_head_html(self, fname, inject=False):')
+    for (const anchor of [
+      'return self._serve_head_html("index.html", inject=True)',
+      'return self._serve_head_html("landing.html")',
+    ]) expect(s).toContain(anchor)
+    // do_HEAD tetap kena allowlist utk jalur statis (kontrak 214 utuh).
+    expect(s).toContain('if self._allowed_rel() is not None:\n            super().do_HEAD()')
+  })
+
   it('apply script deploy terkontrol: backup + compile-check + smoke + auto-rollback', () => {
     const a = readFileSync(APPLY, 'utf-8')
     expect(a).toContain('server.py.bak-')

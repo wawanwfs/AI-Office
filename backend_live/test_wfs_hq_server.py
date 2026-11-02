@@ -8,6 +8,7 @@ H._proxy langsung tanpa server sungguhan.
 
 import io
 import json
+import pathlib
 import threading
 import unittest
 from http.server import BaseHTTPRequestHandler, HTTPServer
@@ -70,7 +71,8 @@ class FakeWFile:
 class FakeH:
     """Objek pengganti instance handler untuk memanggil H._proxy secara langsung."""
 
-    def __init__(self, path="/wfs-api/agents", command="GET", headers=None, body=b""):
+    def __init__(self, path="/wfs-api/agents", command="GET", headers=None, body=b"",
+                 wfs_cc=None):
         self.path = path
         self.command = command
         self.headers = FakeHeaders(headers or {})
@@ -79,6 +81,17 @@ class FakeH:
         self._status = None
         self._headers = []
         self._ended = False
+        if wfs_cc is not None:
+            self._wfs_cc = wfs_cc
+        # SIKLUS 222: do_HEAD/_serve_head_html memanggil helper kelas H pada
+        # instance — delegasikan ke implementasi asli (pola duck-typed sama
+        # seperti pemanggilan H._proxy(fake) di test lain).
+        self._allowed_rel = lambda: H._allowed_rel(self)
+        self._inject_token = lambda data: H._inject_token(self, data)
+        self._serve_head_html = lambda fname, inject=False: H._serve_head_html(self, fname, inject=inject)
+        self.translate_path = lambda p: H.translate_path(self, p)
+        import os as _os
+        self.directory = _os.getcwd()  # SimpleHTTPRequestHandler.translate_path
 
     def send_response(self, code):
         self._status = code
@@ -233,6 +246,128 @@ class TestWfsHqServer(unittest.TestCase):
             mock.call("X-Content-Type-Options", "nosniff"),
             mock.call("Referrer-Policy", "same-origin"),
         ])
+
+    # --- SIKLUS 222: hardening CORS proxy admin + HEAD konsisten dgn GET ---
+
+    def _proxy_bantuin_recording(self, fake):
+        """Panggil H._proxy_bantuin dgn stub backend :8000 terpasang.
+
+        Monkey-patch http.client.HTTPConnection di modul superset agar request
+        admin tertangkap tanpa menyentuh backend sungguhan (berdampak-nol).
+        """
+        import http.client
+        from unittest import mock
+        rec = {}
+
+        class _StubConn:
+            def __init__(self, host, port, timeout=None):
+                rec["host"], rec["port"] = host, port
+
+            def request(self, method, path, body=None, headers=None):
+                rec.update(method=method, path=path, body=body, headers=headers)
+
+            def getresponse(self):
+                resp = mock.Mock()
+                resp.status = 200
+                resp.read.return_value = b'{"ok": true}'
+                resp.getheader.return_value = "application/json"
+                return resp
+
+            def close(self):
+                rec["closed"] = True
+
+        with mock.patch.object(wfs_hq_server.http, "client", http.client), \
+                mock.patch.object(http.client, "HTTPConnection", _StubConn):
+            H._proxy_bantuin(fake)
+        return rec
+
+    def test_proxy_bantuin_no_acao_wildcard_anymore(self):
+        # Dulu: setiap respons /api/admin/* menyertakan
+        # "Access-Control-Allow-Origin: *" — konsumen semuanya same-origin
+        # (panel /admin/ diproxy :9503), ACAO * hanya memperluas permukaan
+        # baca lintas-origin tanpa manfaat → dihapus siklus 222.
+        fake = FakeH(path="/api/admin/stats", command="GET")
+        self._proxy_bantuin_recording(fake)
+        acao = [v for n, v in fake._headers if n == "Access-Control-Allow-Origin"]
+        self.assertEqual(acao, [])
+
+    def test_proxy_bantuin_auth_forward_and_status_kept(self):
+        # Kontrak lain proxy admin ikut dikunci agar penghapusan ACAO tidak
+        # menyeret regresi tersembunyi: status diteruskan, Authorization
+        # diteruskan, body dikirim ke klien.
+        fake = FakeH(path="/api/admin/stats", command="GET",
+                     headers={"Authorization": "Bearer jwttest"})
+        rec = self._proxy_bantuin_recording(fake)
+        self.assertEqual(rec["host"], "127.0.0.1")
+        self.assertEqual(rec["port"], 8000)
+        self.assertEqual(rec["headers"].get("Authorization"), "Bearer jwttest")
+        self.assertEqual(fake._status, 200)
+        self.assertEqual(fake.wfile.data, b'{"ok": true}')
+        self.assertTrue(fake._ended)
+
+    def test_source_has_no_acao_wildcard(self):
+        # Guard sumber: tidak ada lagi Access-Control-Allow-Origin "*" di file
+        # server produksi (semua konsumen same-origin).
+        src = pathlib.Path(wfs_hq_server.__file__).read_text(encoding="utf-8")
+        self.assertNotIn('"Access-Control-Allow-Origin"', src)
+
+    def _head_html_env(self):
+        """Tmpdir dgn index.html & landing.html minimal + chdir (cwd test bukan web root)."""
+        import os
+        import tempfile
+        outer = os.getcwd()
+        tmp = tempfile.mkdtemp(prefix="wfs-head-")
+        with open(os.path.join(tmp, "index.html"), "wb") as f:
+            f.write(b"<html><head><title>t</title></head><body>app</body></html>")
+        with open(os.path.join(tmp, "landing.html"), "wb") as f:
+            f.write(b"<html><body>landing</body></html>")
+        os.chdir(tmp)
+        return tmp, outer
+
+    def test_head_html_pages_match_get_status(self):
+        # HEAD /, /app/, /landing kini 200 — konsisten dgn GET (dulu 404,
+        # monitor uptime berbasis HEAD menerima "page down" palsu).
+        import os
+        tmp, outer = self._head_html_env()
+        try:
+            for path in ("/", "/app/", "/landing"):
+                fake = FakeH(path=path, command="HEAD", wfs_cc="stale")
+                H.do_HEAD(fake)
+                self.assertEqual(fake._status, 200, msg=f"HEAD {path}")
+                self.assertEqual(fake.wfile.data, b"", msg=f"HEAD {path} tanpa body")
+                hdrs = dict(fake._headers)
+                self.assertEqual(hdrs.get("Content-Type"), "text/html; charset=utf-8")
+                self.assertTrue(int(hdrs.get("Content-Length", "0")) > 0,
+                                msg=f"HEAD {path} Content-Length = panjang GET")
+                self.assertEqual(fake._wfs_cc, "no-store")
+                self.assertTrue(fake._ended)
+        finally:
+            os.chdir(outer)
+
+    def test_head_root_injects_token_but_no_body(self):
+        # HEAD / memakai injeksi token sama persis dgn GET /: Content-Length
+        # = panjang html TERINJEKSI (bukan mentah), body tetap kosong.
+        import os
+        tmp, outer = self._head_html_env()
+        try:
+            raw = open("index.html", "rb").read()
+            injected = H._inject_token(None, raw)
+            fake = FakeH(path="/", command="HEAD", wfs_cc="stale")
+            H.do_HEAD(fake)
+            self.assertEqual(fake._status, 200)
+            self.assertEqual(fake.wfile.data, b"")
+            self.assertEqual(dict(fake._headers).get("Content-Length"),
+                             str(len(injected)))
+        finally:
+            os.chdir(outer)
+
+    def test_head_static_and_unknown_keep_allowlist_contract(self):
+        # Kontrak 214 tidak berubah: path non-allowlist HEAD tetap 404 tanpa
+        # body (server.py tak pernah ada di allowlist).
+        fake404 = FakeH(path="/server.py", command="HEAD", wfs_cc="stale")
+        H.do_HEAD(fake404)
+        self.assertEqual(fake404._status, 404)
+        self.assertEqual(fake404.wfile.data, b"")
 
     # --- SIKLUS 218: gerbang token jalur legacy /api/* (api_service) ---
 
