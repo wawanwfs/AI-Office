@@ -136,7 +136,18 @@ async def lifespan(app):
     yield
 
 
-app = FastAPI(title="WFS Virtual Office Gateway", lifespan=lifespan)
+# Siklus 217: introspeksi API DITUTUP — /docs, /redoc, /openapi.json = 404.
+# Tidak dikonsumsi UI/skrip mana pun (census grep src/ scripts/ backend_live = 0
+# referensi); permukaan introspeksi sia-sia bagi klien, mempermudah pemetaan
+# endpoint oleh pihak luar di LAN/Tailscale. docs_url/redoc_url/openapi_url
+# None = FastAPI tidak mendaftarkan rute itu sama sekali (bukan 404 dinamis).
+app = FastAPI(
+    title="WFS Virtual Office Gateway",
+    lifespan=lifespan,
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None,
+)
 
 
 # ---------- config per agent ----------

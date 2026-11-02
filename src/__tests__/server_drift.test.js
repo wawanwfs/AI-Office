@@ -105,6 +105,18 @@ describe('drift-gate server gateway produksi :8787 (siklus 209)', () => {
     expect(s).not.toMatch(/int\(body\.get\("timeout"\)\)/)
   })
 
+  it('siklus 217: introspeksi API DITUTUP — docs/redoc/openapi None di app + smoke fase-2 menegakkan 404', () => {
+    const s = src()
+    // FastAPI tidak mendaftarkan rute introspeksi sama sekali (bukan 404 dinamis).
+    expect(s).toContain('docs_url=None')
+    expect(s).toContain('redoc_url=None')
+    expect(s).toContain('openapi_url=None')
+    // smoke fase-2 apply script wajib verifikasi 404 ketiganya via HTTP.
+    const a = readFileSync(APPLY, 'utf-8')
+    expect(a).toContain('"/docs", "/redoc", "/openapi.json"')
+    expect(a).toContain('introspeksi API ditutup 217')
+  })
+
   it('test superset ter-track dan menarget wfs_server', () => {
     const t = readFileSync(resolve(REPO, 'backend_live/test_wfs_server_superset.py'), 'utf-8')
     expect(t).toContain('import wfs_server as server')

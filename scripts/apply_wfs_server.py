@@ -150,7 +150,12 @@ def smoke(strict: bool = False):
         st, body = post("/api/tasks/1/run", "{}")
         if st != 409:
             why.append(f"POST /api/tasks/1/run saat paused: {st} {body[:60]!r} (harus 409)")
-        # 6. Fitur live: redirect root + routers read-only hidup.
+        # 6b. Siklus 217: introspeksi API tertutup (docs/redoc/openapi 404).
+        for p_int in ("/docs", "/redoc", "/openapi.json"):
+            st_i, _, _ = get(p_int)
+            if st_i != 404:
+                why.append(f"{p_int} status {st_i} (harus 404 — introspeksi API ditutup 217)")
+        # 7. Fitur live: redirect root + routers read-only hidup.
         st, body, hdr = get("/")
         if st != 307 or "9503" not in (hdr.get("Location") or hdr.get("location") or ""):
             why.append(f"GET / status {st} location {hdr.get('Location')!r} (harus 307 -> :9503)")
