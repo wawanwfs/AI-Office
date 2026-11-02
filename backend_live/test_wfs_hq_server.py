@@ -199,6 +199,41 @@ class TestWfsHqServer(unittest.TestCase):
         self.assertEqual(rec["method"], "GET")
         self.assertEqual(rec["path"], "/api/agents")
 
+    # --- siklus 212: fitur unik hq_proxy yang diserap superset ---
+    def test_inject_token_adds_meta_into_head(self):
+        # Dari backend/test_hq_proxy.py (dihapus) — kontrak injeksi token.
+        html = "<html><head><title>x</title></head><body>y</body></html>"
+        out = H._inject_token(None, html.encode()).decode()
+        meta = f'<meta name="wfs-ui-token" content="{wfs_hq_server.UI_TOKEN}">'
+        self.assertIn(meta, out)
+        self.assertLess(out.index(meta), out.index("<title>"))
+
+    def test_inject_token_prepends_when_no_head(self):
+        html = "<html><body>y</body></html>"
+        out = H._inject_token(None, html.encode()).decode()
+        self.assertTrue(out.startswith('<meta name="wfs-ui-token"'))
+
+    def test_security_headers_baseline(self):
+        sec = dict(wfs_hq_server._security_headers())
+        self.assertEqual(sec.get("X-Content-Type-Options"), "nosniff")
+        self.assertEqual(sec.get("Referrer-Policy"), "same-origin")
+
+    def test_end_headers_emits_cache_and_security_headers(self):
+        # Header keamanan mengalir lewat end_headers() — semua jalur respons
+        # (static, proxy, SSE, admin, widget) mewarisinya otomatis.
+        import http.server as hs
+        from unittest import mock
+        with mock.patch.object(hs.BaseHTTPRequestHandler, "send_header") as m_send, \
+                mock.patch.object(hs.BaseHTTPRequestHandler, "end_headers") as m_end:
+            h = H.__new__(H)
+            h._wfs_cc = "no-store"
+            h.end_headers()
+        self.assertEqual(m_send.call_args_list, [
+            mock.call("Cache-Control", "no-store"),
+            mock.call("X-Content-Type-Options", "nosniff"),
+            mock.call("Referrer-Policy", "same-origin"),
+        ])
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

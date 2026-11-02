@@ -1,5 +1,11 @@
 """Run real, paused, isolated API/UI layout checks after npm run build.
 
+Siklus 212: layout runtime kini memakai SUPERSET PRODUKSI ASLI —
+backend_live/wfs_hq_server.py (server :9503) + backend_live/wfs_server.py
+(gateway :8787, flat-alias tasks/orders). Dulu pakai backend/hq_proxy.py
+(duplikat stale — dihapus 212) + backend/server.py (hapus 209) yang saling
+meleset dari produksi; test menguji server yang TIDAK pernah jalan di live.
+
 Usage: /path/to/python-with-playwright-and-backend-deps scripts/test_runtime_layout.py
 Optional CHROMIUM_EXECUTABLE selects an installed browser. No production state used.
 """
@@ -17,11 +23,18 @@ from playwright.sync_api import sync_playwright
 from check_runtime_layout import check_header, check_toast
 
 root = Path(__file__).resolve().parents[1]
+live = root / 'backend_live'
 out = Path(tempfile.mkdtemp(prefix='runtime-layout-', dir=os.environ['TMPDIR']))
 backend = out / 'backend'
 backend.mkdir()
-for source in (root / 'backend').glob('*.py'):
-    shutil.copy2(source, backend / source.name)
+# Flat superset (pola backend/test_startup_static.py siklus 208-209):
+# engine + server gateway + server UI 9503, semua SATU SUMBER dgn produksi.
+shutil.copy2(live / 'wfs_tasks.py', backend / 'tasks.py')
+shutil.copy2(live / 'wfs_orders.py', backend / 'orders.py')
+shutil.copy2(live / 'wfs_server.py', backend / 'server.py')
+shutil.copy2(live / 'wfs_hq_server.py', backend / 'hq_ui_server.py')
+# static_serve diimpor server 9503 (deploy: sebelah file; repo: fallback ../backend).
+shutil.copy2(root / 'backend' / 'static_serve.py', backend / 'static_serve.py')
 shutil.copytree(root / 'dist', backend / 'static')
 home = out / 'home'
 home.mkdir()
@@ -29,7 +42,9 @@ processes = []
 try:
     for name, code in [
         ('api', "import tasks; tasks.set_paused(True); import uvicorn; uvicorn.run('server:app',host='127.0.0.1',port=18787)"),
-        ('proxy', "import hq_proxy,os,socketserver; hq_proxy.GATEWAY='http://127.0.0.1:18787/api/'; os.chdir('static'); socketserver.ThreadingTCPServer.allow_reuse_address=True; socketserver.ThreadingTCPServer(('127.0.0.1',19513),hq_proxy.H).serve_forever()"),
+        # Superset 9503 asli: ThreadingTCPServer + fitur live eksak (dulu hq_proxy
+        # single-thread — SSE membekukan seluruh server). Static = dist/ di static/.
+        ('proxy', "import hq_ui_server,os,socketserver; hq_ui_server.GATEWAY='http://127.0.0.1:18787/api/'; os.chdir('static'); hq_ui_server.socketserver.ThreadingTCPServer.allow_reuse_address=True; socketserver.ThreadingTCPServer(('127.0.0.1',19513),hq_ui_server.H).serve_forever()"),
     ]:
         # Fail rather than connect accidentally to another process using our ports.
         import socket

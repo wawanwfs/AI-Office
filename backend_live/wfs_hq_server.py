@@ -25,6 +25,14 @@
 #   - _parse_content_length toleran: invalid/negatif → 0 (tanpa ValueError).
 #   - MAX_PROXY_BODY 5MB: POST /wfs-api/* dan /api/admin/* lebih besar → 413
 #     TANPA membaca body ke RAM.
+# Siklus 212 — SUPERSET hq_proxy.py (pola 206, duplikat stale ke-5 dihapus):
+#   - backend/hq_proxy.py (server UI 9503 mode-repo dipakai layout runtime +
+#     backend/test_hq_proxy.py) dihapus; fitur uniknya diserap:
+#       * _security_headers() (X-Content-Type-Options + Referrer-Policy) kini
+#         di end_headers() SEMUA respons — repo lebih maju, produksi tertinggal.
+#       * index.html fallback / landing 500 jelas (sebelumnya exception kosong
+#         tanpa respons = koneksi menggantung).
+#       * ThreadingTCServer di __main__ kini SATU class yang sama dgn produksi.
 import http.server, socketserver, os, urllib.request, urllib.error, json, secrets, re
 try:
     import project_api  # hanya ada di direktori deploy (~/wfs-hq)
@@ -88,11 +96,27 @@ def _reject_oversize(handler):
     _reply_json(handler, 413, {"error": "payload terlalu besar"})
 
 
+def _security_headers():
+    """Header keamanan dasar untuk semua respons UI (siklus 212, dari hq_proxy).
+
+    Anti MIME-sniffing + referrer leak. Dipancarkan di end_headers() sehingga
+    MENGALIR ke semua jalur: static, index/landing/app injeksi token, proxy
+    /wfs-api/*, SSE, /admin, /cs-widget, api_service, do_DELETE.
+    """
+    return (
+        ("X-Content-Type-Options", "nosniff"),
+        ("Referrer-Policy", "same-origin"),
+    )
+
+
 class H(http.server.SimpleHTTPRequestHandler):
     def end_headers(self):
         if not hasattr(self, "_wfs_cc"):
             self._wfs_cc = "no-store"
         self.send_header('Cache-Control', self._wfs_cc)
+        # Siklus 212: header keamanan di SEMUA respons (diserap dari hq_proxy).
+        for name, value in _security_headers():
+            self.send_header(name, value)
         super().end_headers()
 
     def _serve_static(self):
@@ -280,6 +304,8 @@ class H(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
             except Exception:
+                # Siklus 212: 500 eksak — dulu exception kosong tanpa respons
+                # (koneksi menggantung, pola hq_proxy sama-sama cacat).
                 self.send_response(500); self.send_header("Content-Length", "0"); self.end_headers()
             return
         if path_only in ("/app", "/app/"):
@@ -374,6 +400,10 @@ class H(http.server.SimpleHTTPRequestHandler):
         self.send_response(404); self.end_headers()
 
 if __name__ == "__main__":
+    # Siklus 212: satu server class untuk SEMUA mode (hq_proxy lama pakai
+    # TCPServer single-thread — SSE /wfs-api/events membekukan seluruh UI
+    # mode-repo; produksi sudah benar sejak 154). Test layout runtime kini
+    # memakai class yang IDENTIK dgn produksi.
     class ThreadingTCPServer(socketserver.ThreadingMixIn, socketserver.TCPServer):
         daemon_threads = True
         allow_reuse_address = True

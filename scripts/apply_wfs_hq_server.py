@@ -16,7 +16,7 @@ Latar belakang (audit drift siklus 206):
 Pemakaian:
 - Tanpa argumen : CHECK saja — bandingkan live vs sumber, exit 3 bila beda (drift).
 - --apply       : backup → tulis (tmp + compile-check) → restart wfs-hq → health
-                  :9503 → smoke fitur (/, /app/, /wfs-api/auth 401, hardening CL
+                  :9503 → smoke fitur (/, /app/, /wfs-api/auth 401, hardening CL, header keamanan 212
                   malformed → proxy jalan, CL raksasa → 413) → gagal → AUTO-ROLLBACK.
 - --rollback    : pulihkan backup TERBARU lalu restart.
 
@@ -135,6 +135,17 @@ def smoke():
             why.append(f"POST CL-raksasa status {st} body {body[:80]!r} (harap 413)")
     except Exception as e:
         why.append(f"POST CL-raksasa exc: {e}")
+    # 7. Siklus 212: header keamanan di SEMUA respons (diserap dari hq_proxy —
+    #    fitur repo yang dulu TIDAK PERNAH sampai produksi).
+    try:
+        req = urllib.request.Request(BASE + "/")
+        with urllib.request.urlopen(req, timeout=5) as r:
+            hdrs = {k.lower(): v for k, v in r.headers.items()}
+        if hdrs.get("x-content-type-options") != "nosniff" or \
+                hdrs.get("referrer-policy") != "same-origin":
+            why.append(f"security headers hilang: { {k: hdrs.get(k) for k in ('x-content-type-options','referrer-policy')} }")
+    except Exception as e:
+        why.append(f"security headers exc: {e}")
     return (not why), why
 
 
@@ -187,7 +198,7 @@ def do_apply():
         print("smoke GAGAL — rollback:", why)
         _rollback_to(bak)
         return 2
-    print("DEPLOY OK — live == sumber", sha(SRC)[:12], "; smoke 6/6")
+    print("DEPLOY OK — live == sumber", sha(SRC)[:12], "; smoke 7/7 (termasuk header keamanan siklus 212)")
     return 0
 
 
@@ -217,7 +228,7 @@ def do_check():
     print("live   :", sha(DST)[:12], DST)
     if same:
         ok, why = smoke()
-        print("IDENTIK; smoke:", "OK" if ok else f"GAGAL {why}")
+        print("IDENTIK; smoke 7/7:", "OK" if ok else f"GAGAL {why}")
         return 0 if ok else 2
     print("DRIFT: live != sumber — jalankan scripts/apply_wfs_hq_server.py --apply")
     return 3

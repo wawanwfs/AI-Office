@@ -1,6 +1,6 @@
 """Kebijakan cache & kompresi untuk file statis WFS HQ.
 
-Dipakai server 9503 (hq_proxy.py / server.py produksi):
+Dipakai server 9503 (server.py produksi / superset backend_live/wfs_hq_server.py):
 - Aset ber-hash di /assets/ dan workbox-* -> immutable 1 tahun.
 - index.html, sw.js, registerSW.js -> no-store (service worker & shell harus fresh).
 - Statis lainnya (font, ikon, manifest) -> max-age 1 hari.
