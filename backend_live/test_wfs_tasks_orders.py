@@ -123,6 +123,45 @@ def test_set_status_updates_result_and_files(tmp_tasks_db):
     assert row["files"] == ["a.py"]
 
 
+def test_parse_qa_verdict_prompt_format():
+    """Siklus 233 — format teks prompt 'VERDICT: pass' / 'VERDICT: revise' dikenali benar."""
+    assert tasks.parse_qa_verdict("VERDICT: revise\nAda kegagalan syntax di models.py") == "revise"
+    assert tasks.parse_qa_verdict("VERDICT: pass\nSemua fungsi dan unit test berjalan baik") == "pass"
+    assert tasks.parse_qa_verdict("VERDICT:revise\nTanpa spasi setelah titik dua") == "revise"
+    assert tasks.parse_qa_verdict("verdict: revise\nHuruf kecil") == "revise"
+    assert tasks.parse_qa_verdict("verdict: pass\nHuruf kecil") == "pass"
+
+
+def test_parse_qa_verdict_json_and_edge_cases():
+    """Siklus 233 — format JSON, awalan baris, dan fallback toleran."""
+    # JSON payload dari LLM yang memilih format terstruktur
+    assert tasks.parse_qa_verdict('{"verdict": "revise", "reason": "kurang exception"}') == "revise"
+    assert tasks.parse_qa_verdict('{"verdict": "pass"}') == "pass"
+    # Awalan baris jika LLM melupakan kata VERDICT
+    assert tasks.parse_qa_verdict("Revise - test sandbox gagal pada endpoint auth") == "revise"
+    assert tasks.parse_qa_verdict("Pass - implementasi sesuai spesifikasi") == "pass"
+    # Fallback aman jika kosong / non-string / output ambigu
+    assert tasks.parse_qa_verdict("") == "pass"
+    assert tasks.parse_qa_verdict(None) == "pass"
+    assert tasks.parse_qa_verdict("Teks penjelasan bebas tanpa putusan tegas") == "pass"
+
+
+def test_parse_qa_verdict_closes_prompt_regex_discrepancy():
+    """Siklus 233 — bukti merah->hijau penutupan bug: regex JSON lama GAGAL pada format teks prompt."""
+    import re as _re
+    qa_output = "VERDICT: revise\nFungsi belum menangani koneksi database putus."
+    
+    # Perilaku lama (bug): regex JSON menghasilkan None -> jatuh diam-diam ke 'pass'
+    old_vm = _re.search(r'"verdict"\s*:\s*"(pass|revise)"', qa_output)
+    assert old_vm is None, "Regex lama terbukti TIDAK cocok dengan format teks prompt"
+    old_verdict = old_vm.group(1) if old_vm else "pass"
+    assert old_verdict == "pass", "Bug lama terbukti: review revise ditandai pass!"
+    
+    # Perilaku baru (fix): parse_qa_verdict menghasilkan 'revise' secara akurat
+    new_verdict = tasks.parse_qa_verdict(qa_output)
+    assert new_verdict == "revise"
+
+
 def test_get_task_missing_returns_none(tmp_tasks_db):
     assert tasks.get_task(999999) is None
 

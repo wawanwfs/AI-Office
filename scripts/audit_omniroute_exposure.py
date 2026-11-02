@@ -124,9 +124,12 @@ info(
 
 # 3. gerbang internet tertutup — bukti Tencent SG
 pub_ip = ""
-rc, out, _ = sh(["curl", "-s", "--max-time", "8", "https://api.ipify.org"])
-if rc == 0 and out.strip():
-    pub_ip = out.strip()
+for u in ["https://api.ipify.org", "https://icanhazip.com", "https://ifconfig.me/ip", "https://checkip.amazonaws.com"]:
+    rc, out, _ = sh(["curl", "-s", "--max-time", "6", u])
+    c = out.strip()
+    if rc == 0 and re.fullmatch(r"\d+\.\d+\.\d+\.\d+", c):
+        pub_ip = c
+        break
 check("publik IP egress terdeteksi (SNAT ≠ EIP inbound)", bool(re.fullmatch(r"\d+\.\d+\.\d+\.\d+", pub_ip)), pub_ip or "n/a")
 check(
     "check-host.net: 20128 & kontrol :22 timeout dari node luar (barrier = Tencent SG, bukan ufw)",

@@ -23,7 +23,7 @@ DEPLOY: python3 scripts/apply_wfs_tasks.py --apply
 (backup → compile-check → restart wfs-office → smoke → auto-rollback).
 JANGAN mengedit ~/wfs-office/tasks.py langsung — drift gate vitest akan FAIL.
 """
-import sqlite3, json, os, time, threading, httpx
+import sqlite3, json, os, time, threading, httpx, re
 from pathlib import Path
 
 DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tasks.db")
@@ -115,6 +115,34 @@ def normalize_role(role):
         if any(k in r for k in keys):
             return canon
     return "backend"
+
+
+def parse_qa_verdict(review):
+    """Siklus 233 — ekstrak verdict QA ('pass' atau 'revise') dari output LLM QA.
+
+    ROLE_SYS['qa'] menginstruksikan format teks: "jawab mulai dengan 'VERDICT: pass' atau
+    'VERDICT: revise'". Dulu _execute_task mengecek regex JSON r'"verdict"\\s*:\\s*"(pass|revise)"'
+    sehingga respons teks standar dari Rina QA ("VERDICT: revise...") gagal cocok,
+    jatuh diam-diam ke default 'pass', dan task bermasalah langsung ditandai 'done'
+    tanpa revisi.
+
+    Kini mendukung:
+    - Pola teks prompt: "VERDICT: pass" / "VERDICT: revise" (case-insensitive)
+    - Pola JSON: {"verdict": "pass"} / {"verdict": "revise"}
+    - Pola awalan: kata pertama baris diawali 'pass' atau 'revise'
+    Fallback aman: 'pass'.
+    """
+    if not review or not isinstance(review, str):
+        return "pass"
+    m = re.search(r'(?:verdict\s*[:=]\s*["\']?|["\']verdict["\']\s*:\s*["\'])(pass|revise)["\']?', review, re.IGNORECASE)
+    if m:
+        return m.group(1).lower()
+    first_line = review.strip().splitlines()[0].strip().lower() if review.strip() else ""
+    if first_line.startswith("revise") or (("revise" in first_line) and ("pass" not in first_line)):
+        return "revise"
+    if first_line.startswith("pass"):
+        return "pass"
+    return "pass"
 
 def add_project(name, brief):
     c = db()
@@ -505,13 +533,11 @@ async def _execute_task(tid, attempt_no=0):
                     test_evidence = f"\n\nHASIL TEST SANDBOX (ok={tr['ok']}):\n{tr['output'][:1500]}"
             except Exception:
                 pass
-            review = await _execution_llm(tid, "qa1",
-                ROLE_SYS["qa"],
+            review = await _execution_llm(tid, 'qa1',
+                ROLE_SYS['qa'],
                 f"Review task ini: '{t['title']}'. Output agent:\n\n{result_out[:6000]}{test_evidence}\n\nNilai layak/pass atau perlu revisi.")
-            import re as _re
-            vm = _re.search(r'"verdict"\s*:\s*"(pass|revise)"', review)
-            verdict = vm.group(1) if vm else "pass"
-            set_status(tid, "done" if verdict=="pass" else "review",
+            verdict = parse_qa_verdict(review)
+            set_status(tid, 'done' if verdict=='pass' else 'review',
                        review=review[:3000])
             if verdict != "pass" and attempt_no < 1:
                 await asyncio.sleep(2)

@@ -144,6 +144,22 @@ describe('drift-gate tasks engine produksi gateway :8787 (siklus 208)', () => {
     expect(t).toContain('def test_add_task_normalizes_llm_role_family_to_canonical')
   })
 
+  it('siklus 233: parse_qa_verdict — format prompt VERDICT: pass/revise dikenali, anti-pola regex JSON di _execute_task dihapus', () => {
+    const s = readFileSync(SRC, 'utf-8')
+    // Fungsi parse_qa_verdict ada di sumber
+    expect(s).toContain('def parse_qa_verdict(review)')
+    // _execute_task memanggil parse_qa_verdict
+    expect(s).toMatch(/verdict = parse_qa_verdict\(review\)/)
+    // Anti-pola lama (regex JSON yang menolak teks prompt) tidak boleh ada di _execute_task
+    const execBody = s.slice(s.indexOf('async def _execute_task'), s.indexOf('def sync_sandbox'))
+    expect(execBody).not.toMatch(/vm = _re\.search\(r'\"verdict\"/)
+    // Guard pytest perilaku nyata ter-track
+    const t = readFileSync(resolve(REPO, 'backend_live/test_wfs_tasks_orders.py'), 'utf-8')
+    expect(t).toContain('def test_parse_qa_verdict_prompt_format')
+    expect(t).toContain('def test_parse_qa_verdict_json_and_edge_cases')
+    expect(t).toContain('def test_parse_qa_verdict_closes_prompt_regex_discrepancy')
+  })
+
   it('backend/tasks.py duplikat mati TIDAK kembali (satu sumber, pola 207)', () => {
     let exists = true
     try { readFileSync(resolve(REPO, 'backend/tasks.py')) } catch { exists = false }
