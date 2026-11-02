@@ -152,7 +152,7 @@ describe('drift-gate tasks engine produksi gateway :8787 (siklus 208)', () => {
     expect(s).toMatch(/verdict = parse_qa_verdict\(review\)/)
     // Anti-pola lama (regex JSON yang menolak teks prompt) tidak boleh ada di _execute_task
     const execBody = s.slice(s.indexOf('async def _execute_task'), s.indexOf('def sync_sandbox'))
-    expect(execBody).not.toMatch(/vm = _re\.search\(r'\"verdict\"/)
+    expect(execBody).not.toMatch(/vm = _re\.search\(r'"verdict"'/)
     // Guard pytest perilaku nyata ter-track
     const t = readFileSync(resolve(REPO, 'backend_live/test_wfs_tasks_orders.py'), 'utf-8')
     expect(t).toContain('def test_parse_qa_verdict_prompt_format')
