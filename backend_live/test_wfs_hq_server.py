@@ -91,6 +91,11 @@ class FakeH:
         self._serve_head_html = lambda fname, inject=False: H._serve_head_html(self, fname, inject=inject)
         # SIKLUS 223: do_HEAD memanggil _serve_head_static pada instance.
         self._serve_head_static = lambda: H._serve_head_static(self)  # type: ignore[arg-type]
+        # SIKLUS 224: do_HEAD memanggil helper proxy HEAD pada instance.
+        self._head_proxy_helper = lambda port, path, timeout=30: H._head_proxy_helper(self, port, path, timeout)  # type: ignore[arg-type]
+        self._serve_head_admin = lambda: H._serve_head_admin(self)  # type: ignore[arg-type]
+        self._serve_head_cs_widget = lambda: H._serve_head_cs_widget(self)  # type: ignore[arg-type]
+        self._serve_head_admin_api = lambda: H._serve_head_admin_api(self)  # type: ignore[arg-type]
         # _serve_head_static memakai self.guess_type (SimpleHTTPRequestHandler)
         # yang butuh extensions_map — delegasikan + salin map kelas.
         self.extensions_map = dict(H.extensions_map)
@@ -434,6 +439,152 @@ class TestWfsHqServer(unittest.TestCase):
         H.do_HEAD(fake404)
         self.assertEqual(fake404._status, 404)
         self.assertEqual(fake404.wfile.data, b"")
+
+    # --- SIKLUS 224: HEAD jalur proxy (/admin/, /cs-widget/, /api/admin/*) ---
+
+    def _head_proxy_conn(self, resp_status=200, ct="text/html", body=b"<html>x</html>"):
+        """Monkey-patch http.client.HTTPConnection dgn stub upstream loopback."""
+        import http.client
+        from unittest import mock
+        rec = {}
+
+        class _StubConn:
+            def __init__(self, host, port, timeout=None):
+                rec["host"], rec["port"] = host, port
+
+            def request(self, method, path, body=None, headers=None):
+                rec.update(method=method, path=path, headers=headers or {})
+
+            def getresponse(self):
+                resp = mock.Mock()
+                resp.status = resp_status
+                resp.read.return_value = body
+                resp.getheader.return_value = ct
+                return resp
+
+            def close(self):
+                rec["closed"] = True
+
+        return rec, mock.patch.object(http.client, "HTTPConnection", _StubConn)
+
+    def test_head_admin_panel_matches_get(self):
+        # HEAD /admin/ & /admin dulu 404 stdlib (GET = 200 panel HTML :3000);
+        # kini mirror cabang GET: status 200, CT text/html, CL = panjang
+        # payload GET, TANPA body, CC no-store — monitor uptime tak menipu.
+        for p in ("/admin", "/admin/"):
+            rec, patcher = self._head_proxy_conn(body=b"<html>panel</html>")
+            with patcher:
+                fake = FakeH(path=p, command="HEAD", wfs_cc="stale")
+                H.do_HEAD(fake)
+            self.assertEqual(fake._status, 200, msg=f"HEAD {p}")
+            self.assertEqual(fake.wfile.data, b"", msg=f"HEAD {p} tanpa body")
+            hdrs = dict(fake._headers)
+            self.assertEqual(hdrs.get("Content-Type"), "text/html")
+            self.assertEqual(hdrs.get("Content-Length"),
+                             str(len(b"<html>panel</html>")))
+            self.assertEqual(fake._wfs_cc, "no-store")
+            self.assertTrue(fake._ended)
+            self.assertTrue(rec["closed"])
+            self.assertEqual(rec["host"], "127.0.0.1")
+            self.assertEqual(rec["port"], 3000)
+            self.assertEqual(rec["method"], "GET")  # HEAD→GET rewrite loopback
+            self.assertEqual(rec["path"], "/")
+
+    def test_head_cs_widget_matches_get(self):
+        # HEAD /cs-widget/widget.js dulu 404 stdlib; kini mirror cabang GET
+        # (upstream :3001, sub-path diteruskan persis).
+        rec, patcher = self._head_proxy_conn(resp_status=200, ct="application/javascript",
+                                             body=b"window.WFS_CS=1")
+        with patcher:
+            fake = FakeH(path="/cs-widget/widget.js", command="HEAD", wfs_cc="stale")
+            H.do_HEAD(fake)
+        self.assertEqual(fake._status, 200)
+        self.assertEqual(fake.wfile.data, b"")
+        hdrs = dict(fake._headers)
+        self.assertEqual(hdrs.get("Content-Type"), "application/javascript")
+        self.assertEqual(hdrs.get("Content-Length"), "15")
+        self.assertEqual(fake._wfs_cc, "no-store")
+        self.assertTrue(fake._ended)
+        self.assertEqual(rec["port"], 3001)
+        self.assertEqual(rec["path"], "/widget.js")
+
+    def test_head_cs_widget_upstream_404_is_forwarded(self):
+        # Widget absen di upstream (:3001 balas 404 HTML) → HEAD meneruskan
+        # status + CT + CL persis GET (bukan 404 "kosong tanpa CT" stdlib).
+        rec, patcher = self._head_proxy_conn(resp_status=404, ct="text/html",
+                                             body=b"<!doctype html>not found")
+        with patcher:
+            fake = FakeH(path="/cs-widget/absen.js", command="HEAD", wfs_cc="stale")
+            H.do_HEAD(fake)
+        self.assertEqual(fake._status, 404)
+        hdrs = dict(fake._headers)
+        self.assertEqual(hdrs.get("Content-Type"), "text/html")
+        self.assertEqual(hdrs.get("Content-Length"), "24")
+        self.assertEqual(fake.wfile.data, b"")
+
+    def test_head_admin_api_matches_get_without_auth(self):
+        # HEAD /api/admin/stats dulu 404 tanpa CT; GET tanpa JWT = 401 JSON.
+        # Kini HEAD mirror GET: 401 + CT JSON + CL body, Authorization
+        # diteruskan (bila ada), CC no-store — uptime-probe tak menipu.
+        rec, patcher = self._head_proxy_conn(resp_status=401, ct="application/json",
+                                             body=b'{"detail":"Unauthorized"}')
+        with patcher:
+            fake = FakeH(path="/api/admin/stats", command="HEAD", wfs_cc="stale")
+            H.do_HEAD(fake)
+        self.assertEqual(fake._status, 401)
+        self.assertEqual(fake.wfile.data, b"")
+        hdrs = dict(fake._headers)
+        self.assertEqual(hdrs.get("Content-Type"), "application/json")
+        self.assertEqual(hdrs.get("Content-Length"),
+                         str(len(b'{"detail":"Unauthorized"}')))
+        self.assertEqual(fake._wfs_cc, "no-store")
+        self.assertTrue(fake._ended)
+        self.assertEqual(rec["port"], 8000)
+        self.assertEqual(rec["path"], "/api/admin/stats")
+        self.assertEqual(rec["method"], "GET")  # HEAD→GET rewrite: upstream 405-proof
+        self.assertNotIn("Authorization", rec["headers"])
+
+    def test_head_admin_api_forwards_authorization(self):
+        rec, patcher = self._head_proxy_conn(resp_status=200, ct="application/json",
+                                             body=b'{"ok": true}')
+        with patcher:
+            fake = FakeH(path="/api/admin/tenants", command="HEAD",
+                         headers={"Authorization": "Bearer jwttest"}, wfs_cc="stale")
+            H.do_HEAD(fake)
+        self.assertEqual(fake._status, 200)
+        self.assertEqual(rec["headers"].get("Authorization"), "Bearer jwttest")
+        hdrs = dict(fake._headers)
+        self.assertEqual(hdrs.get("Content-Length"), "12")
+
+    def test_head_proxy_upstream_down_is_502_no_body(self):
+        # Upstream mati → 502 + tanpa body (konsisten dgn GET proxy yang
+        # juga membalas 502 saat koneksi loopback gagal).
+        import http.client
+        from unittest import mock
+        with mock.patch.object(http.client, "HTTPConnection",
+                               mock.Mock(side_effect=OSError("conn refused"))):
+            fake = FakeH(path="/admin/", command="HEAD", wfs_cc="stale")
+            H.do_HEAD(fake)
+        self.assertEqual(fake._status, 502)
+        self.assertEqual(fake.wfile.data, b"")
+        self.assertTrue(fake._ended)
+
+    def test_head_allowlist_and_html_routes_untouched(self):
+        # Rute lama tidak tersenggol cabang proxy baru: / tetap 200 injeksi
+        # token tanpa body, non-allowlist tetap 404 tanpa body.
+        import os
+        tmp, outer = self._head_html_env()
+        try:
+            fake = FakeH(path="/", command="HEAD", wfs_cc="stale")
+            H.do_HEAD(fake)
+            self.assertEqual(fake._status, 200)
+            self.assertEqual(fake.wfile.data, b"")
+            fake404 = FakeH(path="/server.py", command="HEAD", wfs_cc="stale")
+            H.do_HEAD(fake404)
+            self.assertEqual(fake404._status, 404)
+            self.assertEqual(fake404.wfile.data, b"")
+        finally:
+            os.chdir(outer)
 
     # --- SIKLUS 218: gerbang token jalur legacy /api/* (api_service) ---
 

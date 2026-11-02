@@ -106,11 +106,12 @@ describe('siklus 214 — dokumentasi & SOP di sumber', () => {
     expect(src).toContain('.wfs_ui_token');
   });
 
-  it('apply script smoke 10 poin (212 + 222 + 223: CORS/HEAD/aset) — siklus ini menambah cakupan via pytest+vitest+smoke, bukan mem-bypass smoke', () => {
+  it('apply script smoke 11 poin (212 + 222 + 223 + 224: CORS/HEAD/aset/proxy) — siklus ini menambah cakupan via pytest+vitest+smoke, bukan mem-bypass smoke', () => {
     const a = readFileSync(join(ROOT, 'scripts', 'apply_wfs_hq_server.py'), 'utf8');
     expect(a).toContain('def smoke(');
-    expect(a).toContain('smoke 10/10');
+    expect(a).toContain('smoke 11/11');
     expect(a).toContain('SIKLUS 223');
+    expect(a).toContain('SIKLUS 224');
     expect(a).toContain('max-age=31536000, immutable');
   });
 });

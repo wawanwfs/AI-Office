@@ -203,6 +203,26 @@ def smoke():
         why.append(f"HEAD aset statis HTTP {e.code}")
     except Exception as e:
         why.append(f"HEAD aset statis exc: {e}")
+    # 11. SIKLUS 224: HEAD jalur proxy mirror GET — dulu 404 stdlib palsu:
+    #     HEAD /admin/ (GET = 200 HTML) dan HEAD /api/admin/stats (GET = 401
+    #     JSON tanpa CT). Status wajib sama GET; CT + CL wajib ada.
+    try:
+        import http.client as _hc
+        for pp, want in (("/admin/", 200), ("/api/admin/stats", 401)):
+            c = _hc.HTTPConnection("127.0.0.1", 9503, timeout=8)
+            c.request("HEAD", pp)
+            r = c.getresponse()
+            r.read()
+            ct, cl = r.getheader("Content-Type"), r.getheader("Content-Length")
+            c.close()
+            if r.status != want:
+                why.append(f"HEAD {pp} status {r.status} (harap {want}, konsisten GET)")
+            elif not ct:
+                why.append(f"HEAD {pp} tanpa Content-Type (stdlib 404 palsu?)")
+            elif not cl or int(cl) <= 0:
+                why.append(f"HEAD {pp} Content-Length {cl!r} (harap panjang GET)")
+    except Exception as e:
+        why.append(f"HEAD jalur proxy exc: {e}")
     return (not why), why
 
 
@@ -255,7 +275,7 @@ def do_apply():
         print("smoke GAGAL — rollback:", why)
         _rollback_to(bak)
         return 2
-    print("DEPLOY OK — live == sumber", sha(SRC)[:12], "; smoke 10/10 (keamanan 212 + CORS/HEAD 222 + HEAD aset 223)")
+    print("DEPLOY OK — live == sumber", sha(SRC)[:12], "; smoke 11/11 (keamanan 212 + CORS/HEAD 222 + HEAD aset 223 + HEAD proxy 224)")
     return 0
 
 
@@ -285,7 +305,7 @@ def do_check():
     print("live   :", sha(DST)[:12], DST)
     if same:
         ok, why = smoke()
-        print("IDENTIK; smoke 10/10:", "OK" if ok else f"GAGAL {why}")
+        print("IDENTIK; smoke 11/11:", "OK" if ok else f"GAGAL {why}")
         return 0 if ok else 2
     print("DRIFT: live != sumber — jalankan scripts/apply_wfs_hq_server.py --apply")
     return 3

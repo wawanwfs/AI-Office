@@ -602,6 +602,9 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.send_response(r.status)
             self.send_header("Content-Type",
                              r.getheader("Content-Type", "application/json"))
+            # GET _proxy_bantuin mengirim Cache-Control: no-store via default
+            # end_headers — HEAD menegaskan eksplisit agar identik.
+            self._wfs_cc = "no-store"
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
         except Exception:

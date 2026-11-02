@@ -111,6 +111,22 @@ describe('drift-gate server produksi wfs-hq (siklus 206)', () => {
     expect(s.match(/_serve_head_static/g)?.length).toBeGreaterThanOrEqual(3)
   })
 
+  it('SIKLUS 224: HEAD jalur proxy (/admin/, /cs-widget/, /api/admin/*) mirror GET, terpasang sebelum fallback stdlib', () => {
+    const s = readFileSync(SRC, 'utf-8')
+    for (const fn of ['_serve_head_admin_api', '_serve_head_admin', '_serve_head_cs_widget', '_head_proxy_helper']) {
+      expect(s).toContain(`def ${fn}(`)
+    }
+    const head = s.slice(s.indexOf('def do_HEAD('))
+    // ketiga cabang proxy HEAD dipasang SEBELUM fallback stdlib/404.
+    for (const fn of ['_serve_head_admin_api', '_serve_head_admin', '_serve_head_cs_widget']) {
+      expect(head.indexOf(`self.${fn}()`)).toBeGreaterThan(-1)
+      expect(head.indexOf(`self.${fn}()`)).toBeLessThan(head.indexOf('self._allowed_rel() is not None'))
+    }
+    // HEAD→GET rewrite loopback (upstream :8000 menjawab 405 untuk HEAD).
+    expect(s).toContain('def _head_proxy_helper(self, port, path, timeout=30)')
+    expect(s).toContain('conn.request("GET", path)')
+  })
+
   it('apply script deploy terkontrol: backup + compile-check + smoke + auto-rollback', () => {
     const a = readFileSync(APPLY, 'utf-8')
     expect(a).toContain('server.py.bak-')
