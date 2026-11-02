@@ -61,7 +61,7 @@ HTTP: set DB paused=1 -> GET /api/tasks/paused harus {"paused": true}
 (server lama: false) + POST /api/tasks/1/run saat paused -> 409 via HTTP.
 """
 import json, os, re, time, asyncio, pathlib, subprocess
-from typing import Optional
+from typing import Optional, Union
 import httpx
 from fastapi import FastAPI, HTTPException, Request
 from fastapi.responses import RedirectResponse, Response, StreamingResponse
@@ -1020,8 +1020,10 @@ else:
 
 # ---------- TASKS — engine satu sumber, hardening SELALU ----------
 @app.get("/api/tasks")
-async def api_tasks(project: int = None):
-    return {"tasks": taskengine.list_tasks(project)}
+async def api_tasks(project: Optional[str] = None):
+    """Ambil daftar task — filter project opsional mendukung numerik atau slug teks (siklus 234)."""
+    proj = project.strip() if (project and project.strip()) else None
+    return {"tasks": taskengine.list_tasks(proj)}
 
 _bg_tasks = set()
 
@@ -1029,7 +1031,7 @@ class TaskIn(BaseModel):
     title: str
     role: str = "backend"
     prompt: str = ""
-    project: Optional[int] = None
+    project: Optional[Union[int, str]] = None
 
 @app.post("/api/tasks")
 async def api_add_task(body: TaskIn):
@@ -1038,11 +1040,13 @@ async def api_add_task(body: TaskIn):
     Siklus 232 — role dinormalisasi via taskengine.normalize_role (satu sumber
     dgn engine): role bebas dari UI/manual juga tak pernah jatuh ke fallback
     senyap; title di-truncate sebelum masuk DB (kontrak lama utuh).
+    Siklus 234 — project mendukung integer maupun slug string (misal 'proj-demo').
     """
     title = body.title.strip()
     if not title:
         raise HTTPException(400, "title wajib")
-    tid = taskengine.add_task(body.project, title[:200], body.role, (body.prompt or title)[:4000])
+    proj = str(body.project).strip() if (body.project is not None and str(body.project).strip() != "") else None
+    tid = taskengine.add_task(proj, title[:200], body.role, (body.prompt or title)[:4000])
     return {"ok": True, "task_id": tid, "role": taskengine.normalize_role(body.role)}
 
 def _check_task(tid):

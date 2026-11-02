@@ -110,7 +110,39 @@ def test_list_tasks_filter_by_project(tmp_tasks_db):
     tasks.add_task(p2, "T2", "frontend", "p")
     only_p1 = tasks.list_tasks(project=p1)
     assert [t["title"] for t in only_p1] == ["T1"]
+    assert "created" in only_p1[0]
+    assert "updated" in only_p1[0]
+    assert "created_at" in only_p1[0]
+    assert "updated_at" in only_p1[0]
     assert tasks.list_tasks()[0]["agent_id"]  # semua task
+
+
+def test_list_tasks_and_add_task_string_slug_and_timestamps(tmp_tasks_db):
+    """Siklus 234 — project slug teks (misal 'proj-demo') & timestamp konsisten."""
+    tid = tasks.add_task("proj-demo", "Task Demo", "devops", "deploy infra")
+    row = tasks.get_task(tid)
+    assert row is not None
+    assert row["project"] == "proj-demo"
+    assert row["title"] == "Task Demo"
+    assert row["role"] == "devops"
+    assert row["created"] is not None
+    assert row["updated"] is not None
+    assert row["created_at"] == row["created"]
+    assert row["updated_at"] == row["updated"]
+
+    # Filter string slug eksak
+    filtered = tasks.list_tasks(project="proj-demo")
+    assert len(filtered) == 1
+    assert filtered[0]["id"] == tid
+    assert filtered[0]["project"] == "proj-demo"
+    assert filtered[0]["created"] is not None
+    assert filtered[0]["created_at"] is not None
+
+    # Filter string kosong / None kembalikan semua
+    assert len(tasks.list_tasks(project="")) >= 1
+    assert len(tasks.list_tasks(project=None)) >= 1
+    # Filter project yang tidak ada kembalikan kosong
+    assert tasks.list_tasks(project="nonexistent-slug") == []
 
 
 def test_set_status_updates_result_and_files(tmp_tasks_db):
@@ -118,9 +150,15 @@ def test_set_status_updates_result_and_files(tmp_tasks_db):
     tid = tasks.add_task(pid, "T", "qa", "p")
     tasks.set_status(tid, "done", result="OK", files=["a.py"], review="lulus")
     row = tasks.get_task(tid)
+    assert row is not None
     assert row["status"] == "done"
     assert row["result"] == "OK"
     assert row["files"] == ["a.py"]
+    assert row["review"] == "lulus"  # siklus 234: review tidak lagi di-drop oleh get_task
+    assert row["created"] is not None
+    assert row["updated"] is not None
+    assert row["created_at"] == row["created"]
+    assert row["updated_at"] == row["updated"]
 
 
 def test_parse_qa_verdict_prompt_format():

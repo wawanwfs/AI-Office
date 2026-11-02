@@ -161,30 +161,34 @@ def list_projects():
 def add_task(project, title, role, prompt):
     role = normalize_role(role)  # siklus 232: tanpa role liar masuk DB
     c = db()
+    proj = str(project).strip() if (project is not None and str(project).strip() != "") else None
     cur = c.execute("""INSERT INTO tasks(project,title,role,agent_id,status,prompt,created,updated)
         VALUES(?,?,?,?, 'pending',?,?,?)""",
-        (project, title, role, ROLE_AGENT.get(role, "be1"), prompt, time.time(), time.time()))
+        (proj, title, role, ROLE_AGENT.get(role, "be1"), prompt, time.time(), time.time()))
     tid = cur.lastrowid
     c.commit(); c.close()
     return tid
 
 def list_tasks(project=None):
     c = db()
-    if project:
-        rows = c.execute("SELECT id,project,title,role,agent_id,status,files,review FROM tasks WHERE project=? ORDER BY id",(project,)).fetchall()
+    proj = str(project).strip() if (project is not None and str(project).strip() != "") else None
+    if proj:
+        rows = c.execute("SELECT id,project,title,role,agent_id,status,files,review,created,updated FROM tasks WHERE project=? ORDER BY id",(proj,)).fetchall()
     else:
-        rows = c.execute("SELECT id,project,title,role,agent_id,status,files,review FROM tasks ORDER BY id").fetchall()
+        rows = c.execute("SELECT id,project,title,role,agent_id,status,files,review,created,updated FROM tasks ORDER BY id").fetchall()
     c.close()
     return [{"id":r[0],"project":r[1],"title":r[2],"role":r[3],"agent_id":r[4],
-             "status":r[5],"files":json.loads(r[6] or "[]"),"review":r[7]} for r in rows]
+             "status":r[5],"files":json.loads(r[6] or "[]"),"review":r[7],
+             "created":r[8],"updated":r[9],"created_at":r[8],"updated_at":r[9]} for r in rows]
 
 def get_task(tid):
     c = db()
-    r = c.execute("SELECT id,project,title,role,agent_id,status,prompt,result,files FROM tasks WHERE id=?",(tid,)).fetchone()
+    r = c.execute("SELECT id,project,title,role,agent_id,status,prompt,result,files,review,created,updated FROM tasks WHERE id=?",(tid,)).fetchone()
     c.close()
     if not r: return None
     return {"id":r[0],"project":r[1],"title":r[2],"role":r[3],"agent_id":r[4],
-            "status":r[5],"prompt":r[6],"result":r[7],"files":json.loads(r[8] or "[]")}
+            "status":r[5],"prompt":r[6],"result":r[7],"files":json.loads(r[8] or "[]"),
+            "review":r[9],"created":r[10],"updated":r[11],"created_at":r[10],"updated_at":r[11]}
 
 def set_status(tid, status, result=None, files=None, review=None):
     c = db()

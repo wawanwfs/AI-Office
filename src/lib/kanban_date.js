@@ -25,7 +25,7 @@ export function getDateRangePreset(key) {
 
 export function parseTaskTimestamp(task) {
   if (!task || typeof task !== 'object') return null;
-  const raw = task.created_at ?? task.createdAt ?? task.timestamp ?? task.updated_at ?? task.updatedAt ?? task.date;
+  const raw = task.created_at ?? task.createdAt ?? task.timestamp ?? task.updated_at ?? task.updatedAt ?? task.date ?? task.created ?? task.updated;
   if (raw == null || raw === '') return null;
 
   if (typeof raw === 'number') {

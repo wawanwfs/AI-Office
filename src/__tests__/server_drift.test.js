@@ -167,4 +167,13 @@ describe('drift-gate server gateway produksi :8787 (siklus 209)', () => {
     expect(t).toContain('def test_plan_project_tasks_holds_strong_ref_and_pausable')
     expect(t).toContain('def test_plan_project_tasks_pause_and_gc_contract_behavior')
   })
+
+  it('siklus 234: /api/tasks query & POST mendukung project slug teks & numerik (anti-422)', () => {
+    const s = src()
+    expect(s).toContain('async def api_tasks(project: Optional[str] = None):')
+    expect(s).toContain('project: Optional[Union[int, str]] = None')
+    // Guard pytest perilaku nyata ter-track
+    const t = readFileSync(resolve(REPO, 'backend_live/test_wfs_server_superset.py'), 'utf-8')
+    expect(t).toContain('def test_api_tasks_supports_string_slug_and_numeric_project')
+  })
 })

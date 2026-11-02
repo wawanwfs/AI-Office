@@ -81,11 +81,13 @@ describe('kanban_date.js', () => {
       expect(parseTaskTimestamp({ created_at: d })).toBe(d.getTime());
     });
 
-    it('memeriksa properti fallback createdAt, timestamp, updated_at, date', () => {
+    it('memeriksa properti fallback createdAt, timestamp, updated_at, date, created, updated', () => {
       expect(parseTaskTimestamp({ createdAt: 1729900000000 })).toBe(1729900000000);
       expect(parseTaskTimestamp({ timestamp: 1729900000000 })).toBe(1729900000000);
       expect(parseTaskTimestamp({ updated_at: 1729900000000 })).toBe(1729900000000);
       expect(parseTaskTimestamp({ date: 1729900000000 })).toBe(1729900000000);
+      expect(parseTaskTimestamp({ created: 1729900000 })).toBe(1729900000000);
+      expect(parseTaskTimestamp({ updated: 1729900000 })).toBe(1729900000000);
     });
 
     it('mengembalikan null jika string tidak dapat diparsing', () => {

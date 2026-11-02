@@ -387,3 +387,72 @@ def test_plan_project_tasks_llm_failure_marks_failed_not_stuck(tmp_path, monkeyp
     assert "UPDATE projects SET status='failed' WHERE id=?" in body
     assert "UPDATE projects SET status='backlog' WHERE id=?" in body
     assert "UPDATE projects SET status='pending' WHERE id=?" in body
+
+
+def test_api_tasks_supports_string_slug_and_numeric_project(tmp_path, monkeypatch):
+    """Siklus 234 — /api/tasks query & POST mendukung project slug teks & numerik (anti-422)."""
+    # Isolasi tasks.db ke tmp_path agar tidak menyenggol DB produksi
+    fake_db = str(tmp_path / "tasks.db")
+    monkeypatch.setattr(taskengine, "DB", fake_db)
+
+    with TestClient(server.app) as cl:
+        # 1. GET saat DB kosong / filter slug teks tidak boleh 422
+        r = cl.get("/api/tasks?project=proj-demo")
+        assert r.status_code == 200
+        assert r.json() == {"tasks": []}
+
+        # 2. GET dengan string kosong atau numerik tidak boleh 422
+        assert cl.get("/api/tasks?project=").status_code == 200
+        assert cl.get("/api/tasks?project=123").status_code == 200
+        assert cl.get("/api/tasks").status_code == 200
+
+        # 3. POST task dengan project slug teks (dulu 422 Unprocessable Entity)
+        r_post = cl.post("/api/tasks", json={
+            "title": "Setup CI pipeline",
+            "role": "devops",
+            "prompt": "bikin workflow github actions",
+            "project": "proj-demo"
+        })
+        assert r_post.status_code == 200
+        data_post = r_post.json()
+        assert data_post["ok"] is True
+        tid1 = data_post["task_id"]
+
+        # 4. POST task dengan project numerik
+        r_post2 = cl.post("/api/tasks", json={
+            "title": "Migrasi database",
+            "role": "backend",
+            "prompt": "alter table",
+            "project": 101
+        })
+        assert r_post2.status_code == 200
+        tid2 = r_post2.json()["task_id"]
+
+        # 5. GET filter string slug mengembalikan task yang relevan
+        r_slug = cl.get("/api/tasks?project=proj-demo")
+        assert r_slug.status_code == 200
+        tasks_slug = r_slug.json()["tasks"]
+        assert len(tasks_slug) == 1
+        assert tasks_slug[0]["id"] == tid1
+        assert tasks_slug[0]["project"] == "proj-demo"
+        assert tasks_slug[0]["role"] == "devops"
+        assert "created" in tasks_slug[0]
+        assert "created_at" in tasks_slug[0]
+
+        # 6. GET filter numeric string mengembalikan task numerik
+        r_num = cl.get("/api/tasks?project=101")
+        assert r_num.status_code == 200
+        tasks_num = r_num.json()["tasks"]
+        assert len(tasks_num) == 1
+        assert tasks_num[0]["id"] == tid2
+        assert tasks_num[0]["project"] == "101"
+
+        # 7. GET tanpa filter mengembalikan semua task
+        r_all = cl.get("/api/tasks")
+        assert r_all.status_code == 200
+        assert len(r_all.json()["tasks"]) == 2
+
+    # Kontrak statis sumber server
+    src = Path(server.__file__).read_text()
+    assert "async def api_tasks(project: Optional[str] = None):" in src
+    assert "project: Optional[Union[int, str]] = None" in src

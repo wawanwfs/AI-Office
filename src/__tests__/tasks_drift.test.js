@@ -160,6 +160,19 @@ describe('drift-gate tasks engine produksi gateway :8787 (siklus 208)', () => {
     expect(t).toContain('def test_parse_qa_verdict_closes_prompt_regex_discrepancy')
   })
 
+  it('siklus 234: list_tasks & get_task mendukung project slug teks + review & timestamp lengkap', () => {
+    const s = readFileSync(SRC, 'utf-8')
+    // get_task memilih review, created, updated
+    expect(s).toMatch(/SELECT id,project,title,role,agent_id,status,prompt,result,files,review,created,updated FROM tasks WHERE id=\?/)
+    // list_tasks memilih review, created, updated
+    expect(s).toContain('SELECT id,project,title,role,agent_id,status,files,review,created,updated FROM tasks')
+    // normalisasi filter project slug teks
+    expect(s).toContain('proj = str(project).strip() if (project is not None and str(project).strip() != "") else None')
+    // Guard pytest perilaku nyata ter-track
+    const t = readFileSync(resolve(REPO, 'backend_live/test_wfs_tasks_orders.py'), 'utf-8')
+    expect(t).toContain('def test_list_tasks_and_add_task_string_slug_and_timestamps')
+  })
+
   it('backend/tasks.py duplikat mati TIDAK kembali (satu sumber, pola 207)', () => {
     let exists = true
     try { readFileSync(resolve(REPO, 'backend/tasks.py')) } catch { exists = false }
