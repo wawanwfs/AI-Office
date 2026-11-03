@@ -288,9 +288,14 @@ async def call_llm(agent_id, sys_prompt, user_prompt):
     async with httpx.AsyncClient(timeout=300) as cl:
         for attempt in range(2):
             try:
+                # Siklus 245 — reasoning_effort "low": model 'auto' (GLM)
+                # terbukti memakan 17K+ token untuk reasoning lalu kehabisan
+                # token sebelum menulis jawaban final (content kosong).
+                # Dengan effort rendah, reasoning singkat & kode lengkap keluar.
                 r = await cl.post(base.rstrip("/")+"/chat/completions",
                     headers={"Authorization": f"Bearer {key}"},
-                    json={"model": model, "max_tokens": 20000, "temperature": 0.2,
+                    json={"model": model, "max_tokens": 60000, "temperature": 0.2,
+                          "reasoning_effort": "low",
                           "messages":[{"role":"system","content":sys_prompt},
                                       {"role":"user","content":user_prompt}]})
                 d = r.json()
@@ -328,7 +333,20 @@ def write_json_files(task_id, output):
         txt = txt.strip()
     try:
         data = _json.loads(txt)
+        _healed = True
     except Exception:
+        # Siklus 246 — auto-heal truncation 1-3 char terakhir (output
+        # terpotong persis di akhir JSON): coba tambahkan penutup kurung.
+        _healed = False
+        data = None
+        for _sfx in ("}", "]}", '"}]}'):
+            try:
+                data = _json.loads(txt + _sfx)
+                _healed = True
+                break
+            except Exception:
+                continue
+    if not _healed:
         # JSON terbenam di dalam reasoning text — cari {"files": ...}
         import re as _re
         m = _re.search(r'\{\s*"files"\s*:', txt)
