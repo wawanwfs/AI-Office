@@ -172,6 +172,19 @@ button { font-family: inherit; }
   filter: brightness(1.12); transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(245, 158, 11, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
+/* Siklus 243: keadaan TERBUKA menang atas accent — tombol toggle ber-accent
+   (Dashboard) kini berubah biru saat panel terbuka; dulu .ibtn.accent (ditulis
+   kemudian, specificity sama) menimpa .ibtn[aria-expanded=true] → background
+   oranye IDENTIK saat terbuka/tertutup, tak ada umpan balik keadaan (terbukti
+   probe DOM live: computed backgroundImage sama persis). */
+.ibtn.accent[aria-expanded=true], .ibtn.accent.on {
+  background: linear-gradient(180deg, rgba(77, 159, 255, 0.22) 0%, rgba(77, 159, 255, 0.08) 100%);
+  color: var(--teal); border-color: rgba(77, 159, 255, 0.36);
+  box-shadow: 0 0 16px rgba(77, 159, 255, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+.ibtn.accent[aria-expanded=true]:hover, .ibtn.accent.on:hover {
+  filter: brightness(1.12); transform: translateY(-2px);
+}
 .ibtn.good { color: var(--green); }
 .ibtn .dot {
   position: absolute; top: 5px; right: 9px; width: 8px; height: 8px;

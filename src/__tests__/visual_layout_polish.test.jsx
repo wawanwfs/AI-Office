@@ -100,3 +100,30 @@ describe('Siklus 241: fade tepi ticker-window (anti hard-clip marquee)', () => {
     expect(winBlock).toContain('overflow: hidden')
   })
 })
+
+// Siklus 243: tombol toggle ber-accent (Dashboard .ibtn.accent) kehilangan
+// umpan balik keadaan — .ibtn.accent (ditulis kemudian, specificity sama) menimpa
+// .ibtn[aria-expanded=true] (biru) → background oranye IDENTIK saat panel terbuka
+// (bukti probe DOM live: computed backgroundImage sama persis saat expanded
+// true vs false). Perbaikan = rule keadaan terbuka khusus accent yang MENANG.
+describe('Siklus 243: keadaan terbuka tombol accent menang atas accent (umpan balik toggle)', () => {
+  const css = readCss()
+
+  it('.ibtn.accent[aria-expanded=true] / .ibtn.accent.on punya rule keadaan terbuka sendiri', () => {
+    expect(css).toMatch(/\.ibtn\.accent\[aria-expanded=true\],\s*\.ibtn\.accent\.on\s*\{/)
+  })
+
+  it('rule keadaan terbuka accent ditulis SETELAH .ibtn.accent (cascade menang) & berisi background biru', () => {
+    const posAccent = css.indexOf('.ibtn.accent {')
+    const posOpen = css.search(/\.ibtn\.accent\[aria-expanded=true\],\s*\.ibtn\.accent\.on\s*\{/)
+    expect(posAccent).toBeGreaterThan(-1)
+    expect(posOpen).toBeGreaterThan(posAccent)
+    const openBlock = css.slice(posOpen, css.indexOf('}', posOpen))
+    expect(openBlock).toContain('linear-gradient(180deg, rgba(77, 159, 255')
+    expect(openBlock).toContain('var(--teal)')
+  })
+
+  it('basis .ibtn[aria-expanded=true] tetap ada (toggle non-accent tidak kehilangan keadaan)', () => {
+    expect(css).toContain('.ibtn[aria-expanded=true], .ibtn.on {')
+  })
+})
