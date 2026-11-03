@@ -55,11 +55,11 @@ describe('createServerRoom — server room + water cooler kantor 3D', () => {
     expect(added.length).toBe(7)
   })
 
-  it('rack: body 0x2E3244 0.9×2.1×0.7 y=1.05 castShadow + 2 edge cyan 0x00E5FF + 8 unit 0x3A3F55 + 24 LED per rack', async () => {
+  it('rack: body 0x2E3244 0.9×2.1×0.7 y=1.05 castShadow + 2 edge cyan 0x00E5FF + 8 unit 0x3A3F55 + 24 LED per rack + plinth kontak 0x1A1D28', async () => {
     const { refs } = await build(makeCtx())
     const r0 = refs.racks[0]
-    // anak-anak rack: 1 body + 2 edge + (8 unit + 24 led) = 35
-    expect(r0.children.length).toBe(1 + 2 + 8 + 24)
+    // anak-anak rack: 1 body + 2 edge + (8 unit + 24 led) + 1 plinth = 36
+    expect(r0.children.length).toBe(1 + 2 + 8 + 24 + 1)
     const body = r0.children[0]
     expect(body.geometry.args).toEqual([0.9, 2.1, 0.7])
     expect(body.material.color).toBe(0x2E3244)
@@ -101,7 +101,7 @@ describe('createServerRoom — server room + water cooler kantor 3D', () => {
     })
   })
 
-  it('lampu server room: PointLight cyan 0x00BCD4 0.55/6 di (2.8, 2.6, −7.4) + bulb 0xB2EBF2 di (2.8, 2.9, −7.4) + kabel 0x333344 3×0.04×0.06 di (2.8, 0.03, −7.6)', async () => {
+  it('kabel bundel di depan muka rak (z=-7.15) — tidak menembus badan rak (z -7.25..-7.95) + plinth kontak di kaki tiap rak', async () => {
     const { refs } = await build(makeCtx())
     expect(refs.light.color).toBe(0x00BCD4)
     expect(refs.light.intensity).toBe(0.55)
@@ -112,7 +112,17 @@ describe('createServerRoom — server room + water cooler kantor 3D', () => {
     expect(refs.bulb.position).toMatchObject({ x: 2.8, y: 2.9, z: -7.4 })
     expect(refs.cable.geometry.args).toEqual([3, 0.04, 0.06])
     expect(refs.cable.material.color).toBe(0x333344)
-    expect(refs.cable.position).toMatchObject({ x: 2.8, y: 0.03, z: -7.6 })
+    // guard anti-penembusan: seluruh tebal kabel (z ±0.03) di depan muka rak
+    expect(refs.cable.position.z).toBe(-7.15)
+    expect(refs.cable.position.z + 0.03).toBeLessThan(-7.25)
+    // plinth kontak: 1.0×0.06×0.8 gelap 0x1A1D28 menapak (y=0.03), 1 per rack
+    refs.racks.forEach((r) => {
+      const plinth = r.children[r.children.length - 1]
+      expect(plinth.geometry.args).toEqual([1.0, 0.06, 0.8])
+      expect(plinth.material.color).toBe(0x1A1D28)
+      expect(plinth.position.y).toBe(0.03)
+      expect(plinth.receiveShadow).toBe(true)
+    })
   })
 
   it('water cooler: body 0xE0E0E0 0.4×1.1×0.4 y=0.55, jug biru transparan y=1.28, tap 0x607D8B, grup di (−11.6, 0, 0)', async () => {

@@ -27,6 +27,11 @@ export function createServerRoom(ctx) {
       });
     }
     g.position.set(x, 0, z);
+    // plinth kontak: base gelap 1.0×0.06×0.8 sedikit lebih lebar dari body
+    // (0.9×0.7) — transisi lantai→rak tidak lagi flat (temuan A/B kamera
+    // rendah siklus 245: rak menapak tapi kontak "kering" tanpa base).
+    const plinth = new THREE.Mesh(new THREE.BoxGeometry(1.0, .06, .8), M(0x1A1D28));
+    plinth.position.y = .03; plinth.receiveShadow = true; g.add(plinth);
     g.traverse(o => { if (o.isMesh && !o.material.isMeshBasicMaterial) o.castShadow = true; });
     if (ctx.blobMat) {
       const rackShadow = new THREE.Mesh(new THREE.PlaneGeometry(1.2, 0.95), ctx.blobMat);
@@ -45,9 +50,12 @@ export function createServerRoom(ctx) {
   light.position.set(2.8, 2.6, -7.4); office.add(light);
   const bulb = new THREE.Mesh(new THREE.BoxGeometry(.5, .06, .14), MB(0xB2EBF2));
   bulb.position.set(2.8, 2.9, -7.4); office.add(bulb);
-  // Kabel bundel di lantai server room
+  // Kabel bundel di lantai server room — DI DEPAN muka rak (z=-7.15; rak
+  // z=-7.6 body depth .7 → z -7.25..-7.95). Sebelumnya z=-7.6 persis sama
+  // dgn pusat rak → menembus badan rak (temuan vision A/B kamera rendah
+  // siklus 245: "boks kecil berpotongan ke balok besar").
   const cable = new THREE.Mesh(new THREE.BoxGeometry(3, .04, .06), M(0x333344));
-  cable.position.set(2.8, .03, -7.6); office.add(cable);
+  cable.position.set(2.8, .03, -7.15); office.add(cable);
 
   // --- WATER COOLER (kiri) ---
   const cooler = new THREE.Group();
