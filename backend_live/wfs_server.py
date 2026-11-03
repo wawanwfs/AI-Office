@@ -1141,6 +1141,30 @@ async def api_run_task(tid: int):
     _schedule([tid])
     return {"ok": True, "started": tid}
 
+
+class TaskMoveIn(BaseModel):
+    status: str
+
+@app.patch("/api/tasks/{tid}/status")
+async def api_move_task(tid: int, body: TaskMoveIn):
+    """Siklus 235 — persist pindah kolom kanban dari UI.
+
+    Dulu TaskBoard drag-drop/quick-move hanya optimis-lokal (tidak ada endpoint
+    status → POST /api/tasks/{id}/status live = 404; poll 8 dtk membalikkan
+    kartu tanpa jejak). Kini delegasi taskengine.move_task: validasi status,
+    approval-gate paritas run_task, 404/400 jujur. TIDAK menjadwalkan eksekusi
+    (bukan run — mesin berbayar tak tersentuh; 'running' hanya label status).
+    """
+    try:
+        t = taskengine.move_task(tid, body.status)
+    except PermissionError as exc:
+        raise HTTPException(403, str(exc)) from exc
+    except ValueError as exc:
+        raise HTTPException(400, str(exc)) from exc
+    except LookupError as exc:
+        raise HTTPException(404, "task not found") from exc
+    return {"ok": True, "task_id": tid, "status": t["status"]}
+
 @app.get("/api/system/resources")
 async def api_system_resources():
     """Pemakaian CPU/RAM per kontainer docker + host, utk panel monitoring.

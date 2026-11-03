@@ -190,6 +190,33 @@ def get_task(tid):
             "status":r[5],"prompt":r[6],"result":r[7],"files":json.loads(r[8] or "[]"),
             "review":r[9],"created":r[10],"updated":r[11],"created_at":r[10],"updated_at":r[11]}
 
+def move_task(tid, status):
+    """Siklus 235 — pindahkan task ke kolom kanban dari UI (persist, bukan optimis-lokal).
+
+    Dulu TaskBoard drag-drop & tombol 'Pindah Kolom' hanya mengubah state React:
+    TIDAK ADA endpoint status di gateway (POST /api/tasks/{id}/status = 404 live)
+    dan poll 8 dtk membalikkan posisi kartu diam-diam (kelas 'badge live palsu'
+    siklus 203/204). Engine sediakan mutasi eksplisit:
+
+    - status target WAJIB salah satu status engine sah (pending/assigned/running/
+      review/done/failed) — string lain ditolak ValueError (bukan fallback senyap).
+    - approval-gate: task tanpa approval project_launch ditolak PermissionError
+      (paritas run_task — mutasi status juga gate mesin berbayar yang sama).
+    - 'running' via move TIDAK menjalankan LLM apa pun (hanya set_status).
+    """
+    tid = int(tid)
+    s = str(status or "").strip().lower()
+    _VALID_MOVE = ("pending", "assigned", "running", "review", "done", "failed")
+    if s not in _VALID_MOVE:
+        raise ValueError(f"status tidak sah: {status!r} (sah: {', '.join(_VALID_MOVE)})")
+    t = get_task(tid)
+    if not t:
+        raise LookupError("task not found")
+    require_launch_approval(t["project"])
+    set_status(tid, s)
+    return get_task(tid)
+
+
 def set_status(tid, status, result=None, files=None, review=None):
     c = db()
     if status == "running":
