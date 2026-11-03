@@ -8,6 +8,7 @@ Sengaja memakai DB SQLite sementara (tmp_path) via monkeypatch variabel
 global `DB`, supaya TIDAK menyentuh tasks.db / orders.db produksi.
 """
 import json
+import inspect
 import sys
 from pathlib import Path
 
@@ -277,28 +278,15 @@ def test_move_task_persists_status_and_rejects_invalid(tmp_tasks_db, monkeypatch
     Dulu TaskBoard drag-drop/quick-move hanya mengubah state React: TIDAK ADA
     endpoint/engine mutasi status (POST /api/tasks/{id}/status live = 404) dan
     poll 8 dtk membalikkan posisi kartu diam-diam. engine.move_task kini satu
-    sumber mutasi: validasi status sah, set_status persist, approval-gate.
+    sumber mutasi: validasi status sah + set_status persist.
     """
-    # Isolasi DB approvals: require_launch_approval membaca modul `database`
-    # (backend/database.py — DB_DIR modul-level). Tanpa ini test menyenggol
-    # DB produksi ~/wfs-projects dan bocor approval (sudah terjadi & dibersihkan).
-    import database  # noqa: E402  (backend/ ada di sys.path header file)
-    monkeypatch.setattr(database, "DB_DIR", str(tmp_tasks_db))
-    monkeypatch.setattr(database, "DB_PATH", str(tmp_tasks_db / "approvals_test.db"))
-    database.init_db()
-
     pid = tasks.add_project("P", "b")
     tid = tasks.add_task(pid, "T", "backend", "p")
     assert tasks.get_task(tid)["status"] == "pending"
 
-    # Approval-gate paritas run_task: tanpa approval project_launch → ditolak.
-    with pytest.raises(PermissionError, match="project_launch"):
-        tasks.move_task(tid, "done")
-    assert tasks.get_task(tid)["status"] == "pending"  # tidak ada setengah-mutasi
-
-    _approve_project(pid)
-
-    # Pindah ke done → persist (bukan hanya return value)
+    # Pindah ke done → persist (bukan hanya return value). move = mutasi status
+    # MURNI tanpa gate approval: tidak memicu LLM/kontainer/uang ('running' via
+    # move hanya label; eksekusi nyata tetap eksklusif jalur run + approval).
     row = tasks.move_task(tid, "done")
     assert row["status"] == "done"
     assert tasks.get_task(tid)["status"] == "done"
@@ -316,9 +304,9 @@ def test_move_task_persists_status_and_rejects_invalid(tmp_tasks_db, monkeypatch
     with pytest.raises(LookupError):
         tasks.move_task(999999, "done")
 
-
-def _approve_project(pid):
-    """Seed approval project_launch 'approved' untuk project pid (DB repo)."""
-    import database
-    aid = database.add_approval(project_id=str(pid), action_type="project_launch")
-    database.set_approval(aid, "approved")
+    # Jalur eksekusi run TETAP digate approval (paritas uang) — siklus 186 tetap
+    # hidup di jalur run/claim, bukan dipindah ke move_task.
+    src = inspect.getsource(tasks)
+    assert "require_launch_approval" in src
+    run_src = src[src.index("async def run_task"):]
+    assert "require_launch_approval(t['project'])" in run_src

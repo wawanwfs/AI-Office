@@ -464,46 +464,38 @@ def test_api_tasks_move_status_persists(tmp_path, monkeypatch):
     Dulu drag-drop/quick-move TaskBoard TIDAK tersimpan: tidak ada endpoint
     status (POST /api/tasks/{id}/status live = 404) dan poll 8 dtk membalikkan
     kartu. Kini PATCH delegasi taskengine.move_task: 200 persist, 400 status
-    tak sah, 404 task tak ada, 403 tanpa approval project_launch (gate paritas
-    run_task — mesin berbayar TIDAK dijadwalkan oleh move; 'running' hanya
-    label status, bukan eksekusi).
+    tak sah, 404 task tak ada. move TANPA approval-gate (revisi live-eksak):
+    move = mutasi buku besar status murni — tidak memicu LLM/kontainer/uang;
+    'running' hanya label status, eksekusi nyata tetap eksklusif jalur run
+    + require_launch_approval (gate di move justru mematikan UI: approvals
+    produksi kosong → setiap drag-drop 403, terbukti live sebelum revisi).
     """
     import database as sh_db
-    # Isolasi DB engine + DB approvals ke tmp_path (tidak menyenggol produksi)
+    # Isolasi DB engine ke tmp_path (tidak menyenggol produksi)
     fake_db = str(tmp_path / "tasks.db")
     monkeypatch.setattr(taskengine, "DB", fake_db)
-    monkeypatch.setattr(sh_db, "DB_DIR", str(tmp_path))
-    monkeypatch.setattr(sh_db, "DB_PATH", str(tmp_path / "house.db"))
-    sh_db.init_db()
 
     with TestClient(server.app) as cl:
-        # Task DENGAN project eksplisit (approval dicari per project — paritas run_task)
-        tid = cl.post("/api/tasks", json={"title": "T", "role": "backend", "prompt": "p", "project": 77}).json()["task_id"]
+        tid = cl.post("/api/tasks", json={"title": "T", "role": "backend", "prompt": "p"}).json()["task_id"]
 
-        # 1. Tanpa approval → 403 (approval-gate paritas run_task)
-        r403 = cl.patch(f"/api/tasks/{tid}/status", json={"status": "done"})
-        assert r403.status_code == 403
-
-        # 2. Setelah approval (project '77') → 200 & persist terbaca via GET /api/tasks
-        aid = sh_db.add_approval(project_id="77", action_type="project_launch")
-        sh_db.set_approval(aid, "approved")
+        # 1. Move ke done → 200 & persist terbaca via GET /api/tasks
         r_ok = cl.patch(f"/api/tasks/{tid}/status", json={"status": "done"})
         assert r_ok.status_code == 200
         assert r_ok.json() == {"ok": True, "task_id": tid, "status": "done"}
         row = [t for t in cl.get("/api/tasks").json()["tasks"] if t["id"] == tid][0]
         assert row["status"] == "done"
 
-        # 3. Case-insensitive → "Pending" sah
+        # 2. Case-insensitive → "Pending" sah
         assert cl.patch(f"/api/tasks/{tid}/status", json={"status": "Pending"}).json()["status"] == "pending"
 
-        # 4. Status tak sah → 400 (bukan fallback senyap)
+        # 3. Status tak sah → 400 (bukan fallback senyap)
         r400 = cl.patch(f"/api/tasks/{tid}/status", json={"status": "selesai"})
         assert r400.status_code == 400
 
-        # 5. Task tak ada → 404
+        # 4. Task tak ada → 404
         assert cl.patch("/api/tasks/999999/status", json={"status": "done"}).status_code == 404
 
-        # 6. Body tanpa status → 422 validasi pydantic
+        # 5. Body tanpa status → 422 validasi pydantic
         assert cl.patch(f"/api/tasks/{tid}/status", json={}).status_code == 422
 
     # Kontrak statis: delegasi engine, bukan SQL duplikat di server
@@ -513,3 +505,10 @@ def test_api_tasks_move_status_persists(tmp_path, monkeypatch):
     # 'running' via move TIDAK memanggil _schedule (bukan jalur eksekusi berbayar)
     body_src = src[src.index('async def api_move_task'):src.index("@app.get(\"/api/system/resources\")")]
     assert "_schedule" not in body_src
+    # Gate approval TIDAK di move (UI hidup) TAPI TETAP di jalur eksekusi run
+    tasks_src = Path(taskengine.__file__).read_text()
+    run_src = tasks_src[tasks_src.index("async def run_task"):]
+    assert "require_launch_approval(t['project'])" in run_src
+    move_body = tasks_src[tasks_src.index("def move_task"):tasks_src.index("def set_status")]
+    move_code = move_body[move_body.index('"""', move_body.index('"""') + 3) + 3:]  # skip docstring
+    assert "require_launch_approval" not in move_code

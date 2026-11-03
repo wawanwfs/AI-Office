@@ -173,13 +173,17 @@ describe('drift-gate tasks engine produksi gateway :8787 (siklus 208)', () => {
     expect(t).toContain('def test_list_tasks_and_add_task_string_slug_and_timestamps')
   })
 
-  it('siklus 235: move_task persist pindah kolom kanban — validasi status + approval-gate', () => {
+  it('siklus 235: move_task persist pindah kolom kanban — validasi status, gate approval TIDAK di move', () => {
     const s = readFileSync(SRC, 'utf-8')
     expect(s).toContain('def move_task(tid, status):')
     // validasi status sah (tanpa fallback senyap)
     expect(s).toMatch(/_VALID_MOVE = \("pending", "assigned", "running", "review", "done", "failed"\)/)
-    // approval-gate paritas run_task
-    expect(s).toMatch(/def move_task[\s\S]*?require_launch_approval\(t\["project"\]\)/)
+    // gate approval TIDAK di move (move = mutasi status murni, tanpa LLM/uang —
+    // approvals produksi kosong; gate di move mematikan drag-drop UI dgn 403).
+    // Gate tetap hidup di jalur eksekusi run (siklus 186).
+    const moveBody = s.slice(s.indexOf('def move_task(tid, status):'), s.indexOf('def set_status'))
+    const moveCode = moveBody.slice(moveBody.indexOf('"""', moveBody.indexOf('"""') + 3) + 3)
+    expect(moveCode).not.toContain('require_launch_approval')
     // dipanggil gateway (delegasi, bukan duplikasi SQL)
     const srv = readFileSync(resolve(REPO, 'backend_live/wfs_server.py'), 'utf-8')
     expect(srv).toContain('taskengine.move_task(tid, body.status)')

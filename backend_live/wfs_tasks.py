@@ -200,9 +200,11 @@ def move_task(tid, status):
 
     - status target WAJIB salah satu status engine sah (pending/assigned/running/
       review/done/failed) — string lain ditolak ValueError (bukan fallback senyap).
-    - approval-gate: task tanpa approval project_launch ditolak PermissionError
-      (paritas run_task — mutasi status juga gate mesin berbayar yang sama).
-    - 'running' via move TIDAK menjalankan LLM apa pun (hanya set_status).
+    - TANPA approval-gate (revisi live-eksak): move = mutasi buku besar status
+      murni — TIDAK memicu LLM/kontainer/uang apa pun ('running' via move hanya
+      label, eksekusi nyata tetap eksklusif jalur run + require_launch_approval).
+      Gate di sini justru mematikan fitur UI: approvals produksi kosong, setiap
+      drag-drop akan 403 (terbukti live sebelum revisi).
     """
     tid = int(tid)
     s = str(status or "").strip().lower()
@@ -212,7 +214,6 @@ def move_task(tid, status):
     t = get_task(tid)
     if not t:
         raise LookupError("task not found")
-    require_launch_approval(t["project"])
     set_status(tid, s)
     return get_task(tid)
 
