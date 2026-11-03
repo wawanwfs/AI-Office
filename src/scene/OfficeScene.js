@@ -9,6 +9,7 @@ import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles, charMotion, applyCharMotion } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
+import { occlusionPass, OCCL_MIN_OPACITY } from './parts/label_occlusion.js';
 import { perfStep } from './parts/perf_quality.js';
 import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam, resetFocusGoal, agentFocusPos } from './parts/kamera_focus.js';
 import { nextAgentIndex } from './parts/agent_cycle.js';
@@ -1923,7 +1924,7 @@ function animate(){
     // pembangunan pts (agent/zona/bubble) via parts/label_overlap.js (murni, diuji unit).
     const k=PX_PER_TAN(container.clientHeight,camera.fov);
     const pxW=container.clientWidth/2, pxH=container.clientHeight/2; // NDC → piksel layar dari pusat
-    const pts=buildAgentPts(vis.map(a=>({...a,proj:a.label.position.clone().project(camera)})),k,pxW,pxH);
+    const pts=buildAgentPts(vis.map(a=>({...a,proj:a.label.position.clone().project(camera),dist:camera.position.distanceTo(a.label.position)})),k,pxW,pxH);
     pts.sort((p,q)=>p.y-q.y);
     // label ZONA statis ikut dihitung (sebagai penghalang): agent yang menumpuk zona digeser, zona tidak bergerak.
     // fade & jitter via buildZonePts; penerapan opacity/visible di sini (butuh sprite nyata).
@@ -1953,6 +1954,15 @@ function animate(){
     // -> ulangi (sweep→clamp) sampai stabil (max 3x). Konvergen: total ruang vertikal
     // aman melebihi kebutuhan, tiap iterasi hanya mengurangi pelanggaran.
     sweepClampRounds(pts, { height: container.clientHeight, width: container.clientWidth });
+    // OKLUSI antar-sprite nameplate (backlog visual 238c): label X-ray (depthTest
+    // false, renderOrder 35) membuat nameplate baris belakang tergambar PENUH di
+    // atas nameplate baris depan di kluster tengah — teks-atas-teks. Label yang
+    // box layar FINAL-nya menumpuk dgn label lebih dekat (selisih kedalaman kamera
+    // ≥ OCCL_START) dipudarkan proporsional sampai OCCL_MIN_OPACITY — nama tetap
+    // terbaca samar & terdekat selalu opacity 1. Pass ini hanya menulis field
+    // `occ` pts (posisi/offX/offY hasil anti-overlap TIDAK diubah).
+    const __occN = occlusionPass(pts);
+    window.__occlFade = __occN;
     // konversi offset piksel ke satuan dunia (~ jarak/tinggi layar) via worldPerPx
     // (murni, parts/label_overlap.js); penerapan clamp offset via labelWorldOffset.
     // OFFSET DI-DAMPING (bukan snap): relayout hanya tiap kelipatan frame; offset
@@ -1972,6 +1982,14 @@ function animate(){
       const prevX=(u.antiX===undefined)?cdx:u.antiX+(cdx-u.antiX)*LBL_SMOOTH;
       p.a.label.position.y=p.baseY+prevY; p.a.label.position.x=p.baseX+prevX;
       u.antiY=prevY; u.antiX=prevX; // utk base frame berikutnya (nilai ter-damping)
+      // Terapkan fade oklusi ke sprite nyata (1 = apa adanya; <1 = tertutup label
+      // lebih dekat). Damping eksponensial yang sama dgn antiY/antiX agar tak
+      // berkedip saat relayout berkelanjutan; matikan damping utk nilai pertama.
+      const occT=(p.occ===undefined||!Number.isFinite(p.occ))?1:p.occ;
+      const prevO=(u.occO===undefined)?occT:u.occO+(occT-u.occO)*LBL_SMOOTH;
+      u.occO=prevO;
+      p.a.label.material.opacity=OCCL_MIN_OPACITY+prevO*(1-OCCL_MIN_OPACITY);
+      p.a.label.userData.occApplied=+prevO.toFixed(3);
     });
   } else {
     // bila nama disembunyikan lalu dimunculkan lagi, posisi direset oleh state (sitting/meeting/walker) — tak ada sisa offset
