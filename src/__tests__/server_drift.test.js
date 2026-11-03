@@ -176,4 +176,14 @@ describe('drift-gate server gateway produksi :8787 (siklus 209)', () => {
     const t = readFileSync(resolve(REPO, 'backend_live/test_wfs_server_superset.py'), 'utf-8')
     expect(t).toContain('def test_api_tasks_supports_string_slug_and_numeric_project')
   })
+
+  it('siklus 235: PATCH /api/tasks/{tid}/status persist pindah kolom kanban (engine.move_task)', () => {
+    const s = src()
+    // Endpoint gateway ada & delegasi engine (bukan logika SQL sendiri)
+    expect(s).toContain('@app.patch("/api/tasks/{tid}/status")')
+    expect(s).toContain('taskengine.move_task(tid, body.status)')
+    // Guard pytest perilaku nyata ter-track
+    const t = readFileSync(resolve(REPO, 'backend_live/test_wfs_server_superset.py'), 'utf-8')
+    expect(t).toContain('def test_api_tasks_move_status_persists')
+  })
 })

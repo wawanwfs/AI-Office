@@ -58,4 +58,14 @@ describe('api', () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 204, json: async () => { throw new Error('no body') } })))
     expect(await api('/ping')).toBeNull()
   })
+  it('siklus 235: PATCH dikirim sbg POST + X-HTTP-Method-Override (proxy 9503 tanpa do_PATCH)', async () => {
+    mock(200, { ok: true })
+    await api('tasks/5/status', { method: 'PATCH', body: { status: 'done' } })
+    const [url, o] = fetch.mock.calls[0]
+    expect(url).toBe('/wfs-api/tasks/5/status')
+    expect(o.method).toBe('POST')                       // wire nyata = POST (proxy tak punya PATCH)
+    expect(o.headers['X-HTTP-Method-Override']).toBe('PATCH') // gateway membaca PATCH eksak
+    expect(o.headers['X-WFS-Token']).toBe('tok')        // mutasi tetap lewat gerbang token
+    expect(o.body).toBe('{"status":"done"}')
+  })
 })

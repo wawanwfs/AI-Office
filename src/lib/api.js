@@ -13,8 +13,13 @@ export async function api(path, { method = 'GET', body, signal, timeoutMs } = {}
     : FETCH_TIMEOUT.POST)
   const headers = { 'Content-Type': 'application/json' }
   if (method !== 'GET') headers['X-WFS-Token'] = uiToken()
+  // Siklus 235: proxy :9503 hanya punya do_GET/do_POST/do_DELETE — PATCH ke
+  // gateway (mis. persist pindah kolom kanban) dikirim sbg POST + header
+  // X-HTTP-Method-Override (pola proxy umum) supaya tidak 501 di proxy.
+  const sendMethod = method === 'PATCH' ? 'POST' : method
+  if (sendMethod !== method) headers['X-HTTP-Method-Override'] = method
   const r = await fetchWithTimeout('/wfs-api/' + path.replace(/^\//, ''), {
-    method, headers, timeoutMs: t, signal, body: body === undefined ? undefined : JSON.stringify(body),
+    method: sendMethod, headers, timeoutMs: t, signal, body: body === undefined ? undefined : JSON.stringify(body),
   })
   let data = null
   try { data = await r.json() } catch { /* non-JSON */ }

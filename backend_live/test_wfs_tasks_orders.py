@@ -267,3 +267,58 @@ def test_lookup_parses_order_number(tmp_orders_db):
 def test_lookup_without_number_returns_error(tmp_orders_db):
     r = orders.lookup("pesanan saya belum datang")
     assert r["ok"] is False
+
+
+# ---------------- siklus 235: move_task persist kanban ----------------
+
+def test_move_task_persists_status_and_rejects_invalid(tmp_tasks_db, monkeypatch):
+    """Siklus 235 — pindah kolom kanban UI TERSIMPAN (dulu optimis-lokal).
+
+    Dulu TaskBoard drag-drop/quick-move hanya mengubah state React: TIDAK ADA
+    endpoint/engine mutasi status (POST /api/tasks/{id}/status live = 404) dan
+    poll 8 dtk membalikkan posisi kartu diam-diam. engine.move_task kini satu
+    sumber mutasi: validasi status sah, set_status persist, approval-gate.
+    """
+    # Isolasi DB approvals: require_launch_approval membaca modul `database`
+    # (backend/database.py — DB_DIR modul-level). Tanpa ini test menyenggol
+    # DB produksi ~/wfs-projects dan bocor approval (sudah terjadi & dibersihkan).
+    import database  # noqa: E402  (backend/ ada di sys.path header file)
+    monkeypatch.setattr(database, "DB_DIR", str(tmp_tasks_db))
+    monkeypatch.setattr(database, "DB_PATH", str(tmp_tasks_db / "approvals_test.db"))
+    database.init_db()
+
+    pid = tasks.add_project("P", "b")
+    tid = tasks.add_task(pid, "T", "backend", "p")
+    assert tasks.get_task(tid)["status"] == "pending"
+
+    # Approval-gate paritas run_task: tanpa approval project_launch → ditolak.
+    with pytest.raises(PermissionError, match="project_launch"):
+        tasks.move_task(tid, "done")
+    assert tasks.get_task(tid)["status"] == "pending"  # tidak ada setengah-mutasi
+
+    _approve_project(pid)
+
+    # Pindah ke done → persist (bukan hanya return value)
+    row = tasks.move_task(tid, "done")
+    assert row["status"] == "done"
+    assert tasks.get_task(tid)["status"] == "done"
+    assert tasks.get_task(tid)["updated"] >= tasks.get_task(tid)["created"]
+
+    # Pindah balik ke pending → persist juga
+    assert tasks.move_task(tid, "Pending")["status"] == "pending"  # case-insensitive
+
+    # Status tak sah → ValueError LOUD (tanpa fallback senyap)
+    for bad in ("selesai", "archived", "", None, "DROP TABLE"):
+        with pytest.raises(ValueError, match="status tidak sah"):
+            tasks.move_task(tid, bad)
+
+    # Task tak ada → LookupError (endpoint memetakan 404)
+    with pytest.raises(LookupError):
+        tasks.move_task(999999, "done")
+
+
+def _approve_project(pid):
+    """Seed approval project_launch 'approved' untuk project pid (DB repo)."""
+    import database
+    aid = database.add_approval(project_id=str(pid), action_type="project_launch")
+    database.set_approval(aid, "approved")

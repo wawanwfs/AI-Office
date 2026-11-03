@@ -451,6 +451,18 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
     setTasks(prev => moveTaskToColumn(prev, task.id, targetColKey))
     setSel(s => (s && String(s.id) === String(task.id) ? { ...s, status: targetColKey } : s))
 
+    // Siklus 235 — PERSIST, bukan lagi optimis-lokal: dulu perpindahan hanya
+    // mengubah state React tanpa panggilan API apa pun (endpoint status tak ada
+    // → POST .../status live 404) dan poll 8 dtk membalikkan kartu diam-diam.
+    // Kini PATCH /tasks/{id}/status (delegasi engine.move_task, approval-gate
+    // paritas run). Status dikirim PERSIS status engine (failed tetap failed —
+    // bukan dipetakan ke review), flash gagal jujur saat persist ditolak.
+    const persistedStatus = task.status === 'failed' && targetColKey === 'review' ? 'failed' : targetColKey
+    api(`tasks/${task.id}/status`, { method: 'PATCH', body: { status: persistedStatus } })
+      .catch(e => {
+        if (onFlash) onFlash(`Gagal memindahkan task #${task.id}: ${e.message || 'server menolak'}`, true)
+      })
+
     if (onFlash) onFlash(formatDragDropNotification(task, targetColKey, targetLabel))
 
     // Audio feedback interaktif

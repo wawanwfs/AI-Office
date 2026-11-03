@@ -173,6 +173,21 @@ describe('drift-gate tasks engine produksi gateway :8787 (siklus 208)', () => {
     expect(t).toContain('def test_list_tasks_and_add_task_string_slug_and_timestamps')
   })
 
+  it('siklus 235: move_task persist pindah kolom kanban — validasi status + approval-gate', () => {
+    const s = readFileSync(SRC, 'utf-8')
+    expect(s).toContain('def move_task(tid, status):')
+    // validasi status sah (tanpa fallback senyap)
+    expect(s).toMatch(/_VALID_MOVE = \("pending", "assigned", "running", "review", "done", "failed"\)/)
+    // approval-gate paritas run_task
+    expect(s).toMatch(/def move_task[\s\S]*?require_launch_approval\(t\["project"\]\)/)
+    // dipanggil gateway (delegasi, bukan duplikasi SQL)
+    const srv = readFileSync(resolve(REPO, 'backend_live/wfs_server.py'), 'utf-8')
+    expect(srv).toContain('taskengine.move_task(tid, body.status)')
+    // Guard pytest perilaku nyata ter-track
+    const t = readFileSync(resolve(REPO, 'backend_live/test_wfs_tasks_orders.py'), 'utf-8')
+    expect(t).toContain('def test_move_task_persists_status_and_rejects_invalid')
+  })
+
   it('backend/tasks.py duplikat mati TIDAK kembali (satu sumber, pola 207)', () => {
     let exists = true
     try { readFileSync(resolve(REPO, 'backend/tasks.py')) } catch { exists = false }

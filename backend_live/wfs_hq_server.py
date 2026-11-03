@@ -340,6 +340,11 @@ class H(http.server.SimpleHTTPRequestHandler):
 
     def _proxy(self):
         path = self.path[len("/wfs-api/"):]
+        # SIKLUS 235: header X-HTTP-Method-Override (dari src/lib/api.js) —
+        # proxy ini hanya punya do_GET/do_POST/do_DELETE; PATCH klien dikirim
+        # sbg POST + override ini → gateway :8787 tetap menerima PATCH eksak
+        # (mis. persist pindah kolom kanban /api/tasks/{id}/status).
+        override = (self.headers.get("X-HTTP-Method-Override") or "").strip().upper()
         url = GATEWAY + path
         body = None
         if self.command == "POST":
@@ -354,7 +359,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 _reject_oversize(self)
                 return
             body = self.rfile.read(ln) if ln else b"{}"
-        req = urllib.request.Request(url, data=body, method=self.command)
+        req = urllib.request.Request(url, data=body, method=override or self.command)
         req.add_header("Content-Type", "application/json")
         try:
             with urllib.request.urlopen(req, timeout=120) as r:
