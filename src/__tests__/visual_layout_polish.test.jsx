@@ -127,3 +127,34 @@ describe('Siklus 243: keadaan terbuka tombol accent menang atas accent (umpan ba
     expect(css).toContain('.ibtn[aria-expanded=true], .ibtn.on {')
   })
 })
+
+// Siklus 244: kompaksi dock laptop — akar ilusi "T terbalik" (klaim vision 243)
+// dibuktikan probe DOM live: konten dock penuh ~1498px > viewport 1280-1519px,
+// flex-wrap:center menjatuhkan 3 tombol terakhir (Konsol/Atur/Bantuan) ke baris
+// kedua TENGAH dgn ruang kosong kiri-kanan = siluet T. Kompaksi media query
+// 1024-1520px membuat dock 1 baris dari 1280px (terukur CDP: dockW 1222 @1366).
+describe('Siklus 244: kompaksi dock laptop (anti ilusi T terbalik)', () => {
+  const css = readCss()
+
+  it('media query kompaksi 1024-1520px ada dgn 3 deklarasi kunci', () => {
+    const m = css.search(/@media \(min-width: 1024px\) and \(max-width: 1520px\)/)
+    expect(m).toBeGreaterThan(-1)
+    const block = css.slice(m, css.indexOf('@media', m + 10))
+    expect(block).toContain('.dock { gap: 4px; }')
+    expect(block).toContain('.dock .sep { margin: 0 2px; }')
+    expect(block).toContain('.dock .ibtn { min-width: 44px; padding: 5px 6px; font-size: 10.5px; }')
+  })
+
+  it('label .ibtn .lb TIDAK disembunyikan di blok kompaksi (bukan penyunatan label)', () => {
+    const m = css.indexOf('@media (min-width: 1024px) and (max-width: 1520px)')
+    const block = css.slice(m, css.indexOf('@media', m + 10))
+    expect(block).not.toContain('.lb')
+    expect(block).not.toContain('display: none')
+  })
+
+  it('basis .dock global tetap wrap + center (viewport sempit tetap berperilaku 185)', () => {
+    const base = css.slice(css.indexOf('.dock {'), css.indexOf('}', css.indexOf('.dock {')))
+    expect(base).toContain('flex-wrap: wrap')
+    expect(base).toContain('justify-content: center')
+  })
+})

@@ -172,6 +172,18 @@ button { font-family: inherit; }
   filter: brightness(1.12); transform: translateY(-2px);
   box-shadow: 0 6px 20px rgba(245, 158, 11, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
+/* Siklus 244: KOMPAKSI DOCK LAPTOP — akar ilusi "T terbalik" (vision_analyze
+   243) terbukti via probe DOM live: konten dock penuh ~1498px > viewport
+   1280-1519px → flex-wrap:center menjatuhkan 2-3 tombol terakhir (Konsol, Atur,
+   Bantuan) ke baris kedua TENGAH, sisanya ruang kosong kiri-kanan = siluet T.
+   Kompaksi halus (bukan penyunatan label): gap 6→4, sep margin 4→2,
+   min-width 54→44, padding 5/8→5/6, font 11→10.5 → konten ~1222px muat 1 baris
+   dari 1280px; ≤1200px tetap wrap (perilaku 185 utuh), ≥1521px tak tersentuh. */
+@media (min-width: 1024px) and (max-width: 1520px) {
+  .dock { gap: 4px; }
+  .dock .sep { margin: 0 2px; }
+  .dock .ibtn { min-width: 44px; padding: 5px 6px; font-size: 10.5px; }
+}
 /* Siklus 243: keadaan TERBUKA menang atas accent — tombol toggle ber-accent
    (Dashboard) kini berubah biru saat panel terbuka; dulu .ibtn.accent (ditulis
    kemudian, specificity sama) menimpa .ibtn[aria-expanded=true] → background
