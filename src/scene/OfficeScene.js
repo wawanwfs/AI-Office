@@ -52,6 +52,7 @@ import { createServerRoom } from './parts/serverroom.js';
 import { createLounge } from './parts/lounge.js';
 import { createStructure } from './parts/structure.js';
 import { createTerraces } from './parts/terraces.js';
+import { createPedestal } from './parts/pedestal.js';
 import { chatPhrases, COLLAB_PAIRS, pickCollab, clampBubbleText, LINE_SEC, autoTalkDelay, autoTalkText } from './parts/dialog.js';
 import { agentIdMap, buildRunningByAgent } from './parts/running_tasks.js';
 import { BADGE_COLORS, statusPollActions } from './parts/status_poll.js';
@@ -686,6 +687,10 @@ if(fl)fl.visible=false;
 if(cp)cp.visible=false;
 // Struktur 3 Lantai Bertingkat (Stepped High-Rise Terraces & Stairs)
 const __terraces=createTerraces({ THREE, office, M, MB });
+// SIKLUS 239: pedestal dasar kampus — plinth + bayangan kontak + glow rim bawah.
+// Membumikan dek 34×27 m thd void latar (temuan vision_analyze 238: tepi dek
+// "terpotong kertas"). Aditif di Y negatif — walkable/agen/jalur tak tersentuh.
+const __pedestal=createPedestal({ THREE, M, MB, group: office });
 
 // CEILING — DARK BLUE + tekstur panel prosedural (seam grid + vignette)
 const __ceilObjsSafe=[];
