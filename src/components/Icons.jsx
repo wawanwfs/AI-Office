@@ -80,13 +80,16 @@ export function IconCamera({ className, size = 18 }) {
   )
 }
 
+// Siklus 238: IconFront kamera 3D — elevasi depan kubus 3D (wajah depan menonjol
+// + garis perspektif atas/samping; dulu ikon kalender keliru dari set ikon).
 export function IconFront({ className, size = 18 }) {
   return (
     <svg className={className} width={size} height={size} viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" strokeWidth="1.75" strokeLinecap="round" strokeLinejoin="round">
-      <rect x="3" y="4" width="18" height="16" rx="2" />
-      <line x1="8" y1="2" x2="8" y2="4" />
-      <line x1="16" y1="2" x2="16" y2="4" />
-      <line x1="3" y1="10" x2="21" y2="10" />
+      <rect x="4" y="7" width="12" height="12" rx="1.5" />
+      <path d="M8 4h12v12" />
+      <line x1="4" y1="7" x2="8" y2="4" />
+      <line x1="16" y1="7" x2="20" y2="4" />
+      <line x1="16" y1="19" x2="20" y2="16" />
     </svg>
   )
 }

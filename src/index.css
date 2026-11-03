@@ -579,8 +579,15 @@ button { font-family: inherit; }
   text-transform: uppercase; color: var(--text-secondary); margin-top: 3px;
   text-shadow: 0 1px 8px rgba(0,0,0,.9);
 }
+/* Siklus 238: .hdr disembunyikan di layar desktop/laptop standar (761px - 1540px)
+   karena bilah atas sudah dipenuhi oleh .hud (kiri, ~650px) dan .sysmeter (kanan, ~320px)
+   yang bertabrakan langsung dengan teks judul di tengah. Di layar ultrawide (>=1541px)
+   tetap tampil di tengah; di mobile (<=760px) tetap tampil karena .hud berada di bawah. */
+@media (min-width: 761px) and (max-width: 1540px) {
+  .hdr { display: none; }
+}
 .hint, .credit, .legend { display: none; }
-.meeting-badge { position: fixed; top: 104px; left: 0; right: 0; display: flex; justify-content: center; z-index: var(--z-hud); pointer-events: none; }
+.meeting-badge { position: fixed; top: 134px; left: 0; right: 0; display: flex; justify-content: center; z-index: var(--z-hud); pointer-events: none; }
 .meeting-badge div {
   font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700; color: #04121f;
   background: linear-gradient(135deg, #4D9FFF, #448AFF); padding: 7px 16px; border-radius: 20px;
@@ -670,8 +677,11 @@ button { font-family: inherit; }
 }
 
 /* ===== Ticker: pita tipis di bawah header, tepi memudar ===== */
+/* Siklus 238: Ticker top diubah 76px -> 96px di desktop agar bebas dari tumpang tindih
+   dengan .floor-nav (top: 58px, tinggi ~32px, dasar y=90px); pil .ticker-presence kini
+   sepenuhnya bersih di bawah baris pemilih lantai. */
 .ticker {
-  position: fixed; top: 76px; left: 0; right: 0; margin: 0 auto; width: min(720px, calc(100vw - 380px));
+  position: fixed; top: 96px; left: 0; right: 0; margin: 0 auto; width: min(720px, calc(100vw - 380px));
   z-index: var(--z-hud); pointer-events: none; overflow: hidden; min-height: 30px;
   display: flex; align-items: center; gap: 8px; padding: 2px 8px;
   background: rgba(6, 12, 24, 0.65); backdrop-filter: blur(16px);
