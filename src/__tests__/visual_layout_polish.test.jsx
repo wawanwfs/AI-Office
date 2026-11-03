@@ -79,3 +79,24 @@ describe('Siklus 238: Kontrak tata letak index.css', () => {
     expect(badgeMatch[1]).toBe('134')
   })
 })
+
+// Siklus 241: potongan keras teks marquee ticker di tepi window — vision_analyze
+// (screenshot e2e_err_probe) membacanya sbg "Terputus menimpa teks", probe DOM
+// membuktikan TIDAK ada overlap kotak (chip .right 501.8 < window .left 509.8);
+// akar = overflow:hidden tanpa fade → kata terpotong ("0 running" → "ining…")
+// persis di samping chip. Perbaikan = mask fade 20px dua tepi .ticker-window.
+describe('Siklus 241: fade tepi ticker-window (anti hard-clip marquee)', () => {
+  const css = readCss()
+
+  it('.ticker-window memakai mask-image fade 20px di KEDUA tepi', () => {
+    const winBlock = css.slice(css.indexOf('.ticker-window'), css.indexOf('}', css.indexOf('.ticker-window')))
+    expect(winBlock).toContain('mask-image')
+    expect(winBlock).toMatch(/linear-gradient\(90deg,\s*transparent 0,\s*#000 20px/)
+    expect(winBlock).toMatch(/#000 calc\(100% - 20px\),\s*transparent 100%\)/)
+  })
+
+  it('overflow:hidden tetap (mask adalah pelunak, bukan pengganti klip)', () => {
+    const winBlock = css.slice(css.indexOf('.ticker-window'), css.indexOf('}', css.indexOf('.ticker-window')))
+    expect(winBlock).toContain('overflow: hidden')
+  })
+})

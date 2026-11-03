@@ -689,7 +689,19 @@ button { font-family: inherit; }
   box-shadow: 0 4px 20px rgba(0,0,0,0.4);
   animation: fadeUp 1s ease 1.4s both;
 }
-.ticker-window { min-width: 0; flex: 1; overflow: hidden; }
+.ticker-window {
+  min-width: 0; flex: 1; overflow: hidden;
+  /* Siklus 241: teks marquee TIDAK lagi terpotong KERAS di tepi window — tepi
+     kiri window tepat di samping chip Sinkron/Terputus & presence, sehingga
+     potongan kata ("0 running" → "ining · 1 pending · 1 failed") terbaca
+     seolah menabrak badge (temuan vision_analyze siklus 241 pada screenshot
+     e2e_err_probe). Probe DOM membuktikan TIDAK ada overlap kotak nyata
+     (chip .right 501.8 < window .left 509.8) — ini hard-clip overflow:hidden.
+     Mask fade 20px di kedua tepi = potongan terbaca sbg fade-out marquee
+     standar; browser tanpa dukungan mask tetap hard-clip (tanpa regresi). */
+  -webkit-mask-image: linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+  mask-image: linear-gradient(90deg, transparent 0, #000 20px, #000 calc(100% - 20px), transparent 100%);
+}
 .ticker .track { display: flex; white-space: nowrap; width: max-content; animation: tickerScroll 60s linear infinite; }
 .ticker .track > span {
   font-family: 'DM Sans', sans-serif; font-size: 12.5px; font-weight: 600; margin-right: 0;
