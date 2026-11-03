@@ -9,6 +9,7 @@ import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles, charMotion, applyCharMotion } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
+import { applyZoneLod } from './parts/zone_lod.js';
 import { occlusionPass, OCCL_MIN_OPACITY } from './parts/label_occlusion.js';
 import { perfStep } from './parts/perf_quality.js';
 import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam, resetFocusGoal, agentFocusPos } from './parts/kamera_focus.js';
@@ -1930,6 +1931,11 @@ function animate(){
     // fade & jitter via buildZonePts; penerapan opacity/visible di sini (butuh sprite nyata).
     if(window.__zoneLabels){
       const kz=k;
+      // Siklus 246: LOD jarak — label zona MENYUSUT saat kamera dekat (anti
+      // menutupi objek yang dilihat, mis. rak server) & utuh saat kamera rumah.
+      // Diterapkan SEBELUM entri dibangun agar zw/zh (box kolisi) & pw (fade)
+      // memakai ukuran yang benar-benar digambar — paritas oklusi 240.
+      window.__zoneLabels.forEach(zt=>applyZoneLod(zt,camera.position.distanceTo(zt.position)));
       const zents=window.__zoneLabels.map(zt=>{
         const zb=(window.__zoneBase&&window.__zoneBase.get(zt))||{y:zt.position.y,x:zt.position.x};
         return {ref:zt,visible:zt.visible,proj:zt.position.clone().project(camera),

@@ -118,6 +118,13 @@ describe('createZones — patch lantai & label zona', () => {
     expect(spr[2].scale.x).toBeCloseTo(4.25)
     expect(spr[2].scale.y).toBeCloseTo(0.8)
   })
+  it('siklus 246: userData.baseScale = skala penuh (x & y) utk LOD jarak kamera', async () => {
+    const { added } = await build()
+    const spr = added.filter((o) => o instanceof Sprite)
+    expect(spr[0].userData.baseScale).toEqual({ x: 3.4, y: 0.64 })
+    expect(spr[2].userData.baseScale).toEqual({ x: 4.25, y: 0.8 })
+    expect(spr.every((s) => s.userData.baseScale && s.userData.baseScale.x === s.scale.x && s.userData.baseScale.y === s.scale.y)).toBe(true)
+  })
   it('window.__zoneBase: Map label→posisi dasar (x, y, z) untuk anti-tumpuk', async () => {
     const { added } = await build()
     expect(window.__zoneBase).toBeInstanceOf(Map)

@@ -43,6 +43,9 @@ export function createZones(ctx){
     zl.renderOrder=25; // di atas label agent (20) & layar presentasi board (5): label zona tak tertutup
     const zsc=zoneLabelScale(z.label); // label panjang lebih besar
     zl.scale.set(3.4*zsc,.64*zsc,1);
+    // Siklus 246: baseScale = skala penuh utk LOD jarak kamera (parts/zone_lod.js)
+    // — kamera dekat menyusutkan label (anti menutupi objek), kamera rumah utuh.
+    zl.userData.baseScale={x:3.4*zsc,y:.64*zsc};
     zl.visible=ctx.namesVisible!==false; // ikut preferensi nama (persist wfs_names)
     zl.position.set(z.x,1.15,zly);office.add(zl);
     (window.__zoneLabels=window.__zoneLabels||[]).push(zl); // dipakai anti-tumpuk label

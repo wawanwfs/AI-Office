@@ -295,9 +295,21 @@ async def call_llm(agent_id, sys_prompt, user_prompt):
                                       {"role":"user","content":user_prompt}]})
                 d = r.json()
                 msg = d.get("choices",[{}])[0].get("message",{})
-                out = msg.get("content") or msg.get("reasoning_content") or ""
-                if out.strip():
-                    return out
+                content = (msg.get("content") or "").strip()
+                if content:
+                    return content
+                # Siklus 244 — reasoning-model: content kosong tapi
+                # reasoning_content panjang = token habis untuk berpikir,
+                # jawaban final TIDAK ADA. Dulu reasoning dipakai sebagai
+                # output → file sampah/parse gagal senyap. Sekarang: gagal
+                # keras agar retry berikutnya mencoba lagi.
+                reasoning = (msg.get("reasoning_content") or "").strip()
+                if reasoning:
+                    last_err = RuntimeError(
+                        "reasoning-only response (content kosong, reasoning "
+                        f"{len(reasoning)} chars terpotong) — token habis "
+                        "sebelum jawaban final")
+                    continue
                 last_err = RuntimeError("empty content: "+str(d)[:200])
             except Exception as e:
                 last_err = e
@@ -349,6 +361,11 @@ def write_json_files(task_id, output):
         path = str(it.get("path") or it.get("file") or "").strip()
         code = it.get("code") or it.get("content") or ""
         if not path or " " in path or len(path) > 120 or path.startswith(("<", "path", "nama")):
+            continue
+        # Siklus 243 — file kode terpotong (<200 chars) = sampah yang membuat
+        # integrasi gagal senyap (index.html 3 bytes!). Tolak tulis; QA/task
+        # retry yang mengurus.
+        if len(str(code).strip()) < 200:
             continue
         fp = Path(REPO) / path
         if not str(fp.resolve()).startswith(str(Path(REPO).resolve())):
