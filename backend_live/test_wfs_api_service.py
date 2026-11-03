@@ -70,6 +70,28 @@ class TestContentLength(unittest.TestCase):
 
 
 class TestPostBodyLimit(unittest.TestCase):
+    # SIKLUS 237 — ISOLASI DB: dulu test ini dispatch POST /api/projects sampai
+    # ke TaskOrchestrator.plan_task() dengan body kosong (name default
+    # "New Project") → SETIAP run pytest penuh menyisipkan 1 task
+    # "Develop: New Project" + 8 subtask + log ke DB PRODUKSI UI
+    # (~/wfs-projects/wfs_software_house.db) — terbukti: 49 task
+    # "Create New Project" status 'ready' menumpuk di DB live. Kini DB
+    # diarahkan ke tmp SEBELUM dispatch; kontrak yang diuji tetap sama
+    # (bukan 413 di batas, dispatch berjalan).
+    @classmethod
+    def setUpClass(cls):
+        import database
+        import tempfile
+        cls._tmp = tempfile.mkdtemp(prefix="wfs_bodylimit_237_")
+        database.DB_DIR = cls._tmp
+        database.DB_PATH = cls._tmp + "/test_bodylimit.db"
+        database.init_db()
+
+    @classmethod
+    def tearDownClass(cls):
+        import shutil
+        shutil.rmtree(cls._tmp, ignore_errors=True)
+
     def test_oversized_content_length_returns_413_before_db(self):
         # Header Content-Length palsu yang melebihi batas -> 413 segera,
         # tanpa membaca body / menyentuh DB (early-return sebelum branch API).

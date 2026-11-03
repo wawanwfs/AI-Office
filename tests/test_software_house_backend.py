@@ -1,11 +1,24 @@
 import unittest
 import os
 import sys
+import tempfile
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "backend")))
-from database import init_db, list_agents, list_projects, get_db
-from docker_sandbox import DockerSandboxManager
-from orchestrator import TaskOrchestrator
+
+# SIKLUS 237 — ISOLASI DB: modul database.py memakai DB_PATH modul-level yang
+# dihitung saat import (~/wfs-projects/wfs_software_house.db = DB produksi UI).
+# Dulu test ini langsung plan_task() ke DB produksi (insiden 235 sama: test
+# menyisipkan task 'E-Commerce API' di DB live). Kini setiap test diarahkan ke
+# DB tmp — nol tulisan ke produksi, dites tanpa jaringan.
+import database as _database  # noqa: E402
+
+_TMPDIR = tempfile.mkdtemp(prefix="wfs_sh_test_")
+_database.DB_DIR = _TMPDIR
+_database.DB_PATH = os.path.join(_TMPDIR, "wfs_software_house.db")
+
+from database import init_db, list_agents, list_projects, get_db  # noqa: E402
+from docker_sandbox import DockerSandboxManager  # noqa: E402
+from orchestrator import TaskOrchestrator  # noqa: E402
 
 class TestSoftwareHouseBackend(unittest.TestCase):
     def setUp(self):

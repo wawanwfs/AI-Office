@@ -30,10 +30,27 @@ def project_snapshot():
         if _os.path.exists(dbp):
             c = sqlite3.connect(dbp)
             cur = c.cursor()
-            cur.execute("SELECT COUNT(*) FROM tasks WHERE status = 'completed'")
-            snap["tasks"]["done"] = cur.fetchone()[0]
-            cur.execute("SELECT COUNT(*) FROM tasks WHERE status = 'running'")
-            snap["tasks"]["running"] = cur.fetchone()[0]
+            # SIKLUS 237 — bucket status LENGKAP, mirror normalizeTaskStatus()
+            # frontend (projectboard_data.js). Dulu hanya 'completed' & 'running'
+            # yang dihitung; orchestrator menandai task baru 'ready' → 55 task
+            # antri ditampilkan "ANTRI (0), 0% selesai" di papan 3D & TV lounge.
+            # failed/review juga dulu tak pernah terisi dari DB (banner
+            # review/gagal papan tak akan muncul walau ada).
+            cur.execute("SELECT status, COUNT(*) FROM tasks GROUP BY status")
+            _buckets = {"done": 0, "running": 0, "pending": 0, "failed": 0, "review": 0}
+            for _st, _n in cur.fetchall():
+                _s = str(_st or "").lower().strip()
+                if _s in ("done", "completed", "finished", "resolved", "success"):
+                    _buckets["done"] += _n
+                elif _s in ("running", "in_progress", "active", "working"):
+                    _buckets["running"] += _n
+                elif _s in ("failed", "error"):
+                    _buckets["failed"] += _n
+                elif _s in ("review", "qa"):
+                    _buckets["review"] += _n
+                else:
+                    _buckets["pending"] += _n  # ready/pending/queued/todo/backlog/…
+            snap["tasks"].update(_buckets)
             cur.execute("SELECT COUNT(*) FROM tasks")
             snap["tasks"]["total"] = cur.fetchone()[0]
             cur.execute("SELECT id, title, status FROM tasks ORDER BY created_at DESC LIMIT 8")
@@ -46,8 +63,21 @@ def project_snapshot():
                 gtasks = gdata.get("tasks") or []
                 if gtasks:
                     snap["tasks"]["total"] = len(gtasks)
-                    snap["tasks"]["done"] = sum(1 for x in gtasks if x.get("status") in ("done", "completed"))
-                    snap["tasks"]["running"] = sum(1 for x in gtasks if x.get("status") in ("running", "in_progress"))
+                    # SIKLUS 237 — mirror bucket lengkap juga di jalur fallback
+                    # engine :8787 (dulu hanya done/running; pending/failed/review
+                    # selalu 0 → kolom & banner papan dari data engine salah).
+                    for x in gtasks:
+                        _s = str(x.get("status") or "").lower().strip()
+                        if _s in ("done", "completed", "finished", "resolved", "success"):
+                            snap["tasks"]["done"] += 1
+                        elif _s in ("running", "in_progress", "active", "working"):
+                            snap["tasks"]["running"] += 1
+                        elif _s in ("failed", "error"):
+                            snap["tasks"]["failed"] += 1
+                        elif _s in ("review", "qa"):
+                            snap["tasks"]["review"] += 1
+                        else:
+                            snap["tasks"]["pending"] += 1
                     snap["tasks"]["recent"] = [{"id": x.get("id"), "title": x.get("title"), "status": x.get("status")} for x in gtasks[:8]]
     except Exception:
         pass
