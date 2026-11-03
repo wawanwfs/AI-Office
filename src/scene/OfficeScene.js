@@ -1962,7 +1962,7 @@ function animate(){
     // terbaca samar & terdekat selalu opacity 1. Pass ini hanya menulis field
     // `occ` pts (posisi/offX/offY hasil anti-overlap TIDAK diubah).
     const __occN = occlusionPass(pts);
-    window.__occlFade = __occN;
+    window.__occlFade = __occN; // hook probe e2e (terdaftar SCENE_HOOKS — purge destroy)
     // konversi offset piksel ke satuan dunia (~ jarak/tinggi layar) via worldPerPx
     // (murni, parts/label_overlap.js); penerapan clamp offset via labelWorldOffset.
     // OFFSET DI-DAMPING (bukan snap): relayout hanya tiap kelipatan frame; offset

@@ -47,6 +47,8 @@ export const SCENE_HOOKS = [
   // dinding & zona (parts/walls.js, parts/flooring.js)
   '__wallFade', '__wallState', '__wallLast', '__corners',
   '__zoneLabels', '__zoneBase',
+  // oklusi nameplate (parts/label_occlusion.js — siklus 240, jumlah label ter-fade)
+  '__occlFade',
   // TV lounge & whiteboard (parts/lounge.js, parts/room.js)
   '__tvCanvas', '__tvData', '__lastTvDrawAt', '__tvPullErr', '__lastWbDrawAt',
   // controls scene utuh (jembatan destroy/probe E2E — memegang seluruh closure)

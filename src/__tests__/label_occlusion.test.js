@@ -121,4 +121,8 @@ describe('drift-gate sumber OfficeScene.js — oklusi terpasang di jalur relayou
     expect(src).toMatch(/p\.a\.label\.material\.opacity=OCCL_MIN_OPACITY\+prevO\*\(1-OCCL_MIN_OPACITY\)/);
     expect(src).toMatch(/window\.__occlFade/); // hook probe e2e
   });
+  it('hook __occlFade terdaftar SCENE_HOOKS (purge destroy menjangkaunya)', () => {
+    const hooks = readFileSync(join(here, '..', 'scene', 'parts', 'scene_hooks.js'), 'utf8');
+    expect(hooks).toContain("'__occlFade'");
+  });
 });
