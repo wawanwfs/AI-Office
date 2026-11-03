@@ -14,7 +14,14 @@ Probe (CDP :99, chrome-headless-shell, pola e2e_zone_multi):
   T4 anti-regresi wiring: seluruh label punya userData.baseScale di awal.
 Urutan: T4 pertama (wiring), lalu T1 → T2 → T3 (state kamera disentuh terakhir).
 """
-import json, os, subprocess, time, urllib.request, sys
+import json, os, subprocess, time, urllib.request, sys, base64
+
+# Reuse transport WS ter-hardening (timeout, EOF guard, framing) — SATU SUMBER,
+# pola e2e_zone_multi.py. Jangan implementasi WS inline di sini.
+_src = open(os.path.join(os.path.dirname(__file__), "e2e_shot.py")).read()
+_g = {}
+exec(_src.split("if __name__")[0], _g)
+WS = _g["WS"]
 
 WS_TIMEOUT_S = 60
 CHROME = os.path.expanduser(
@@ -66,11 +73,14 @@ SET_CAM = """(function(){
 })()"""
 
 
-def pump(cmd, frames=6):
-    cmd("Runtime.evaluate",
-        expression=f"new Promise(r=>{{let i=0;const t=()=>{{if(++i>={frames})r(true);else requestAnimationFrame(t)}};requestAnimationFrame(t)}})",
-        awaitPromise=True)
-    time.sleep(1.5)
+def pump(cmd, frames=3):
+    try:
+        cmd("Runtime.evaluate",
+            expression=f"new Promise(r=>{{let i=0;const t=()=>{{if(++i>={frames})r(true);else requestAnimationFrame(t)}};requestAnimationFrame(t)}})",
+            awaitPromise=True)
+    except TimeoutError:
+        pass  # SwiftShader lambat: rAF batch > WS deadline — cukup sleep di bawah
+    time.sleep(4.0)
 
 
 def main():
@@ -90,26 +100,12 @@ def main():
         time.sleep(2)
         tabs = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{PORT}/json/list", timeout=5).read())
         wsu = [t["webSocketDebuggerUrl"] for t in tabs if t.get("type") == "page"][0]
-        from urllib.parse import urlparse
-        import socket, struct, base64
-        pr = urlparse(wsu)
-        s = socket.create_connection((pr.hostname, pr.port), timeout=WS_TIMEOUT_S)
-        s.sendall((f"GET {pr.path} HTTP/1.1\r\nHost: {pr.hostname}:{pr.port}\r\n"
-                   "Upgrade: websocket\r\nConnection: Upgrade\r\n"
-                   f"Sec-WebSocket-Key: {base64.b64encode(os.urandom(16)).decode()}\r\n"
-                   "Sec-WebSocket-Version: 13\r\n\r\n").encode())
-        buf = b""
-        s.settimeout(WS_TIMEOUT_S)
-        while b"\r\n\r\n" not in buf:
-            c = s.recv(1)
-            if not c:
-                raise ConnectionResetError("EOF handshake")
-            buf += c
+        s = WS(wsu)
         mid = [0]
 
         def cmd(method, **params):
             mid[0] += 1
-            s.send(json.dumps({"id": mid[0], "method": method, "params": params}).encode())
+            s.send(json.dumps({"id": mid[0], "method": method, "params": params}))
             for _ in range(600):
                 r = json.loads(s.recv())
                 if r.get("id") == mid[0]:
@@ -137,7 +133,7 @@ def main():
 
         def setcam(tgt, theta, phi, radius):
             ev(SET_CAM % (tgt, theta, phi, radius))
-            pump(cmd, frames=10)
+            pump(cmd, frames=2)
             time.sleep(2.0)
 
         # ── T1: kamera rumah → scale == baseScale eksak ──
@@ -172,6 +168,18 @@ def main():
             ok = ok and passed
         print()
         print("E2E_ZONE_LOD:", "OK" if ok else "FAIL")
+
+        # ── Mode --shot: PNG kamera rendah server room (label visible) utk vision ──
+        if "--shot" in sys.argv:
+            setcam("2.5, 1.2, -8", 2.0, 1.25, 9.0)
+            out = os.path.expanduser("~/.hermes/cache/scratch/zone_lod_lowcam.png")
+            shot = cmd("Page.captureScreenshot", format="png")
+            data = shot.get("result", {}).get("data")
+            if not data:
+                print("SHOT_FAIL:", json.dumps(shot)[:300]); sys.exit(1)
+            with open(out, "wb") as f:
+                f.write(base64.b64decode(data))
+            print("SHOT_SAVED:", out, os.path.getsize(out), "bytes")
         sys.exit(0 if ok else 1)
     finally:
         p.kill()
