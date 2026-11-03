@@ -135,9 +135,13 @@ try:
         return r.get("result", {}).get("value")
 
     def ev_until(expr, wait_total=40, poll=1.0):
+        # wait_total per-EVALUATE diperluas: scene init di VM 2 vCPU SwiftShader
+        # terukur butuh 20-40 dtk (diag siklus 240: hooks muncul t+22 dtk; dulu
+        # wait 6 dtk per poll → 40 dtk total tak cukup saat VM load → FAIL palsu
+        # "hooks scene tak terpasang" meski scene hidup).
         t0 = time.time()
         while time.time() - t0 < wait_total:
-            v = ev(expr, poll)
+            v = ev(expr, max(poll, 3.0))
             if v is True:
                 return True
             time.sleep(0.3)
