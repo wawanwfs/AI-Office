@@ -255,8 +255,8 @@ DEFAULT_AI = load_default()
 ROLE_SYS = {
     "backend": 'Kamu Budi, Backend Engineer. Balas HANYA satu JSON object: {"files":[{"path":"app/models/tenant.py","code":"<kode lengkap python>"},{"path":"...","code":"..."}]}. Minimal 3 file, path nyata unik, kode lengkap siap jalan. Tanpa teks lain.',
     "backend2": 'Kamu Rizky, Backend payment/webhook. Balas HANYA JSON object {"files":[{"path":"...","code":"..."}]}. Minimal 3 file, kode lengkap. Tanpa teks lain.',
-    "frontend": 'Kamu Dewi, Frontend React/Next.js. Balas HANYA JSON object {"files":[{"path":"...","code":"..."}]}. Minimal 3 file, kode lengkap. Tanpa teks lain.',
-    "frontend2": 'Kamu Andi, Frontend performa/PWA. Balas HANYA JSON object {"files":[{"path":"...","code":"..."}]}. Minimal 3 file, kode lengkap. Tanpa teks lain.',
+    "frontend": 'Kamu Dewi, Frontend Engineer (web apa pun: HTML/CSS/JS murni ATAU React sesuai kebutuhan task). IKUTI spesifikasi task di user prompt — kalau diminta single-file index.html, buat SATU file index.html lengkap (HTML+CSS+JS inline), JANGAN Next.js, JANGAN scaffold framework. Balas HANYA JSON object {"files":[{"path":"...","code":"..."}]}. Kode lengkap siap jalan. Tanpa teks lain.',
+    "frontend2": 'Kamu Andi, Frontend performa/PWA. IKUTI spesifikasi task di user prompt — kalau diminta single-file index.html, buat SATU file lengkap, JANGAN scaffold framework. Balas HANYA JSON object {"files":[{"path":"...","code":"..."}]}. Kode lengkap siap jalan. Tanpa teks lain.',
     "devops": 'Kamu Toni, DevOps. Balas HANYA JSON object {"files":[{"path":"Dockerfile","code":"..."},{"path":"docker-compose.yml","code":"..."}]}. Kode lengkap. Tanpa teks lain.',
     "qa": "Kamu Rina, QA. Review kode task ini: jawab mulai dengan 'VERDICT: pass' atau 'VERDICT: revise' lalu 1-3 kalimat alasan singkat.",
     "pm": "Kamu Sari, Product Manager. Pecah brief menjadi daftar task teknis. Jawab HANYA JSON valid array, tiap item WAJIB ada key: role, title, desc. role HANYA salah satu dari: backend, backend2, frontend, frontend2, mobile, design, devops, qa, ai, integration, marketing, cs, pm (jangan buat role lain). Mulai dengan '[' langsung.",
@@ -533,19 +533,46 @@ async def _execute_task(tid, attempt_no=0):
         if not paths:
             out = await _execution_llm(tid, t["agent_id"], ROLE_SYS.get(t["role"], ROLE_SYS["backend"]), t["prompt"])
             files = write_json_files(tid, out) or write_output_files(tid, out)
+            if not files:
+                # Siklus 241 — reasoning-model kerap menjawab analisis panjang
+                # TANPA JSON files (habis di thinking). Retry 1x dengan
+                # feedback tegas agar menghasilkan JSON files, bukan ulang
+                # task dari nol tanpa jejak error.
+                retry_out = await _execution_llm(
+                    tid, t["agent_id"],
+                    ROLE_SYS.get(t["role"], ROLE_SYS["backend"]),
+                    t["prompt"]
+                    + "\n\nPENTING: Balasanmu sebelumnya berupa analisis/teks "
+                    "tanpa JSON files dan TIDAK BISA diproses. Balas SEKARANG "
+                    "HANYA satu JSON object {\"files\":[{\"path\":\"...\","
+                    "\"code\":\"<kode lengkap>\"}]} — mulai karakter pertama "
+                    "dengan { . Tanpa penjelasan, tanpa rencana.")
+                files = write_json_files(tid, retry_out) or write_output_files(tid, retry_out)
+                if files:
+                    out = retry_out
             result_out = out
         else:
             role_sys = ROLE_SYS.get(t["role"], ROLE_SYS["backend"])
             for p in paths:
-                try:
-                    fout = await _execution_llm(tid, t["agent_id"],
-                        'Balas HANYA JSON: {"path":"%s","code":"<kode lengkap>"}. Kode lengkap siap jalan. Tanpa teks lain.' % p,
-                        t["prompt"])
-                    fl = write_json_files(tid, fout)
-                    if fl:
-                        all_files.extend(fl)
-                except Exception:
-                    continue
+                _file_sys = ('Balas HANYA JSON: {"path":"%s","code":"<kode lengkap>"}. '
+                             'Kode lengkap siap jalan. Tanpa teks lain.' % p)
+                fout = None
+                for _attempt in range(2):
+                    try:
+                        _out = await _execution_llm(
+                            tid, t["agent_id"], _file_sys,
+                            t["prompt"] if _attempt == 0 else
+                            t["prompt"] + "\n\nPENTING: balasan sebelumnya tidak "
+                            "bisa diproses. Balas SEKARANG HANYA JSON object "
+                            '{"path":"%s","code":"<kode lengkap file>"} — '
+                            "mulai karakter pertama dengan { ." % p)
+                        fl = write_json_files(tid, _out)
+                        if fl:
+                            all_files.extend(fl)
+                            fout = _out
+                            break
+                    except Exception:
+                        continue
             files = all_files
             result_out = plan_out
             if not files:
@@ -565,10 +592,24 @@ async def _execute_task(tid, attempt_no=0):
                     test_evidence = f"\n\nHASIL TEST SANDBOX (ok={tr['ok']}):\n{tr['output'][:1500]}"
             except Exception:
                 pass
+            # Siklus 242 — QA WAJIB tahu deliverable nyata: tanpa file kode
+            # (hanya placeholder 'no files produced') task TIDAK boleh pass.
+            _code_files = [f for f in (files or [])
+                           if not str(f).startswith("docs/task_")
+                           or "no files produced" not in str(
+                               (Path(REPO)/str(f)).read_text(errors="replace")
+                               if (Path(REPO)/str(f)).exists() else "")]
+            files_note = ("\n\nDELIVERABLE FILE: " + ", ".join(files)
+                          if files else "\n\nDELIVERABLE FILE: TIDAK ADA")
+            if not _code_files:
+                files_note += ("\nCATATAN WAJIB: agent TIDAK menghasilkan file "
+                               "kode sama sekali — ini otomatis REVISE.")
             review = await _execution_llm(tid, 'qa1',
                 ROLE_SYS['qa'],
-                f"Review task ini: '{t['title']}'. Output agent:\n\n{result_out[:6000]}{test_evidence}\n\nNilai layak/pass atau perlu revisi.")
+                f"Review task ini: '{t['title']}'. Output agent:\n\n{result_out[:6000]}{test_evidence}{files_note}\n\nNilai layak/pass atau perlu revisi.")
             verdict = parse_qa_verdict(review)
+            if not _code_files:
+                verdict = "revise"  # hard guard: tanpa file kode = tidak pernah pass
             set_status(tid, 'done' if verdict=='pass' else 'review',
                        review=review[:3000])
             if verdict != "pass" and attempt_no < 1:

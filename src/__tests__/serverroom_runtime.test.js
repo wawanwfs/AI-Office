@@ -112,9 +112,10 @@ describe('createServerRoom — server room + water cooler kantor 3D', () => {
     expect(refs.bulb.position).toMatchObject({ x: 2.8, y: 2.9, z: -7.4 })
     expect(refs.cable.geometry.args).toEqual([3, 0.04, 0.06])
     expect(refs.cable.material.color).toBe(0x333344)
-    // guard anti-penembusan: seluruh tebal kabel (z ±0.03) di depan muka rak
+    // guard anti-penembusan: tepi belakang kabel (z − 0.03) tetap DI DEPAN
+    // muka rak (z = -7.25) — celah bebas 0.07
     expect(refs.cable.position.z).toBe(-7.15)
-    expect(refs.cable.position.z + 0.03).toBeLessThan(-7.25)
+    expect(refs.cable.position.z - 0.03).toBeGreaterThan(-7.25)
     // plinth kontak: 1.0×0.06×0.8 gelap 0x1A1D28 menapak (y=0.03), 1 per rack
     refs.racks.forEach((r) => {
       const plinth = r.children[r.children.length - 1]

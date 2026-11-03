@@ -646,7 +646,21 @@ def _plan_project_tasks(pid: int, name: str, brief: str):
                     "planning: respons LLM tanpa SATU PUN entri bertitle "
                     f"(len={len(tasks)}) — 0 task valid")
             for t in valid:
-                taskengine.add_task(pid, t.get("title", "task"), t.get("role", "backend"), t.get("prompt", ""))
+                # Siklus 240 — prompt task WAJIB berisi detail: desc PM + brief
+                # founder + konteks project. Tanpa ini engineer hanya melihat
+                # judul task (prompt kosong) dan menghasilkan template generik
+                # yang ditolak QA (VERDICT: revise tanpa ujung).
+                _desc = (t.get("desc") or t.get("description")
+                         or t.get("prompt") or "").strip()
+                _prompt = (
+                    f"Project: {name}\nBrief founder: {brief}\n\n"
+                    f"Task ini: {t.get('title', 'task')}\n"
+                    f"Detail dari PM: {_desc}\n\n"
+                    "Kerjakan sesuai detail di atas. Patuhi format balasan "
+                    "system prompt."
+                ).strip()
+                taskengine.add_task(pid, t.get("title", "task"),
+                                    t.get("role", "backend"), _prompt[:4000])
             c = taskengine.db()
             c.execute("UPDATE projects SET status='backlog' WHERE id=?", (pid,))
             c.commit(); c.close()
