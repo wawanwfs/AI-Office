@@ -49,6 +49,14 @@ export const SCENE_HOOKS = [
   '__zoneLabels', '__zoneBase',
   // oklusi nameplate (parts/label_occlusion.js — siklus 240, jumlah label ter-fade)
   '__occlFade',
+  // night family & material debug (siklus 193/196 — e2e_sky/wall/trim/board/
+  // title/ceil_night + probe_neon_ceil membaca hook ini; dulu TIDAK terdaftar →
+  // 13 hook menunjuk graph scene mati pasca-destroy: getter __light tetap hidup)
+  '__skyNight', '__skyCv', '__wallNight', '__wallTexCv',
+  '__trimNight', '__trimMat', '__boardNight', '__boardMat',
+  '__titleNight', '__titleCv', '__ceilNight', '__ceilMat',
+  // pedestal dasar kampus (parts/pedestal.js — siklus 239, hook A/B visual)
+  '__pedestal',
   // TV lounge & whiteboard (parts/lounge.js, parts/room.js)
   '__tvCanvas', '__tvData', '__lastTvDrawAt', '__tvPullErr', '__lastWbDrawAt',
   // controls scene utuh (jembatan destroy/probe E2E — memegang seluruh closure)

@@ -3,6 +3,9 @@
 // menunjuk graph scene mati setelah remount/HMR; heap terkunci & SysMeter
 // membaca hitungan agen basi).
 import { describe, it, expect } from 'vitest';
+import { readFileSync, readdirSync } from 'node:fs';
+import { join, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { SCENE_HOOKS, purgeSceneHooks } from '../scene/parts/scene_hooks.js';
 
 describe('SCENE_HOOKS — daftar sumber kebenaran', () => {
@@ -21,6 +24,32 @@ describe('SCENE_HOOKS — daftar sumber kebenaran', () => {
     ['__agentData', '__cam', '__renderer', '__zoneLabels', '__zoneBase',
       '__wallFade', '__meetFigs', '__tvData', '__officeSound', '__scene',
     ].forEach((k) => expect(SCENE_HOOKS).toContain(k));
+  });
+
+  it('memuat SEMUA hook night-family & pedestal (siklus 242 — 13 hook dulu lupa terdaftar → hidup menunjuk graph mati pasca-destroy)', () => {
+    ['__skyNight', '__skyCv', '__wallNight', '__wallTexCv',
+      '__trimNight', '__trimMat', '__boardNight', '__boardMat',
+      '__titleNight', '__titleCv', '__ceilNight', '__ceilMat', '__pedestal',
+    ].forEach((k) => expect(SCENE_HOOKS).toContain(k));
+  });
+
+  it('cakupan lengkap: SETIAP assignment window.__* di OfficeScene + parts terdaftar (kecuali milik pemilik lain)', () => {
+    const here = dirname(fileURLToPath(import.meta.url));
+    const sceneDir = join(here, '../scene');
+    const EXCLUDED = new Set(['THREE', '__officeSceneDestroyed']);
+    const files = [join(sceneDir, 'OfficeScene.js'),
+      ...readdirSync(join(sceneDir, 'parts')).map((f) => join(sceneDir, 'parts', f)),
+    ].filter((f) => f.endsWith('.js'));
+    const assigned = new Set();
+    files.forEach((f) => {
+      const code = readFileSync(f, 'utf8');
+      for (const m of code.matchAll(/window\.([a-zA-Z0-9_]+)\s*=(?!=)/g)) {
+        if (m[1].startsWith('__') && !EXCLUDED.has(m[1])) assigned.add(m[1]);
+      }
+    });
+    expect(assigned.size).toBeGreaterThanOrEqual(60); // sanity: scanner benar-benar memindai
+    const missing = [...assigned].filter((k) => !SCENE_HOOKS.includes(k));
+    expect(missing).toEqual([]);
   });
 
   it('TIDAK memuat milik pemilik lain (App React / flag lintas-scene / global lib)', () => {
