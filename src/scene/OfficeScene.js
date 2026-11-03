@@ -691,6 +691,12 @@ const __terraces=createTerraces({ THREE, office, M, MB });
 // Membumikan dek 34×27 m thd void latar (temuan vision_analyze 238: tepi dek
 // "terpotong kertas"). Aditif di Y negatif — walkable/agen/jalur tak tersentuh.
 const __pedestal=createPedestal({ THREE, M, MB, group: office });
+// Hook e2e (aditif): atribusi visual pedestal bisa dibuktikan deterministik —
+// setVisible(false) lalu bandingkan statistik piksel pita tepi dek dengan
+// setVisible(true). Dipakai scripts/probe_pedestal_zoom.py (siklus 239).
+window.__pedestal={group:__pedestal.group,made:__pedestal.made,
+  setVisible:(v)=>{ if(__pedestal.group)__pedestal.group.visible=!!v; return __pedestal.group?__pedestal.group.visible:false; },
+  info:()=>({visible:!!(__pedestal.group&&__pedestal.group.visible),parts:__pedestal.made.length})};
 
 // CEILING — DARK BLUE + tekstur panel prosedural (seam grid + vignette)
 const __ceilObjsSafe=[];

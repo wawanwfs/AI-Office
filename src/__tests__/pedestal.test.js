@@ -72,7 +72,7 @@ describe('createPedestal — plinth + lip emas + bayangan kontak + glow rim (rev
     const M = (c) => new Mat({ color: c })
     const MB = (c) => new Mat({ color: c })
     const res = createPedestal({ THREE, M, MB, group: new Obj() })
-    const [w, h] = dims(res.plinth.geometry)
+    const [, h] = dims(res.plinth.geometry)
     expect(PLINTH.TOP_Y).toBeLessThanOrEqual(-0.20)          // tak menembus dek terendah
     expect(res.plinth.position.y + h / 2).toBeCloseTo(PLINTH.TOP_Y, 5)
     // wajah depan plinth LEBIH DEKAT ke kamera daripada bibir dek (z=-13.9)
@@ -87,7 +87,7 @@ describe('createPedestal — plinth + lip emas + bayangan kontak + glow rim (rev
     const M = (c) => new Mat({ color: c })
     const MB = (c) => new Mat({ color: c })
     const res = createPedestal({ THREE, M, MB, group: new Obj() })
-    const [sw, , sd] = dims(res.shadow.geometry) // PlaneGeometry → [w,h]; dims[2] undefined
+    const [sw] = dims(res.shadow.geometry) // PlaneGeometry → [w,h]
     expect(sw).toBeGreaterThan(PLINTH.W)
     expect(res.shadow.rotation.x).toBeCloseTo(-Math.PI / 2)
     expect(res.shadow.material.depthWrite).toBe(false)
