@@ -1165,6 +1165,22 @@ async def api_move_task(tid: int, body: TaskMoveIn):
         raise HTTPException(404, "task not found") from exc
     return {"ok": True, "task_id": tid, "status": t["status"]}
 
+
+@app.get("/api/tasks/{tid}")
+async def api_task_detail(tid: int):
+    """Siklus 236 — detail SATU task lengkap (brief prompt + result output agen).
+
+    Dulu hanya GET /api/tasks (list ramping tanpa prompt/result — payload poll)
+    yang ada: GET /api/tasks/{id} live = 404 sehingga detail modal TaskBoard
+    tak bisa menampilkan Brief & Hasil Agen. Delegasi taskengine.get_task
+    (satu sumber), read-only — tanpa approval gate (bukan jalur eksekusi).
+    """
+    t = taskengine.get_task(tid)
+    if not t:
+        raise HTTPException(404, "task not found")
+    return t
+
+
 @app.get("/api/system/resources")
 async def api_system_resources():
     """Pemakaian CPU/RAM per kontainer docker + host, utk panel monitoring.

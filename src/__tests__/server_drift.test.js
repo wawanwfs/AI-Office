@@ -186,4 +186,20 @@ describe('drift-gate server gateway produksi :8787 (siklus 209)', () => {
     const t = readFileSync(resolve(REPO, 'backend_live/test_wfs_server_superset.py'), 'utf-8')
     expect(t).toContain('def test_api_tasks_move_status_persists')
   })
+
+  it('siklus 236: GET /api/tasks/{tid} detail lengkap — brief & output agen terbaca UI', () => {
+    const s = src()
+    // Endpoint detail ada, delegasi engine satu sumber, read-only murni
+    expect(s).toContain('@app.get("/api/tasks/{tid}")')
+    expect(s).toContain('taskengine.get_task(tid)')
+    const body = s.slice(s.indexOf('async def api_task_detail'), s.indexOf('@app.get("/api/system/resources")'))
+    expect(body).not.toContain('require_launch_approval') // jalur baca tanpa gate
+    expect(body).not.toContain('_schedule') // nol jalur eksekusi berbayar
+    // Guard pytest perilaku nyata ter-track
+    const t = readFileSync(resolve(REPO, 'backend_live/test_wfs_server_superset.py'), 'utf-8')
+    expect(t).toContain('def test_api_task_detail_serves_prompt_and_result')
+    // Engine kontrak: get_task memuat prompt+result (satu sumber detail)
+    const g = readFileSync(resolve(REPO, 'backend_live/wfs_tasks.py'), 'utf-8')
+    expect(g).toContain('SELECT id,project,title,role,agent_id,status,prompt,result,files,review,created,updated FROM tasks')
+  })
 })

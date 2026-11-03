@@ -512,3 +512,47 @@ def test_api_tasks_move_status_persists(tmp_path, monkeypatch):
     move_body = tasks_src[tasks_src.index("def move_task"):tasks_src.index("def set_status")]
     move_code = move_body[move_body.index('"""', move_body.index('"""') + 3) + 3:]  # skip docstring
     assert "require_launch_approval" not in move_code
+
+
+def test_api_task_detail_serves_prompt_and_result(tmp_path, monkeypatch):
+    """Siklus 236 — GET /api/tasks/{tid} detail lengkap (brief + output agen).
+
+    Dulu endpoint ini tidak ada (live = 404) dan list poll ramping tanpa
+    prompt/result: output agen tidak pernah bisa tampil di UI mana pun.
+    Kini delegasi taskengine.get_task — read-only, tanpa approval gate
+    (bukan jalur eksekusi). Rute spesifik (/paused) menang di atas /{tid}.
+    """
+    fake_db = str(tmp_path / "tasks.db")
+    monkeypatch.setattr(taskengine, "DB", fake_db)
+
+    with TestClient(server.app) as cl:
+        tid = cl.post("/api/tasks", json={
+            "title": "T", "role": "backend", "prompt": "buat modul auth",
+        }).json()["task_id"]
+
+        # 1. Detail 200: brief eksak + fields kontrak UI
+        r = cl.get(f"/api/tasks/{tid}")
+        assert r.status_code == 200
+        d = r.json()
+        assert d["prompt"] == "buat modul auth"
+        for k in ("id", "title", "role", "agent_id", "status", "files", "review", "created", "updated"):
+            assert k in d
+        assert d["result"] is None  # belum dieksekusi
+
+        # 2. Task absen → 404 jujur (bukan None/500)
+        assert cl.get("/api/tasks/999999").status_code == 404
+
+        # 3. Rute spesifik TIDAK tertelan /{tid}: paused tetap pause state
+        assert cl.get("/api/tasks/paused").json() == {"paused": taskengine.is_paused()}
+
+        # 4. List tetap ramping (tanpa prompt/result) — payload poll kecil
+        row = cl.get("/api/tasks").json()["tasks"][0]
+        assert "prompt" not in row and "result" not in row
+
+    # Kontrak statis: delegasi engine satu sumber, read-only (tanpa gate di jalur baca)
+    src = Path(server.__file__).read_text()
+    assert '@app.get("/api/tasks/{tid}")' in src
+    body = src[src.index('async def api_task_detail'):src.index("@app.get(\"/api/system/resources\")")]
+    assert "taskengine.get_task(tid)" in body
+    assert "require_launch_approval" not in body
+    assert "_schedule" not in body

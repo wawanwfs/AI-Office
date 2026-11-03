@@ -310,3 +310,27 @@ def test_move_task_persists_status_and_rejects_invalid(tmp_tasks_db, monkeypatch
     assert "require_launch_approval" in src
     run_src = src[src.index("async def run_task"):]
     assert "require_launch_approval(t['project'])" in run_src
+
+
+def test_get_task_full_detail_has_prompt_and_result(tmp_tasks_db):
+    """Siklus 236 — get_task menyajikan detail lengkap utk endpoint /api/tasks/{tid}.
+
+    list_tasks sengaja ramping (tanpa prompt/result — payload poll 8 dtk),
+    jadi satu-satunya sumber brief & output agen adalah get_task. Kontrak:
+    prompt tersimpan saat add_task terbaca kembali eksak, result yang ditulis
+    set_status terbaca, task absen tetap None (endpoint memetakan 404).
+    """
+    pid = tasks.add_project("P", "b")
+    tid = tasks.add_task(pid, "Tulis modul auth", "backend", "buat login + JWT refresh")
+    row = tasks.get_task(tid)
+    assert row is not None
+    assert row["prompt"] == "buat login + JWT refresh"  # brief tampil di modal
+    assert row["result"] is None  # belum dieksekusi — tanpa result palsu
+
+    tasks.set_status(tid, "done", result="auth.py selesai, 3 test hijau")
+    row2 = tasks.get_task(tid)
+    assert row2 is not None
+    assert row2["result"] == "auth.py selesai, 3 test hijau"
+    assert row2["prompt"] == "buat login + JWT refresh"  # brief tak tertimpa
+
+    assert tasks.get_task(999999) is None

@@ -12,6 +12,51 @@ const tasks = [
 afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
 describe('TaskBoard', () => {
+  it('siklus 236: membuka task mem-fetch detail GET /tasks/{id} & menampilkan Brief + Hasil Agen', async () => {
+    // List poll ramping (tanpa prompt/result — kontrak backend); hanya endpoint
+    // detail yang menyajikan keduanya.
+    const f = vi.fn(async (url) => {
+      if (String(url) === '/wfs-api/tasks/2') {
+        return { ok: true, status: 200, json: async () => ({ ...tasks[1], prompt: 'Buat CRUD admin', result: 'admin.py selesai, 2 endpoint hidup' }) }
+      }
+      return { ok: true, status: 200, json: async () => ({ tasks }) }
+    })
+    vi.stubGlobal('fetch', f)
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />)
+    fireEvent.click(screen.getByText('Papan'))
+    await waitFor(() => screen.getByText(/Halaman admin/))
+    fireEvent.click(screen.getByText(/Halaman admin/))
+    // Detail endpoint dipanggil eksak satu kali utk task yang dibuka
+    await waitFor(() => expect(f.mock.calls.some(c => String(c[0]) === '/wfs-api/tasks/2')).toBe(true))
+    // Brief & Hasil Agen tampil di modal detail
+    expect(await screen.findByText('Buat CRUD admin')).toBeTruthy()
+    expect(screen.getByText('admin.py selesai, 2 endpoint hidup')).toBeTruthy()
+    expect(screen.getByText('Brief')).toBeTruthy()
+    expect(screen.getByText('Hasil Agen')).toBeTruthy()
+    // Task tanpa result (list): blok Hasil Agen tidak dirender palsu
+    fireEvent.click(screen.getByRole('button', { name: /Kembali/ }))
+    await waitFor(() => screen.getByText(/Buat login/))
+    fireEvent.click(screen.getByText(/Buat login/))
+    expect(screen.queryByText('Hasil Agen')).toBeNull()
+  })
+
+  it('siklus 236: detail gagal dimuat → modal tetap tampil dari data list (tanpa crash/blok palsu)', async () => {
+    const f = vi.fn(async (url) => {
+      if (String(url) === '/wfs-api/tasks/2') return { ok: false, status: 404, json: async () => ({ detail: 'task not found' }) }
+      return { ok: true, status: 200, json: async () => ({ tasks }) }
+    })
+    vi.stubGlobal('fetch', f)
+    render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />)
+    fireEvent.click(screen.getByText('Papan'))
+    await waitFor(() => screen.getByText(/Halaman admin/))
+    fireEvent.click(screen.getByText(/Halaman admin/))
+    // Modal tetap terbuka dari data list; tak ada Brief/Hasil palsu
+    await waitFor(() => expect(f.mock.calls.some(c => String(c[0]) === '/wfs-api/tasks/2')).toBe(true))
+    await waitFor(() => expect(screen.getByText('#2 Halaman admin')).toBeTruthy())
+    expect(screen.queryByText('Hasil Agen')).toBeNull()
+    expect(screen.queryByText('Brief')).toBeNull()
+  })
+
   it('menampilkan & memfilter task', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => ({ ok: true, status: 200, json: async () => ({ tasks }) })))
     render(<TaskBoard onFlash={() => {}} onAsk={() => {}} />)

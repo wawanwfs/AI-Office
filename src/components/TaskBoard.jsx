@@ -95,6 +95,10 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
   const [sortBy, setSortBy] = useState('newest') // 'newest' | 'oldest' | 'priority' | 'title' | 'agent'
   const [q, setQ] = useState('')
   const [sel, setSel] = useState(null)
+  // Siklus 236 — detail lengkap task terbuka (GET /tasks/{id}: prompt brief +
+  // result output agen, yang TIDAK ada di list poll ramping). null = memuat /
+  // gagal memuat → modal tetap tampil dari data list, tanpa blok kosong palsu.
+  const [detail, setDetail] = useState(null)
   const [draggedTaskId, setDraggedTaskId] = useState(null)
   const [dragOverCol, setDragOverCol] = useState(null)
   const [customPresets, setCustomPresets] = useState(() => {
@@ -431,6 +435,22 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
       if (h) h.focus()
     }, 30)
     return () => clearTimeout(t)
+  }, [open, sel])
+
+  // Siklus 236 — muat detail lengkap task terbuka (GET /tasks/{id}: brief
+  // prompt + result output agen yang tidak ada di list poll ramping).
+  // Guard async pola WfsPanel: hanya respons milik task TERBARU yang boleh
+  // menulis state; gagal → detail null (modal tetap tampil dari data list,
+  // bukan blok "memuat" menggantung atau pesan error palsu).
+  useEffect(() => {
+    setDetail(null)
+    if (!open || !sel) return
+    let dead = false
+    const my = sel.id
+    api(`tasks/${my}`)
+      .then(d => { if (!dead && String(d?.id) === String(my)) setDetail(d) })
+      .catch(() => { if (!dead) setDetail(null) })
+    return () => { dead = true }
   }, [open, sel])
 
   const run = async (t) => {
@@ -800,6 +820,11 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
               </div>
               {(() => { const fl = parseFileList(sel.files); return fl.length > 0 && <><label className="note">File dihasilkan</label><pre className="note" style={{ whiteSpace: 'pre-wrap', margin: '4px 0 10px', color: '#cfd8e3' }}>{fl.join('\n')}</pre></> })()}
               {sel.review && <><label className="note">Ulasan QA</label><div className="msg" style={{ maxWidth: '100%', marginTop: 4, fontSize: 13 }}>{sel.review}</div></>}
+              {/* Siklus 236 — Brief & Hasil Agen: sumber detail GET /tasks/{id}
+                  (prompt/result hanya di sana; list poll ramping tanpa keduanya).
+                  fallback sel menjaga tampilan bila detail gagal dimuat. */}
+              {(detail?.prompt ?? sel.prompt) && <><label className="note">Brief</label><div className="msg" style={{ maxWidth: '100%', marginTop: 4, fontSize: 13, whiteSpace: 'pre-wrap' }}>{detail?.prompt ?? sel.prompt}</div></>}
+              {(detail?.result ?? sel.result) && <><label className="note">Hasil Agen</label><div className="msg" style={{ maxWidth: '100%', marginTop: 4, fontSize: 13, whiteSpace: 'pre-wrap' }}>{detail?.result ?? sel.result}</div></>}
               {(() => {
                 const selBadges = getTaskCardBadges(sel)
                 return selBadges.tags.length > 0 ? (
