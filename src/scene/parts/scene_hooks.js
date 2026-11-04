@@ -49,6 +49,10 @@ export const SCENE_HOOKS = [
   '__zoneLabels', '__zoneBase',
   // oklusi nameplate (parts/label_occlusion.js — siklus 240, jumlah label ter-fade)
   '__occlFade',
+  // snapshot pt mentah pass oklusi (siklus 258 — probe falsifikasi akar "zona tak
+  // ter-fade": window.__occPts = {zone,bub,zt,name,x,y,dx,dy,sw,sh,zw,zh,dist,occ}
+  // ditulis tiap tick relayout SEBELUM blok apply; __occPtsErr = kegagalan aman)
+  '__occPts', '__occPtsErr',
   // night family & material debug (siklus 193/196 — e2e_sky/wall/trim/board/
   // title/ceil_night + probe_neon_ceil membaca hook ini; dulu TIDAK terdaftar →
   // 13 hook menunjuk graph scene mati pasca-destroy: getter __light tetap hidup)
