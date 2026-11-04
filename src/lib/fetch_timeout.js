@@ -71,7 +71,7 @@ export function timeoutErrorDetail(e) {
 // (kontrak 203 utuh). Abort pemanggil (options.signal) tetap menang.
 function deadlineSignal(ms) {
   const ac = new AbortController()
-  const err = new Error('fetch deadline (' + ms + 'ms) — gateway menggantung?')
+  const err = new Error('fetch deadline (' + ms + 'ms) @252b — gateway menggantung?')
   err.name = 'TimeoutError' // alasan abort = TimeoutError → catch wrapper melipat jadi TimeoutError (paritas AbortSignal.timeout)
   let id = null
   let phase = 'transport' // 'transport' → 'body' → 'done'
