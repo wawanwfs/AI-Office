@@ -2000,7 +2000,14 @@ function animate(){
     // yang lama → delta piksel = (prev−prev_prev)/wpp. Tick pertama (antiX/Y
     // undefined): delta = prev/ wpp penuh → cocok dgn intensi offX/offY.
     pts.forEach(p=>{
-      if(p.zone||!p.a||!p.a.label) return;
+      if(p.zone){
+        // Posisi gambar zona & bubble pada kanvas = proyeksi kamera nyata (p.x, p.y);
+        // offX/offY anti-overlap tidak pernah diterapkan ke posisi 3D zona/bubble di dunia
+        p.drawnX=p.x;
+        p.drawnY=p.y;
+        return;
+      }
+      if(!p.a||!p.a.label) return;
       const u2=p.a.label.userData;
       const {dy:dy2,dx:dx2}=labelWorldOffset(p,wpp);
       const cdy2=Math.max(-1.2,Math.min(1.6,dy2));

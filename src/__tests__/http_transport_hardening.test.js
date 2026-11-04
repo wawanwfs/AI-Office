@@ -118,11 +118,11 @@ describe('http_transport_hardening siklus 201 — scanner self-test', () => {
 })
 
 describe('http_transport_hardening siklus 201 — census', () => {
-  it('census: 85 file .py dgn call-site urlopen, >=94 call-site, 3 file .sh curl (siklus 246: +1 e2e_zone_lod.py — probe CDP kamera LOD; reuse e2e_shot.py)', () => {
+  it('census: 86 file .py dgn call-site urlopen, >=95 call-site, 3 file .sh curl (siklus 257: +1 audit_cam_presets.py — CDP preset kamera & oklusi)', () => {
     expect(PY_ALL.length).toBeGreaterThan(70)
-    expect(PY_HTTP.length).toBe(85)
+    expect(PY_HTTP.length).toBe(86)
     const total = PY_HTTP.reduce((n, f) => n + pySites(f).length, 0)
-    expect(total).toBeGreaterThanOrEqual(94)
+    expect(total).toBeGreaterThanOrEqual(95)
     expect(SH_ALL.length).toBe(3)
   })
 })
