@@ -141,7 +141,31 @@ export function occlusionPass(pts, opts = {}) {
       }
     }
   }
+  // ── Siklus 256: pasangan AGENT×ZONE — zona yang mengalah ──────────────────
+  // buildZonePts TIDAK mengisi pt.dist utk zona (hanya agent yg punya), jadi
+  // kurva kedalaman tak bisa dipakai utk zona. Aturan deterministik sederhana:
+  // label zona (penanda ruangan, X-ray renderOrder 35) yang menumpuk label agen
+  // ≥ OCCL_ZONE_TIE_FRAC luas zona → zona pudar ke OCCL_ZONE_TIE_MIN. Nama agen
+  // (entitas aktif) selalu tampil penuh; zona besar (teks ribbon lebar) tetap
+  // terbaca di 0.5. Bila BEBERAPA agen menumpuk zona yg sama, fade min antar
+  // kasus (satu nilai per zona).
+  for (let i = 0; i < ag.length; i++) {
+    const pi = ag[i];
+    for (let j = 0; j < zn.length; j++) {
+      const zj = zn[j];
+      const dx = Math.abs(X(pi) - X(zj));
+      const dy = Math.abs(Y(pi) - Y(zj));
+      const ox = ((pi.sw || 0) + (zj.zw || 0)) / 2;
+      const oy = ((pi.sh || 0) + (zj.zh || 0)) / 2;
+      if (dx >= ox + px || dy >= oy + px) continue;
+      const ix = Math.max(0, ox - dx), iy = Math.max(0, oy - dy);
+      const areaZ = (zj.zw || 0) * (zj.zh || 0);
+      if (!(areaZ > 0) || ix * iy < areaZ * zoneTieFrac) continue;
+      if (zoneTieMin < zj.occ) zj.occ = zoneTieMin;
+    }
+  }
   let n = 0;
   ag.forEach(p => { if (p.occ < 1) n++; });
+  zn.forEach(p => { if (p.occ < 1) n++; });
   return n;
 }

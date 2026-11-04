@@ -1920,6 +1920,7 @@ function animate(){
     PX_PER_TAN, worldPerPx, accumulate: accumulateZoneAnti,
   });
   if(namesVisible&&shouldRelayoutLabels(frame)){
+    let zpFadeMap=new Map(); // Siklus 256: fade viewport zona → dikalikan occ di bawah (scope blok relayout)
     sizeLabels();
     const vis=agentData.filter(a=>a.label.visible && a.state !== 'offsite');
     // k = px per unit tan(fov/2); proyeksi kamera per label dihitung di sini,
@@ -1943,11 +1944,16 @@ function animate(){
           dist:camera.position.distanceTo(zt.position),label:zt.userData.label,
           base:zb,antiY:zt.userData.antiY,antiX:zt.userData.antiX,scale:zt.scale};
       });
-      buildZonePts(zents,kz,pxW,pxH).forEach(zp=>{
+      const zpts=buildZonePts(zents,kz,pxW,pxH);
+      zpts.forEach(zp=>{
         // fade diterapkan ke sprite nyata via referensi zp.zt (urutan aman)
         if(zp.zt){zp.zt.material.opacity=zp.fade.opacity;zp.zt.visible=zp.fade.visible;}
         pts.push(zp);
       });
+      // Siklus 256: simpan fade viewport/LOD per zona — oklusi agent×zone
+      // (occlusionPass) mengalikan opacity final dgn fade ini di bawah,
+      // jadi fade zoneScreenFade tidak tertimpa nilai occ.
+      zpFadeMap=new Map(zpts.map(zp=>[zp.zt,zp.fade.opacity]));
     }
     // bubble dialog ikut sebagai penghalang statis: label zona digeser menjauh dari bubble (bubble tidak bergerak)
     const bents=chatBubbles.map(bb=>({ref:bb.sprite,proj:bb.sprite.position.clone().project(camera)}));
@@ -2015,7 +2021,23 @@ function animate(){
     const __occN = occlusionPass(pts);
     window.__occlFade = __occN; // hook probe e2e (terdaftar SCENE_HOOKS — purge destroy)
     pts.forEach(p=>{
-      if(p.zone) return; // zona adalah penghalang statis bagi label agent, posisinya dikendalikan oleh guard viewport
+      // SIKLUS 256: zona kini juga menerima field `occ` (agent×zone pass di
+      // label_occlusion.js) — fade zona TANPA menyentuh posisi (posisi zona
+      // tetap milik guard viewport & anti-overlap). Damping eksponensial sama
+      // dgn label agen (key userData.occO yg sama dipakai? TIDAK — sprite zona
+      // beda objek; pakai key sama aman krn per-sprite).
+      if(p.zone){
+        if(!p.zt) return; // bubble: fade oklusi tak berlaku
+        const occT2=(p.occ===undefined||!Number.isFinite(p.occ))?1:p.occ;
+        const zu2=p.zt.userData||(p.zt.userData={});
+        const prevO2=(zu2.occO===undefined)?occT2:zu2.occO+(occT2-zu2.occO)*LBL_SMOOTH;
+        zu2.occO=prevO2;
+        // zona punya fade sendiri (zoneScreenFade → zp.fade di atas); kalikan —
+        // opacity final = fade LOD/viewport × occ, floor 0 supaya tidak negatif.
+        p.zt.material.opacity=Math.max(0,zpFadeMap.get(p.zt)*prevO2);
+        p.zt.userData.occApplied=+prevO2.toFixed(3);
+        return;
+      }
       const {dy,dx}=labelWorldOffset(p,wpp);
       const cdy=Math.max(-1.2,Math.min(1.6,dy));
       const cdx=Math.max(-1.5,Math.min(1.5,dx));
