@@ -68,13 +68,56 @@ describe('occlusionPass — pasangan agent×zone (siklus 256)', () => {
     expect(a2.occ).toBe(1);
   });
 
-  it('bubble (zone:true, zt:null) DILEWATI — tidak crash, tidak di-fade', () => {
+  it('bubble (zone:true, zt:null) DILEWATI saat hanya bersama agen — tidak crash, tidak di-fade', () => {
     const a = ag('BUDI', 0, 0, 73, 24, 30);
     const b = bubPt(0, 4, 120, 60);
     const pts = [a, b];
     expect(() => occlusionPass(pts)).not.toThrow();
     const n = occlusionPass(pts);
     expect(n).toBe(0);
+  });
+
+  // ── Siklus 257: tes pasangan BUBBLE×ZONE ──────────────────────────────────
+  it('bubble menumpuk zona ≥ 12% → zona pudar ke OCCL_ZONE_TIE_MIN, bubble TIDAK di-fade', () => {
+    // Bubble chat aktif di dekat meja DEV DESK
+    const b = bubPt(0, 0, 140, 35);
+    const z = zonePt('DEV DESK', 10, 5, 180, 40);
+    const pts = [b, z];
+    const n = occlusionPass(pts);
+    expect(n).toBe(1); // 1 zona di-fade
+    expect(z.occ).toBeCloseTo(OCCL_ZONE_TIE_MIN, 10);
+    expect(b.occ).toBeUndefined(); // bubble tidak di-fade
+  });
+
+  it('bubble menyentuh sudut zona secara tipis (< 12%) → TIDAK ada yang di-fade', () => {
+    // Overlap kecil di sudut (ix*iy = 10*3 = 30px^2, jauh di bawah 12% bubble 432px^2)
+    const b = bubPt(0, 0, 120, 30);
+    const zFar = zonePt('SERVER ROOM', 140, 32, 180, 40); // ox=150, oy=35; dx=140, dy=32 -> ix=10, iy=3 -> area 30 < 432
+    const pts = [b, zFar];
+    const n = occlusionPass(pts);
+    expect(n).toBe(0);
+    expect(zFar.occ).toBe(1);
+  });
+
+  it('bubble DAN agen menumpuk zona yang sama → zona pudar, agen tetap 1, bubble utuh', () => {
+    const a = ag('RIAN', -20, 0, 73, 24, 34);
+    const b = bubPt(20, 0, 140, 35);
+    const z = zonePt('MEETING ROOM', 0, 0, 190, 40);
+    const pts = [a, b, z];
+    const n = occlusionPass(pts);
+    expect(n).toBe(1);
+    expect(z.occ).toBeCloseTo(OCCL_ZONE_TIE_MIN, 10);
+    expect(a.occ).toBe(1);
+    expect(b.occ).toBeUndefined();
+  });
+
+  it('bubble jauh dari zona → zona tetap 1.0', () => {
+    const b = bubPt(-300, -300, 140, 35);
+    const z = zonePt('CAFÉ', 100, 100, 160, 40);
+    const pts = [b, z];
+    const n = occlusionPass(pts);
+    expect(n).toBe(0);
+    expect(z.occ).toBe(1);
   });
 
   it('zona tanpa agen menumpuk → occ 1 (regresi oklusi agent×agent tak berubah)', () => {

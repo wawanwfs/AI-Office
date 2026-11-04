@@ -164,6 +164,36 @@ export function occlusionPass(pts, opts = {}) {
       if (zoneTieMin < zj.occ) zj.occ = zoneTieMin;
     }
   }
+  // ── Siklus 257: pasangan BUBBLE×ZONE — zona mengalah saat menumpuk bubble chat ──
+  // Bubble chat (percakapan aktif agen, life 3.5s, renderOrder 30) yang muncul
+  // di dalam atau dekat ruangan tertutup pita nama zona (renderOrder 35,
+  // depthTest false). Seperti agen, ZONA yang mengalah: saat bubble menumpuk
+  // label zona ≥ OCCL_ZONE_TIE_FRAC luas terkecil (min(areaZ, areaB)), zona dipudarkan
+  // ke OCCL_ZONE_TIE_MIN (0.50). Bubble TIDAK PERNAH di-fade (percakapan harus
+  // selalu terbaca penuh); saat bubble hilang/expired, zona kembali ke 1.0 via
+  // damping LBL_SMOOTH.
+  const bb = pts.filter(p => p && p.bub);
+  for (let i = 0; i < bb.length; i++) {
+    const bk = bb[i];
+    const bw = bk.zw || bk.sw || 0;
+    const bh = bk.zh || bk.sh || 0;
+    const areaB = bw * bh;
+    if (!(areaB > 0)) continue;
+    for (let j = 0; j < zn.length; j++) {
+      const zj = zn[j];
+      const dx = Math.abs(X(bk) - X(zj));
+      const dy = Math.abs(Y(bk) - Y(zj));
+      const ox = (bw + (zj.zw || 0)) / 2;
+      const oy = (bh + (zj.zh || 0)) / 2;
+      if (dx >= ox + px || dy >= oy + px) continue;
+      const ix = Math.max(0, ox - dx), iy = Math.max(0, oy - dy);
+      const areaZ = (zj.zw || 0) * (zj.zh || 0);
+      if (!(areaZ > 0)) continue;
+      const areaMin = Math.min(areaZ, areaB);
+      if (ix * iy < areaMin * zoneTieFrac) continue;
+      if (zoneTieMin < zj.occ) zj.occ = zoneTieMin;
+    }
+  }
   let n = 0;
   ag.forEach(p => { if (p.occ < 1) n++; });
   zn.forEach(p => { if (p.occ < 1) n++; });

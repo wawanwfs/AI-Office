@@ -2034,7 +2034,7 @@ function animate(){
         zu2.occO=prevO2;
         // zona punya fade sendiri (zoneScreenFade → zp.fade di atas); kalikan —
         // opacity final = fade LOD/viewport × occ, floor 0 supaya tidak negatif.
-        p.zt.material.opacity=Math.max(0,zpFadeMap.get(p.zt)*prevO2);
+        p.zt.material.opacity=Math.max(0,(zpFadeMap.get(p.zt)??1)*prevO2);
         p.zt.userData.occApplied=+prevO2.toFixed(3);
         return;
       }
