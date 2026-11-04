@@ -136,6 +136,17 @@ describe('drift-gate sumber OfficeScene.js — oklusi terpasang di jalur relayou
     const hooks = readFileSync(join(here, '..', 'scene', 'parts', 'scene_hooks.js'), 'utf8');
     expect(hooks).toContain("'__occlFade'");
   });
+  it('damping oklusi memakai waktu-nyata antar tick (relayoutDelta), bukan delta 1 frame (siklus 251)', () => {
+    // Akar bug 251: LBL_SMOOTH memakai deltaFrame (delta SATU frame, cap 0.05 s)
+    // padahal diterapkan sekali per tick relayout (tiap 4 frame) → laju efektif
+    // 3/s; di renderer lambat (0.3–0.5 FPS, tick 8 dtk) konvergensi 60–90 detik —
+    // pasangan tumpuk tetap opacity 1 (klaim vision "nameplate bertumpuk").
+    // Kontrak: relayoutDelta diakumulasi antar tick & LBL_SMOOTH memakainya.
+    expect(src).toMatch(/relayoutDelta \+= delta;/);
+    expect(src).toMatch(/const LBL_SMOOTH=1-Math\.exp\(-12\*Math\.min\(relayoutDelta,2\)\)/);
+    expect(src).not.toMatch(/LBL_SMOOTH=1-Math\.exp\(-12\*\(deltaFrame/); // pola lama dilarang kembali
+    expect(src).toMatch(/let relayoutDelta=0;/); // deklarasi ada (di-reset per tick)
+  });
 });
 
 // ── Siklus 250: aturan TIE — tetangga meja kedalaman nyaris sama ────────────

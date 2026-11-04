@@ -1673,6 +1673,7 @@ function autoTalk(){
 }
 // Sinkron task running: tidak ada interval sendiri — data status + tasks diambil di pollStatus (SATU fetch /agents/status)
 let deltaFrame=0; // delta dtk frame terakhir (utk cooldown chat berbasis waktu nyata)
+let relayoutDelta=0; // akumulasi waktu NYATA sejak tick relayout terakhir (damping 251)
 function checkConversations(){
   // Logika pasangan terdekat di parts/chat_check.js (murni + unit test).
   // Cooldown dihitung dgn delta detik NYATA (dulu 0.016 per frame — di GPU
@@ -1976,8 +1977,23 @@ function animate(){
     // Approach eksponensial (rate 12/s: konvergen <0.3 dtk, gerak halus) —
     // saat relayout pertama (antiY/antiX belum ada) langsung pakai nilai penuh.
     // (Pemeriksaan viewport zona dipindah ke atas — jalan tiap frame.)
+    // ── Siklus 251 — BUG KONVERGENSI LAMBAT (ditemukan probe steady-state 12×8s): ──
+    // Damping eksponensial anti-overlap & oklusi memakai `deltaFrame` = delta SATU
+    // frame (cap 0.05 s) padahal nilai baru hanya dihitung & diterapkan SEKALI per
+    // tick relayout (tiap LABEL_RELAYOUT_EVERY=4 frame). Di 60 FPS tick=1/15 s →
+    // laju efektif 12/4=3/s (bukan kontrak komentar "12/s"), konvergen ~1 dtk —
+    // tak terlihat. Di renderer LAMBAT (SwiftShader headless 0.3–0.5 FPS, kiosk
+    // GPU lemah, tab throttled) tick = 4/0.5 = 8 dtk → setiap langkah damping
+    // hanya ±0.086 → konvergensi butuh 60–90 DETIK; selama itu pasangan label
+    // bertumpuk tetap opacity 1 — persis "tumpukan nameplate" yang dilaporkan
+    // audit vision 251 (dan menjelaskan probe iso 250 yang sempat melaporkan
+    // pasangan "stagnan": itu BUKAN stagnansi pass-nya, tapi dampingnya).
+    // FIX: delta damping = waktu NYATA sejak tick relayout terakhir (clock wall,
+    // akumulasi deltaFrame antar tick), laju 12/s benar-benar 12/s pada FPS apa pun.
     const wpp = worldPerPx(camera.position.distanceTo(tgt), camera.fov, container.clientHeight);
-    const LBL_SMOOTH=1-Math.exp(-12*(deltaFrame||0.016));
+    relayoutDelta += delta;
+    const LBL_SMOOTH=1-Math.exp(-12*Math.min(relayoutDelta,2));
+    relayoutDelta=0;
     pts.forEach(p=>{
       if(p.zone) return; // zona adalah penghalang statis bagi label agent, posisinya dikendalikan oleh guard viewport
       const {dy,dx}=labelWorldOffset(p,wpp);
