@@ -46,6 +46,21 @@ export const OCCL_PX = 26;
 export const OCCL_TIE_FRAC = 0.15;   // fraksi luas tumpukan / luas label terkecil
 export const OCCL_TIE_MIN_OPACITY = 0.55; // cukup pudar utk memisahkan mata, teks tetap terbaca
 
+// ── Siklus 256: oklusi pasangan AGENT×ZONE ───────────────────────────────────
+// Probe steady-state siklus 256 (kamera rumah): pasangan zona×agent tetap saling
+// menutup PENUH dgn opacity 1: RIAN×MEETING frac 0.46, INTEGRATOR BOT×WELCOME
+// frac 0.56, RIZKY/TONI×CAFÉ frac 0.16–0.21 — occlusionPass lama memfilter
+// `p.a && !p.zone` sehingga label zona (juga X-ray renderOrder 35) TIDAK PERNAH
+// dioklusi. Zona = penanda ruangan statis; agen = entitas aktif — saat menumpuk,
+// ZONA yang harus mengalah (nama agen harus selalu terbaca penuh):
+//   1. agent lebih dekat ≥ OCCL_START → kurva kedalaman penuh (zone → OCCL_MIN);
+//   2. Δdist < START tapi tumpukan ≥ OCCL_ZONE_TIE_FRAC → zona pudar ke
+//      OCCL_ZONE_TIE_MIN (agent tak tersentuh).
+// Zona juga mengalah pada ZONA lain? Tidak — pasangan zona×zona tetap diproses
+// overlap posisi (bukan fade) di label_overlap.js; di sini cukup agent×zone.
+export const OCCL_ZONE_TIE_FRAC = 0.12;   // lebih sensitif dr agent×agent (0.15): teks zona lebih kecil
+export const OCCL_ZONE_TIE_MIN = 0.5;     // zona pudar sedikit lebih dr tie agen (0.55)
+
 // Fade target utk satu pasangan (dist = jarak label ini, nearerDist = jarak label
 // penutup yang lebih dekat). 1 bila tak menutupi cukup dalam; linear 1→MIN antara
 // START..END. Non-finite → 1 (anti-poisoning, sama pola dgn zoneScreenFade).
@@ -85,11 +100,15 @@ export function occlusionPass(pts, opts = {}) {
   const px = opts.padPx ?? OCCL_PX;
   const tieFrac = opts.tieFrac ?? OCCL_TIE_FRAC;
   const tieMin = opts.tieMinOpacity ?? OCCL_TIE_MIN_OPACITY;
+  const zoneTieFrac = opts.zoneTieFrac ?? OCCL_ZONE_TIE_FRAC;
+  const zoneTieMin = opts.zoneTieMin ?? OCCL_ZONE_TIE_MIN;
   if (!Array.isArray(pts)) return 0;
   const X = q => (Number.isFinite(q.drawnX) ? q.drawnX : q.x + (q.offX || 0));
   const Y = q => (Number.isFinite(q.drawnY) ? q.drawnY : q.y + (q.offY || 0));
   const ag = pts.filter(p => p && p.a && !p.zone);
+  const zn = pts.filter(p => p && p.zone && p.zt); // hanya zona nyata (bukan bubble: zt null)
   ag.forEach(p => { p.occ = 1; });
+  zn.forEach(p => { p.occ = 1; });
   for (let i = 0; i < ag.length; i++) {
     const pi = ag[i];
     const di = Number.isFinite(pi.dist) ? pi.dist : null;
