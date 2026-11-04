@@ -2,6 +2,7 @@
 // — diekstrak dari animate() OfficeScene ke parts/label_overlap.js.
 import { describe, it, expect } from 'vitest';
 import { buildAgentPts, buildZonePts, buildBubblePts, PX_PER_TAN, zoneScreenFade } from '../scene/parts/label_overlap.js';
+import { occlusionPass } from '../scene/parts/label_occlusion.js';
 
 const label = (sx, sy, y, x, antiY = 0, antiX = 0) => ({
   scale: { x: sx, y: sy },
@@ -45,6 +46,34 @@ describe('buildAgentPts', () => {
     const pts = buildAgentPts(vis, 500, 100, 100);
     expect(pts).toHaveLength(3);
     expect(pts.map(p => p.a)).toEqual(vis);
+  });
+  // Siklus 249 — guard anti-regresi BUG OKLUSI MATI SENYAP: OfficeScene melampirkan
+  // dist kamera pada tiap entri vis (label.position → camera.distanceTo); pt WAJIB
+  // meneruskannya karena occlusionPass (label_occlusion.js) melewati pt tanpa dist
+  // (di===null → continue). Dulu field dist TERDROP di buildAgentPts → oklusi siklus
+  // 240 tidak pernah memudarkan label apa pun di produksi (occlFade selalu 0) —
+  // unit test oklusi lolos karena menyusun pts manual. Regresi = MERAH di sini.
+  it('dist kamera diteruskan dari vis ke pt (konsumsi occlusionPass — bug mati-senyap 249)', () => {
+    const vis = [
+      { label: label(1.2, 0.4, 2.5, 0.7), proj: proj(0.2, -0.4), dist: 42.5 },
+      { label: label(1.2, 0.4, 2.5, 0.7), proj: proj(-0.3, 0.1), dist: 18.2 },
+      { label: label(1.2, 0.4, 2.5, 0.7), proj: proj(0, 0) }, // tanpa dist → undefined, boleh (konsumen cek)
+    ];
+    const pts = buildAgentPts(vis, 700, 683, 384);
+    expect(pts[0].dist).toBe(42.5);
+    expect(pts[1].dist).toBe(18.2);
+    expect(pts[2].dist).toBeUndefined();
+  });
+  it('oklusi end-to-end: pts hasil buildAgentPts memicu fade pada pasangan menumpuk (regresi 249)', () => {
+    const vis = [
+      // pasangan proyeksi hampir sama; label lebih jauh WAJIB ter-fade
+      { label: label(1.2, 0.4, 2.5, 0.7), proj: proj(0.05, 0.02), dist: 40 },
+      { label: label(1.2, 0.4, 2.5, 0.7), proj: proj(0.05, 0.02), dist: 20 },
+    ];
+    const pts = buildAgentPts(vis, 700, 683, 384);
+    occlusionPass(pts);
+    expect(pts[0].occ).toBeLessThan(1); // jauh → pudar
+    expect(pts[1].occ).toBe(1);         // dekat → utuh
   });
 });
 

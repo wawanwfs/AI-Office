@@ -266,6 +266,11 @@ const PX_PER_TAN = (clientH, fovDeg) => clientH / (2 * Math.tan((fovDeg * Math.P
 
 // pts label agent: sw/sh piksel sprite, baseY/baseX = posisi state dikurangi
 // offset anti-tumpuk frame sebelumnya (offset TIDAK terakumulasi antar frame).
+// dist (jarak kamera, dihitung OfficeScene saat membangun vis) DITERUSKAN ke pt —
+// oklusi antar-sprite (label_occlusion.js::occlusionPass) membaca pt.dist; dulu
+// field ini TERDROP di sini sehingga occlusionPass melewati semua pt (di===null
+// → continue) dan fade oklusi siklus 240 MATI SENYAP di produksi (occlFade
+// selalu 0) — unit test 240 lolos karena menyusun pts manual dgn dist.
 export function buildAgentPts(vis, k, pxW, pxH) {
   return vis.map(a => {
     const u = a.label.userData, v = a.proj;
@@ -276,6 +281,7 @@ export function buildAgentPts(vis, k, pxW, pxH) {
       sw: a.label.scale.x * k, sh: a.label.scale.y * k,
       baseY: by, baseX: bx,
       x: v.x * pxW, y: v.y * pxH, offY: 0, offX: 0,
+      dist: a.dist, // oklusi 249: teruskan — Number.isFinite dicek konsumen (occlusionPass)
     };
   });
 }
