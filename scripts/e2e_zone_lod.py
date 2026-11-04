@@ -164,7 +164,12 @@ def main():
                        t2, f"scale={sr2['sx']:.3f} exp={exp:.3f} dist={sr2['dist']} pxW={sr2['pxW']}px" if sr2 else "SERVER ROOM tak terlihat"))
 
         # ── T3: pulih ke rumah → scale == base lagi (LOD dua arah) ──
+        # Siklus 248: jaminan konvergensi dua-tick yang SAMA dgn T2 (relayout
+        # throttle 4 frame + SwiftShader 0.3 FPS) — baca scale HANYA setelah
+        # tick kedua; dulu satu pump bisa membaca sebelum tick pulih tiba.
         setcam("0, 1.4, 0.3", 2.446, 1.0, 42.5)
+        pump(cmd, frames=2)  # tick kedua — pastikan LOD pulih konvergen
+        time.sleep(2.0)
         d3 = ev(ZONES_EXPR)
         t3 = all(abs(z["sx"] - base_map[z["label"]]["x"]) < 1e-6 and
                  abs(z["sy"] - base_map[z["label"]]["y"]) < 1e-6 for z in d3["zones"])
