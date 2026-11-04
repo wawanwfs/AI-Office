@@ -1324,11 +1324,26 @@ async def api_agents_status():
 
 @app.get("/api/sandboxes")
 async def api_sandboxes():
-    import subprocess, os
-    out = subprocess.run(["docker", "ps", "--format", "{{.Names}} {{.Status}}"],
-                         capture_output=True, text=True).stdout
-    boxes = [l for l in out.splitlines() if l.startswith("wfs-agent-")]
-    return {"sandboxes": boxes}
+    """Daftar sandbox agent (container wfs-agent-*) via docker ps.
+
+    SIKLUS 254 — non-blocking (kelas sama dgn fix 253): dulu `docker ps`
+    (~70ms, bisa lebih saat daemon sibuk) dijalankan LANGSUNG di event-loop
+    async def tanpa offload & TANPA timeout — 12 request paralel terukur
+    membekukan /api/status 2.7ms → 357ms (127×) dan eksekusi tanpa deadline
+    melanggar kontrak guard subprocess (siklus 202). Kini di-offload via
+    asyncio.to_thread + timeout=10 (pola api_system_resources 253); docker
+    ps gagal/absen → [] (bukan 500, guard anti-poisoning)."""
+    import asyncio
+
+    def _list():
+        try:
+            ps = subprocess.run(["docker", "ps", "--format", "{{.Names}} {{.Status}}"],
+                                capture_output=True, text=True, timeout=10)
+        except Exception:
+            return []
+        return [l for l in ps.stdout.splitlines() if l.startswith("wfs-agent-")]
+
+    return {"sandboxes": await asyncio.to_thread(_list)}
 
 
 @app.post("/api/sandbox/{agent_id}/exec")

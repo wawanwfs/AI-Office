@@ -660,3 +660,66 @@ def test_system_resources_collect_cpu_delta_and_mem_format(monkeypatch):
             assert suffix.endswith("GiB")
             num = suffix[: -len("GiB")]  # "0.500"
             assert len(num.split(".")[1]) == 3
+
+
+# ---------- siklus 254: /api/sandboxes non-blocking + ber-timeout ----------
+
+def test_sandboxes_no_event_loop_block_with_timeout():
+    """SIKLUS 254 — kelas defek yang sama dgn fix 253, endpoint terakhir.
+
+    Pra-fix: `docker ps` (~70ms) dijalankan LANGSUNG di event-loop async def
+    TANPA offload & TANPA timeout — terukur live: 12 request paralel
+    membekukan /api/status 2.7ms → 357ms (127×), dan subprocess tanpa
+    deadline melanggar kontrak guard subprocess (siklus 202: wajib timeout
+    literal). Kini: asyncio.to_thread + timeout=10 + docker ps gagal → []
+    (bukan 500)."""
+    src = Path(server.__file__).read_text()
+    body = src[src.index('async def api_sandboxes'):src.index('async def sandbox_exec')]
+    # 1. Offload wajib — subprocess TIDAK lagi di event-loop.
+    assert "asyncio.to_thread(" in body
+    # 2. Deadline literal wajib (kontrak guard 202).
+    assert "timeout=10" in body
+    # 3. docker ps gagal/absen → [] jujur, bukan 500 (guard anti-poisoning).
+    assert "except Exception" in body
+    # 4. Kontrak AST ketat: di dalam endpoint TIDAK ADA pemanggilan
+    #    subprocess.run langsung pada badan async (harus lewat _list di
+    #    thread) — _list di dalam to_thread BOLEH memanggilnya.
+    import ast as _ast
+    tree = _ast.parse(src)
+    for node in _ast.walk(tree):
+        if isinstance(node, _ast.AsyncFunctionDef) and node.name == "api_sandboxes":
+            # Cari def _list (nested) — pemanggilan run sah di dalamnya.
+            lists = [s for s in _ast.walk(node)
+                     if isinstance(s, _ast.FunctionDef) and s.name == "_list"]
+            assert lists, "def _list (thread worker) hilang dari api_sandboxes"
+            banned = _ast.get_source_segment(src, node) or ""
+            for lst in lists:
+                seg = _ast.get_source_segment(src, lst) or ""
+                banned = banned.replace(seg, "")
+            for ln in banned.splitlines():
+                ls = ln.strip()
+                if ls.startswith("#") or ls.startswith('"""') or ls.startswith('"'):
+                    continue
+                assert ".run(" not in ln, f"subprocess.run langsung di badan async: {ln.strip()}"
+
+    # Perilaku nyata: endpoint tetap 200, shape wire lama utuh.
+    with TestClient(server.app) as cl:
+        r = cl.get("/api/sandboxes")
+        assert r.status_code == 200
+        d = r.json()
+        assert set(d.keys()) == {"sandboxes"}
+        assert isinstance(d["sandboxes"], list)
+        for b in d["sandboxes"]:
+            assert isinstance(b, str) and b.startswith("wfs-agent-")
+
+
+def test_sandboxes_docker_broken_returns_empty_not_500(monkeypatch):
+    """Docker CLI hilang (kontainer rehearsal 2026-10-25: FileNotFoundError)
+    → endpoint tetap 200 dgn sandboxes [] — bukan 500 (guard anti-poisoning)."""
+    def boom(*a, **k):
+        raise FileNotFoundError(2, "No such file or directory", "docker")
+    monkeypatch.setattr(server.subprocess, "run", boom)
+    with TestClient(server.app) as cl:
+        r = cl.get("/api/sandboxes")
+        assert r.status_code == 200
+        assert r.json() == {"sandboxes": []}
