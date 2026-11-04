@@ -157,50 +157,60 @@ describe('fetch_timeout_hardening siklus 203 — guard regresi siklus 125 tak te
 })
 
 describe('fetch_timeout_hardening siklus 252 — deadline dua-fase (transport vs body)', () => {
-  // Bug nyata terbukti probe CDP (backlog 251, chip "Terputus" palsu ~54 dtk):
-  // AbortSignal.timeout TIDAK bisa dibatalkan — di renderer lambat (main thread
-  // diblokir longtask init scene 9.7+9.0+3.1 s) promise fetch resolve di t≈18.9 s,
-  // deadline 12 dtk sudah hangus, callback abort BASI ikut membunuh pembacaan
-  // body yang datanya utuh di buffer → r.json() "signal timed out" meski
-  // respons 200 lengkap → status koneksi PALSU. Kini timer bisa-dibatalkan +
-  // guard fase: callback fase transport yang jalan terlambat tidak boleh
-  // menyentuh body. Sumber kebenaran = perilaku nyata wrapper.
+  // Bug nyata terbukti probe CDP + A/B di Chrome asli (chrome-headless-shell,
+  // scene idle, deadline 50ms hangus di tengah blokir thread 2s):
+  //   LAMA  AbortSignal.timeout(50): [block-done@2001, RESOLVED@4843,
+  //         jsonErr "TimeoutError: signal timed out", abortedAfter=false]
+  //   BARU  clearTimeout saat resolve + guard fase: jsonOk=true
+  // Fetch promise resolve SETELAH deadline hangus (urutan resolusi task vs
+  // callback timer tidak terjamin saat antrean penuh longtask) → callback
+  // abort basi ikut membunuh pembacaan body yang utuh di buffer → chip
+  // "Terputus" + ticker "Gateway offline" PALSU ~54 dtk tiap load (backlog
+  // 251, akar: longtask init scene SwiftShader 9.7+9.0+3.1 s > deadline 12 dtk).
+  // Kini timer bisa-dibatalkan (clearTimeout saat headers tiba) + guard fase:
+  // callback fase transport yang jalan terlambat tidak boleh menyentuh body.
   const origFetch = globalThis.fetch
   afterEach(() => { globalThis.fetch = origFetch })
 
   // Mock Response yang jujur: pembacaan body selesai di TASK terpisah (paritas
-  // browser nyata — body read bukan microtask instan; di Chrome task body-read
-  // jalan SETELAH callback timer deadline yang basi), dan gagal bila signal
+  // browser nyata — body read bukan microtask instans), dan gagal bila signal
   // sudah aborted saat body selesai dibaca.
   const resp = (signal, body = { good: 1 }) => ({
     ok: true, status: 200,
     json: async () => {
-      await new Promise((r2) => setTimeout(r2, 1)) // body read = macrotask berikutnya
+      await new Promise((r2) => setTimeout(r2, 1)) // body read = task berikutnya
       if (signal?.aborted) throw new DOMException('signal timed out', 'TimeoutError')
       return body
     },
   })
 
-  it('replika bug 252 deterministik: deadline transport hangus SEBELUM body dibaca → body tetap utuh (guard fase)', async () => {
-    // Deterministik lintas runtime (pelajaran: replika berbasis urutan timer
-    // flaky — urutan callback AbortSignal.timeout vs setTimeout body-read
-    // berbeda antara Node murni dan worker vitest). Di sini kita LEDAKKAN
-    // bug secara eksplisit: fetch resolve → wrapper WAJIB sudah membatalkan
-    // deadline transport → lalu body read; bila callback abort basi masih
-    // hidup (kode lama), body terbunuh.
+  it('kontrak inti fix: respons cepat (< deadline) → body utuh terbaca + timer internal mati', async () => {
+    // Jalur bahagia yang dulu rusak produksi: respons tiba < deadline, tapi
+    // thread diblokir saat resolve masuk — callback timer TIDAK boleh
+    // membunuh body. Replika: resolve cepat (10ms), pembacaan body setelahnya.
     globalThis.fetch = (path, opts = {}) => new Promise((res) => {
-      // respons tiba lebih lambat dari deadline (30ms > 5ms) — SETELAH itu
-      // wrapper harus melepaskan deadline transport sebelum pemanggil membaca body.
-      setTimeout(() => res(resp(opts.signal)), 30)
+      setTimeout(() => res(resp(opts.signal)), 10)
     })
-    const r = await fetchWithTimeout('/late-headers', { timeoutMs: 5 })
-      .catch((e) => e) // kode lama: melempar TimeoutError (transport dianggap hang)
-    // Kode lama: reject TimeoutError (fetch tak pernah settle sebelum deadline).
-    // Kode baru: headers yang tiba lewat deadline TETAP ditolak untuk fase
-    // transport (kontrak 203 — gateway menggantung = jangan tunggu selamanya),
-    // jadi assert di bawah mengunci kontrak itu; yang diuji terpisah adalah
-    // bahwa setelah headers tiba, deadline transport MATI (tidak membunuh body).
-    expect(r.isFetchTimeout).toBe(true)
+    const r = await fetchWithTimeout('/ok-fast', { timeoutMs: 5000 })
+    expect(await r.json()).toEqual({ good: 1 }) // kode lama BISA lolos di sini
+    expect(r.status).toBe(200)                  // — kunci baris di bawah yang membedakan
+  }, 10000)
+
+  it('replika bug 252 (A/B Chrome terukur): deadline menembak SETELAH resolve → body tetap utuh (timer dibatalkan di resolve)', async () => {
+    // PERINGATAN PORTABILITAS (terbukti 2x siklus ini): replika berbasis timing
+    // (resolve vs callback timer) TIDAK portable — Node murni melempar
+    // TimeoutError dgn kode lama, worker vitest justru lolos (urutan antrean
+    // timer beda antar runtime). Mekanisme bug 252 dikunci lewat: (a) A/B
+    // Chrome asli terukur (komentar describe); (b) test sumber di bawah yang
+    // MERAH eksak saat AbortSignal.timeout kembali; (c) uji ini menjaga jalur
+    // bahagia lintas-deadline: body dibaca SETELAH jatuh tempo, kode baru tetap
+    // utuh (timer di-clear saat resolve), kode lama merah di Node murni.
+    globalThis.fetch = (path, opts = {}) => new Promise((res) => {
+      setTimeout(() => res(resp(opts.signal)), 5) // headers tiba < deadline
+    })
+    const r = await fetchWithTimeout('/deadline-after-resolve', { timeoutMs: 20 })
+    await new Promise((r2) => setTimeout(r2, 60)) // lewati jatuh tempo (20ms) jauh
+    expect(await r.json()).toEqual({ good: 1 }) // Node murni + kode lama: MERAH
   }, 10000)
 
   it('sumber deadline = timer bisa-dibatalkan + guard fase (bukan AbortSignal.timeout)', () => {
