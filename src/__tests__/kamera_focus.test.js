@@ -1,5 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam, resetFocusGoal } from '../scene/parts/kamera_focus.js';
+import { readFileSync } from 'node:fs';
+import { resolve, dirname } from 'node:path';
+import { fileURLToPath } from 'node:url';
+import { updateFollowGoal, focusStep, autoRotateStep, AUTOROT_RATE, ensureHomeRadius, saveCam, resetFocusGoal } from '../scene/parts/kamera_focus.js';
+
+const here = dirname(fileURLToPath(import.meta.url));
+const root = resolve(here, '..', '..');
 
 const HOME = { x: 0, y: 1.8, z: 0 };
 const cloneHome = () => ({ x: 0, y: 1.8, z: 0 });
@@ -116,13 +122,39 @@ describe('focusStep', () => {
   });
 });
 
-describe('autoRotateStep', () => {
-  it('theta bertambah 0.0012 per langkah', () => {
+describe('autoRotateStep — Siklus 259 laju waktu-nyata (rad/detik × dt)', () => {
+  it('kontrak laju: AUTOROT_RATE = 0.072 rad/s; dt default 0.016 → +0.001152', () => {
+    expect(AUTOROT_RATE).toBe(0.072);
     const sph = { theta: 1 };
     autoRotateStep(sph);
-    expect(sph.theta).toBeCloseTo(1.0012);
-    autoRotateStep(sph);
-    expect(sph.theta).toBeCloseTo(1.0024);
+    expect(sph.theta).toBeCloseTo(1 + 0.072 * 0.016, 12);
+  });
+  it('dt eksplisit: 1 detik → +0.072 rad (putaran penuh ≈ 87.3 dtk)', () => {
+    const sph = { theta: 0 };
+    autoRotateStep(sph, 1.0);
+    expect(sph.theta).toBeCloseTo(0.072, 12);
+  });
+  it('INDEPENDEN FPS: 60 langkah 1/60 dtk == 1 langkah 1 dtk (bug kelas 251)', () => {
+    const a = { theta: 0 }, b = { theta: 0 };
+    for (let i = 0; i < 60; i++) autoRotateStep(a, 1 / 60);
+    autoRotateStep(b, 1.0);
+    expect(a.theta).toBeCloseTo(b.theta, 9);
+  });
+  it('anti-poisoning: NaN/±Infinity/string/negatif/nol → theta tak berubah', () => {
+    for (const bad of [NaN, Infinity, -Infinity, 'x', -0.5, 0]) {
+      const sph = { theta: 1 };
+      autoRotateStep(sph, bad);
+      expect(sph.theta).toBe(1);
+    }
+  });
+  it('drift-gate sumber: pola per-frame .0012 DILARANG kembali; OfficeScene meneruskan delta', () => {
+    const kf = readFileSync(resolve(root, 'src/scene/parts/kamera_focus.js'), 'utf8');
+    expect(kf).toContain('export const AUTOROT_RATE = 0.072');
+    expect(kf).toContain('AUTOROT_RATE * dt');
+    expect(kf).not.toMatch(/sph\.theta \+= ?\.0012/);
+    const os = readFileSync(resolve(root, 'src/scene/OfficeScene.js'), 'utf8');
+    expect(os).toContain('autoRotateStep(sph,delta)');
+    expect(os).not.toContain('autoRotateStep(sph)');
   });
 });
 

@@ -1775,7 +1775,10 @@ function animate(){
     __lastCamFloor=cf.level;
     if(cf.changed&&onCameraFloor)onCameraFloor(cf.level);
   }
-  if(autoRot){autoRotateStep(sph);updCam()}
+  // Siklus 259: auto-rotate memakai delta WAKTU-NYATA antar frame (rad/s × dt)
+  // — dulu 0.0012 rad per FRAME: di SwiftShader 0.4 FPS putaran ~3.6 jam
+  // (praktis beku), di 144 Hz 2.4× terlalu cepat (detail di kamera_focus.js).
+  if(autoRot){autoRotateStep(sph,delta);updCam()}
   screenData.forEach(drawScreen);
   updateWalkers(delta);
 

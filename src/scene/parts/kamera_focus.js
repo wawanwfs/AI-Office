@@ -76,8 +76,19 @@ export function focusStep(tgt, sph, goalT, goalR, goalPhi) {
   return Math.sqrt(tgt.x * tgt.x + (tgt.y - 1.8) * (tgt.y - 1.8) + tgt.z * tgt.z) < .05;
 }
 
-// Auto-rotate idle: theta bertambah konstan per frame (0.0012 rad).
-export function autoRotateStep(sph) { sph.theta += .0012; }
+// Auto-rotate idle — Siklus 259: laju kini berbasis WAKTU-NYATA (rad/detik),
+// bukan rad per frame (bug kelas 251: delta frame-level di jalur yang
+// FPS-dependent). Dulu `theta += 0.0012` per pemanggilan (per frame): di 60 FPS
+// = 0.072 rad/s (putaran ~87 dtk, kebetulan pas), di SwiftShader/kiosk 0.4 FPS
+// = 0.00048 rad/s (putaran ~3.6 JAM — rotasi praktis beku), di 144 Hz = 0.173
+// rad/s (2.4× terlalu cepat). Kontrak laju: AUTOROT_RATE = 0.072 rad/s pada
+// FPS APA PUN. Nama fungsi & pemanggil tetap; dt non-finite → 0 (anti-poisoning
+// konsisten modul lain); dt ≤ 0 tidak bergerak.
+export const AUTOROT_RATE = 0.072; // rad/detik — putaran penuh ~87.3 dtk
+export function autoRotateStep(sph, dt = 0.016) {
+  if (!(typeof dt === 'number' && Number.isFinite(dt)) || dt <= 0) return;
+  sph.theta += AUTOROT_RATE * dt;
+}
 
 // ── Siklus 115: helper interaksi kamera (murni, null-safe) ──────────
 // Menggantikan duplikat inline di OfficeScene (7× clamp homeRadius,
