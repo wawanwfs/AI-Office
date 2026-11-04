@@ -202,4 +202,12 @@ describe('drift-gate server gateway produksi :8787 (siklus 209)', () => {
     const g = readFileSync(resolve(REPO, 'backend_live/wfs_tasks.py'), 'utf-8')
     expect(g).toContain('SELECT id,project,title,role,agent_id,status,prompt,result,files,review,created,updated FROM tasks')
   })
+
+  it('siklus 255: sandbox_exec dan sandbox_test di-offload ke asyncio.to_thread (anti-beku event-loop)', () => {
+    const s = src()
+    expect(s).toContain('asyncio.to_thread(sandbox_exec.run_in_sandbox')
+    expect(s).toContain('asyncio.to_thread(sandbox_exec.run_tests_in_sandbox')
+    const t = readFileSync(resolve(REPO, 'backend_live/test_wfs_server_superset.py'), 'utf-8')
+    expect(t).toContain('def test_sandbox_exec_and_test_offloaded_to_thread')
+  })
 })

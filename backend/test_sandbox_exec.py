@@ -128,3 +128,35 @@ def test_run_tests_ok_dan_timeout(fake_docker):
     res2 = sandbox_exec.run_tests_in_sandbox("a1", timeout=120)
     assert res2["ok"] is False
     assert "timeout" in res2["output"]
+
+
+# ---------------- hardening siklus 255 ----------------
+
+def test_docker_ps_enforces_timeout_10_and_error_handling(fake_docker, monkeypatch):
+    calls, running = fake_docker
+    running["containers"] = {"wfs-agent-a1"}
+    running["exec_result"] = _FakeProc(returncode=0, stdout="ok")
+    _mkdir_workspace(sandbox_exec.SANDBOX_BASE, "a1")
+
+    # 1. Pastikan docker ps membawa timeout=10
+    sandbox_exec.run_in_sandbox("a1", "print(1)")
+    ps_calls = [c for c in calls if c[0][:2] == ["docker", "ps"]]
+    assert len(ps_calls) >= 1
+    assert ps_calls[-1][1].get("timeout") == 10
+
+    sandbox_exec.run_tests_in_sandbox("a1")
+    ps_calls = [c for c in calls if c[0][:2] == ["docker", "ps"]]
+    assert ps_calls[-1][1].get("timeout") == 10
+
+    # 2. Docker absen / FileNotFoundError tidak melempar 500 unhandled exception
+    def broken_ps(*args, **kwargs):
+        raise FileNotFoundError("No such file or directory: 'docker'")
+    monkeypatch.setattr(subprocess, "run", broken_ps)
+
+    r1 = sandbox_exec.run_in_sandbox("a1", "print(1)")
+    assert r1["ok"] is False
+    assert "docker error" in r1["output"]
+
+    r2 = sandbox_exec.run_tests_in_sandbox("a1")
+    assert r2["ok"] is False
+    assert "docker error" in r2["output"]

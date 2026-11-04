@@ -723,3 +723,64 @@ def test_sandboxes_docker_broken_returns_empty_not_500(monkeypatch):
         r = cl.get("/api/sandboxes")
         assert r.status_code == 200
         assert r.json() == {"sandboxes": []}
+
+
+# ---------- siklus 255: sandbox_exec & sandbox_test non-blocking (asyncio.to_thread) ----------
+
+def test_sandbox_exec_and_test_offloaded_to_thread(monkeypatch):
+    """SIKLUS 255: sandbox_exec dan sandbox_test wajib di-offload ke worker thread
+    (asyncio.to_thread) agar eksekusi kode / pytest di container (hingga 600s/120s)
+    TIDAK membekukan event loop Uvicorn."""
+    src = Path(server.__file__).read_text()
+    exec_src = src[src.index('async def sandbox_exec'):src.index('async def sandbox_test')]
+    test_src = src[src.index('async def sandbox_test'):src.index('async def api_run_all')]
+
+    # 1. Kontrak statis: to_thread wajib ada di kedua endpoint
+    assert "asyncio.to_thread(sandbox_exec.run_in_sandbox" in exec_src
+    assert "asyncio.to_thread(sandbox_exec.run_tests_in_sandbox" in test_src
+
+    # 2. Kontrak AST: dipanggil via await asyncio.to_thread
+    import ast as _ast
+    tree = _ast.parse(src)
+    for node in _ast.walk(tree):
+        if isinstance(node, _ast.AsyncFunctionDef) and node.name in ("sandbox_exec", "sandbox_test"):
+            awaits = [n for n in _ast.walk(node) if isinstance(n, _ast.Await)]
+            assert awaits, f"tidak ada await di {node.name}"
+            calls = [n.value for n in awaits if isinstance(n.value, _ast.Call)]
+            assert any(
+                isinstance(c.func, _ast.Attribute) and c.func.attr == "to_thread"
+                for c in calls
+            ), f"to_thread tidak di-await di {node.name}"
+
+    # 3. Verifikasi perilaku nyata: fungsi dieksekusi di thread terpisah (bukan main thread)
+    import threading
+    import types
+    main_tid = threading.get_ident()
+    executed_tids = {}
+
+    class FakeSE:
+        @staticmethod
+        def run_in_sandbox(aid, code, timeout):
+            executed_tids["exec"] = threading.get_ident()
+            return {"ok": True, "output": "ok"}
+
+        @staticmethod
+        def run_tests_in_sandbox(aid):
+            executed_tids["test"] = threading.get_ident()
+            return {"ok": True, "output": "tests ok"}
+
+    fake = types.ModuleType("sandbox_exec")
+    setattr(fake, "run_in_sandbox", FakeSE.run_in_sandbox)
+    setattr(fake, "run_tests_in_sandbox", FakeSE.run_tests_in_sandbox)
+    monkeypatch.setitem(sys.modules, "sandbox_exec", fake)
+
+    with TestClient(server.app) as cl:
+        r1 = cl.post("/api/sandbox/be1/exec", json={"code": "1"})
+        assert r1.status_code == 200
+        assert r1.json() == {"ok": True, "output": "ok"}
+        assert executed_tids.get("exec") != main_tid, "run_in_sandbox dieksekusi di main thread!"
+
+        r2 = cl.post("/api/sandbox/be1/test")
+        assert r2.status_code == 200
+        assert r2.json() == {"ok": True, "output": "tests ok"}
+        assert executed_tids.get("test") != main_tid, "run_tests_in_sandbox dieksekusi di main thread!"

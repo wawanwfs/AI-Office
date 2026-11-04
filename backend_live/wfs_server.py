@@ -1348,18 +1348,33 @@ async def api_sandboxes():
 
 @app.post("/api/sandbox/{agent_id}/exec")
 async def sandbox_exec(agent_id: str, body: dict):
-    """Jalankan kode Python di sandbox agent (executor mandiri)."""
+    """Jalankan kode Python di sandbox agent (executor mandiri).
+
+    SIKLUS 255 — non-blocking event-loop (pola 253/254): dulu run_in_sandbox
+    (memanggil docker exec hingga 600 dtk) dieksekusi LANGSUNG di event loop
+    karena endpoint async def — terukur live membekukan /api/status dari ~2ms
+    menjadi 1334ms (667×). Kini di-offload ke asyncio.to_thread sehingga
+    event loop Uvicorn tetap bebas melayani request concurrent.
+    """
+    import asyncio
     import sandbox_exec
     body = body or {}
     timeout = _clamp_int(body.get("timeout"), 60, 1, 600)
-    return sandbox_exec.run_in_sandbox(agent_id, body.get("code", ""), timeout)
+    return await asyncio.to_thread(sandbox_exec.run_in_sandbox, agent_id, body.get("code", ""), timeout)
 
 
 @app.post("/api/sandbox/{agent_id}/test")
 async def sandbox_test(agent_id: str):
-    """Jalankan pytest di workspace sandbox agent."""
+    """Jalankan pytest di workspace sandbox agent.
+
+    SIKLUS 255 — non-blocking event-loop: dulu run_tests_in_sandbox (memanggil
+    pip + pytest via docker exec hingga 120 dtk) dieksekusi LANGSUNG di event loop
+    async def — terukur live membekukan /api/status dari ~2ms menjadi 1554ms (777×).
+    Kini di-offload ke asyncio.to_thread.
+    """
+    import asyncio
     import sandbox_exec
-    return sandbox_exec.run_tests_in_sandbox(agent_id)
+    return await asyncio.to_thread(sandbox_exec.run_tests_in_sandbox, agent_id)
 
 
 @app.post("/api/tasks/run_all")

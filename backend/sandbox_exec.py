@@ -10,13 +10,21 @@ def run_in_sandbox(agent_id: str, code: str, timeout: int = 60) -> dict:
     """Jalankan kode Python di container wfs-agent-<agent_id>. Return {ok, output}."""
     name = f"wfs-agent-{agent_id}"
     # cek container hidup
-    r = subprocess.run(["docker", "ps", "--format", "{{.Names}}"], capture_output=True, text=True)
+    try:
+        r = subprocess.run(["docker", "ps", "--format", "{{.Names}}"],
+                           capture_output=True, text=True, timeout=10)
+    except Exception as e:
+        return {"ok": False, "output": f"docker error: {e}"}
     if name not in r.stdout.split():
         return {"ok": False, "output": f"sandbox {name} tidak running"}
     # tulis script ke workspace (mounted) lalu exec
-    script_host = os.path.join(SANDBOX_BASE, agent_id, "workspace", "_task_script.py")
-    with open(script_host, "w") as f:
-        f.write(code)
+    try:
+        script_host = os.path.join(SANDBOX_BASE, agent_id, "workspace", "_task_script.py")
+        os.makedirs(os.path.dirname(script_host), exist_ok=True)
+        with open(script_host, "w") as f:
+            f.write(code)
+    except Exception as e:
+        return {"ok": False, "output": f"gagal menulis script: {e}"}
     try:
         r = subprocess.run(
             ["docker", "exec", name, "python3", "/workspace/_task_script.py"],
@@ -25,12 +33,18 @@ def run_in_sandbox(agent_id: str, code: str, timeout: int = 60) -> dict:
         return {"ok": r.returncode == 0, "output": (r.stdout + r.stderr).strip()[:4000]}
     except subprocess.TimeoutExpired:
         return {"ok": False, "output": f"timeout setelah {timeout}s"}
+    except Exception as e:
+        return {"ok": False, "output": f"exec error: {e}"}
 
 
 def run_tests_in_sandbox(agent_id: str, timeout: int = 120) -> dict:
     """Jalankan pytest di workspace agent (kalau ada test)."""
     name = f"wfs-agent-{agent_id}"
-    r = subprocess.run(["docker", "ps", "--format", "{{.Names}}"], capture_output=True, text=True)
+    try:
+        r = subprocess.run(["docker", "ps", "--format", "{{.Names}}"],
+                           capture_output=True, text=True, timeout=10)
+    except Exception as e:
+        return {"ok": False, "output": f"docker error: {e}"}
     if name not in r.stdout.split():
         return {"ok": False, "output": f"sandbox {name} tidak running"}
     try:
@@ -42,3 +56,5 @@ def run_tests_in_sandbox(agent_id: str, timeout: int = 120) -> dict:
         return {"ok": r.returncode == 0, "output": r.stdout.strip()[:4000]}
     except subprocess.TimeoutExpired:
         return {"ok": False, "output": f"timeout setelah {timeout}s"}
+    except Exception as e:
+        return {"ok": False, "output": f"test error: {e}"}
