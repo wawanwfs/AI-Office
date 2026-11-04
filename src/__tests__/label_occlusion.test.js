@@ -4,7 +4,7 @@
 // tengah — teks-atas-teks "bertumpuk kertas". occlusionPass memudarkan label yang
 // menumpuk di layar dgn label LEBIH DEKAT ke kamera (fade berbasis selisih kedalaman).
 import { describe, it, expect } from 'vitest';
-import { occlusionFade, occlusionPass, OCCL_START, OCCL_END, OCCL_MIN_OPACITY, OCCL_PX } from '../scene/parts/label_occlusion.js';
+import { occlusionFade, occlusionPass, OCCL_START, OCCL_END, OCCL_MIN_OPACITY, OCCL_PX, OCCL_TIE_FRAC, OCCL_TIE_MIN_OPACITY } from '../scene/parts/label_occlusion.js';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -61,9 +61,20 @@ describe('occlusionPass — aturan siapa menutup siapa', () => {
     expect(occlusionPass([far, near])).toBe(0);
     expect(far.occ).toBe(1);
   });
-  it('TIDAK fade bila selisih kedalaman kecil meski menumpuk (baris sejajar normal)', () => {
+  it('TIDAK fade bila selisih kedalaman kecil DAN tumpukan di bawah ambang tie (baris sejajar)', () => {
     const a = lbl('A', 0, 0, 60, 30, 11);
-    const b = lbl('B', 0, 0, 60, 30, 10); // 1 unit — di bawah OCCL_START
+    const b = lbl('B', 0, 0, 60, 30, 10); // 1 unit — di bawah OCCL_START & di bawah tieFrac? tumpuk total → tie MENYALA
+    // Kontrak 250 mengubah perilaku ini SECARA SENGAJA utk tumpukan nyata:
+    // Δdist < START + tumpuk ≥ tieFrac = dua teks pekat saling menimpa.
+    expect(occlusionPass([a, b])).toBe(1);
+    expect(a.occ).toBe(OCCL_TIE_MIN_OPACITY);
+    expect(b.occ).toBe(1);
+  });
+  it('TIDAK fade bila selisih kedalaman kecil dan label hanya bersinggungan tepi (< tieFrac)', () => {
+    // geser vertikal 22px dari tinggi 30 → tumpukan tipis ~ (30-22)/30 = 27% …
+    // dibuat lebih tipis lagi: hanya 4px → 4/30 = 13% < 15% ambang
+    const a = lbl('A', 0, 0, 60, 30, 11);
+    const b = lbl('B', 0, 26, 60, 30, 10);
     expect(occlusionPass([a, b])).toBe(0);
     expect(a.occ).toBe(1); expect(b.occ).toBe(1);
   });
@@ -124,5 +135,79 @@ describe('drift-gate sumber OfficeScene.js — oklusi terpasang di jalur relayou
   it('hook __occlFade terdaftar SCENE_HOOKS (purge destroy menjangkaunya)', () => {
     const hooks = readFileSync(join(here, '..', 'scene', 'parts', 'scene_hooks.js'), 'utf8');
     expect(hooks).toContain("'__occlFade'");
+  });
+});
+
+// ── Siklus 250: aturan TIE — tetangga meja kedalaman nyaris sama ────────────
+// Probe produksi (kamera rumah & preset iso): 9–19 pasangan label bertumpuk
+// tetap opacity 1 padahal pasca-fix oklusi 249 — semuanya Δdist < OCCL_START
+// (0.05–2.3 unit, tetangga meja 2.0–4.0 unit dunia) sehingga kurva kedalaman
+// 240 melewati mereka, sementara anti-overlap 2D mustahil memisahkan label
+// 73.4px dgn offset ter-clamp ±16px. Kini pasangan tumpuk ≥25% luas label
+// terkecil dgn Δdist < START dipudarkan satu sisi ke 0.55.
+describe('occlusionPass — aturan TIE (siklus 250)', () => {
+  const lblT = (name, x, y, sw, sh, dist, extra = {}) => ({
+    a: { name }, zone: false, x, y, offX: 0, offY: 0, sw, sh, dist, ...extra,
+  });
+
+  it('tetangga meja (Δdist kecil, tumpukan ≥ 15% luas terkecil) → yang lebih jauh pudar ke TIE_MIN', () => {
+    // replika produksi preset iso (probe 250): RIZKY × GILANG — tumpukan
+    // 0.66 luas, jarak kamera 46.6 vs 47.1 (Δ 0.46 < START 2.5): kurva
+    // kedalaman 240 melewati (Δ < START), kini aturan tie yang menyala.
+    const near = lblT('RIZKY', 770, 292, 73.4, 22.4, 46.6);
+    const far = lblT('GILANG', 804, 282, 73.4, 22.4, 47.1);
+    const n = occlusionPass([near, far]);
+    expect(n).toBe(1);
+    expect(far.occ).toBe(OCCL_TIE_MIN_OPACITY);
+    expect(near.occ).toBe(1); // pemenang tak tersentuh
+  });
+
+  it('tumpukan DI BAWAH ambang (label nyaris tidak bersinggungan) → tidak pudar', () => {
+    // oy ~ dy 1.1px ≪ ambang; ix kecil → area < 25%
+    const far = lblT('TONI', 672, 275, 73.4, 22.4, 46.79);
+    const near = lblT('SUPPORT', 619, 296, 73.4, 22.4, 44.73);
+    const n = occlusionPass([far, near]);
+    expect(far.occ).toBe(1);
+    expect(near.occ).toBe(1);
+    expect(n).toBe(0);
+  });
+
+  it('ekuivalen dist persis → nama lexicographic yang pudar (deterministik)', () => {
+    const a = lblT('zeta', 0, 0, 73.4, 22.4, 46.0);
+    const b = lblT('alpha', 0, 0, 73.4, 22.4, 46.0); // tumpuk total, dist sama
+    const n = occlusionPass([a, b]);
+    expect(n).toBe(1);
+    expect(a.occ).toBe(OCCL_TIE_MIN_OPACITY); // 'zeta' > 'alpha' → zeta pudar
+    expect(b.occ).toBe(1);
+  });
+
+  it('kurva kedalaman 240 UTUH: penutup lebih dekat ≥ START tetap pakai kurva lama', () => {
+    const far = lblT('BEHIND', 0, 0, 60, 30, 20);
+    const near = lblT('FRONT', 0, 0, 60, 30, 12); // Δ 8 ≥ END → MIN_OPACITY lama
+    const n = occlusionPass([far, near]);
+    expect(n).toBe(1);
+    expect(far.occ).toBe(OCCL_MIN_OPACITY); // bukan TIE_MIN
+  });
+
+  it('pasangan yang SUDAH di-fade kurva kedalaman tak makin pudar oleh tie (min antar aturan)', () => {
+    const far = lblT('L', 0, 0, 60, 30, 14);   // Δ 4 → kurva parsial ~0.607
+    const near = lblT('N', 0, 0, 60, 30, 10);  // tie juga memenuhi (Δ < START)
+    occlusionPass([far, near]);
+    expect(far.occ).toBeCloseTo(occlusionFade(14, 10), 10); // kurva menang (lebih pudar)
+  });
+
+  it('tieFrac 0 → aturan tie MATI total (perilaku pra-250 utk Δdist < START)', () => {
+    const far = lblT('ARIS', 0, 0, 73.4, 22.4, 47.32);
+    const near = lblT('CLARA', 0, 0, 73.4, 22.4, 45.15);
+    const n = occlusionPass([far, near], { tieFrac: 0 });
+    expect(n).toBe(0);
+    expect(far.occ).toBe(1);
+  });
+
+  it('label tanpa dist tetap dilewati aturan tie (kontrak lama utuh)', () => {
+    const noDist = lblT('X', 0, 0, 73.4, 22.4, undefined);
+    const has = lblT('Y', 0, 0, 73.4, 22.4, 45);
+    expect(occlusionPass([noDist, has])).toBe(0);
+    expect(noDist.occ).toBe(1); expect(has.occ).toBe(1);
   });
 });
