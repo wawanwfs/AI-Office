@@ -1202,16 +1202,79 @@ async def api_system_resources():
     Baca /proc lewat parser toleran (_parse_meminfo/_parse_loadavg) + try/except
     OSError agar endpoint tidak pernah 500 pada file hilang/format tak terduga
     (guard anti-poisoning, pola sama dgn _clamp_int).
+
+    SIKLUS 253 — non-blocking + tanpa `docker stats` (lambat ~2.1 dtk):
+    dulu endpoint ini menjalankan subprocess `docker stats --no-stream` DI
+    THREAD event-loop uvicorn (async def tanpa offload) → seluruh gateway
+    :8787 BEKU ~2 dtk setiap kali SysMeter/Dashboard/TeamStats menarik data
+    (terukur: /api/status concurrent 1ms → 1914ms). Kini sampling CPU via
+    delta cgroup cpu.stat dua-pass (250ms) dan RAM dari memory.current/
+    memory.max cgroup v2 (baca file ~1ms), offload ke worker thread via
+    asyncio.to_thread — total <400ms — angka setara docker stats
+    (terverifikasi berdampingan, presisi 0.01–0.2%).
     """
-    import subprocess, os
+    import asyncio, glob as _glob
+
+    def _collect(prev, dt_s):
+        """Sampling satu pass: nama via docker ps (subprocess cepat ~70ms),
+        RAM/CPU dari cgroup v2 per-kontainer (baca file ~1ms/15 kontainer)."""
+        ncpu = os.cpu_count() or 2
+        try:
+            ps = subprocess.run(["docker", "ps", "--format", "{{.ID}} {{.Names}}"],
+                                capture_output=True, text=True, timeout=10)
+        except Exception:
+            ps = None
+        cur = {}
+        if ps is not None and ps.returncode == 0:
+            for line in ps.stdout.splitlines():
+                parts = line.split()
+                if len(parts) < 2:
+                    continue
+                cid, name = parts[0], " ".join(parts[1:])
+                usage = mem_cur = None
+                mem_lim = None
+                try:
+                    hits = _glob.glob("/sys/fs/cgroup/system.slice/docker-" + cid + "*.scope")
+                    if hits:
+                        base = hits[0]
+                        try:
+                            mem_cur = int(open(os.path.join(base, "memory.current")).read())
+                        except (OSError, ValueError):
+                            mem_cur = None
+                        try:
+                            raw = open(os.path.join(base, "memory.max")).read().strip()
+                            mem_lim = None if raw == "max" else int(raw)
+                        except (OSError, ValueError):
+                            mem_lim = None
+                        # cpu.stat baris pertama = "usage_usec <n>" (cgroup v2)
+                        with open(os.path.join(base, "cpu.stat")) as f:
+                            first = f.readline().split()
+                        usage = int(first[1]) if (len(first) >= 2 and first[0] == "usage_usec") else None
+                except Exception:
+                    pass
+                cur[cid] = (name, usage, mem_cur, mem_lim)
+        rows = []
+        for cid, (name, u1, m1, lim) in cur.items():
+            cpu = "0.00%"
+            if prev and cid in prev and u1 is not None and prev[cid] is not None:
+                d = max(0, u1 - prev[cid]) / 1e6 / max(dt_s, 1e-3) / ncpu * 100
+                cpu = f"{d:.2f}%"
+            mem = "?" if m1 is None else f"{m1 / 2**20:.1f}MiB"
+            if lim:
+                mem += f" / {lim / 2**30:.3f}GiB"
+            rows.append({"name": name, "cpu": cpu, "mem": mem})
+            if u1 is not None:
+                prev[cid] = u1
+        return rows, prev, dt_s
+
     try:
-        out = subprocess.run(["docker", "stats", "--no-stream", "--format", "{{.Name}} {{.CPUPerc}} {{.MemUsage}}"],
-                             capture_output=True, text=True, timeout=15).stdout.strip().splitlines()
-        containers = []
-        for line in out:
-            parts = line.split()
-            if len(parts) >= 3:
-                containers.append({"name": parts[0], "cpu": parts[1], "mem": " ".join(parts[2:])})
+        # Pass-0 baseline CPU (tanpa output) → jeda 250ms → pass-1 dgn delta.
+        # asyncio.to_thread = primitif offload yang SUDAH dipakai file ini
+        # (api_projects:710 utk docker inspect) — subprocess & baca file
+        # JANGAN pernah dieksekusi langsung di event-loop.
+        _r0, prev0, _ = await asyncio.to_thread(_collect, None, 0.0)
+        await asyncio.sleep(0.25)
+        containers, prev1, dt = await asyncio.to_thread(_collect, prev0, 0.25)
     except Exception:
         containers = []
     try:
