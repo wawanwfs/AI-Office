@@ -221,6 +221,11 @@ describe('fetch_timeout_hardening siklus 252 — deadline dua-fase (transport vs
     expect(src).not.toMatch(/fetchTimeoutSignal\(/) // helper lama sekali-hangus dihapus
     expect(src).toContain("phase !== 'transport') return") // guard fase: abort basi tak menyentuh body
     expect(src).toContain('d.toBody()') // anggaran body baru saat headers tiba
+    // 252b: tembakan terlambat (thread diblokir) dapat satu tenggang — tanpa
+    // ini deadline yang jatuh tempo DI TENGAH longtask tetap membunuh respons
+    // yang datanya sudah tiba (live: sync 25.8 dtk, target < 20 dtk).
+    expect(src).toContain('LATE_SLACK_MS')
+    expect(src).toMatch(/late > LATE_SLACK_MS && !graced/)
   })
 
   it('deadline tetap terpasang sbg signal fase transport (AbortSignal instance)', async () => {

@@ -75,12 +75,28 @@ function deadlineSignal(ms) {
   err.name = 'TimeoutError' // alasan abort = TimeoutError → catch wrapper melipat jadi TimeoutError (paritas AbortSignal.timeout)
   let id = null
   let phase = 'transport' // 'transport' → 'body' → 'done'
-  const arm = () => { id = setTimeout(onFire, ms) }
+  let graced = false       // siklus 252b: tembakan TERLAMBAT (thread diblokir) dapat satu tenggang
+  let dueAt = 0
+  // Ambang "tembakan terlambat": timer browser/Node menembak tepat waktu bila
+  // thread bebas. Selisih eksekusi vs jatuh tempo > 250 ms berarti task lain
+  // (longtask init scene SwiftShader 9.7+9+3 dtk, tab throttled) MEMBLOKIR
+  // thread — bukan gateway lambat. Deadline yang jatuh tempo di tengah blokir
+  // tak boleh menghukum respons yang datanya sudah tiba di buffer.
+  const LATE_SLACK_MS = 250
+  const arm = () => { dueAt = Date.now() + ms; id = setTimeout(onFire, ms) }
   const onFire = () => {
     // Guard fase (inti fix 252): callback bisa dieksekusi JAUH setelah jatuh
     // tempo (main thread diblokir longtask). Bila fase-nya sudah berganti,
     // abort basi DILARANG menyentuh body yang sudah tiba.
     if (phase !== 'transport') return
+    const late = Date.now() - dueAt
+    if (late > LATE_SLACK_MS && !graced) {
+      // Tembakan terlambat = thread terblokir, bukan gateway diam. Beri SATU
+      // tenggang penuh; hang sungguhan tetap gagal ≤ 2× deadline (bounded).
+      graced = true
+      arm()
+      return
+    }
     ac.abort(err)
   }
   arm()
