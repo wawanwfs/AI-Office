@@ -58,31 +58,59 @@ export function timeoutErrorDetail(e) {
 // sejak call-start), padahal di renderer lambat (SwiftShader headless 0.3 FPS,
 // tab throttled, kiosk GPU lemah) main thread bisa diblokir longtask init
 // scene 9.7+9.0+3.1 s. Respons 200 tercatat Network.responseReceived <0.1 s
-// TAPI promise fetch/json baru terproses di t≈18.9 s — deadline 12 dtk sudah
-// hangus → r.json() melempar "signal timed out" meski body utuh di buffer →
-// chip "Terputus" + ticker "Gateway offline" PALSU ~54 dtk tiap load (backlog
-// 251, akar ditemukan & terbukti). Kini deadline MURNI transport: timer
-// clearTimeout begitu HEADERS tiba (fetch resolve), pembacaan body tidak
-// pernah dibunuh deadline basi — body sudah tiba via jaringan, tersangkut
-// hanya antrean main thread. Hang sungguhan tetap TimeoutError (kontrak 203).
+// TAPI promise fetch/json baru terproses di t≈18.9 s — callback abort BASI
+// (jatuh tempo 12 dtk, sudah mengantre) ikut membunuh pembacaan body yang
+// datanya utuh di buffer → r.json() "signal timed out" → chip "Terputus" +
+// ticker "Gateway offline" PALSU ~54 dtk tiap load (backlog 251).
+//
+// Kini deadline DUA FASE dgn timer bisa-dibatalkan + GUARD FASE: timer fase
+// transport yang menembak terlambat TIDAK boleh membunuh fase body (yang
+// sudah dimulai) — ia memeriksa `phase` saat callback benar-benar berjalan,
+// bukan saat dijadwalkan. Body lalu dapat anggaran deadline SENDIRI mulai
+// saat headers tiba; body yang benar-benar menggantung tetap TimeoutError
+// (kontrak 203 utuh). Abort pemanggil (options.signal) tetap menang.
 function deadlineSignal(ms) {
   const ac = new AbortController()
   const err = new Error('fetch deadline (' + ms + 'ms) — gateway menggantung?')
   err.name = 'TimeoutError' // alasan abort = TimeoutError → catch wrapper melipat jadi TimeoutError (paritas AbortSignal.timeout)
-  const id = setTimeout(() => ac.abort(err), ms)
-  return { signal: ac.signal, clear: () => clearTimeout(id) }
+  let id = null
+  let phase = 'transport' // 'transport' → 'body' → 'done'
+  const arm = () => { id = setTimeout(onFire, ms) }
+  const onFire = () => {
+    // Guard fase (inti fix 252): callback bisa dieksekusi JAUH setelah jatuh
+    // tempo (main thread diblokir longtask). Bila fase-nya sudah berganti,
+    // abort basi DILARANG menyentuh body yang sudah tiba.
+    if (phase !== 'transport') return
+    ac.abort(err)
+  }
+  arm()
+  return {
+    signal: ac.signal,
+    // headers tiba: tutup fase transport, buka anggaran BARU utk body.
+    toBody: () => {
+      if (phase !== 'transport') return
+      if (id) clearTimeout(id)
+      phase = 'body'
+      arm()
+    },
+    // seluruh respons selesai dibaca pemanggil: matikan deadline.
+    settle: () => { if (id) clearTimeout(id); id = null; phase = 'done' },
+    done: () => phase === 'done',
+  }
 }
 
 export async function fetchWithTimeout(path, options = {}) {
   const { timeoutMs = DEFAULT, signal, ...rest } = options
   if (typeof AbortSignal === 'undefined' || !AbortSignal.timeout) return fetch(path, { ...rest, signal }) // browser tua: degrade tanpa deadline
-  const d = deadlineSignal(timeoutMs) // SIKLUS 252: timer bisa-dibatalkan, bukan AbortSignal.timeout sekali-hangus
+  const d = deadlineSignal(timeoutMs) // SIKLUS 252: timer bisa-dibatalkan + guard fase
   const signal2 = signal
     ? (AbortSignal.any ? AbortSignal.any([signal, d.signal]) : signal) // tanpa AbortSignal.any: deadline dikorbankan, abort pemanggil tetap hidup
     : d.signal
+  let headersOk = false
   try {
     const r = await fetch(path, { ...rest, signal: signal2 })
-    d.clear() // headers tiba → deadline selesai; body bebas dari deadline basi (252)
+    headersOk = true
+    d.toBody() // fase transport selesai — body bebas dari deadline basi (252)
     return r
   } catch (e) {
     if (isTimeoutError(e) && e.name === 'AbortError' && signal?.aborted) throw e // abort pemanggil, bukan deadline
@@ -94,6 +122,8 @@ export async function fetchWithTimeout(path, options = {}) {
     }
     throw e
   } finally {
-    d.clear() // jalur error juga harus lepas referensi timer (anti-leak)
+    if (!headersOk) d.settle() // jalur error: buang timer (anti-leak)
+    // jalur sukses: timer body tetap berjalan (anggaran penuh timeoutMs, sekali
+    // tembak, bounded) — body yang benar-benar menggantung tetap TimeoutError.
   }
 }

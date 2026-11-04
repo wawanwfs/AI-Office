@@ -155,3 +155,95 @@ describe('fetch_timeout_hardening siklus 203 — guard regresi siklus 125 tak te
     expect(src).toContain("e.name !== 'AbortError'")
   })
 })
+
+describe('fetch_timeout_hardening siklus 252 — deadline dua-fase (transport vs body)', () => {
+  // Bug nyata terbukti probe CDP (backlog 251, chip "Terputus" palsu ~54 dtk):
+  // AbortSignal.timeout TIDAK bisa dibatalkan — di renderer lambat (main thread
+  // diblokir longtask init scene 9.7+9.0+3.1 s) promise fetch resolve di t≈18.9 s,
+  // deadline 12 dtk sudah hangus, callback abort BASI ikut membunuh pembacaan
+  // body yang datanya utuh di buffer → r.json() "signal timed out" meski
+  // respons 200 lengkap → status koneksi PALSU. Kini timer bisa-dibatalkan +
+  // guard fase: callback fase transport yang jalan terlambat tidak boleh
+  // menyentuh body. Sumber kebenaran = perilaku nyata wrapper.
+  const origFetch = globalThis.fetch
+  afterEach(() => { globalThis.fetch = origFetch })
+
+  // Mock Response yang jujur: pembacaan body selesai di TASK terpisah (paritas
+  // browser nyata — body read bukan microtask instan; di Chrome task body-read
+  // jalan SETELAH callback timer deadline yang basi), dan gagal bila signal
+  // sudah aborted saat body selesai dibaca.
+  const resp = (signal, body = { good: 1 }) => ({
+    ok: true, status: 200,
+    json: async () => {
+      await new Promise((r2) => setTimeout(r2, 1)) // body read = macrotask berikutnya
+      if (signal?.aborted) throw new DOMException('signal timed out', 'TimeoutError')
+      return body
+    },
+  })
+
+  it('replika bug 252: main thread DIBLOKIR melewati deadline → respons 200 yang sudah di-buffer tetap terbaca utuh', async () => {
+    // Replika urutan Chrome nyata (dibuktikan probe CDP siklus 252): task
+    // resolve jaringan mengantre di t=10ms (respons server 200 <0.1 s), timer
+    // deadline di t=30ms, thread diblokir 100ms (longtask init scene) → saat
+    // bebas urutannya: await-fetch lanjut, THEN callback timer basi, THEN task
+    // body-read. Kode lama (AbortSignal.timeout): callback basi meng-abort
+    // signal → json() lempar "signal timed out" → chip "Terputus" + ticker
+    // "Gateway offline" PALSU ~54 dtk. Kode baru: timer di-clear saat headers
+    // tiba + guard fase → body utuh terbaca.
+    globalThis.fetch = (path, opts = {}) => new Promise((res) => {
+      setTimeout(() => res(resp(opts.signal)), 10)
+    })
+    const p = fetchWithTimeout('/blocked-thread', { timeoutMs: 30 })
+    const t0 = Date.now()
+    while (Date.now() - t0 < 100) { /* blokir main thread — replika longtask scene init */ }
+    const r = await p
+    expect(await r.json()).toEqual({ good: 1 }) // kode lama: MERAH di sini (TimeoutError)
+  }, 10000)
+
+  it('kontrol urutan makrotask (mekanisme bug): timer basi menembak SEBELUM body-read', async () => {
+    // Guard sumber-kebenaran fix 252: tanpa clearTimeout, callback abort jatuh
+    // SESUDAH await-fetch-lanjut tapi SEBELUM body-read → body terbunuh.
+    // Test ini mengunci model urutan yang dipakai test di atas (bukan tebak).
+    const order = []
+    const ac = new AbortController()
+    setTimeout(() => { order.push('deadline'); ac.abort(new Error('x')) }, 30)
+    const fetched = new Promise((res) => setTimeout(() => res('RESP'), 10))
+    const consumer = (async () => {
+      await fetched
+      order.push('after-await')
+      await new Promise((r2) => setTimeout(r2, 1)) // body read = task berikutnya
+      order.push('body-read aborted=' + ac.signal.aborted)
+    })()
+    const t0 = Date.now()
+    while (Date.now() - t0 < 100) { /* blokir */ }
+    await consumer
+    expect(order).toEqual(['after-await', 'deadline', 'body-read aborted=true'])
+  }, 10000)
+
+  it('sumber deadline = timer bisa-dibatalkan + guard fase (bukan AbortSignal.timeout)', () => {
+    const src = read('src/lib/fetch_timeout.js')
+    expect(src).toMatch(/deadlineSignal\s*\(/)
+    expect(src).toContain('clearTimeout')
+    expect(src).toContain('AbortSignal.timeout(T) TIDAK BISA dibatalkan')
+    expect(src).not.toMatch(/fetchTimeoutSignal\(/) // helper lama sekali-hangus dihapus
+    expect(src).toContain("phase !== 'transport') return") // guard fase: abort basi tak menyentuh body
+    expect(src).toContain('d.toBody()') // anggaran body baru saat headers tiba
+  })
+
+  it('deadline tetap terpasang sbg signal fase transport (AbortSignal instance)', async () => {
+    const seen = []
+    globalThis.fetch = async (path, opts) => {
+      seen.push(opts.signal)
+      return resp(opts.signal, {})
+    }
+    await fetchWithTimeout('/ok', { timeoutMs: 5000 })
+    expect(seen[0]).toBeInstanceOf(AbortSignal)
+  })
+
+  it('hang sungguhan (body tak pernah tiba) → tetap TimeoutError (kontrak 203 utuh)', async () => {
+    globalThis.fetch = (path, opts = {}) => new Promise((_, rej) => {
+      opts.signal?.addEventListener('abort', () => rej(new DOMException('aborted', 'AbortError')))
+    })
+    await expect(fetchWithTimeout('/hang', { timeoutMs: 40 })).rejects.toMatchObject({ name: 'TimeoutError' })
+  }, 10000)
+})
