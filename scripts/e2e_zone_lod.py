@@ -145,7 +145,16 @@ def main():
                        "; ".join(f"{z['label'][:6]}={z['sx']:.2f}/{base_map[z['label']]['x']:.2f}" for z in d1["zones"][:3])))
 
         # ── T2: kamera rendah server room → scale == base×0.45 & px turun ──
+        # Siklus 248 — konvergensi LOD dua-tick diterapkan KONSISTEN: setelah
+        # setcam, tunggu SATU tick relayout penuh (pump + read-back frames via
+        # __animFrames; SwiftShader 0.3 FPS = 1 tick bisa >4 s) lalu pump LAGI
+        # sebelum membaca scale. Dulu hanya pump+sleep 4s sekali → pada VM
+        # lambat tick relayout pertama kadang tiba SETELAH pembacaan (race),
+        # T2 palsu-merah padahal LOD benar (iterasi deterministik 3×:
+        # tick1 kadang 4.25, tick2 selalu 1.913).
         setcam("2.5, 1.2, -8", 2.0, 1.25, 9.0)
+        pump(cmd, frames=2)  # tick kedua — pastikan relayout LOD sudah konvergen
+        time.sleep(2.0)
         p2 = ev(PROJ_EXPR)
         sr2 = next((z for z in p2["zones"] if z["label"] == "SERVER ROOM"), None)
         b = base_map["SERVER ROOM"]
