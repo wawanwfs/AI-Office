@@ -2027,6 +2027,13 @@ function animate(){
     // Pass ini hanya menulis field `occ` pts (posisi TIDAK diubah).
     const __occN = occlusionPass(pts);
     window.__occlFade = __occN; // hook probe e2e (terdaftar SCENE_HOOKS — purge destroy)
+    // Siklus 258: hook diagnostik — snapshot pt mentah zona + agen kunci SEBELUM
+    // blok apply, utk falsifikasi akar "pass tidak memudarkan zona di produksi".
+    try { window.__occPts = pts.map(p=>({zone:!!p.zone,bub:!!p.bub,zt:p.zt?(p.zt.userData&&p.zt.userData.label)||1:null,
+      name:p.a&&p.a.agent?p.a.agent.name:null,x:+p.x.toFixed(1),y:+p.y.toFixed(1),
+      dx:+p.drawnX.toFixed(1),dy:+p.drawnY.toFixed(1),sw:+(p.sw||0).toFixed(1),sh:+(p.sh||0).toFixed(1),
+      zw:+(p.zw||0).toFixed(1),zh:+(p.zh||0).toFixed(1),dist:p.dist!==undefined?+p.dist.toFixed(2):null,
+      occ:p.occ!==undefined?+p.occ.toFixed(3):null})); } catch(e){ window.__occPtsErr=String(e); }
     pts.forEach(p=>{
       // SIKLUS 256: zona kini juga menerima field `occ` (agent×zone pass di
       // label_occlusion.js) — fade zona TANPA menyentuh posisi (posisi zona
