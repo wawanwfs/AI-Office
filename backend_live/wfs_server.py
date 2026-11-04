@@ -1217,8 +1217,12 @@ async def api_system_resources():
 
     def _collect(prev, dt_s):
         """Sampling satu pass: nama via docker ps (subprocess cepat ~70ms),
-        RAM/CPU dari cgroup v2 per-kontainer (baca file ~1ms/15 kontainer)."""
+        RAM/CPU dari cgroup v2 per-kontainer (baca file ~1ms/15 kontainer).
+        dt efektif diukur EKSAK: stempel time.monotonic() di akhir pembacaan
+        tiap pass (disimpan di prev["_t"]) → pembagi CPU% = rentang nyata
+        antara dua batch baca cpu.stat, bukan nominal 250ms."""
         ncpu = os.cpu_count() or 2
+        t_prev = prev.get("_t") if isinstance(prev, dict) else None
         try:
             ps = subprocess.run(["docker", "ps", "--format", "{{.ID}} {{.Names}}"],
                                 capture_output=True, text=True, timeout=10)
@@ -1246,6 +1250,18 @@ async def api_system_resources():
                             mem_lim = None if raw == "max" else int(raw)
                         except (OSError, ValueError):
                             mem_lim = None
+                        # memory.current termasuk page cache: kurangi inactive_file
+                        # (formula docker stats) — tanpa ini omniroute tampil
+                        # 646MiB padahal docker stats 486MiB (selisih cache 160MiB).
+                        if mem_cur is not None:
+                            try:
+                                with open(os.path.join(base, "memory.stat")) as f:
+                                    for ln in f:
+                                        if ln.startswith("inactive_file "):
+                                            mem_cur -= int(ln.split()[1])
+                                            break
+                            except (OSError, ValueError, TypeError):
+                                pass  # tanpa memory.stat: pakai current mentah
                         # cpu.stat baris pertama = "usage_usec <n>" (cgroup v2)
                         with open(os.path.join(base, "cpu.stat")) as f:
                             first = f.readline().split()
@@ -1253,11 +1269,13 @@ async def api_system_resources():
                 except Exception:
                     pass
                 cur[cid] = (name, usage, mem_cur, mem_lim)
+        now = time.monotonic()
+        dt_eff = (now - t_prev) if t_prev else dt_s
         rows = []
         for cid, (name, u1, m1, lim) in cur.items():
             cpu = "0.00%"
             if prev and cid in prev and u1 is not None and prev[cid] is not None:
-                d = max(0, u1 - prev[cid]) / 1e6 / max(dt_s, 1e-3) / ncpu * 100
+                d = max(0, u1 - prev[cid]) / 1e6 / max(dt_eff, 1e-3) / ncpu * 100
                 cpu = f"{d:.2f}%"
             mem = "?" if m1 is None else f"{m1 / 2**20:.1f}MiB"
             if lim:
@@ -1265,14 +1283,16 @@ async def api_system_resources():
             rows.append({"name": name, "cpu": cpu, "mem": mem})
             if u1 is not None:
                 prev[cid] = u1
-        return rows, prev, dt_s
+        if isinstance(prev, dict):
+            prev["_t"] = now  # stempel utk pass berikutnya
+        return rows, prev, dt_eff
 
     try:
         # Pass-0 baseline CPU (tanpa output) → jeda 250ms → pass-1 dgn delta.
         # asyncio.to_thread = primitif offload yang SUDAH dipakai file ini
         # (api_projects:710 utk docker inspect) — subprocess & baca file
         # JANGAN pernah dieksekusi langsung di event-loop.
-        _r0, prev0, _ = await asyncio.to_thread(_collect, None, 0.0)
+        _r0, prev0, _ = await asyncio.to_thread(_collect, {}, 0.0)
         await asyncio.sleep(0.25)
         containers, prev1, dt = await asyncio.to_thread(_collect, prev0, 0.25)
     except Exception:
