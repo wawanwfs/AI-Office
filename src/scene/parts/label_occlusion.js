@@ -69,6 +69,15 @@ export function occlusionFade(dist, nearerDist, start = OCCL_START, end = OCCL_E
 // pt tanpa `dist` (undefined/NaN) dilewati — fade 1 (perilaku lama).
 // Return jumlah label yang di-fade (occ < 1) — utk pengukuran/probe.
 // TIDAK mengubah x/y/offX/offY/sw/sh — hanya menulis field baru `occ`.
+// ── Siklus 251b: posisi GAMBAR nyata (drawnX/drawnY) dipakai bila ada ───────
+// pts.x+offX = layout INTENSI anti-overlap; tapi OfficeScene mengonversi offset
+// piksel → dunia dgn CLAMP (±1.2/±1.6 unit vertikal, ±1.5 horizontal = maks
+// ~25px/16px di kamera rumah) — realisasi clamp bisa masih menumpuk padahal
+// pts-final sudah "terpisah" → pass yang menilai pts-final melewatkan pasangan
+// yang DIGAMBAR tumpuk (temuan steady-state 251: BANTUIN AI×BUDI 0.73 tetap
+// op 1 sementara pts-final tak overlap ≥15%). OfficeScene kini menghitung
+// posisi layar pasca-clamp per pt (drawnX/drawnY) SEBELUM memanggil pass —
+// pass menilai apa yang benar-benar digambar, bukan intensi.
 export function occlusionPass(pts, opts = {}) {
   const start = opts.start ?? OCCL_START;
   const end = opts.end ?? OCCL_END;
@@ -77,6 +86,8 @@ export function occlusionPass(pts, opts = {}) {
   const tieFrac = opts.tieFrac ?? OCCL_TIE_FRAC;
   const tieMin = opts.tieMinOpacity ?? OCCL_TIE_MIN_OPACITY;
   if (!Array.isArray(pts)) return 0;
+  const X = q => (Number.isFinite(q.drawnX) ? q.drawnX : q.x + (q.offX || 0));
+  const Y = q => (Number.isFinite(q.drawnY) ? q.drawnY : q.y + (q.offY || 0));
   const ag = pts.filter(p => p && p.a && !p.zone);
   ag.forEach(p => { p.occ = 1; });
   for (let i = 0; i < ag.length; i++) {
@@ -88,9 +99,10 @@ export function occlusionPass(pts, opts = {}) {
       const pj = ag[j];
       const dj = Number.isFinite(pj.dist) ? pj.dist : null;
       if (dj === null) continue;
-      // overlap layar dgn posisi FINAL (offX/offY hasil anti-overlap/sweep)
-      const dx = Math.abs((pi.x + (pi.offX || 0)) - (pj.x + (pj.offX || 0)));
-      const dy = Math.abs((pi.y + (pi.offY || 0)) - (pj.y + (pj.offY || 0)));
+      // posisi GAMBAR: drawnX/drawnY (pasca-clamp dunia) bila ada, fallback
+      // x+offX (posisi final pts) — kontrak lama utk pemanggil tanpa drawn.
+      const dx = Math.abs(X(pi) - X(pj));
+      const dy = Math.abs(Y(pi) - Y(pj));
       const ox = ((pi.sw || 0) + (pj.sw || 0)) / 2;
       const oy = ((pi.sh || 0) + (pj.sh || 0)) / 2;
       if (dx >= ox + px || dy >= oy + px) continue;

@@ -116,6 +116,38 @@ describe('occlusionPass — aturan siapa menutup siapa', () => {
     expect(far.offX).toBe(0); expect(far.offY).toBe(0);
     expect(far.sw).toBe(60); expect(far.sh).toBe(30);
   });
+  // ── Siklus 251b: posisi GAMBAR (drawnX/drawnY) menang atas pts-final ──────
+  // OfficeScene mengonversi offset → dunia dgn clamp; realisasi clamp bisa tetap
+  // tumpuk meski layout intensi (x+offX) sudah "terpisah" → pass wajib menilai
+  // posisi digambar bila pemanggil menyediakannya (temuan steady-state 251:
+  // pasangan op-1 yang pts-final-nya tak overlap ≥15% tapi realisasi tumpuk).
+  it('drawnX/drawnY dipakai bila ada: layout intensi terpisah tapi digambar tumpuk → tetap fade', () => {
+    const far = lbl('BEHIND', 0, 0, 60, 30, 14);
+    const near = lbl('FRONT', 0, 0, 60, 30, 10);
+    // layout intensi terpisah jauh (x+offX = 200px) tapi realisasi dunia (clamp)
+    // menaruh keduanya hampir di tempat sama di layar
+    far.offX = 200; near.offX = 0;
+    far.drawnX = 2; far.drawnY = 1; near.drawnX = 0; near.drawnY = 0;
+    const n = occlusionPass([far, near]);
+    expect(n).toBe(1); // jauh (dist 14 vs 10) → fade
+    expect(far.occ).toBeLessThan(1);
+    expect(near.occ).toBe(1);
+  });
+  it('drawnX/drawnY tumpuk BUKAN menyalakan fade bila intensi sudah terpisah nyata (kontrak ganda arah)', () => {
+    const far = lbl('BEHIND', 0, 0, 60, 30, 14);
+    const near = lbl('FRONT', 0, 0, 60, 30, 10);
+    // sebaliknya: pts-final tumpuk (x sama) tapi posisi digambar (pasca-clamp)
+    // terpisah jauh → TIDAK ada fade (yang digambar tidak bertabrakan)
+    far.drawnX = 300; near.drawnX = 0; far.drawnY = 0; near.drawnY = 0;
+    const n = occlusionPass([far, near]);
+    expect(n).toBe(0);
+    expect(far.occ).toBe(1);
+  });
+  it('tanpa drawnX/drawnY → fallback kontrak lama x+offX (kompatibilitas pemanggil lama)', () => {
+    const far = lbl('BEHIND', 0, 0, 60, 30, 14);
+    const near = lbl('FRONT', 0, 0, 60, 30, 10);
+    expect(occlusionPass([far, near])).toBe(1); // box sama persis → fade (jalur lama)
+  });
 });
 
 describe('drift-gate sumber OfficeScene.js — oklusi terpasang di jalur relayout', () => {

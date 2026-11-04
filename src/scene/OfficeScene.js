@@ -1961,15 +1961,6 @@ function animate(){
     // -> ulangi (sweep→clamp) sampai stabil (max 3x). Konvergen: total ruang vertikal
     // aman melebihi kebutuhan, tiap iterasi hanya mengurangi pelanggaran.
     sweepClampRounds(pts, { height: container.clientHeight, width: container.clientWidth });
-    // OKLUSI antar-sprite nameplate (backlog visual 238c): label X-ray (depthTest
-    // false, renderOrder 35) membuat nameplate baris belakang tergambar PENUH di
-    // atas nameplate baris depan di kluster tengah — teks-atas-teks. Label yang
-    // box layar FINAL-nya menumpuk dgn label lebih dekat (selisih kedalaman kamera
-    // ≥ OCCL_START) dipudarkan proporsional sampai OCCL_MIN_OPACITY — nama tetap
-    // terbaca samar & terdekat selalu opacity 1. Pass ini hanya menulis field
-    // `occ` pts (posisi/offX/offY hasil anti-overlap TIDAK diubah).
-    const __occN = occlusionPass(pts);
-    window.__occlFade = __occN; // hook probe e2e (terdaftar SCENE_HOOKS — purge destroy)
     // konversi offset piksel ke satuan dunia (~ jarak/tinggi layar) via worldPerPx
     // (murni, parts/label_overlap.js); penerapan clamp offset via labelWorldOffset.
     // OFFSET DI-DAMPING (bukan snap): relayout hanya tiap kelipatan frame; offset
@@ -1977,7 +1968,6 @@ function animate(){
     // Approach eksponensial (rate 12/s: konvergen <0.3 dtk, gerak halus) —
     // saat relayout pertama (antiY/antiX belum ada) langsung pakai nilai penuh.
     // (Pemeriksaan viewport zona dipindah ke atas — jalan tiap frame.)
-    // ── Siklus 251 — BUG KONVERGENSI LAMBAT (ditemukan probe steady-state 12×8s): ──
     // Damping eksponensial anti-overlap & oklusi memakai `deltaFrame` = delta SATU
     // frame (cap 0.05 s) padahal nilai baru hanya dihitung & diterapkan SEKALI per
     // tick relayout (tiap LABEL_RELAYOUT_EVERY=4 frame). Di 60 FPS tick=1/15 s →
@@ -1994,6 +1984,36 @@ function animate(){
     relayoutDelta += delta;
     const LBL_SMOOTH=1-Math.exp(-12*Math.min(relayoutDelta,2));
     relayoutDelta=0;
+    // ── Siklus 251b: hitung posisi GAMBAR (pasca-clamp + damping) SEKARANG, lalu
+    // tulis ke pt sbg drawnX/drawnY SEBELUM occlusionPass — pass oklusi kini
+    // menilai apa yang benar-benar digambar frame ini, bukan layout intensi
+    // pts.x+offX (clamp ±1.2/±1.6 unit vertikal & ±1.5 horizontal bisa
+    // meninggalkan pasangan tetap tumpuk di layar meski pts-final "terpisah").
+    // Baseline: pts.x/y = proyeksi label.position SAAT INI (= base + antiX/Y
+    // tick lalu); offset dunia BARU (prevX2/prevY2 hasil clamp+damping) MENGGANTIKAN
+    // yang lama → delta piksel = (prev−prev_prev)/wpp. Tick pertama (antiX/Y
+    // undefined): delta = prev/ wpp penuh → cocok dgn intensi offX/offY.
+    pts.forEach(p=>{
+      if(p.zone||!p.a||!p.a.label) return;
+      const u2=p.a.label.userData;
+      const {dy:dy2,dx:dx2}=labelWorldOffset(p,wpp);
+      const cdy2=Math.max(-1.2,Math.min(1.6,dy2));
+      const cdx2=Math.max(-1.5,Math.min(1.5,dx2));
+      const prevY2=(u2.antiY===undefined)?cdy2:u2.antiY+(cdy2-u2.antiY)*LBL_SMOOTH;
+      const prevX2=(u2.antiX===undefined)?cdx2:u2.antiX+(cdx2-u2.antiX)*LBL_SMOOTH;
+      p.drawnX=(p.x)+(prevX2-(u2.antiX!==undefined?u2.antiX:0))/wpp;
+      p.drawnY=(p.y)+(prevY2-(u2.antiY!==undefined?u2.antiY:0))/wpp;
+    });
+    // OKLUSI antar-sprite nameplate (backlog visual 238c, direvisi 251b): label
+    // X-ray (depthTest false, renderOrder 35) membuat nameplate baris belakang
+    // tergambar PENUH di atas nameplate baris depan di kluster — teks-atas-teks.
+    // Pass dipindah SETELAH drawnX/drawnY (posisi gambar pasca-clamp+damping,
+    // 251b) sehingga menilai apa yang benar-benar digambar, bukan layout intensi.
+    // Aturan: penutup lebih dekat ≥ OCCL_START → kurva kedalaman 240; Δdist <
+    // START + tumpukan ≥ 15% luas terkecil → aturan TIE 250 (fading 0.55).
+    // Pass ini hanya menulis field `occ` pts (posisi TIDAK diubah).
+    const __occN = occlusionPass(pts);
+    window.__occlFade = __occN; // hook probe e2e (terdaftar SCENE_HOOKS — purge destroy)
     pts.forEach(p=>{
       if(p.zone) return; // zona adalah penghalang statis bagi label agent, posisinya dikendalikan oleh guard viewport
       const {dy,dx}=labelWorldOffset(p,wpp);
