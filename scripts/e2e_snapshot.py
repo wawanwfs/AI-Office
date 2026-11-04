@@ -212,17 +212,26 @@ try:
               isinstance(goal, dict) and goal.get("ok") is True, str(goal)[:120])
 
     # TES 5: tombol FOTO DOM + klik → unduhan + flash sukses
-    ui = ev("""(() => {
+    # Siklus 256 diag: present=None + downloads terisi = ev() TIMEOUT (bukan tombol
+    # hilang — unduhan justru TERJADI). Urutan CDP: Runtime.evaluate dgn returnByValue
+    # kadang tak balas sebelum pump 6 dtk saat kanvas render lambat (SwiftShader).
+    # Robuskan: retry ev() 2x, dan anggap unduhan = bukti klik (tombol di DOM
+    # diverifikasi eksplisit dgn query terpisah).
+    ui = ev("!!document.querySelector('button[aria-label=\"Simpan foto kantor\"]')", wait=6.0)
+    if not ui:
+        pump(2)
+        ui = ev("!!document.querySelector('button[aria-label=\"Simpan foto kantor\"]')", wait=6.0)
+    clicked = ev("""(() => {
       const btn = document.querySelector('button[aria-label="Simpan foto kantor"]');
-      if (!btn) return { present:false };
+      if (!btn) return false;
       btn.click();
-      return { present:true, clicked:true };
+      return true;
     })()""")
     pump(3)
     check("TES5 tombol FOTO ada & klik memicu unduhan PNG",
-          bool(ui.get("present")) and len(downloads) >= 1
+          bool(ui) and bool(clicked) and len(downloads) >= 1
           and str(downloads[0]).startswith("kantor-wfs-"),
-          f"present={ui.get('present')} downloads={downloads[:2]}")
+          f"present={ui} clicked={clicked} downloads={downloads[:2]}")
 
     check("TES6 error window = 0", len(errs) == 0 and len(excs) == 0,
           f"errs={errs[:2]} excs={excs[:2]}")
