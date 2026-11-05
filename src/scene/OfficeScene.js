@@ -1958,10 +1958,11 @@ function animate(){
     // bertumpuk tetap opacity 1 — persis "tumpukan nameplate" yang dilaporkan
     // audit vision 251 (dan menjelaskan probe iso 250 yang sempat melaporkan
     // pasangan "stagnan": itu BUKAN stagnansi pass-nya, tapi dampingnya).
-    // FIX: delta damping = waktu NYATA sejak tick relayout terakhir (clock wall,
-    // akumulasi deltaFrame antar tick), laju 12/s benar-benar 12/s pada FPS apa pun.
+    // FIX (siklus 251/263): delta damping = waktu NYATA sejak tick relayout
+    // terakhir (clock wall, akumulasi deltaFrame antar tick). Siklus 263:
+    // relayoutDelta diakumulasi SETIAP frame di animate() (bukan di dalam
+    // blok throttled frame%4===0 ini sehingga 3 dari 4 frame tidak terbuang lagi).
     const wpp = worldPerPx(camera.position.distanceTo(tgt), camera.fov, container.clientHeight);
-    relayoutDelta += delta;
     const LBL_SMOOTH=1-Math.exp(-12*Math.min(relayoutDelta,2));
     relayoutDelta=0;
     // ── Siklus 251b: hitung posisi GAMBAR (pasca-clamp + damping) SEKARANG, lalu
