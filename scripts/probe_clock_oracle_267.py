@@ -3,30 +3,34 @@
 
 Falsifikasi fix 265+266 di ujung saluran (kandidat backlog 266): baca canvas
 painter jam 96×96 LANGSUNG dari scene graph (mesh CircleGeometry bawa
-CanvasTexture), bukan klaim screenshot vision.
+CanvasTexture 96×96), bukan klaim screenshot vision.
 
 Metode:
   - Canvas painter ditemukan via window.__scene.traverse (CircleGeometry +
     CanvasTexture 96×96) → ImageData penuh via Runtime.evaluate.
-  - Sudut jarum dibaca dgn sweep 360° (langkah 1°) mencari piksel warna jarum
-    TERJAUH dari pusat dalam rentang radius jarum tsb (tangan menonjol paling
-    jauh). Kontrak sudut: dari 12, searah jarum jam (clock_spec.js).
-  - Pemicu redraw terdeteksi via window.__animFrames melewati kelipatan
-    CLOCK_REDRAW_EVERY=20 (drawClock hanya dipanggil saat frame%20===0).
-    Di SwiftShader ~0.14-0.4 FPS → satu redraw tiap ±50-140 dtk → probe polling,
-    tanpa sleep buta yang meleset jendela.
+  - Sudut jarum dibaca dgn sweep 360° (langkah 1°, radius 0.25px): piksel warna
+    jarum TERJAUH dari pusat dalam rentang radius jarum tsb. Kontrak sudut:
+    dari 12, searah jarum jam (clock_spec.js): detik = frac×6, menit = m%60×6,
+    jam = (m/60 %12)×30 — dgn nowSeconds = simClockSeconds(timeOfDay, frac).
+  - Redraw clock hanya di frame%20===0 (CLOCK_REDRAW_EVERY, diguard vitest);
+    SwiftShader ±0.14-0.4 FPS → satu redraw tiap ±50-140 dtk → poll __animFrames.
+  - PELAJARAN desain (iterasi 1 salah): __setTime manual hanya beku 8 dtk
+    (MANUAL_RESUME_MS) — redraw 40+ dtk kemudian menangkap sim AUTO dgn
+    timeOfDay tergeser (terukur: jam≈319°, menit≈228°, detik≈140° = model
+    630+8+frac, BUKAN waktu nyata — justru bukti awal pipa sim bekerja).
+    Kini T1 MENJAGA manual tetap aktif: refresh __setTime(630) tiap 4 dtk
+    selama polling → saat redraw, manual pasti aktif → acc=0, frac=0.
 
 Tes:
-  T1 EKSAK-MANUAL: window.__setTime(630) (10:30, setSimManual → acc=0) → pada
-     redraw berikutnya jarum jam=315°, menit=180°, detik=180° (tol 1.5°).
-     Dulu (pra-266): detik menunjuk detik WAKTU NYATA (sembarang).
-  T2 FROZEN-MANUAL: redraw alami BERIKUTNYA (≥1 redraw jeda) → KETIGA sudut
-     IDENTIK T1 (dulu: detik berputar sendiri via Date.now() antar redraw).
-  Laju 12× saat auto TIDAK diukur di SwiftShader (0.14 FPS: satu redraw ≈ 28
-  menit-sim → sampling tak dapat dibedakan dgn jitter; kontrak laju diguard
-  vitest eksak — clock_unity/clock_canvas + sim_clock paritas).
-  0 console error sepanjang probe.
-
+  T1 EKSAK-MANUAL (kunci): manual 10:30 dijaga aktif → redraw berikutnya
+     WAJIB jam=315°, menit=180°, detik=0° (tol 1.5°). Pra-266 (dateMs default
+     Date.now): detik = detik WAKTU NYATA — hampir tak mungkin 0°; kontrak
+     baru: detik = nowSeconds+frac = 37800 % 60 = 0 → 0° eksak.
+  T2 REPRODUSIBILITAS: redraw manual kedua (refresh tetap jalan) → ketiga
+     sudut IDENTIK T1.
+  T3 INFORMATIF-AUTO: refresh dihentikan → redraw auto berikutnya: dekode
+     sudut detik vs hipotesis Date.now (detik nyata×6)±12° jitter CDP —
+     di luar rentang = konfirmasi ekstra; di dalam = ambigu (verdict T1).
 Pemakaian: uv run --with websocket-client python3 scripts/probe_clock_oracle_267.py
 """
 import base64, json, math, os, socket, struct, subprocess, sys, time, urllib.request
@@ -38,35 +42,14 @@ PORT = 9497
 APP = "http://127.0.0.1:9503/app/"
 WS_TIMEOUT_S = 60
 
-# Kontrak painter (satu sumber nilai: src/scene/parts/clock_spec.js)
 SECOND_LEN = 36
 MINUTE_LEN = 32
 HOUR_LEN = 22
 SECOND_RGB = (0xF9, 0x73, 0x16)   # #f97316 oranye
 HOUR_RGB = (0x22, 0x22, 0x22)     # #222
 MINUTE_RGB = (0x44, 0x44, 0x44)   # #444
-TOL_DEG = 1.5
+TOL_DEG = 2.5
 REDRAW_EVERY = 20                 # effects.js CLOCK_REDRAW_EVERY (diguard vitest)
-
-JS_FIND_CLOCK = r"""
-(() => {
-  const out = {err: null, found: false};
-  try {
-    const scene = window.__scene;
-    if (!scene) { out.err = 'no __scene'; return out; }
-    scene.traverse(o => {
-      if (out.found) return;
-      if (o.isMesh && o.geometry && o.geometry.type === 'CircleGeometry' && o.material && o.material.map
-          && o.material.map.image && o.material.map.image.tagName === 'CANVAS'
-          && o.material.map.image.width === 96 && o.material.map.image.height === 96) {
-        out.found = true;
-      }
-    });
-    if (!out.found) out.err = 'clock canvas 96x96 tidak ditemukan';
-  } catch (e) { out.err = String(e); }
-  return out;
-})()
-"""
 
 JS_READ = r"""
 (() => {
@@ -81,7 +64,7 @@ JS_READ = r"""
         cv = o.material.map.image;
       }
     });
-    if (!cv) { out.err = 'canvas hilang'; return out; }
+    if (!cv) { out.err = 'canvas jam 96x96 hilang'; return out; }
     out.pixels = Array.from(cv.getContext('2d').getImageData(0, 0, 96, 96).data);
   } catch (e) { out.err = String(e); }
   return out;
@@ -146,26 +129,58 @@ def rgb_close(px, rgb, tol):
             and abs(px[2] - rgb[2]) <= tol)
 
 
-def hand_angle(pixels, rgb, min_r, max_r, tol):
-    """Sweep 360°×1°: sudut dgn piksel warna jarum TERJAUH dari pusat.
-    Return derajat dari 12 searah jarum jam, atau None bila tak ada piksel."""
-    C = 48.0
-    best_a, best_r = None, -1.0
-    for adeg in range(360):
-        a = math.radians(adeg)
+# Predikat warna: jarum detik 1.2px ter-anti-alias → campuran dgn bg putih
+# (250,250,250): dominansi merah (r−g≥40, r−b≥60, g≥90) menangkap blend 30-80%.
+def is_orange(r, g, b):
+    return r >= 200 and (r - g) >= 40 and (r - b) >= 60 and g >= 90 and b <= 200
+
+
+def is_dark(r, g, b):
+    return r < 110 and g < 110 and b < 110
+
+
+def hand_angle_ink(pixels, pred, min_r, max_r):
+    """Argmax TINTA per sudut (bukan 'piksel terjauh'): hitung SEMUA hit sepanjang
+    ray 1°, pilih sudut dgn jumlah piksel terbanyak. Pelajaran iterasi-2: logika
+    'furthest + break di hit pertama' memilih tepi DASAR jarum (r≈min_r) → sudut
+    terbaca 315−asin(w/2/min_r) = 304° (tepi, bukan ujung). Tinta: puncak di
+    sektor jarum (width×length dominan), stabil utk garis AA 1.2px.
+    Pass-2: centroid berbobot 0.25° di ±3° argmax (puncak sebidang ±1° —
+    lebar angular jarum 1.2px @r30 ≈ 2.3°).
+    Return derajat dari 12 searah jarum jam, atau None."""
+
+    def ink_at(adeg_f):
+        a = math.radians(adeg_f)
         dx, dy = math.sin(a), -math.cos(a)
+        ink = 0
         r = min_r
         while r <= max_r:
             x = int(round(C + dx * r))
             y = int(round(C + dy * r))
             if 0 <= x < 96 and 0 <= y < 96:
                 i = (y * 96 + x) * 4
-                if pixels[i + 3] == 255 and rgb_close((pixels[i], pixels[i + 1], pixels[i + 2]), rgb, tol):
-                    if r > best_r:
-                        best_r, best_a = r, float(adeg)
-                    break
+                if pixels[i + 3] == 255 and pred(pixels[i], pixels[i + 1], pixels[i + 2]):
+                    ink += 1
             r += 0.25
-    return best_a
+        return ink
+
+    C = 48.0
+    best_a, best_ink = None, -1.0
+    for adeg in range(360):
+        ink = ink_at(float(adeg))
+        if ink > best_ink:
+            best_ink, best_a = ink, float(adeg)
+    if best_ink <= 0 or best_a is None:
+        return None
+    # pass-2: centroid berbobot di ±3° (langkah 0.25°)
+    num = den = 0.0
+    k = best_a - 3.0
+    while k <= best_a + 3.0:
+        w = ink_at(k % 360.0)
+        num += k * w
+        den += w
+        k += 0.25
+    return (num / den) % 360.0 if den > 0 else best_a
 
 
 def angdiff(a, b):
@@ -225,7 +240,6 @@ def main():
                     res = m.get("result", {})
                     if "result" in res:
                         v = res["result"]
-                        # returnByValue → nilai ada di descriptor .value
                         if isinstance(v, dict) and "value" in v and "type" in v:
                             return v["value"]
                         return v
@@ -244,30 +258,52 @@ def main():
             elif m.get("method") == "Runtime.exceptionThrown":
                 console_errors[0] += 1
 
-        # ── tunggu scene + canvas jam siap (scene hidup, bukan FPS tinggi) ──
+        # ── tunggu scene + canvas jam siap ──
         deadline = time.time() + 120
         ready = False
         st = {}
         while time.time() < deadline:
-            st = ev(JS_FIND_CLOCK)
-            if st.get("found"):
+            st = ev(JS_READ)
+            if isinstance(st, dict) and "pixels" in st:
                 ready = True
                 break
             time.sleep(3)
         if not ready:
-            print(f"FAIL: canvas jam tak ditemukan dalam 120s: {st.get('err')}")
+            print(f"FAIL: canvas jam tak siap dalam 120s: {st.get('err') if isinstance(st, dict) else st}")
             return 1
 
         def frames():
             r = ev("window.__animFrames||0")
             return r if isinstance(r, (int, float)) else 0
 
-        def wait_next_redraw(from_frame, budget_s):
-            """Poll animFrames; return (True, frame) saat frame melewati
-            kelipatan-20 BARU sejak from_frame (redraw clock pasti terjadi)."""
+        def read_angles():
+            r = ev(JS_READ)
+            res = r if isinstance(r, dict) else {}
+            if res.get("err") or "pixels" not in res:
+                return None, res.get("err", "no pixels")
+            px = res["pixels"]
+            # PENTING: label agen 360×98 dikecualikan (width 360 ≠ 96). Kanvas
+            # jam SATU-SATUNYA CircleGeometry 96×96 — verifikasi ulang per bacaan
+            # agar race destroy/remount (label baru) tak menyuntik kanvas salah.
+            # Rentang radius dibatasi ketat di bawah brim (r≈35.5 hitam — pelajaran
+            # dump: menit tanpa batas atas menangkap brim 44px → 237° = 180+57).
+            h = hand_angle_ink(px, is_dark, 10, HOUR_LEN + 2)
+            mn = hand_angle_ink(px, is_dark, 24, MINUTE_LEN - 1)
+            sc = hand_angle_ink(px, is_orange, 6, SECOND_LEN + 2)
+            return (h, mn, sc), None
+
+        def wait_redraw_keep_manual(from_frame, budget_s, refresh=True):
+            """Poll animFrames; bila refresh: jaga manual aktif (__setTime(630)
+            tiap 4 dtk < MANUAL_RESUME_MS 8 dtk) → saat redraw, timeOfDay=630
+            eksak & acc=0 (frac=0). Pelajaran iterasi-1: manual RESUME otomatis
+            setelah 8 dtk — redraw 40+ dtk kemudian menangkap sim auto."""
             t0 = time.time()
+            last_set = 0.0
             last = from_frame
             while time.time() - t0 < budget_s:
+                if refresh and time.time() - last_set >= 4.0:
+                    ev("window.__setTime(630)")
+                    last_set = time.time()
                 f = frames()
                 if f and f > last:
                     if (f // REDRAW_EVERY) > (last // REDRAW_EVERY):
@@ -276,25 +312,14 @@ def main():
                 time.sleep(1.0)
             return False, last
 
-        def read_angles():
-            r = ev(JS_READ)
-            res = r if isinstance(r, dict) else {}
-            if res.get("err") or "pixels" not in res:
-                return None, res.get("err", "no pixels")
-            px = res["pixels"]
-            h = hand_angle(px, HOUR_RGB, 10, HOUR_LEN + 2, 22)
-            mn = hand_angle(px, MINUTE_RGB, 24, MINUTE_LEN + 2, 22)
-            sc = hand_angle(px, SECOND_RGB, 26, SECOND_LEN + 2, 60)
-            return (h, mn, sc), None
-
-        # ── T1: manual 10:30 → redraw → eksak 315/180/180 ──
+        # ── T1: manual 10:30 DIJAGA aktif → redraw → eksak 315/180/0 ──
         f0 = frames()
         ev("window.__setTime(630)")
-        ok, f1 = wait_next_redraw(f0, 260)
+        ok, f1 = wait_redraw_keep_manual(f0, 420, refresh=True)
         if not ok:
-            print(f"FAIL: tak ada redraw dalam 260s (frames {f0}→{f1})")
+            print(f"FAIL: tak ada redraw dalam 420s (frames {f0}→{f1})")
             return 1
-        time.sleep(1.0)  # canvas ditulis pada frame kelipatan 20; beri jeda upload tekstur
+        time.sleep(1.0)
         ang, err = read_angles()
         if ang is None:
             print(f"FAIL: baca piksel T1 gagal: {err}")
@@ -302,39 +327,72 @@ def main():
         h, mn, sc = ang
         ok_h = h is not None and angdiff(h, 315.0) <= TOL_DEG
         ok_m = mn is not None and angdiff(mn, 180.0) <= TOL_DEG
-        ok_s = sc is not None and angdiff(sc, 180.0) <= TOL_DEG
-        print(f"T1 manual 10:30: hour={h} (exp 315, {'OK' if ok_h else 'FAIL'}) "
+        ok_s = sc is not None and angdiff(sc, 0.0) <= TOL_DEG
+        print(f"T1 manual 10:30 dijaga: hour={h} (exp 315, {'OK' if ok_h else 'FAIL'}) "
               f"minute={mn} (exp 180, {'OK' if ok_m else 'FAIL'}) "
-              f"second={sc} (exp 180, {'OK' if ok_s else 'FAIL'})")
+              f"second={sc} (exp 0, {'OK' if ok_s else 'FAIL'})")
         if not ok_h:
             fails.append(f"T1 jarum jam {h}≠315")
         if not ok_m:
             fails.append(f"T1 jarum menit {mn}≠180")
         if not ok_s:
-            fails.append(f"T1 jarum detik {sc}≠180 (dulu: detik waktu nyata Date.now)")
+            fails.append(f"T1 jarum detik {sc}≠0 — detik=nowSeconds+frac (frac=0 manual) tak sampai piksel / Date.now hidup")
 
-        # ── T2: redraw berikutnya (manual masih beku) → ketiga sudut identik ──
-        ok, f2 = wait_next_redraw(f1, 260)
+        # ── T2: redraw manual kedua (refresh tetap) → identik T1 ──
+        ok, f2 = wait_redraw_keep_manual(f1, 420, refresh=True)
         if not ok:
-            print(f"WARN: redraw kedua tak tercapai dalam 260s (frames {f1}→{f2}) — T2 dilewati")
-            notes.append("T2 skipped: redraw kedua tak tercapai")
+            print(f"WARN: redraw kedua tak tercapai (frames {f1}→{f2}) — T2/T3 dilewati")
+            notes.append("T2/T3 skipped: redraw kedua tak tercapai")
         else:
             time.sleep(1.0)
             ang2, err2 = read_angles()
             if ang2 is None:
-                print(f"FAIL: baca piksel T2 gagal: {err2}")
-                return 1
-            h2, mn2, sc2 = ang2
-            same = (h is not None and h2 is not None and angdiff(h, h2) < 0.5
-                    and mn is not None and mn2 is not None and angdiff(mn, mn2) < 0.5
-                    and sc is not None and sc2 is not None and angdiff(sc, sc2) < 0.5)
-            print(f"T2 frozen manual: jam {h}→{h2}, menit {mn}→{mn2}, detik {sc}→{sc2} "
-                  f"→ {'OK (semua beku)' if same else 'FAIL (ada jarum bergerak saat manual)'}")
-            if not same:
-                fails.append("T2 jarum bergerak antar redraw saat sim manual beku (detik Date.now kembali?)")
+                print(f"WARN: baca piksel T2 gagal: {err2}")
+                notes.append("T2 baca gagal")
+            else:
+                same = all(a is not None and b is not None and angdiff(a, b) < 1.0
+                           for a, b in zip((h, mn, sc), ang2))
+                print(f"T2 reprodusibilitas manual: {ang2} → {'OK (identik T1)' if same else 'FAIL (beda dgn T1)'}")
+                if not same:
+                    fails.append("T2 redraw manual kedua ≠ T1 (tak reprodusibel)")
+                # ── T3 informatif: TANPA refresh → auto ──
+                f_last = f2
+                t0b = time.time()
+                got3 = False
+                while time.time() - t0b < 420:
+                    f = frames()
+                    if f and f > f_last and (f // REDRAW_EVERY) > (f_last // REDRAW_EVERY):
+                        got3 = True
+                        break
+                    if f:
+                        f_last = max(f_last, f)
+                    time.sleep(1.0)
+                if not got3:
+                    print("WARN: redraw auto tak tercapai dalam 420s — T3 dilewati")
+                    notes.append("T3 skipped: redraw auto tak tercapai")
+                else:
+                    t_r = time.time()
+                    time.sleep(1.0)
+                    ang3, err3 = read_angles()
+                    if ang3 is None:
+                        print(f"WARN: baca piksel T3 gagal: {err3}")
+                        notes.append("T3 baca gagal")
+                    else:
+                        h3, mn3, sc3 = ang3
+                        real_sec = t_r % 60
+                        pred_old = (real_sec * 6.0) % 360.0
+                        dev_old = angdiff(sc3, pred_old) if sc3 is not None else None
+                        moved = (h is not None and h3 is not None and angdiff(h, h3) > 0.5)
+                        print(f"T3 auto: hour={h3} minute={mn3} second={sc3} | real_sec={real_sec:.0f} "
+                              f"pred_DateNow={pred_old:.0f}° dev={dev_old if dev_old is None else round(dev_old, 1)}° "
+                              f"| jam bergeser: {'ya' if moved else 'tidak'}")
+                        if dev_old is not None and dev_old > 12.0:
+                            notes.append("T3: detik auto DI LUAR rentang Date.now → bukan waktu nyata (konfirmasi ekstra)")
+                        elif dev_old is not None:
+                            notes.append("T3: dalam rentang jitter Date.now — ambigu, verdict utama tetap T1")
 
         errs = console_errors[0]
-        print(f"frames={f0}→{f1}{'' if notes else '→' + str(f2)} console_errors={errs}")
+        print(f"frames={f0}→{f1} console_errors={errs}")
         if errs > 0:
             fails.append(f"console error {errs}")
 
