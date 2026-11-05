@@ -21,7 +21,11 @@ import { snapshotDataUrl, snapshotFilename } from './parts/snapshot_spec.js';
 import { dblclickPointGoal, dblclickBlankGoal, tapCandidate, isDoubleTap, dtapRadius, DTAP_ZOOM_STEP } from './parts/dblclick_spec.js';
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
-import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent, ringFloorY, hoverRingPos, meetingFigureAnchor } from './parts/ring_spec.js';
+import {
+  SEL_RING, HOVER_RING, selAnchorOf, selectedAgent, ringFloorY, hoverRingPos,
+  meetingFigureAnchor, SEL_RING_DAMP_RATE, HOVER_RING_DAMP_RATE,
+  stepRingRotation, ringDampFactor, stepRingPosition, selRingTarget, hoverRingTarget,
+} from './parts/ring_spec.js';
 import { paintRing } from './parts/ring_canvas.js';
 import { drawSky, drawGlassSheen } from './parts/sky_canvas.js';
 import { drawWoodFloor, drawAoStrip } from './parts/floor_canvas.js';
@@ -557,26 +561,10 @@ function ensureSelRing(){if(selRing)return;const c=document.createElement('canva
   selRing.rotation.x=-Math.PI/2;selRing.position.y=SEL_RING.Y;selRing.renderOrder=4;selRing.visible=false;office.add(selRing);window.__sceneSelRing=selRing;}
 function applySelected(){
   if(selRing)selRing.visible=false;
-  if(selectedIdx===-2){
-    ensureSelRing();
-    selRing.position.set(7.6,1.20+SEL_RING.Y,6.1);
-    selRing.visible=true;
-    return;
-  }
-  const a=selectedAgent(agentData,selectedIdx);
-  if(!a)return;
-  // REGRESI siklus 119: agen PESERTA RAPAT (walker & sittingChar hidden,
-  // figur rapat tampil di kursi) → ring emas di KURSI RAPAT via
-  // meetingFigureAnchor — dulu selAnchorOf(a)=null → ring disembunyikan
-  // (agen bisa dipilih via figur rapat tapi tanpa umpan balik ring).
-  const mfp=meetingFigureAnchor(__meet&&__meet.figures?__meet.figures[selectedIdx]:null);
-  if(mfp){ensureSelRing();selRing.position.set(mfp.x,mfp.y+SEL_RING.Y,mfp.z);selRing.visible=true;return;}
-  // agent tidak ada di kantor (offsite) → ring disembunyikan,
-  // selectedIdx tetap tersimpan sehingga ring muncul lagi saat agent kembali.
-  const p=selAnchorOf(a);
-  if(!p)return;
+  const target=selRingTarget(agentData,selectedIdx,__meet&&__meet.figures);
+  if(!target)return;
   ensureSelRing();
-  selRing.position.set(p.x,ringFloorY(a)+SEL_RING.Y,p.z+p.off);
+  selRing.position.set(target.x,target.y,target.z);
   selRing.visible=true;
 }
 // posisi ring utk agent: walker (berjalan) / home (duduk) / null (tidak terlihat di kantor)

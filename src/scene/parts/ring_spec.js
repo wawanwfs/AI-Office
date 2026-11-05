@@ -25,6 +25,45 @@ export const HOVER_RING = {
   Y: 0.02,
 };
 
+// Siklus 260: Kontrak laju rotasi cincin seleksi berbasis WAKTU-NYATA (rad/s),
+// bukan rad/frame (bug kelas 251/259 ketiga: 0.012 rad/frame di SwiftShader/kiosk
+// 0.4 FPS butuh ~21.8 menit per putaran penuh — cincin praktis beku; di 144 Hz
+// 2.4× terlalu cepat). 60 FPS × 0.012 = 0.72 rad/s (putaran penuh ≈ 8.73 dtk).
+export const SEL_RING_ROT_RATE = 0.72; // rad/detik
+
+export function stepRingRotation(rotZ, dt = 0.016) {
+  const current = (typeof rotZ === 'number' && Number.isFinite(rotZ)) ? rotZ : 0;
+  if (!(typeof dt === 'number' && Number.isFinite(dt)) || dt <= 0) return current;
+  return current + SEL_RING_ROT_RATE * dt;
+}
+
+// Siklus 260: Laju damping eksponensial waktu-nyata (/detik) setara faktor per-frame 60 FPS:
+// alpha = 1 - exp(-rate * dt) → rate = -ln(1 - alpha) * 60
+// Untuk selRing: alpha = 0.25 → rate = -ln(0.75) * 60 ≈ 17.2609 /s
+// Untuk hoverRing: alpha = 0.45 → rate = -ln(0.55) * 60 ≈ 35.8702 /s
+export const SEL_RING_DAMP_RATE = 17.26;
+export const HOVER_RING_DAMP_RATE = 35.87;
+
+export function ringDampFactor(rate, dt = 0.016) {
+  if (!(typeof rate === 'number' && Number.isFinite(rate)) || rate <= 0) return 0;
+  if (!(typeof dt === 'number' && Number.isFinite(dt)) || dt <= 0) return 0;
+  const f = 1 - Math.exp(-rate * dt);
+  return Math.max(0, Math.min(1, f));
+}
+
+export function stepRingPosition(pos, target, factor) {
+  if (!pos || !target) return false;
+  const tx = Number.isFinite(target.x) ? target.x : pos.x;
+  const ty = Number.isFinite(target.y) ? target.y : pos.y;
+  const tz = Number.isFinite(target.z) ? target.z : pos.z;
+  const f = (typeof factor === 'number' && Number.isFinite(factor)) ? Math.max(0, Math.min(1, factor)) : 0;
+  if (f <= 0) return false;
+  pos.x += (tx - pos.x) * f;
+  pos.y += (ty - pos.y) * f;
+  pos.z += (tz - pos.z) * f;
+  return true;
+}
+
 const clampIdx = (i, n) => (i >= 0 && i < n) ? i : null;
 
 // Which anchor object to attach the ring to: walker (moving),
@@ -75,10 +114,49 @@ export function hoverRingPos(agent, isNexus, nexusPos) {
 // urutan = agentData): kursi rapat (seat) yang ditempati figur. Posisi dari
 // figure.position itu sendiri (dipindah ke kursi oleh meeting.begin →
 // placeFigure) — bukan dari home agen (mejanya kosong saat rapat).
+// Siklus 260: mendukung fig mentah ATAU objek owner { figure } (unwrapping aman
+// dari findMeetingFigureOwner sehingga hover ring tidak langsung lenyap di animate).
 // Return null bila figur tak valid/tersembunyi → ring disembunyikan.
-// Murni & null-safe [regresi siklus 119].
+// Murni & null-safe [regresi siklus 119 / siklus 260].
 export function meetingFigureAnchor(fig) {
-  if (!fig || fig.visible === false || !fig.position) return null;
-  const y = Number.isFinite(fig.position.y) ? fig.position.y : 0;
-  return { x: fig.position.x, y, z: fig.position.z, off: 0 };
+  const f = (fig && fig.figure) ? fig.figure : fig;
+  if (!f || f.visible === false || !f.position) return null;
+  const y = Number.isFinite(f.position.y) ? f.position.y : 0;
+  return { x: f.position.x, y, z: f.position.z, off: 0 };
+}
+
+export const FOUNDER_CHAIR_POS = { x: 7.6, y: 1.20, z: 6.1 };
+
+// Siklus 260: Resolusi target posisi (x, y, z) cincin seleksi emas untuk
+// 3 kondisi: Founder (-2), Peserta Rapat (mfa), Agen biasa duduk/jalan.
+// Return null bila agen tak terlihat (offsite) atau index tak valid.
+export function selRingTarget(agentData, selectedIdx, meetingFigures, founderPos = FOUNDER_CHAIR_POS) {
+  if (selectedIdx === -2) {
+    if (!founderPos || !Number.isFinite(founderPos.x) || !Number.isFinite(founderPos.y) || !Number.isFinite(founderPos.z)) {
+      return null;
+    }
+    return { x: founderPos.x, y: founderPos.y + SEL_RING.Y, z: founderPos.z };
+  }
+  if (!Array.isArray(agentData) || selectedIdx < 0 || selectedIdx >= agentData.length) {
+    return null;
+  }
+  const a = agentData[selectedIdx];
+  if (!a) return null;
+  const mfa = meetingFigureAnchor(meetingFigures ? meetingFigures[selectedIdx] : null);
+  if (mfa) {
+    return { x: mfa.x, y: mfa.y + SEL_RING.Y, z: mfa.z };
+  }
+  const p = selAnchorOf(a);
+  if (!p) return null;
+  return { x: p.x, y: ringFloorY(a) + SEL_RING.Y, z: p.z + p.off };
+}
+
+// Siklus 260: Satu sumber kebenaran target posisi cincin hover biru di animate() & handler pointermove
+export function hoverRingTarget(hoveredAgent, isMfHover, nexusPos, isNexus = false) {
+  if (isMfHover) {
+    const mfa = meetingFigureAnchor(isMfHover);
+    if (mfa) return { x: mfa.x, y: mfa.y + HOVER_RING.Y, z: mfa.z };
+    return null;
+  }
+  return hoverRingPos(hoveredAgent, isNexus, nexusPos);
 }
