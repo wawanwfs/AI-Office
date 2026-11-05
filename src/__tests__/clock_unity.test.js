@@ -44,7 +44,7 @@ describe('clock_units — satu sumber waktu ketiga jarum (siklus 265)', () => {
     expect(simClockSeconds(870, 99)).toBe(52259.999);         // clamp: menit-sim tidak terlewati
     expect(simClockSeconds(870, -1)).toBe(52200);             // negatif → 0
     expect(simClockSeconds(870, NaN)).toBe(52200);            // NaN → 0 (anti-poisoning)
-    expect(simClockSeconds(870, Infinity)).toBe(52259.999);   // Infinity → clamp
+    expect(simClockSeconds(870, Infinity)).toBe(52200);       // Infinity non-finite → no-op (pola guard)
   });
   it('anti-poisoning: menit non-finite → 0 detik (jarum 12:00), tidak menulari NaN', () => {
     expect(simClockSeconds(NaN, 2)).toBe(2);

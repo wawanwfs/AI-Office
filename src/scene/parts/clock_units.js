@@ -26,7 +26,8 @@ export const SIM_SEC_PER_MIN = 5; // paritas sim_clock.js — diguard vitest (cl
 export const CLOCK_FRAC_MAX = 59.999; // batas atas detik-sim dalam satu menit
 export function simClockSeconds(m, fracSec = 0) {
   const base = simMinutesToClockSeconds(Number.isFinite(m) ? m : 0);
+  // guard anti-poisoning: frac non-finite (NaN/±Infinity — Infinity BUKAN finite)
+  // atau ≤0 → base utuh (konsisten pola guard modul lain: input korup = no-op)
   if (!Number.isFinite(fracSec) || fracSec <= 0) return base;
-  const f = Math.min(fracSec, CLOCK_FRAC_MAX);
-  return base + (Number.isFinite(f) ? f : CLOCK_FRAC_MAX);
+  return base + Math.min(fracSec, CLOCK_FRAC_MAX);
 }
