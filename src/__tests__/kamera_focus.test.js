@@ -158,6 +158,35 @@ describe('autoRotateStep — Siklus 259 laju waktu-nyata (rad/detik × dt)', () 
   });
 });
 
+// ── Siklus 260: cincin seleksi/hover — rotasi & damping waktu-nyata (bug kelas 251/259 ketiga) ──
+describe('ring kontrak waktu-nyata — drift-gate sumber (Siklus 260)', () => {
+  const readSrc = (rel) => readFileSync(resolve(root, rel), 'utf8');
+
+  it('ring_spec.js: SEL_RING_ROT_RATE 0.72 ada; pola per-frame 0.012 DILARANG kembali', () => {
+    const src = readSrc('src/scene/parts/ring_spec.js');
+    expect(src).toContain('export const SEL_RING_ROT_RATE = 0.72');
+    expect(src).toContain('SEL_RING_ROT_RATE * dt');
+    // pola lama: tambahan rotasi konstan per frame tanpa dt
+    expect(src).not.toMatch(/rotation\.z \+= ?0\.012/);
+  });
+
+  it('OfficeScene.js: rotasi ring lewat stepRingRotation(selRing.rotation.z,delta) — bukan += 0.012', () => {
+    const os = readSrc('src/scene/OfficeScene.js');
+    expect(os).toContain('stepRingRotation(selRing.rotation.z,delta)');
+    expect(os).not.toMatch(/selRing\.rotation\.z \+= ?0\.012/);
+    // damping posisi ring juga waktu-nyata (per-frame .25/.45 DILARANG)
+    expect(os).toContain('ringDampFactor(SEL_RING_DAMP_RATE,delta)');
+    expect(os).toContain('ringDampFactor(HOVER_RING_DAMP_RATE,delta)');
+    expect(os).not.toMatch(/selRing\.position\.[xyz] \+= \(.*\) \* 0\.25/);
+    expect(os).not.toMatch(/hoverRing\.position\.[xyz] \+= \(.*\) \* 0\.45/);
+    // satu sumber kebenaran target — applySelected & animate pakai selRingTarget
+    expect(os).toContain('selRingTarget(agentData,selectedIdx');
+    expect(os).toContain('hoverRingTarget(hoveredAgent,isMfHover,NEXUS_HOVER');
+    // alias selAnchor & cabang duplikat lama dihapus
+    expect(os).not.toContain('const selAnchor=');
+  });
+});
+
 // ── Siklus 115: helper interaksi kamera (null-safe) ──
 describe('ensureHomeRadius', () => {
   it('null → nilai baru di-clamp 24..70, saved=true', () => {
