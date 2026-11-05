@@ -94,10 +94,15 @@ export function computePct(T) {
 
 // subjudul di bawah judul papan
 export function subtitle(T, timeStr) {
-  let sub = 'Data live · task engine + SaaS · ' + (timeStr || '')
-  if (T && T.review) sub += ' · review ' + T.review
-  if (T && T.failed) sub += ' · gagal ' + T.failed
-  return sub
+  // Siklus 270 — timeStr kosong/tidak diberikan tidak boleh meninggalkan
+  // trailing separator "· " gantung di papan 3D (dulu: 'Data live · task engine
+  // + SaaS · ' lalu '· review 2' menambah separator ganda).
+  const head = 'Data live · task engine + SaaS'
+  const parts = []
+  if (timeStr) parts.push(timeStr)
+  if (T && T.review) parts.push('review ' + T.review)
+  if (T && T.failed) parts.push('gagal ' + T.failed)
+  return parts.length ? head + ' · ' + parts.join(' · ') : head
 }
 
 // chip banner [teks, warna]; kosong bila tidak ada task bermasalah

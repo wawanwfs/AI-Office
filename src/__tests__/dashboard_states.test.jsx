@@ -2,7 +2,8 @@
 import React from 'react'
 import { it, expect, vi, afterEach } from 'vitest'
 import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react'
-import Dashboard, { fmtTime } from '../components/Dashboard'
+import Dashboard from '../components/Dashboard'
+import { fmtTime } from '../lib/format_time.js'
 import { api } from '../lib/api'
 vi.mock('../lib/api', () => ({ api: vi.fn() }))
 afterEach(() => { cleanup(); vi.resetAllMocks() })
@@ -81,9 +82,13 @@ it('siklus 270 — Dashboard log activity anti-poisoning: log dengan timestamp r
   expect(containerText).not.toContain('Invalid')
 })
 
-it('siklus 270 — drift-gate: Dashboard.jsx mengimpor parseTimestampMs dan tidak memakai ts * 1000 tanpa guard', async () => {
+it('siklus 270 — drift-gate: Dashboard.jsx memakai fmtTime dari lib/format_time (bukan ts×1000 telanjang) dan lib memakai parseTimestampMs', async () => {
   const fs = await import('fs')
-  const src = fs.readFileSync('src/components/Dashboard.jsx', 'utf-8')
-  expect(src).toMatch(/import\s*\{[^}]*parseTimestampMs[^}]*\}\s*from\s*['"][^'"]*kanban_date\.js['"]/)
-  expect(src).not.toMatch(/new\s+Date\(\s*ts\s*\*\s*1000\s*\)/)
+  const dash = fs.readFileSync('src/components/Dashboard.jsx', 'utf-8')
+  expect(dash).toMatch(/import\s*\{\s*fmtTime\s*\}\s*from\s*['"][^'"]*format_time\.js['"]/)
+  expect(dash).not.toMatch(/new\s+Date\(\s*ts\s*\*\s*1000\s*\)/)
+  expect(dash).not.toMatch(/const fmtTime/)
+  const lib = fs.readFileSync('src/lib/format_time.js', 'utf-8')
+  expect(lib).toMatch(/import\s*\{\s*parseTimestampMs\s*\}\s*from\s*['"][^'"]*kanban_date\.js['"]/)
+  expect(lib).toMatch(/ms\s*<=\s*0/)
 })

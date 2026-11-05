@@ -27,29 +27,10 @@ export function parseTaskTimestamp(task) {
   if (!task || typeof task !== 'object') return null;
   const raw = task.created_at ?? task.createdAt ?? task.timestamp ?? task.updated_at ?? task.updatedAt ?? task.date ?? task.created ?? task.updated;
   if (raw == null || raw === '') return null;
-
-  if (typeof raw === 'number') {
-    if (isNaN(raw) || !isFinite(raw)) return null;
-    return raw < 10000000000 ? Math.round(raw * 1000) : Math.round(raw);
-  }
-
-  if (typeof raw === 'string') {
-    const s = raw.trim();
-    if (!s) return null;
-    const num = Number(s);
-    if (!isNaN(num) && isFinite(num)) {
-      return num < 10000000000 ? Math.round(num * 1000) : Math.round(num);
-    }
-    const parsed = Date.parse(s);
-    if (!isNaN(parsed)) return parsed;
-  }
-
-  if (raw instanceof Date) {
-    const t = raw.getTime();
-    return isNaN(t) ? null : t;
-  }
-
-  return null;
+  // Siklus 270 — mendelegasikan penuh ke parser satu-sumber parseTimestampMs
+  // (dulu body parser di-copy inline di sini = duplikasi logika anti-poisoning;
+  // kini satu inti, perbaikan parser otomatis berlaku ke kedua API).
+  return parseTimestampMs(raw);
 }
 
 export function getStartOfDay(timestamp) {
@@ -201,11 +182,16 @@ export function normalizeCustomDateRange(range) {
 
 /**
  * Format string tanggal singkat ramah pengguna (contoh: "26 Okt 2026").
+ * Siklus 270 — ANTI-POISONING: input diparsing via parseTimestampMs
+ * (detik-UNIX <1e10 auto ×1000, ISO string, Date instance). Racun
+ * (null/NaN/±Inf/0/epoch-0/'invalid'/Date NaN) → '' murni — dulu
+ * new Date(NaN) memberi "NaN NaN NaN" style garbage dan detik-UNIX
+ * melukis tanggal 1970 palsu.
  */
 export function formatSimpleDate(timestamp) {
-  if (timestamp == null) return '';
-  const d = new Date(timestamp);
-  if (isNaN(d.getTime())) return '';
+  const ts = parseTimestampMs(timestamp);
+  if (ts == null || ts <= 0) return '';
+  const d = new Date(ts);
   const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
   return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }

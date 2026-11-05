@@ -5,14 +5,11 @@ import { useDialogA11y } from '../lib/dialogA11y'
 import { IconClose, IconStats } from './Icons'
 import { clip } from '../lib/clip.js'
 import { fileCount } from '../lib/files'
+import { fmtTime } from '../lib/format_time.js'
 import { dashboardPresenceSummary } from '../scene/parts/agent_status.js'
 
 /* Dashboard — overview penuh software house: proyek, task, agen, sandbox, host.
    Semua data NYATA dari /api (task engine, docker stats, dashboard stats). */
-
-const fmtTime = ts => {
-  try { return new Date(ts * 1000).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }) } catch { return '' }
-}
 
 export default function Dashboard({ onOpenBoard, onOpenProjects }) {
   const [open, setOpen] = useState(false)

@@ -6,6 +6,7 @@
 import { computePct, clip, cardY, CARD_H, subtitle as subLine, bannerParts, bannerLayout, columnItems, cardMeta, stripLayout, STRIP_GAP, STRIP_LEFT, STRIP_RIGHT } from './projectboard_data.js'
 import { applyPollResult, connectionBadge, nextPollDelay } from '../../lib/connection_spec.js'
 import { fetchWithTimeout } from '../../lib/fetch_timeout.js'
+import { parseTimestampMs } from '../../lib/kanban_date.js'
 import { uiTexture, uiMaterial } from './ui_colorspace.js'
 
 // Polling adaptif papan 3D: cadence sehat tetap 60 dtk (perilaku lama), tapi
@@ -62,7 +63,8 @@ export function createProjectBoard(office, THREE) {
     g.font = 'bold 52px sans-serif'; g.textAlign = 'left'
     g.fillText('WFS PROJECT: SOFTWARE HOUSE', 36, 66)
     g.fillStyle = '#8fa3bd'; g.font = '30px sans-serif'
-    let sub = subLine(T, new Date(lastOk).toLocaleTimeString('id-ID'))
+    const stampTs = snapshotStamp()
+    let sub = subLine(T, stampTs != null ? new Date(stampTs).toLocaleTimeString('id-ID') : '')
     g.fillText(sub, 36, 112)
 
     // progress bar
@@ -165,6 +167,14 @@ export function createProjectBoard(office, THREE) {
   // Jadwal pertama menyusul pull awal selesai, agar delay dihitung dari tracker segar.
   let pollTimer = null
   let pollStopped = false
+  // Siklus 270 — stempel subjudul "Data live · … · HH.MM.SS" ANTI-POISONING:
+  // snapshot d.at (dibangun server/gateway) diparsing via parseTimestampMs
+  // (null/NaN/±Inf/'invalid'/Date NaN → NULL, detik-UNIX auto ×1000),
+  // fallback ke lastOk (wall-clock saat poll sukses). Dulu `new Date(lastOk)`
+  // mengabaikan d.at & `new Date('invalid')` kelas 269 melukis "Invalid Date".
+  function snapshotStamp() {
+    return parseTimestampMs(snap?.at) ?? (lastOk > 0 ? lastOk : null)
+  }
   function schedulePoll() {
     pollTimer = setTimeout(async () => {
       await pull()
