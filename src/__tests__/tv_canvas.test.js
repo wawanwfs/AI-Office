@@ -156,4 +156,26 @@ describe('drawTvDashboard',()=>{
     expect(stamp.t).not.toContain(new Date(at+99999).toLocaleTimeString('id-ID'));
     expect(stamp.t).toBe('update '+new Date(at).toLocaleTimeString('id-ID'));
   });
+  it('siklus 269 — stempel ANTI-POISONING: at/now racun tidak pernah melukis "Invalid Date" atau "NaN"',()=>{
+    const at=new Date('2026-10-21T21:00:00+08:00').getTime();
+    const cases=[
+      ['now:NaN (truthy! — dulu lolos pola opts.now||)',{at,tasks:{total:1,done:1}},{now:NaN},new Date(at)],
+      ['at:string-invalid',{at:'invalid',tasks:{total:1,done:1}},{now:at},new Date(at)],
+      ['at:NaN',{at:NaN,tasks:{total:1,done:1}},{now:at},new Date(at)],
+      ['at:Infinity',{at:Infinity,tasks:{total:1,done:1}},{now:at},new Date(at)],
+      ['at:Date-NaN',{at:new Date(NaN),tasks:{total:1,done:1}},{now:at},new Date(at)],
+      ['tanpa-at & now-racun',{tasks:{total:1,done:1}},{now:'juga-racun'},null],
+      ['at:detik-UNIX auto ×1000',{at:at/1000,tasks:{total:1,done:1}},{now:NaN},new Date(at)],
+      ['at:ISO-string',{at:'2026-10-21T21:00:00+08:00',tasks:{total:1,done:1}},{now:NaN},new Date(at)],
+    ];
+    for(const [name,data,opts,expected] of cases){
+      const c=mockCtx();
+      drawTvDashboard(c,data,opts);
+      const stamp=texts(c).find(o=>o.t.startsWith('update '));
+      expect(stamp, name).toBeTruthy();
+      expect(stamp.t, name).not.toContain('Invalid');
+      expect(stamp.t, name).not.toContain('NaN');
+      if(expected) expect(stamp.t, name).toBe('update '+expected.toLocaleTimeString('id-ID'));
+    }
+  });
 });

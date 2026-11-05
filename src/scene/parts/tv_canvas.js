@@ -1,6 +1,7 @@
 // Canvas TV lounge: render dasbor WFS HQ LIVE diekstrak murni dari drawTv
 // (OfficeScene.js) agar bisa di-unit-test: ctx 2D di-inject (mock recorder),
 // tidak ada THREE.
+import { parseTimestampMs, resolveNow } from '../../lib/kanban_date.js';
 
 // Warna palet & koordinat layout (satu sumber kebenaran untuk render & test).
 export const TV_W = 256;
@@ -48,8 +49,14 @@ export function tvPct(T){
 // di-pure-kan lewat helper di atas; fungsi ini hanya urutan perintah gambar.
 // opts.conn: {state,ageSec} opsional — bila ada, badge koneksi gateway
 // digambar di sudut kanan atas (paritas chip HUD & strip papan 3D).
+// Siklus 269 — stempel "update" ANTI-POISONING: data.at diparsing via
+// parseTimestampMs (null/NaN/±Inf/string invalid/Date NaN → NULL, bukan NaN
+// lolos), fallback ke opts.now (juga diparsing — dulu `opts.now||Date.now()`
+// membuat NaN TRUTHY lolos) lalu Date.now(). `new Date('invalid')` lama
+// melukis "update Invalid Date" permanen di TV 3D kelas "Sinkron NaN" 268.
 export function drawTvDashboard(ctx,data,opts={}){
-  const now=opts.now||Date.now();
+  const now = resolveNow(opts.now);
+  const stampTs = parseTimestampMs(data?.at) ?? now;
   ctx.fillStyle=TV_BG;ctx.fillRect(0,0,TV_W,TV_H);
   ctx.fillStyle=TV_ACCENT;ctx.font='bold 16px sans-serif';ctx.textAlign='left';ctx.textBaseline='alphabetic';
   ctx.fillText('WFS HQ · LIVE',12,24);
@@ -84,5 +91,5 @@ export function drawTvDashboard(ctx,data,opts={}){
   ctx.fillStyle=TV_GREEN;
   ctx.fillText(AG.map(a=>a.name+(a.status==='Up'?'●':'○')).join(' ')||'-',56,120);
   ctx.fillStyle=TV_DIM;ctx.font='9px monospace';
-  ctx.fillText('update '+new Date(data?.at||now).toLocaleTimeString('id-ID'),12,138);
+  ctx.fillText('update '+new Date(stampTs).toLocaleTimeString('id-ID'),12,138);
 }

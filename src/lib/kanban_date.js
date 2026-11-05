@@ -60,32 +60,45 @@ export function getStartOfDay(timestamp) {
 }
 
 /**
+ * Parser timestamp MURNI satu-sumber (siklus 269 — penyatuan duplikasi parser
+ * yang sebelumnya di-copy inline di parseTaskTimestamp & resolveNow).
+ * Menerima number (ms atau detik UNIX <1e10 auto ×1000), Date object, atau
+ * string (angka numerik / ISO date). Mengembalikan milidetik finite, atau
+ * NULL bila input tak dapat diparsing (null/''/NaN/±Infinity/'invalid'/Date NaN)
+ * — penelepon yang butuh fallback wall-clock memakai resolveNow().
+ */
+export function parseTimestampMs(input) {
+  if (input == null) return null;
+  if (typeof input === 'number') {
+    if (!Number.isFinite(input)) return null;
+    return input < 10000000000 ? Math.round(input * 1000) : Math.round(input);
+  }
+  if (input instanceof Date) {
+    const t = input.getTime();
+    return Number.isFinite(t) ? t : null;
+  }
+  if (typeof input === 'string') {
+    const s = input.trim();
+    if (!s) return null;
+    const num = Number(s);
+    if (Number.isFinite(num)) {
+      return num < 10000000000 ? Math.round(num * 1000) : Math.round(num);
+    }
+    const parsed = Date.parse(s);
+    return Number.isFinite(parsed) ? parsed : null;
+  }
+  return null;
+}
+
+/**
  * Resolusi timestamp acuan 'now' yang aman & anti-poisoning (siklus 268).
  * Menerima number (ms atau detik UNIX), Date object, atau parseable date string.
  * Bila null/undefined, non-finite (NaN/±Infinity), atau string tidak valid,
  * secara aman fallback ke Date.now() (waktu nyata / wall-clock by design).
  */
 export function resolveNow(nowInput) {
-  if (nowInput == null) return Date.now();
-  if (typeof nowInput === 'number') {
-    if (!Number.isFinite(nowInput)) return Date.now();
-    return nowInput < 10000000000 ? Math.round(nowInput * 1000) : Math.round(nowInput);
-  }
-  if (nowInput instanceof Date) {
-    const t = nowInput.getTime();
-    return Number.isFinite(t) ? t : Date.now();
-  }
-  if (typeof nowInput === 'string') {
-    const s = nowInput.trim();
-    if (!s) return Date.now();
-    const num = Number(s);
-    if (Number.isFinite(num)) {
-      return num < 10000000000 ? Math.round(num * 1000) : Math.round(num);
-    }
-    const parsed = Date.parse(s);
-    return Number.isFinite(parsed) ? parsed : Date.now();
-  }
-  return Date.now();
+  const t = parseTimestampMs(nowInput);
+  return t != null ? t : Date.now();
 }
 
 /**

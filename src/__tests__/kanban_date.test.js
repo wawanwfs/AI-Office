@@ -3,6 +3,7 @@ import {
   DATE_RANGE_PRESETS,
   getDateRangePreset,
   parseTaskTimestamp,
+  parseTimestampMs,
   getStartOfDay,
   parseDateInputToTimestamp,
   normalizeCustomDateRange,
@@ -92,6 +93,19 @@ describe('kanban_date.js', () => {
 
     it('mengembalikan null jika string tidak dapat diparsing', () => {
       expect(parseTaskTimestamp({ created_at: 'bukan tanggal acak' })).toBeNull();
+    });
+
+    it('siklus 269 — paritas penuh dgn parser satu-sumber parseTimestampMs', () => {
+      // Semua bentuk input yang didukung parseTaskTimestamp identik hasilnya
+      // dengan parseTimestampMs (dua API kini SATU inti parser):
+      const samples = [FIXED_NOW, FIXED_NOW / 1000, String(FIXED_NOW), new Date(FIXED_NOW), '2026-10-26T08:30:00.000Z'];
+      for (const v of samples) {
+        expect(parseTimestampMs(v)).toBe(parseTaskTimestamp({ created_at: v }));
+      }
+      // Input racun → null konsisten (bukan NaN, bukan throw)
+      for (const v of [null, undefined, NaN, Infinity, -Infinity, '', '   ', 'invalid', new Date(NaN), {}, []]) {
+        expect(parseTimestampMs(v)).toBeNull();
+      }
     });
   });
 
