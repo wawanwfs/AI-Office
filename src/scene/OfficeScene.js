@@ -6,7 +6,7 @@ import { createLighting, createNeonMode, createShift } from './parts/daycycle.js
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles, charMotion, applyCharMotion } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles, charMotion, applyCharMotion } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -1459,7 +1459,13 @@ for(let i=-3;i<=3;i++){
 addDeskTrinkets({THREE,office,M,rng},desks);
 const __pages=createDriftingPages({THREE,office,rng});
 let frame=0;
-const drawScreen=(s,i)=>{ if(shouldRedrawScreenAt(frame,i)) drawScreenFrame(s,frame); };
+// Siklus 264 (bug kelas 251 keenam): waktu animasi layar monitor kini WAKTU-
+// NYATA — drawScreen menerima elapsed (detik nyata dari Timer) via __screenT
+// dan meneruskannya ke drawScreenFrame (dulu t=frame*0.02 → di SwiftShader
+// 0.4 FPS animasi layar ~150× lebih lambat, monitor praktis beku di kiosk).
+// __screenT di-update di animate() SEBELUM forEach (urutan aman: frame 0 → 0).
+let __screenT=0;
+const drawScreen=(s,i)=>{ if(shouldRedrawScreenAt(frame,i)) drawScreenFrame(s,frame,__screenT); };
 
 // ═══════════════════════════════════════════════════
 // TIME SYSTEM
@@ -1664,6 +1670,7 @@ function autoTalk(){
 // Sinkron task running: tidak ada interval sendiri — data status + tasks diambil di pollStatus (SATU fetch /agents/status)
 let deltaFrame=0; // delta dtk frame terakhir (utk cooldown chat berbasis waktu nyata)
 let relayoutDelta=0; // akumulasi waktu NYATA sejak tick relayout terakhir (damping 251)
+let __dustAcc=0; // akumulasi waktu NYATA antar tick dust (siklus 264 — pola relayoutDelta)
 function checkConversations(){
   // Logika pasangan terdekat di parts/chat_check.js (murni + unit test).
   // Cooldown dihitung dgn delta detik NYATA (dulu 0.016 per frame — di GPU
@@ -1738,6 +1745,7 @@ function animate(){
   const delta=Math.min(timer.getDelta(),.05);
   deltaFrame=delta;
   relayoutDelta += delta;
+  __dustAcc += delta; // siklus 264: akumulasi waktu nyata antar tick dust (pola relayoutDelta 251/263)
   const elapsed=timer.getElapsed();
   frame++;
   window.__animFrames=frame;
@@ -1774,6 +1782,7 @@ function animate(){
   // — dulu 0.0012 rad per FRAME: di SwiftShader 0.4 FPS putaran ~3.6 jam
   // (praktis beku), di 144 Hz 2.4× terlalu cepat (detail di kamera_focus.js).
   if(autoRot){autoRotateStep(sph,delta);updCam()}
+  __screenT=elapsed; // siklus 264: waktu animasi layar = detik NYATA (bukan frame*0.02)
   screenData.forEach(drawScreen);
   updateWalkers(delta);
 
@@ -1835,10 +1844,15 @@ function animate(){
 
   // Dust drift — di-throttle ~20×/dtk (drift sangat lambat; dulu 40×sin/cos +
   // upload buffer GPU tiap frame). Y via dustY (murni, respawn > 3.6 → 0.5).
+  // Siklus 264 (bug kelas 251 keenam): dt ticks debu kini WAKTU-NYATA —
+  // __dustAcc mengakumulasi delta antar tick (dulu Y + .0003 KONSTAN per tick →
+  // laju drift bergantung FPS penuh; offset X juga di-tuning ulang via dt di
+  // bawah, kontrak laju X = .036 unit/dtk = .012 × 3 @60FPS lama eksak).
   if(shouldUpdateDust(frame)){
+    const dustDt=__dustAcc; __dustAcc=0;
     for(let i=0;i<pN;i++){
-      pP[i*3]+=Math.sin(elapsed+i)*.0006*DUST_UPDATE_EVERY; // ×3: kecepatan drift sama di throttle ⅓
-      pP[i*3+1]=dustY(pP[i*3],pP[i*3+1],elapsed,i);
+      pP[i*3]+=Math.sin(elapsed+i)*DUST_RATE_X*dustDt; // kontrak .036 unit/dtk × sin fase (lama: .0006×3 per tick — @60FPS eksak)
+      pP[i*3+1]=dustY(pP[i*3],pP[i*3+1],elapsed,i,dustDt);
     }
     pG.attributes.position.needsUpdate=true;
   }

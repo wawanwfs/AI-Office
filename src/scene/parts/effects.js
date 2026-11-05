@@ -173,11 +173,23 @@ export const DUST_UPDATE_EVERY = 3;
 export function shouldUpdateDust(frame, every = DUST_UPDATE_EVERY) {
   return Number.isFinite(frame) && frame % every === 0;
 }
-// Murni: geser satu partikel debu (dipakai loop dust + unit test).
-// Mengembalikan Y baru (respawn ke 0.5 bila melewati 3.6).
-export function dustY(x, y, elapsed, i) {
+// Murni: geser satu partikel debu — kontrak laju WAKTU-NYATA (siklus 264, bug
+// kelas 251/259/260/261 keenam): dulu `y + cos(...)*.0003` KONSTAN per TICK —
+// laju efektif bergantung penuh FPS (60 FPS = .018/dtk; SwiftShader 0.4 FPS dgn
+// tick 0.05 dtk-sim = .006/dtk-sim = 3× lebih lambat dari 60 FPS nyata; unit
+// test memanggil dustY manual = bebas- FPS). Kini amplitudo di-tuning agar laju
+// kontrak = .0006 unit/dtk (perilaku 60 FPS lama: .0003 × 20 tick/dtk EKSAK —
+// DUST_UPDATE_EVERY=3 @60FPS ≈ 20 tick/dtk) via dt eksplisit: dy = cos(...) ×
+// DUST_RATE × dt. Respawn >3.6 → 0.5 utuh. Guard anti-poisoning konsisten:
+// input non-finite → 0.5; dt non-finite/≤0 → y utuh (tak bergerak).
+export const DUST_RATE = 0.0006; // unit/dtk — 20× lama .0003 (perilaku 60 FPS lama eksak)
+// Laju drift-X kontrak (siklus 264): lama .0006 × DUST_UPDATE_EVERY(3) per tick
+// × 20 tick/s @60FPS = .036 unit/dtk × sin fase — kini eksak per detik nyata.
+export const DUST_RATE_X = 0.036;
+export function dustY(x, y, elapsed, i, dt = 1 / 20) {
   if (!Number.isFinite(x) || !Number.isFinite(y) || !Number.isFinite(elapsed) || !Number.isFinite(i)) return 0.5;
-  const ny = y + Math.cos(elapsed * .4 + i * .5) * .0003;
+  if (!Number.isFinite(dt) || dt <= 0) return y;
+  const ny = y + Math.cos(elapsed * .4 + i * .5) * DUST_RATE * dt;
   return ny > 3.6 ? 0.5 : ny;
 }
 
@@ -275,9 +287,16 @@ export function shouldUpdateBubbles(frame, every = BUBBLE_EVERY) {
     frame % every === 0;
 }
 
-export function drawScreenFrame(s, frame) {
+export function drawScreenFrame(s, frame, elapsed) {
   const { ctx: c, canvas: cv, type, hex } = s;
-  const w = cv.width, h = cv.height, t = frame * 0.02;
+  const w = cv.width, h = cv.height;
+  // Siklus 264 (bug kelas 251 keenam): waktu animasi layar dulu `frame * 0.02`
+  // — di 60 FPS = 1.2 dtk-animasi/dtk-nyata (pas), di SwiftShader 0.4 FPS =
+  // 0.008 dtk-animasi/dtk (monitor praktis BEKU di kiosk), di 144 Hz = 2.88×
+  // terlalu cepat. Kini `t` = detik WAKTU-NYATA (elapsed dari Timer scene,
+  // akumulasi dt antar redraw) — laju animasi layar identik di FPS mana pun.
+  // Guard anti-poisoning: elapsed non-finite → fallback kontrak lama frame*.02.
+  const t = Number.isFinite(elapsed) ? elapsed : frame * 0.02;
   c.globalAlpha = 1; c.fillStyle = '#0b1220'; c.fillRect(0, 0, w, h);
   (SCREEN_RENDERERS[type] || SCREEN_RENDERERS.terminal)(c, w, h, t, hex);
   c.globalAlpha = 1; s.tex.needsUpdate = true;
