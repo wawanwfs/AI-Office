@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { updateFollowGoal, focusStep, autoRotateStep, AUTOROT_RATE, ensureHomeRadius, saveCam, resetFocusGoal } from '../scene/parts/kamera_focus.js';
+import { updateFollowGoal, focusStep, autoRotateStep, AUTOROT_RATE, FOCUS_LERP_RATE, ensureHomeRadius, saveCam, resetFocusGoal } from '../scene/parts/kamera_focus.js';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const root = resolve(here, '..', '..');
@@ -58,13 +58,33 @@ describe('updateFollowGoal', () => {
   });
 });
 
-describe('focusStep', () => {
-  it('lerp menuju goal (faktor 0.06) untuk target & radius', () => {
+describe('focusStep — Siklus 261 lerp waktu-nyata (alpha = 1−e^(−RATE·dt))', () => {
+  const K60 = 1 - Math.exp(-3.7125 / 60); // alpha satu frame @60 FPS == 0.06 lama (±1e-9)
+  it('kontrak laju: FOCUS_LERP_RATE = 3.7125; dt default 0.016 → alpha 60FPS eksak', () => {
+    expect(FOCUS_LERP_RATE).toBe(3.7125);
     const tgt = { x: 0, y: 1.8, z: 0 };
     const sph = { radius: 40 };
     focusStep(tgt, sph, { x: 10, y: 1.8, z: 0 }, 20);
-    expect(tgt.x).toBeCloseTo(0.6);
-    expect(sph.radius).toBeCloseTo(38.8);
+    expect(tgt.x).toBeCloseTo(10 * K60, 9);
+    expect(sph.radius).toBeCloseTo(40 + (20 - 40) * K60, 9);
+  });
+
+  it('dt eksplisit: konvergensi eksponensial waktu-nyata (8 langkah 1/8 dtk = e^-3.7125)', () => {
+    const tgt = { x: 0, y: 1.8, z: 0 };
+    const sph = { radius: 40 };
+    for (let i = 0; i < 8; i++) focusStep(tgt, sph, { x: 10, y: 1.8, z: 0 }, 20, undefined, 0.125);
+    const k8 = Math.exp(-3.7125); // sisa jarak setelah 1 dtk
+    expect(tgt.x).toBeCloseTo(10 * (1 - k8), 6);
+    expect(sph.radius).toBeCloseTo(20 + (40 - 20) * k8, 6);
+  });
+
+  it('INDEPENDEN FPS: 60 langkah 1/60 dtk == 1 langkah 1 dtk (bug kelas 251/259/260)', () => {
+    const a = { x: 8, y: 1.8, z: 0 }, b = { x: 8, y: 1.8, z: 0 };
+    const sa = { radius: 30 }, sb = { radius: 30 };
+    for (let i = 0; i < 60; i++) focusStep(a, sa, { x: 2, y: 1.8, z: 0 }, 20, undefined, 1 / 60);
+    focusStep(b, sb, { x: 2, y: 1.8, z: 0 }, 20, undefined, 1.0);
+    expect(a.x).toBeCloseTo(b.x, 6);
+    expect(sa.radius).toBeCloseTo(sb.radius, 6);
   });
 
   it('konvergen: berulang mendekati goal lalu selesai (<.05 dari HOME)', () => {
@@ -75,6 +95,16 @@ describe('focusStep', () => {
     expect(done).toBe(true);
     expect(tgt.x).toBeCloseTo(0, 1);
     expect(sph.radius).toBeCloseTo(20, 0);
+  });
+
+  it('dt non-finite / ≤ 0 → tidak bergerak (anti-poisoning, konsisten modul lain)', () => {
+    for (const bad of [NaN, Infinity, -Infinity, 'x', 0, -0.016]) {
+      const tgt = { x: 0, y: 1.8, z: 0 };
+      const sph = { radius: 40 };
+      focusStep(tgt, sph, { x: 10, y: 1.8, z: 0 }, 20, undefined, bad);
+      expect(tgt.x).toBe(0);
+      expect(sph.radius).toBe(40);
+    }
   });
 
   it('belum selesai saat jauh', () => {
@@ -91,7 +121,7 @@ describe('focusStep', () => {
     const tgt = { x: 0, y: 1.8, z: 0 };
     const sph = { radius: 20, phi: 0.35 };
     focusStep(tgt, sph, HOME, 20, 1.05);
-    expect(sph.phi).toBeCloseTo(0.35 + (1.05 - 0.35) * 0.06);
+    expect(sph.phi).toBeCloseTo(0.35 + (1.05 - 0.35) * K60, 9);
   });
 
   it('guard: goal non-finite (NaN/±Infinity) → no-op, tgt/sph tak tertulari', () => {
@@ -117,8 +147,21 @@ describe('focusStep', () => {
     const sph = { radius: 20, phi: 0.35 };
     focusStep(tgt, sph, { x: 10, y: 1.8, z: 0 }, 20, NaN);
     expect(sph.phi).toBe(0.35);
-    expect(tgt.x).toBeCloseTo(0.6);
-    expect(sph.radius).toBeCloseTo(20);
+    expect(tgt.x).toBeCloseTo(10 * K60, 9);
+    expect(sph.radius).toBeCloseTo(20 + (20 - 20) * K60, 9);
+  });
+
+  it('drift-gate sumber: pola per-frame * .06 DILARANG; OfficeScene meneruskan delta & TANPA cabang ganda', () => {
+    const kf = readFileSync(resolve(root, 'src/scene/parts/kamera_focus.js'), 'utf8');
+    expect(kf).toContain('export const FOCUS_LERP_RATE = 3.7125');
+    expect(kf).toContain('Math.exp(-FOCUS_LERP_RATE * dtv)');
+    expect(kf).not.toMatch(/\* ?\.06;/);
+    const os = readFileSync(resolve(root, 'src/scene/OfficeScene.js'), 'utf8');
+    // satu panggilan per frame dgn delta eksplisit
+    expect(os).toContain('focusStep(tgt,sph,focusGoal.t,focusGoal.r,focusGoal.phi,delta)');
+    // cabang ganda lama: if(reset&&focusStep) ... else{focusStep} — step 2× per frame
+    expect(os).not.toMatch(/focusGoal\.reset&&focusStep/);
+    expect(os).not.toMatch(/else\{focusStep/);
   });
 });
 
