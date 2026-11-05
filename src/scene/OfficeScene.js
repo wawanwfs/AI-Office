@@ -42,7 +42,7 @@ import {
   loadAmbienceVolume, saveAmbienceVolume, clampAmbienceVolume,
 } from './parts/sound_spec.js';
 import { advanceSimClock, setSimManual, SIM_SEC_PER_MIN as __SIM_SPM, MANUAL_RESUME_MS as __SIM_RESUME } from './parts/sim_clock.js';
-import { simMinutesToClockSeconds } from './parts/clock_units.js';
+import { simClockSeconds, SIM_SEC_PER_MIN as __CLK_SPM } from './parts/clock_units.js';
 import { createSoundEngine } from './parts/sound_engine.js';
 import { installAudioWake } from './parts/audio_wake.js';
 import { SCENE_HOOKS, purgeSceneHooks } from './parts/scene_hooks.js';
@@ -2073,7 +2073,16 @@ function animate(){
   // timeOfDay = MENIT simulasi (0-1440) → drawClockFace mengharapkan DETIK
   // sejak tengah malam (minutes = nowSeconds/60). Tanpa konversi, jarum selalu
   // menunjuk ~00:xx (bug lama: 14:30 ditampilkan sebagai 00:14).
-  if(shouldRedrawClock(frame))drawClock(simMinutesToClockSeconds(timeOfDay));
+  if(shouldRedrawClock(frame)){
+    // Siklus 265: SATU sumber waktu — jarum DETIK kini dari waktu SIMULASI
+    // (menit-sim × 60 + sisa detik nyata dalam menit-sim berjalan __sim.acc),
+    // bukan Date.now() default drawClock (dulu dua sumber: laju detik nyata vs
+    // menit-sim beda 12× — detik menyalip menit; sim manual beku tapi detik
+    // terus berputar). Paritas kontrak SIM_SEC_PER_MIN diguard vitest; pembagian
+    // acc → frac dgn konstanta __CLK_SPM (bila acc belum menit penuh, frac =
+    // detik nyata yang sudah berjalan di menit-sim ini × (60/SPM) = detik-sim).
+    drawClock(simClockSeconds(timeOfDay,__CLK_SPM>0?(__sim.acc/__CLK_SPM)*60:0));
+  }
 
   // Sounds — tick keyboard agent yang duduk + langkah kaki agent yang jalan
   // keyclick & langkah kaki via tickSoundTimer (murni, diuji unit):
