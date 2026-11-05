@@ -131,9 +131,12 @@ def main():
 
         def cam_state():
             # window.__cam = {sph, tgt, upd} — tgt = THREE.Vector3 target kamera,
-            # sph.radius = radius orbit (hook debug resmi scene).
-            return ev("(function(){const c=window.__cam;if(!c||!c.tgt||!c.sph)return null;"
-                      "return {x:c.tgt.x,y:c.tgt.y,z:c.tgt.z,rad:c.sph.radius,fr:window.__animFrames||0};})()", timeout=30)
+            # sph.radius = radius orbit (hook debug resmi scene);
+            # window.__dbg().focus.t = goal ASLI (t r,sph) — ditambah siklus 261.
+            return ev("(function(){const c=window.__cam;const d=(window.__dbg&&window.__dbg())||null;if(!c||!c.tgt||!c.sph)return null;"
+                      "const g=(d&&d.focus&&d.focus.t)||null;"
+                      "return {x:c.tgt.x,y:c.tgt.y,z:c.tgt.z,rad:c.sph.radius,fr:window.__animFrames||0,"
+                      "gx:g?g[0]:null,gy:g?g[1]:null,gz:g?g[2]:null};})()", timeout=30)
 
         if not wait_agents():
             print("FOCUS261: FAIL — agen tidak siap")
@@ -166,35 +169,46 @@ def main():
             samples.append(v)
             time.sleep(3)
 
-        # goal = titik terakhir (konvergen). Uji sisa eksponensial: jarak sampel_i ke goal
-        # harus turun monotik dgn rasio kontra e^-3.7125*dt_frame.
-        goal = samples[-1]
+        # goal ASLI dari __dbg().focus.t (bukan titik akhir — masih meluruh saat dibaca)
+        goal = {k: samples[-1][k] for k in ("gx", "gy", "gz")}
+        if goal["gx"] is None:
+            print("FOCUS261: goal.t tidak terekspos di __dbg (bundle lama?)")
+            return 1
+        gxyz = (goal["gx"], goal["gy"], goal["gz"])
+        print(f"FOCUS261 goal_asli=({gxyz[0]:.3f},{gxyz[1]:.3f},{gxyz[2]:.3f}) rad_goal terbaca={samples[-1]['rad']:.2f}")
         dists = []
-        for smp in samples[:-1]:
-            d = ((smp["x"] - goal["x"]) ** 2 + (smp["y"] - goal["y"]) ** 2 + (smp["z"] - goal["z"]) ** 2) ** 0.5
+        for smp in samples:
+            d = ((smp["x"] - gxyz[0]) ** 2 + (smp["y"] - gxyz[1]) ** 2 + (smp["z"] - gxyz[2]) ** 2) ** 0.5
             dists.append((smp["fr"], d))
         mono = all(b[1] <= a[1] + 1e-9 for a, b in zip(dists, dists[1:]))
+        # kontrak eksak: alpha per frame == 1−e^(−3.7125×0.05) (dt clamp 0.05 SwiftShader)
+        k_exp = 1 - 0.83019
+        # rasio sisa per frame = e^(−RATE·dt) = 0.83019
         ratios = []
         for a, b in zip(dists, dists[1:]):
-            if a[1] > 1e-6:
+            if a[1] > 1e-9:
                 ratios.append((b[1] / a[1], b[0] - a[0]))
-        print(f"FOCUS261 goal=({goal['x']:.3f},{goal['y']:.3f},{goal['z']:.3f}) rad={goal['rad']}")
-        print(f"FOCUS261 dists={[(f, round(d, 4)) for f, d in dists]} monotonic={mono}")
-        print(f"FOCUS261 ratios(frame)={[(round(r, 4), df) for r, df in ratios]}")
-        # kontrak: rasio per frame == e^-3.7125×0.05 = 0.83019 (dt clamp 0.05 SwiftShader)
-        exp_ratio_per_frame = 0.83019
+        print(f"FOCUS261 dists={[(f, round(d, 5)) for f, d in dists]} monotonic={mono}")
+        print(f"FOCUS261 ratios(frame)={[(round(r, 4), df) for r, df in ratios]} (kontrak e^(-3.7125×0.05)=0.8302/frame)")
+        # agregat paling robust: total peluruhan d0→dN vs 0.83019^(jumlah frame)
+        f0, d0 = dists[0]
+        fN, dN = dists[-1]
         ok_ratio = False
-        if ratios:
-            # agregat: total peluruhan antara sampel pertama & terakhir dgn jumlah frame
-            f0, d0 = dists[0]
-            fN, dN = dists[-1]
-            if d0 > 1e-6 and fN > f0:
-                total_frames = fN - f0
-                expected_remaining = d0 * (exp_ratio_per_frame ** total_frames)
-                ratio_aggregate = dN / expected_remaining if expected_remaining > 1e-9 else None
-                print(f"FOCUS261 aggregate: frames={total_frames} dN/expected={ratio_aggregate if ratio_aggregate is None else round(ratio_aggregate, 4)}")
-                ok_ratio = ratio_aggregate is not None and 0.7 <= ratio_aggregate <= 1.3
-        ok = mono and ok_ratio
+        if d0 > 1e-9 and fN > f0 and dN > 1e-12:
+            total_frames = fN - f0
+            expected_remaining = d0 * (0.83019 ** total_frames)
+            ratio_aggregate = dN / expected_remaining
+            print(f"FOCUS261 aggregate: frames={total_frames} d0={d0:.5f} dN={dN:.6f} expected={expected_remaining:.6f} dN/expected={ratio_aggregate:.4f}")
+            ok_ratio = 0.75 <= ratio_aggregate <= 1.25
+        # radius ikut lerp: goal r=19; radius harus meluruh menuju 19 dgn kontrak sama
+        rad_ok = True
+        if samples[0]["rad"] is not None:
+            r0 = samples[0]["rad"]; rN = samples[-1]["rad"]
+            exp_r = 19 + (r0 - 19) * (0.83019 ** (fN - f0))
+            rad_err = abs(rN - exp_r) / max(1e-9, abs(r0 - 19))
+            print(f"FOCUS261 radius: r0={r0:.2f} rN={rN:.2f} expected={exp_r:.2f} err_frac={rad_err:.4f}")
+            rad_ok = rad_err <= 0.25
+        ok = mono and ok_ratio and rad_ok
         print("FOCUS261:", "PASS" if ok else "FAIL")
         return 0 if ok else 1
     finally:

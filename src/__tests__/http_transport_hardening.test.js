@@ -118,9 +118,9 @@ describe('http_transport_hardening siklus 201 — scanner self-test', () => {
 })
 
 describe('http_transport_hardening siklus 201 — census', () => {
-  it('census: 86 file .py dgn call-site urlopen, >=95 call-site, 3 file .sh curl (siklus 257: +1 audit_cam_presets.py — CDP preset kamera & oklusi)', () => {
+  it('census: 87 file .py dgn call-site urlopen, >=95 call-site, 3 file .sh curl (siklus 261: +1 probe_focus_261.py — konvergensi lerp kamera CDP)', () => {
     expect(PY_ALL.length).toBeGreaterThan(70)
-    expect(PY_HTTP.length).toBe(86)
+    expect(PY_HTTP.length).toBe(87)
     const total = PY_HTTP.reduce((n, f) => n + pySites(f).length, 0)
     expect(total).toBeGreaterThanOrEqual(95)
     expect(SH_ALL.length).toBe(3)

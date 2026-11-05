@@ -119,9 +119,9 @@ describe('subprocess_hardening siklus 202 — scanner self-test', () => {
 })
 
 describe('subprocess_hardening siklus 202 — census', () => {
-  it('census: 71 file .py dgn subprocess.run sinkron, >=76 call-site (siklus 257: +1 audit_cam_presets.py — CDP preset kamera & oklusi)', () => {
+  it('census: 72 file .py dgn subprocess.run sinkron, >=76 call-site (siklus 261: +1 probe_focus_261.py — konvergensi lerp kamera CDP)', () => {
     expect(PY_ALL.length).toBeGreaterThan(70)
-    expect(RUN_FILES.length).toBe(71)
+    expect(RUN_FILES.length).toBe(72)
     const total = RUN_FILES.reduce((n, f) => n + sites(f).length, 0)
     expect(total).toBeGreaterThanOrEqual(76)
   })
