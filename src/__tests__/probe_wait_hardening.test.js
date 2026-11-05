@@ -90,6 +90,16 @@ describe('siklus 200 — kriteria inti probe TIDAK berubah (spot-check per kelom
     expect(src['e2e_events_stream']).toContain('awaitPromise=True')
   })
 
+  it('siklus 271 — stats_grid kontrak logrows = min(server.logs, slice UI 8), bukan len mentah', () => {
+    // Celah laten 28 Okt: Dashboard merender .slice(0, 8) sementara server
+    // LOG_LIMIT 15 → probe lama FAIL permanen begitu logs >= 8 (live 271:
+    // lg 15 vs DOM 8). Kontrak probe kini ekspektasi min(len, 8).
+    expect(src['e2e_dashboard_stats_grid']).toContain('lg:Math.min((d.logs||[]).length, 8)')
+    expect(src['e2e_dashboard_stats_grid']).not.toContain('lg:(d.logs||[]).length}')
+    // Kontrak sumber UI yang dihitung probe tetap tercatat di sumber probe
+    expect(src['e2e_dashboard_stats_grid']).toContain('.slice(0, 8)')
+  })
+
   it('scene_hooks: destroy → recreate + zona=5 + sisa hook', () => {
     expect(src[SCENE_HOOKS]).toContain('destroyed')
     expect(src[SCENE_HOOKS]).toContain('__sceneModuleUrl')

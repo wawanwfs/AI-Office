@@ -82,8 +82,15 @@ ERR_EXPR = ("(()=>{const e=document.querySelector('#dashboard .msg.err');"
 LOGS_EXPR = ("(()=>document.querySelectorAll('.dash-log-row').length)()")
 PRESENCE_EXPR = ("(()=>{const p=document.querySelector('.dash-presence');"
                  "return p?'presence-ok':'no-presence'})()")
+# Siklus 271: logrows != len(server.logs) — Dashboard merender .slice(0, 8)
+# (28 Okt, 06b98d1) sementara server LOG_LIMIT 15 (152) → kontrak lama
+# `logrows == truth["lg"]` FAIL deterministik begitu logs produksi >= 8
+# (terbukti live: 17 task → lg 15 vs DOM 8). Kontrak benar:
+# DOM == min(len(logs), 8). Ekspektasi dihitung dari truth, bukan hardcode
+# agar probe tetap benar bila UI slice berubah (regresi UI = FAIL lagi).
 TRUTH_FETCH = ("fetch('/wfs-api/dashboard/stats').then(r=>r.json())"
-               ".then(d=>JSON.stringify({pt:d.projects_total,tt:d.tasks_total,ac:d.agents_count,lg:(d.logs||[]).length}))")
+               ".then(d=>JSON.stringify({pt:d.projects_total,tt:d.tasks_total,ac:d.agents_count,"
+               "lg:Math.min((d.logs||[]).length, 8)}))")
 
 
 def main():
