@@ -1,4 +1,4 @@
-// Guard siklus 265 — SATU sumber waktu untuk KETIGA jarum jam dinding 3D.
+// Guard siklus 265+266 — SATU sumber waktu untuk KETIGA jarum jam dinding 3D.
 //
 // Bug (audit sumber-waktu, lanjutan pola "dua sumber kebenaran" kelas 251):
 // drawClockFace menarik jarum JAM & MENIT dari nowSeconds = simMinutesToClockSeconds
@@ -14,6 +14,9 @@
 // Fix: OfficeScene kini memanggil simClockSeconds(timeOfDay, frac) — detik
 // jarum DETIK = menit-sim × 60 + sisa detik-SIMULASI dalam menit berjalan —
 // sehingga ketiga jarum dari SATU sumber (timeOfDay + acc sim clock).
+// Siklus 266: pipa 265 TERNYATA MATI di painter — drawClockFace masih pakai
+// dateMs default Date.now() (room.js draw satu-argumen → frac dibuang); painter
+// kini (c, nowSeconds, fracSec=0): detik = nowSeconds + fracSec, Date.now DIHAPUS.
 // Kontrak konstanta: clock_units.SIM_SEC_PER_MIN == sim_clock.SIM_SEC_PER_MIN.
 import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
@@ -87,5 +90,26 @@ describe('clock_units — satu sumber waktu ketiga jarum (siklus 265)', () => {
     const cu = readFileSync(join(here, '..', 'scene', 'parts', 'clock_units.js'), 'utf8');
     expect(cu).toContain('export function simClockSeconds');
     expect(cu).toContain('Math.min(fracSec, CLOCK_FRAC_MAX)');
+  });
+
+  // ── Siklus 266: fix pipa 265 TIDAK sampai ke painter — drawClockFace masih
+  // menarik jarum detik dari dateMs default Date.now(), room.js::draw menerima
+  // satu argumen → frac dihitung lalu DIBUANG. Laju 12× & detik jalan sendiri
+  // saat manual BERTAHAN meski call-site sudah benar. Guard: kontrak painter
+  // berubah ke (c, nowSeconds, fracSec), Date.now DIHAPUS dari painter & room.
+  it('siklus 266 — painter: Date.now DIHAPUS, jarum detik = nowSeconds + fracSec', () => {
+    const cc = readFileSync(join(here, '..', 'scene', 'parts', 'clock_canvas.js'), 'utf8');
+    expect(cc).toContain('drawClockFace(c, nowSeconds, fracSec = 0)');
+    expect(cc).not.toMatch(/Date\.now/); // tidak ada lagi sumber waktu nyata di painter
+    expect(cc).toMatch(/const seconds = safeSeconds \+ safeFrac/);
+    expect(cc).toMatch(/secondHandAngle\(seconds\)/);
+  });
+
+  it('siklus 266 — room.js: draw meneruskan fracSec (bukan dateMs default Date.now)', () => {
+    const rm = readFileSync(join(here, '..', 'scene', 'parts', 'room.js'), 'utf8');
+    expect(rm).toMatch(/drawClockFace\(c, nowSeconds, fracSec\)/);
+    expect(rm).not.toMatch(/dateMs/);
+    // default Date.now() pada draw DILARANG kembali
+    expect(rm).not.toMatch(/draw = \(nowSeconds, dateMs = Date\.now\(\)\)/);
   });
 });

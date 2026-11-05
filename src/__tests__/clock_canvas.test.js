@@ -88,12 +88,14 @@ describe('clock_canvas — konstanta & painter wajah jam', () => {
 
   it('tiga jarum sesuai spec HANDS: panjang, tebal, warna, dan sudut waktu', () => {
     const { ops, ctx } = mkCtx();
-    drawClockFace(ctx, NOW, FIXED_DATE);
+    const FRAC = 12.5; // siklus 266: arg ke-3 = frac detik-sim (bukan dateMs)
+    drawClockFace(ctx, NOW, FRAC);
     const minutes = NOW / 60;
     const specs = [
       [hourHandAngle(minutes), HANDS.hour],
       [minuteHandAngle(minutes), HANDS.minute],
-      [secondHandAngle(((FIXED_DATE / 1000) % 60)), HANDS.second],
+      // detik = nowSeconds + frac (SATU sumber waktu — siklus 266)
+      [secondHandAngle(NOW + FRAC), HANDS.second],
     ];
     for (const [ang, s] of specs) {
       const lt = ops.find((o) => o[0] === 'lineTo' && Math.abs(o[1] - (CLOCK_CENTER + Math.sin(ang) * s.len)) < 1e-6);
@@ -119,8 +121,8 @@ describe('clock_canvas — konstanta & painter wajah jam', () => {
 
   it('dua pemanggilan tak share state (recorder terpisah, hasil identik struktur)', () => {
     const a = mkCtx(); const b = mkCtx();
-    drawClockFace(a.ctx, NOW, FIXED_DATE);
-    drawClockFace(b.ctx, NOW + 15, FIXED_DATE);
+    drawClockFace(a.ctx, NOW, 0);
+    drawClockFace(b.ctx, NOW + 15, 0);
     expect(a.ops.map((o) => o[0])).toEqual(b.ops.map((o) => o[0]));
     expect(a.ctx.fillStyle).toBe(CLOCK_PIN);
     expect(b.ctx.fillStyle).toBe(CLOCK_PIN);
@@ -128,26 +130,24 @@ describe('clock_canvas — konstanta & painter wajah jam', () => {
 });
 
 describe('clock_canvas — guard anti-poisoning input waktu non-finite', () => {
-  it('NaN nowSeconds → jarum jam/menit di 12:00, detik ikut dateMs normal, tanpa koordinat NaN', () => {
+  it('NaN nowSeconds → jarum jam/menit/detik di 12:00, tanpa koordinat NaN (siklus 266: tidak ada fallback Date.now)', () => {
     const { ops, ctx } = mkCtx();
-    drawClockFace(ctx, NaN, FIXED_DATE);
+    drawClockFace(ctx, NaN, 0);
     const lines = ops.filter((o) => o[0] === 'lineTo');
     expect(lines).toHaveLength(TICKS + 3);
-    // jam & menit: sudut 0 → titik ujung (48, 48-len)
+    // ketiga jarum: sudut 0 → titik ujung (48, 48-len)
     expect(lines[TICKS][1]).toBeCloseTo(CLOCK_CENTER, 6);
     expect(lines[TICKS][2]).toBeCloseTo(CLOCK_CENTER - HANDS.hour.len, 6);
     expect(lines[TICKS + 1][1]).toBeCloseTo(CLOCK_CENTER, 6);
     expect(lines[TICKS + 1][2]).toBeCloseTo(CLOCK_CENTER - HANDS.minute.len, 6);
-    // detik: tetap mengikuti dateMs valid
-    const secAng = secondHandAngle(((FIXED_DATE / 1000) % 60));
-    expect(lines[TICKS + 2][1]).toBeCloseTo(CLOCK_CENTER + Math.sin(secAng) * HANDS.second.len, 6);
-    expect(lines[TICKS + 2][2]).toBeCloseTo(CLOCK_CENTER - Math.cos(secAng) * HANDS.second.len, 6);
+    expect(lines[TICKS + 2][1]).toBeCloseTo(CLOCK_CENTER, 6);
+    expect(lines[TICKS + 2][2]).toBeCloseTo(CLOCK_CENTER - HANDS.second.len, 6);
   });
 
   it('Infinity/-Infinity/undefined/null nowSeconds → semua jarum tetap finite pada panjang spec', () => {
     for (const bad of [Infinity, -Infinity, undefined, null]) {
       const { ops, ctx } = mkCtx();
-      drawClockFace(ctx, bad, FIXED_DATE);
+      drawClockFace(ctx, bad, 0);
       const lines = ops.filter((o) => o[0] === 'lineTo');
       expect(lines).toHaveLength(TICKS + 3);
       for (let i = 0; i < 3; i++) {
@@ -160,17 +160,22 @@ describe('clock_canvas — guard anti-poisoning input waktu non-finite', () => {
     }
   });
 
-  it('dateMs NaN → detik fallback Date.now() tanpa koordinat NaN, oper tetap berakhir dgn pin', () => {
-    const { ops, ctx } = mkCtx();
-    drawClockFace(ctx, NOW, NaN);
-    const lines = ops.filter((o) => o[0] === 'lineTo');
-    const sx = lines[TICKS + 2][1], sy = lines[TICKS + 2][2];
-    expect(Number.isFinite(sx)).toBe(true);
-    expect(Number.isFinite(sy)).toBe(true);
-    expect(Math.hypot(sx - CLOCK_CENTER, sy - CLOCK_CENTER)).toBeCloseTo(HANDS.second.len, 6);
-    const i = ops.findIndex((o) => o[0] === 'arc' && o[3] === CLOCK_PIN_R);
-    expect(i).toBeGreaterThan(-1);
-    expect(ops[i + 1]).toEqual(['fill']);
-    expect(ops.slice(i + 2)).toHaveLength(0);
+  it('fracSec non-finite/≤0 → no-op detik = nowSeconds; frac >59.999 di-clamp (tak melewati menit)', () => {
+    const a = mkCtx(); const b = mkCtx(); const c = mkCtx();
+    drawClockFace(a.ctx, NOW, NaN);
+    drawClockFace(b.ctx, NOW, -3);
+    drawClockFace(c.ctx, NOW, 999);
+    const angOf = (r) => {
+      const l = r.ops.filter((o) => o[0] === 'lineTo')[TICKS + 2];
+      return Math.atan2(l[1] - CLOCK_CENTER, -(l[2] - CLOCK_CENTER));
+    };
+    const angA = angOf(a), angB = angOf(b), angC = angOf(c);
+    // NaN & negatif → identik dgn frac 0
+    const base = mkCtx(); drawClockFace(base.ctx, NOW, 0);
+    expect(angA).toBe(angOf(base));
+    expect(angB).toBe(angOf(base));
+    // clamp 59.999: jarum detik tak pernah melewati menit yang ditunjuk
+    const clamped = mkCtx(); drawClockFace(clamped.ctx, NOW, 59.999);
+    expect(angC).toBe(angOf(clamped));
   });
 });

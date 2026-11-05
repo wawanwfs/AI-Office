@@ -123,8 +123,12 @@ export function createWallClock(ctx, x, y, z, faceRotY = Math.PI) {
   const face = new THREE.Mesh(new THREE.CircleGeometry(0.27, 28), uiMaterial(new THREE.MeshBasicMaterial({ map: tex })));
   face.position.set(x, y, z); face.rotation.y = faceRotY; office.add(face);
 
-  const draw = (nowSeconds, dateMs = Date.now()) => {
-    drawClockFace(c, nowSeconds, dateMs);
+  // Siklus 266: draw meneruskan FRAC detik-sim (arg ke-2 = fracSec) ke painter —
+  // dulu arg ke-2 adalah timestamp waktu-nyata bawaan painter, membuat jarum
+  // detik laju 12× dari menit-sim & tetap berputar saat sim manual beku
+  // (fix pipa 265 tak sampai ke painter).
+  const draw = (nowSeconds, fracSec = 0) => {
+    drawClockFace(c, nowSeconds, fracSec);
     tex.needsUpdate = true;
   };
   return { draw, tex };
