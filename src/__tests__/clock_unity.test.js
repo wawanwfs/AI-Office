@@ -22,7 +22,7 @@ import { describe, it, expect } from 'vitest';
 import { readFileSync } from 'node:fs';
 import { join, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { simMinutesToClockSeconds, simClockSeconds, SIM_SEC_PER_MIN } from '../scene/parts/clock_units.js';
+import { simClockSeconds, SIM_SEC_PER_MIN } from '../scene/parts/clock_units.js';
 import { SIM_SEC_PER_MIN as SIM_SPM_SOURCE } from '../scene/parts/sim_clock.js';
 import { secondHandAngle } from '../scene/parts/clock_spec.js';
 

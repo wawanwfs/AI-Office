@@ -35,7 +35,6 @@ const styleBefore = (ops, key, name, arg1) => {
 };
 
 const NOW = 60 * 10 + 30; // 10:30
-const FIXED_DATE = 1700000000000;
 
 describe('clock_canvas — konstanta & painter wajah jam', () => {
   it('mengekspor konstanta sesuai kanvas lama (96×96, pusat 48, rim & pin)', () => {
