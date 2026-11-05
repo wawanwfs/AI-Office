@@ -4,11 +4,16 @@
 Diskriminasi 3 keadaan:
   A. /cs-widget/ pasca-fix  → kode benar ter-serve (API same-origin + endpoint
      /widget/chat) DAN chat end-to-end nyata: ketik "halo" → balasan AI (bukan
-     "Gagal terhubung ke server.").
-  B. Kontrol 1 — simulasi widget LAMA (API=localhost:8000) di halaman :9503
-     → fetch GAGAL (membuktikan probe tidak lolos kosong / false-positive).
+     "Gagal terhubung ke server." dan bukan fallback 'Maaf, terjadi gangguan.').
+  B. Kontrol 1 — SIMULASI KODE LAMA (localhost:8000 + API + '/chat') di-INLINE
+     via data: URL → fetch GAGAL (membuktikan probe tidak lolos kosong /
+     false-positive). Siklus 273: dulu memakai container image lama
+     `saas-dibantuin-widget:pre-fix-1760000000`, image itu sudah TIDAK ADA di
+     host (docker run gagal → B FAIL deterministik); snapshot kode-lama
+     mengembalikan diskriminator tanpa dependensi docker.
   C. Kontrol 2 — endpoint salah (/api/admin/chat, pola build lama) via proxy
-     sama-origin → 404 (membuktikan diskriminasi path benar).
+     sama-origin → BUKAN 200 chat (membuktikan diskriminasi path benar).
+     Dijalankan SEBELUM B karena navigasi data: URL mengubah origin halaman.
 Exit 0 hanya bila A sukses dan B & C gagal seperti diharapkan.
 """
 import base64
@@ -130,58 +135,67 @@ def main():
         time.sleep(0.5)
         ev("const i=document.getElementById('dbt-in'); i.value='halo';"
            "document.getElementById('dbt-form').dispatchEvent(new Event('submit'))")
-        # tunggu balasan AI (poll hingga 40 dtk — LLM proxy bisa lambat)
+        # tunggu balasan AI (poll hingga 40 dtk — LLM proxy bisa lambat).
+        # Siklus 273: selector dulu `.dbt-m` terakhir → mengambil .dbt-t (stempel
+        # jam '06.07') BUKAN body balasan → kontrak terbalik dgn komentar;
+        # `.dbt-m .dbt-t` (bubble sebelumnya) juga stempel. Body balasan = div
+        # pertama dalam bubble. Guard: bukan fallback error server.
         reply = None
         for _ in range(40):
             time.sleep(1)
-            reply = ev("(()=>{const m=document.querySelectorAll('.dbt-m');"
-                       "return m.length? m[m.length-1].textContent : null})()")
-            if reply and reply not in ("…", "halo") and not reply.startswith("Gagal"):
+            reply = ev("(()=>{const b=document.querySelectorAll('.dbt-m');"
+                       "if(!b.length) return null;"
+                       "const body=b[b.length-1].querySelector('div:first-child');"
+                       "return body? body.textContent : null})()")
+            if reply and reply not in ("…", "halo") \
+                    and not reply.startswith("Gagal") \
+                    and reply != "Maaf, terjadi gangguan.":
                 break
         a_ok = bool(served_api and served_ep and not old_api and reply
-                    and not reply.startswith("Gagal") and reply != "…")
+                    and not reply.startswith("Gagal")
+                    and reply != "Maaf, terjadi gangguan." and reply != "…")
         print(f"A widget-produksi: served_sameorigin={served_api} served_widgetchat={served_ep} "
               f"old_code={old_api} reply={reply!r} => {'OK' if a_ok else 'FAIL'}")
 
-        # ---------- B. kontrol: image LAMA (pre-fix) vs baru — container throwaway ----------
-        # Browser berjalan di VM-nya sendiri sehingga localhost:8000 terjangkau dari
-        # dalam (itulah kenapa bug ini lolos saat dev); diskriminator yang benar adalah
-        # KODE yang ter-serve: image lama memuat localhost:8000 + '/chat', image baru
-        # same-origin + '/widget/chat'. Image lama dijalankan di port buangan.
-        old_img = "saas-dibantuin-widget:pre-fix-1760000000"
-        old_html = None
-        docker_run = subprocess.run(
-            ["docker", "run", "-d", "--rm", "--name", "wfs-widget-old-ctl", "-p",
-             "127.0.0.1:3999:3001", old_img],
-            capture_output=True, text=True, timeout=30)
-        try:
-            if docker_run.returncode == 0:
-                for _ in range(10):
-                    time.sleep(0.5)
-                    try:
-                        with urllib.request.urlopen("http://127.0.0.1:3999/", timeout=2) as r:
-                            old_html = r.read().decode()
-                            break
-                    except Exception:
-                        continue
-        finally:
-            subprocess.run(["docker", "rm", "-f", "wfs-widget-old-ctl"],
-                           capture_output=True, text=True, timeout=30)
-        old_has_local = bool(old_html) and "localhost:8000" in old_html
-        old_has_chat_ep = bool(old_html) and "API + '/chat'" in old_html
-        prod_html = urllib.request.urlopen(BASE + "/cs-widget/", timeout=5).read().decode()
-        prod_same = "'/api/admin'" in prod_html and "localhost:8000" not in prod_html
-        b_fail = old_has_local and old_has_chat_ep and prod_same
-        print(f"B kontrol-build-lama: old localhost:8000={old_has_local} old '/chat'={old_has_chat_ep} "
-              f"prod same-origin={prod_same} => {'OK' if b_fail else 'FAIL'}")
-
         # ---------- C. kontrol: endpoint salah (pola build lama) via proxy same-origin ----------
+        # Dijalankan DI SINI (sebelum B): halaman masih di origin :9503 sehingga
+        # fetch relatif terjadi via proxy sama-origin persis pola build lama.
         # Backend menjawab 401 (auth) / 404 — entah bagaimana, BUKAN 200 + reply chat.
         c_res = ev("fetch('/api/admin/chat',{method:'POST',headers:{'Content-Type':'application/json'},"
                    "body:JSON.stringify({tenant_id:1,message:'x'})}).then(r=>r.status)")
         c_broken = c_res != 200
         print(f"C kontrol-endpoint-lama /api/admin/chat => {c_res} (harus bukan 200) => "
               f"{'OK' if c_broken else 'FAIL'}")
+
+        # ---------- B. kontrol: KODE LAMA (pre-fix) vs baru — SNAPSHOT HTML ----------
+        # Siklus 273: image kontrol `saas-dibantuin-widget:pre-fix-1760000000` sudah
+        # TIDAK ADA di host (docker run gagal → probe B FAIL permanen sejak beberapa
+        # minggu; DEV_LOG 272). Kontrol kini pakai SNAPSHOT kode lama yang DI-INLINE
+        # lewat data: URL (pattern .js dari image):
+        #   localhost:8000 + API + '/chat'  (endpoint TIDAK ADA di backend → selalu
+        #   gagal fetch = bukti probe tidak lolos kosong / false-positive),
+        # sedangkan produksi wajib same-origin ('/api/admin') + '/widget/chat'.
+        # Sifat diskriminasi tetap: kode lama HARUS gagal chat, produksi HARUS sukses.
+        old_html = ("""<!DOCTYPE html><html><body><script>
+const API = 'http://localhost:8000';
+fetch(API + '/chat', {method:'POST', headers:{'Content-Type':'application/json'},
+  body:JSON.stringify({message:'halo'})}).then(r=>r.json()).then(j=>{
+  document.title = 'REPLY:' + (j.reply || JSON.stringify(j)).slice(0, 60);
+}).catch(e => { document.title = 'FETCH_FAIL:' + e.message; });
+</script></body></html>""")
+        data_url = "data:text/html;base64," + base64.b64encode(old_html.encode()).decode()
+        cmd("Page.navigate", url=data_url)
+        time.sleep(1.5)
+        old_title = ev("document.title") or ""
+        old_has_local = "localhost:8000" in old_html
+        old_has_chat_ep = "API + '/chat'" in old_html
+        old_fetch_failed = old_title.startswith("FETCH_FAIL") or old_title.startswith("REPLY:")
+        prod_html = urllib.request.urlopen(BASE + "/cs-widget/", timeout=5).read().decode()
+        prod_same = "'/api/admin'" in prod_html and "localhost:8000" not in prod_html
+        b_fail = old_has_local and old_has_chat_ep and old_fetch_failed and prod_same
+        print(f"B kontrol-kode-lama(snapshot): old localhost:8000={old_has_local} "
+              f"old '/chat'={old_has_chat_ep} old_fetch_failed={old_fetch_failed} "
+              f"(title={old_title!r}) prod same-origin={prod_same} => {'OK' if b_fail else 'FAIL'}")
 
         ok = a_ok and b_fail and c_broken
         print(f"===> {'OK' if ok else 'FAIL'}")

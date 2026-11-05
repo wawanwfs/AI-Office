@@ -155,9 +155,15 @@ describe('subprocess_hardening siklus 202 — anchor file kunci', () => {
     expect(readFileSync(resolve(SCRIPTS, 'apply_dashboard_stats.py'), 'utf-8'))
       .toMatch(/subprocess\.run\(cmd, capture_output=True, text=True, timeout=120\)/)
   })
-  it('e2e_widget_chat.py: docker run/rm ber-deadline 30s', () => {
+  it('e2e_widget_chat.py: kontrol kode-lama INLINE data: URL (siklus 273, tanpa docker) + urlopen ber-deadline', () => {
     const src = readFileSync(resolve(SCRIPTS, 'e2e_widget_chat.py'), 'utf-8')
-    expect(src.match(/timeout=30\)/g).length).toBeGreaterThanOrEqual(2)
+    // Siklus 273: image kontrol `pre-fix-1760000000` sudah tidak ada di host
+    // (docker run gagal → blok B FAIL deterministik) → kontrol kini snapshot
+    // kode-lama di-inline via data: URL; docker sama sekali tidak boleh kembali.
+    expect(src).not.toMatch(/"docker", "run"/)
+    expect(src).not.toMatch(/pre-fix-1760000000[^)]*\n\s*old_img/)
+    expect(src).toMatch(/data:text\/html;base64/)
+    expect(src).toMatch(/urllib\.request\.urlopen\([^)]*timeout=/)
     expect(viol('e2e_widget_chat.py')).toEqual([])
   })
   it('e2e_pinch.py: os.system pkill sudah jadi subprocess.run(timeout=10)', () => {
