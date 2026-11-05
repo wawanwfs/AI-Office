@@ -43,14 +43,49 @@ OCCL_TIE_FRAC = 0.15         # agent×agent TIE → yang lebih jauh pudar
 OCCL_ZONE_TIE_MIN = 0.5      # target occ zona ter-fade
 MAX_TIE_MIN_DELTA = 1e-3     # occ disimpan 3 desimal (toFixed(3))
 
-# Alias nama zona versi vision → label zona scene (floor_zones.js)
-ZONE_LABELS = ["DEV DESK", "MEETING", "WELCOME & LOUNGE", "CAFÉ", "SERVER ROOM"]
+# Alias nama zona versi vision → label zona scene (label asli dibaca dari
+# parts/floor_zones.js; alias hanya utk nama yang dipakai vision/tulisan bebas).
 ZONE_ALIAS = {
-    "KANTIN AI": "CAFÉ", "KANTIN": "CAFÉ", "CAFE": "CAFÉ",
+    "KANTIN AI": "CAFÉ", "KANTIN": "CAFÉ", "CAFE": "CAFÉ", "KAFE": "CAFÉ",
     "WELCOME": "WELCOME & LOUNGE", "LOUNGE": "WELCOME & LOUNGE",
-    "WELCOME & LOUNGE": "WELCOME & LOUNGE", "MEETING ROOM": "MEETING",
-    "SERVER ROOM": "SERVER ROOM", "DEV DESK": "DEV DESK", "MEETING": "MEETING",
+    "MEETING ROOM": "MEETING", "RAPAT": "MEETING",
 }
+ZONES_JS = os.path.join(ROOT, "src", "scene", "parts", "floor_zones.js")
+AGENT_SRC = [
+    os.path.join(ROOT, "src", "scene", "parts", "agents_spec.js"),
+    os.path.join(ROOT, "src", "scene", "parts", "extended_desks.js"),
+]
+
+
+def known_agents():
+    """Nama agen = SATU SUMBER dari spec scene (bukan daftar salinan di script)."""
+    out = set()
+    for p in AGENT_SRC:
+        with open(p, "r", encoding="utf-8") as f:
+            for m in re.finditer(r"name\s*:\s*'([^']+)'", f.read()):
+                out.add(m.group(1).strip().upper())
+    out.add("WAHYU FS")  # founder (bukan di spec agen)
+    return out
+
+
+def known_zones():
+    with open(ZONES_JS, "r", encoding="utf-8") as f:
+        return {m.group(1).strip().upper() for m in re.finditer(r"label\s*:\s*'([^']+)'", f.read())}
+
+
+def resolve_name(raw, known):
+    """Cocokkan nama terpanjang yg dikenal: buang kata DEPAN (kiri) atau BELAKANG
+    (kanan) — "reproduksi produksi RIAN" → "RIAN", "MEETING zoneOp" → "MEETING"."""
+    words = raw.split()
+    for drop in range(len(words)):
+        cand = " ".join(words[drop:]).strip()
+        if cand.upper() in known:
+            return cand
+    for keep in range(len(words) - 1, 0, -1):
+        cand = " ".join(words[:keep]).strip()
+        if cand.upper() in known:
+            return cand
+    return None
 
 # ── PARSER ────────────────────────────────────────────────────────────────────
 # Nama klaim: huruf pertama alfabet, boleh spasi/&/apostrof/É (teks zona vision).
@@ -78,8 +113,9 @@ def _valid_name(s):
     return s
 
 
-def parse_vision_claims(text, max_sections=4):
+def parse_vision_claims(text, max_sections=40):
     """Ekstrak pasangan klaim vision dari teks DEV_LOG (section terbaru dulu)."""
+    ags, zns = known_agents(), known_zones()
     sections = []  # (judul, isi)
     cur_title, cur_body = None, []
     for line in text.splitlines():
@@ -107,17 +143,24 @@ def parse_vision_claims(text, max_sections=4):
             if not LINE_FILTER_RE.search(ln):
                 continue
             for mm in PAIR_RE.finditer(ln):
-                a, b = _valid_name(mm.group(1)), _valid_name(mm.group(2))
-                if not a or not b:
+                ra, rb = _valid_name(mm.group(1)), _valid_name(mm.group(2))
+                if not ra or not rb:
                     continue
-                zu = b.upper()
-                zone = ZONE_ALIAS.get(zu)
-                if zone is None and b.upper() not in [z.upper() for z in ZONE_LABELS]:
-                    # kanan bukan zona dikenal → pasangan agen×agen
-                    zone = None
+                a = resolve_name(ra, ags)
+                if not a:
+                    continue
+                bz = resolve_name(rb, zns)
+                if bz is None:
+                    zb = ZONE_ALIAS.get(rb.strip().upper())
+                    bz = zb
+                if bz:
+                    zone, pair_label = bz, bz
                 else:
-                    zone = zone or b.upper()
-                key = (a.upper(), (zone or b).upper())
+                    b = resolve_name(rb, ags)
+                    if not b or b == a:
+                        continue
+                    zone, pair_label = None, b
+                key = (a.upper(), (zone or pair_label).upper())
                 if key in seen:
                     continue
                 seen.add(key)
@@ -125,9 +168,9 @@ def parse_vision_claims(text, max_sections=4):
                 claims.append({
                     "id": f"VC-{cycle or n_sel}-{k}", "cycle": cycle,
                     "section": title[:80], "agent": a.upper(),
-                    "raw_pair": f"{a}×{b}",
+                    "raw_pair": f"{a}×{pair_label}",
                     "zone": zone,  # None = klaim agen×agen
-                    "pair_label": zone if zone else b.upper(),
+                    "pair_label": pair_label.upper(),
                 })
     return claims
 
@@ -334,9 +377,10 @@ def live_audit(pairs):
                 print(f"  BUG __occlFade={snap.get('n')} != hitungan occ<1={n_less}")
             if rnd == 0:
                 for cl in pairs:
-                    a = next((q for q in agents if q.get("name") == cl["agent"]), None)
+                    a_up = cl["agent"].upper()
+                    a = next((q for q in agents if (q.get("name") or "").upper() == a_up), None)
                     if cl.get("zone"):
-                        z = next((q for q in zones if q["zt"] == cl["zone"]), None)
+                        z = next((q for q in zones if q["zt"].upper() == cl["zone"].upper()), None)
                         if a is None:
                             print(f"VERDICT {cl['id']} {cl['raw_pair']}: AGENT_MISSING ({cl['agent']} offsite/absen)")
                             continue
@@ -355,7 +399,8 @@ def live_audit(pairs):
                         else:
                             print(f"VERDICT {cl['id']} {cl['raw_pair']}: FALSIFIED (tak tumpuk di steady-state ini)")
                     else:
-                        b = next((q for q in agents if q.get("name") == cl["pair_label"]), None)
+                        b_up = cl["pair_label"].upper()
+                        b = next((q for q in agents if (q.get("name") or "").upper() == b_up), None)
                         if a is None or b is None:
                             print(f"VERDICT {cl['id']} {cl['raw_pair']}: AGENT_MISSING")
                             continue

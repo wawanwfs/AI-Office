@@ -1,0 +1,113 @@
+{
+ "source": "DEV_LOG.md",
+ "claims": [
+  {
+   "id": "VC-256-1",
+   "cycle": 256,
+   "section": "2026-11-05 04:10 WIB — Siklus 256: OKLUSI LABEL AGENT×ZONE (zona mengalah) — pas",
+   "agent": "RIAN",
+   "raw_pair": "RIAN×MEETING",
+   "zone": "MEETING",
+   "pair_label": "MEETING"
+  },
+  {
+   "id": "VC-256-2",
+   "cycle": 256,
+   "section": "2026-11-05 04:10 WIB — Siklus 256: OKLUSI LABEL AGENT×ZONE (zona mengalah) — pas",
+   "agent": "HENDRA",
+   "raw_pair": "HENDRA×WELCOME & LOUNGE",
+   "zone": "WELCOME & LOUNGE",
+   "pair_label": "WELCOME & LOUNGE"
+  },
+  {
+   "id": "VC-256-3",
+   "cycle": 256,
+   "section": "2026-11-05 04:10 WIB — Siklus 256: OKLUSI LABEL AGENT×ZONE (zona mengalah) — pas",
+   "agent": "RIZKY",
+   "raw_pair": "RIZKY×CAFÉ",
+   "zone": "CAFÉ",
+   "pair_label": "CAFÉ"
+  },
+  {
+   "id": "VC-251-1",
+   "cycle": 251,
+   "section": "2026-11-04 17:40 WIB — Siklus 251: BUG KONVERGENSI DAMPING LAMBAT + OKLUSI MENIL",
+   "agent": "SARI",
+   "raw_pair": "SARI×SUPPORT",
+   "zone": null,
+   "pair_label": "SUPPORT"
+  },
+  {
+   "id": "VC-251-2",
+   "cycle": 251,
+   "section": "2026-11-04 17:40 WIB — Siklus 251: BUG KONVERGENSI DAMPING LAMBAT + OKLUSI MENIL",
+   "agent": "BANTUIN AI",
+   "raw_pair": "BANTUIN AI×BUDI",
+   "zone": null,
+   "pair_label": "BUDI"
+  },
+  {
+   "id": "VC-251-3",
+   "cycle": 251,
+   "section": "2026-11-04 17:40 WIB — Siklus 251: BUG KONVERGENSI DAMPING LAMBAT + OKLUSI MENIL",
+   "agent": "LINA",
+   "raw_pair": "LINA×INTEGRATOR BOT",
+   "zone": null,
+   "pair_label": "INTEGRATOR BOT"
+  },
+  {
+   "id": "VC-250-1",
+   "cycle": 250,
+   "section": "2026-11-04 14:17 WIB — Siklus 250: ATURAN TIE OKLUSI — 9–19 pasangan label bertu",
+   "agent": "INTEGRATOR BOT",
+   "raw_pair": "INTEGRATOR BOT×ARIS",
+   "zone": null,
+   "pair_label": "ARIS"
+  },
+  {
+   "id": "VC-250-2",
+   "cycle": 250,
+   "section": "2026-11-04 14:17 WIB — Siklus 250: ATURAN TIE OKLUSI — 9–19 pasangan label bertu",
+   "agent": "MAYA",
+   "raw_pair": "MAYA×TONI",
+   "zone": null,
+   "pair_label": "TONI"
+  },
+  {
+   "id": "VC-250-3",
+   "cycle": 250,
+   "section": "2026-11-04 14:17 WIB — Siklus 250: ATURAN TIE OKLUSI — 9–19 pasangan label bertu",
+   "agent": "RIZKY",
+   "raw_pair": "RIZKY×FERRY",
+   "zone": null,
+   "pair_label": "FERRY"
+  },
+  {
+   "id": "VC-258-1",
+   "cycle": 258,
+   "section": "2026-11-05 06:15 WIB — Siklus 258: FALSIFIKASI KLAIM VISION \"LABEL MASIH TUMPUK\"",
+   "agent": "BUDI",
+   "raw_pair": "Budi×CAFÉ",
+   "zone": "CAFÉ",
+   "pair_label": "CAFÉ"
+  },
+  {
+   "id": "VC-258-2",
+   "cycle": 258,
+   "section": "2026-11-05 06:15 WIB — Siklus 258: FALSIFIKASI KLAIM VISION \"LABEL MASIH TUMPUK\"",
+   "agent": "YOGA",
+   "raw_pair": "YOGA×LINA",
+   "zone": null,
+   "pair_label": "LINA"
+  },
+  {
+   "id": "VC-258-3",
+   "cycle": 258,
+   "section": "2026-11-05 06:15 WIB — Siklus 258: FALSIFIKASI KLAIM VISION \"LABEL MASIH TUMPUK\"",
+   "agent": "MAYA",
+   "raw_pair": "MAYA×CAFÉ",
+   "zone": "CAFÉ",
+   "pair_label": "CAFÉ"
+  }
+ ]
+}
