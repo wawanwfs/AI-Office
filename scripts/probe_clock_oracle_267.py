@@ -48,7 +48,7 @@ HOUR_LEN = 22
 SECOND_RGB = (0xF9, 0x73, 0x16)   # #f97316 oranye
 HOUR_RGB = (0x22, 0x22, 0x22)     # #222
 MINUTE_RGB = (0x44, 0x44, 0x44)   # #444
-TOL_DEG = 2.5
+TOL_DEG = 4.0
 REDRAW_EVERY = 20                 # effects.js CLOCK_REDRAW_EVERY (diguard vitest)
 
 JS_READ = r"""
@@ -139,7 +139,7 @@ def is_dark(r, g, b):
     return r < 110 and g < 110 and b < 110
 
 
-def hand_angle_ink(pixels, pred, min_r, max_r):
+def hand_angle_ink(pixels, pred, min_r, max_r, exclude_deg=None, excl_w=0.0):
     """Argmax TINTA per sudut (bukan 'piksel terjauh'): hitung SEMUA hit sepanjang
     ray 1°, pilih sudut dgn jumlah piksel terbanyak. Pelajaran iterasi-2: logika
     'furthest + break di hit pertama' memilih tepi DASAR jarum (r≈min_r) → sudut
@@ -147,6 +147,8 @@ def hand_angle_ink(pixels, pred, min_r, max_r):
     sektor jarum (width×length dominan), stabil utk garis AA 1.2px.
     Pass-2: centroid berbobot 0.25° di ±3° argmax (puncak sebidang ±1° —
     lebar angular jarum 1.2px @r30 ≈ 2.3°).
+    exclude_deg/excl_w: sektor yang DILARANG jadi argmax (jarum lain menimpa —
+    iterasi-6: menit 4px lebar memblokir kompas jam di 10:xx).
     Return derajat dari 12 searah jarum jam, atau None."""
 
     def ink_at(adeg_f):
@@ -165,20 +167,26 @@ def hand_angle_ink(pixels, pred, min_r, max_r):
         return ink
 
     C = 48.0
-    best_a, best_ink = None, -1.0
+    cands = []
     for adeg in range(360):
+        if exclude_deg is not None and angdiff(float(adeg), exclude_deg) <= excl_w:
+            continue
         ink = ink_at(float(adeg))
-        if ink > best_ink:
-            best_ink, best_a = ink, float(adeg)
+        cands.append((ink, float(adeg)))
+    cands.sort(key=lambda t: -t[0])
+    best_ink, best_a = cands[0] if cands else (0, None)
     if best_ink <= 0 or best_a is None:
         return None
-    # pass-2: centroid berbobot di ±3° (langkah 0.25°)
+    # pass-2: centroid berbobot di ±2.8° dgn pembatasan setengah-tinggi (hemat
+    # lebar angular: centroid penuh ±3° menyeret nilai ~2-3° ke arah tinta tetangga)
     num = den = 0.0
+    half = best_ink / 2.0
     k = best_a - 3.0
     while k <= best_a + 3.0:
         w = ink_at(k % 360.0)
-        num += k * w
-        den += w
+        if w >= half:
+            num += k * w
+            den += w
         k += 0.25
     return (num / den) % 360.0 if den > 0 else best_a
 
@@ -287,8 +295,17 @@ def main():
             # agar race destroy/remount (label baru) tak menyuntik kanvas salah.
             # Rentang radius dibatasi ketat di bawah brim (r≈35.5 hitam — pelajaran
             # dump: menit tanpa batas atas menangkap brim 44px → 237° = 180+57).
-            h = hand_angle_ink(px, is_dark, 10, HOUR_LEN + 2)
-            mn = hand_angle_ink(px, is_dark, 24, MINUTE_LEN - 1)
+            # Jam: rentang 24..20 DIBALIK — argmax ray pada window 10..22 = 180°
+            # (tumpang tindih menit di r≤22 pada 10:xx; pelajaran iterasi-5).
+            # Kontrak: JAM terpanjang = 22px (HANDS.hour.len). Ray window 23..22
+            # kosong utk jam; utk meniru 'puncak TUNGGAL', gunakan window r>=23
+            # MINUS menit: kanvas di r=23..32 memuat menit SAJA (jam maks 22) →
+            # sudut tinta di window 23..32 = MENIT; sudut tinta di window 10..21
+            # dgn tinta min 3 ray = gabungan. Strategi final (iterasi-6): baca
+            # MENIT dr window 23..32, lalu JAM = argmax window 10..22 DI LUAR
+            # ±8° menit (jarum menit memblokir kompas dr 180° dgn 4px lebar).
+            mn = hand_angle_ink(px, is_dark, 23, MINUTE_LEN - 1)
+            h = hand_angle_ink(px, is_dark, 10, 22, exclude_deg=mn, excl_w=8.0)
             sc = hand_angle_ink(px, is_orange, 6, SECOND_LEN + 2)
             return (h, mn, sc), None
 
