@@ -301,3 +301,44 @@ describe('createProjectBoard — destroy', () => {
     expect(mesh.material.opacity).toBe(0.2) // forceVisible juga mati
   })
 })
+
+describe('createProjectBoard — anti-poisoning stempel waktu & paritas d.at (siklus 270)', () => {
+  it('respons /wfs-project dengan d.at valid dilukis pada subjudul', async () => {
+    const atIso = '2026-10-21T21:00:00+08:00'
+    const expTime = new Date(atIso).toLocaleTimeString('id-ID')
+    const snapAt = { ...SNAP, at: atIso }
+    await mount(snapAt)
+    const subText = texts.find(t => t.startsWith('Data live · task engine + SaaS'))
+    expect(subText).toBeTruthy()
+    expect(subText).toContain(expTime)
+  })
+
+  it('respons /wfs-project dengan detik UNIX <1e10 auto ×1000 ke ms', async () => {
+    const atSec = 1762387200 // detik UNIX
+    const expTime = new Date(atSec * 1000).toLocaleTimeString('id-ID')
+    const snapAt = { ...SNAP, at: atSec }
+    await mount(snapAt)
+    const subText = texts.find(t => t.startsWith('Data live · task engine + SaaS'))
+    expect(subText).toBeTruthy()
+    expect(subText).toContain(expTime)
+  })
+
+  it('respons /wfs-project dengan at racun (invalid/NaN) aman fallback ke Date.now tanpa melukis Invalid Date', async () => {
+    for (const poison of ['invalid', NaN, Infinity, -Infinity]) {
+      texts.length = 0
+      const snapPoison = { ...SNAP, at: poison }
+      await mount(snapPoison)
+      const subText = texts.find(t => t.startsWith('Data live · task engine + SaaS'))
+      expect(subText).toBeTruthy()
+      expect(subText).not.toContain('Invalid')
+      expect(subText).not.toContain('NaN')
+    }
+  })
+
+  it('drift-gate sumber: projectboard.js mengimpor parseTimestampMs dan tidak memakai new Date(lastOk) mentah', async () => {
+    const fs = await import('fs')
+    const src = fs.readFileSync('src/scene/parts/projectboard.js', 'utf-8')
+    expect(src).toMatch(/import\s*\{[^}]*parseTimestampMs[^}]*\}\s*from\s*['"][^'"]*kanban_date\.js['"]/)
+    expect(src).not.toMatch(/new\s+Date\(\s*lastOk\s*\)\.toLocaleTimeString/)
+  })
+})

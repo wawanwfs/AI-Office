@@ -107,6 +107,16 @@ describe('kanban_date.js', () => {
         expect(parseTimestampMs(v)).toBeNull();
       }
     });
+
+    it('siklus 270 — drift-gate: parseTaskTimestamp murni mendelegasikan ke parseTimestampMs(raw) tanpa duplikasi body', async () => {
+      const fs = await import('fs');
+      const src = fs.readFileSync('src/lib/kanban_date.js', 'utf-8');
+      const fnMatch = /export function parseTaskTimestamp\(task\) \{([\s\S]*?)\n\}/.exec(src);
+      expect(fnMatch).toBeTruthy();
+      const body = fnMatch[1];
+      expect(body).toContain('return parseTimestampMs(raw)');
+      expect(body).not.toContain('raw < 10000000000');
+    });
   });
 
   describe('isTaskInDateRange & filterTasksByDate', () => {
@@ -330,6 +340,18 @@ describe('kanban_date.js', () => {
         expect(str).toBe('20 – 25 Okt 2026');
         expect(formatSimpleDate(new Date(2026, 9, 20).getTime())).toBe('20 Okt 2026');
         expect(formatSimpleDate(null)).toBe('');
+      });
+
+      it('siklus 270 — formatSimpleDate mendukung detik-UNIX, ISO, Date instance, dan menolak 0/racun', () => {
+        // Detik-UNIX <1e10 otomatis ×1000 ke ms (bukan tahun 1970!)
+        const targetSec = Math.round(new Date(2026, 9, 20, 12, 0).getTime() / 1000);
+        expect(formatSimpleDate(targetSec)).toBe('20 Okt 2026');
+        expect(formatSimpleDate('2026-10-20')).toBe('20 Okt 2026');
+        expect(formatSimpleDate(new Date(2026, 9, 20))).toBe('20 Okt 2026');
+        // Racun / epoch 0 / nilai non-positif → string kosong murni (bukan 1970 / Invalid Date)
+        for (const poison of [null, undefined, 0, -1000, NaN, Infinity, -Infinity, 'invalid', new Date(NaN), {}, []]) {
+          expect(formatSimpleDate(poison)).toBe('');
+        }
       });
 
       it('memformat tanggal tunggal jika start dan end sama', () => {

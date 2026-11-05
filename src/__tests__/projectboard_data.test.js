@@ -66,6 +66,16 @@ describe('subtitle', () => {
   it('bersih bila tidak ada masalah', () => {
     expect(subtitle({}, '10:00')).not.toContain('review')
   })
+  it('siklus 270 — tanpa timeStr tidak menghasilkan trailing dot atau spasi gantung', () => {
+    expect(subtitle({}, '')).toBe('Data live · task engine + SaaS')
+    expect(subtitle({}, null)).toBe('Data live · task engine + SaaS')
+    expect(subtitle({}, undefined)).toBe('Data live · task engine + SaaS')
+  })
+  it('siklus 270 — tanpa timeStr tetapi ada review/gagal terformat rapi tanpa double separator', () => {
+    expect(subtitle({ review: 2 }, '')).toBe('Data live · task engine + SaaS · review 2')
+    expect(subtitle({ failed: 1 }, null)).toBe('Data live · task engine + SaaS · gagal 1')
+    expect(subtitle({ review: 1, failed: 3 }, '')).toBe('Data live · task engine + SaaS · review 1 · gagal 3')
+  })
 })
 
 describe('bannerParts & bannerNames', () => {
