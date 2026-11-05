@@ -100,6 +100,17 @@ describe('siklus 200 — kriteria inti probe TIDAK berubah (spot-check per kelom
     expect(src['e2e_dashboard_stats_grid']).toContain('.slice(0, 8)')
   })
 
+  it('siklus 272 — sh_console_overview kontrak lg = total_logs (kartu "Log event" UI), bukan recent_logs.length', () => {
+    // Celah laten 29 Okt (siklus 153): kartu 'Log event' di ShConsole overview
+    // merender ov.total_logs (17 di produksi) sedangkan TRUTH_FETCH lama
+    // mengambil (d.recent_logs||[]).length (8) → probe lama FAIL deterministik
+    // begitu total_logs > recent_logs.length (live 272: 17 vs 8).
+    // Kontrak probe kini d.total_logs untuk kartu 'Log event' dan recent_len untuk baris log list.
+    expect(src['e2e_sh_console_overview']).toContain('d.total_logs')
+    expect(src['e2e_sh_console_overview']).not.toContain('lg:(d.recent_logs||[]).length}')
+    expect(src['e2e_sh_console_overview']).toContain('recent_len')
+  })
+
   it('scene_hooks: destroy → recreate + zona=5 + sisa hook', () => {
     expect(src[SCENE_HOOKS]).toContain('destroyed')
     expect(src[SCENE_HOOKS]).toContain('__sceneModuleUrl')

@@ -8,8 +8,8 @@ tab Approvals "Memuat approval…" selamanya. Kini keduanya 200 dari server:
      'Konsol Software House' → drawer ShConsole terbuka di tab Overview.
   2. Ground truth = fetch('/wfs-api/sh/overview') DARI DALAM halaman.
   3. Kartu grid overview muncul TANPA banner err; 'Projects', 'Task total',
-     'Agent total' = nilai server; baris log muncul (data nyata, bukan
-     "Belum ada log").
+     'Agent total' & 'Log event' = nilai server (siklus 272: 'Log event'
+     merender d.total_logs, baris log merender d.recent_logs).
   4. Klik tab Approvals → status "Tidak ada approval pending." (jujur kosong,
      bukan "Memuat…" selamanya / banner err).
 Pemakaian: uv run --with websocket-client python scripts/e2e_sh_console_overview.py
@@ -78,7 +78,8 @@ def _x99_alive():
 
 TRUTH_FETCH = ("fetch('/wfs-api/sh/overview').then(r=>r.json())"
                ".then(d=>JSON.stringify({p:d.projects,t:d.tasks,a:d.agents,"
-               "lg:(d.recent_logs||[]).length}))")
+               "lg:(d.total_logs!=null?d.total_logs:(d.recent_logs||[]).length),"
+               "recent_len:(d.recent_logs||[]).length}))")
 ERR_EXPR = "(()=>{const es=[...document.querySelectorAll('[role=\"alert\"]')];return es.length?'ERR-BANNER':'no-err'})()"
 
 
@@ -191,19 +192,19 @@ def main():
                          ("a", r"Agent total\n(\d+)"), ("lg", r"Log event\n(\d+)")):
             m = re.search(pat, drawer_txt)
             nums[key] = int(m.group(1)) if m else -1
-        log_rows = len(re.findall(r"info ·", drawer_txt))
+        log_rows = len(re.findall(r"(?:info|warn|error|debug)\s*·", drawer_txt))
 
         # Tab Approvals: klik tab 'Approvals' → status jujur kosong
         appr = "not-tested"
-        apclk = ev("(()=>{const b=[...document.querySelectorAll('button')]"
-                   ".find(x=>(x.getAttribute('aria-label')||'')==='Tab Approvals');"
+        apclk = ev("(()=>{const b=[...document.querySelectorAll('button')]"\
+                   ".find(x=>(x.getAttribute('aria-label')||'')==='Tab Approvals');"\
                    "if(!b)return 'no-tab'; b.click(); return 'clicked'})()").get("value", "no-tab")
         if apclk == "clicked":
             for _ in range(15):
                 time.sleep(1)
-                t = ev("(()=>{const d=document.body.innerText;"
-                       "if(d.includes('Memuat approval'))return 'loading';"
-                       "if(d.includes('Tidak ada approval pending'))return 'honest-empty';"
+                t = ev("(()=>{const d=document.body.innerText;"\
+                       "if(d.includes('Memuat approval'))return 'loading';"\
+                       "if(d.includes('Tidak ada approval pending'))return 'honest-empty';"\
                        "return 'unexpected'})()").get("value", "unexpected")
                 if t != "loading":
                     appr = t
@@ -221,6 +222,7 @@ def main():
                 and nums["p"] == truth["p"] and nums["t"] == truth["t"] \
                 and nums["a"] == truth["a"] and nums["lg"] == truth["lg"] \
                 and err_raw == "no-err" and int(log_rows) > 0 \
+                and int(log_rows) == truth["recent_len"] \
                 and appr == "honest-empty" and err_after == "no-err"
         except Exception as e:
             print("parse fail:", e)
