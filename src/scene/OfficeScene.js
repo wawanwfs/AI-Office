@@ -22,7 +22,7 @@ import { dblclickPointGoal, dblclickBlankGoal, tapCandidate, isDoubleTap, dtapRa
 import { createMeetingRoom, createWallClock, createCeilingFixtures } from './parts/room.js';
 import { drawNameplate, PLATE } from './parts/nameplate_spec.js';
 import {
-  SEL_RING, HOVER_RING, selAnchorOf, selectedAgent, ringFloorY, hoverRingPos,
+  SEL_RING, HOVER_RING, selectedAgent,
   meetingFigureAnchor, SEL_RING_DAMP_RATE, HOVER_RING_DAMP_RATE,
   stepRingRotation, ringDampFactor, stepRingPosition, selRingTarget, hoverRingTarget,
 } from './parts/ring_spec.js';
@@ -366,7 +366,7 @@ const focusAgentRoot=(root,opts={})=>{
 // klik pada peserta yang duduk di ruang meeting. Goal kamera ke kursi rapat
 // (posisi figur), r = min(radius, 16) — idempoten dgn keluarga fokus lain
 // (ensureHomeRadius + saveCam → Escape "kembali" berfungsi). Agen tetap
-// DIPILIH di UI (selectedIdx = index agen, ring via meetingFigureAnchor —
+// DIPILIH di UI (selectedIdx = index agen, ring via selRingTarget —
 // bukan ring -2 nexus) + bubble sapaan konsisten dgn fokus agen biasa.
 // Dulu: figur peserta tidak ada di daftar raycast → klik jatuh ke jalur
 // "klik kosong" (kamera me-reset ke rumah, pilihan justru dihapus) [119].
@@ -540,7 +540,7 @@ __onCanvas('dblclick',e=>{
 });
 
 // hover pointer di atas agent/papan: isyarat "bisa diklik" (raycast throttled)
-// Posisi nexus utk hover ring (agent null + isNexus) — dipakai hoverRingPos.
+// Posisi nexus utk hover ring (agent null + isNexus) — dipakai hoverRingTarget.
 const NEXUS_HOVER={x:7.6,y:1.20,z:6.1};
 const hoverRay=new THREE.Raycaster();let hoverNdc={x:0,y:0},hoverPend=false,hoveredAgent=null;
 // Timer throttle hover disimpan agar pointerleave bisa MEMBATALKAN raycast yang
@@ -568,7 +568,8 @@ function applySelected(){
   selRing.visible=true;
 }
 // posisi ring utk agent: walker (berjalan) / home (duduk) / null (tidak terlihat di kantor)
-const selAnchor=(a)=>selAnchorOf(a); // alias kompakt (dipakai blok animasi sel ring)
+// Siklus 260: alias selAnchor dihapus (dipakai blok animate lama) — selRingTarget
+// satu sumber kebenaran posisi ring seleksi (applySelected + animate).
 
 function ensureHoverRing(){if(hoverRing)return;const c=document.createElement('canvas');c.width=c.height=HOVER_RING.SIZE;paintRing(c.getContext('2d'),HOVER_RING,0.9);
   const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;
@@ -601,9 +602,8 @@ __onCanvas('pointermove',e=>{
     }
     isMfHover=isMf;
     hoveredAgent=ha;
-    // Posisi ring via hoverRingPos (satu sumber kebenaran dgn blok follow):
-    // dulu formula inline duplikat (anchor + Y dihitung 2× — handler & follow).
-    const hpos=isMf?meetingFigureAnchor(isMf.figure):hoverRingPos(hoveredAgent,isNxHover,NEXUS_HOVER);
+    // Posisi ring via hoverRingTarget (satu sumber kebenaran dgn blok follow di animate):
+    const hpos=hoverRingTarget(hoveredAgent,isMf,NEXUS_HOVER,isNxHover);
     if(hpos){
       ensureHoverRing();
       hoverRing.position.set(hpos.x,hpos.y,hpos.z);
@@ -1838,60 +1838,36 @@ function animate(){
   // Labels (bobbing duduk di-throttle di blok ambient di atas)
   // cincin emas mengikuti agent terpilih (juga saat berjalan/meeting) dgn tracking halus & rotasi elegan
   // siklus 119: agen PESERTA RAPAT (walker & sittingChar hidden) → anchor =
-  // kursi rapat via meetingFigureAnchor (dulu selAnchorOf(a)=null → ring
-  // dimatikan SETIAP FRAME oleh blok ini, mengalahkan applySelected).
-  if(selRing&&selectedIdx>=0&&selectedIdx<agentData.length){
-    const a=agentData[selectedIdx];
-    const mfa=meetingFigureAnchor(__meet&&__meet.figures?__meet.figures[selectedIdx]:null);
-    const p=mfa||selAnchor(a);
-    if(!p){selRing.visible=false}
-    else if(mfa){
-      const targetY = mfa.y + SEL_RING.Y;
-      selRing.position.x += (mfa.x - selRing.position.x) * 0.25;
-      selRing.position.z += (mfa.z - selRing.position.z) * 0.25;
-      selRing.position.y += (targetY - selRing.position.y) * 0.25;
-      selRing.rotation.z += 0.012;
+  // kursi rapat via selRingTarget (dulu selAnchorOf(a)=null → ring dimatikan
+  // SETIAP FRAME oleh blok ini, mengalahkan applySelected).
+  // Siklus 260: target posisi tunggal via selRingTarget (Founder -2, peserta
+  // rapat, agent biasa — 3 cabang dulu duplikat jadi 1), rotasi waktu-nyata
+  // stepRingRotation (SEL_RING_ROT_RATE rad/s × dt — bug kelas 251/259 ketiga:
+  // 0.012 rad per FRAME butuh ~21.8 menit per putaran di SwiftShader 0.4 FPS),
+  // damping posisi waktu-nyata ringDampFactor (60 FPS lama dipertahankan eksak).
+  if(selRing){
+    const target=selRingTarget(agentData,selectedIdx,__meet&&__meet.figures);
+    if(!target){
+      selRing.visible=false;
+    }else{
+      const f=ringDampFactor(SEL_RING_DAMP_RATE,delta);
+      stepRingPosition(selRing.position,target,f);
+      selRing.rotation.z=stepRingRotation(selRing.rotation.z,delta);
       selRing.visible=true;
     }
-    else{
-      const targetY = ringFloorY(a) + SEL_RING.Y;
-      selRing.position.x += (p.x - selRing.position.x) * 0.25;
-      selRing.position.z += (p.z + p.off - selRing.position.z) * 0.25;
-      selRing.position.y += (targetY - selRing.position.y) * 0.25;
-      selRing.rotation.z += 0.012;
-      selRing.visible=true;
-    }
-  }else if(selRing&&selectedIdx===-2){
-    const targetY = 1.20 + SEL_RING.Y;
-    selRing.position.x += (7.6 - selRing.position.x) * 0.25;
-    selRing.position.z += (6.1 - selRing.position.z) * 0.25;
-    selRing.position.y += (targetY - selRing.position.y) * 0.25;
-    selRing.rotation.z += 0.012;
-    selRing.visible=true;
   }
-  // cincin biru hover mengikuti agent yang di-hover tiap frame — dulu posisi
-  // hanya diset saat pointermove (throttle 80 ms): ring BEKU di posisi lama
-  // saat agent berjalan / naik-turun lantai, terlihat "tertinggal" di lantai.
-  // Posisi via hoverRingPos (satu sumber kebenaran dgn handler pointermove);
-  // state hoveredAgent juga dibersihkan pointerleave (ring tetap false-safe).
-  // siklus 119: hover figur peserta rapat → follow kursi rapat via
-  // meetingFigureAnchor (figur BUKAN bagian agentData, posisi kursi).
-  if(hoverRing&&hoverRing.visible&&isMfHover){
-    const hpos=meetingFigureAnchor(isMfHover);
-    if(!hpos){hoverRing.visible=false}
-    else{
-      hoverRing.position.x += (hpos.x - hoverRing.position.x) * 0.45;
-      hoverRing.position.z += (hpos.z - hoverRing.position.z) * 0.45;
-      hoverRing.position.y += (hpos.y - hoverRing.position.y) * 0.45;
-    }
-  }
-  else if(hoverRing&&hoverRing.visible&&hoveredAgent){
-    const hpos=hoverRingPos(hoveredAgent,false,NEXUS_HOVER);
-    if(!hpos){hoverRing.visible=false}
-    else{
-      hoverRing.position.x += (hpos.x - hoverRing.position.x) * 0.45;
-      hoverRing.position.z += (hpos.z - hoverRing.position.z) * 0.45;
-      hoverRing.position.y += (hpos.y - hoverRing.position.y) * 0.45;
+  // Siklus 260: cincin biru hover mengikuti agent/figur rapat/nexus via
+  // hoverRingTarget (satu sumber kebenaran dgn handler pointermove; dulu 2
+  // cabang duplikat 0.45 per FRAME) + damping waktu-nyata HOVER_RING_DAMP_RATE
+  // (≈ 0.45 @60FPS eksak). meetingFigureAnchor kini menerima owner {figure}
+  // mentah dari findMeetingFigureOwner → bug ring langsung lenyap di animate.
+  if(hoverRing&&hoverRing.visible){
+    const hpos=hoverRingTarget(hoveredAgent,isMfHover,NEXUS_HOVER,false);
+    if(!hpos){
+      hoverRing.visible=false;
+    }else{
+      const f=ringDampFactor(HOVER_RING_DAMP_RATE,delta);
+      stepRingPosition(hoverRing.position,hpos,f);
     }
   }
   // Atap & lampu panel disembunyikan saat kamera di atas (agar isi kantor terlihat), dimunculkan dari sudut rendah

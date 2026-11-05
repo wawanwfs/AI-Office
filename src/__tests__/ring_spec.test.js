@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent, ringFloorY, hoverRingPos } from '../scene/parts/ring_spec.js';
+import { SEL_RING, HOVER_RING, selAnchorOf, selectedAgent, ringFloorY, hoverRingPos, selRingTarget, hoverRingTarget } from '../scene/parts/ring_spec.js';
 
 describe('ring constants', () => {
   it('selection ring historical values', () => {
@@ -164,5 +164,83 @@ describe('selectedAgent', () => {
   });
   it('null data → null without throwing', () => {
     expect(selectedAgent(null, 0)).toBeNull();
+  });
+});
+
+// Siklus 260: resolusi target posisi ring seleksi — satu sumber kebenaran
+// applySelected + blok animate (3 cabang duplikat dulu → 1 fungsi murni).
+describe('selRingTarget (Siklus 260)', () => {
+  const FP = { x: 9.4, y: 0.04, z: -4.1 };
+  const fig = () => ({ visible: true, position: { ...FP } });
+  it('Founder selectedIdx -2 → kursi founder (7.6, 1.20+Y, 6.1)', () => {
+    const t = selRingTarget([], -2, null);
+    expect(t).toEqual({ x: 7.6, y: 1.20 + SEL_RING.Y, z: 6.1 });
+  });
+  it('Founder dgn founderPos kustom → posisi kustom + SEL_RING.Y', () => {
+    const t = selRingTarget([], -2, null, { x: 1, y: 2, z: 3 });
+    expect(t).toEqual({ x: 1, y: 2 + SEL_RING.Y, z: 3 });
+  });
+  it('founderPos korup (NaN) → null (ring disembunyikan, tidak menulari)', () => {
+    expect(selRingTarget([], -2, null, { x: NaN, y: 1, z: 1 })).toBeNull();
+  });
+  it('peserta rapat → anchor KURSI rapat + SEL_RING.Y (bukan meja kosong)', () => {
+    const data = [{ walker: { visible: false }, home: { x: 1, y: 0.7, z: 1 }, sittingChar: { visible: false } }];
+    const figs = [fig(0)];
+    expect(selRingTarget(data, 0, figs)).toEqual({ x: FP.x, y: FP.y + SEL_RING.Y, z: FP.z });
+  });
+  it('agen duduk → home + off 0.55 + SEL_RING.Y (kontrak lama utuh)', () => {
+    const data = [{ walker: { visible: false }, home: { x: 2, y: 0.72, z: 3 }, sittingChar: { visible: true } }];
+    const t = selRingTarget(data, 0, []);
+    expect(t).toEqual({ x: 2, y: 0.72 + SEL_RING.Y, z: 3 + 0.55 });
+  });
+  it('agen berjalan → posisi walker, off 0', () => {
+    const data = [{ walker: { visible: true, position: { x: 5, y: 1.1, z: -7 } }, home: { x: 1, y: 0.72, z: 1 }, sittingChar: { visible: false } }];
+    const t = selRingTarget(data, 0, []);
+    expect(t).toEqual({ x: 5, y: 1.1 + SEL_RING.Y, z: -7 });
+  });
+  it('agen offsite → null (ring disembunyikan; selectedIdx tetap tersimpan)', () => {
+    const data = [{ walker: { visible: false }, home: { x: 2, y: 0.72, z: 3 }, sittingChar: { visible: false } }];
+    expect(selRingTarget(data, 0, [])).toBeNull();
+  });
+  it('index di luar rentang / data bukan array → null tanpa throw', () => {
+    expect(selRingTarget([], 0, [])).toBeNull();
+    expect(selRingTarget(null, 0, null)).toBeNull();
+    expect(selRingTarget([{ walker: { visible: true, position: { x: 0, y: 0, z: 0 } } }], -1, null)).toBeNull();
+    expect(selRingTarget([{ walker: { visible: true, position: { x: 0, y: 0, z: 0 } } }], 5, null)).toBeNull();
+  });
+  it('konsistensi applySelected==animate: target sama utk pasangan data/figs sama', () => {
+    const data = [{ walker: { visible: false }, home: { x: 2, y: 0.72, z: 3 }, sittingChar: { visible: true } }];
+    const t1 = selRingTarget(data, 0, []);
+    const t2 = selRingTarget(data, 0, [null]);
+    expect(t1).toEqual(t2);
+  });
+});
+
+// Siklus 260: target hover — figur peserta rapat kini via owner {figure} mentah
+describe('hoverRingTarget (Siklus 260)', () => {
+  const NX = { x: 7.6, y: 1.20, z: 6.1 };
+  it('owner {figure} mentah (findMeetingFigureOwner) → anchor kursi + HOVER_RING.Y', () => {
+    const owner = { index: 2, figure: { visible: true, position: { x: 9.4, y: 0.04, z: -4.1 } } };
+    expect(hoverRingTarget(null, owner, NX)).toEqual({ x: 9.4, y: 0.04 + HOVER_RING.Y, z: -4.1 });
+  });
+  it('figur langsung (pola lama) → tetap bekerja (backward compat)', () => {
+    const fig = { visible: true, position: { x: 3, y: 0.1, z: 4 } };
+    expect(hoverRingTarget(null, fig, NX)).toEqual({ x: 3, y: 0.1 + HOVER_RING.Y, z: 4 });
+  });
+  it('owner figure tersembunyi → null (ring disembunyikan, bukan crash)', () => {
+    const owner = { index: 0, figure: { visible: false, position: { x: 1, y: 1, z: 1 } } };
+    expect(hoverRingTarget(null, owner, NX)).toBeNull();
+  });
+  it('isMfHover menang atas hoveredAgent bila keduanya ada', () => {
+    const owner = { figure: { visible: true, position: { x: 9, y: 0, z: 9 } } };
+    const ag = { walker: { visible: true, position: { x: 1, y: 0, z: 1 } }, home: { x: 0, y: 0, z: 0 }, sittingChar: { visible: true } };
+    const t = hoverRingTarget(ag, owner, NX);
+    expect(t.x).toBe(9);
+  });
+  it('tanpa figur → agen biasa / nexus (hoverRingPos kontrak utuh)', () => {
+    const ag = { walker: { visible: false }, home: { x: 2, y: 0.72, z: 3 }, sittingChar: { visible: true } };
+    expect(hoverRingTarget(ag, null, NX)).toEqual({ x: 2, y: 0.72 + HOVER_RING.Y, z: 3 + 0.55 });
+    expect(hoverRingTarget(null, null, NX, true)).toEqual({ x: 7.6, y: 1.20 + HOVER_RING.Y, z: 6.1 });
+    expect(hoverRingTarget(null, null, NX, false)).toBeNull();
   });
 });

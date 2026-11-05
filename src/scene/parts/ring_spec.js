@@ -31,7 +31,7 @@ export const HOVER_RING = {
 // 2.4× terlalu cepat). 60 FPS × 0.012 = 0.72 rad/s (putaran penuh ≈ 8.73 dtk).
 export const SEL_RING_ROT_RATE = 0.72; // rad/detik
 
-export function stepRingRotation(rotZ, dt = 0.016) {
+export function stepRingRotation(rotZ, dt) {
   const current = (typeof rotZ === 'number' && Number.isFinite(rotZ)) ? rotZ : 0;
   if (!(typeof dt === 'number' && Number.isFinite(dt)) || dt <= 0) return current;
   return current + SEL_RING_ROT_RATE * dt;
@@ -44,9 +44,9 @@ export function stepRingRotation(rotZ, dt = 0.016) {
 export const SEL_RING_DAMP_RATE = 17.26;
 export const HOVER_RING_DAMP_RATE = 35.87;
 
-export function ringDampFactor(rate, dt = 0.016) {
-  if (!(typeof rate === 'number' && Number.isFinite(rate)) || rate <= 0) return 0;
+export function ringDampFactor(rate, dt) {
   if (!(typeof dt === 'number' && Number.isFinite(dt)) || dt <= 0) return 0;
+  if (!(typeof rate === 'number' && Number.isFinite(rate)) || rate <= 0) return 0;
   const f = 1 - Math.exp(-rate * dt);
   return Math.max(0, Math.min(1, f));
 }
