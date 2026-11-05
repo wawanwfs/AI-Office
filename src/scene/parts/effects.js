@@ -175,14 +175,13 @@ export function shouldUpdateDust(frame, every = DUST_UPDATE_EVERY) {
 }
 // Murni: geser satu partikel debu — kontrak laju WAKTU-NYATA (siklus 264, bug
 // kelas 251/259/260/261 keenam): dulu `y + cos(...)*.0003` KONSTAN per TICK —
-// laju efektif bergantung penuh FPS (60 FPS = .018/dtk; SwiftShader 0.4 FPS dgn
-// tick 0.05 dtk-sim = .006/dtk-sim = 3× lebih lambat dari 60 FPS nyata; unit
-// test memanggil dustY manual = bebas- FPS). Kini amplitudo di-tuning agar laju
-// kontrak = .0006 unit/dtk (perilaku 60 FPS lama: .0003 × 20 tick/dtk EKSAK —
-// DUST_UPDATE_EVERY=3 @60FPS ≈ 20 tick/dtk) via dt eksplisit: dy = cos(...) ×
-// DUST_RATE × dt. Respawn >3.6 → 0.5 utuh. Guard anti-poisoning konsisten:
-// input non-finite → 0.5; dt non-finite/≤0 → y utuh (tak bergerak).
-export const DUST_RATE = 0.0006; // unit/dtk — 20× lama .0003 (perilaku 60 FPS lama eksak)
+// laju efektif bergantung penuh FPS (60 FPS = .006/dtk; SwiftShader 0.4 FPS dgn
+// tick 0.05 dtk-sim = .0015/dtk-sim = 4× lebih lambat; unit test memanggil
+// dustY manual = bebas-FPS). Kini dy = cos(...) × DUST_RATE × dt (dt =
+// akumulasi waktu nyata antar tick di OfficeScene). Respawn >3.6 → 0.5 utuh.
+// Guard anti-poisoning konsisten: input non-finite → 0.5; dt non-finite/≤0 →
+// y utuh (tak bergerak).
+export const DUST_RATE = 0.006; // unit/dtk — = .0003/tick × 20 tick/s @60FPS lama eksak
 // Laju drift-X kontrak (siklus 264): lama .0006 × DUST_UPDATE_EVERY(3) per tick
 // × 20 tick/s @60FPS = .036 unit/dtk × sin fase — kini eksak per detik nyata.
 export const DUST_RATE_X = 0.036;

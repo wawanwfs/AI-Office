@@ -1846,8 +1846,8 @@ function animate(){
   // upload buffer GPU tiap frame). Y via dustY (murni, respawn > 3.6 → 0.5).
   // Siklus 264 (bug kelas 251 keenam): dt ticks debu kini WAKTU-NYATA —
   // __dustAcc mengakumulasi delta antar tick (dulu Y + .0003 KONSTAN per tick →
-  // laju drift bergantung FPS penuh; offset X juga di-tuning ulang via dt di
-  // bawah, kontrak laju X = .036 unit/dtk = .012 × 3 @60FPS lama eksak).
+  // laju drift bergantung FPS penuh; offset X juga kini kontrak DUST_RATE_X
+  // .036 unit/dtk = .0006×3 per tick @60FPS lama eksak).
   if(shouldUpdateDust(frame)){
     const dustDt=__dustAcc; __dustAcc=0;
     for(let i=0;i<pN;i++){
