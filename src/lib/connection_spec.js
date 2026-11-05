@@ -22,24 +22,25 @@ export const STALE_AFTER_MS = 30000 // >30s tanpa sukses = data dianggap basi
 // now: timestamp ms (injeksi waktu agar testable).
 export function applyPollResult(tr, result, now = Date.now()) {
   const t = tr || {}
+  const safeNow = Number.isFinite(now) ? now : Date.now()
   if (result && result.ok) {
     t.failStreak = 0
     t.lastError = null
-    t.lastOkAt = now
+    t.lastOkAt = safeNow
     t.everConnected = true
     t.state = 'live'
     t.nextDelayMs = POLL_HEALTHY_MS
   } else {
     t.failStreak = (t.failStreak || 0) + 1
     t.lastError = (result && result.error) || 'unknown'
-    t.lastFailAt = now
+    t.lastFailAt = safeNow
     // state: gagal pertama saat masih punya data sukses = 'stale' (data basi
     // tapi tampilan masih layak), tanpa pernah sukses = 'down' langsung.
     t.state = t.everConnected ? 'stale' : 'down'
     const exp = POLL_BASE_MS * Math.pow(2, Math.min(t.failStreak - 1, 5))
     t.nextDelayMs = Math.min(exp, POLL_MAX_MS)
   }
-  t.updatedAt = now
+  t.updatedAt = safeNow
   return t
 }
 
@@ -47,7 +48,8 @@ export function applyPollResult(tr, result, now = Date.now()) {
 // digambar (tidak pernah undefined) dan teks Indonesia konsisten dgn UI lain.
 export function connectionBadge(tr, now = Date.now()) {
   const t = tr || {}
-  const age = t.lastOkAt != null ? Math.max(0, now - t.lastOkAt) : null
+  const safeNow = Number.isFinite(now) ? now : Date.now()
+  const age = Number.isFinite(t.lastOkAt) ? Math.max(0, safeNow - t.lastOkAt) : null
   if (t.state === 'live') {
     return { state: 'live', label: 'Sinkron', detail: 'Gateway tersinkron', tone: 'ok' }
   }

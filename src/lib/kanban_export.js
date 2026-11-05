@@ -5,7 +5,7 @@
  * serta penamaan berkas otomatis berbasis filter aktif.
  */
 import { parseFileList } from './files.js';
-import { formatTaskDate } from './kanban_date.js';
+import { formatTaskDate, resolveNow } from './kanban_date.js';
 import {
   getTaskRoleLabel,
   getTaskPriorityInfo,
@@ -107,7 +107,7 @@ export function buildTaskCsv(tasks, options = {}) {
  */
 export function buildTaskJson(tasks, options = {}) {
   const taskList = Array.isArray(tasks) ? tasks : [];
-  const exportDate = options.now ? new Date(options.now) : new Date();
+  const exportDate = new Date(resolveNow(options.now));
 
   const formattedTasks = taskList
     .filter((t) => t && typeof t === 'object')
@@ -171,7 +171,7 @@ export function buildTaskJson(tasks, options = {}) {
  */
 export function generateTaskExportFilename(format = 'csv', options = {}) {
   const ext = String(format || 'csv').toLowerCase().replace(/^\./, '');
-  const now = options.now ? new Date(options.now) : new Date();
+  const now = new Date(resolveNow(options.now));
   const year = now.getFullYear();
   const month = String(now.getMonth() + 1).padStart(2, '0');
   const day = String(now.getDate()).padStart(2, '0');

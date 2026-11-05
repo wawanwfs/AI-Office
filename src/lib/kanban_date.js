@@ -53,9 +53,39 @@ export function parseTaskTimestamp(task) {
 }
 
 export function getStartOfDay(timestamp) {
-  const d = new Date(timestamp);
+  const ts = Number.isFinite(timestamp) ? timestamp : Date.now();
+  const d = new Date(ts);
   d.setHours(0, 0, 0, 0);
   return d.getTime();
+}
+
+/**
+ * Resolusi timestamp acuan 'now' yang aman & anti-poisoning (siklus 268).
+ * Menerima number (ms atau detik UNIX), Date object, atau parseable date string.
+ * Bila null/undefined, non-finite (NaN/±Infinity), atau string tidak valid,
+ * secara aman fallback ke Date.now() (waktu nyata / wall-clock by design).
+ */
+export function resolveNow(nowInput) {
+  if (nowInput == null) return Date.now();
+  if (typeof nowInput === 'number') {
+    if (!Number.isFinite(nowInput)) return Date.now();
+    return nowInput < 10000000000 ? Math.round(nowInput * 1000) : Math.round(nowInput);
+  }
+  if (nowInput instanceof Date) {
+    const t = nowInput.getTime();
+    return Number.isFinite(t) ? t : Date.now();
+  }
+  if (typeof nowInput === 'string') {
+    const s = nowInput.trim();
+    if (!s) return Date.now();
+    const num = Number(s);
+    if (Number.isFinite(num)) {
+      return num < 10000000000 ? Math.round(num * 1000) : Math.round(num);
+    }
+    const parsed = Date.parse(s);
+    return Number.isFinite(parsed) ? parsed : Date.now();
+  }
+  return Date.now();
 }
 
 /**
@@ -217,7 +247,7 @@ export function isTaskInDateRange(task, rangeKey = 'all', options = {}) {
     return true;
   }
 
-  const now = options.now != null ? (typeof options.now === 'number' ? options.now : new Date(options.now).getTime()) : Date.now();
+  const now = resolveNow(options.now);
   const startOfToday = getStartOfDay(now);
   const endOfToday = startOfToday + 86400000 - 1;
   const startOfYesterday = startOfToday - 86400000;
@@ -255,7 +285,7 @@ export function computeDateRangeStats(tasks, options = {}) {
   };
   if (!Array.isArray(tasks)) return stats;
 
-  const now = options.now != null ? (typeof options.now === 'number' ? options.now : new Date(options.now).getTime()) : Date.now();
+  const now = resolveNow(options.now);
   const customOpts = { ...options, now };
 
   for (const t of tasks) {
@@ -281,7 +311,7 @@ export function formatTaskDate(task, options = {}) {
   if (ts == null) return '—';
 
   const d = new Date(ts);
-  const now = options.now != null ? (typeof options.now === 'number' ? options.now : new Date(options.now).getTime()) : Date.now();
+  const now = resolveNow(options.now);
   const startOfToday = getStartOfDay(now);
   const startOfYesterday = startOfToday - 86400000;
 
