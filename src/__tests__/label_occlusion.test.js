@@ -179,6 +179,44 @@ describe('drift-gate sumber OfficeScene.js — oklusi terpasang di jalur relayou
     expect(src).not.toMatch(/LBL_SMOOTH=1-Math\.exp\(-12\*\(deltaFrame/); // pola lama dilarang kembali
     expect(src).toMatch(/let relayoutDelta=0;/); // deklarasi ada (di-reset per tick)
   });
+  it('relayoutDelta diakumulasi per frame di animate(), bukan di dalam blok throttled shouldRelayoutLabels (siklus 263)', () => {
+    // Siklus 263: siklus 251 meletakkan `relayoutDelta += delta;` di dalam
+    // `if(namesVisible&&shouldRelayoutLabels(frame))` — akibatnya frame 1,2,3
+    // terbuang (relayoutDelta tetap 0) dan hanya delta frame ke-4 yang ditambahkan.
+    // Laju efektif jatuh 4× lebih lambat dari kontrak 12/s.
+    // Guard: relayoutDelta += delta harus berada di animate() sebelum blok throttle.
+    const iAnimate = src.indexOf('function animate()');
+    const iAcc = src.indexOf('relayoutDelta += delta;', iAnimate);
+    const iThrot = src.indexOf('if(namesVisible&&shouldRelayoutLabels(frame))', iAnimate);
+    expect(iAnimate).toBeGreaterThan(-1);
+    expect(iAcc).toBeGreaterThan(iAnimate);
+    expect(iThrot).toBeGreaterThan(iAcc);
+
+    // REGRESI DILARANG: relayoutDelta += delta di dalam blok throttled
+    const iThrotEnd = src.indexOf('relayoutDelta=0;', iThrot);
+    const throtBlock = src.slice(iThrot, iThrotEnd);
+    expect(throtBlock).not.toMatch(/relayoutDelta\s*\+=\s*delta/);
+  });
+  it('kontrak matematis konvergensi damping 12/s: 4 frame akumulasi vs delta 1 frame lama (siklus 263)', () => {
+    // 60 FPS: 4 frame = 4 * (1/60) s ≈ 0.0667 s
+    const dt4_60 = 4 / 60;
+    const factor60 = 1 - Math.exp(-12 * dt4_60);
+    expect(factor60).toBeGreaterThan(0.50);
+    expect(factor60).toBeLessThan(0.60);
+
+    // Bandingkan dengan rumus lama (hanya 1 frame = 1/60 s)
+    const factorOld60 = 1 - Math.exp(-12 * (1 / 60));
+    expect(factorOld60).toBeLessThan(0.20); // dulu hanya ~0.18
+
+    // SwiftShader 0.4 FPS (clamp dt 0.05s per frame): 4 frame = 0.20 s
+    const dt4_ss = 4 * 0.05;
+    const factorSS = 1 - Math.exp(-12 * dt4_ss);
+    expect(factorSS).toBeGreaterThan(0.90);
+
+    // Bandingkan dengan rumus lama di SwiftShader (hanya 1 frame = 0.05 s)
+    const factorOldSS = 1 - Math.exp(-12 * 0.05);
+    expect(factorOldSS).toBeLessThan(0.50); // dulu hanya ~0.45 per tick (~64s)
+  });
 });
 
 // ── Siklus 250: aturan TIE — tetangga meja kedalaman nyaris sama ────────────

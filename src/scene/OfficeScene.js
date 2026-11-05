@@ -1737,6 +1737,7 @@ function animate(){
   timer.update(); // sekali per frame → getDelta/getElapsed konsisten sepanjang frame
   const delta=Math.min(timer.getDelta(),.05);
   deltaFrame=delta;
+  relayoutDelta += delta;
   const elapsed=timer.getElapsed();
   frame++;
   window.__animFrames=frame;
