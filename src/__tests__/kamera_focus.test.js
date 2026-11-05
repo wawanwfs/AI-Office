@@ -59,7 +59,7 @@ describe('updateFollowGoal', () => {
 });
 
 describe('focusStep — Siklus 261 lerp waktu-nyata (alpha = 1−e^(−RATE·dt))', () => {
-  const K60 = 1 - Math.exp(-3.7125 / 60); // alpha satu frame @60 FPS == 0.06 lama (±1e-9)
+  const K60 = 1 - Math.exp(-3.7125 * 0.016); // alpha default dt 0.016 ≈ 0.0579 (60 FPS lama: 0.06)
   it('kontrak laju: FOCUS_LERP_RATE = 3.7125; dt default 0.016 → alpha 60FPS eksak', () => {
     expect(FOCUS_LERP_RATE).toBe(3.7125);
     const tgt = { x: 0, y: 1.8, z: 0 };

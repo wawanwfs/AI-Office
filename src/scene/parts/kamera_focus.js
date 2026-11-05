@@ -54,12 +54,15 @@ export function agentFocusPos(a) {
   return { x: fp.x, y: (fp.y || 0) + 1.5, z: fp.z };
 }
 
-// Satu langkah kamera: lerp posisi target & radius ke goal (faktor .06),
-// opsi goalPhi untuk menyelaraskan pitch kamera bila disediakan,
-// lalu bila goal.reset dan target sudah dekat HOME_TGT (<.05) goal selesai.
-// tgt = {x,y,z}, sph = {radius,theta,phi,...} — dimutasi langsung.
-// return: true bila goal reset selesai (pemanggil boleh set focusGoal=null).
-export function focusStep(tgt, sph, goalT, goalR, goalPhi) {
+// Siklus 261: lerp kamera-goal kini berbasis WAKTU-NYATA (bug kelas 251/259/260
+// keempat): dulu faktor per-FRAME `* .06` — di 60 FPS konvergensi ~0.06/frame
+// (rate efektif −ln(0.94)×60 ≈ 3.7125 /s, pas), di SwiftShader 0.4 FPS kamera
+// merayap 150× lebih lambat dari kontrak (fokus/reset "menggantung" menit-menit),
+// di 144 Hz 2.4× terlalu gesit. Kini alpha = 1 − e^(−RATE·dt): hasil identik di
+// 60 FPS, FPS-independen di tempat lain (sama dgn pola ring 260 & autorot 259).
+// dt non-finite/≤0 → alpha 0 (tidak bergerak) — anti-poisoning konsisten modul lain.
+export const FOCUS_LERP_RATE = 3.7125; // 1/dtk — = −ln(1−0.06)×60 (perilaku 60 FPS lama eksak)
+export function focusStep(tgt, sph, goalT, goalR, goalPhi, dt = 0.016) {
   // Guard anti-poisoning: goal non-finite (NaN/±Infinity) → no-op aman.
   // Lerp dari goal korup akan menulari tgt/sph → posisi kamera NaN
   // (kamera runtuh/lenyap). Konsisten dgn guard anti-poisoning modul lain
@@ -68,11 +71,13 @@ export function focusStep(tgt, sph, goalT, goalR, goalPhi) {
       !Number.isFinite(goalT.z) || !Number.isFinite(goalR)) {
     return false;
   }
-  tgt.x += (goalT.x - tgt.x) * .06;
-  tgt.y += (goalT.y - tgt.y) * .06;
-  tgt.z += (goalT.z - tgt.z) * .06;
-  sph.radius += (goalR - sph.radius) * .06;
-  if (goalPhi !== undefined && Number.isFinite(goalPhi)) sph.phi += (goalPhi - sph.phi) * .06;
+  const dtv = (typeof dt === 'number' && Number.isFinite(dt) && dt > 0) ? dt : 0;
+  const k = 1 - Math.exp(-FOCUS_LERP_RATE * dtv);
+  tgt.x += (goalT.x - tgt.x) * k;
+  tgt.y += (goalT.y - tgt.y) * k;
+  tgt.z += (goalT.z - tgt.z) * k;
+  sph.radius += (goalR - sph.radius) * k;
+  if (goalPhi !== undefined && Number.isFinite(goalPhi)) sph.phi += (goalPhi - sph.phi) * k;
   return Math.sqrt(tgt.x * tgt.x + (tgt.y - 1.8) * (tgt.y - 1.8) + tgt.z * tgt.z) < .05;
 }
 

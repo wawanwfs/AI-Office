@@ -187,6 +187,8 @@ let focusGoal=null;const HOME_TGT=new THREE.Vector3(0,1.4,0.3);let homeRadius=nu
 // langkah kembali→pergi ke lantai yang SAMA tetap terlapor.
 let __lastCamFloor=null;
 function updCam(){const p=Math.max(.18,Math.min(Math.PI/2.3,sph.phi));sph.phi=p;camera.position.set(sph.radius*Math.sin(p)*Math.sin(sph.theta)+tgt.x,sph.radius*Math.cos(p)+tgt.y,sph.radius*Math.sin(p)*Math.cos(sph.theta)+tgt.z);camera.lookAt(tgt)}
+// Siklus 261: __dbg menyertakan goal.t (vektor goal kamera) — probe e2e mengukur
+// konvergensi eksponensial focusStep terhadap goal ASLI (dulu hanya focus.r/reset).
 const __vo=()=>{const w=Math.max(1,container.clientWidth||1),h=Math.max(1,container.clientHeight||1);const vo=getViewOffsetConfig(w,h);if(vo.enabled)camera.setViewOffset(vo.fullWidth,vo.fullHeight,vo.offsetX,vo.offsetY,vo.width,vo.height);else camera.clearViewOffset()};__vo();
 updCam();
 let downXY=null;
@@ -1268,7 +1270,7 @@ setTimeout(()=>{
 },1200);
 
   window.__agentData=agentData; window.__screens=screenData; window.__setTime=(m)=>updateTime(m); window.__skyNight=()=>__light.skyNight; window.__skyCv=__skyCv; window.__wallNight=()=>__light.wallNight; window.__wallTexCv=()=>(__wallsRt&&__wallsRt.wallTexPaints&&__wallsRt.wallTexPaints[0])?__wallsRt.wallTexPaints[0].cv:null; window.__trimNight=()=>__light.trimNight; window.__trimMat=()=>(__wallsRt&&__wallsRt.trimPaints&&__wallsRt.trimPaints[0])?__wallsRt.trimPaints[0].mat:null; window.__boardNight=()=>__light.boardNight; window.__boardMat=()=>__mr&&__mr.boardMesh?__mr.boardMesh.material:null; window.__titleNight=()=>__light.titleNight; window.__titleCv=()=>wtc; window.__ceilNight=()=>__light.ceilNight; window.__ceilMat=()=>{let out=null;office.traverse(o=>{if(!out&&o.isMesh&&o.userData&&o.userData.__ceil!==undefined&&o.material&&o.material.color)out=[o.material.color.r,o.material.color.g,o.material.color.b];});return out;}; window.__glLost=()=>__glLost; // siklus 172: status konteks WebGL utk probe E2E
- window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
+ window.__dbg=()=>({t:timeOfDay,ph:__shift.phase,fr:frame,focus:focusGoal?{r:focusGoal.r,reset:!!focusGoal.reset,t:focusGoal.t?[focusGoal.t.x,focusGoal.t.y,focusGoal.t.z]:null}:null});window.__toggleNeon=()=>{toggleCyberpunk();return cyberpunkMode}; window.__meet=()=>({active:__meet.active,vis:__meet.figures.filter(f=>f.visible).length}); window.__lunch=()=>({on:__shift.lunch,atCafe:agentData.filter(a=>a.lunch).length}); window.__cam={sph,tgt,upd:()=>updCam()};window.__camCam=camera; // debug/e2e
 window.__renderer=renderer; // debug/e2e: info.memory.textures/geometries (probe kebocoran tekstur)
 window.__spawnBubble=(x,y,z,text,color,anchor)=>createBubble(x,y,z,text,color,anchor); // debug/e2e probe kebocoran (jalur createBubble asli)
   // Badge status real-time: poll gateway tiap 20s, warnai badge dada sesuai status task
@@ -1750,8 +1752,12 @@ function animate(){
       }
       focusGoal=updateFollowGoal(focusGoal,homeRadius,sph.radius,HOME_TGT,figAnchor);
     }
-    if(focusGoal.reset&&focusStep(tgt,sph,focusGoal.t,focusGoal.r,focusGoal.phi))focusGoal=null;
-    else{focusStep(tgt,sph,focusGoal.t,focusGoal.r,focusGoal.phi)}
+    // Siklus 261: SATU panggilan focusStep per frame dgn delta — pola lama
+    // (cabang IF diakhiri step, cabang ELSE menjalankan step lagi) membuat
+    // konvergensi goal reset 2× lebih cepat dari goal follow/statis
+    // (perilaku tak konsisten). Kini jalur tunggal: goal reset selesai
+    // bila step melapor selesai.
+    if(focusStep(tgt,sph,focusGoal.t,focusGoal.r,focusGoal.phi,delta)&&focusGoal.reset)focusGoal=null;
     updCam();
     // Siklus 146: pelapor lantai kamera TERPUSAT per-frame — follow agen yang
     // berjalan lintas lantai (rapat→L1, lunch→L3) & goal statis non-reset
