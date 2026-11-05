@@ -18,6 +18,11 @@ import { resolve } from 'node:path'
 //
 // Kriteria inti tiap probe TIDAK berubah (hanya mekanisme tunggu/diagnosis).
 //
+// Siklus 272: kontrak ground-truth eksak per-bidang UI (pelajaran 271
+// diteruskan) — TRUTH_FETCH sh_console kini membaca d.total_logs (bidang yang
+// dilukis kartu 'Log event'), bukan (d.recent_logs||[]).length yang hanya
+// menghitung baris list (17 vs 8 di produksi → probe lama FAIL permanen).
+//
 // Sumber kebenaran = teks skrip (unit Python butuh Xvfb :99 + chrome — di
 // luar vitest; pola agent_phase_hardening 199).
 
