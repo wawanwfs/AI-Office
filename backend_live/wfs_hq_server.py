@@ -136,16 +136,19 @@ MAX_PROXY_BODY = 5 * 1024 * 1024
 # hasil build dist/ (PWA shell, aset ber-hash, font, ikon PWA) yang dilayani.
 # Aturan: (1) direktori eksak — semua isi dilayani; (2) file eksak per-nama.
 STATIC_ALLOW_DIRS = frozenset(("assets", "fonts"))
+# SIKLUS 279: entri terakhir = skrip SW fake eksak utk e2e_sw_update (siklus
+# 192) — file fisik di web root hanya ditulis probe sekali-pakai & dihapus di
+# finally; tanpa fisik = 404 (tak bisa ditanam via HTTP). Dulu entri ini TIDAK
+# ADA → probe 192 register fake 404 senyap → banner tak naik → poll+cmd tanpa
+# deadline menggantung >5 menit (terbukti live 3× di siklus 279, exit 124).
+# CATATAN kontrak guard: tanpa komentar DI DALAM frozenset — drift-gate vitest
+# mengekstrak isi via regex non-greedy '))' pertama (komentar berisi tanda
+# kurung/koma merusak parsing item).
 STATIC_ALLOW_FILES = frozenset((
     "index.html", "landing.html", "manifest.webmanifest",
     "sw.js", "registerSW.js", "workbox-2fbc6a65.js",
     "favicon.svg", "wfs-logo.svg",
     "og-image.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png",
-    # SIKLUS 279: skrip SW fake eksak utk e2e_sw_update (siklus 192) — file
-    # fisik di web root hanya ditulis probe sekali-pakai & dihapus di finally;
-    # tanpa fisik = 404 (tak bisa ditanam via HTTP). Dulu entri ini TIDAK ADA
-    # → probe 192 register fake 404 senyap → banner tak naik → poll+cmd tanpa
-    # deadline menggantung >5 menit (terbukti live 3× di siklus 279, exit 124).
     "e2e-sw-fake.js",
 ))
 
