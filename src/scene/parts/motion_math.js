@@ -27,7 +27,13 @@ export function dist2(a, b) {
 
 // Satu langkah menuju target. Return { x, z, rot, arrived, clamped }.
 // rot = arah hadap (atan2(dx, dz)) ATAU posisi sebelumnya bila sudah tiba/clamp-total.
+// Siklus 274: sub-step — pemanggil boleh memberi delta frame besar (GPU
+// lambat/SwiftShader 0.3 FPS → delta nyata bisa >2 s) tapi fisika per-langkah
+// dibatasi STEP_MAX detik supaya kontrak "≤0.05 dtk per langkah" tetap
+// terpenuhi DAN total jarak tempuh tetap proporsional delta penuh (dulu
+// pemanggil OfficeScene meng-clamp 0.05 → jarak tempuh 0.3 FPS kacau).
 export function stepMove(pos, target, speed, delta) {
+// Overload lama dipertahankan: delta ≤ STEP_MAX → perilaku & return identik.
   const { dx, dz, d } = dist2(pos, target);
   // Guard degenerat: jarak non-finite (NaN/±Infinity, mis. target korup) TIDAK
   // boleh menulari posisi walker (nx = dx/d → NaN → posisi jadi NaN & agent hilang).
