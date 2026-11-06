@@ -177,4 +177,32 @@ describe('siklus 200 — kriteria inti probe TIDAK berubah (spot-check per kelom
     expect(src[NEW_199]).toContain('deadline = time.time() + 60')
     expect(src[NEW_199]).toContain('Istirahat makan siang')
   })
+
+  it('siklus 277 — ticker_presence: normalisasi jam sim + guard valid + exit jujur', () => {
+    // Census "jam-nyata-load" (lanjutan 276): ticker_presence membawa akar
+    // FAIL-by-jam yang sama (load 12:00–13:00 WIB → baseline "0 di meja · 26
+    // makan siang") PLUS bug exit tak jujur (FAIL dicetak, exit 0) PLUS
+    // kontrak baseline yang mengodifikasi artefak pra-fix-274 ("26 di meja"
+    // hanya benar karena walker beku; pasca-fix 274 fisika jalan waktu-nyata
+    // → sebagian agen sah berjalan by design).
+    const w = src['e2e_ticker_presence']
+    expect(w).toContain('NORMALISASI JAM SIM')
+    expect(w).toContain('window.__setTime(480)')
+    // guard ketat: settled hanya pada bacaan VALID (pelajaran 276)
+    expect(w).toContain('if s and s["lunch"] == 0 and s["lunchWalk"] == 0')
+    expect(w).toContain('480 <= s["t"] < 720')
+    expect(w).not.toContain('s.get("lunch", 0) == 0')
+    // urutan: normalisasi sebelum baseline pill
+    expect(w.indexOf('NORMALISASI JAM SIM')).toBeGreaterThan(-1)
+    expect(w.indexOf('pill_initial = ev(')).toBeGreaterThan(w.indexOf('NORMALISASI JAM SIM'))
+    // kontrak baseline baru = invarian inti pill (bukan artefak "26 di meja")
+    expect(w).toContain('desk_initial >= 1')
+    expect(w).toContain('lunch_initial == 0')
+    expect(w).toContain('total_initial == agents')
+    expect(w).not.toContain('items_initial == [(agents, "di meja")]')
+    // exit jujur (kelas 276)
+    expect(w).toContain('return 0 if ok else 1')
+    expect(w).toContain('sys.exit(main())')
+    expect(w).not.toMatch(/^\s*main\(\)\s*$/m)
+  })
 })

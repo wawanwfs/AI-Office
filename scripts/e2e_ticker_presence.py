@@ -3,11 +3,15 @@
 
 Langkah:
   1. Muat kantor, tunggu scene siap (agents>=26).
-  2. Jam simulasi 480 (08:00, semua agen di meja) → pill .ticker-presence
-     menampilkan "26 di meja" (semua work, satu item).
+  2. NORMALISASI JAM SIM ke 480 (08:00) via setTime resmi + guard bacaan VALID
+     (siklus 277, paritas fix 276) → pill .ticker-presence baseline: total
+     semua item == jumlah agen, NOL "makan siang", ≥1 "di meja". Kontrak lama
+     "26 di meja (satu item)" adalah artefak dunia pra-fix-274 (walker beku di
+     SwiftShader); pasca-fix fisika jalan waktu-nyata sebagian agen sah
+     berstatus berjalan — di GPU pun identik (by design).
   3. __setTime(720) (lunch 12:00) → daycycle mengirim agen ke Executive Cafe
-     → pill berubah LIVE: "N makan siang" muncul, total hitungan semua item
-     tetap = jumlah agen (setiap agen selalu terwakili satu status).
+     → pill berubah LIVE: "N makan siang" muncul (≥3), total hitungan semua
+     item tetap = jumlah agen (setiap agen selalu terwakili satu status).
 Pemakaian: uv run --with websocket-client python scripts/e2e_ticker_presence.py
 """
 import subprocess, os, time, urllib.request, json, socket, struct, base64, sys, queue, threading, re
@@ -169,11 +173,63 @@ def main():
                 break
             time.sleep(1)
 
-        # 08:00 — semua agen duduk di meja → satu item "N di meja" (N = jumlah agen)
-        ev("window.__setTime(480)")
-        time.sleep(2)
+        # ── NORMALISASI JAM SIM (siklus 277, paritas fix 276 di floor_occupancy) ──
+        # timeOfDay awal = jam NYATA load (OfficeScene.js:1476). Load di window
+        # lunch sim 12:00–13:00 → baseline terbaca "0 di meja · 26 makan siang"
+        # → ok_initial mustahil — FAIL deterministik-by-jam yang sama dengan
+        # siklus 276. setTime(480) = jalur resmi slider HUD (updateTime →
+        # applySimTime + lighting → autoplay dari 08:00).
+        #
+        # Kontrak tunggu KETAT (pelajaran 276): di bawah beban SwiftShader
+        # `Runtime.evaluate` bisa timeout → ev() = {} → json.loads("{}")
+        # menghasilkan {lunch:0,...} → guard "0" MENYALA PALSU pada bacaan
+        # GAGAL. Maka: (1) setTime diulang sampai __dbg().t terkonfirmasi masuk
+        # jam kerja; (2) settled hanya bila kedua kunci BENAR-BENAR ada.
+        def sim_state():
+            raw = ev("(()=>{const d=window.__agentData||[],dbg=window.__dbg?window.__dbg():null;"
+                     "if(!dbg)return 'NO_DBG';"
+                     "return JSON.stringify({t:dbg.t,lunch:d.filter(e=>e.lunch).length,"
+                     "lunchWalk:d.filter(e=>e.state==='walking_out'&&e.lunch).length})})()"
+                     ).get("value")
+            if not isinstance(raw, str) or not raw.startswith("{"):
+                return None            # bacaan GAGAL — bukan "settled"
+            try:
+                s = json.loads(raw)
+            except Exception:
+                return None
+            if not isinstance(s, dict) or "lunch" not in s or "lunchWalk" not in s or "t" not in s:
+                return None
+            return s
+
+        for _ in range(12):
+            ev("window.__setTime(480)")
+            time.sleep(1.5)
+            s = sim_state()
+            if s and isinstance(s.get("t"), (int, float)) and 480 <= s["t"] < 720:
+                break
+        # Tunggu walker lunch benar-benar pulang (endLunch/working_am) sebelum
+        # baseline: kedua kunci nol DAN bacaan valid.
+        for _ in range(30):
+            s = sim_state()
+            if s and s["lunch"] == 0 and s["lunchWalk"] == 0:
+                break
+            time.sleep(1.5)
+        time.sleep(1)
+
+        # 08:00 — baseline (siklus 277: kontrak lama items_initial ==
+        # [(agents,"di meja")] adalah artefak dunia PRA-fix-274: walker dulu
+        # BEKU di SwiftShader (delta clamp 0.05) sehingga tak pernah ada yang
+        # berjalan → "26 di meja" kebetulan selalu benar. Pasca-fix 274 fisika
+        # jalan WAKTU-NYATA (sit timer 10–28 dtk + trip lintas lantai via
+        # tangga): sebagian agen memang sah berstatus berjalan — di GPU pun
+        # identik (fraksi duduk steady-state ~20–30%). Kontrak baru = invarian
+        # inti pill: SEMUA agen terwakili (total == jumlah agen), NOL "makan
+        # siang" di jam 08:00 (konsisten dgn guard lunch==0), dan ≥1 di meja.
         pill_initial = ev(PILL_EXPR).get("value", "no-pill")
         items_initial = parse_pill(pill_initial)
+        desk_initial = sum(n for n, lbl in items_initial if lbl == "di meja")
+        lunch_initial = sum(n for n, lbl in items_initial if lbl == "makan siang")
+        total_initial = sum(n for n, _ in items_initial)
 
         # 12:00 — lunch: pill berubah LIVE, item "makan siang" muncul (≥3 —
         # daycycle mengirim kelompok, flag lunch terpasang saat berangkat),
@@ -195,10 +251,16 @@ def main():
         live = ev("document.querySelector('#ticker-live')?.textContent||''").get("value", "")
 
         print(f"E2E_TICKERPRESENCE: agents={agents} initial={pill_initial!r} final={pill_final!r} "
-              f"lunch={lunch_n} total={total_final} live_has_presence={'di meja' in live or 'makan siang' in live}")
-        ok_initial = agents >= 26 and items_initial == [(agents, "di meja")]
+              f"desk0={desk_initial} total0={total_initial} lunch={lunch_n} total={total_final} "
+              f"live_has_presence={'di meja' in live or 'makan siang' in live}")
+        # Kontrak baseline (277): total konservatif == jumlah agen (semua
+        # agen terwakili), nol lunch di 08:00, ≥1 di meja.
+        ok_initial = agents >= 26 and desk_initial >= 1 and lunch_initial == 0 and total_initial == agents
         ok = (ok_initial and lunch_n >= 3 and total_final == agents)
         print("E2E_TICKERPRESENCE: OK" if ok else "E2E_TICKERPRESENCE: FAIL")
+        # Siklus 277: exit code JUJUR (kelas 276 — dulu FAIL dicetak tapi
+        # sys.exit(None) == 0, cron tak bisa membedakan hijau vs merah).
+        return 0 if ok else 1
     finally:
         p.terminate()
         if xv:
@@ -206,4 +268,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
