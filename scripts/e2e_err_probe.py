@@ -137,7 +137,7 @@ def published_asset_status(root):
             path = unquote(parsed.path).removeprefix("/")
             while path.startswith("./"):
                 path = path[2:]
-            if not path:
+            if not path or path in ('.js', '.css'):
                 continue
             if re.fullmatch(r"workbox-[A-Za-z0-9_-]{8,}", path):
                 path += ".js"
