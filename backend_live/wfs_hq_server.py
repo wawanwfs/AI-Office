@@ -141,6 +141,12 @@ STATIC_ALLOW_FILES = frozenset((
     "sw.js", "registerSW.js", "workbox-2fbc6a65.js",
     "favicon.svg", "wfs-logo.svg",
     "og-image.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png",
+    # SIKLUS 279: skrip SW fake eksak utk e2e_sw_update (siklus 192) — file
+    # fisik di web root hanya ditulis probe sekali-pakai & dihapus di finally;
+    # tanpa fisik = 404 (tak bisa ditanam via HTTP). Dulu entri ini TIDAK ADA
+    # → probe 192 register fake 404 senyap → banner tak naik → poll+cmd tanpa
+    # deadline menggantung >5 menit (terbukti live 3× di siklus 279, exit 124).
+    "e2e-sw-fake.js",
 ))
 
 

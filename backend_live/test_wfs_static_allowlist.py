@@ -28,8 +28,19 @@ class TestStaticAllowlist(unittest.TestCase):
             "sw.js", "registerSW.js", "workbox-2fbc6a65.js",
             "favicon.svg", "wfs-logo.svg",
             "og-image.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png",
+            # Siklus 279: fake-SW eksak utk probe pembaruan PWA 192 — file fisik
+            # hanya ditulis probe sekali-pakai (dihapus di finally); tanpa fisik
+            # tetap 404. Entri eksak, bukan pola: tidak membuka nama lain.
+            "e2e-sw-fake.js",
         ):
             self.assertTrue(_static_allowed(f), f)
+
+    def test_fake_sw_neighbor_names_still_rejected(self):
+        # Siklus 279: allowlist = daftar EKSAK — nama mirip fake SW tetap TOLAK
+        # (membuktikan entri baru bukan pola/prefix).
+        for p in ("e2e-sw-fake2.js", "e2e-sw-fake.js.bak", "e2e-sw-fake",
+                  "e2e-sw-fake.js.py", "other/e2e-sw-fake.js"):
+            self.assertFalse(_static_allowed(p), p)
 
     def test_allow_dir_subpaths(self):
         self.assertTrue(_static_allowed("assets/index-eWLO-0Cj.js"))

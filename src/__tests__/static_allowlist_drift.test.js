@@ -40,7 +40,7 @@ describe('siklus 214 — konstanta allowlist statis', () => {
     expect(items.sort()).toEqual(['assets', 'fonts']);
   });
 
-  it('STATIC_ALLOW_FILES ada & memuat 12 jalur dist/ eksak', () => {
+  it('STATIC_ALLOW_FILES ada & memuat 13 jalur eksak (12 dist/ + fake-SW e2e 279)', () => {
     expect(ALLOW_FILES_BLOCK, 'STATIC_ALLOW_FILES harus ada').toBeTruthy();
     const items = ALLOW_FILES_BLOCK[1].split(',').map(s => s.trim().replace(/['"]/g, '')).filter(Boolean);
     for (const f of [
@@ -49,7 +49,11 @@ describe('siklus 214 — konstanta allowlist statis', () => {
       'favicon.svg', 'wfs-logo.svg',
       'og-image.png', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png',
     ]) expect(items).toContain(f);
-    expect(items.length).toBe(12);
+    // Siklus 279: e2e-sw-fake.js = skrip SW dummy utk probe pembaruan PWA (192).
+    // File fisik hanya ditulis probe sekali-pakai & dihapus di finally; tanpa
+    // fisik → 404. Entri ini memulihkan kontrak 192 tanpa membuka pola luas.
+    expect(items).toContain('e2e-sw-fake.js');
+    expect(items.length).toBe(13);
   });
 
   it('allowlist TIDAK memuat file non-aset (py/db/bak/token/screenshot)', () => {
