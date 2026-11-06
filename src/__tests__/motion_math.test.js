@@ -74,7 +74,7 @@ describe('motion_math: stepMove', () => {
       expect(s.z).toBeLessThanOrEqual(BOUNDS.zMax);
     }
   });
-  it('clamp pojok: X dan Z terjepit sekaligus dalam satu langkah', () => {
+  it('hard clamp pojok: X dan Z terjepit sekaligus dalam satu langkah', () => {
     const s = stepMove({ x: 12, z: 9, rot: 0 }, { x: 50, z: 50 }, 100, 1);
     expect(s.x).toBe(BOUNDS.xMax);
     expect(s.z).toBe(BOUNDS.zMax);
@@ -91,6 +91,34 @@ describe('motion_math: stepMove', () => {
     const s = stepMove({ x: 1, z: 1, rot: 1.23 }, { x: 1.01, z: 1.01 }, 2, 1);
     expect(s.arrived).toBe(true);
     expect(s.rot).toBe(1.23);
+  });
+  // ── Siklus 274: sub-step (STEP_MAX) — delta besar dipecah, hasil proporsional ──
+  it('delta besar (2 dtk) menempuh speed×delta penuh via sub-langkah (kontrak laju FPS-rendah)', () => {
+    // 0.3 FPS: satu frame ≈ 3.3 dtk delta nyata — walker HARUS menempuh 1.6×2
+    // = 3.2 unit, bukan 0.05×1.6=0.08 unit (kelakuan clamp lama).
+    const s = stepMove({ x: 0, z: 0, rot: 0 }, { x: 30, z: 0 }, 1.6, 2);
+    expect(s.x).toBeCloseTo(3.2, 5);
+    expect(s.arrived).toBe(false);
+  });
+  it('sub-step hasil identik dgn pemanggilan pecahan manual (linier & stateless)', () => {
+    const one = stepMove({ x: -4, z: 1, rot: 0 }, { x: 6, z: 1 }, 1.6, 0.5);
+    let cur = { x: -4, z: 1, rot: 0 }, last = null;
+    for (let i = 0; i < 10; i++) { last = stepMove(cur, { x: 6, z: 1 }, 1.6, 0.05); cur = { x: last.x, z: last.z, rot: last.rot }; }
+    expect(last.x).toBeCloseTo(one.x, 9);
+    expect(last.z).toBeCloseTo(one.z, 9);
+  });
+  it('delta ±Infinity/NaN → no-op aman tanpa hang (anti-poisoning, terminasi pasti)', () => {
+    for (const bad of [Infinity, -Infinity, NaN]) {
+      const s = stepMove({ x: 0, z: 0, rot: 0 }, { x: 10, z: 0 }, 2, bad);
+      expect(s.x).toBe(0); // dt→0 → tidak bergerak
+      expect(s.arrived).toBe(false);
+    }
+  });
+  it('delta raksasa (60 dtk) tetap terminasi & ter-clamp BOUNDS (cap 600 sub-langkah)', () => {
+    const s = stepMove({ x: 0, z: 0, rot: 0 }, { x: 200, z: 0 }, 1.6, 60);
+    expect(s.x).toBe(BOUNDS.xMax); // 1.6×60=96 unit → terpental dinding x=15.9
+    expect(s.clamped).toBe(true);
+    expect(Number.isFinite(s.x)).toBe(true); // cap 600 memastikan loop selalu selesai
   });
   it('target NaN/±Infinity → TIDAK menulari posisi (anti-poisoning)', () => {
     const safe = { x: 1, z: 2, rot: 0.5 };

@@ -16,12 +16,15 @@ describe('motion_math: dist2', () => {
 
 describe('motion_math: stepMove', () => {
   it('bergerak menuju target dengan rotasi menghadap arah gerak', () => {
+    // Siklus 274: sub-langkah 20×0.05 — target jarak 1 ditempuh 2 u/s × 1 dtk =
+    // 2 unit → menyentuh target (d < ARRIVE) di sub-langkah ke-10 & BERHENTI di
+    // target (tidak overshoot): semantik baru "tidak pernah melewati target".
     const r = stepMove({ x: 0, z: 0, rot: 0 }, { x: 1, z: 0 }, 2, 1);
-    expect(r.x).toBeCloseTo(2);
+    expect(r.x).toBeCloseTo(0.9); // sub-langkah ke-9: d=0.1 < ARRIVE=0.2 → berhenti (0.1 sebelum pusat target, tanpa overshoot)
     expect(r.z).toBeCloseTo(0);
-    expect(r.arrived).toBe(false);
+    expect(r.arrived).toBe(true);
     expect(r.clamped).toBe(false);
-    expect(r.rot).toBeCloseTo(Math.PI / 2); // atan2(dx, dz) untuk +x
+    expect(r.rot).toBeCloseTo(Math.PI / 2); // atan2(dx, dz) untuk +x (arah sub-langkah terakhir)
   });
   it('tiba saat jarak < ARRIVE, rot tetap dipertahankan', () => {
     const r = stepMove({ x: 0, z: 0, rot: 0.7 }, { x: 0.1, z: 0 }, 2, 1);
