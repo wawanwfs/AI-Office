@@ -60,6 +60,10 @@ const CsWidget = lazy(() => import('./components/CsWidget'))
 
 export default function App() {
   const [viewMode, setViewMode] = useState(() => {
+    // Landing links are explicit, one-time entry choices; unknown values retain /app defaults.
+    const mode = new URLSearchParams(window.location.search).get('mode')
+    if (mode === 'dashboard') return '2d'
+    if (mode === 'office') return '3d'
     try { return localStorage.getItem('wfs_view_mode') === '3d' ? '3d' : '2d' } catch { return '2d' }
   })
   const switchView = (mode) => {
@@ -783,6 +787,7 @@ export default function App() {
         <h1>WFS Project · Ruang kerja</h1>
         <p>Mode ringan 2D — data pekerjaan dari task engine, tanpa memuat ruangan 3D.</p>
         <nav aria-label="Mulai bekerja">
+          <a className="btn" href="/" style={{ minHeight: 44, display: 'inline-flex', alignItems: 'center' }}>Kembali ke beranda</a>
           <button className="btn" onClick={() => window.dispatchEvent(new CustomEvent('wfs-toggle-dashboard'))}>Lihat dashboard</button>
           <button className="btn" onClick={() => dispatchTaskBoardEvent('wfs-open-task-board', { view: 'kanban' })}>Buka papan task</button>
           <button className="btn" onClick={() => window.dispatchEvent(new CustomEvent('wfs-open-project-panel', { detail: {} }))}>Buka proyek</button>

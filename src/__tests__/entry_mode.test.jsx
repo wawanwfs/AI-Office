@@ -1,12 +1,13 @@
 // @vitest-environment jsdom
 import React from 'react'
 import { it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, cleanup, act } from '@testing-library/react'
 const scene = vi.hoisted(() => ({ destroy: vi.fn(), isCyberpunk: () => false }))
 const create = vi.hoisted(() => vi.fn(() => scene))
 vi.mock('../scene/OfficeScene', () => ({ createOfficeScene: create }))
 import App from '../App'
 beforeEach(() => {
+  window.history.replaceState(null, '', '/app/')
   localStorage.clear(); create.mockClear(); scene.destroy.mockClear()
   vi.stubGlobal('fetch', vi.fn(async (url) => ({ ok: true, json: async () => String(url).includes('tasks/paused') ? { paused: false } : String(url).includes('tasks') ? { tasks: [{ id: 1, title: 'Real task', status: 'running' }] } : {} })))
 })
@@ -22,6 +23,64 @@ it('opens a live lightweight workspace without initializing 3D; explicit choice 
   fireEvent.click(screen.getByRole('button', { name: 'Gunakan mode ringan 2D' }))
   await waitFor(() => expect(scene.destroy).toHaveBeenCalledTimes(1))
   expect(localStorage.getItem('wfs_view_mode')).toBe('2d')
+})
+it('dashboard query overrides a saved 3D choice without mounting a scene', async () => {
+  localStorage.setItem('wfs_view_mode', '3d')
+  window.history.replaceState(null, '', '/app/?mode=dashboard')
+  render(<App />)
+  await waitFor(() => expect(screen.getAllByText('1 jalan · 0 antri').length).toBeGreaterThan(0))
+  expect(screen.getByRole('main', { name: 'Ruang kerja ringan' })).toBeTruthy()
+  expect(create).not.toHaveBeenCalled()
+  expect(localStorage.getItem('wfs_view_mode')).toBe('3d')
+})
+it('office query overrides a saved lightweight choice, mounts once, and cleans up on return', async () => {
+  localStorage.setItem('wfs_view_mode', '2d')
+  window.history.replaceState(null, '', '/app/?mode=office')
+  render(<App />)
+  await waitFor(() => expect(create).toHaveBeenCalledTimes(1))
+  fireEvent.click(screen.getByRole('button', { name: 'Bantuan' }))
+  expect(create).toHaveBeenCalledTimes(1)
+  fireEvent.click(screen.getByRole('button', { name: 'Gunakan mode ringan 2D' }))
+  expect(scene.destroy).toHaveBeenCalledTimes(1)
+  expect(window.__wfsSceneSelect).toBeUndefined()
+  expect(screen.getByRole('main', { name: 'Ruang kerja ringan' })).toBeTruthy()
+  expect(create).toHaveBeenCalledTimes(1)
+})
+it.each(['unknown', '3d', '2d', 'Office', '', '__proto__'])('unknown mode %j falls back to the saved preference', async (mode) => {
+  localStorage.setItem('wfs_view_mode', '3d')
+  window.history.replaceState(null, '', `/app/?mode=${encodeURIComponent(mode)}`)
+  render(<App />)
+  await waitFor(() => expect(create).toHaveBeenCalledTimes(1))
+})
+it('unknown mode without a valid saved preference remains lightweight', async () => {
+  localStorage.setItem('wfs_view_mode', 'office')
+  window.history.replaceState(null, '', '/app/?mode=invalid')
+  render(<App />)
+  await act(async () => {})
+  expect(screen.getByRole('main', { name: 'Ruang kerja ringan' })).toBeTruthy()
+  expect(create).not.toHaveBeenCalled()
+})
+it('cancels an outstanding scene import when returning to lightweight mode', async () => {
+  window.history.replaceState(null, '', '/app/?mode=office')
+  render(<App />)
+  // Synchronously switch before the dynamic import promise resolves.
+  fireEvent.click(screen.getByRole('button', { name: 'Gunakan mode ringan 2D' }))
+  await act(async () => {})
+  expect(create).not.toHaveBeenCalled()
+  expect(scene.destroy).not.toHaveBeenCalled()
+  expect(window.__wfsSceneSelect).toBeUndefined()
+  expect(screen.getByRole('main', { name: 'Ruang kerja ringan' })).toBeTruthy()
+})
+it('cancels an outstanding scene import when unmounted', async () => {
+  window.history.replaceState(null, '', '/app/?mode=office')
+  const { unmount } = render(<App />)
+  unmount()
+  await act(async () => {})
+  expect(create).not.toHaveBeenCalled()
+})
+it('provides an accessible link from lightweight workspace back to the landing', () => {
+  render(<App />)
+  expect(screen.getByRole('link', { name: 'Kembali ke beranda' }).getAttribute('href')).toBe('/')
 })
 it('honors a returning user’s explicit 3D choice', async () => {
   localStorage.setItem('wfs_view_mode', '3d')
