@@ -6,7 +6,7 @@ import {
 } from './Icons'
 
 // Menu kecil untuk zoom + pencahayaan + preset sudut kamera (popover di atas dock)
-export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onToggleTheme, theme, onZoomIn, onZoomOut, onSetView, onGoHome, onSnapshot, onCycleAgent, onCycleAgentBack, paused }) {
+export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onToggleTheme, theme, onZoomIn, onZoomOut, onSetView, onGoHome, onSnapshot, onCycleAgent, onCycleAgentBack, paused, sceneEnabled = true }) {
   const [open, setOpen] = useState(false)
   useModalFlag(open)
   const ref = useRef(null)
@@ -33,6 +33,7 @@ export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onTog
             <span className="ic"><IconPause size={18} /><span className="sr-only">⏸</span></span>
             <span className="lb">Jeda</span>
           </button>}
+      {sceneEnabled && <>
       <span className="sep" />
       <button className="ibtn" onClick={onZoomOut} title="Zoom out — lihat lebih luas (shortcut -)" aria-label="Perkecil">
         <span className="ic"><IconZoomOut size={19} /><span className="sr-only">🔍</span></span>
@@ -95,6 +96,7 @@ export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onTog
         </span>
         <span className="lb">{!theme ? 'Terang' : 'Gelap'}</span>
       </button>
+      </>}
     </>
   )
 }

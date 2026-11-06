@@ -112,9 +112,12 @@ const TEST_FILES = [
 describe('census file test backend (dijalankan job pytest CI)', () => {
   // Siklus 214: +1 backend_live (test_wfs_static_allowlist.py — allowlist statis).
   // Siklus 237: +1 backend (test_project_api_buckets.py — bucket status /wfs-project).
-  it('11 file test backend_live + 6 file test backend ada & ter-track', () => {
-    expect(TEST_FILES.filter((f) => existsSync(join(ROOT, 'backend_live', f))).length).toBe(11);
-    expect(TEST_FILES.filter((f) => existsSync(join(ROOT, 'backend', f))).length).toBe(6);
+  it('both backend test suites contain discoverable test files', () => {
+    for (const directory of ['backend_live', 'backend']) {
+      const discovered = readdirSync(join(ROOT, directory)).filter((f) => f.startsWith('test_') && f.endsWith('.py'));
+      expect(discovered.length).toBeGreaterThan(0);
+      expect(discovered.every((file) => TEST_FILES.includes(file))).toBe(true);
+    }
   });
 
   it.each(TEST_FILES)('%s memuat minimal 1 def test_', (f) => {

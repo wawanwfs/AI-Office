@@ -184,9 +184,9 @@ const tgt=new THREE.Vector3(0,1.0,0.6);
 // Preferensi auto-rotate: hormati prefers-reduced-motion bila user belum set eksplisit (localStorage wfs_autorot 0/1)
 const __prm=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):null;
 let __userRot=null;try{const __v=localStorage.getItem('wfs_autorot');if(__v==='0')__userRot=false;else if(__v==='1')__userRot=true}catch{/* abaikan */}
-const autoRotDefault=()=>__userRot!==null?__userRot:(__prm?!__prm.matches:true);
+const autoRotDefault=()=>__userRot!==null?__userRot:(!__quality.low && (!__prm || !__prm.matches));
 let autoRot=autoRotDefault(),autoTmr;
-const __prmListener=(e)=>{if(__userRot===null)autoRot=!e.matches}; // bernama: destroy() bisa melepas (siklus 123)
+const __prmListener=(e)=>{if(__userRot===null)autoRot=!__quality.low && !e.matches}; // bernama: destroy() bisa melepas (siklus 123)
 __prm&&__prm.addEventListener&&__prm.addEventListener('change',__prmListener);
 let focusGoal=null;const HOME_TGT=new THREE.Vector3(0,1.4,0.3);let homeRadius=null;let nxChar=null,nxAgent=null;
 // Siklus 146: latch lantai kamera — pelapor terpusat per-frame (animate) hanya
@@ -1803,9 +1803,10 @@ function animate(){
   // (praktis beku), di 144 Hz 2.4× terlalu cepat (detail di kamera_focus.js).
   // Siklus 274: delta tak lagi di-clamp 0.05 — laju kontrak 0.072 rad/s kini
   // benar di FPS RENDAH sekalipun (putaran penuh ~87 dtk wall-clock).
-  if(autoRot && !__quality.low){autoRotateStep(sph,delta);updCam()}
+  if(autoRot){autoRotateStep(sph,delta);updCam()}
   __screenT=elapsed; // siklus 264: waktu animasi layar = detik NYATA (bukan frame*0.02)
-  if(!__quality.low || frame === 1)screenData.forEach(drawScreen);
+  // Complete one stagger cycle so every monitor gets a texture before freezing.
+  if(!__quality.low || frame <= 6)screenData.forEach(drawScreen);
   updateWalkers(delta);
 
   // Water cooler convos

@@ -21,6 +21,14 @@ function mockSun(withMap = true) {
 const BASE = { t0: 0, lastFrame: 0, fps: 0, downgraded: false, shadowLevel: 0, goodStreak: 0, basePR: 0 };
 
 describe('visible startup stalls', () => {
+  it('explains capability-disabled shadows without promising automatic recovery', () => {
+    const sun = mockSun(false); sun.castShadow = false;
+    const s = perfStep({ ...BASE, t0: 1000, shadowLevel: 2 }, 3000, 60, { sun, allowShadows: false });
+    expect(s.allowShadows).toBe(false);
+    const chip = perfChip(s);
+    expect(chip.detail).toMatch(/perangkat/i);
+    expect(chip.detail).not.toMatch(/pemulihan otomatis|pulih bertahap|16 dtk/i);
+  });
   it('never recovers disabled startup shadows from healthy samples', () => {
     const sun = mockSun(false); sun.castShadow = false;
     let s = { ...BASE, t0: 1000, shadowLevel: 2 };

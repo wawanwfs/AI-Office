@@ -22,7 +22,7 @@ describe('SysMeter', () => {
 
   it('menampilkan data host nyata (agent, load, RAM, disk)', async () => {
     render(<SysMeter />)
-    await waitFor(() => expect(screen.getByText('15 agent')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('15 agen task engine')).toBeTruthy())
     expect(screen.getByText('⚡ 4.71')).toBeTruthy()
     expect(screen.getByText('🧠 3833/7623')).toBeTruthy()
     expect(screen.getByText('💾 28.5/49.1 GB')).toBeTruthy()
@@ -33,7 +33,7 @@ describe('SysMeter', () => {
     // simulasikan layar sempit
     window.innerWidth = 600
     render(<SysMeter />)
-    await waitFor(() => expect(screen.getByText('15 agent')).toBeTruthy())
+    await waitFor(() => expect(screen.getByText('15 agen task engine')).toBeTruthy())
     const disk = screen.queryByText('💾 28.5/49.1 GB')
     expect(disk).toBeTruthy() // masih ter-render; penampilan dikontrol CSS
   })

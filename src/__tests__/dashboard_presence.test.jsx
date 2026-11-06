@@ -115,7 +115,7 @@ describe('Dashboard — paragraf kehadiran LIVE (integrasi)', () => {
     // teks task-engine lama tetap tampil (dua sumber data berdampingan)
     expect(screen.getByText('semua idle')).toBeTruthy()
     // aria: ringkasan dibacakan screen reader
-    expect(p.querySelector('.sr-only').textContent).toContain('26 agen di kantor — 26 rapat')
+    expect(p.querySelector('.sr-only').textContent).toContain('26 avatar di kantor — 26 rapat')
   })
 
   it('campuran live: "4 di meja · 2 rapat · 1 makan siang" dirender dgn role=status', async () => {

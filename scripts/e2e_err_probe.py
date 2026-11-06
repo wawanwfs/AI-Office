@@ -14,10 +14,10 @@ diprune TMPDIR 24 jam, siklus 185). Smoketest kesehatan scene di browser nyata:
  5. Mode MOBILE (arg "mobile"): viewport 390x844 dsf=2 (HP umum user) +
     gate tambahan dock: .dock .ibbtn tidak ada yang terpotong viewport —
     kelas bug siklus 184 (dock 3-4 baris meluap kapsul/viewport).
- 6. Gate HYGIENE deploy (siklus 191): ~/wfs-hq/assets TIDAK menumpuk file
-    hashed orphan (>15 file = FAIL) — bug siklus 157 sempat mengulang karena
-    SOP `cp -r dist/*` tak menghapus bundle lama; kini tiap probe wajib
-    mendeteksi re-akumulasi. Referensi satu sumber = scripts/deploy.py.
+ 6. Gate publication: current index/landing/SW dependencies must exist at
+    their referenced paths. Retained old hashes are expected for open tabs;
+    neither orphan counts nor an asset-count ceiling indicate broken deploys.
+    This check is read-only and reports bounded missing-path evidence.
 
 Pemakaian: uv run --with websocket-client scripts/e2e_err_probe.py [mobile] [out.png]
 Transport: salinan e2e_perf_chip.py (Xvfb :99 + chrome-headless-shell + CDP WS).
@@ -105,6 +105,55 @@ class WS:
 def x99_alive():
     return subprocess.run(["xdpyinfo", "-display", ":99"], timeout=10,
                           stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL).returncode == 0
+
+
+def published_asset_status(root):
+    """Read current entry references without pruning or scanning retained hashes.
+
+    Preserve paths (not just basenames), strip query/fragment URL suffixes, and
+    resolve Workbox's extensionless sibling module to .js. Optional landing/SW
+    files are checked when present; index.html is always required. This is a
+    local publication check, not an HTTP/service-worker lifecycle substitute.
+    """
+    import re
+    from pathlib import Path
+    from urllib.parse import unquote, urlsplit
+
+    root = Path(root).resolve()
+    required = {"index.html"}
+    for entry in ("index.html", "landing.html", "sw.js"):
+        source = root / entry
+        if not source.is_file():
+            continue
+        body = source.read_text(encoding="utf-8", errors="replace")
+        # Quoted HTML URLs, JS imports, and Workbox precache url fields.
+        urls = re.findall(r'''["']([^"'<>\s]+)["']''', body)
+        precache = set(re.findall(r'''["']?\burl["']?\s*:\s*["']([^"']+)["']''', body))
+        urls += sorted(precache)
+        for url in urls:
+            parsed = urlsplit(url)
+            if parsed.scheme or parsed.netloc:
+                continue
+            path = unquote(parsed.path).removeprefix("/")
+            while path.startswith("./"):
+                path = path[2:]
+            if not path:
+                continue
+            if re.fullmatch(r"workbox-[A-Za-z0-9_-]{8,}", path):
+                path += ".js"
+            elif not (path.startswith("assets/") or
+                      path.endswith((".js", ".css")) or
+                      url in precache):
+                continue
+            required.add(path)
+    missing = []
+    for path in sorted(required):
+        target = (root / path).resolve()
+        if not target.is_relative_to(root) or not target.is_file():
+            missing.append(path)
+    return {"ok": not missing, "refs": len(required),
+            "missing_count": len(missing),
+            "missing": [p[:200] for p in missing[:20]]}
 
 
 def main():
@@ -236,21 +285,13 @@ def main():
                  and not res["init_failed"] and res["hooks_ok"] and res["shot_ok"]
                  and res["pixels_ok"]
                  and (res.get("dock_ok", True)))
-        # 6) Gate hygiene deploy (siklus 191): assets/ ~/wfs-hq tidak menumpuk
-        #    file hashed orphan. Referensi dibaca dari index.html/landing.html/
-        #    sw.js yang SUDAH dideploy (satu sumber: deploy.referenced_assets);
-        #    pola hashed juga satu sumber (deploy.HASHED_RE). Ambang 15:
-        #    build sehat = 11 file; 15 = batah aman, kelebihan itu = akumulasi.
+        # 6) Read-only publication health: retained chunks are not orphans to
+        # delete. Only missing dependencies of current entries fail this gate.
         try:
-            hq_assets = os.path.join(deploy_mod.DST_HQ, "assets")
-            refs = deploy_mod.referenced_assets()
-            hashed = [n for n in os.listdir(hq_assets)
-                      if deploy_mod.HASHED_RE.match(n)] if os.path.isdir(hq_assets) else []
-            orphans = sorted(n for n in hashed if not deploy_mod._is_referenced(n, refs))
-            res["hygiene"] = {"hashed": len(hashed), "refs": len(refs), "orphans": orphans}
-            res["hygiene_ok"] = len(hashed) <= 15 and not orphans
-        except Exception as e:  # gate tak boleh menutup probe bila env aneh
-            res["hygiene"] = {"err": str(e)}
+            res["hygiene"] = published_asset_status(deploy_mod.DST_HQ)
+            res["hygiene_ok"] = res["hygiene"]["ok"]
+        except Exception as e:  # fail closed with bounded evidence
+            res["hygiene"] = {"err": str(e)[:200]}
             res["hygiene_ok"] = False
         clean = clean and res["hygiene_ok"]
         print("E2E_ERR_PROBE:", "OK" if clean else "FAIL", json.dumps(res, ensure_ascii=False))

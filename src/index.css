@@ -2925,3 +2925,11 @@ button { font-family: inherit; }
   .hud .hud-sep { display: none; }
   .hud input[type=range] { max-width: 70px; }
 }
+
+.simulation-label { font-size: 11px; color: #cbd5e1; }
+@media (max-width: 560px) {
+  .dock button[aria-label="Dashboard"] .lb,
+  .dock button[aria-label="Tambah task baru"] .lb,
+  .dock button[aria-label^="Proyek"] .lb { display: block; font-size: 10px; }
+  .dock button[aria-label="Dashboard"], .dock button[aria-label^="Proyek"] { min-width: 65px; }
+}

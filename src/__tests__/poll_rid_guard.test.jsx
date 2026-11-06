@@ -204,10 +204,10 @@ describe('SysMeter — guard poll out-of-order', () => {
     await act(async () => { vi.advanceTimersByTime(12000) })
     await waitFor(() => expect(t.count()).toBe(2))
     await t.d.settle(2, HOST_NEW)
-    expect(screen.getByText('15 agent')).toBeTruthy()
+    expect(screen.getByText('15 agen task engine')).toBeTruthy()
     await t.d.settle(1, HOST_OLD)
-    expect(screen.queryByText('9 agent')).toBeNull() // kode lama: data mundur
-    expect(screen.getByText('15 agent')).toBeTruthy()
+    expect(screen.queryByText('9 agen task engine')).toBeNull() // kode lama: data mundur
+    expect(screen.getByText('15 agen task engine')).toBeTruthy()
   })
 
   it('poll LAMA GAGAL setelah poll BARU sukses → "Gateway offline" basi tidak muncul', async () => {
@@ -218,10 +218,10 @@ describe('SysMeter — guard poll out-of-order', () => {
     await act(async () => { vi.advanceTimersByTime(12000) })
     await waitFor(() => expect(t.count()).toBe(2))
     await t.d.settle(2, HOST_NEW)
-    expect(screen.getByText('15 agent')).toBeTruthy()
+    expect(screen.getByText('15 agen task engine')).toBeTruthy()
     await t.d.settle(1, new Error('offline'))
     expect(screen.queryByText('Gateway offline')).toBeNull() // kode lama: banner basi
-    expect(screen.getByText('15 agent')).toBeTruthy()
+    expect(screen.getByText('15 agen task engine')).toBeTruthy()
   })
 
   it('respons telat pasca-unmount tidak menulis state (0 act-error)', async () => {

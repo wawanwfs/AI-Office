@@ -119,7 +119,7 @@ describe('App poll — guard rid (out-of-order & unmount)', () => {
       return Promise.resolve({ ok: true, json: async () => ({}) })
     }))
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const { unmount } = localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); const { unmount } = render(<App />)
     await waitFor(() => expect(screen.getByText('1 jalan · 0 antri')).toBeTruthy())
     // poll #2 menggantung (tasks defer) → unmount → respons telat resolve
     hangTasks = true

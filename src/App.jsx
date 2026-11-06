@@ -817,6 +817,7 @@ export default function App() {
       {/* Dock bawah: satu bilah, tidak ada elemen saling tumpuk. */}
       <div className="dock" role="toolbar" aria-label="Menu utama">
         <QuickToolbar
+          sceneEnabled={viewMode === '3d'}
           paused={paused}
           onAddTask={() => setShowTask(true)}
           onPauseAll={() => openConfirm('pause')}

@@ -56,7 +56,7 @@ const ROLE = {
   2: 'Core Engineering & Cloud Database Pod',
   3: 'Executive Penthouse, Security & Delivery Suite',
 }
-const navBtn = (n) => screen.getByRole('button', { name: `Fokus ke ${ROLE[n]}` })
+const navBtn = (n) => screen.getByRole('button', { name: new RegExp(`Fokus ke ${ROLE[n]}`) })
 const isActive = (n) => navBtn(n).className.includes('active')
 
 async function renderAppWithScene() {

@@ -8,6 +8,7 @@ import { fmtUptime } from '../lib/uptime'
 export default function SysMeter() {
   const [d, setD] = useState(null)
   const [sceneAgents, setSceneAgents] = useState(null)
+  const [updatedAt, setUpdatedAt] = useState(null)
   const [err, setErr] = useState(false)
 
   useEffect(() => {
@@ -22,6 +23,7 @@ export default function SysMeter() {
         if (stop || my !== rid) return
         setD({ ...st, load: res?.load ?? '—', ram: res?.ram_mb ?? '—' })
         setErr(false)
+        setUpdatedAt(new Date().toLocaleTimeString())
       } catch {
         if (!stop && my === rid) setErr(true)
       }
@@ -44,7 +46,9 @@ export default function SysMeter() {
   }
   return (
     <div className="sysmeter" role="status" aria-label="Status host">
-      <span className="sm-item sm-hl" title="Agen aktif di kantor 3D"><i />{sceneAgents ?? d.agents} agent</span>
+      {err && <span className="sm-item" role="alert">Data host usang · terakhir {updatedAt}</span>}
+      <span className="sm-item" title="Agen dari status backend">{d.agents ?? '—'} agen task engine</span>
+      {sceneAgents && <span className="sm-item" title="Avatar ambient, bukan status pekerjaan">{sceneAgents} avatar simulasi</span>}
       <span className="sm-item" title="Load average host">⚡ {d.load}</span>
       <span className="sm-item" title="RAM terpakai / total">🧠 {d.ram}</span>
       <span className="sm-item" title="Disk terpakai / total">💾 {d.disk_used_gb}/{d.disk_total_gb} GB</span>

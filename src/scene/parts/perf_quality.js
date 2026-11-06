@@ -55,6 +55,8 @@ export function perfStep(st, nowMs, frame, opts) {
   if (!Number.isFinite(nowMs) || !Number.isFinite(frame)) return { ...st };
   const sampleMs = o.fpsSampleMs || 2000;
   let s = { ...st };
+  // Retain the capability policy for the HUD, including before the first sample.
+  if (o.allowShadows !== undefined) s.allowShadows = o.allowShadows;
   // state rusak non-finite (dari poison sebelumnya) → reset ke nilai aman
   if (!Number.isFinite(s.t0)) s.t0 = 0;
   if (!Number.isFinite(s.lastFrame)) s.lastFrame = 0;
@@ -199,6 +201,9 @@ export function perfChip(p) {
   // sedang diulang; tangga degradasi dilewati pada sampel ini.
   if (p.stale) {
     return { state: 'stale', label: 'GPU mengukur ulang…', detail: 'Kualitas otomatis: pengukuran FPS di-reset (tab tidur / jeda panjang terdeteksi) — mengukur ulang beberapa detik' };
+  }
+  if (p.allowShadows === false) {
+    return { state: 'stale', label: `GPU ${fpsTxt} FPS`, detail: `Mode ringan perangkat: bayangan dinonaktifkan untuk kemampuan perangkat ini${prTxt}` };
   }
   if (p.shadowLevel >= 2) {
     return { state: 'down', label: `GPU ${fpsTxt} FPS`, detail: `Kualitas otomatis: bayangan dimatikan (FPS ${fpsTxt}) — pemulihan otomatis bila FPS sehat 16 dtk${prTxt}` };

@@ -1,22 +1,16 @@
 #!/usr/bin/env python3
-"""Deploy dist/ → ~/wfs-hq dengan pemangkasan aset hashed basi.
+"""Publish dist/ additively, with complete files and HTML entry points last.
 
-Masalah yang diperbaiki (siklus 158): SOP lama `cp -r dist/* ~/wfs-hq/` tidak
-pernah MENGHAPUS bundle lama — setiap build menghasilkan nama file hashed baru
-(index-XXXX.js, OfficeScene-XXXX.js, …) sehingga direktori assets/ menumpuk
-file orphan (90 file, hanya 7 dipakai; ±11 MB basi ter-serve & ikut membingungkan
-audit). Sekarang: salin sinkron (hapus dulu, salin ulang) + pemangkasan file
-hashed orphan di assets/ yang tidak direferensikan index.html / landing.html /
-sw.js — diarsipkan ke ~/wfs-hq/.pruned-assets/ (bukan rm permanen) dan bisa
-dipulihkan. File tanpa hash (favicon.svg, og-image.png, dsb) tidak disentuh.
+Routine deploys retain previous hashed chunks for open tabs and service workers.
+Each file is copied to a sibling temporary file and published with os.replace;
+index.html is published only after all other build files are ready. This is
+per-file atomic publication, not a whole-release transaction.
 
-Siklus 191: logika dipindah ke fungsi `deploy()` dengan guard `__main__` agar
-AMAN di-import (tanpa efek samping saat import) — e2e_err_probe.py memakai
-modul ini sebagai SATU SUMBER HASHED_RE + referenced_assets() untuk gate
-hygiene anti-re-akumulasi (bug siklus 157 sempat mengulang: SOP cp -r masih
-dipakai cron hingga assets/ kembali menumpuk 75 file vs 11 hidup).
+Prune helpers and reference APIs remain import-compatible for explicit offline
+maintenance. Current HTML references cannot prove that an old chunk is unused:
+pruning requires a separate retention policy and must never run during deploy.
 """
-import os, re, shutil, urllib.request
+import os, re, shutil, tempfile, urllib.request
 
 SRC_DIST = '/home/agentuser/ai-office-main/dist'
 DST_HQ = '/home/agentuser/wfs-hq'
@@ -60,23 +54,40 @@ def prune_orphan_assets() -> list:
     return pruned
 
 
+def _publish_file(source, destination):
+    """Copy beside the target, then atomically publish a complete file."""
+    parent = os.path.dirname(destination)
+    os.makedirs(parent, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(prefix='.deploy-', suffix='.tmp', dir=parent)
+    os.close(fd)
+    try:
+        shutil.copy2(source, temporary)
+        os.replace(temporary, destination)
+    finally:
+        if os.path.exists(temporary):
+            os.remove(temporary)
+
+
 def sync_dist_to_hq():
-    """Salin dist/ → ~/wfs-hq sinkron penuh (assets/ dihapus dulu, salin ulang)."""
-    src_assets = os.path.join(SRC_DIST, 'assets')
-    dst_assets = os.path.join(DST_HQ, 'assets')
-    if os.path.isdir(src_assets):
-        if os.path.isdir(dst_assets):
-            shutil.rmtree(dst_assets)
-        shutil.copytree(src_assets, dst_assets)
-    for item in os.listdir(SRC_DIST):
-        s = os.path.join(SRC_DIST, item)
-        d = os.path.join(DST_HQ, item)
-        if os.path.isdir(s):
-            if os.path.exists(d):
-                shutil.rmtree(d)
-            shutil.copytree(s, d)
-        else:
-            shutil.copy2(s, d)
+    """Publish additively: dependencies first, HTML last, index.html last of all.
+
+    Keep previous chunks for open tabs. Failed copies leave the target file
+    intact; no entry HTML is changed until every non-HTML file is ready.
+    This is per-file atomic publication, not a multi-file transaction.
+    """
+    files = []
+    for root, directories, names in os.walk(SRC_DIST):
+        directories.sort()
+        for name in sorted(names):
+            source = os.path.join(root, name)
+            relative = os.path.relpath(source, SRC_DIST)
+            files.append(relative)
+    files.sort(key=lambda name: (
+        name == 'index.html', name.lower().endswith('.html'), name,
+    ))
+    for relative in files:
+        _publish_file(os.path.join(SRC_DIST, relative),
+                      os.path.join(DST_HQ, relative))
 
 
 def referenced_root_files() -> set:
@@ -128,8 +139,8 @@ def prune_root_png() -> list:
     screenshot eksperimen era Okt yang menumpuk ±7MB di web root produksi dan
     pernah tersaji publik 200 via :9503, ditutup allowlist 214). Invarian:
     SETIAP .png di root WAJIB berasal dari dist/ — yang bukan diarsipkan ke
-    .pruned-assets (bukan rm permanen, bisa dipulihkan), sehingga higiene web
-    root ditegakkan tiap deploy, bukan sekali bersih lalu menumpuk lagi."""
+    .pruned-assets (bukan rm permanen, bisa dipulihkan). Maintenance only:
+    this helper is never called by routine deploy()."""
     dist_png = {n for n in os.listdir(SRC_DIST) if n.lower().endswith('.png')}
     pruned = []
     for name in sorted(os.listdir(DST_HQ)):
@@ -149,10 +160,13 @@ def prune_root_png() -> list:
 
 
 def deploy():
-    """Deploy penuh + prune. Return jumlah orphan yang dipangkas."""
+    """Publish without pruning; retain the legacy integer prune-count result.
+
+    Previous hashed files may still be requested by old open tabs and service
+    workers. Prune helpers are explicit maintenance only, never deploy steps.
+    """
     sync_dist_to_hq()
-    return (len(prune_orphan_assets()) + len(prune_root_stale())
-            + len(prune_root_png()))
+    return 0
 
 
 if __name__ == '__main__':

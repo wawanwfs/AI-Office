@@ -1,8 +1,8 @@
 // Siklus 192: kontrak statis alur pembaruan PWA end-to-end. Sumber kebenaran =
 // teks file (unit live butuh SW runtime nyata — tidak mungkin di jsdom penuh).
 // Menjaga: vite.config (prompt + tanpa injeksi), registrasi satu-sumber di
-// App, banner dengan aksi muat-ulang, sw.js TANPA skipWaiting bake-in,
-// deploy.py prune root (workbox sibling tidak boleh ikut terpangkas).
+// App, banner dengan aksi muat-ulang, sw.js TANPA skipWaiting bake-in.
+// Deployment filesystem behavior is covered by scratch-only Python fixtures.
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { fileURLToPath } from 'node:url'
@@ -13,7 +13,6 @@ const read = (p) => readFileSync(resolve(here, '../..', p), 'utf-8')
 const viteCfg = read('vite.config.js')
 const app = read('src/App.jsx')
 const swUpdate = read('src/lib/sw_update.js')
-const deployPy = read('scripts/deploy.py')
 
 describe('vite.config.js — mode prompt + registrasi eksplisit', () => {
   it('registerType prompt (SW baru menunggu, tanpa skipWaiting bake-in)', () => {
@@ -49,15 +48,7 @@ describe('App.jsx — wiring banner pembaruan', () => {
   })
 })
 
-describe('deploy.py — prune root aman (siklus 192)', () => {
-  it('prune_root_stale dipanggil di deploy() (root ~/wfs-hq ikut bersih)', () => {
-    expect(deployPy).toContain('def prune_root_stale()')
-    expect(deployPy).toMatch(/deploy\(\)[\s\S]{0,200}prune_root_stale\(\)/)
-  })
-
-  it('referensi ROOT dihormati — workbox sibling sw.js TIDAK boleh terpangkas', () => {
-    expect(deployPy).toContain('def referenced_root_files()')
-    // net luas: basename .js/.css di mana pun dalam 3 file sumber (regex Python)
-    expect(deployPy).toContain("[A-Za-z0-9][A-Za-z0-9._-]*\\.(?:js|css)")
-  })
-})
+// Publication safety (including retained root Workbox siblings) is exercised
+// once by deploy_prune.test.js through scripts/test_deploy_safe.py. Current
+// Workbox references are checked with filesystem fixtures in hygiene_gate.test.js;
+// neither contract requires automatic pruning during routine deployment.

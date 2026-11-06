@@ -79,5 +79,5 @@ with tempfile.TemporaryDirectory(dir=scratch, prefix='office-ui-') as profile:
     finally:
         p.terminate()
         try: p.wait(5)
-        except subprocess.TimeoutExpired: p.kill(); p.wait()
+        except subprocess.TimeoutExpired: p.kill(); p.wait(5)
         (scratch / 'office-ui-viewports.json').write_text(json.dumps(results, indent=2))
