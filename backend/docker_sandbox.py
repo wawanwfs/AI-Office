@@ -226,11 +226,5 @@ def test_index_content():
 
     @classmethod
     def run_command(cls, project_id, command):
-        ws = cls.get_workspace_path(project_id)
-        # Execute inside workspace
-        res = subprocess.run(command, shell=True, cwd=ws, capture_output=True, text=True, timeout=30)
-        return {
-            "stdout": res.stdout,
-            "stderr": res.stderr,
-            "exit_code": res.returncode
-        }
+        """Disabled: the legacy implementation executed a shell on the host."""
+        raise PermissionError("Legacy terminal execution is disabled")

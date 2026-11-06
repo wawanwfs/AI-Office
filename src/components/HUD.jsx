@@ -47,6 +47,7 @@ export default function HUD({
 
   return (
     <div className="hud" role="group" aria-label="Waktu simulasi dan status">
+      <span className="simulation-label">Simulasi</span>
       <span className="clock">{time}</span>
       {phaseInfo && (
         <span
@@ -65,7 +66,7 @@ export default function HUD({
         aria-valuetext={time}
         onChange={e => onTimeChange(parseInt(e.target.value, 10))}
       />
-      <span className={'stat ' + (statusKind || '')} role="status"><i />{status}</span>
+      <span className={'stat ' + (statusKind || '')} role="status" title="Status pekerjaan dari task engine (backend)"><i />{status}</span>
 
       {conn && (
         <span

@@ -2895,3 +2895,33 @@ button { font-family: inherit; }
   .dash-cols { grid-template-columns: 1fr; }
   .panel.wide#dashboard { width: calc(100vw - 16px); }
 }
+
+/* Work-first entry and viewport-bound dashboard; outside filtered dock. */
+.dashboard-overlay { position: fixed; inset: 0; z-index: 1000; display: grid; place-items: center; padding: 12px; background: #020617b8; }
+.dashboard-overlay .panel.wide#dashboard { position: relative; inset: auto !important; transform: none; animation: none; width: min(860px, 100%) !important; height: min(640px, calc(100dvh - 24px)); max-height: none; margin: 0; }
+.dashboard-overlay #dashboard .ph { flex-shrink: 0; }
+.dashboard-overlay #dashboard .dash-body { min-height: 0; overscroll-behavior: contain; }
+.view-mode-switch { position: fixed; top: 104px; right: 14px; z-index: 24; }
+.view-mode-switch button { min-height: 44px; background: #14213a; color: #e2e8f0; border: 1px solid #64748b; }
+.light-workspace { position: fixed; z-index: 2; top: 170px; bottom: calc(var(--dock-h-raw, 80px) + 100px); left: max(16px, calc((100vw - 900px)/2)); right: max(16px, calc((100vw - 900px)/2)); overflow: auto; padding: 20px; border: 1px solid #334155; border-radius: 16px; background: #0b1529; color: #e2e8f0; }
+.light-workspace h1 { font-size: clamp(18px, 3vw, 28px); margin: 0 0 12px; }
+.light-workspace p { font-size: 14px; line-height: 1.6; margin: 12px 0; }
+.light-workspace nav { display: flex; flex-wrap: wrap; gap: 8px; }
+.light-workspace button { min-height: 44px; }
+@media (max-width: 760px) {
+  .view-mode-switch { top: 78px; right: 10px; }
+  .light-workspace { top: 132px; bottom: calc(var(--dock-h-raw, 180px) + 142px); padding: 14px; }
+}
+
+.floor-nav-btn { min-height: 44px; }
+@media (max-width: 760px) {
+  .floor-nav { width: calc(100vw - 20px); max-width: calc(100vw - 20px); padding: 4px; box-sizing: border-box; }
+  .floor-nav-label { display: none; }
+  .floor-nav-buttons { width: 100%; min-width: 0; }
+  .floor-nav-btn { flex: 1 1 0; min-width: 0; justify-content: center; padding: 4px; font-size: 10px; gap: 3px; }
+  .floor-nav-btn > span:nth-child(2) { overflow: hidden; text-overflow: ellipsis; }
+  .hud { box-sizing: border-box; width: calc(100vw - 20px); max-width: calc(100vw - 20px); flex-wrap: wrap; justify-content: center; gap: 6px; }
+  .hud .hud-amb-btn { min-height: 44px; padding: 6px 10px; }
+  .hud .hud-sep { display: none; }
+  .hud input[type=range] { max-width: 70px; }
+}

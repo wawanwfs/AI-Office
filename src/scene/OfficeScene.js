@@ -12,6 +12,7 @@ import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulate
 import { applyZoneLod } from './parts/zone_lod.js';
 import { occlusionPass, OCCL_MIN_OPACITY } from './parts/label_occlusion.js';
 import { perfStep } from './parts/perf_quality.js';
+import { startupQuality, applyLightBudget } from './parts/render_startup.js';
 import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam, resetFocusGoal, agentFocusPos } from './parts/kamera_focus.js';
 import { nextAgentIndex } from './parts/agent_cycle.js';
 import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js';
@@ -80,6 +81,7 @@ export function createOfficeScene(container, callbacks = {}) {
   // scene baru dibuat → flag destroy scene LAMA dicabut; tanpa ini remount/hot-reload
   // membuat scene baru dengan audio mati permanen (__ensureAudio selalu return early).
   window.__officeSceneDestroyed = false;
+  const __renderStart=performance.now();
   // Siklus 123: sisa hook scene LAMA yang belum ter-purge (remount/HMR cepat,
   // destroy terlewat) direset di sini — tanpa ini registri zona (__zoneLabels/
   // __zoneBase) DIPAKAI ULANG scene baru: createZones push label zona tambahan
@@ -105,19 +107,25 @@ scene.name = 'Office3D';
  scene.fog=new THREE.FogExp2(0x010A28,0.0048);
  const __initAsp = computeAspect(container.clientWidth, container.clientHeight);
  const camera = new THREE.PerspectiveCamera(getResponsiveFov(__initAsp), __initAsp, 0.1, 500);
+ const __hints={cores:navigator.hardwareConcurrency,memory:navigator.deviceMemory,devicePixelRatio:window.devicePixelRatio};
+ let __quality=startupQuality(__hints);
  let renderer=null;
   try{
-    renderer=new THREE.WebGLRenderer({antialias:true,failIfMajorPerformanceCaveat:false});
+    renderer=new THREE.WebGLRenderer({antialias:!__quality.low,failIfMajorPerformanceCaveat:false});
     if(!renderer.getContext()){renderer=null;throw new Error('WebGL context unavailable')}
   }catch(e){
     // WebGL tidak tersedia — hentikan seluruh init scene; App menangkap & menampilkan pesan UI-only.
     console.warn('WebGL unavailable:',e.message);
     throw e;
   }
+  // The extension is optional/privacy-sensitive; absence is not a failure.
+  const __gl=renderer.getContext();
+  const __gpuInfo=__gl.getExtension('WEBGL_debug_renderer_info');
+  __quality=startupQuality({...__hints,renderer:__gpuInfo?__gl.getParameter(__gpuInfo.UNMASKED_RENDERER_WEBGL):''});
   if(renderer){
     renderer.setSize(Math.max(1, container.clientWidth || 1), Math.max(1, container.clientHeight || 1));
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio||1,2.0));
-    renderer.shadowMap.enabled=true;
+    renderer.setPixelRatio(__quality.pixelRatio);
+    renderer.shadowMap.enabled=__quality.shadows;
     renderer.shadowMap.type=THREE.PCFSoftShadowMap;
     renderer.toneMapping=THREE.ACESFilmicToneMapping;
     renderer.toneMappingExposure=1.1;
@@ -1736,7 +1744,10 @@ let lastMeetingState=false;
 const timer=new THREE.Timer();
 timer.connect(document);
 let rafId=null, pageHidden=document.visibilityState==='hidden';
-let __perfWin={t0:0,lastFrame:0,fps:0,downgraded:false,shadowLevel:0,goodStreak:0,basePR:0};
+// Bound expensive light shader arrays before the first render. Keep all geometry,
+// agents, routes and debug handles intact; blob shadows remain available.
+if(__quality.low){sun.castShadow=false;applyLightBudget(scene,4);}
+let __perfWin={t0:__renderStart,lastFrame:0,fps:0,downgraded:__quality.low,shadowLevel:__quality.low?2:0,goodStreak:0,basePR:__quality.pixelRatio};
 function animate(){
   if(pageHidden)return; // loop berhenti total saat tab hidden (hemat CPU/GPU)
   rafId=requestAnimationFrame(animate);
@@ -1792,9 +1803,9 @@ function animate(){
   // (praktis beku), di 144 Hz 2.4× terlalu cepat (detail di kamera_focus.js).
   // Siklus 274: delta tak lagi di-clamp 0.05 — laju kontrak 0.072 rad/s kini
   // benar di FPS RENDAH sekalipun (putaran penuh ~87 dtk wall-clock).
-  if(autoRot){autoRotateStep(sph,delta);updCam()}
+  if(autoRot && !__quality.low){autoRotateStep(sph,delta);updCam()}
   __screenT=elapsed; // siklus 264: waktu animasi layar = detik NYATA (bukan frame*0.02)
-  screenData.forEach(drawScreen);
+  if(!__quality.low || frame === 1)screenData.forEach(drawScreen);
   updateWalkers(delta);
 
   // Water cooler convos
@@ -2134,15 +2145,20 @@ function animate(){
       renderer: { getPixelRatio: () => renderer.getPixelRatio(), setPixelRatio: (v) => renderer.setPixelRatio(v) },
       sun,
       needsShadowUpdate: () => { renderer.shadowMap.needsUpdate = true; },
-      basePixelRatio: Math.min(window.devicePixelRatio || 1, 1.5),
+      basePixelRatio: __quality.pixelRatio,
+      allowShadows: __quality.shadows,
       glLost: () => __glLost, // siklus 172: konteks WebGL hilang → sampling jelata + chip "GPU terputus…"
     });
+    // Diagnostic counters are actual Three.js render results, not FPS estimates.
+    __perfWin.render={calls:renderer.info.render.calls,triangles:renderer.info.render.triangles,programs:renderer.info.programs.length};
+    __perfWin.low=__quality.low;
     window.__perf = __perfWin; // hook debug: ikut reassign tiap frame (fps/downgraded live, tidak stale)
   }
 }
 window.__perf=__perfWin;
-animate();
+rafId=requestAnimationFrame(animate);
 const onVis=()=>{ pageHidden=document.visibilityState==='hidden';
+  __perfWin=perfStep(__perfWin,performance.now(),frame,{discontinuity: true});
   if(!pageHidden){ // hidupkan lagi loop render saat kembali visible (anti double-loop)
     if(rafId){cancelAnimationFrame(rafId);rafId=null;}
     animate();

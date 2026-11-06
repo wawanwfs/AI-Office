@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { createPortal } from 'react-dom'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
@@ -108,7 +109,8 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
 
   return (
     <>
-      {open && (
+      {open && createPortal(
+        <div className="dashboard-overlay">
         <div ref={box} id="dashboard" className="panel wide" role="dialog" aria-label="Dashboard" aria-modal="true">
           <div className="ph">
             <div className="t">Dashboard<small>overview software house · refresh 10 dtk</small></div>
@@ -127,12 +129,12 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
             {stats && (
               <>
                 <div className="dash-grid">
-                  {card('Proyek', stats.projects_total ?? 0, '#4D9FFF')}
-                  {card('Proyek jalan', stats.projects_running ?? 0, '#F59E0B')}
-                  {card('Task', stats.tasks_total ?? 0, '#8B5CF6')}
-                  {card('Task jalan', stats.tasks_running ?? running, '#F59E0B')}
-                  {card('Selesai', stats.tasks_completed ?? (byStatus.done || 0), '#10E5A0')}
-                  {card('Agen', stats.agents_count ?? 0, '#4D9FFF')}
+                  {card('Proyek', stats.projects_total ?? (projects ? projects.length : '—'), '#4D9FFF')}
+                  {card('Proyek jalan', stats.projects_running ?? (projects ? projects.filter(p => p.status === 'running').length : '—'), '#F59E0B')}
+                  {card('Task', stats.tasks_total ?? (tasks ? tasks.length : '—'), '#8B5CF6')}
+                  {card('Task jalan', stats.tasks_running ?? (tasks ? running : '—'), '#F59E0B')}
+                  {card('Selesai', stats.tasks_completed ?? (tasks ? (byStatus.done || byStatus.completed || 0) : '—'), '#10E5A0')}
+                  {card('Agen task engine', stats.agents_count ?? '—', '#4D9FFF')}
                   {card('File dihasilkan', tasks ? totalFiles : '—', '#ADDBF2')}
                   {card('Sandbox', res ? (res.containers || []).filter(c => /wfs-sandbox|sbx/.test(c.name)).length : '—', '#60A5FA')}
                 </div>
@@ -177,10 +179,10 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
                         task engine tak tahu siapa yang rapat/makan siang; scene tahu.
                         null (scene absen) → tak dirender, teks task-engine di atas utuh. */}
                     {presence && (
-                      <div className="dash-presence" role="status" title="Kehadiran live agen di kantor 3D">
+                      <div className="dash-presence" role="status" title="Simulasi avatar kantor, bukan status eksekusi task">
                         <i style={{ background: '#10E5A0' }} aria-hidden="true" />
-                        <b aria-hidden="true">{presence.total} agen di kantor:</b> {presence.text}
-                        <span className="sr-only">Kehadiran live: {presence.total} agen di kantor — {presence.text}</span>
+                        <b aria-hidden="true">{presence.total} avatar simulasi:</b> {presence.text}
+                        <span className="sr-only">Simulasi: {presence.total} avatar di kantor — {presence.text}</span>
                       </div>
                     )}
                     {!res && <p>Data container tidak tersedia.</p>}
@@ -214,6 +216,7 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
             )}
           </div>
         </div>
+        </div>, document.body
       )}
       <button className="ibtn accent" onClick={() => setOpen(!open)} aria-expanded={open} aria-controls="dashboard" aria-label="Dashboard" title="Dashboard — overview proyek, task, agen, sandbox (shortcut D)">
         <span className="ic"><IconStats size={19} /><span className="sr-only">📊</span></span><span className="lb">Dashboard</span>

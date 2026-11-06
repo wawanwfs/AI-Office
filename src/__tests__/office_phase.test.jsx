@@ -93,7 +93,7 @@ describe('App→HUD fase kantor live (integrasi)', () => {
       return { ...mockSceneInstance, destroy: vi.fn() }
     })
     stubFetch()
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     await waitFor(() => expect(capturedCallbacks).toBeTruthy())
     await act(async () => { capturedCallbacks.onStatusUpdate('Deep work · semua online') })
     // nama aksesibel chip = seluruh teks (ikon + label) → query via teks label
@@ -110,7 +110,7 @@ describe('App→HUD fase kantor live (integrasi)', () => {
 
   it('scene belum lapor (callback tidak dipanggil) → chip fase TIDAK dirender (bukan klaim palsu)', async () => {
     stubFetch()
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     await new Promise(r => setTimeout(r, 0))
     expect(screen.queryByRole('status', { name: /Fase kantor|Shift|Fokus|Stand-up|Sprint|Istirahat|Tim |Persiapan|Deep work/ })).toBeNull()
     expect(document.querySelector('.hud .phase-chip')).toBeNull()

@@ -129,37 +129,32 @@ def main():
         time.sleep(2)
         ws = WS(tabs[0]["webSocketDebuggerUrl"])
         mid = [0]
-        _ws_lock = __import__("threading").Lock()
+        def on_exc(params):
+            d = params.get("exceptionDetails") or {}
+            res["errors"].append(str(d.get("exception", {}).get("description") or d.get("text")))
+
         def cmd(method, **params):
-            # Siklus 279 (kelas b1 200): deadline TOTAL 60 dtk — dulu loop 30×
-            # recv_text(timeout=10) = 300 dtk per reply; saat reload context
-            # destroyed reply tak pernah datang → probe menggantung >5 menit
-            # tanpa verdict (cron timeout 124). Kini TimeoutError jujur ≤60 dtk.
-            # Kini dgn lock: bg-thread intersep bisa menandai event saat reply
-            # dikirim — lock menjamin reply tak dimakan thread lain.
             mid[0] += 1
-            with _ws_lock:
-                ws.send(json.dumps({"id": mid[0], "method": method, "params": params}))
+            ws.send(json.dumps({"id": mid[0], "method": method, "params": params}))
             deadline = time.time() + 60  # siklus 279: deadline total kelas b1 200
             for _ in range(60):
                 remaining = deadline - time.time()
                 if remaining <= 0:
                     raise TimeoutError(f"no CDP reply dalam 60 dtk: {method}")
-                with _ws_lock:
-                    try:
-                        ws.sock.settimeout(min(10, remaining))
-                        r = json.loads(ws.recv_text())
-                    except (socket.timeout, TimeoutError):
-                        continue
-                    except (ConnectionError, OSError):
-                        continue
+                try:
+                    ws.sock.settimeout(min(10, remaining))
+                    r = json.loads(ws.recv_text())
+                except (socket.timeout, TimeoutError):
+                    continue
+                except (ConnectionError, OSError):
+                    continue
                 if not isinstance(r, dict): continue  # siklus 197: event malformed diabaikan
+                if r.get("method") == "Runtime.exceptionThrown":
+                    on_exc(r.get("params") or {})
                 if r.get("id") == mid[0]: return r
             raise TimeoutError(f"no CDP reply: {method}")
+
         def ev(expr, await_p=False):
-            # Siklus 279 (kelas b2/hardening): eval jalan di thread utama, tapi
-            # reply bisa dimakan bg-thread intersep (reg.continueRequest) — satu
-            # retry 30 dtk setelah reply hilang; kriteria inti tak berubah.
             try:
                 r = cmd("Runtime.evaluate", expression=expr, returnByValue=True,
                         awaitPromise=await_p)
@@ -173,81 +168,18 @@ def main():
             v = ((r.get("result") or {}).get("result") or {}).get("value")
             try: return json.loads(v) if isinstance(v, str) else v
             except Exception: return v
+
         cmd("Runtime.enable"); cmd("Page.enable")
-        # Siklus 279: FAKE_URL 404 sejak allowlist statis 214 (bukti live: GET
-        # /e2e-sw-fake.js = 404 — dulu 200; allowlist default-TOLAK hanya melayani
-        # jalur dist/ eksak). Register fake SW gagal senyap → banner TIDAK muncul
-        # → TES3 poll 20×1.5 dtk + cmd 30×10 dtk tanpa deadline = menggantung
-        # >5 menit (cron timeout 124, tanpa verdict). Fix tanpa membuka allowlist
-        # produksi: intersep FetchNetwork di CDP — Fetch.enable pattern KHUSUS
-        # *e2e-sw-fake.js (pattern "*" mem-pause SEMUA request termasuk navigasi
-        # dan membuat Page.reload reply hilang — terbukti live); tiap requestPaused
-        # fake dijawab body FAKE_JS (string di skrip; file temp dihapus pasca-run;
-        # produksi UTUH — zero allowlist change).
-        cmd("Fetch.enable", patterns=[{"urlPattern": "*e2e-sw-fake.js", "requestStage": "Request"}])
-
-        def _fetch_intercept_bg():
-            # Polling intersep: cmd() pemanggil membuang non-match id; event
-            # requestPaused dijawab di sini. Guard socket timeout 0.5 dtk.
-            # PENTING (pelajaran 279): thread ini BERSAING dgn thread utama pada
-            # SATU socket WS — dulu bg thread memanggil cmd() (settimeout) yang
-            # merusak timeout thread utama + JSONDecodeError "Expecting value"
-            # saat reply dimakan dua thread. Kini bg thread HANYA membaca frame
-            # dgn sinkronisasi lock — tidak pernah memanggil cmd().
-            while not _fetch_stop:
-                with _ws_lock:
-                    try:
-                        ws.sock.settimeout(0.5)
-                        raw = ws.recv_text()
-                    except Exception:
-                        continue
-                try:
-                    m = json.loads(raw)
-                except Exception:
-                    continue
-                if m.get("method") != "Fetch.requestPaused":
-                    continue
-                u = (m.get("params") or {}).get("request", {}).get("url", "")
-                mid2 = m.get("params", {}).get("requestId")
-                if u.endswith(FAKE_URL):
-                    body = base64.b64encode(FAKE_JS.encode()).decode()
-                    d = json.dumps({"id": _fetch_mid(), "method": "Fetch.fulfillRequest",
-                                    "params": {"requestId": mid2, "responseCode": 200,
-                                               "responseHeaders": [{"name": "Content-Type", "value": "application/javascript"}],
-                                               "body": body}}).encode()
-                else:
-                    d = json.dumps({"id": _fetch_mid(), "method": "Fetch.continueRequest",
-                                    "params": {"requestId": mid2}}).encode()
-                with _ws_lock:
-                    try:
-                        ws.send(d.decode())
-                    except Exception:
-                        pass
-
-        _fetch_stop = False
-        import threading as _th
-        _fetch_mid_ctr = [mid[0]]
-
-        def _fetch_mid():
-            _fetch_mid_ctr[0] += 1
-            return 100000 + _fetch_mid_ctr[0]
-
-        _fetch_th = _th.Thread(target=_fetch_intercept_bg, daemon=True)
-        _fetch_th.start()
-
-        def on_exc(params):
-            d = params.get("exceptionDetails") or {}
-            res["errors"].append(str(d.get("exception", {}).get("description") or d.get("text")))
-        cmd("Runtime.enable")  # events mengalir; recv di cmd() membuang non-match
         # Pemungut exception sederhana: interleave recv di antara cmd via polling
         def drain_events(sec):
             end = time.time() + sec
             ws.sock.settimeout(0.3)
             while time.time() < end:
                 try:
-                    m = json.loads(ws.recv_text())
-                    if m.get("method") == "Runtime.exceptionThrown":
-                        on_exc(m.get("params") or {})
+                    r = json.loads(ws.recv_text())
+                    if not isinstance(r, dict): continue
+                    if r.get("method") == "Runtime.exceptionThrown":
+                        on_exc(r.get("params") or {})
                 except (socket.timeout, OSError):
                     pass
                 except Exception:

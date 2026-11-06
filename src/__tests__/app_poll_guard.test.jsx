@@ -79,7 +79,7 @@ function stubDeferredTasks() {
 describe('App poll — guard rid (out-of-order & unmount)', () => {
   it('respons poll LAMA tiba belakangan → tidak menimpa status/toast poll BARU', async () => {
     const t = stubDeferredTasks()
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     // poll #1 (mount) tertahan — poll #2 disulut via event 'online' SEBELUM #1 tiba
     await waitFor(() => expect(t.count()).toBe(1))
     await act(async () => { window.dispatchEvent(new Event('online')) })
@@ -93,7 +93,7 @@ describe('App poll — guard rid (out-of-order & unmount)', () => {
 
   it('poll LAMA GAGAL tiba setelah poll BARU sukses → chip tak mundur ke offline/stale', async () => {
     const t = stubDeferredTasks()
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     await waitFor(() => expect(t.count()).toBe(1))
     await act(async () => { window.dispatchEvent(new Event('online')) })
     await waitFor(() => expect(t.count()).toBe(2))
@@ -119,7 +119,7 @@ describe('App poll — guard rid (out-of-order & unmount)', () => {
       return Promise.resolve({ ok: true, json: async () => ({}) })
     }))
     const errSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
-    const { unmount } = render(<App />)
+    const { unmount } = localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     await waitFor(() => expect(screen.getByText('1 jalan · 0 antri')).toBeTruthy())
     // poll #2 menggantung (tasks defer) → unmount → respons telat resolve
     hangTasks = true

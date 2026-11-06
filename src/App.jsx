@@ -59,6 +59,14 @@ import { triggerSnapshotDownload } from './scene/parts/snapshot_spec.js'
 const CsWidget = lazy(() => import('./components/CsWidget'))
 
 export default function App() {
+  const [viewMode, setViewMode] = useState(() => {
+    try { return localStorage.getItem('wfs_view_mode') === '3d' ? '3d' : '2d' } catch { return '2d' }
+  })
+  const switchView = (mode) => {
+    try { localStorage.setItem('wfs_view_mode', mode) } catch { /* private storage */ }
+    setSceneReady(false); setSceneErr(false); setOfficePhase(null); setInMeeting(false)
+    setSelectedAgent(null); setViewMode(mode)
+  }
   const canvasRef = useRef(null)
   const sceneRef = useRef(null)
   const toastTimer = useRef(null)
@@ -394,7 +402,7 @@ export default function App() {
   const [sceneErr, setSceneErr] = useState(false)
   // ---- scene 3D (lazy) ----
   useEffect(() => {
-    if (!canvasRef.current || sceneRef.current) return
+    if (viewMode !== '3d' || !canvasRef.current || sceneRef.current) return
     let cancelled = false
     import('./scene/OfficeScene').then(({ createOfficeScene }) => {
       if (cancelled) return
@@ -473,7 +481,7 @@ export default function App() {
       if (sceneRef.current) { sceneRef.current.destroy(); sceneRef.current = null }
       delete window.__wfsSceneSelect
     }
-  }, [flash])
+  }, [flash, viewMode])
 
   const handleTimeChange = useCallback((minutes) => {
     setTime(minutes)
@@ -762,15 +770,30 @@ export default function App() {
   return (
     <>
       <div ref={canvasRef} style={{ position: 'fixed', inset: 0, zIndex: 0 }} aria-hidden="true" />
-      {!sceneReady && !sceneErr && <div className="scene-loading" role="status">Memuat ruangan…</div>}
+      {viewMode === '3d' && !sceneReady && !sceneErr && <div className="scene-loading" role="status">Memuat ruangan…</div>}
       {sceneErr && <div className="scene-loading err" role="alert">Scene 3D tidak aktif — mode UI saja. Muat ulang halaman untuk mencoba lagi.</div>}
       <div className="vignette" aria-hidden="true" />
 
+      <div className="view-mode-switch" role="group" aria-label="Mode tampilan">
+        <button className="btn" onClick={() => switchView(viewMode === '3d' ? '2d' : '3d')}>
+          {viewMode === '3d' ? 'Gunakan mode ringan 2D' : 'Aktifkan kantor 3D'}
+        </button>
+      </div>
+      {viewMode === '2d' && <main className="light-workspace" aria-label="Ruang kerja ringan">
+        <h1>WFS Project · Ruang kerja</h1>
+        <p>Mode ringan 2D — data pekerjaan dari task engine, tanpa memuat ruangan 3D.</p>
+        <nav aria-label="Mulai bekerja">
+          <button className="btn" onClick={() => window.dispatchEvent(new CustomEvent('wfs-toggle-dashboard'))}>Lihat dashboard</button>
+          <button className="btn" onClick={() => dispatchTaskBoardEvent('wfs-open-task-board', { view: 'kanban' })}>Buka papan task</button>
+          <button className="btn" onClick={() => window.dispatchEvent(new CustomEvent('wfs-open-project-panel', { detail: {} }))}>Buka proyek</button>
+        </nav>
+        <p>Kantor 3D opsional: 26 avatar dan aktivitas ambient adalah simulasi, bukan bukti agen sedang menjalankan pekerjaan. Status task berasal dari backend.</p>
+      </main>}
       <SkipLink />
       <Header />
       <SysMeter />
       <Ticker conn={connBadge} />
-      <FloorNavigator currentFloor={currentFloor} onSelectFloor={handleFloorSelect} />
+      {viewMode === '3d' && <FloorNavigator currentFloor={currentFloor} onSelectFloor={handleFloorSelect} />}
 
       {inMeeting && <div className="meeting-badge" role="status"><div><i />Rapat berlangsung</div></div>}
 

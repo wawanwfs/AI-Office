@@ -104,13 +104,13 @@ const openDash = async () => {
 }
 
 describe('Dashboard — paragraf kehadiran LIVE (integrasi)', () => {
-  it('BUG UTAMA: semua agen rapat → paragraf "26 agen di kantor: 26 rapat" meski tanpa task jalan', async () => {
+  it('BUG UTAMA: semua agen rapat → paragraf "26 avatar simulasi: 26 rapat" meski tanpa task jalan', async () => {
     window.__agentData = Array.from({ length: 26 }, (_, i) => meeting('A' + i))
     mockApi() // tasks kosong → teks task-engine "semua idle"
     await openDash()
     const p = document.querySelector('.dash-presence')
     expect(p).toBeTruthy()
-    expect(p.textContent).toContain('26 agen di kantor:')
+    expect(p.textContent).toContain('26 avatar simulasi:')
     expect(p.textContent).toContain('26 rapat')
     // teks task-engine lama tetap tampil (dua sumber data berdampingan)
     expect(screen.getByText('semua idle')).toBeTruthy()
@@ -125,7 +125,7 @@ describe('Dashboard — paragraf kehadiran LIVE (integrasi)', () => {
     await openDash()
     const p = document.querySelector('.dash-presence')
     expect(p.getAttribute('role')).toBe('status')
-    expect(p.textContent).toContain('7 agen di kantor:')
+    expect(p.textContent).toContain('7 avatar simulasi:')
     expect(p.textContent).toContain('4 di meja · 2 rapat · 1 makan siang')
   })
 

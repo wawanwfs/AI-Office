@@ -67,7 +67,7 @@ async function renderAppWithScene() {
     return { ...mockSceneInstance, destroy: vi.fn() }
   })
   stubFetch()
-  render(<App />)
+  localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
   await waitFor(() => expect(cbs).toBeTruthy())
   return cbs
 }

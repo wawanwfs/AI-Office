@@ -322,6 +322,20 @@ async def call_llm(agent_id, sys_prompt, user_prompt):
 
 FILE_RE_SPLIT = "### FILE:"
 
+def _contained_file(root, relative):
+    """Resolve a relative file path inside root, never a lexical-prefix sibling."""
+    try:
+        relative = Path(relative)
+        if relative.is_absolute():
+            return None
+        base = Path(root).resolve()
+        target = (base / relative).resolve()
+        if target == base or not target.is_relative_to(base):
+            return None
+        return target
+    except (ValueError, OSError, RuntimeError, TypeError):
+        return None
+
 def write_json_files(task_id, output):
     """Parse JSON array [{path, code}] / {"files":[...]} → tulis file. Return list path atau None."""
     import json as _json
@@ -385,8 +399,8 @@ def write_json_files(task_id, output):
         # retry yang mengurus.
         if len(str(code).strip()) < 200:
             continue
-        fp = Path(REPO) / path
-        if not str(fp.resolve()).startswith(str(Path(REPO).resolve())):
+        fp = _contained_file(REPO, path)
+        if fp is None:
             continue
         fp.parent.mkdir(parents=True, exist_ok=True)
         fp.write_text(code)
@@ -398,7 +412,9 @@ def write_output_files(task_id, output):
     written = []
     if FILE_RE_SPLIT not in output:
         # simpan sebagai dokumen
-        p = Path(REPO)/"docs"/f"task_{task_id}_output.md"
+        p = _contained_file(REPO, f"docs/task_{task_id}_output.md")
+        if p is None:
+            return []
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(output)
         return [str(p.relative_to(REPO))]
@@ -420,8 +436,8 @@ def write_output_files(task_id, output):
             body = "\n".join(blines[1:-1]) if len(blines)>2 else body
         if not body.strip():
             continue
-        fp = Path(REPO)/path
-        if not str(fp.resolve()).startswith(str(Path(REPO).resolve())):
+        fp = _contained_file(REPO, path)
+        if fp is None:
             continue  # safety
         fp.parent.mkdir(parents=True, exist_ok=True)
         fp.write_text(body)
@@ -429,7 +445,9 @@ def write_output_files(task_id, output):
     if len(written)==1 and written[0] in ("app/nama_file.py",):
         written=[]
     if not written and FILE_RE_SPLIT in output:
-        p = Path(REPO)/"docs"/f"task_{task_id}_output.md"
+        p = _contained_file(REPO, f"docs/task_{task_id}_output.md")
+        if p is None:
+            return []
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(output)
         return [str(p.relative_to(REPO))]
@@ -611,7 +629,9 @@ async def _execute_task(tid, attempt_no=0):
             files = all_files
             result_out = plan_out
             if not files:
-                p = Path(REPO)/"docs"/f"task_{tid}_output.md"
+                p = _contained_file(REPO, f"docs/task_{tid}_output.md")
+                if p is None:
+                    raise PermissionError("Output path is outside repository")
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_text("no files produced")
                 files = [str(p.relative_to(REPO))]
@@ -659,16 +679,19 @@ async def _execute_task(tid, attempt_no=0):
 
 def sync_sandbox(agent_id: str, files: list) -> str:
     """Salin file hasil agent ke sandbox docker agent tsb (jalan). Return path atau ''."""
-    import shutil, subprocess
-    sb = os.path.expanduser(f"~/wfs-office/sandboxes/{agent_id}/workspace")
-    if not os.path.isdir(sb):
+    import shutil
+    if not isinstance(agent_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", agent_id):
+        return ""
+    sb = _contained_file(os.path.expanduser("~/wfs-office/sandboxes"),
+                         f"{agent_id}/workspace")
+    if sb is None or not sb.is_dir():
         return ""
     copied = []
     for f in files:
-        src = os.path.join(REPO, f)
-        if os.path.isfile(src):
-            dst = os.path.join(sb, f)
-            os.makedirs(os.path.dirname(dst) or sb, exist_ok=True)
+        src = _contained_file(REPO, f)
+        dst = _contained_file(sb, f)
+        if src is not None and dst is not None and src.is_file():
+            dst.parent.mkdir(parents=True, exist_ok=True)
             shutil.copy2(src, dst)
             copied.append(f)
     return f"{len(copied)} file ke sandbox {agent_id}"

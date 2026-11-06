@@ -74,7 +74,7 @@ describe('useDialogA11y', () => {
         </>
       )
     }
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     document.getElementById('t').focus()
     fireEvent.keyDown(document, { key: 'Escape' })
     await waitFor(() => expect(document.querySelector('[role="dialog"]')).toBeNull())

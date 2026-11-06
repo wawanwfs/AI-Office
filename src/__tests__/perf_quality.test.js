@@ -20,6 +20,31 @@ function mockSun(withMap = true) {
 }
 const BASE = { t0: 0, lastFrame: 0, fps: 0, downgraded: false, shadowLevel: 0, goodStreak: 0, basePR: 0 };
 
+describe('visible startup stalls', () => {
+  it('never recovers disabled startup shadows from healthy samples', () => {
+    const sun = mockSun(false); sun.castShadow = false;
+    let s = { ...BASE, t0: 1000, shadowLevel: 2 };
+    for (let i = 1; i <= 16; i++) s = perfStep(s, 1000 + i * 2000, i * 60, { sun, allowShadows: false });
+    expect(sun.castShadow).toBe(false);
+    expect(s.shadowLevel).toBe(2);
+  });
+  it('consecutive 7–20s visible frames degrade immediately instead of discarding samples', () => {
+    const r = mockRenderer(1.5); const sun = mockSun();
+    let s = { ...BASE, t0: 1000 };
+    let now = 1000;
+    for (const [i, gap] of [7000, 20000, 12000].entries()) {
+      now += gap;
+      s = perfStep(s, now, i + 1, { renderer: r, sun });
+      expect(s.stale).toBe(false);
+      expect(s.fps).toBeGreaterThan(0);
+      expect(s.shadowLevel).toBe(2);
+      expect(sun.castShadow).toBe(false);
+    }
+    expect(r.current).toBe(0.75);
+    expect(s.pixelRatio).toBe(0.75);
+  });
+});
+
 describe('perfStep — tangga adaptive quality', () => {
   it('sampling pertama hanya mencatat t0 (tanpa aksi)', () => {
     const r = mockRenderer(1.5); const sun = mockSun();
@@ -282,7 +307,7 @@ describe('perfStep — jendela sampling usang (siklus 148)', () => {
     let needsUpdate = 0;
     // t0=1000, kembali di 61000 (60 dtk tidur) dgn 3 frame saja → dulu fps≈0,05
     // memicu pixelRatio turun + bayangan mati. Kini: sampel usang diabaikan.
-    const s = perfStep({ ...BASE, t0: 1000 }, 61000, 3, { renderer: r, sun, needsShadowUpdate: () => needsUpdate++ });
+    const s = perfStep({ ...BASE, t0: 1000 }, 61000, 3, { renderer: r, sun, discontinuity: true, needsShadowUpdate: () => needsUpdate++ });
     expect(s.stale).toBe(true);
     expect(s.fps).toBe(0); // fps lama dipertahankan, tak dihitung dari jendela usang
     expect(r.current).toBe(1.5); // TIDAK turun
@@ -294,7 +319,7 @@ describe('perfStep — jendela sampling usang (siklus 148)', () => {
   it('jendela usang me-reset jendela & streak recovery, lalu sampel berikut normal kembali', () => {
     const r = mockRenderer(1.5); const sun = mockSun();
     let s = { ...BASE, t0: 1000, goodStreak: 3, shadowStreak: 5, downgraded: true, shadowLevel: 0 };
-    s = perfStep(s, 61000, 3, { renderer: r, sun });
+    s = perfStep(s, 61000, 3, { renderer: r, sun, discontinuity: true });
     expect(s.stale).toBe(true);
     expect(s.goodStreak).toBe(0);
     expect(s.shadowStreak).toBe(0);

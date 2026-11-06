@@ -84,18 +84,10 @@ export function perfStep(st, nowMs, frame, opts) {
     s.goodStreak = 0; s.shadowStreak = 0; s.recovering = false;
     return s;
   }
-  // Siklus 148: jendela sampling USANG (> 6 dtk) → sampel tak valid. Tab
-  // hidden / laptop sleep menghentikan rAF tetapi performance.now() terus
-  // berjalan: sampel pertama pasca-resume = beberapa frame ÷ menit → FPS
-  // palsu ≈0 yang dulu memicu tangga degradasi di GPU sehat begitu pengguna
-  // kembali (bayangan mati, resolusi turun) lalu pulih belasan detik
-  // kemudian. Jendela usang: fps TIDAK dihitung (nilai lama dibiarkan — chip
-  // menandai stale "mengukur ulang"), jendela & streak recovery di-reset,
-  // tangga degradasi dilewati sampel ini. Ambang 6 dtk = 3× sampleMs: tab
-  // hidden tak perlu proteksi (loop berhenti via pageHidden), tapi sleep OS
-  // / stall rAF > sampleMs nyata terjadi.
+  // Only an explicit visibility/sleep signal invalidates elapsed time. A slow
+  // visible render is real work, even when its window exceeds six seconds.
   const winMs = nowMs - s.t0;
-  if (winMs > sampleMs * 3) {
+  if (o.discontinuity || winMs < 0) {
     s.t0 = nowMs; s.lastFrame = frame; s.stale = true;
     s.goodStreak = 0; s.shadowStreak = 0; s.recovering = false;
     return s;
@@ -153,7 +145,7 @@ export function perfStep(st, nowMs, frame, opts) {
   // TIDAK otomatis (hindari lonjakan alokasi VRAM tanpa sepengetahuan pengguna).
   // Hysteresis: satu sampel sehat-gagal (fps < 28) mereset hitungan — cegah
   // on-off saat FPS "bernapas" di sekitar ambang.
-  if (s.shadowLevel && sun) {
+  if (s.shadowLevel && sun && o.allowShadows !== false) {
     if (s.fps >= 28) {
       s.shadowStreak = (s.shadowStreak || 0) + 1;
       if (s.shadowStreak >= 8 && s.fps >= 28) {
@@ -174,6 +166,7 @@ export function perfStep(st, nowMs, frame, opts) {
   } else if (s.shadowStreak) {
     s.shadowStreak = 0;
   }
+  if (r) s.pixelRatio = r.getPixelRatio();
   return s;
 }
 

@@ -277,9 +277,9 @@ def handle_api_request(handler, method, path):
             return True
 
         elif action == "terminal" and method == "POST":
-            cmd = body.get("command", "echo OK")
-            res = DockerSandboxManager.run_command(pid, cmd)
-            send_json(res)
+            # The public HTML UI token is not authorization for host execution.
+            send_json({"error": "Legacy terminal execution is disabled",
+                       "capability": "disabled"}, 410)
             return True
 
     # ── TASKS ──
@@ -330,12 +330,8 @@ def handle_api_request(handler, method, path):
         return True
 
     if api_path.startswith("tasks/") and api_path.endswith("/execute") and method == "POST":
-        tid = api_path.split("/")[1]
-        try:
-            res = TaskOrchestrator.execute_task(tid)
-            send_json(res)
-        except Exception as e:
-            send_json({"error": str(e)}, 500)
+        send_json({"error": "Legacy demo orchestrator execution is disabled",
+                   "capability": "disabled"}, 410)
         return True
 
     # ── AGENTS ──

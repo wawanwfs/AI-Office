@@ -85,7 +85,7 @@ const cancelBtn = () => screen.getByRole('button', { name: 'Batal' })
 describe('App doConfirm — guard rid pause/resume (siklus 137): respons POST LAMA telat tak menulis generasi BARU', () => {
   it('pause menggantung → dialog ditutup (Batal) → dibuka ulang → respons LAMA telat sukses TIDAK menutup dialog BARU, toast basi TIDAK muncul', async () => {
     const t = stubDeferredConfirm()
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     await waitFor(() => expect(screen.getByRole('button', { name: 'Jeda semua task' })).toBeTruthy())
 
     fireEvent.click(screen.getByRole('button', { name: 'Jeda semua task' }))
@@ -117,7 +117,7 @@ describe('App doConfirm — guard rid pause/resume (siklus 137): respons POST LA
 
   it('pause LAMA GAGAL telat (HTTP 503) setelah dialog dibuka ulang → toast 503 basi TIDAK muncul, dialog BARU tidak tertutup', async () => {
     const t = stubDeferredConfirm()
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     await waitFor(() => expect(screen.getByRole('button', { name: 'Jeda semua task' })).toBeTruthy())
 
     fireEvent.click(screen.getByRole('button', { name: 'Jeda semua task' }))
@@ -142,7 +142,7 @@ describe('App doConfirm — guard rid pause/resume (siklus 137): respons POST LA
 
   it('resume (paused) menggantung → tutup → buka ulang → POST resume LAMA telat sukses: dialog BARU utuh, toast "Dilanjutkan" basi TIDAK muncul', async () => {
     const t = stubDeferredConfirm({ paused: true })
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     await waitFor(() => expect(screen.getByRole('button', { name: 'Lanjutkan semua task' })).toBeTruthy())
 
     fireEvent.click(screen.getByRole('button', { name: 'Lanjutkan semua task' }))
@@ -168,7 +168,7 @@ describe('App doConfirm — guard rid pause/resume (siklus 137): respons POST LA
 
   it('submit menggantung → tutup tanpa resolve → buka ulang → tombol konfirmasi langsung aktif (busy basi di-reset saat buka)', async () => {
     const t = stubDeferredConfirm()
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     await waitFor(() => expect(screen.getByRole('button', { name: 'Jeda semua task' })).toBeTruthy())
 
     fireEvent.click(screen.getByRole('button', { name: 'Jeda semua task' }))
@@ -197,7 +197,7 @@ describe('App doConfirm — guard rid pause/resume (siklus 137): respons POST LA
 
   it('alur normal tanpa gangguan tidak berubah: konfirmasi resume sukses → dialog tertutup + toast + POST 1x', async () => {
     const t = stubDeferredConfirm({ paused: true })
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     await waitFor(() => expect(screen.getByRole('button', { name: 'Lanjutkan semua task' })).toBeTruthy())
 
     fireEvent.click(screen.getByRole('button', { name: 'Lanjutkan semua task' }))

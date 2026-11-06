@@ -99,7 +99,7 @@ export default function FloorNavigator({ onSelectFloor, currentFloor }) {
               className={`floor-nav-btn ${isActive ? 'active' : ''}`}
               onClick={() => handleFloorClick(fl)}
               title={`Level 0${fl.num}: ${fl.roleLabel}\nTim: ${fl.desc}`}
-              aria-label={`Fokus ke ${fl.roleLabel}`}
+              aria-label={`Fokus ke ${fl.roleLabel} · Lantai ${fl.num} · simulasi${occupancy ? ` · ${occupancy[fl.num]} avatar` : ''}`}
               aria-pressed={isActive}
               style={{
                 borderColor: isActive ? fl.color : undefined,

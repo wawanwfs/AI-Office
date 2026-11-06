@@ -55,14 +55,14 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); vi.restoreAllMocks() })
 describe('App — integrasi UI', () => {
   it('gateway OK → status "1 jalan · 1 antri" di HUD, scene loading selesai', async () => {
     stubFetch(TASKS)
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     expect(screen.getByText('Memuat ruangan…')).toBeTruthy()
     await waitFor(() => expect(screen.getByText('1 jalan · 1 antri')).toBeTruthy())
   })
 
   it('gateway offline → status "Gateway offline" kind=off', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => { throw new Error('down') }))
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     await waitFor(() => expect(screen.getAllByText('Gateway offline').length).toBeGreaterThan(0))
   })
 
@@ -80,7 +80,7 @@ describe('App — integrasi UI', () => {
       if (u.includes('tasks/paused')) return { ok: true, json: async () => ({ paused: false }) }
       return { ok: true, json: async () => ({ tasks }) }
     }))
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     await waitFor(() => expect(screen.getByText('1 jalan · 1 antri')).toBeTruthy(), { timeout: 3000 })
     // poll ulang via event 'online' yang memicu tick() (lebih cepat daripada interval 15 dtk)
     await act(async () => { window.dispatchEvent(new Event('online')) })
@@ -100,7 +100,7 @@ describe('App — integrasi UI', () => {
       if (u.includes('tasks/paused')) return { ok: true, json: async () => ({ paused: false }) }
       return { ok: true, json: async () => ({ tasks }) }
     }))
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     await waitFor(() => expect(screen.getByText('1 jalan · 1 antri')).toBeTruthy(), { timeout: 3000 })
     await act(async () => { window.dispatchEvent(new Event('online')) })
     await waitFor(() => expect(screen.getByText(/Task #2 gagal: Fix UI/)).toBeTruthy(), { timeout: 3000 })
@@ -109,7 +109,7 @@ describe('App — integrasi UI', () => {
 
   it('shortcut "l" membuka Log Aktivitas, Escape menutup', () => {
     stubFetch([])
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     expect(screen.queryByRole('dialog', { name: 'Log aktivitas' })).toBeNull()
     fireEvent.keyDown(window, { key: 'l' })
     expect(screen.getByRole('dialog', { name: 'Log aktivitas' })).toBeTruthy()
@@ -119,7 +119,7 @@ describe('App — integrasi UI', () => {
 
   it('shortcut "h" membuka panduan (OverlayHelp)', () => {
     stubFetch([])
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     expect(screen.queryByText(/Panduan/i)).toBeNull()
     fireEvent.keyDown(window, { key: 'h' })
     expect(screen.getByRole('dialog')).toBeTruthy()
@@ -129,7 +129,7 @@ describe('App — integrasi UI', () => {
     // Siklus 190: SettingsModal lazy + mount-on-demand → konten muncul ASYNC
     // (chunk diunduh saat pertama dibuka); pakai waitFor, bukan asersi langsung.
     stubFetch([])
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     expect(screen.queryByText('Pengaturan Kantor 3D')).toBeNull()
     fireEvent.keyDown(window, { key: 'o' })
     await waitFor(() => expect(screen.getByText('Pengaturan Kantor 3D')).toBeTruthy())
@@ -146,7 +146,7 @@ describe('App — integrasi UI', () => {
 
   it('klik kanan (contextmenu) pada tombol Suara membuka modal pengaturan', async () => {
     stubFetch([])
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     expect(screen.queryByText('Pengaturan Kantor 3D')).toBeNull()
     const muteBtn = screen.getByRole('button', { name: 'Bisukan suara' })
     fireEvent.contextMenu(muteBtn)
@@ -155,7 +155,7 @@ describe('App — integrasi UI', () => {
 
   it('shortcut "m" toggle mute → tombol dock berubah jadi "Suara Mati"', () => {
     stubFetch([])
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     expect(screen.getByRole('button', { name: 'Bisukan suara' })).toBeTruthy()
     fireEvent.keyDown(window, { key: 'm' })
     expect(screen.getByRole('button', { name: 'Nyalakan suara' })).toBeTruthy()
@@ -163,7 +163,7 @@ describe('App — integrasi UI', () => {
 
   it('shortcut "t" toggle Papan Task (TaskBoard) membuka dan menutup panel', async () => {
     stubFetch([])
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     expect(screen.queryByRole('dialog', { name: 'Papan task' })).toBeNull()
     fireEvent.keyDown(window, { key: 't' })
     await waitFor(() => expect(screen.getByRole('dialog', { name: 'Papan task' })).toBeTruthy())
@@ -174,7 +174,7 @@ describe('App — integrasi UI', () => {
 
   it('shortcut "p" toggle Papan Proyek (ProjectPanel) membuka dan menutup panel', async () => {
     stubFetch([])
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     expect(screen.queryByRole('dialog', { name: 'Proyek dibantuin.com' })).toBeNull()
     fireEvent.keyDown(window, { key: 'p' })
     await waitFor(() => expect(screen.getByRole('dialog', { name: 'Proyek dibantuin.com' })).toBeTruthy())
@@ -185,7 +185,7 @@ describe('App — integrasi UI', () => {
 
   it('shortcut "a" toggle Ambience hum kantor dan Shift+"A" siklus volume preset', async () => {
     stubFetch([])
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     const ambBtn = screen.getByRole('button', { name: /Ambience hum kantor/i })
     expect(ambBtn.getAttribute('aria-pressed')).toBe('false')
 
@@ -204,14 +204,14 @@ describe('App — integrasi UI', () => {
 
   it('judul tab dinamis mengikuti status gateway', async () => {
     stubFetch([])
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     await waitFor(() => expect(document.title).toBe('0 jalan · 0 antri — WFS Project HQ'))
   })
 
   it('log aktivitas: clear → localStorage "wfs_activity" dihapus', async () => {
     localStorage.store.wfs_activity = JSON.stringify([{ t: '10:00', id: 1, status: 'done', label: 'selesai', title: 'x' }])
     stubFetch([])
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     fireEvent.keyDown(window, { key: 'l' })
     await waitFor(() => expect(screen.getByText(/#1/)).toBeTruthy())
     fireEvent.click(screen.getByText('Bersihkan'))
@@ -221,7 +221,7 @@ describe('App — integrasi UI', () => {
   it('mode neon persist di localStorage: tombol dock Neon langsung aktif (aria-pressed=true & class on)', () => {
     localStorage.store.wfs_neon = '1'
     stubFetch([])
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     const btn = screen.getByLabelText('Lampu neon')
     expect(btn.getAttribute('aria-pressed')).toBe('true')
     expect(btn.className).toContain('on')
@@ -242,7 +242,7 @@ describe('App — integrasi UI', () => {
       destroy: vi.fn(),
     }))
     stubFetch([])
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     const btn = screen.getByLabelText('Lampu neon')
     expect(btn.getAttribute('aria-pressed')).toBe('false')
     await waitFor(() => expect(screen.queryByText('Memuat ruangan…')).toBeNull())
@@ -254,7 +254,7 @@ describe('App — integrasi UI', () => {
   it('audio muted persist di localStorage: tombol dock Suara langsung aktif dalam status bisu', () => {
     localStorage.store.wfs_audio_muted = '1'
     stubFetch([])
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     const btn = screen.getByRole('button', { name: 'Nyalakan suara' })
     expect(btn.getAttribute('aria-pressed')).toBe('true')
     expect(screen.getByText('Suara Mati')).toBeTruthy()
@@ -279,7 +279,7 @@ describe('App — integrasi UI', () => {
       }
     })
     stubFetch([])
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     await waitFor(() => expect(capturedCallbacks).toBeTruthy())
 
     // Simulasi klik agen di scene 3D
@@ -319,7 +319,7 @@ describe('App — integrasi UI', () => {
       }
     })
     stubFetch([])
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     await waitFor(() => expect(capturedCallbacks).toBeTruthy())
 
     // Sebelum inspeksi: HUD/Header/Ticker tidak inert
@@ -364,7 +364,7 @@ describe('App — integrasi UI', () => {
       destroy: vi.fn(),
     }))
     stubFetch([])
-    render(<App />)
+    localStorage.setItem('wfs_view_mode', '3d'); render(<App />)
     await waitFor(() => expect(screen.queryByText('Memuat ruangan…')).toBeNull())
 
     const btnL1 = screen.getByText('L1 · Ops & AI').closest('button')
