@@ -18,6 +18,16 @@ transport salinan e2e_lazy_modals.py — fixed-delay dari Python):
         efek ke pengguna nyata; sw.js produksi TIDAK disentuh).
 Exit non-zero bila ada bukti yang gagal.
 """
+# Siklus 279 (census lanjutan kelas b1 siklus 200 — probe ini TERTINGGAL dari
+# sensus 14-probe): dulu `main()` telanjang + `cmd()` tanpa deadline total —
+# reply CDP hilang saat reload (context destroyed) membuat recv_text retry
+# 30×10 dtk = 300 dtk PER evaluate; TES3 (20 poll × 1.5 dtk + klik tiap poll)
+# bisa menggantung >5 menit → cron timeout 124 tanpa verdict (terukur live 3×
+# beruntun di siklus ini: PROG berhenti di tes2, exit=124 di 170–280 dtk).
+# Fix kelas b1: deadline TOTAL 60 dtk di cmd() — `recv_text` dipanggil dengan
+# timeout sisa (`min(10, remaining)`), `remaining <= 0` → TimeoutError jujur
+# (ditangkap jalur poll TES3 yang sudah try/except — kriteria inti TIDAK
+# berubah); verdict dipropagasi `sys.exit(main())`.
 import base64, json, os, shutil, socket, struct, subprocess, sys, time, urllib.request
 from urllib.parse import urlparse
 
@@ -120,9 +130,18 @@ def main():
         ws = WS(tabs[0]["webSocketDebuggerUrl"])
         mid = [0]
         def cmd(method, **params):
+            # Siklus 279 (kelas b1 200): deadline TOTAL 60 dtk — dulu loop 30×
+            # recv_text(timeout=10) = 300 dtk per reply; saat reload context
+            # destroyed reply tak pernah datang → probe menggantung >5 menit
+            # tanpa verdict (cron timeout 124). Kini TimeoutError jujur ≤60 dtk.
             mid[0] += 1
             ws.send(json.dumps({"id": mid[0], "method": method, "params": params}))
+            deadline = time.time() + 60  # siklus 279: deadline total kelas b1 200
             for _ in range(30):
+                remaining = deadline - time.time()
+                if remaining <= 0:
+                    raise TimeoutError(f"no CDP reply dalam 60 dtk: {method}")
+                ws.sock.settimeout(min(10, remaining))
                 try:
                     r = json.loads(ws.recv_text())
                     if not isinstance(r, dict): continue  # siklus 197: event malformed diabaikan
@@ -296,7 +315,7 @@ def main():
                  "tes2": res["tests"].get("tes2_banner"),
                  "tes5": res["tests"].get("tes5_hooks_after"),
                  "errors": res["errors"][:3]}, ensure_ascii=False), flush=True)
-        sys.exit(0 if verdict else 1)
+        return 0 if verdict else 1
     finally:
         try: p.kill()
         except Exception: pass
@@ -305,4 +324,4 @@ def main():
         except Exception: pass
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
