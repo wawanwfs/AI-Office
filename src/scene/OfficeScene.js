@@ -1742,7 +1742,16 @@ function animate(){
   rafId=requestAnimationFrame(animate);
   if(!renderer)return; // UI-only mode (tanpa WebGL)
   timer.update(); // sekali per frame → getDelta/getElapsed konsisten sepanjang frame
-  const delta=Math.min(timer.getDelta(),.05);
+  // Siklus 274: delta WAKTU-NYATA tanpa clamp 0.05 — dulu di GPU lambat
+  // (SwiftShader ~0.3 FPS) clamp membuat seluruh dunia bergerak 0.015× waktu
+  // nyata: walker 1.6 u/s terukur 0.023 u/s, perjalanan lunch >60 dtk tak pernah
+  // tiba (e2e_floor_occupancy FAIL permanen), auto-rotate 87 dtk → ~3.6 jam.
+  // Kontrak fisika "≤0.05 dtk per langkah" tetap dijaga via SUB-STEP di dalam
+  // stepMove (motion_math.js STEP_MAX) — bukan dgn membuang waktu nyata.
+  // Cap 4 dtk = guard anti-hang bila tab dibekukan berminit (getDelta raksasa
+  // → ribuan sub-step dalam satu frame saat resume).
+  const rawDelta=timer.getDelta();
+  const delta=Math.min(Number.isFinite(rawDelta)?rawDelta:.05,4);
   deltaFrame=delta;
   relayoutDelta += delta;
   __dustAcc += delta; // siklus 264: akumulasi waktu nyata antar tick dust (pola relayoutDelta 251/263)
@@ -1781,6 +1790,8 @@ function animate(){
   // Siklus 259: auto-rotate memakai delta WAKTU-NYATA antar frame (rad/s × dt)
   // — dulu 0.0012 rad per FRAME: di SwiftShader 0.4 FPS putaran ~3.6 jam
   // (praktis beku), di 144 Hz 2.4× terlalu cepat (detail di kamera_focus.js).
+  // Siklus 274: delta tak lagi di-clamp 0.05 — laju kontrak 0.072 rad/s kini
+  // benar di FPS RENDAH sekalipun (putaran penuh ~87 dtk wall-clock).
   if(autoRot){autoRotateStep(sph,delta);updCam()}
   __screenT=elapsed; // siklus 264: waktu animasi layar = detik NYATA (bukan frame*0.02)
   screenData.forEach(drawScreen);

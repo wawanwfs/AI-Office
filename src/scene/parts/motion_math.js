@@ -6,6 +6,9 @@
 export const BOUNDS = { xMin: -15.9, xMax: 15.9, zMin: -12.4, zMax: 12.4 };
 
 export const ARRIVE = 0.2;
+// Siklus 274: langkah fisika maksimum per panggilan stepMove (detik). Delta
+// frame di atas ini dipecah jadi beberapa sub-langkah di dalam stepMove.
+export const STEP_MAX = 0.05;
 
 // Selisih sudut terpendek (wrap ke [-π, π]) — dipakai interpolasi rotasi halus
 // walker (slerp/lerp sudut terpendek) supaya tidak berputar memutar.
@@ -33,7 +36,28 @@ export function dist2(a, b) {
 // terpenuhi DAN total jarak tempuh tetap proporsional delta penuh (dulu
 // pemanggil OfficeScene meng-clamp 0.05 → jarak tempuh 0.3 FPS kacau).
 export function stepMove(pos, target, speed, delta) {
-// Overload lama dipertahankan: delta ≤ STEP_MAX → perilaku & return identik.
+  // Overload lama dipertahankan: delta ≤ STEP_MAX → perilaku & return identik.
+  // Sub-step: fisika per langkah ≤ STEP_MAX detik (kontrak motion.js 20+);
+  // langkah linier & stateless → jumlah sub-step hanya membagi, total identik.
+  // Guard: delta non-finite (NaN/±Infinity) → jalur lama (dt→0, no-op aman,
+  // tanpa loop); delta raksasa → sub-step di-cap 600 (dt proporsional) supaya
+  // selalu terminasi (delta 4 dtk dari OfficeScene = hanya 80 sub-langkah).
+  const steps = Number.isFinite(delta)
+    ? Math.min(Math.max(1, Math.ceil(delta / STEP_MAX)), 600)
+    : 1;
+  if (steps > 1) {
+    const dt = delta / steps;
+    let cur = pos, res = null;
+    for (let i = 0; i < steps; i++) {
+      res = stepMove(cur, target, speed, dt);
+      // Tiba di sub-langkah mana pun → SELESAI: sisa waktu dibuang (bukan
+      // dibawa ke tujuan berikutnya — kontrak arrival per-target, dgn sisa
+      // 9.8 dtk angka absur; dulu tanpa ini sisa delta bocor ke arrived=true).
+      if (res.arrived) break;
+      cur = { x: res.x, z: res.z, rot: res.rot };
+    }
+    return { x: res.x, z: res.z, rot: res.rot, arrived: res.arrived, clamped: res.clamped };
+  }
   const { dx, dz, d } = dist2(pos, target);
   // Guard degenerat: jarak non-finite (NaN/±Infinity, mis. target korup) TIDAK
   // boleh menulari posisi walker (nx = dx/d → NaN → posisi jadi NaN & agent hilang).

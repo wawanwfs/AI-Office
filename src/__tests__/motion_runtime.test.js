@@ -220,11 +220,11 @@ describe('createMotion — walking_back', () => {
     ad.walker.children[2].rotation.x = 0.4;
     ad.walker.position.y = 0.03;
     const update = createMotion(mkCtx([ad]));
-    update(0.2); update(0.2); // langkah 0.32 → sisa 0.08 < ARRIVE → duduk
+    update(0.2); update(0.2); // Siklus 274: sub-langkah 4×0.05 → tiba saat d=0.16<ARRIVE di update PERTAMA (dulu: terdeteksi baru di update kedua)
     expect(ad.state).toBe('sitting');
     expect(ad.walker.visible).toBe(false);
     expect(ad.sittingChar.visible).toBe(true);
-    expect(ad.timer).toBe(SIT_TIMER_MIN);
+    expect(ad.timer).toBe(SIT_TIMER_MIN - 0.2); // timer terisi di update-1, ter-dekremen sekali dgn delta update-2
     expect(ad.walker.children[0].position.z).toBe(0);
     expect(ad.walker.children[0].rotation.x).toBe(0);
     expect(ad.walker.children[2].rotation.x).toBe(0);
