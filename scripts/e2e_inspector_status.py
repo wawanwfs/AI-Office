@@ -191,9 +191,12 @@ def main():
               f"meeting_window={chip_meeting!r} meet={meet} sel={sel}")
         ok = (agents >= 26 and str(chip_initial).startswith("CHIP:") and str(chip_meeting).startswith("CHIP:"))
         print("E2E_INSPECTOR: OK" if ok else "E2E_INSPECTOR: FAIL")
+        # Siklus 278: exit code JUJUR (kelas 276/277 — dulu FAIL dicetak tapi
+        # sys.exit(None) == 0 → cron membaca FAIL sebagai sukses).
+        return 0 if ok else 1
     finally:
         p.terminate()
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

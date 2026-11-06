@@ -219,6 +219,9 @@ def main():
               and chip_initial is not None and chip_initial[0] >= 3 and chip_initial[1] == 4
               and chip_final is not None and chip_final[2] in ("makan siang", "di rapat"))
         print("E2E_TEAMPRES: OK" if ok else "E2E_TEAMPRES: FAIL")
+        # Siklus 278: exit code JUJUR (kelas 276/277 — dulu FAIL dicetak tapi
+        # sys.exit(None) == 0 → cron membaca FAIL sebagai sukses).
+        return 0 if ok else 1
     finally:
         p.terminate()
         if xv:
@@ -226,4 +229,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

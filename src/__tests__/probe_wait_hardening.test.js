@@ -205,4 +205,18 @@ describe('siklus 200 — kriteria inti probe TIDAK berubah (spot-check per kelom
     expect(w).toContain('sys.exit(main())')
     expect(w).not.toMatch(/^\s*main\(\)\s*$/m)
   })
+
+  it('siklus 278 — keluarga presence (dashboard/team/inspector_status): exit code jujur (census lanjutan 276/277)', () => {
+    // Census exit-tak-jujur: 3 probe presence SISANYA masih `main()` telanjang —
+    // FAIL dicetak tapi sys.exit(None) == 0 → cron membaca FAIL sebagai sukses.
+    // Kelas persis bug 276/277; inilah sebab FAIL-by-jam 276 tak pernah
+    // tercatat merah berminggu-minggu (dashboard_presence & team_presence
+    // dijadwalkan cron dan "hijau" palsu saat jam lunch pra-fix 276).
+    for (const n of ['e2e_dashboard_presence', 'e2e_team_presence', 'e2e_inspector_status']) {
+      const w = src[n]
+      expect(w, n).toContain('return 0 if ok else 1')
+      expect(w, n).toContain('sys.exit(main())')
+      expect(w, n).not.toMatch(/^\s*main\(\)\s*$/m)
+    }
+  })
 })

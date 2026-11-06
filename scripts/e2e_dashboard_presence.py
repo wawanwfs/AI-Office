@@ -212,6 +212,10 @@ def main():
               and para_final is not None and para_final[0] >= 26
               and para_final[1] in ("makan siang", "berjalan", "rapat"))
         print("E2E_DASHPRES: OK" if ok else "E2E_DASHPRES: FAIL")
+        # Siklus 278: exit code JUJUR (kelas 276/277 — dulu FAIL dicetak tapi
+        # sys.exit(None) == 0 → cron membaca FAIL sebagai sukses; pola ini yang
+        # membuat FAIL-by-jam 276 tak pernah tercatat merah berminggu-minggu).
+        return 0 if ok else 1
     finally:
         p.terminate()
         if xv:
@@ -219,4 +223,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
