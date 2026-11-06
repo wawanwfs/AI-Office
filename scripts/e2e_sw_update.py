@@ -156,6 +156,44 @@ def main():
             try: return json.loads(v) if isinstance(v, str) else v
             except Exception: return v
         cmd("Runtime.enable"); cmd("Page.enable")
+        # Siklus 279: FAKE_URL 404 sejak allowlist statis 214 (bukti live: GET
+        # /e2e-sw-fake.js = 404 — dulu 200; allowlist default-TOLAK hanya melayani
+        # jalur dist/ eksak). Register fake SW gagal senyap → banner TIDAK muncul
+        # → TES3 poll 20×1.5 dtk + cmd 30×10 dtk tanpa deadline = menggantung
+        # >5 menit (cron timeout 124, tanpa verdict). Fix tanpa membuka allowlist
+        # produksi: intersep FetchNetwork di CDP — Fetch.enable (patterns *)
+        # lalu tiap Fetch.requestPaused bawaan URL /e2e-sw-fake.js dijawab body
+        # FAKE_JS (path file statis repo, dihapus pasca-run; produksi UTUH).
+        cmd("Fetch.enable", patterns=[{"urlPattern": "*", "requestStage": "Request"}])
+
+        def _fetch_intercept_bg():
+            # Polling intersep: cmd() pemanggil membuang non-match id; event
+            # requestPaused dijawab di sini. Guard socket timeout 2 dtk.
+            ws.sock.settimeout(0.5)
+            while not _fetch_stop:
+                try:
+                    m = json.loads(ws.recv_text())
+                except Exception:
+                    continue
+                if m.get("method") != "Fetch.requestPaused":
+                    continue
+                u = (m.get("params") or {}).get("request", {}).get("url", "")
+                mid2 = m.get("params", {}).get("requestId")
+                if u.endswith(FAKE_URL):
+                    body = base64.b64encode(FAKE_JS.encode()).decode()
+                    cmd("Fetch.fulfillRequest", requestId=mid2, responseCode=200,
+                        responseHeaders=[{"name": "Content-Type", "value": "application/javascript"}],
+                        body=body)
+                else:
+                    try:
+                        cmd("Fetch.continueRequest", requestId=mid2)
+                    except Exception:
+                        pass
+
+        _fetch_stop = False
+        import threading as _th
+        _fetch_th = _th.Thread(target=_fetch_intercept_bg, daemon=True)
+        _fetch_th.start()
 
         def on_exc(params):
             d = params.get("exceptionDetails") or {}
@@ -322,6 +360,5 @@ def main():
         shutil.rmtree(PROFILE, ignore_errors=True)
         try: os.remove(FAKE_SRC)
         except Exception: pass
-
 if __name__ == "__main__":
     sys.exit(main())
