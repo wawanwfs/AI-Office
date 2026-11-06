@@ -276,7 +276,13 @@ def main():
             and not (t1 or {}).get("waiting") and not (t1 or {}).get("banner")
 
         # TES1b: reload → halaman terkontrol (prompt-mode: kontrol efektif pasca reload)
+        # Siklus 279 (bukti diagnostik /tmp/swdiag10): PASCA-NAVIGASI Runtime domain
+        # di-reset — Runtime.evaluate TANPA Runtime.enable ulang tak pernah dibalas
+        # (try1/try2 None; setelah enable ulang → reply normal). Dulu ini penyebab
+        # penggantungan TES2/TES3 bila reply hilang juga. Kontrak: Page.reload +
+        # Runtime.enable ulang setiap kali setelah navigasi.
         cmd("Page.reload")
+        cmd("Runtime.enable")
         time.sleep(15)
         t1b = ev("JSON.stringify({ controlled: !!navigator.serviceWorker.controller,"
                  "  banner: !!document.querySelector('[data-testid=\"sw-update-banner\"]') })")
