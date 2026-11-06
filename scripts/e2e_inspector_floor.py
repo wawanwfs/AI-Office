@@ -173,21 +173,38 @@ def main():
         # window lunch 12:00–13:00 → shiftStep langsung lunch_start → agen-0
         # ikut sendToLunch sebelum seleksi → badge awal/skip-salah. setTime(480)
         # = jalur resmi slider HUD (updateTime → applySimTime + lighting).
-        ev("window.__setTime(480)")
-        # Tunggu transisi non-lunch selesai (endLunch/working_am memulangkan
-        # walker lunch ke meja) — paritas fix e2e_floor_occupancy siklus 276.
-        for _ in range(30):
-            time.sleep(1.5)
-            st = ev("(()=>{const d=window.__agentData||[];"
-                    "const ln=d.filter(e=>e.lunch).length;"
-                    "const lk=d.filter(e=>e.state==='walking_out'&&e.lunch).length;"
-                    "return JSON.stringify({lunch:ln,lunchWalk:lk})})()").get("value", "{}")
+        # Kontrak ketat (pelajaran 276, paritas e2e_floor_occupancy): bacaan
+        # ev() = {} saat Runtime.evaluate timeout → guard "0" MENYALA PALSU
+        # pada bacaan GAGAL → setTime diulang sampai __dbg().t terkonfirmasi
+        # masuk jam kerja, dan settled hanya bila kunci benar-benar ada.
+        def sim_state():
+            raw = ev("(()=>{const d=window.__agentData||[],dbg=window.__dbg?window.__dbg():null;"
+                     "if(!dbg)return 'NO_DBG';"
+                     "return JSON.stringify({t:dbg.t,lunch:d.filter(e=>e.lunch).length,"
+                     "lunchWalk:d.filter(e=>e.state==='walking_out'&&e.lunch).length})})()"
+                     ).get("value")
+            if not isinstance(raw, str) or not raw.startswith("{"):
+                return None            # bacaan GAGAL — bukan "settled"
             try:
-                s = json.loads(st)
-                if s.get("lunch", 0) == 0 and s.get("lunchWalk", 0) == 0:
-                    break
+                s = json.loads(raw)
             except Exception:
-                pass
+                return None
+            if not isinstance(s, dict) or "lunch" not in s or "lunchWalk" not in s or "t" not in s:
+                return None
+            return s
+
+        for _ in range(12):
+            ev("window.__setTime(480)")
+            time.sleep(1.5)
+            s = sim_state()
+            if s and isinstance(s.get("t"), (int, float)) and 480 <= s["t"] < 720:
+                break
+        # Tunggu walker lunch benar-benar pulang (endLunch/working_am).
+        for _ in range(30):
+            s = sim_state()
+            if s and s["lunch"] == 0 and s["lunchWalk"] == 0:
+                break
+            time.sleep(1.5)
         time.sleep(1)
 
         # agen meja L1: indeks 0 (BANTUIN AI, meja z=-3). Jam simulasi pagi (480 = 08:00,

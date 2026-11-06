@@ -165,22 +165,43 @@ def main():
         # L3>=base+3 mustahil (akar FAIL deterministik-by-jam, bukan regresi
         # produk). setTime(480) = jalur resmi slider HUD (updateTime →
         # applySimTime + lighting → sim lanjut autoplay dari 08:00).
-        ev("window.__setTime(480)")
-        # Tunggu transisi NON-lunch selesai: tak ada agen berlabel lunch &
-        # tak ada walker lunch yang masih menyeberang (state walking_out
-        # dgn lunch=false dipulangkan endLunch/working_am ke meja).
-        for _ in range(30):
-            time.sleep(1.5)
-            st = ev("(()=>{const d=window.__agentData||[];"
-                    "const ln=d.filter(e=>e.lunch).length;"
-                    "const lk=d.filter(e=>e.state==='walking_out'&&e.lunch).length;"
-                    "return JSON.stringify({lunch:ln,lunchWalk:lk})})()").get("value", "{}")
+        #
+        # Kontrak tunggu yang KETAT (pelajaran penting siklus 276): di bawah
+        # beban SwiftShader `Runtime.evaluate` bisa timeout → ev() = {} dan
+        # json.loads("{}") menghasilkan {lunch:0,lunchWalk:0} → guard lama
+        # "break bila 0" MENYALA PALSU pada bacaan GAGAL (terbukti live: probe
+        # diagnostik semua trace = {}). Karena itu: (1) setTime diulang sampai
+        # TERKONFIRMASI lewat __dbg().t masuk jam kerja; (2) settled hanya bila
+        # kedua kunci BENAR-BENAR ada di payload.
+        def sim_state():
+            raw = ev("(()=>{const d=window.__agentData||[],dbg=window.__dbg?window.__dbg():null;"
+                     "if(!dbg)return 'NO_DBG';"
+                     "return JSON.stringify({t:dbg.t,lunch:d.filter(e=>e.lunch).length,"
+                     "lunchWalk:d.filter(e=>e.state==='walking_out'&&e.lunch).length})})()"
+                     ).get("value")
+            if not isinstance(raw, str) or not raw.startswith("{"):
+                return None            # bacaan GAGAL — bukan "settled"
             try:
-                s = json.loads(st)
-                if s.get("lunch", 0) == 0 and s.get("lunchWalk", 0) == 0:
-                    break
+                s = json.loads(raw)
             except Exception:
-                pass
+                return None
+            if not isinstance(s, dict) or "lunch" not in s or "lunchWalk" not in s or "t" not in s:
+                return None
+            return s
+
+        for _ in range(12):
+            ev("window.__setTime(480)")
+            time.sleep(1.5)
+            s = sim_state()
+            if s and isinstance(s.get("t"), (int, float)) and 480 <= s["t"] < 720:
+                break
+        # Tunggu walker lunch benar-benar pulang (endLunch/working_am): kedua
+        # kunci nol DAN bacaan valid.
+        for _ in range(30):
+            s = sim_state()
+            if s and s["lunch"] == 0 and s["lunchWalk"] == 0:
+                break
+            time.sleep(1.5)
         time.sleep(1)
 
         # Baca badge okupansi tiap tombol lantai dari DOM

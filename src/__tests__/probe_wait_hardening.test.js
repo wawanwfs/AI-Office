@@ -142,7 +142,12 @@ describe('siklus 200 — kriteria inti probe TIDAK berubah (spot-check per kelom
       const w = src[n]
       expect(w, n).toContain('NORMALISASI JAM SIM')
       expect(w, n).toContain('window.__setTime(480)')
-      expect(w, n).toContain("s.get(\"lunch\", 0) == 0 and s.get(\"lunchWalk\", 0) == 0")
+      // kontrak ketat: guard hanya pada bacaan VALID (kedua kunci ada) —
+      // bacaan ev()=={} (Runtime.evaluate timeout di SwiftShader) TIDAK boleh
+      // dianggap "settled" (pelajaran 276: false-break membuat baseline lama)
+      expect(w, n).toContain('if s and s["lunch"] == 0 and s["lunchWalk"] == 0')
+      expect(w, n).toContain('480 <= s["t"] < 720')
+      expect(w, n).not.toContain('s.get("lunch", 0) == 0')
       // urutan: normalisasi harus muncul sebelum pemakaian baseline/seleksi
       expect(w.indexOf('NORMALISASI JAM SIM'), n)
         .toBeGreaterThan(-1)
