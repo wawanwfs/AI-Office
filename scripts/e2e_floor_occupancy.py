@@ -158,6 +158,31 @@ def main():
                 break
             time.sleep(1)
 
+        # ── Siklus 276: NORMALISASI JAM SIM ke jam kerja SEBELUM baseline ──
+        # timeOfDay awal = jam NYATA load (OfficeScene.js:1476). Load di dalam
+        # window lunch 12:00–13:00 → shiftStep langsung lunch_start → semua
+        # agen berjalan ke kafe sebelum baseline → base L3:26 → syarat
+        # L3>=base+3 mustahil (akar FAIL deterministik-by-jam, bukan regresi
+        # produk). setTime(480) = jalur resmi slider HUD (updateTime →
+        # applySimTime + lighting → sim lanjut autoplay dari 08:00).
+        ev("window.__setTime(480)")
+        # Tunggu transisi NON-lunch selesai: tak ada agen berlabel lunch &
+        # tak ada walker lunch yang masih menyeberang (state walking_out
+        # dgn lunch=false dipulangkan endLunch/working_am ke meja).
+        for _ in range(30):
+            time.sleep(1.5)
+            st = ev("(()=>{const d=window.__agentData||[];"
+                    "const ln=d.filter(e=>e.lunch).length;"
+                    "const lk=d.filter(e=>e.state==='walking_out'&&e.lunch).length;"
+                    "return JSON.stringify({lunch:ln,lunchWalk:lk})})()").get("value", "{}")
+            try:
+                s = json.loads(st)
+                if s.get("lunch", 0) == 0 and s.get("lunchWalk", 0) == 0:
+                    break
+            except Exception:
+                pass
+        time.sleep(1)
+
         # Baca badge okupansi tiap tombol lantai dari DOM
         OCC_EXPR = ("(()=>{const nav=document.querySelector('.floor-nav');"
                     "if(!nav)return 'no-nav';"
@@ -169,8 +194,6 @@ def main():
                     "return JSON.stringify(out)})()")
 
         # 08:00 — semua agen di meja (bukan lunch/rapat)
-        ev("window.__setTime(480)")
-        time.sleep(2)
         occ_initial = ev(OCC_EXPR).get("value", "?")
 
         # 12:00 — lunch window: agen berjalan ke kafe L3 via tangga nyata (rute
@@ -203,9 +226,12 @@ def main():
         except Exception:
             ok = False
         print("E2E_FLOORSOCC: OK" if ok else "E2E_FLOORSOCC: FAIL")
+        # Siklus 276: exit code JUJUR — dulu selalu 0 walau FAIL (verdict tak
+        # dipropagasi) sehingga cron tidak bisa membedakan hijau vs merah.
+        return 0 if ok else 1
     finally:
         p.terminate()
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

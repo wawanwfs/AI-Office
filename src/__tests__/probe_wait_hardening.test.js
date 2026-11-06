@@ -129,6 +129,43 @@ describe('siklus 200 — kriteria inti probe TIDAK berubah (spot-check per kelom
     expect(src['e2e_inspector_status']).toContain('__agentData')
   })
 
+  it('siklus 276 — floor_occupancy & inspector_floor: normalisasi jam sim PRA-baseline (akar FAIL-by-jam lunch 12:xx WIB)', () => {
+    // timeOfDay awal = jam NYATA load (OfficeScene.js:1476). Load di window
+    // lunch sim 12:00–13:00 → shiftStep langsung lunch_start → SEMUA agen
+    // jalan ke kafe sebelum baseline → base L3:26 → syarat L3>=base+3
+    // mustahil → FAIL deterministik sesuai jam eksekusi (terbukti live siklus
+    // 276: 3× FAIL beruntun jam 12:1x–12:4x WIB setelah 274/275 hijau jam
+    // pagi). Kontrak: setTime(480) SEBELUM baseline + tunggu lunch==0, dan
+    // pola lama "setTime(480) + sleep(2) + baca baseline TANPA guard lunch"
+    // DILARANG kembali.
+    for (const n of ['e2e_floor_occupancy', 'e2e_inspector_floor']) {
+      const w = src[n]
+      expect(w, n).toContain('NORMALISASI JAM SIM')
+      expect(w, n).toContain('window.__setTime(480)')
+      expect(w, n).toContain("s.get(\"lunch\", 0) == 0 and s.get(\"lunchWalk\", 0) == 0")
+      // urutan: normalisasi harus muncul sebelum pemakaian baseline/seleksi
+      expect(w.indexOf('NORMALISASI JAM SIM'), n)
+        .toBeGreaterThan(-1)
+      expect(w.indexOf('occ_initial = ev(') >= 0
+        ? w.indexOf('occ_initial = ev(') : w.indexOf('floor_initial = ev('), n)
+        .toBeGreaterThan(w.indexOf('NORMALISASI JAM SIM'))
+    }
+    // Pola lama: setTime(480) langsung disusul seleksi agen TANPA guard lunch
+    expect(src['e2e_inspector_floor']).not.toContain(
+      'ev("window.__setTime(480)")\n        ev("window.__wfsSceneSelect')
+  })
+
+  it('siklus 276 — exit code jujur di probe lantai (dulu FAIL dicetak tapi exit 0)', () => {
+    // e2e_floor_occupancy & e2e_inspector_floor: verdict tidak dipropagasi —
+    // main() tanpa return → sys.exit(None) == 0 walau "FAIL" tercetak. Cron
+    // tidak bisa membedakan hijau vs merah. Kontrak: sys.exit(main()) + return 0/1.
+    for (const n of ['e2e_floor_occupancy', 'e2e_inspector_floor']) {
+      expect(src[n], n).toContain('return 0 if ok else 1')
+      expect(src[n], n).toContain('sys.exit(main())')
+      expect(src[n], n).not.toMatch(new RegExp(`^\\s*main\\(\\)\\s*$`, 'm'))
+    }
+  })
+
   it('office_phase 199 tak ter-regresi: chip fase + __setTime(720) + deadline 60', () => {
     expect(src[NEW_199]).toContain('.hud .phase-chip')
     expect(src[NEW_199]).toContain('__setTime(720)')

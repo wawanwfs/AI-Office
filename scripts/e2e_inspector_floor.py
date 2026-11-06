@@ -168,9 +168,30 @@ def main():
                       "const btn=lab.closest('button');"
                       "return 'FLOOR:'+(btn?btn.textContent.replace('Lokasi Lantai','').replace('FOKUS','').replace('↗','').trim():'?');})()")
 
+        # ── Siklus 276: NORMALISASI JAM SIM ke jam kerja SEBELUM seleksi agen ──
+        # timeOfDay awal = jam NYATA load (OfficeScene.js:1476): load di dalam
+        # window lunch 12:00–13:00 → shiftStep langsung lunch_start → agen-0
+        # ikut sendToLunch sebelum seleksi → badge awal/skip-salah. setTime(480)
+        # = jalur resmi slider HUD (updateTime → applySimTime + lighting).
+        ev("window.__setTime(480)")
+        # Tunggu transisi non-lunch selesai (endLunch/working_am memulangkan
+        # walker lunch ke meja) — paritas fix e2e_floor_occupancy siklus 276.
+        for _ in range(30):
+            time.sleep(1.5)
+            st = ev("(()=>{const d=window.__agentData||[];"
+                    "const ln=d.filter(e=>e.lunch).length;"
+                    "const lk=d.filter(e=>e.state==='walking_out'&&e.lunch).length;"
+                    "return JSON.stringify({lunch:ln,lunchWalk:lk})})()").get("value", "{}")
+            try:
+                s = json.loads(st)
+                if s.get("lunch", 0) == 0 and s.get("lunchWalk", 0) == 0:
+                    break
+            except Exception:
+                pass
+        time.sleep(1)
+
         # agen meja L1: indeks 0 (BANTUIN AI, meja z=-3). Jam simulasi pagi (480 = 08:00,
         # semua sudah arriving/working — bukan lunch).
-        ev("window.__setTime(480)")
         ev("window.__wfsSceneSelect('ai-cs')")
         time.sleep(1.5)
         floor_initial = ev(FLOOR_EXPR).get("value", "?")
@@ -199,9 +220,12 @@ def main():
         ok = (agents >= 26 and str(floor_initial).startswith("FLOOR:L1")
               and str(floor_final).startswith("FLOOR:L3"))
         print("E2E_INSPECTOR_FLOOR: OK" if ok else "E2E_INSPECTOR_FLOOR: FAIL")
+        # Siklus 276: exit code JUJUR — dulu main() tanpa return (None/0 walau
+        # FAIL) sehingga cron membaca FAIL sebagai sukses.
+        return 0 if ok else 1
     finally:
         p.terminate()
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())
