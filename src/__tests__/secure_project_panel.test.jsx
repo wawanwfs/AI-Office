@@ -1,3 +1,4 @@
+// @vitest-environment jsdom
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
@@ -38,7 +39,7 @@ describe('Phase 5 secure project panel', () => {
     fireEvent.change(screen.getByLabelText('Bearer token operator'), { target: { value: 'x'.repeat(43) } })
     fireEvent.click(screen.getByRole('button', { name: /Muat data nyata/i }))
     await waitFor(() => expect(screen.getByText('job-a')).toBeTruthy())
-    expect(screen.getByText('300 µUSD')).toBeTruthy()
+    expect(screen.getByText(/Sisa: 300 µUSD/)).toBeTruthy()
     for (const [,options] of fetchMock.mock.calls) {
       expect(options.credentials).toBe('omit')
       expect(options.headers.Authorization).toBe('Bearer ' + 'x'.repeat(43))
