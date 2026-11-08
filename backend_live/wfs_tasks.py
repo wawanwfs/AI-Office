@@ -44,6 +44,10 @@ def _require_worker_fence():
     queue, claim = ctx["queue"], ctx["claim"]
     if not queue.verify_lease(claim["id"], claim["worker_id"], claim["lease_token"]):
         raise PermissionError("worker lease expired, cancelled or fenced off")
+    # RBAC may be revoked while an LLM request or task is executing.
+    # Recheck at each billing call and generated-artifact boundary.
+    if ctx.get("acl") is not None:
+        ctx["acl"].require(ctx["principal"],ctx["project_id"],"run")
 
 Path(REPO).mkdir(parents=True, exist_ok=True)
 

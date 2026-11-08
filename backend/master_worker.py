@@ -113,6 +113,7 @@ class ApprovedMasterWorker:
             self.engine.REPO = self._workspace(claim["project_id"])
             ctx_token = self.engine._WFS_BILLING_CONTEXT.set({
                 "queue":self.queue,"claim":claim,"ledger":self.ledger,
+                "acl":self.access_control,"principal":self.principal,
                 "project_id":claim["project_id"],"task_id":claim["task_id"]})
             if not self.queue.record_phase(jid,self.worker_id,token,"executing",
                                            "legacy taskengine.run_task"):

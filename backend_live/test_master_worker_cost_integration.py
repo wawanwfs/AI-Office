@@ -109,3 +109,19 @@ def test_new_worker_never_syncs_files_into_shared_agent_sandbox(cost_ctx):
     result=tasks.sync_sandbox("fe1",["index.html"])
     assert "not synced" in result
     assert "project-scoped" in result
+
+
+
+def test_revoked_project_permission_stops_next_paid_call(cost_ctx,tmp_path):
+    from project_rbac import ProjectRBAC, AccessDenied
+    ledger,queue,claim=cost_ctx
+    acl=ProjectRBAC(tmp_path/"rbac.db")
+    acl.bootstrap_owner("project-1","owner")
+    acl.set_role("owner","project-1","worker-identity","worker")
+    current=tasks._WFS_BILLING_CONTEXT.get()
+    current["acl"]=acl
+    current["principal"]="worker-identity"
+    acl.revoke("owner","project-1","worker-identity")
+    with pytest.raises(AccessDenied):
+        asyncio.run(tasks.call_llm("agent-1","system","brief"))
+    assert FakeClient.calls==0
