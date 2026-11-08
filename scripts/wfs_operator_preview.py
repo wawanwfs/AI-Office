@@ -24,7 +24,7 @@ def main():
     parser.add_argument("--state-root",required=True,help="private local disposable directory")
     parser.add_argument("--approved",action="store_true")
     parser.add_argument("--reviewed-manifest",required=True,
-        help="operator-approved JSON mapping of exact four SHA-256 runtime files")
+        help="independently approved v2 JSON: sources, frontend, lock, SBOM, image references")
     parser.add_argument("--discard-data",action="store_true",
                         help="required to remove disposable PostgreSQL volumes")
     args=parser.parse_args()
@@ -45,7 +45,7 @@ def main():
     admission_file=Path(args.reviewed_manifest).absolute()
     if (admission_file.is_symlink() or not admission_file.is_file() or
             admission_file.resolve()!=admission_file or
-            admission_file.stat().st_size>4096):
+            admission_file.stat().st_size>131072):
         parser.error("unsafe reviewed admission manifest")
     try:
         approved_hashes=json.loads(admission_file.read_text(encoding="utf-8"))
