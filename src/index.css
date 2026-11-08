@@ -3007,3 +3007,42 @@ button { font-family: inherit; }
   .dock, .panel, .dash-card { border-color: #d8bb84; }
   .panel .ph .t small, .dash-card span { color: #e7ddf2; }
 }
+
+/* Phase 5 verified project controls — navy/violet/gold, keyboard accessible. */
+.wfs-secure-panel{margin:14px 0 8px;padding:16px;border:1px solid rgba(202,177,238,.35);
+  border-radius:18px;background:linear-gradient(125deg,rgba(24,30,66,.96),rgba(51,31,82,.88) 66%,rgba(58,46,67,.9));
+  box-shadow:0 14px 40px rgba(0,0,0,.2)}
+.wfs-secure-heading{display:flex;align-items:center;justify-content:space-between;gap:14px}
+.wfs-secure-heading strong{display:block;color:var(--wfs-gold-bright);font-size:14px;letter-spacing:.025em}
+.wfs-secure-heading small{display:block;color:var(--text-secondary);font-size:11px;margin-top:4px}
+.wfs-secure-body{margin-top:14px;border-top:1px solid var(--wfs-glass-border);padding-top:12px}
+.wfs-secure-note,.wfs-secure-last-events{font-size:12px;color:var(--text-secondary);line-height:1.6}
+.wfs-secure-inputs{display:grid;grid-template-columns:minmax(115px,1fr) minmax(160px,2fr) auto;
+  align-items:end;gap:10px;margin:12px 0}
+.wfs-secure-inputs label{display:grid;gap:5px;color:var(--wfs-gold-bright);font-size:11px}
+.wfs-secure-panel input{width:100%;min-width:0;background:rgba(7,13,33,.78);
+ color:#fff;border:1px solid rgba(194,174,233,.38);border-radius:9px;min-height:38px;padding:8px 11px;
+ font:inherit;font-size:12px}
+.wfs-secure-panel input:focus-visible{outline:2px solid var(--wfs-gold);outline-offset:2px}
+.wfs-secure-panel button:disabled{opacity:.5;cursor:not-allowed}
+.wfs-secure-error{color:#ffb2be;font-size:12px;margin:8px 0}
+.wfs-secure-notice{color:#b8f1d2;font-size:12px;margin:8px 0}
+.wfs-secure-budget{display:flex;gap:14px;flex-wrap:wrap;margin:10px 0;padding:10px;
+ border-radius:10px;background:rgba(4,9,26,.55);font-size:12px}
+.wfs-secure-budget b{color:#c2f1d6}
+.wfs-secure-queue-head{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-top:14px}
+.wfs-secure-queue-head strong{color:var(--wfs-gold-bright);font-size:13px}
+.wfs-secure-enqueue{display:flex;gap:6px;align-items:center}
+.wfs-secure-enqueue input{width:110px}
+.wfs-secure-jobs{display:grid;gap:6px;margin-top:10px;max-height:210px;overflow:auto}
+.wfs-secure-job{display:flex;justify-content:space-between;align-items:center;gap:10px;
+ border:1px solid rgba(176,158,218,.22);border-radius:9px;padding:8px 10px;background:rgba(12,19,45,.5)}
+.wfs-secure-job b,.wfs-secure-job span{font-size:12px}
+.wfs-secure-job span{color:#c7b3fb;margin-left:7px}
+.wfs-secure-job small{display:block;color:var(--text-tertiary);font-size:10px;margin-top:3px;overflow-wrap:anywhere}
+@media(max-width:630px){
+ .wfs-secure-panel{padding:12px}.wfs-secure-heading{align-items:flex-start;flex-direction:column}
+ .wfs-secure-inputs{grid-template-columns:1fr}.wfs-secure-queue-head{flex-direction:column;align-items:flex-start}
+ .wfs-secure-enqueue{width:100%}.wfs-secure-enqueue input{flex:1}
+}
+@media(prefers-reduced-motion:reduce){.wfs-secure-panel *{scroll-behavior:auto;transition:none!important}}

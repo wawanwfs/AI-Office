@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { createPortal } from 'react-dom'
 import { api } from '../lib/api'
+import SecureProjectPanel from './SecureProjectPanel'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
 import { IconClose, IconStats } from './Icons'
@@ -124,6 +125,7 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
               <button className="btn" onClick={() => { setOpen(false); onOpenBoard?.() }}>Buka papan task</button>
               <button className="btn" onClick={() => { setOpen(false); onOpenProjects?.() }}>Buka daftar proyek</button>
             </nav>
+            <SecureProjectPanel />
             {!stats && !err && <div className="skeleton" role="status">Memuat dashboard…</div>}
             {err && <div role="alert" className="msg err" style={{ maxWidth: '100%' }}>Data belum lengkap — sebagian layanan tidak dapat dihubungi. <button className="btn" style={{ minHeight: 32, marginLeft: 6 }} onClick={() => load()}>Coba lagi</button></div>}
             {stats && (
