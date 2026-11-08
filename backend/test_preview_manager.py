@@ -386,7 +386,8 @@ def test_phase10_policy_changes_and_revocation_fail_closed(preview):
             public_key_path=manager.authority.public_key_path,
             signature_path=manager.authority.signature_path,
             policy_path=policy,
-            trusted_policy_sha256=hashlib.sha256(policy.read_bytes(,**root_args(manager.authority))).hexdigest())
+            trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),
+            **root_args(manager.authority))
         with pytest.raises(AdmissionDenied,match="revoked"):
             TemplatePreviewManager(manager.registry.parent/"revoked.db",
                 manager.template,enabled=True,runner=manager.runner,
@@ -449,7 +450,8 @@ def test_phase10_bad_policy_structure_and_duplicate_keys_rejected(preview):
             public_key_path=manager.authority.public_key_path,
             signature_path=manager.authority.signature_path,
             policy_path=policy,
-            trusted_policy_sha256=hashlib.sha256(payload,**root_args(manager.authority)).hexdigest())
+            trusted_policy_sha256=hashlib.sha256(payload).hexdigest(),
+            **root_args(manager.authority))
         with pytest.raises(AdmissionDenied,match="policy"):
             authority.verify(manager.reviewed_manifest)
     policy.write_bytes(original)
@@ -530,7 +532,8 @@ def test_phase11_local_reviewer_epoch_rollback_denied_across_manager_restart(pre
         public_key_path=manager.authority.public_key_path,
         signature_path=manager.authority.signature_path,
         policy_path=policy,
-        trusted_policy_sha256=hashlib.sha256(policy.read_bytes(,**root_args(manager.authority))).hexdigest())
+        trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),
+            **root_args(manager.authority))
     replacement=TemplatePreviewManager(manager.registry,manager.template,
         enabled=True,runner=manager.runner,
         reviewed_files=manager.reviewed_manifest,reviewer_authority=authority)
@@ -567,7 +570,8 @@ def test_phase11_equal_epoch_policy_swap_denied(preview):
         public_key_path=manager.authority.public_key_path,
         signature_path=manager.authority.signature_path,
         policy_path=policy,
-        trusted_policy_sha256=hashlib.sha256(policy.read_bytes(,**root_args(manager.authority))).hexdigest())
+        trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),
+            **root_args(manager.authority))
     with pytest.raises(AdmissionDenied,match="same epoch"):
         TemplatePreviewManager(manager.registry,manager.template,
             enabled=True,runner=manager.runner,
