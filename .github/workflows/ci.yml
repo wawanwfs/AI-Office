@@ -50,7 +50,7 @@ jobs:
           python-version: '3.11'
       - run: npm ci
       - run: npm run build
-      - run: python -m pip install --no-cache-dir playwright==1.65.0
+      - run: python -m pip install --no-cache-dir playwright==1.64.1
       - run: python -m playwright install --with-deps chromium
       - name: Real Chromium desktop/mobile + WebGL fallback screenshots
         run: |
