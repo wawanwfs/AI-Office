@@ -1487,7 +1487,10 @@ if os.environ.get("WFS_SECURE_CONTROL_API_ENABLED") == "YES":
         rbac=ProjectRBAC(os.environ["WFS_RBAC_DB"]),
         ledger=CostLedger(os.environ["WFS_COST_DB"]),
         tokens=TokenStore(os.environ["WFS_AUTH_DB"]),
-        taskengine=taskengine))
+        taskengine=taskengine,
+        artifact_store=(__import__("artifact_store").VerifiedArtifacts(
+            os.environ["WFS_WORKSPACE_ROOT"])
+            if os.environ.get("WFS_WORKSPACE_ROOT") else None)))
 
 
 # In strict project mode, old unscoped routes remain intentionally CLOSED.

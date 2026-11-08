@@ -91,7 +91,7 @@ class CancelReply(BaseModel):
     status:str
 
 
-def create_secure_router(*, queue, rbac, ledger, tokens, taskengine=None):
+def create_secure_router(*, queue, rbac, ledger, tokens, taskengine=None, artifact_store=None):
     """Dependency-injected data sources; no unauthenticated fallback."""
     router=APIRouter(prefix="/api/v4", tags=["WFS Secure Control API"])
 
@@ -198,4 +198,33 @@ def create_secure_router(*, queue, rbac, ledger, tokens, taskengine=None):
         no_cache(response)
         updated=queue.get(job_id)
         return {"job_id":job_id,"status":updated["status"]}
+    @router.get("/projects/{project_id}/jobs/{job_id}/artifacts")
+    def artifacts(project_id:str,job_id:str,response:Response,
+                  principal:str=Depends(authenticated)):
+        scoped(project_id,principal,"read")
+        if artifact_store is None:
+            raise HTTPException(503,"Artifact storage unavailable")
+        try:
+            job=queue.get(job_id)
+            value=artifact_store.listing(project_id,job)
+        except (ValueError,PermissionError) as exc:
+            raise HTTPException(409,"Verified artifact not ready") from exc
+        no_cache(response)
+        return value
+
+    @router.get("/projects/{project_id}/jobs/{job_id}/artifacts/{path:path}")
+    def download_artifact(project_id:str,job_id:str,path:str,
+                          principal:str=Depends(authenticated)):
+        scoped(project_id,principal,"read")
+        if artifact_store is None:
+            raise HTTPException(503,"Artifact storage unavailable")
+        try:
+            job=queue.get(job_id)
+            data=artifact_store.read(project_id,job,path)
+        except (ValueError,PermissionError) as exc:
+            raise HTTPException(409,"Verified artifact not ready") from exc
+        return Response(content=data,media_type="application/octet-stream",
+                        headers={"Cache-Control":"no-store",
+                                 "X-Content-Type-Options":"nosniff",
+                                 "Content-Disposition":"attachment"})
     return router
