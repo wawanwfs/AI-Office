@@ -1,7 +1,8 @@
 """Phase 10: independently pinned, rechecked reviewer trust for ALL preview manager paths.
 
-Operator-owned policy SHA256 and a SEPARATE Ed25519 roster-root fingerprint
-are pinned outside GitHub, uploads and AI code. A signed candidate is NOT independent review. CI uses
+Operator-owned policy SHA256, separate roster-root fingerprint, and a
+THIRD witness-signed latest checkpoint SHA256 are pinned outside GitHub,
+uploads and AI code. A signed candidate is NOT independent review. CI uses
 synthetic, ephemeral signers solely to prove fail-closed behavior.
 """
 import hashlib
@@ -12,6 +13,7 @@ import re
 from preview_admission_v2 import AdmissionDenied
 from preview_signature import _read_trusted, verify_review_signature
 from preview_root_authority import verify_roster_signature
+from preview_witness import SignedReviewerCheckpoint
 
 _SHA256 = re.compile(r"[a-f0-9]{64}\Z")
 
@@ -35,7 +37,8 @@ class SignedPreviewAuthority:
 
     def __init__(self, *, public_key_path, signature_path, policy_path,
                  trusted_policy_sha256, root_public_key_path,
-                 root_signature_path, trusted_root_fingerprint):
+                 root_signature_path, trusted_root_fingerprint,
+                 witness_checkpoint):
         if (not isinstance(trusted_policy_sha256, str) or
                 not _SHA256.fullmatch(trusted_policy_sha256)):
             raise AdmissionDenied("independent reviewer policy SHA-256 pin required")
@@ -46,6 +49,9 @@ class SignedPreviewAuthority:
         self.root_public_key_path = root_public_key_path
         self.root_signature_path = root_signature_path
         self.trusted_root_fingerprint = trusted_root_fingerprint
+        if not isinstance(witness_checkpoint, SignedReviewerCheckpoint):
+            raise AdmissionDenied("independently pinned signed witness checkpoint required")
+        self.witness_checkpoint = witness_checkpoint
 
     def verify(self, reviewed_manifest):
         # Snapshot the externally pinned authority policy, not supplied by
@@ -85,6 +91,16 @@ class SignedPreviewAuthority:
             raw, root_public_key_path=self.root_public_key_path,
             root_signature_path=self.root_signature_path,
             trusted_root_fingerprint=self.trusted_root_fingerprint,
+            reviewer_fingerprint=approved_reviewer,
+        )
+        # The witness key is independent of BOTH the roster signer and
+        # reviewed-manifest signer. A restore of the operator SQLite registry
+        # cannot approve an older policy while the separately pinned latest
+        # witness receipt is retained.
+        self.witness_checkpoint.verify(
+            policy_sha256=self.trusted_policy_sha256,
+            epoch=policy["epoch"],
+            roster_root_fingerprint=self.trusted_root_fingerprint,
             reviewer_fingerprint=approved_reviewer,
         )
         fingerprint = verify_review_signature(
