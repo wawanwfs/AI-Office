@@ -6118,3 +6118,8 @@
 - Cron harian 04:15 (`15 4 * * *`) terpasang; run manual pertama sukses.
 - Verifikasi restore: arsip wfs-hq-20261108-1618.tgz (1.8M) diekstrak ke scratch, md5 server.py arsip == live; server.py, api_service.py, .wfs_ui_token terkonfirmasi ada dalam arsip.
 - Sisa backlog: (a) gateway :8787→Docker; (b) saas-dibantuin push GitHub; (d) keputusan omniroute :20128; (siapa penghapus wfs-hq tetap belum ketemu — kini mitigasi backup harian ada).
+## 2026-11-09 00:30 WIB — Siklus 286: RERUN REGRESI 20 probe e2e patched (siklus 282–284) — 20/20 HIJAU, tanpa flake
+
+- Sweep berkala backlog 282/283: seluruh probe yang diberi fallback /app/?mode=office + perbaikan regex/koordinat/sampling di-rerun live: dashboard_presence, inspector_status, lazy_modals, dblclick_nexus, hover_follow, hover_leave, camera_reset, async_destroy, events_stream, floor_occupancy, camera_floor_live, audio_signal, bubble_leak (13) + office_phase, scene_hooks, team_presence, ticker_presence, meeting_pick, meeting_follow, zoom_follow (7) = 20/20 exit 0.
+- Produksi scene & dist TIDAK berubah (verifikasi-only); build/tes tidak dijalankan ulang.
+- Sisa backlog: (a) gateway :8787→Docker (menunggu keputusan user); (b) saas-dibantuin push GitHub; (d) keputusan omniroute :20128; penghapus wfs-hq tak teridentifikasi (mitigasi backup harian siklus 285 aktif).
