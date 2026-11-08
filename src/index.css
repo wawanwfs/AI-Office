@@ -298,6 +298,16 @@ button { font-family: inherit; }
 .hud .phase-chip.break i { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
 .hud .phase-chip.dawn i, .hud .phase-chip.dusk i { background: #fbbf24; box-shadow: 0 0 8px #fbbf24; }
 .hud .phase-chip.night i, .hud .phase-chip.dim i { background: #8b93a3; box-shadow: 0 0 8px #8b93a3; }
+/* Siklus 314: chip jam nyata host di HUD — membedakan wall-clock vs waktu simulasi */
+.hud .realtime-chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: 'DM Mono', 'Space Mono', monospace; font-size: 12px; font-weight: 600;
+  letter-spacing: .5px; color: #A78BFA; white-space: nowrap;
+  padding: 3px 10px; border-radius: 999px;
+  border: 1px solid rgba(167, 139, 250, 0.25);
+  background: rgba(167, 139, 250, 0.08);
+}
+.hud .realtime-chip i { width: 7px; height: 7px; border-radius: 50%; background: #A78BFA; box-shadow: 0 0 8px #A78BFA; flex: none; }
 /* Chip status sinkronisasi gateway: live (hijau) / stale (amber berdetak) / down (merah) */
 .hud .conn-chip {
   display: flex; align-items: center; gap: 6px;

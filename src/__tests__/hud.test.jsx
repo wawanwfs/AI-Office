@@ -75,4 +75,21 @@ describe('components/HUD', () => {
     render(<HUD {...baseProps} />)
     expect(screen.queryByRole('button', { name: /Ambience hum kantor/ })).toBeNull()
   })
+
+  // Siklus 314: chip jam nyata host — muncul dengan format HH.MM id-ID, punya
+  // title penjelas, dan terpisah dari jam simulasi (teks '08:30' tetap jam sim).
+  it('merender chip jam nyata host terpisah dari jam simulasi', () => {
+    vi.setSystemTime(new Date(2026, 10, 9, 3, 42))
+    try {
+      render(<HUD {...baseProps} />)
+      const chip = screen.getByTitle('Jam nyata host (bukan waktu simulasi)')
+      expect(chip.textContent).toBe('03.42')
+      expect(chip.getAttribute('title')).toContain('bukan waktu simulasi')
+      expect(chip.textContent).not.toContain(':')
+      // jam simulasi tetap utuh, tak tertimpa
+      expect(screen.getByText('08:30')).toBeTruthy()
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

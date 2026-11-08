@@ -6318,3 +6318,14 @@
 - Redeploy dist → ~/wfs-hq: 13 file hashed == dist, 0 orphan.
 - e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 708132 B, nonbg 0.991, hygiene 13 hashed/0 orphan.
 - Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+
+## 2026-11-09 03:58 WIB — Siklus 314: chip jam nyata host di HUD (semua gate hijau)
+
+- Tanpa upstream baru (0 commit HEAD..origin/main). Ambil perbaikan kecil: HUD kiri-atas hanya menampilkan jam simulasi (bisa digeser slider ke nilai apa pun) tanpa acuan jam host.
+- HUD.jsx: chip baru realtime-chip (ungu, dot glow) menampilkan jam nyata host format id-ID HH.MM, poll 10 dtk digerbang visibilityState (tab tersembunyi tidak re-render). Title: "Jam nyata host (bukan waktu simulasi)".
+- index.css: style .realtime-chip; +1 tes kasus hud.test.jsx (vi.setSystemTime 03:42 → chip 03.42, jam sim 08:30 tak tertimpa).
+- Build PWA OK; vitest 252 file / 3666 passed + 6 skipped, 0 fail (+1 tes vs siklus 313).
+- Redeploy dist → ~/wfs-hq; bersihkan 8 orphan asset hash lama → e2e hygiene 13 hashed/0 orphan.
+- e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 704775 B, nonbg 0.991.
+- Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

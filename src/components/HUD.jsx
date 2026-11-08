@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   getAmbienceStatusLabel,
   getAmbienceTooltip,
@@ -24,6 +24,21 @@ export default function HUD({
   onOpenSettings,
 }) {
   const isHumActive = !!(ambienceEnabled && !muted)
+  // Siklus 314: jam nyata (wall-clock) di HUD — jam "Simulasi" bisa digeser
+  // slider ke nilai apa pun, penonton butuh acuan jam host yang sesungguhnya.
+  // Poll 10 dtk cukup (detik tak ditampilkan); polling digerbang
+  // document.visibilityState agar tab tersembunyi tidak memicu re-render tiap
+  // 10 dtk tanpa penonton (pola SysMeter/Ticker).
+  const [wallClock, setWallClock] = useState('')
+  useEffect(() => {
+    const read = () => {
+      if (document.visibilityState !== 'visible') return
+      setWallClock(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }))
+    }
+    read()
+    const iv = setInterval(read, 10000)
+    return () => clearInterval(iv)
+  }, [])
   const statusLabel = getAmbienceStatusLabel({ enabled: ambienceEnabled, muted, volume: ambienceVolume })
   const tooltipText = getAmbienceTooltip({ enabled: ambienceEnabled, muted, volume: ambienceVolume })
   const ariaLabelText = getAmbienceAriaLabel({ enabled: ambienceEnabled, muted, volume: ambienceVolume })
@@ -49,6 +64,11 @@ export default function HUD({
     <div className="hud" role="group" aria-label="Waktu simulasi dan status">
       <span className="simulation-label">Simulasi</span>
       <span className="clock">{time}</span>
+      {wallClock && (
+        <span className="realtime-chip" role="status" title="Jam nyata host (bukan waktu simulasi)">
+          <i aria-hidden="true" />{wallClock}
+        </span>
+      )}
       {phaseInfo && (
         <span
           className={`phase-chip ${phaseInfo.tone}`}
