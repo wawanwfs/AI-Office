@@ -1,3 +1,8 @@
+> **Superseded for new operators:** Phase 11 now uses a private staged
+> Compose build context and a persistent reviewer policy epoch floor.
+> Follow [Phase 11 runbook](PHASE11_RUNTIME_RUNBOOK.md) as well as
+> the reviewer signing requirements below.
+
 # Phase 10 — signed preview manager authority and synthetic offline QA
 
 **Disposable operator-only reference template, not production admission.**

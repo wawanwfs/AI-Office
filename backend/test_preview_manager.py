@@ -422,3 +422,150 @@ def test_phase10_bad_policy_structure_and_duplicate_keys_rejected(preview):
             authority.verify(manager.reviewed_manifest)
     policy.write_bytes(original)
     assert calls==[]
+
+
+
+def test_phase11_docker_reads_signed_staged_tree_not_mutable_source(preview):
+    manager,calls=preview
+    live_api=manager.template.parent/"api.py"
+    original=live_api.read_bytes()
+    observed=[]
+    def adversarial_runner(argv,**kwargs):
+        staged_compose=Path(argv[3])
+        staged_api=staged_compose.parent/"api.py"
+        assert staged_compose != manager.template
+        assert staged_api.read_bytes()==original
+        # A local actor changes live source DURING the Docker call.
+        try:
+            live_api.write_bytes(b"malicious API replaced while Docker runs")
+            assert staged_api.read_bytes()==original
+            observed.append(str(staged_compose))
+        finally:
+            live_api.write_bytes(original)
+        calls.append((argv,kwargs))
+        return SimpleNamespace(returncode=0,stdout="ok",stderr="")
+    manager.runner=adversarial_runner
+    assert manager.start("alpha",19010,"X"*43)["phase"]=="running"
+    assert len(observed)==1
+    staged=Path(observed[0])
+    assert staged.exists()
+    assert "preview-snapshots" in staged.as_posix()
+    assert (staged.parent.parent.parent/"artifacts/fullstack-preview/dist/index.html").is_file()
+    # Subsequent Docker commands use the exact same reviewed context.
+    manager.runner=lambda argv,**kw: (
+        calls.append((argv,kw)) or
+        SimpleNamespace(returncode=0,stdout="ok",stderr=""))
+    manager.logs("alpha","X"*43)
+    assert calls[-1][0][3]==str(staged)
+    assert manager.stop("alpha","X"*43,allow_data_loss=True)["phase"]=="stopped"
+    assert not staged.exists()
+
+
+def test_phase11_snapshot_disallows_unapproved_copy_and_symlink(preview):
+    manager,calls=preview
+    source=manager.template.parent/"api.py"
+    before=source.read_bytes()
+    source.write_bytes(b"bad injected bytes")
+    try:
+        with pytest.raises(AdmissionDenied,match="changed"):
+            manager.start("alpha",19010,"X"*43)
+    finally:
+        source.write_bytes(before)
+    assert calls==[]
+    # A new attempt is allowed only because no transition occurred yet.
+    assert manager.start("alpha",19010,"X"*43)["phase"]=="running"
+    stage=manager.snapshots.path("alpha")
+    assert stage.exists()
+    (stage.parent/"api.py").unlink()
+    try:
+        (stage.parent/"api.py").symlink_to(source)
+    except OSError:
+        pytest.skip("host cannot create symlinks")
+    with pytest.raises(AdmissionDenied,match="unsafe"):
+        manager.logs("alpha","X"*43)
+    assert len(calls)==1
+
+
+def test_phase11_local_reviewer_epoch_rollback_denied_across_manager_restart(preview):
+    manager,calls=preview
+    policy=manager.authority.policy_path
+    old=policy.read_bytes()
+    previous=json.loads(old)
+    upgraded={**previous,"epoch":2}
+    policy.write_text(json.dumps(upgraded,sort_keys=True))
+    authority=SignedPreviewAuthority(
+        public_key_path=manager.authority.public_key_path,
+        signature_path=manager.authority.signature_path,
+        policy_path=policy,
+        trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest())
+    replacement=TemplatePreviewManager(manager.registry,manager.template,
+        enabled=True,runner=manager.runner,
+        reviewed_files=manager.reviewed_manifest,reviewer_authority=authority)
+    assert replacement.reserve("alpha",19010)["phase"]=="reserved"
+    with sqlite3.connect(manager.registry) as db:
+        assert db.execute(
+            "SELECT epoch FROM wfs_preview_reviewer_epoch WHERE singleton=1"
+        ).fetchone()[0]==2
+    # Restore perfectly valid old, signed policy and the original pin.
+    # Version 1 cannot be replayed against the operator-owned registry.
+    policy.write_bytes(old)
+    with pytest.raises(AdmissionDenied,match="epoch rollback"):
+        TemplatePreviewManager(manager.registry,manager.template,
+            enabled=True,runner=manager.runner,
+            reviewed_files=manager.reviewed_manifest,
+            reviewer_authority=manager.authority)
+    with pytest.raises(AdmissionDenied,match="epoch rollback"):
+        manager.reserve("bravo",19011)
+    assert calls==[]
+
+
+def test_phase11_equal_epoch_policy_swap_denied(preview):
+    manager,calls=preview
+    policy=manager.authority.policy_path
+    original=policy.read_bytes()
+    approved=json.loads(original)
+    other=hashlib.sha256(b"revoked-unrelated-test-key").hexdigest()
+    policy.write_text(json.dumps({
+        **approved,"revoked_fingerprints":[other]
+    },sort_keys=True))
+    independent=SignedPreviewAuthority(
+        public_key_path=manager.authority.public_key_path,
+        signature_path=manager.authority.signature_path,
+        policy_path=policy,
+        trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest())
+    with pytest.raises(AdmissionDenied,match="same epoch"):
+        TemplatePreviewManager(manager.registry,manager.template,
+            enabled=True,runner=manager.runner,
+            reviewed_files=manager.reviewed_manifest,
+            reviewer_authority=independent)
+    policy.write_bytes(original)
+    assert manager.reserve("alpha",19010)["phase"]=="reserved"
+    assert calls==[]
+
+
+
+def test_phase11_copy_time_source_substitution_never_publishes_snapshot(
+        preview,monkeypatch):
+    import preview_snapshot
+    manager,calls=preview
+    source=manager.template.parent/"api.py"
+    old=source.read_bytes()
+    real_copy=preview_snapshot._copy_verified
+    copied=[0]
+
+    def attack_on_copy(*args,**kwargs):
+        result=real_copy(*args,**kwargs)
+        copied[0]+=1
+        if copied[0]==1:
+            source.write_bytes(b"malicious bytes injected mid snapshot copy")
+        return result
+
+    monkeypatch.setattr(preview_snapshot,"_copy_verified",attack_on_copy)
+    try:
+        with pytest.raises(AdmissionDenied,match="snapshot input does not match"):
+            manager.snapshots.stage("alpha")
+    finally:
+        source.write_bytes(old)
+    assert copied[0]>=2
+    assert not manager.snapshots.path("alpha").exists()
+    assert calls==[]

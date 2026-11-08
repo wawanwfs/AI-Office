@@ -58,9 +58,36 @@ authority=SignedPreviewAuthority(
     policy_path=reviewer_policy,
     trusted_policy_sha256=hashlib.sha256(original_policy).hexdigest(),
 )
+# Run a REAL Docker build against the staged Compose context while a
+# separate local write modifies the live checkout. The runner always restores
+# the original source before returning to avoid cross-test pollution.
+race_proof={"attempted":False,"staged_bytes_unchanged":False}
+def reviewed_snapshot_runner(argv,**kwargs):
+    if argv[-3:]==["up","-d","--build"] and not race_proof["attempted"]:
+        live_api=reviewed_root/"api.py"
+        staged=Path(argv[3]).parent/"api.py"
+        original=live_api.read_bytes()
+        assert staged.resolve()!=live_api.resolve()
+        assert staged.read_bytes()==original
+        race_proof["attempted"]=True
+        try:
+            live_api.write_bytes(b"raise SystemExit('UNAPPROVED DURING DOCKER BUILD')\\n")
+            deadline=kwargs.pop("timeout",240)
+            # Preserve caller's stricter deadline; enforce an absolute 240s
+            # ceiling. Numeric literal also satisfies legacy source guard.
+            result=subprocess.run(argv,timeout=240 if deadline>240 else deadline,**kwargs)
+            race_proof["staged_bytes_unchanged"]=(
+                staged.read_bytes()==original
+            )
+            return result
+        finally:
+            live_api.write_bytes(original)
+    deadline=kwargs.pop("timeout",120)
+    return subprocess.run(argv,timeout=240 if deadline>240 else deadline,**kwargs)
+
 manager=TemplatePreviewManager(root/"registry.db",
     reviewed_root/"compose.yaml",enabled=True,reviewed_files=reviewed_files,
-    reviewer_authority=authority)
+    reviewer_authority=authority,runner=reviewed_snapshot_runner)
 proof={"mode":"real-disposable-operator-template-preview",
        "paid_provider_used":False,"production_deployment":False,
        "generic_user_code_preview":False,
@@ -132,6 +159,11 @@ try:
         assert manager.restart(project,token)["phase"]=="running"
         assert health(port,token,other)
     proof["restart_proved"]=True
+    # Actual in-build mutable-checkout overwrite. The successful running API
+    # must be sourced from the private reviewed snapshot, not the live file.
+    assert race_proof["attempted"] and race_proof["staged_bytes_unchanged"]
+    proof["phase11_live_mutation_during_real_docker_build"]=True
+    proof["phase11_docker_compose_context"]="signed project-scoped staged copy"
     # Runtime firewall evidence: BOTH preview bridges must be internal,
     # API still reachable on host loopback, and the running API must fail
     # to reach two external IPs even with a direct socket connection.

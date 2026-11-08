@@ -16,6 +16,7 @@ import subprocess
 from project_rbac import ident
 from preview_admission import ReviewedPreviewAdmission, AdmissionDenied
 from preview_authority import SignedPreviewAuthority
+from preview_snapshot import ReviewedPreviewSnapshot
 
 
 class PreviewDenied(PermissionError):
@@ -49,6 +50,8 @@ class TemplatePreviewManager:
             raise PreviewDenied("private registry parent is not provisioned")
         self.docker=docker
         self.runner=runner or subprocess.run
+        self.snapshots=ReviewedPreviewSnapshot(
+            template.parent, self.registry.parent, self.reviewed_manifest)
         with closing(self._db()) as db:
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS wfs_preview_instances(
@@ -58,12 +61,56 @@ class TemplatePreviewManager:
                     ('reserved','running','stopped','uncertain')),
                   compose_name TEXT NOT NULL UNIQUE
                 );
+                CREATE TABLE IF NOT EXISTS wfs_preview_reviewer_epoch(
+                  singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
+                  epoch INTEGER NOT NULL CHECK(epoch BETWEEN 1 AND 4611686018427387904),
+                  policy_sha256 TEXT NOT NULL
+                );
             """)
+        self._enforce_epoch(self.authority.verify(self.reviewed_manifest))
+
+    def _enforce_epoch(self, decision):
+        """Local crash-durable epoch floor and equal-epoch policy pin.
+
+        Protection assumes an operator-owned SQLite registry that an
+        attacker cannot delete, restore, replace or modify directly.
+        It does not provide a remote transparency log / hardware counter.
+        """
+        epoch=decision["epoch"]
+        policy_sha=self.authority.trusted_policy_sha256
+        if type(epoch) is not int or not 1 <= epoch <= 4611686018427387904:
+            raise AdmissionDenied("reviewer epoch outside SQLite bounds")
+        with closing(self._db()) as db:
+            try:
+                db.execute("BEGIN IMMEDIATE")
+                previous=db.execute(
+                    "SELECT epoch,policy_sha256 FROM wfs_preview_reviewer_epoch "
+                    "WHERE singleton=1"
+                ).fetchone()
+                if previous is not None:
+                    if epoch < previous["epoch"]:
+                        raise AdmissionDenied("reviewer policy epoch rollback denied")
+                    if (epoch == previous["epoch"] and
+                            policy_sha != previous["policy_sha256"]):
+                        raise AdmissionDenied("reviewer policy changed at same epoch")
+                if previous is None:
+                    db.execute(
+                        "INSERT INTO wfs_preview_reviewer_epoch VALUES(1,?,?)",
+                        (epoch,policy_sha))
+                elif epoch > previous["epoch"]:
+                    db.execute(
+                        "UPDATE wfs_preview_reviewer_epoch SET epoch=?,policy_sha256=? "
+                        "WHERE singleton=1", (epoch,policy_sha))
+                db.commit()
+            except BaseException:
+                db.rollback()
+                raise
 
     def _verify(self):
         """Fail closed for revoked/policy-changed approvals and altered bytes."""
-        self.authority.verify(self.reviewed_manifest)
+        decision=self.authority.verify(self.reviewed_manifest)
         self.admission.verify()
+        self._enforce_epoch(decision)
         return True
 
     def _db(self):
@@ -162,7 +209,10 @@ class TemplatePreviewManager:
         env.update({"WFS_PREVIEW_PROJECT_NAME":record["compose_name"],
                     "WFS_PREVIEW_HOST_PORT":str(record["port"]),
                     "WFS_PREVIEW_TEST_TOKEN":token})
-        argv=[self.docker,"compose","-f",str(self.template),*args]
+        # Compose's relative build context and bind mounts resolve under the
+        # private, reviewed snapshot. Never point Docker at mutable checkout.
+        staged_compose=self.snapshots.verify(record["project_id"])
+        argv=[self.docker,"compose","-f",str(staged_compose),*args]
         try:
             result=self.runner(argv,env=env,capture_output=True,text=True,
                                timeout=timeout,check=False)
@@ -179,6 +229,9 @@ class TemplatePreviewManager:
         if record["phase"] in ("running","uncertain"):
             raise PreviewDenied("preview is active or uncertain; reconcile before retry")
         self._claim_transition(project_id,("reserved","stopped"))
+        # Copies only previously approved bytes into a project-scoped directory;
+        # abort if ANY source changed during the copy.
+        self.snapshots.stage(project_id)
         self._invoke(record,token,["up","-d","--build"],timeout=240)
         self._phase(project_id,"running")
         return self.status(project_id)
@@ -204,7 +257,12 @@ class TemplatePreviewManager:
             raise PreviewDenied("explicit disposable volume deletion approval required")
         if record["phase"]=="stopped":
             return record
-        self._claim_transition(project_id,("running","uncertain","reserved"))
+        if record["phase"]=="reserved":
+            # Never started, so there is no Docker volume to delete.
+            self._phase(project_id,"stopped")
+            return self.status(project_id)
+        self._claim_transition(project_id,("running","uncertain"))
         self._invoke(record,token,["down","--volumes","--remove-orphans"])
         self._phase(project_id,"stopped")
+        self.snapshots.discard_after_authorized_stop(project_id)
         return self.status(project_id)
