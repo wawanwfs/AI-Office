@@ -1,4 +1,6 @@
 name: CI
+# Siklus 213: backend pytest was previously buta di CI; keep it mandatory.
+# Security uplift: pinned Node24-based Actions and read-only workflow token.
 on: [push, pull_request]
 
 # Fork PRs and compromised dependency scripts may not write repository content.

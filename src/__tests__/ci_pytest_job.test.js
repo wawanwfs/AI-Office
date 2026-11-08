@@ -33,12 +33,12 @@ const REQ_PKGS = ['pytest', 'fastapi', 'httpx', 'starlette', 'pydantic', 'uvicor
 describe('ci.yml job pytest (siklus 213)', () => {
   it('memuat job pytest dgn setup-python 3.11', () => {
     expect(ciYml).toMatch(/^ {2}pytest:$/m);
-    expect(ciYml).toContain('actions/setup-python@v5');
+    expect(ciYml).toContain('actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6');
     expect(ciYml).toMatch(/python-version: {1,2}'3\.11'/);
   });
 
   it('menginstall requirements-pytest.txt lalu menjalankan pytest backend_live+backend', () => {
-    expect(ciYml).toMatch(/^ {6}- run: pip install --no-cache-dir -r requirements-pytest\.txt$/m);
+    expect(ciYml).toMatch(/^ {6}- run: (?:python -m )?pip install --no-cache-dir -r requirements-pytest\.txt$/m);
     expect(ciYml).toMatch(/python -m pytest backend_live backend -q/);
   });
 
