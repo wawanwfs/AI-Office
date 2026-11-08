@@ -11,6 +11,3 @@ httpx==0.28.1
 starlette==1.10.0
 pydantic==2.14.2
 uvicorn==0.54.0
-
-# Phase 9: verify independently provisioned Ed25519 reviewer signatures.
-cryptography==50.0.2
