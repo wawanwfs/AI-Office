@@ -8,11 +8,14 @@ services:
       POSTGRES_DB: wfsdemo
       POSTGRES_USER: wfsdemo
       POSTGRES_PASSWORD: test-only-disposable
-    volumes:
-      - postgres-preview-data:/var/lib/postgresql/data
+    # CI-only ephemeral DB. Run as postgres UID, never invoke root entrypoint
+    # chmod/chown without container capabilities.
+    user: "70:70"
+    read_only: true
     tmpfs:
-      - /tmp
-      - /var/run/postgresql
+      - /tmp:rw,nosuid,nodev,uid=70,gid=70
+      - /var/run/postgresql:rw,nosuid,nodev,uid=70,gid=70
+      - /var/lib/postgresql/data:rw,nosuid,nodev,uid=70,gid=70,mode=0700
     cap_drop:
       - ALL
     security_opt:
@@ -54,5 +57,3 @@ services:
 networks:
   preview-internal:
     internal: true
-volumes:
-  postgres-preview-data:
