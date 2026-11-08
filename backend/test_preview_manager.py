@@ -320,3 +320,105 @@ def test_phase9_operator_does_not_inherit_proxies_or_provider_keys(preview,monke
     for variable in ("HTTP_PROXY","HTTPS_PROXY","ALL_PROXY","OPENAI_API_KEY"):
         assert variable not in environment
     assert environment["WFS_PREVIEW_HOST_PORT"]=="19010"
+
+
+def test_phase10_manager_rejects_unsigned_hashes_even_in_programmatic_api(preview,tmp_path):
+    manager,calls=preview
+    with pytest.raises(AdmissionDenied,match="signed reviewer authority"):
+        TemplatePreviewManager(tmp_path/"bypass.db",manager.template,
+            enabled=True,runner=manager.runner,
+            reviewed_files=manager.reviewed_manifest)
+    assert calls==[]
+
+
+def test_phase10_policy_changes_and_revocation_fail_closed(preview):
+    manager,calls=preview
+    policy=manager.authority.policy_path
+    original=policy.read_bytes()
+    original_info=json.loads(original)
+    fingerprint=original_info["active_fingerprints"][0]
+    manager.reserve("alpha",19010)
+    try:
+        # Existing manager has an out-of-band PIN: any edit is denied.
+        policy.write_text(json.dumps({
+            "version":1,"epoch":2,"active_fingerprints":[fingerprint],
+            "revoked_fingerprints":[fingerprint]
+        }))
+        with pytest.raises(AdmissionDenied,match="policy changed"):
+            manager.start("alpha",19010,"X"*43)
+        with pytest.raises(AdmissionDenied,match="policy changed"):
+            manager.status("alpha")
+        # Even if an operator separately pins this new policy, the explicitly
+        # revoked key MUST NOT become trusted again.
+        authority=SignedPreviewAuthority(
+            public_key_path=manager.authority.public_key_path,
+            signature_path=manager.authority.signature_path,
+            policy_path=policy,
+            trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest())
+        with pytest.raises(AdmissionDenied,match="revoked"):
+            TemplatePreviewManager(manager.registry.parent/"revoked.db",
+                manager.template,enabled=True,runner=manager.runner,
+                reviewed_files=manager.reviewed_manifest,
+                reviewer_authority=authority)
+    finally:
+        policy.write_bytes(original)
+    assert manager.status("alpha")["phase"]=="reserved"
+    assert calls==[]
+
+
+def test_phase10_signature_swap_after_start_blocks_manager_and_docker(preview):
+    manager,calls=preview
+    token="X"*43
+    manager.start("alpha",19010,token)
+    count=len(calls)
+    signature=manager.authority.signature_path
+    prior=signature.read_bytes()
+    try:
+        signature.write_bytes(b"corrupt-not-signed")
+        with pytest.raises(AdmissionDenied):
+            manager.restart("alpha",token)
+        with pytest.raises(AdmissionDenied):
+            manager.logs("alpha",token)
+    finally:
+        signature.write_bytes(prior)
+    assert len(calls)==count
+    assert manager.status("alpha")["phase"]=="running"
+
+
+def test_phase10_key_rotation_requires_new_pin_and_new_manager(preview):
+    manager,calls=preview
+    manifest=manager.reviewed_manifest
+    original_policy=manager.authority.policy_path.read_bytes()
+    # Test helper overwrites synthetic signer/public key/policy with a fresh
+    # independent TEST identity. No production secret ever exists here.
+    new_authority=ci_authority(manager.registry.parent,manifest)
+    with pytest.raises(AdmissionDenied,match="policy changed"):
+        manager.reserve("alpha",19010)
+    replacement=TemplatePreviewManager(
+        manager.registry.parent/"rotated-registry.db",manager.template,
+        enabled=True,runner=manager.runner,reviewed_files=manifest,
+        reviewer_authority=new_authority)
+    assert replacement.reserve("bravo",19011)["phase"]=="reserved"
+    assert calls==[]
+    assert original_policy != new_authority.policy_path.read_bytes()
+
+
+def test_phase10_bad_policy_structure_and_duplicate_keys_rejected(preview):
+    manager,calls=preview
+    policy=manager.authority.policy_path
+    original=policy.read_bytes()
+    for payload in (
+        b'{"version":1,"version":1,"epoch":1,"active_fingerprints":[],"revoked_fingerprints":[]}',
+        b'{"version":1,"epoch":1,"active_fingerprints":[],"revoked_fingerprints":[]}',
+        b'{"version":1,"epoch":true,"active_fingerprints":["a"],"revoked_fingerprints":[]}',
+    ):
+        policy.write_bytes(payload)
+        authority=SignedPreviewAuthority(
+            public_key_path=manager.authority.public_key_path,
+            signature_path=manager.authority.signature_path,
+            policy_path=policy,
+            trusted_policy_sha256=hashlib.sha256(payload).hexdigest())
+        with pytest.raises(AdmissionDenied,match="policy"):
+            authority.verify(manager.reviewed_manifest)
+    policy.write_bytes(original)
+    assert calls==[]
