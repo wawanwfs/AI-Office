@@ -273,3 +273,16 @@ def test_phase8_broken_cyclonedx_is_denied_even_if_checksum_reapproved(preview):
         TemplatePreviewManager(repo/"bad-bom.db",manager.template,enabled=True,
                                reviewed_files=manifest)
     assert calls==[]
+
+
+def test_phase9_operator_does_not_inherit_proxies_or_provider_keys(preview,monkeypatch):
+    manager,calls=preview
+    monkeypatch.setenv("HTTP_PROXY","http://169.254.169.254:8888")
+    monkeypatch.setenv("HTTPS_PROXY","http://1.1.1.1:8888")
+    monkeypatch.setenv("ALL_PROXY","socks5://8.8.8.8:1080")
+    monkeypatch.setenv("OPENAI_API_KEY","not-a-real-provider-token")
+    manager.start("alpha",19010,"X"*43)
+    environment=calls[-1][1]["env"]
+    for variable in ("HTTP_PROXY","HTTPS_PROXY","ALL_PROXY","OPENAI_API_KEY"):
+        assert variable not in environment
+    assert environment["WFS_PREVIEW_HOST_PORT"]=="19010"

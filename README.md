@@ -243,3 +243,25 @@ Drag untuk memutar · Scroll / pinch untuk zoom · Tap agent untuk fokus · Slid
 MIT. Fondasi visualisasi isometrik awal berasal dari proyek MIT *ai-office* karya Gaurav Mishra;
 sejak itu kantor, karakter, dinding, UI, backend, task engine, dan seluruh fitur operasional dibangun ulang
 dan dikembangkan oleh WFS Project. Hak cipta asli dipertahankan di `LICENSE` sesuai ketentuan MIT.
+
+
+## Phase 9 — Offline reviewer signature & scoped Docker egress proof
+
+The local disposable preview operator CLI now requires a detached Ed25519
+signature over its exact v2 source/asset/lock/SBOM/image admission manifest,
+plus an out-of-band pinned reviewer public-key fingerprint. The signing
+private key is NEVER provisioned to this repo, CI, or Docker worker.
+Programmatic manager internals still require an explicitly trusted caller;
+signature enforcement is currently **CLI-only**.
+
+Two disposable multi-tenant Docker API containers undergo direct public
+IPv4/IPv6 TCP and metadata connection denials, proxy-environment checks,
+a deliberately simulated DNS rebound, and real Docker network membership
+inspection. **Simulated rebinding is not an authoritative DNS firewall test.**
+
+- [Phase 9 narrow REA gates](docs/REA_PHASE9.md)
+- [Phase 9 local operator signing/runtime runbook](docs/PHASE9_RUNTIME_RUNBOOK.md)
+- [Next Phase 10 implementation prompt](docs/NEXT_PHASE10_PROMPT.md)
+
+No real provider integration, arbitrary user source execution, production
+deployment, or independently verified invoice reconciliation is claimed.

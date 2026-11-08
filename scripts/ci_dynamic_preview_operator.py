@@ -19,6 +19,7 @@ import httpx
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"backend"))
 from preview_manager import TemplatePreviewManager,PreviewDenied
 from preview_admission import REVIEWED_FILES, candidate_manifest_for_ci_only
+from ci_preview_network_probe import prove_disposable_container_egress
 
 repo=Path(__file__).resolve().parents[1]
 root=Path(tempfile.mkdtemp(prefix="wfs-preview-operator-"))
@@ -125,6 +126,33 @@ print('outbound IPv4 denied for both targets')
         assert "outbound IPv4 denied" in result
     proof["two_networks_per_project_internal"]=True
     proof["external_socket_egress_denied"]=True
+    # Phase 9: exercise actual running Docker API containers. DNS
+    # rebinding is an explicit simulation, NOT host firewall evidence.
+    proof["phase9_egress"]={}
+    for project,token in zip(names,tokens):
+        identifier=hashlib.sha256(project.encode()).hexdigest()[:12]
+        proof["phase9_egress"][identifier] = (
+            prove_disposable_container_egress(manager,project,token)
+        )
+    # Verify actual Docker network membership, not only Compose declarations.
+    proof["phase9_service_networks"]={}
+    for project,token in zip(names,tokens):
+        record=manager.status(project)
+        name=record["compose_name"]
+        for service,expected in (
+            ("db",{"preview-internal"}),
+            ("api",{"preview-internal","preview-edge"}),
+            ("ingress",{"preview-edge","ingress-public"}),
+        ):
+            container_id=manager._invoke(record,token,["ps","-q",service]).strip()
+            assert container_id, "missing real container: "+service
+            inspect=subprocess.run(["docker","inspect","--format",
+                "{{json .NetworkSettings.Networks}}",container_id],
+                capture_output=True,text=True,timeout=15,check=True)
+            attached=json.loads(inspect.stdout)
+            actual={key.removeprefix(name+"_") for key in attached}
+            assert actual == expected, f"unexpected networks on {service}: {actual}"
+            proof["phase9_service_networks"][name+"/"+service]=sorted(actual)
 
     # Actual HTTP gateway TestClient -> authenticated project RBAC ->
     # read-only registry -> running loopback preview -> live PostgreSQL.
