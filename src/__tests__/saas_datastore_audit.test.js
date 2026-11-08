@@ -50,7 +50,7 @@ describe('audit datastore saas-dibantuin (siklus 220)', () => {
     expect(s).toContain('requirepass') // INFO auth internal redis
   })
 
-  it('audit live datastore lulus penuh (semua cek PASS)', async () => {
+  it.skipIf(process.env.WFS_RUN_LIVE_AUDITS !== '1')('audit live datastore lulus penuh (semua cek PASS)', async () => {
     try {
       const { stdout } = await execFileAsync('python3', [AUDIT], { timeout: 180_000 })
       expect(stdout).toContain('PASS')

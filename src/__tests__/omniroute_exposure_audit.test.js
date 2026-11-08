@@ -59,7 +59,7 @@ describe('audit eksposur omniroute :20128 (siklus 221)', () => {
     expect(s).toContain('/metrics') // telemetri tidak terekspos
   })
 
-  it('audit live omniroute lulus penuh (semua cek PASS)', async () => {
+  it.skipIf(process.env.WFS_RUN_LIVE_AUDITS !== '1')('audit live omniroute lulus penuh (semua cek PASS)', async () => {
     try {
       const { stdout } = await execFileAsync('python3', [AUDIT], { timeout: 240_000 })
       expect(stdout).toContain('PASS')

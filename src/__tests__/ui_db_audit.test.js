@@ -39,7 +39,7 @@ describe('audit_ui_db_238 — drift-gate', () => {
     expect(src).toMatch(/mode=ro/)
   })
 
-  it('audit live lulus penuh saat vitest (DB UI bersih / hanya data user)', () => {
+  it.skipIf(process.env.WFS_RUN_LIVE_AUDITS !== '1')('audit live lulus penuh saat vitest (DB UI bersih / hanya data user)', () => {
     const out = execFileSync('python3', [SCRIPT], {
       encoding: 'utf8', timeout: 30_000,
     })

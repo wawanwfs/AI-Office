@@ -49,7 +49,7 @@ describe('audit JWT saas-dibantuin :8000 (siklus 219)', () => {
     expect(s).toContain('0.0.0.0:8000') // bind wild TIDAK boleh ada
   })
 
-  it('audit live :8000 lulus penuh (semua cek PASS)', async () => {
+  it.skipIf(process.env.WFS_RUN_LIVE_AUDITS !== '1')('audit live :8000 lulus penuh (semua cek PASS)', async () => {
     try {
       const { stdout } = await execFileAsync('python3', [AUDIT], { timeout: 180_000 })
       expect(stdout).toContain('PASS')
