@@ -8,6 +8,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from preview_signature import canonical_review_bytes
 from preview_root_authority import canonical_roster_bytes
+from preview_witness import SignedReviewerCheckpoint, canonical_checkpoint_bytes
 from preview_authority import SignedPreviewAuthority
 from types import SimpleNamespace
 import pytest
@@ -16,6 +17,7 @@ from preview_admission import AdmissionDenied,REVIEWED_FILES,candidate_manifest_
 
 
 _TEST_ROSTER_SIGNERS={}
+_TEST_WITNESS_SIGNERS={}
 
 
 def root_args(authority):
@@ -32,6 +34,29 @@ def resign_roster_for_synthetic_test(authority):
     authority.root_signature_path.write_bytes(
         base64.b64encode(key.sign(canonical_roster_bytes(
             authority.policy_path.read_bytes()))))
+
+
+def issue_synthetic_test_checkpoint(authority, label):
+    """Independent synthetic test receipt and new out-of-band fixture pin."""
+    previous=authority.witness_checkpoint
+    signer=_TEST_WITNESS_SIGNERS[str(previous.public_key_path)]
+    policy=json.loads(authority.policy_path.read_bytes())
+    state=authority.policy_path.parent
+    receipt=state/("test-witness-"+label+".json")
+    signature=state/("test-witness-"+label+".sig")
+    payload={
+        "version":1,"epoch":policy["epoch"],
+        "policy_sha256":hashlib.sha256(authority.policy_path.read_bytes()).hexdigest(),
+        "roster_root_fingerprint":authority.trusted_root_fingerprint,
+    }
+    receipt.write_text(json.dumps(payload,sort_keys=True))
+    signature.write_bytes(base64.b64encode(
+        signer.sign(canonical_checkpoint_bytes(receipt.read_bytes()))))
+    return SignedReviewerCheckpoint(
+        public_key_path=previous.public_key_path,
+        signature_path=signature,receipt_path=receipt,
+        trusted_witness_fingerprint=previous.trusted_witness_fingerprint,
+        trusted_receipt_sha256=hashlib.sha256(receipt.read_bytes()).hexdigest())
 
 
 def hashes(directory):
@@ -62,11 +87,34 @@ def ci_authority(root, reviewed):
     _TEST_ROSTER_SIGNERS[str(root_pem)]=root_key
     root_fp=hashlib.sha256(root_key.public_key().public_bytes(
         serialization.Encoding.Raw,serialization.PublicFormat.Raw)).hexdigest()
+    witness_key=Ed25519PrivateKey.generate()
+    witness_public=root/"test-witness-public.pem"
+    witness_receipt=root/"test-witness-initial.json"
+    witness_sig=root/"test-witness-initial.sig"
+    witness_public.write_bytes(witness_key.public_key().public_bytes(
+        serialization.Encoding.PEM,serialization.PublicFormat.SubjectPublicKeyInfo))
+    witness_fp=hashlib.sha256(witness_key.public_key().public_bytes(
+        serialization.Encoding.Raw,serialization.PublicFormat.Raw)).hexdigest()
+    assert witness_fp not in (fingerprint,root_fp)
+    witness_receipt.write_text(json.dumps({
+        "version":1,"epoch":1,
+        "policy_sha256":hashlib.sha256(policy.read_bytes()).hexdigest(),
+        "roster_root_fingerprint":root_fp,
+    },sort_keys=True))
+    witness_sig.write_bytes(base64.b64encode(
+        witness_key.sign(canonical_checkpoint_bytes(witness_receipt.read_bytes()))))
+    _TEST_WITNESS_SIGNERS[str(witness_public)]=witness_key
+    witness=SignedReviewerCheckpoint(
+        public_key_path=witness_public,receipt_path=witness_receipt,
+        signature_path=witness_sig,
+        trusted_witness_fingerprint=witness_fp,
+        trusted_receipt_sha256=hashlib.sha256(witness_receipt.read_bytes()).hexdigest())
     return SignedPreviewAuthority(
         public_key_path=pem,signature_path=sig,policy_path=policy,
         trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),
         root_public_key_path=root_pem,root_signature_path=root_signature,
-        trusted_root_fingerprint=root_fp
+        trusted_root_fingerprint=root_fp,
+        witness_checkpoint=witness
     )
 
 
@@ -387,7 +435,8 @@ def test_phase10_policy_changes_and_revocation_fail_closed(preview):
             signature_path=manager.authority.signature_path,
             policy_path=policy,
             trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),
-            **root_args(manager.authority))
+            **root_args(manager.authority),
+            witness_checkpoint=manager.authority.witness_checkpoint)
         with pytest.raises(AdmissionDenied,match="revoked"):
             TemplatePreviewManager(manager.registry.parent/"revoked.db",
                 manager.template,enabled=True,runner=manager.runner,
@@ -451,7 +500,8 @@ def test_phase10_bad_policy_structure_and_duplicate_keys_rejected(preview):
             signature_path=manager.authority.signature_path,
             policy_path=policy,
             trusted_policy_sha256=hashlib.sha256(payload).hexdigest(),
-            **root_args(manager.authority))
+            **root_args(manager.authority),
+            witness_checkpoint=manager.authority.witness_checkpoint)
         with pytest.raises(AdmissionDenied,match="policy"):
             authority.verify(manager.reviewed_manifest)
     policy.write_bytes(original)
@@ -528,12 +578,14 @@ def test_phase11_local_reviewer_epoch_rollback_denied_across_manager_restart(pre
     upgraded={**previous,"epoch":2}
     policy.write_text(json.dumps(upgraded,sort_keys=True))
     resign_roster_for_synthetic_test(manager.authority)
+    newer_witness=issue_synthetic_test_checkpoint(manager.authority,"phase11-upgrade")
     authority=SignedPreviewAuthority(
         public_key_path=manager.authority.public_key_path,
         signature_path=manager.authority.signature_path,
         policy_path=policy,
         trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),
-            **root_args(manager.authority))
+            **root_args(manager.authority),
+            witness_checkpoint=newer_witness)
     replacement=TemplatePreviewManager(manager.registry,manager.template,
         enabled=True,runner=manager.runner,
         reviewed_files=manager.reviewed_manifest,reviewer_authority=authority)
@@ -566,12 +618,14 @@ def test_phase11_equal_epoch_policy_swap_denied(preview):
         **approved,"revoked_fingerprints":[other]
     },sort_keys=True))
     resign_roster_for_synthetic_test(manager.authority)
+    newer_witness=issue_synthetic_test_checkpoint(manager.authority,"phase11-equal")
     independent=SignedPreviewAuthority(
         public_key_path=manager.authority.public_key_path,
         signature_path=manager.authority.signature_path,
         policy_path=policy,
         trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),
-            **root_args(manager.authority))
+            **root_args(manager.authority),
+            witness_checkpoint=newer_witness)
     with pytest.raises(AdmissionDenied,match="same epoch"):
         TemplatePreviewManager(manager.registry,manager.template,
             enabled=True,runner=manager.runner,
@@ -626,7 +680,8 @@ def test_phase12_roster_signature_required_even_with_new_hash_pin(preview):
         signature_path=manager.authority.signature_path,
         policy_path=roster,
         trusted_policy_sha256=hashlib.sha256(roster.read_bytes()).hexdigest(),
-        **root_args(manager.authority))
+        **root_args(manager.authority),
+            witness_checkpoint=manager.authority.witness_checkpoint)
     try:
         with pytest.raises(AdmissionDenied,match="roster signature mismatch"):
             TemplatePreviewManager(manager.registry,manager.template,
@@ -666,7 +721,8 @@ def test_phase12_reviewer_cannot_self_sign_authority(preview):
         trusted_policy_sha256=manager.authority.trusted_policy_sha256,
         root_public_key_path=manager.authority.public_key_path,
         root_signature_path=manager.authority.root_signature_path,
-        trusted_root_fingerprint=reviewer_fp)
+        trusted_root_fingerprint=reviewer_fp,
+        witness_checkpoint=manager.authority.witness_checkpoint)
     with pytest.raises(AdmissionDenied,match="distinct key"):
         TemplatePreviewManager(manager.registry.parent/"same-root.db",
             manager.template,enabled=True,runner=manager.runner,
