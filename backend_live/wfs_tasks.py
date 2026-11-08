@@ -37,6 +37,17 @@ REPO = os.path.expanduser(os.environ.get(
 _WFS_BILLING_CONTEXT = ContextVar("wfs_billing_context", default=None)
 
 
+def _workspace_root():
+    """Immutable per-coroutine worker workspace, legacy REPO only as fallback.
+
+    Concurrent tasks inherit their own ContextVar value when created by the
+    worker. Never mutate module-level REPO at dispatch time.
+    """
+    ctx = _WFS_BILLING_CONTEXT.get()
+    return ctx["workspace"] if ctx is not None and ctx.get("workspace") else REPO
+
+
+
 def _require_worker_fence():
     ctx = _WFS_BILLING_CONTEXT.get()
     if ctx is None:
@@ -466,7 +477,7 @@ def write_json_files(task_id, output):
         # retry yang mengurus.
         if len(str(code).strip()) < 200:
             continue
-        fp = _contained_file(REPO, path)
+        fp = _contained_file(_workspace_root(), path)
         if fp is None:
             continue
         _require_worker_fence()
@@ -481,12 +492,12 @@ def write_output_files(task_id, output):
     written = []
     if FILE_RE_SPLIT not in output:
         # simpan sebagai dokumen
-        p = _contained_file(REPO, f"docs/task_{task_id}_output.md")
+        p = _contained_file(_workspace_root(), f"docs/task_{task_id}_output.md")
         if p is None:
             return []
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(output)
-        return [str(p.relative_to(REPO))]
+        return [str(p.relative_to(_workspace_root()))]
     import re
     parts = output.split(FILE_RE_SPLIT)[1:]
     for part in parts:
@@ -505,7 +516,7 @@ def write_output_files(task_id, output):
             body = "\n".join(blines[1:-1]) if len(blines)>2 else body
         if not body.strip():
             continue
-        fp = _contained_file(REPO, path)
+        fp = _contained_file(_workspace_root(), path)
         if fp is None:
             continue  # safety
         _require_worker_fence()
@@ -515,12 +526,12 @@ def write_output_files(task_id, output):
     if len(written)==1 and written[0] in ("app/nama_file.py",):
         written=[]
     if not written and FILE_RE_SPLIT in output:
-        p = _contained_file(REPO, f"docs/task_{task_id}_output.md")
+        p = _contained_file(_workspace_root(), f"docs/task_{task_id}_output.md")
         if p is None:
             return []
         p.parent.mkdir(parents=True, exist_ok=True)
         p.write_text(output)
-        return [str(p.relative_to(REPO))]
+        return [str(p.relative_to(_workspace_root()))]
     return written
 
 def require_launch_approval(project):
@@ -701,12 +712,12 @@ async def _execute_task(tid, attempt_no=0):
             files = all_files
             result_out = plan_out
             if not files:
-                p = _contained_file(REPO, f"docs/task_{tid}_output.md")
+                p = _contained_file(_workspace_root(), f"docs/task_{tid}_output.md")
                 if p is None:
                     raise PermissionError("Output path is outside repository")
                 p.parent.mkdir(parents=True, exist_ok=True)
                 p.write_text("no files produced")
-                files = [str(p.relative_to(REPO))]
+                files = [str(p.relative_to(_workspace_root()))]
         set_status(tid, "review", result=result_out[:8000], files=files)
         sync_sandbox(t["agent_id"], files if isinstance(files, list) else [])
         # QA review utk task kode — mulai dari hasil test sandbox (bukti objektif)
@@ -726,8 +737,8 @@ async def _execute_task(tid, attempt_no=0):
             _code_files = [f for f in (files or [])
                            if not str(f).startswith("docs/task_")
                            or "no files produced" not in str(
-                               (Path(REPO)/str(f)).read_text(errors="replace")
-                               if (Path(REPO)/str(f)).exists() else "")]
+                               (Path(_workspace_root())/str(f)).read_text(errors="replace")
+                               if (Path(_workspace_root())/str(f)).exists() else "")]
             files_note = ("\n\nDELIVERABLE FILE: " + ", ".join(files)
                           if files else "\n\nDELIVERABLE FILE: TIDAK ADA")
             if not _code_files:
@@ -769,7 +780,7 @@ def sync_sandbox(agent_id: str, files: list) -> str:
         return ""
     copied = []
     for f in files:
-        src = _contained_file(REPO, f)
+        src = _contained_file(_workspace_root(), f)
         dst = _contained_file(sb, f)
         if src is not None and dst is not None and src.is_file():
             dst.parent.mkdir(parents=True, exist_ok=True)

@@ -36,7 +36,8 @@ class Engine:
             raise PermissionError("launch approval revoked")
 
     async def run_task(self,tid):
-        self.runs.append((tid,self.REPO))
+        ctx=self._WFS_BILLING_CONTEXT.get()
+        self.runs.append((tid,ctx["workspace"] if ctx else self.REPO))
         if self.block is not None:
             await self.block.wait()
         if not self.leave_pending:
@@ -80,7 +81,8 @@ def test_project_scoped_real_engine_success_is_not_visual_only(ready):
     assert result["queue_status"]=="completed"
     assert q.get(job)["status"]=="completed"
     assert engine.runs[0][0]==1
-    assert Path(engine.runs[0][1]).name=="p1"
+    assert Path(engine.runs[0][1]).parent.parent.name=="p1"
+    assert Path(engine.runs[0][1]).name=="attempt-1"
     assert engine.REPO=="legacy"
     assert [e["phase"] for e in q.events("p1")][:3]==["completed","executing","leased"]
 
@@ -168,3 +170,25 @@ def test_project_workspace_symlink_alias_rejected(ready,tmp_path):
     assert result["engine_result"]=="failed"
     assert "symlinked" in result["error"]
     assert engine.runs==[]
+
+
+def test_concurrent_workers_use_contextvar_not_shared_repo(ready):
+    q,ledger,engine,first=ready
+    engine.tasks[2]["status"]="pending"
+    first.enqueue_task("1")
+    first.enqueue_task("2")
+    q.set_paused(False)
+    second=ApprovedMasterWorker(q,engine,ledger,first.workspace_root,
+        access_control=first.access_control,principal="owner",
+        worker_id="worker-2",heartbeat_seconds=.02,lease_seconds=10)
+    async def scenario():
+        a,b=await asyncio.gather(first.run_once(),second.run_once())
+        assert a["queue_status"]=="completed"
+        assert b["queue_status"]=="completed"
+    asyncio.run(scenario())
+    assert len(engine.runs)==2
+    paths={tid:Path(root) for tid,root in engine.runs}
+    assert paths[1].parents[1].name=="p1"
+    assert paths[2].parents[1].name=="p2"
+    assert paths[1]!=paths[2]
+    assert engine.REPO=="legacy"

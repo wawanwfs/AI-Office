@@ -66,23 +66,26 @@ class ApprovedMasterWorker:
         if not budget["approved"] or budget["remaining_microusd"] <= 0:
             raise PermissionError("approved budget with remaining funds required")
 
-    def _workspace(self, project_id):
-        project_id = str(project_id)
-        if not project_id or not project_id.isascii() or not all(
-                c.isalnum() or c in "-_." for c in project_id):
-            raise PermissionError("invalid project workspace identifier")
-        candidate = self.workspace_root / project_id
-        # The lexical name must resolve to its OWN directory, not an existing
-        # sibling project's directory reached through an attacker-set symlink.
-        # Reject even symlinks that remain inside the authorized root.
-        if candidate.is_symlink():
-            raise PermissionError("symlinked project workspace denied")
-        folder = candidate.resolve()
-        if (folder != candidate or folder == self.workspace_root or
-                not folder.is_relative_to(self.workspace_root)):
-            raise PermissionError("workspace escape or alias denied")
-        folder.mkdir(parents=True, exist_ok=True)
-        return str(folder)
+    def _workspace(self, project_id, job_id, attempt):
+        """Create a distinct immutable path for every real execution attempt.
+
+        Never resolve through a symlink in project, job or attempt component.
+        Paths are unique across projects, tasks and retries. No global REPO.
+        """
+        parts = (str(project_id), str(job_id), f"attempt-{attempt}")
+        if any(not p or not p.isascii() or p in (".", "..") or
+               not all(c.isalnum() or c in "-_." for c in p) for p in parts):
+            raise PermissionError("invalid workspace identifier")
+        parent = self.workspace_root
+        for part in parts:
+            candidate = parent / part
+            if candidate.is_symlink() or candidate.resolve() != candidate:
+                raise PermissionError("symlinked project workspace denied")
+            candidate.mkdir(exist_ok=True)
+            parent = candidate
+        if parent == self.workspace_root or not parent.is_relative_to(self.workspace_root):
+            raise PermissionError("workspace escape denied")
+        return str(parent)
 
     def enqueue_task(self, task_id):
         """Owner-authorized intake: validate actual task and approvals first."""
@@ -103,17 +106,17 @@ class ApprovedMasterWorker:
         result = "failed"
         error = ""
         ctx_token = None
-        previous_workspace = getattr(self.engine,"REPO",None)
         try:
             t = self._task(claim["task_id"])
             if (str(t["project"]) != claim["project_id"] or
                     str(t["role"]) != claim["role"]):
                 raise PermissionError("job metadata does not match source-of-truth task")
             self._preflight(t)  # approval may have been revoked since intake
-            self.engine.REPO = self._workspace(claim["project_id"])
+            workspace = self._workspace(claim["project_id"], jid, claim["attempt"])
             ctx_token = self.engine._WFS_BILLING_CONTEXT.set({
                 "queue":self.queue,"claim":claim,"ledger":self.ledger,
                 "acl":self.access_control,"principal":self.principal,
+                "workspace":workspace,
                 "project_id":claim["project_id"],"task_id":claim["task_id"]})
             if not self.queue.record_phase(jid,self.worker_id,token,"executing",
                                            "legacy taskengine.run_task"):
@@ -152,8 +155,6 @@ class ApprovedMasterWorker:
         finally:
             if ctx_token is not None:
                 self.engine._WFS_BILLING_CONTEXT.reset(ctx_token)
-            if previous_workspace is not None:
-                self.engine.REPO = previous_workspace
             # Only the still-valid lease holder can settle. Stale workers
             # cannot write completion; expired work is quarantined, not retried.
             settled = self.queue.finish(jid,self.worker_id,token,
