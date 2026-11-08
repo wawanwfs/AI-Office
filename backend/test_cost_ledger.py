@@ -102,3 +102,15 @@ def test_dollars_are_not_floats_and_secrets_never_exposed(ledger):
     assert row["id"]==ident
     assert all("api_key" not in k and "secret" not in k for k in row)
     assert type(ledger.summary("project-1")["remaining_microusd"]) is int
+
+
+def test_model_price_frozen_during_reserved_call(ledger):
+    call_id=book(ledger)
+    with pytest.raises(BudgetDenied,match="reprice"):
+        ledger.set_price("provider-a","model-a",
+                         input_microusd_per_million=10,
+                         output_microusd_per_million=20)
+    ledger.settle(call_id,{"prompt_tokens":0,"completion_tokens":1})
+    ledger.set_price("provider-a","model-a",
+                     input_microusd_per_million=10,
+                     output_microusd_per_million=20)

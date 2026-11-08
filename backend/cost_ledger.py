@@ -4,7 +4,7 @@ Accounting units: integer micro-USD (1 USD = 1_000_000 micro-USD).
 Prices: micro-USD per 1,000,000 tokens, configured by an authorized operator.
 NO assumed provider prices, NO external model calls, NO auto-approved budgets.
 """
-from contextlib import contextmanager
+from contextlib import contextmanager, closing
 from pathlib import Path
 import re
 import sqlite3
@@ -43,7 +43,7 @@ class CostLedger:
         self.path = str(Path(db_path).resolve())
         self.clock = clock or time.time
         Path(self.path).parent.mkdir(parents=True, exist_ok=True)
-        with self._db() as conn:
+        with closing(self._db()) as conn:
             conn.executescript("""
                 CREATE TABLE IF NOT EXISTS wfs_cost_budgets(
                   project_id TEXT PRIMARY KEY,
@@ -118,6 +118,15 @@ class CostLedger:
         pi = _positive(input_microusd_per_million, "input_price")
         po = _positive(output_microusd_per_million, "output_price")
         with self._tx() as db:
+            previous = db.execute("""SELECT input_microusd_per_million,
+                output_microusd_per_million FROM wfs_cost_prices
+                WHERE provider=? AND model=?""",(provider,model)).fetchone()
+            if previous and (previous[0], previous[1]) != (pi,po):
+                pending = db.execute("""SELECT COUNT(*) FROM wfs_cost_calls
+                    WHERE provider=? AND model=? AND status='reserved'""",
+                    (provider,model)).fetchone()[0]
+                if pending:
+                    raise BudgetDenied("cannot reprice model while calls are reserved")
             db.execute("""INSERT INTO wfs_cost_prices VALUES(?,?,?,?,?)
                 ON CONFLICT(provider,model) DO UPDATE SET
                 input_microusd_per_million=excluded.input_microusd_per_million,
@@ -219,7 +228,7 @@ class CostLedger:
 
     def summary(self, project_id):
         project_id = _id(project_id, "project_id")
-        with self._db() as db:
+        with closing(self._db()) as db:
             b = db.execute("SELECT cap_microusd FROM wfs_cost_budgets WHERE project_id=?",
                            (project_id,)).fetchone()
             if b is None:
@@ -234,7 +243,7 @@ class CostLedger:
         p = _id(project_id, "project_id")
         if isinstance(limit, bool) or not isinstance(limit,int) or not 1<=limit<=500:
             raise ValueError("invalid limit")
-        with self._db() as db:
+        with closing(self._db()) as db:
             rows = db.execute("""SELECT id, project_id,task_id,agent_id,
                   provider,model,status,prompt_reserved,completion_reserved,
                   actual_prompt,actual_completion,reserved_microusd,
