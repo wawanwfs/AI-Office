@@ -148,3 +148,55 @@ jobs:
           path: artifacts/code-qa/
           if-no-files-found: warn
           retention-days: 14
+
+  dependency-security:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '22'
+          cache: npm
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+      - run: npm ci --ignore-scripts
+      - name: Audit production npm dependencies (high/critical gate)
+        run: |
+          mkdir -p artifacts/security
+          npm audit --omit=dev --audit-level=high --json > artifacts/security/npm-audit.json
+      - run: python -m pip install --no-cache-dir pip-audit==2.9.0
+      - name: Audit pinned Python dependency requirements
+        run: pip-audit --requirement requirements-pytest.txt --format=json --output=artifacts/security/pip-audit.json
+      - name: Upload dependency vulnerability evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase5-dependency-scans
+          path: artifacts/security/*audit.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  secret-patterns:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+      - name: Scan tracked files for high-confidence credential patterns
+        run: python scripts/ci_secret_scan.py
+      - name: Upload secret scan summary (no token contents)
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase5-secret-patterns
+          path: artifacts/security/secret-scan.json
+          if-no-files-found: warn
+          retention-days: 14
