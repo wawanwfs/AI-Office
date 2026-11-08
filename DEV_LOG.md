@@ -6131,3 +6131,9 @@
 - Audit delta-panjang (backlog siklus 278) selesai: seluruh konsumen delta di animate() kini waktu-nyata (motion sub-step 278, focusStep/autorot 261/259, ring 260, dust 264, relayout 251/263, bubble, pages, sounds tick, sim_clock pakai performance.now). Tidak ada perubahan produksi scene.
 - Gate: vitest 3636 passed + 6 skipped (251 file, 0 fail) · pytest 311 passed + 4 subtests · 9503 & :8787 live OK pasca deploy · dist tidak berubah.
 - Sisa backlog: (a) gateway :8787→Docker; (b) saas-dibantuin push; (d) keputusan omniroute; (e) cleanup script apply_* anchor lama; penghapus wfs-hq tetap tak teridentifikasi (backup harian aktif).
+## 2026-11-08 17:40 WIB — Siklus 288: CLEANUP 3 SCRIPT APPLY USANG — apply_events/dashboard_stats/sh_console DIHAPUS (anchor lama, false-negative terkonfirmasi)
+
+- Verifikasi sebelum hapus: ketiga script CHECK (tanpa --apply) exit 3 "BELUM terpasang" padahal endpoint live /api/events, /api/dashboard/stats, /api/sh/overview, /api/approvals semua sehat via router superset wfs_server.py baru (siklus 287) — anchor Half siklus 152-154 sudah tidak relevan; --apply berisiko patch duplikat/false-negative.
+- git rm scripts/apply_events.py, apply_dashboard_stats.py, apply_sh_console.py; apply_wfs_* (4 script sinkron server/tasks/api) tetap dipertahankan & CHECK identik.
+- Tidak ada perubahan kode produksi scene/server; build & vitest tidak dijalankan ulang (hapus script saja).
+- Sisa backlog: (a) gateway :8787→Docker; (b) saas-dibantuin push; (d) keputusan omniroute; penghapus wfs-hq tak teridentifikasi.
