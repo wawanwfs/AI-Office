@@ -6399,3 +6399,12 @@
 - Redeploy dist → ~/wfs-hq via deploy.py (9503: 200, pruned 0); hygiene 13 hashed/0 orphan.
 - e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 707183 B, nonbg 0.992, hygiene 13/0.
 - Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 2026-11-09 07:10 WIB — Siklus 322: daftar agent WfsPanel refresh SEGERA saat tab kembali visible
+
+- Tanpa upstream baru (0 commit HEAD..origin/main). Item paritas visible-refresh terakhir yang terlewat (pola 315-321): WfsPanel memuat daftar agent HANYA sekali saat mount, tanpa gerbang visibility & tanpa listener — setelah tab lama disembunyikan lalu kembali visible, daftar/status agen bisa basi tanpa batas waktu (tidak ada interval yang menyegarkan).
+- WfsPanel.jsx: effect mount digerbang visibilityState (tab dibuka di background tidak memicu fetch saat hidden) + listener 'visibilitychange' memuat ulang daftar SEGERA saat kembali visible + cleanup removeEventListener saat unmount. Paritas visible-refresh kini benar-benar menyeluruh: scene, HUD, drawer, ticker, sysmeter, dan panel chat.
+- +1 file tes visibility_parity_322.test.jsx (4 kasus: visible segera reload, mount saat hidden tidak fetch, hidden tidak memicu, cleanup melepas listener).
+- Build PWA OK; vitest 257 file / 3690 passed + 6 skipped, 0 fail (+4 tes vs siklus 321).
+- Redeploy dist → ~/wfs-hq via deploy.py (9503: 200) + prune orphan eksplisit (7 file hash lama → hygiene 13 hashed/0 orphan).
+- e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 692057 B, nonbg 0.992, hygiene 13/0.
+- Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

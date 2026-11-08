@@ -97,7 +97,19 @@ export default function WfsPanel() {
     }).catch(e => setLoadErr('Gagal memuat daftar agent: ' + e.message)).finally(() => setLoading(false))
   }, [choose])
 
-  useEffect(() => { const t0 = setTimeout(loadAgents, 0); return () => clearTimeout(t0) }, [loadAgents])
+  // Siklus 322: mount-time load digerbang visibility (tab dibuka di background
+  // tidak memicu fetch saat hidden), dan saat kembali visible daftar agent +
+  // status dimuat ulang SEGERA — sebelumnya daftar bisa basi tanpa batas waktu
+  // karena hanya dimuat sekali saat mount (pola 315-321).
+  useEffect(() => {
+    if (document.visibilityState !== 'visible') return
+    const t0 = setTimeout(loadAgents, 0); return () => clearTimeout(t0)
+  }, [loadAgents])
+  useEffect(() => {
+    const onVis = () => { if (document.visibilityState === 'visible') loadAgents() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => document.removeEventListener('visibilitychange', onVis)
+  }, [loadAgents])
   useEffect(() => {
     if (!open) return
     let dead = false
