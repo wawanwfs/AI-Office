@@ -120,6 +120,7 @@ jobs:
             backend/preview_manager.py backend/preview_proxy.py \
             backend/billing_reconcile.py backend/preview_admission.py \
             backend/preview_admission_v2.py backend/preview_signature.py \
+            backend/preview_authority.py \
             examples/fullstack-preview/ingress.py
       - name: Upload scoped static scan report
         if: always()
@@ -185,6 +186,27 @@ jobs:
         with:
           name: phase5-dependency-scans
           path: artifacts/security/*audit.json
+          if-no-files-found: warn
+          retention-days: 14
+
+  preview-crypto-offline:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+      - name: Generate ephemeral SHA256 wheelhouse and prove offline install
+        run: python scripts/ci_preview_offline_wheelhouse.py
+      - name: Save scoped wheelhouse reproducibility evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase10-preview-crypto-wheelhouse
+          path: artifacts/phase10-supply-chain/
           if-no-files-found: warn
           retention-days: 14
 
@@ -344,7 +366,7 @@ jobs:
           PYTHONPATH: backend
         run: |
           New-Item -ItemType Directory -Force artifacts/windows-native | Out-Null
-          python -m pytest backend/test_recovery_snapshot.py backend/test_preview_proxy.py backend/test_billing_reconcile.py backend/test_secure_control_api.py backend/test_brief_reconciliation.py backend/test_reconcile_cli.py backend/test_preview_signature.py -q --junitxml=artifacts/windows-native/pytest.xml
+          python -m pytest backend/test_recovery_snapshot.py backend/test_preview_proxy.py backend/test_billing_reconcile.py backend/test_secure_control_api.py backend/test_brief_reconciliation.py backend/test_reconcile_cli.py backend/test_preview_signature.py backend/test_preview_manager.py -q --junitxml=artifacts/windows-native/pytest.xml
       - name: Upload independent Windows Python evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

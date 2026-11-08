@@ -15,6 +15,7 @@ import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"backend"))
 from preview_manager import TemplatePreviewManager, PreviewDenied
 from preview_signature import verify_review_signature
+from preview_authority import SignedPreviewAuthority
 
 
 def main():
@@ -32,6 +33,10 @@ def main():
         help="detached base64 Ed25519 signature over canonical reviewed manifest")
     parser.add_argument("--trusted-reviewer-fingerprint",required=True,
         help="SHA-256 of reviewer raw public key, verified out-of-band")
+    parser.add_argument("--reviewer-policy",required=True,
+        help="operator-owned allowlist/revocation policy v1, provisioned out of band")
+    parser.add_argument("--trusted-policy-sha256",required=True,
+        help="independently pinned policy file SHA256; never derive from upload")
     parser.add_argument("--discard-data",action="store_true",
                         help="required to remove disposable PostgreSQL volumes")
     args=parser.parse_args()
@@ -65,8 +70,15 @@ def main():
         signature_path=args.review_signature,
         trusted_fingerprint=args.trusted_reviewer_fingerprint,
     )
+    authority=SignedPreviewAuthority(
+        public_key_path=args.reviewer_public_key,
+        signature_path=args.review_signature,
+        policy_path=args.reviewer_policy,
+        trusted_policy_sha256=args.trusted_policy_sha256,
+    )
     manager=TemplatePreviewManager(state/"registry.db",template,
-        enabled=True,reviewed_files=approved_hashes)
+        enabled=True,reviewed_files=approved_hashes,
+        reviewer_authority=authority)
     if args.action=="status":
         result=manager.status(args.project)
     else:

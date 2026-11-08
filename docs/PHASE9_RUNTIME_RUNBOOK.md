@@ -1,3 +1,8 @@
+> **Historical instructions:** As of Phase 10, the manager additionally
+> requires a separately pinned, operator-owned reviewer policy with
+> revocation semantics. Use [Phase 10 runbook](PHASE10_RUNTIME_RUNBOOK.md)
+> instead of invoking the legacy CLI examples below.
+
 # Phase 9 — signed local preview operator & disposable egress proof
 
 **No production execution. No unreviewed AI-authored Dockerfile or image.**

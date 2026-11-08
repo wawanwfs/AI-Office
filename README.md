@@ -265,3 +265,23 @@ inspection. **Simulated rebinding is not an authoritative DNS firewall test.**
 
 No real provider integration, arbitrary user source execution, production
 deployment, or independently verified invoice reconciliation is claimed.
+
+
+## Phase 10 — Signed manager trust policy & scoped offline wheelhouse
+
+Every known `TemplatePreviewManager` entry now requires a signed v2
+reviewed manifest plus an independently pinned reviewer-allowlist policy.
+Policy revocation/edits and signature changes deny subsequent reservations,
+status, transitions and Docker commands. The disposable CI two-stack
+proof uses an **ephemeral synthetic signer** (not external approval).
+The new CI job demonstrates SHA256 hash-locked `--no-index` installation
+and tamper rejection for **only** the preview crypto Python dependency
+slice — not a production offline container build or independent provenance.
+
+- [Phase 10 narrow REA](docs/REA_PHASE10.md)
+- [Phase 10 Windows/Linux operator runbook](docs/PHASE10_RUNTIME_RUNBOOK.md)
+- [Next Phase 11 execution prompt](docs/NEXT_PHASE11_PROMPT.md)
+
+The generic untrusted-code preview, public interactive TLS gateway,
+complete OCI/JS/Python supply chain, paid AI authorization and production
+hardening remain blocked.
