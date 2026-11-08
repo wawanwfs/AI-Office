@@ -89,3 +89,45 @@ def test_unsafe_project_names_and_ports_are_denied(preview):
         with pytest.raises(PreviewDenied):
             m.reserve("alpha",port)
     assert calls==[]
+
+
+def test_concurrent_start_has_one_exclusive_docker_mutation(preview):
+    from concurrent.futures import ThreadPoolExecutor
+    import threading
+    m,calls=preview
+    begun=threading.Event()
+    finish=threading.Event()
+    def slow(argv,**kw):
+        calls.append((argv,kw))
+        begun.set()
+        assert finish.wait(timeout=2)
+        return SimpleNamespace(returncode=0,stdout="ok",stderr="")
+    m.runner=slow
+    def start(_):
+        try:
+            return m.start("alpha",19010,"X"*43)["phase"]
+        except PreviewDenied:
+            return "denied"
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        first=pool.submit(start,1)
+        assert begun.wait(timeout=2)
+        second=pool.submit(start,2)
+        assert second.result(timeout=2)=="denied"
+        finish.set()
+        assert first.result(timeout=2)=="running"
+    assert len(calls)==1
+    assert m.status("alpha")["phase"]=="running"
+
+
+def test_stopped_teardown_idempotent_and_uncertain_can_be_cleaned(preview):
+    m,calls=preview
+    token="X"*43
+    m.reserve("alpha",19010)
+    assert m.stop("alpha",token,allow_data_loss=True)["phase"]=="stopped"
+    before=len(calls)
+    assert m.stop("alpha",token,allow_data_loss=True)["phase"]=="stopped"
+    assert len(calls)==before
+    m.start("alpha",19010,token)
+    m._phase("alpha","uncertain")
+    assert m.stop("alpha",token,allow_data_loss=True)["phase"]=="stopped"
+    assert calls[-1][0][-3:]==["down","--volumes","--remove-orphans"]

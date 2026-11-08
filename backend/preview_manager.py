@@ -103,6 +103,28 @@ class TemplatePreviewManager:
             db.execute("UPDATE wfs_preview_instances SET phase=? WHERE project_id=?",
                        (state,project_id))
 
+    def _claim_transition(self, project_id, allowed):
+        """Fenced state transition: at most one concurrent Docker mutation.
+
+        begin-immediate makes a second operator/worker fail closed rather
+        than executing docker compose simultaneously for the same project.
+        """
+        db=self._db()
+        try:
+            db.execute("BEGIN IMMEDIATE")
+            row=db.execute("SELECT phase FROM wfs_preview_instances WHERE project_id=?",
+                           (project_id,)).fetchone()
+            if row is None or row["phase"] not in allowed:
+                raise PreviewDenied("preview state changed or is uncertain; reconcile first")
+            db.execute("UPDATE wfs_preview_instances SET phase='uncertain' WHERE project_id=?",
+                       (project_id,))
+            db.commit()
+        except BaseException:
+            db.rollback()
+            raise
+        finally:
+            db.close()
+
     def _invoke(self,record,token,args,*,timeout=120):
         if not isinstance(token,str) or len(token)<32 or not token.isascii():
             raise PreviewDenied("operator-supplied ephemeral token required")
@@ -130,7 +152,7 @@ class TemplatePreviewManager:
         record=self.reserve(project_id,port)
         if record["phase"] in ("running","uncertain"):
             raise PreviewDenied("preview is active or uncertain; reconcile before retry")
-        self._phase(project_id,"uncertain")  # crash leaves an explicit marker
+        self._claim_transition(project_id,("reserved","stopped"))
         self._invoke(record,token,["up","-d","--build"],timeout=240)
         self._phase(project_id,"running")
         return self.status(project_id)
@@ -145,7 +167,7 @@ class TemplatePreviewManager:
         record=self.status(project_id)
         if record["phase"]!="running":
             raise PreviewDenied("cannot restart a stopped/uncertain preview")
-        self._phase(project_id,"uncertain")
+        self._claim_transition(project_id,("running",))
         self._invoke(record,token,["restart"])
         self._phase(project_id,"running")
         return self.status(project_id)
@@ -154,7 +176,9 @@ class TemplatePreviewManager:
         record=self.status(project_id)
         if allow_data_loss is not True:
             raise PreviewDenied("explicit disposable volume deletion approval required")
-        self._phase(project_id,"uncertain")
+        if record["phase"]=="stopped":
+            return record
+        self._claim_transition(project_id,("running","uncertain","reserved"))
         self._invoke(record,token,["down","--volumes","--remove-orphans"])
         self._phase(project_id,"stopped")
         return self.status(project_id)
