@@ -6262,3 +6262,11 @@
 - Gate pasca-deploy: vitest 252 file / 3658 passed + 6 skipped, 0 fail; :8787 /api/health 200; :9503 200.
 - e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 705114 B, nonbg 0.991, hygiene 13 hashed/0 orphan.
 - Produksi & dist scene tidak berubah. Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key dari user); (d) keputusan omniroute.
+
+## 2026-11-09 00:57 WIB — Siklus 307: tarik upstream phase10 (ee274e7), deploy dist + prune 8 aset orphan produksi
+
+- git pull --rebase menarik 1 commit upstream: ee274e7 feat(phase10) signed preview reviewer trust & scoped offline wheelhouse (backend/preview_authority.py baru; backend saja, tidak sentuh scene).
+- Build PWA OK; vitest 252 file / 3659 passed + 6 skipped, 0 fail.
+- Redeploy dist → ~/wfs-hq; 8 aset hashed orphan lama (App/CsWidget/OfficeScene/SettingsModal/ShConsole/TaskBoard/index/src generasi sebelumnya) dihapus dari produksi → produksi 13 file == dist.
+- e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 704282 B, nonbg 0.991, hygiene 13 hashed/0 orphan.
+- :8787 /api/health 200 (pause engine tetap). Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
