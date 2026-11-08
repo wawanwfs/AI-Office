@@ -20,6 +20,7 @@ def test_http_gateway_does_not_get_docker_socket_or_host_network():
     for path in (GO, REHEARSAL):
         config = _active_lines(path)
         assert "/var/run/docker.sock" not in config
+        assert "/hermes-home/.hermes/.env:" not in config
         assert "network_mode: host" not in config
         assert "privileged: true" not in config
         assert "cap_drop:" in config and "no-new-privileges:true" in config

@@ -42,7 +42,8 @@ services:
       - /home/agentuser/wfs-office/rehearsal-data/orders.db:/app/orders.db
       - /home/agentuser/wfs-office/rehearsal-data/config:/app/config
       # default AI (baca .hermes/.env via HOME=/hermes-home)
-      - /home/agentuser/.hermes/.env:/hermes-home/.hermes/.env:ro
+      # API provider credentials belong to a separate authorized worker.
+      # Never mount ~/.hermes/.env in an HTTP-serving gateway.
       # No Docker socket in public gateway (worker separated).
       # sandbox_exec.py me-expand ~/wfs-office/sandboxes -> HOME=/hermes-home di container
       - /home/agentuser/wfs-office/sandboxes:/hermes-home/wfs-office/sandboxes

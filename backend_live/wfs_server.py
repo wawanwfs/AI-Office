@@ -1354,6 +1354,8 @@ async def api_sandboxes():
 
 @app.post("/api/sandbox/{agent_id}/exec")
 async def sandbox_exec(agent_id: str, body: dict):
+    if os.environ.get("WFS_MASTER_QUEUE_REQUIRED") == "1":
+        raise HTTPException(503, "Legacy Docker exec disabled in hardened gateway")
     """Jalankan kode Python di sandbox agent (executor mandiri).
 
     SIKLUS 255 — non-blocking event-loop (pola 253/254): dulu run_in_sandbox
@@ -1371,6 +1373,8 @@ async def sandbox_exec(agent_id: str, body: dict):
 
 @app.post("/api/sandbox/{agent_id}/test")
 async def sandbox_test(agent_id: str):
+    if os.environ.get("WFS_MASTER_QUEUE_REQUIRED") == "1":
+        raise HTTPException(503, "Legacy Docker test disabled in hardened gateway")
     """Jalankan pytest di workspace sandbox agent.
 
     SIKLUS 255 — non-blocking event-loop: dulu run_tests_in_sandbox (memanggil
