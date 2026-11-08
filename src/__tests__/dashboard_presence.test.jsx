@@ -172,4 +172,33 @@ describe('Dashboard — paragraf kehadiran LIVE (integrasi)', () => {
       vi.useRealTimers()
     }
   })
+
+  it('siklus 316: tab hidden → interval tak menimpa; visible kembali → baca segera', async () => {
+    // Fake interval + visibilitychange: while hidden, poll scene 4 dtk HARUS
+    // melewati baca (scene render loop juga pause → snapshot usang), dan saat
+    // kembali visible ringkasan diperbarui SEGERA tanpa menunggu interval.
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    try {
+      window.__agentData = Array.from({ length: 26 }, (_, i) => meeting('A' + i))
+      mockApi()
+      render(<Dashboard />)
+      fireEvent.click(screen.getByRole('button', { name: 'Dashboard' }))
+      await waitFor(() => expect(screen.getByText('Task terkini')).toBeTruthy())
+      expect(document.querySelector('.dash-presence').textContent).toContain('26 rapat')
+
+      // Tab disembunyikan, scene berubah (snapshot scene pun basi) → tak dibaca
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'hidden' })
+      window.__agentData = Array.from({ length: 26 }, (_, i) => lunch('A' + i))
+      act(() => { vi.advanceTimersByTime(4500) })
+      expect(document.querySelector('.dash-presence').textContent).toContain('26 rapat') // belum berubah
+
+      // Kembali visible → visibilitychange membaca ulang SEGERA
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' })
+      act(() => { document.dispatchEvent(new Event('visibilitychange')) })
+      expect(document.querySelector('.dash-presence').textContent).toContain('26 makan siang')
+    } finally {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, get: () => 'visible' })
+      vi.useRealTimers()
+    }
+  })
 })

@@ -92,8 +92,18 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
     if (!open) return
     const read = () => setPresence(dashboardPresenceSummary(window.__agentData))
     read()
-    const iv = setInterval(read, 4000)
-    return () => clearInterval(iv)
+    const iv = setInterval(() => {
+      // Tab disembunyikan → scene render loop ikut pause, data scene basi:
+      // jangan timpa ringkasan dengan snapshot usang (pola gate SysMeter/HUD).
+      if (document.visibilityState === 'visible') read()
+    }, 4000)
+    // Tab kembali terlihat setelah sembunyi lama: interval 4 dtk mungkin baru
+    // "bangun" di tengah periode → baca segera agar ringkasan tidak usang.
+    document.addEventListener('visibilitychange', read)
+    return () => {
+      clearInterval(iv)
+      document.removeEventListener('visibilitychange', read)
+    }
   }, [open])
 
   const byStatus = {}

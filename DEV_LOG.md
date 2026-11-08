@@ -6339,3 +6339,14 @@
 - Redeploy dist → ~/wfs-hq; bersihkan 7 orphan asset hash lama → hygiene 13 hashed/0 orphan.
 - e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 707383 B, nonbg 0.992, hygiene 13 hashed/0 orphan.
 - Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+
+## 2026-11-09 04:55 WIB — Siklus 316: Dashboard presence tak usang saat tab kembali visible
+
+- Tanpa upstream baru (0 commit HEAD..origin/main). Lanjut polish ringkasan kehadiran Dashboard (siklus 151): setelah tab lama disembunyikan lalu kembali visible, interval 4 dtk bisa membaca snapshot scene usang dan menampilkan fase lama (rapat → seharusnya makan siang) hingga 4 dtk.
+- Dashboard.jsx: poll scene digerbang visibilityState (tab hidden tidak menimpa ringkasan; scene render loop juga pause → snapshotnya basi) + listener visibilitychange membaca ulang SEGERA saat kembali visible; cleanup listener saat unmount.
+- +1 tes dashboard_presence.test.jsx (hidden → tetap "26 rapat", visible → segera "26 makan siang").
+- Build PWA OK; vitest 252 file / 3668 passed + 6 skipped, 0 fail (+1 tes vs siklus 315).
+- Redeploy dist → ~/wfs-hq; bersihkan 7 orphan asset hash lama → hygiene 13 hashed/0 orphan.
+- e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 707585 B, nonbg 0.992, hygiene 13 hashed/0 orphan.
+- Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
