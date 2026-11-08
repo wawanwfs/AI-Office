@@ -6238,3 +6238,11 @@
 - e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 705405 B, nonbg 0.991, hygiene 37 refs/0 missing.
 - saas-dibantuin push tetap gagal "Repository not found" — repo/deploy key belum dibuat user; lokal tetap 4479d11 siap.
 - Tidak ada perubahan kode dari worker; produksi & dist tidak tersentuh. Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (menunggu repo+key); (d) keputusan omniroute.
+
+## 2026-11-09 00:45 WIB — Siklus 304: pulihkan gate e2e — probe diarahkan ke /app/, 52 aset orphan dipangkas dari produksi
+- Probe e2e_err.py FAIL palsu: landing page baru (commit 6230629, 7 Nov) kini dilayani di `/`, jadi probe `/` tidak lagi melihat scene. URL probe diarahkan ke `/app/?mode=office` (intent asli probe = scene kantor). Script berada di ~/.hermes/cache/scratch (bukan repo).
+- Root cause hygiene FAIL: ~/wfs-hq/assets menumpuk 52 aset hashed lama (65 file, 13 dipakai) — prune_orphan_assets di deploy.py tidak pernah dijalankan pasca-deploy siklus-siklus terakhir. Dijalankan: 52 aset diarsipkan ke ~/wfs-hq/.pruned-assets, produksi kini 13 file == dist.
+- Setelah deploy ulang + prune: E2E_ERR_PROBE OK — agents=26, 0 console/page error, init_failed false, shot 705988 B, nonbg 0.991, hygiene 13 refs/0 orphan. Route `/`, `/app/?mode=office`, `/landing.html`, aset utama semuanya 200.
+- e2e_err.py juga dipulihkan (hilang dari scratch): e2e_err_probe.py + dependensi png_stats.py & deploy.py dikembalikan dari /tmp/scripts-bak-197.
+- Layanan wfs-hq & wfs-office active; :9503 200, :8787 /api/health 200. Tidak ada perubahan kode produksi.
+- Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+deploy key belum dibuat user, coba ulang siklus ini tetap "Repository not found"); (d) keputusan omniroute.
