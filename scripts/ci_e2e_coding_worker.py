@@ -96,10 +96,11 @@ ledger.set_price("fixture.example","offline-code-fixture",
 qa=PythonCodeQA(BASE,IMAGE,enabled=True)
 calls=[]
 
-async def trusted_offline_fixture(agent_id,sys_prompt,user_prompt):
+async def trusted_offline_fixture(tid,agent_id,sys_prompt,user_prompt):
     """Only a CI stub: intentionally no real model API or model credentials."""
     context=wfs_tasks._WFS_BILLING_CONTEXT.get()
     assert context is not None and context["project_id"] in ("alpha","bravo")
+    assert str(tid)==context["task_id"]
     claim=context["claim"]
     assert context["queue"].verify_lease(claim["id"],claim["worker_id"],claim["lease_token"])
     reservation=context["ledger"].reserve(context["project_id"],context["task_id"],
