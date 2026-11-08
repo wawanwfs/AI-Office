@@ -14,6 +14,7 @@ import sys
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"backend"))
 from preview_manager import TemplatePreviewManager, PreviewDenied
+from preview_signature import verify_review_signature
 
 
 def main():
@@ -25,6 +26,12 @@ def main():
     parser.add_argument("--approved",action="store_true")
     parser.add_argument("--reviewed-manifest",required=True,
         help="independently approved v2 JSON: sources, frontend, lock, SBOM, image references")
+    parser.add_argument("--reviewer-public-key",required=True,
+        help="trusted Ed25519 reviewer public key (PEM), provisioned separately")
+    parser.add_argument("--review-signature",required=True,
+        help="detached base64 Ed25519 signature over canonical reviewed manifest")
+    parser.add_argument("--trusted-reviewer-fingerprint",required=True,
+        help="SHA-256 of reviewer raw public key, verified out-of-band")
     parser.add_argument("--discard-data",action="store_true",
                         help="required to remove disposable PostgreSQL volumes")
     args=parser.parse_args()
@@ -51,6 +58,13 @@ def main():
         approved_hashes=json.loads(admission_file.read_text(encoding="utf-8"))
     except (OSError,ValueError) as exc:
         parser.error("invalid reviewed admission JSON")
+    # Approval cannot self-authenticate: the expected key fingerprint must
+    # come from the operator's independent trust policy, not this JSON.
+    verify_review_signature(
+        approved_hashes, public_key_path=args.reviewer_public_key,
+        signature_path=args.review_signature,
+        trusted_fingerprint=args.trusted_reviewer_fingerprint,
+    )
     manager=TemplatePreviewManager(state/"registry.db",template,
         enabled=True,reviewed_files=approved_hashes)
     if args.action=="status":
