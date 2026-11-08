@@ -1,60 +1,131 @@
-"""Sandbox executor: jalankan potongan kode Python di container sandbox agent via docker exec.
-Aman: memory/CPU capped di level container, workspace terisolasi."""
-import subprocess
+"""Execute agent Python and tests in a constrained, existing Docker sandbox.
+
+The caller still controls launch authorization and the Docker daemon. This module
+validates agent ids and workspace paths, avoids overwriting symlink targets, and
+preserves pytest exit codes instead of masking them through shell pipelines.
+"""
 import os
+import re
+import subprocess
+import tempfile
+from pathlib import Path
 
 SANDBOX_BASE = os.path.expanduser("~/wfs-office/sandboxes")
+_AGENT_ID = re.compile(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}\Z")
+
+
+def _agent_name(agent_id):
+    if not isinstance(agent_id, str) or not _AGENT_ID.fullmatch(agent_id):
+        return None
+    return f"wfs-agent-{agent_id}"
+
+
+def _timeout(value, maximum=300):
+    if isinstance(value, bool) or not isinstance(value, int) or value < 1 or value > maximum:
+        return None
+    return value
+
+
+def _container_running(name):
+    try:
+        result = subprocess.run(
+            ["docker", "ps", "--format", "{{.Names}}"],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode != 0:
+            return False, f"docker error: {result.stderr.strip()[:300]}"
+        if name not in result.stdout.split():
+            return False, f"sandbox {name} tidak running"
+        return True, ""
+    except Exception as exc:
+        return False, f"docker error: {exc}"
+
+
+def _safe_workspace(agent_id):
+    """Reject traversal and symlinked workspace escapes before host writes."""
+    root = Path(SANDBOX_BASE).resolve()
+    workspace = root / agent_id / "workspace"
+    resolved = workspace.resolve()
+    if not resolved.is_relative_to(root) or resolved == root:
+        raise PermissionError("workspace sandbox tidak aman")
+    resolved.mkdir(parents=True, exist_ok=True)
+    return resolved
 
 
 def run_in_sandbox(agent_id: str, code: str, timeout: int = 60) -> dict:
-    """Jalankan kode Python di container wfs-agent-<agent_id>. Return {ok, output}."""
-    name = f"wfs-agent-{agent_id}"
-    # cek container hidup
+    """Run Python code inside a named Docker agent container."""
+    name = _agent_name(agent_id)
+    limit = _timeout(timeout)
+    if name is None:
+        return {"ok": False, "output": "agent_id tidak valid"}
+    if limit is None:
+        return {"ok": False, "output": "timeout tidak valid (1–300 detik)"}
+    if not isinstance(code, str) or len(code.encode("utf-8")) > 524288:
+        return {"ok": False, "output": "kode tidak valid atau melebihi 512 KiB"}
+
+    running, error = _container_running(name)
+    if not running:
+        return {"ok": False, "output": error}
+
+    # A temporary file plus os.replace avoids following a preexisting symlink
+    # at _task_script.py. File permissions default to 0600.
+    tmp_name = None
     try:
-        r = subprocess.run(["docker", "ps", "--format", "{{.Names}}"],
-                           capture_output=True, text=True, timeout=10)
-    except Exception as e:
-        return {"ok": False, "output": f"docker error: {e}"}
-    if name not in r.stdout.split():
-        return {"ok": False, "output": f"sandbox {name} tidak running"}
-    # tulis script ke workspace (mounted) lalu exec
+        workspace = _safe_workspace(agent_id)
+        with tempfile.NamedTemporaryFile(
+            mode="w", encoding="utf-8", dir=workspace,
+            prefix=".wfs-script-", suffix=".tmp", delete=False,
+        ) as tmp:
+            tmp.write(code)
+            tmp_name = tmp.name
+        os.replace(tmp_name, workspace / "_task_script.py")
+        tmp_name = None
+    except Exception as exc:
+        return {"ok": False, "output": f"gagal menulis script: {exc}"}
+    finally:
+        if tmp_name is not None:
+            try:
+                os.unlink(tmp_name)
+            except OSError:
+                pass
+
     try:
-        script_host = os.path.join(SANDBOX_BASE, agent_id, "workspace", "_task_script.py")
-        os.makedirs(os.path.dirname(script_host), exist_ok=True)
-        with open(script_host, "w") as f:
-            f.write(code)
-    except Exception as e:
-        return {"ok": False, "output": f"gagal menulis script: {e}"}
-    try:
-        r = subprocess.run(
+        result = subprocess.run(
             ["docker", "exec", name, "python3", "/workspace/_task_script.py"],
-            capture_output=True, text=True, timeout=timeout,
+            capture_output=True, text=True, timeout=limit,
         )
-        return {"ok": r.returncode == 0, "output": (r.stdout + r.stderr).strip()[:4000]}
+        return {"ok": result.returncode == 0,
+                "output": (result.stdout + result.stderr).strip()[:4000]}
     except subprocess.TimeoutExpired:
-        return {"ok": False, "output": f"timeout setelah {timeout}s"}
-    except Exception as e:
-        return {"ok": False, "output": f"exec error: {e}"}
+        return {"ok": False, "output": f"timeout setelah {limit}s"}
+    except Exception as exc:
+        return {"ok": False, "output": f"exec error: {exc}"}
 
 
 def run_tests_in_sandbox(agent_id: str, timeout: int = 120) -> dict:
-    """Jalankan pytest di workspace agent (kalau ada test)."""
-    name = f"wfs-agent-{agent_id}"
+    """Run pytest directly, retaining pytest's true process exit status.
+
+    pytest must be preinstalled in the sandbox image. Installing packages during
+    each test execution can mutate the sandbox and is intentionally avoided.
+    """
+    name = _agent_name(agent_id)
+    limit = _timeout(timeout)
+    if name is None:
+        return {"ok": False, "output": "agent_id tidak valid"}
+    if limit is None:
+        return {"ok": False, "output": "timeout tidak valid (1–300 detik)"}
+
+    running, error = _container_running(name)
+    if not running:
+        return {"ok": False, "output": error}
     try:
-        r = subprocess.run(["docker", "ps", "--format", "{{.Names}}"],
-                           capture_output=True, text=True, timeout=10)
-    except Exception as e:
-        return {"ok": False, "output": f"docker error: {e}"}
-    if name not in r.stdout.split():
-        return {"ok": False, "output": f"sandbox {name} tidak running"}
-    try:
-        r = subprocess.run(
-            ["docker", "exec", name, "sh", "-c",
-             "pip install -q pytest > /dev/null 2>&1; pytest /workspace -x -q 2>&1 | tail -20"],
-            capture_output=True, text=True, timeout=timeout,
+        result = subprocess.run(
+            ["docker", "exec", name, "python3", "-m", "pytest", "/workspace", "-x", "-q"],
+            capture_output=True, text=True, timeout=limit,
         )
-        return {"ok": r.returncode == 0, "output": r.stdout.strip()[:4000]}
+        return {"ok": result.returncode == 0,
+                "output": (result.stdout + result.stderr).strip()[-4000:]}
     except subprocess.TimeoutExpired:
-        return {"ok": False, "output": f"timeout setelah {timeout}s"}
-    except Exception as e:
-        return {"ok": False, "output": f"test error: {e}"}
+        return {"ok": False, "output": f"timeout setelah {limit}s"}
+    except Exception as exc:
+        return {"ok": False, "output": f"test error: {exc}"}

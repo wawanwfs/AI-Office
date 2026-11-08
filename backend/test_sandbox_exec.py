@@ -160,3 +160,60 @@ def test_docker_ps_enforces_timeout_10_and_error_handling(fake_docker, monkeypat
     r2 = sandbox_exec.run_tests_in_sandbox("a1")
     assert r2["ok"] is False
     assert "docker error" in r2["output"]
+
+
+# ---------------- path traversal + accurate QA exit codes ----------------
+
+@pytest.mark.parametrize("agent", ["../escape", "../../tmp/evil", "a/b", "/absolute", "", "a\\\\b", "."])
+def test_rejects_unsafe_agent_id_before_docker_or_host_write(fake_docker, agent):
+    calls, _ = fake_docker
+    assert sandbox_exec.run_in_sandbox(agent, "print(1)")["ok"] is False
+    assert sandbox_exec.run_tests_in_sandbox(agent)["ok"] is False
+    assert calls == []
+
+
+def test_rejects_workspace_symlink_outside_sandbox(fake_docker, tmp_path):
+    calls, running = fake_docker
+    running["containers"] = {"wfs-agent-a1"}
+    outside = tmp_path.parent / (tmp_path.name + "-outside")
+    outside.mkdir(exist_ok=True)
+    (tmp_path / "a1").symlink_to(outside, target_is_directory=True)
+    response = sandbox_exec.run_in_sandbox("a1", "print('unsafe')")
+    assert response["ok"] is False
+    assert not (outside / "workspace" / "_task_script.py").exists()
+    assert not [c for c in calls if c[0][1] == "exec"]
+
+
+def test_preexisting_script_symlink_cannot_overwrite_external_file(fake_docker, tmp_path):
+    calls, running = fake_docker
+    running["containers"] = {"wfs-agent-a1"}
+    ws = _mkdir_workspace(tmp_path, "a1")
+    sensitive = tmp_path / "protected.txt"
+    sensitive.write_text("DO NOT CHANGE")
+    (ws / "_task_script.py").symlink_to(sensitive)
+    response = sandbox_exec.run_in_sandbox("a1", "print('safe')")
+    assert response["ok"] is True
+    assert sensitive.read_text() == "DO NOT CHANGE"
+    assert (ws / "_task_script.py").read_text() == "print('safe')"
+
+
+def test_pytest_failure_exit_code_is_not_masked_by_tail(fake_docker):
+    calls, running = fake_docker
+    running["containers"] = {"wfs-agent-a1"}
+    running["exec_result"] = _FakeProc(returncode=1, stdout="FAILED test_api.py")
+    response = sandbox_exec.run_tests_in_sandbox("a1")
+    assert response["ok"] is False
+    assert "FAILED" in response["output"]
+    commands = [c[0] for c in calls if c[0][1] == "exec"]
+    assert commands[-1] == [
+        "docker", "exec", "wfs-agent-a1", "python3", "-m", "pytest",
+        "/workspace", "-x", "-q",
+    ]
+
+
+@pytest.mark.parametrize("bad_timeout", [0, -1, 301, None, "60", True])
+def test_invalid_timeout_fails_closed_before_docker(fake_docker, bad_timeout):
+    calls, _ = fake_docker
+    assert sandbox_exec.run_in_sandbox("a1", "print(1)", bad_timeout)["ok"] is False
+    assert sandbox_exec.run_tests_in_sandbox("a1", bad_timeout)["ok"] is False
+    assert calls == []
