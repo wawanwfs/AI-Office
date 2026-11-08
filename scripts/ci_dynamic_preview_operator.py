@@ -88,6 +88,32 @@ try:
         assert manager.restart(project,token)["phase"]=="running"
         assert health(port,token,other)
     proof["restart_proved"]=True
+    # Runtime firewall evidence: BOTH preview bridges must be internal,
+    # API still reachable on host loopback, and the running API must fail
+    # to reach two external IPs even with a direct socket connection.
+    for project,token in zip(names,tokens):
+        assigned=manager.status(project)["compose_name"]
+        for net in ("preview-internal","preview-edge"):
+            result=subprocess.run(["docker","network","inspect",
+                                   assigned+"_"+net,"--format","{{.Internal}}"],
+                                  capture_output=True,text=True,timeout=10,check=True)
+            assert result.stdout.strip()=="true", f"network {net} has public egress"
+        socket_probe="""import socket
+for host,port in [('1.1.1.1',443),('169.254.169.254',80)]:
+    try:
+        sock=socket.create_connection((host,port),timeout=1.5)
+    except OSError:
+        continue
+    sock.close()
+    raise SystemExit('external egress unexpectedly available')
+print('outbound IPv4 denied for both targets')
+"""
+        result=manager._invoke(manager.status(project),token,
+            ["exec","-T","api","python","-c",socket_probe],timeout=20)
+        assert "outbound IPv4 denied" in result
+    proof["two_networks_per_project_internal"]=True
+    proof["external_socket_egress_denied"]=True
+
     # Actual HTTP gateway TestClient -> authenticated project RBAC ->
     # read-only registry -> running loopback preview -> live PostgreSQL.
     # The HTTP gateway is never given the Docker socket or operator runner.
