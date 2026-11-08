@@ -6156,3 +6156,12 @@
 - e2e_err_probe OK: agents=26, 0 console/page error, shot 705668 B, nonbg 0.992, hygiene 37 refs/0 missing.
 - Layanan: wfs-hq & wfs-office active; :9503 200, :8787 307 (redirect landing) — produksi & dist tidak diubah (verifikasi-only).
 - Sisa backlog: (a) gateway :8787→Docker; (b) saas-dibantuin push GitHub; (d) keputusan omniroute; penghapus wfs-hq tak teridentifikasi.
+## 2026-11-08 19:20 WIB — Siklus 292: PREFLIGHT migrasi gateway :8787→Docker — 7/7 hijau, image go-live dibangun, gap smoke legacy didokumentasikan
+
+- Backlog (a) maju satu fase TANPA menyentuh produksi: systemd wfs-office tetap pegang :8787 (APPLY butuh persetujuan user eksplisit + gate WFS_PHASE3_CUTOVER_REHEARSED=YES).
+- Image cutover wfs-office-gw:go-live dibangun dari Dockerfile.wfs-office-gw (Successfully built c241c34f4e83, tag go-live) — dependensi pip terkunci pin versi, kode host di-mount ro.
+- Skrip baru scripts/check_golive_preflight.sh (7 cek non-destruktif): systemd active, gateway /api/health, kontrak agents=15, proxy :9503 /wfs-api/health, compose.go-live.yaml config valid, image cutover ada, gate APPLY terkunci — exit 0.
+- Temuan: smoke_go_live.sh fixture siklus 156 memuat 2 cek tak kompatibel topologi Phase 3 hardened (cek 5 sandboxes via docker.sock, cek 7 sandbox exec via gateway) — kini jalan 10/10 di topologi systemd LAMA; sebelum APPLY wajib dibuat smoke baru Phase 3 (dicatat NOTE di preflight).
+- smoke_go_live.sh legacy dieksekusi utk baseline: 10/10 PASS (health, default-ai auto, agents 15, projects 6, orders 4, SSE, sandboxes, tulis DB, exec 42).
+- Gate rutin: vitest 251 file / 3633 passed + 6 skipped (0 fail); e2e_err_probe OK (agents=26, 0 error, shot 703508 B, nonbg 0.991, hygiene 0 missing); dist & scene produksi tidak berubah.
+- Sisa backlog: (a) gateway :8787→Docker — image+preflight SIAP, tinggal smoke Phase 3 baru → persetujuan user → APPLY; (b) saas-dibantuin push GitHub; (d) keputusan omniroute; penghapus wfs-hq tak teridentifikasi.
