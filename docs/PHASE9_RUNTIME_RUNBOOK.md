@@ -16,6 +16,7 @@ The environment must be isolated from customer and production resources.
 git clone https://github.com/wawanwfs/AI-Office.git
 cd AI-Office
 python -m pip install -r requirements-pytest.txt
+python -m pip install -r requirements-preview-crypto.txt
 npm ci
 npx vite build --config examples/fullstack-preview/frontend/vite.config.mjs
 New-Item -ItemType Directory -Force artifacts/fullstack-preview | Out-Null
@@ -23,6 +24,9 @@ npm sbom --sbom-format=cyclonedx --omit=dev | Out-File -Encoding utf8 artifacts/
 $env:PYTHONPATH = "backend"
 python -c "import json; from preview_admission import candidate_manifest_for_ci_only; print(json.dumps(candidate_manifest_for_ci_only('examples/fullstack-preview'),indent=2))" | Out-File -Encoding utf8 candidate-only.json
 ```
+
+The reviewer-signature verifier is pinned separately to preserve the six
+historical pytest requirements and is audited independently in CI.
 
 **Candidate-only.json is NOT approval.** An independent reviewer must
 validate the exact four source hashes, exact frontend asset inventory,
