@@ -406,6 +406,9 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
     const ac = new AbortController()
     const t0 = setTimeout(() => load(ac.signal), 0)
     const iv = setInterval(() => { if (document.visibilityState === 'visible') load(ac.signal) }, 8000)
+    // Siklus 320: refresh SEGERA saat tab kembali visible (pola 315-319).
+    const onVis = () => { if (document.visibilityState === 'visible') load(ac.signal) }
+    document.addEventListener('visibilitychange', onVis)
     const k = e => {
       if (e.key === 'Escape') {
         if (showDivPresetCreator) {
@@ -422,7 +425,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
       }
     }
     document.addEventListener('keydown', k)
-    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k); pollRid.current++ } // eslint-disable-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async), bukan membaca snapshot ref
+    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('visibilitychange', onVis); document.removeEventListener('keydown', k); pollRid.current++ } // eslint-disable-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async), bukan membaca snapshot ref
   }, [open, load, sel, q, showPresetCreator, showDivPresetCreator])
 
   // Fokus ke panel detail saat task dibuka: tombol task yang diklik unmount,

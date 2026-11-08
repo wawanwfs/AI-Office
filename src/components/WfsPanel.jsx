@@ -103,7 +103,10 @@ export default function WfsPanel() {
     let dead = false
     const ld = () => api('agents/status').then(d => { if (!dead) setStat(d.agents || {}) }).catch(() => {})
     const t0 = setTimeout(ld, 0); const iv = setInterval(() => { if (document.visibilityState === 'visible') ld() }, 15000)
-    return () => { dead = true; clearTimeout(t0); clearInterval(iv) }
+    // Siklus 320: refresh SEGERA saat tab kembali visible (pola 315-319).
+    const onVis = () => { if (document.visibilityState === 'visible') ld() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { dead = true; clearTimeout(t0); clearInterval(iv); document.removeEventListener('visibilitychange', onVis) }
   }, [open])
   useEffect(() => { if (sel) { selectedAgentIdRef.current = sel.id; loadCfg(sel) } }, [sel, loadCfg])   // eslint-disable-line react-hooks/set-state-in-effect
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight }, [logs, chatBusy])

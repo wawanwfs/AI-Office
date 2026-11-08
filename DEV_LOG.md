@@ -6380,3 +6380,13 @@
 - Redeploy dist → ~/wfs-hq; bersihkan 7 orphan asset hash lama → hygiene 13 hashed/0 orphan (probe pertama FAIL hygiene, fixed).
 - e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 712291 B, nonbg 0.992, hygiene 13/0.
 - Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 2026-11-09 06:20 WIB — Siklus 320: drawer API refresh SEGERA saat tab kembali visible
+
+- Tanpa upstream baru (0 commit HEAD..origin/main). Paritas visible-refresh (pola 315-319) ke 4 drawer yang poll API dgn gerbang visibility tapi tanpa listener: ShConsole overview (10 dtk), TaskBoard (8 dtk), ProjectPanel (15 dtk), WfsPanel status agen (15 dtk).
+- Keempatnya: tambah listener 'visibilitychange' yang membaca ulang SEGERA saat tab kembali visible (sebelumnya data bisa usang hingga satu periode interval) + cleanup removeEventListener saat unmount.
+- +1 file tes visibility_parity_320.test.jsx (3 kasus pola: hidden→visible segera load, hidden tidak load, cleanup melepas listener).
+- Build PWA OK; vitest 255 file / 3682 passed + 6 skipped, 0 fail (+3 tes vs siklus 319).
+- Redeploy dist → ~/wfs-hq; bersihkan 7 orphan asset hash lama → hygiene 13 hashed/0 orphan (probe pertama FAIL hygiene, fixed).
+- e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 707014 B, nonbg 0.992, hygiene 13/0.
+- Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

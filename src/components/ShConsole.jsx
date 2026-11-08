@@ -233,6 +233,10 @@ export default function ShConsole({ show, onClose }) {
       // (data awal dibutuhkan saat tab kembali); hanya tick interval yang digerbang.
       loadOverview()
       const iv = setInterval(() => { if (document.visibilityState === 'visible') loadOverview() }, 10000)
+      // Siklus 320: refresh SEGERA saat tab kembali visible (pola 315-319) —
+      // tanpa ini data overview bisa usang hingga 10 dtk setelah kembali.
+      const onVis = () => { if (document.visibilityState === 'visible') loadOverview() }
+      document.addEventListener('visibilitychange', onVis)
       let es = null
       let esAlive = true // pesan EventSource yang disetel setelah cleanup tak menulis state
       setEsState('connecting') // masuk tab overview = handshake baru
@@ -255,6 +259,7 @@ export default function ShConsole({ show, onClose }) {
       } else { setEsState('error') }
       return () => {
         clearInterval(iv)
+        document.removeEventListener('visibilitychange', onVis)
         // eslint-disable-next-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async), bukan membaca snapshot ref
         ovRid.current++ // invalidate respons in-flight (tab/drawer ditutup)
         esAlive = false
