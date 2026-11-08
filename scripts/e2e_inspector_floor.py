@@ -79,8 +79,9 @@ def main():
         xv = subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x768x24"],
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         time.sleep(1)
+    udd = f"/tmp/insp-udd-{PORT}"
     p = subprocess.Popen([CHROME, "--no-sandbox", f"--remote-debugging-port={PORT}",
-                          "--enable-unsafe-swiftshader",
+                          "--enable-unsafe-swiftshader", f"--user-data-dir={udd}",
                           "--window-size=1366,768", "--disable-dev-shm-usage", URL],
                          env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:
@@ -150,6 +151,12 @@ def main():
 
         cmd("Runtime.enable")
         time.sleep(1)
+
+        # Siklus 280: landing kini default route (commit 6230629) — paksa masuk
+        # mode office jika probe mendarat di landing (__agentData tetap 'none').
+        if ev("window.__agentData?window.__agentData.length:0").get("value") in (0, None):
+            ev("location.assign('http://127.0.0.1:9503/app/?mode=office')")
+            time.sleep(3)
 
         agents = -1
         for _ in range(40):
