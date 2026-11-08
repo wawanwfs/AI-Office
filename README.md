@@ -326,3 +326,23 @@ External identity/custody verification, hardware anti-rollback,
 truly immutable Docker build context, fully verified OCI dependencies,
 DNS/firewall, generic generated-code admission and interactive TLS previews
 remain unproven. Paid AI and production deployment stay BLOCKED.
+
+
+## Phase 13 — real internal Docker DNS rebinding regression
+
+The disposable two-tenant Docker operator now validates **actual UDP
+authoritative DNS answers** from a separate internal-only DNS sidecar.
+Each API container checks alternating A/AAAA responses and attempts
+network connections to metadata and public IPv4/IPv6 addresses; all
+must be blocked. Unlike the historical Phase 9 monkeypatch simulation,
+this Phase 13 gate exchanges real DNS packets with a running container.
+
+**Scope:** Docker-internal controlled test only; no claim of an external
+authoritative DNS provider, host firewall, rootless daemon, Windows/WSL2
+egress certification, or full OS-enforced immutable build contexts.
+Source admission remains approved fixed-template-only; no paid AI or
+production changes.
+
+- [Phase 13 scoped acceptance evidence](docs/REA_PHASE13.md)
+- [Phase 13 disposable DNS runbook](docs/PHASE13_RUNTIME_RUNBOOK.md)
+- [Next Phase 14 execution prompt](docs/NEXT_PHASE14_PROMPT.md)
