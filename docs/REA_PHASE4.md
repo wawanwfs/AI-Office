@@ -13,12 +13,12 @@ deployment. It does not authorize deploying any service.
 | Queue reliability | Lease heartbeat, cancel and fencing; risky worker failure marked terminal without blind paid retry | SQLite transaction/cancellation tests | Process-kill and external provider idempotency need end-to-end validation |
 | RBAC | Last-owner demotion blocked, scope rechecked before paid calls | Database unit and API TestClient cross-tenant tests | Authentication not yet applied to all legacy gateway routes |
 | HTTP control API | Opt-in `/api/v4` bearer token verified from SHA-256 digest and TTL; read queue/events/budget/usage; scoped enqueue/cancel | FastAPI TestClient with fake and revoked tokens, project crossing attempts | Separate v4 route does NOT make old /api/* routes multi-tenant safe |
-| Docker worker sandbox | Explicitly enabled Docker CLI runner in separate module, non-root, readonly, no network, zero capabilities, no privilege elevation, CPU/RAM/PID limits, forced cleanup | **Real GitHub Actions daemon** runs isolated projects and validates file/network/uid/cleanup. Optional HostConfig and parallel validation included in next CI workflow. | Not yet wired to code-generation task engine, no image registry admission, no production worker host runtime rehearsal |
+| Docker worker sandbox | Explicitly enabled Docker CLI runner in separate module, non-root, readonly, no network, zero capabilities, no privilege elevation, CPU/RAM/PID limits, forced cleanup | **Real GitHub Actions daemon** runs isolated projects and validates file/network/uid/cleanup. HostConfig inspection, image digest pin and concurrent project containers are verified on the disposable CI Docker daemon. | Not yet wired to code-generation task engine, no image registry admission, no production worker host runtime rehearsal |
 | Cost accounting | Approved caps and provider response usage tracking retained from Phase 3 | SQLite and simulated HTTPS provider tests | Chat/streaming/all providers and real invoice reconciliation missing |
 | Website/3D UI | Existing React/Three and Chromium desktop/mobile screenshots retained | npm tests and headless browser CI; gateway offline | No full agent backend-driven UI/real hardware GPU performance proof |
 | Fullstack preview | Existing static sandbox and partial preview scaffolds | Unit tests only | Per-project React/FastAPI/Postgres deployment, authenticated WebSocket/SSE/log/artifact proxy are **not implemented** |
 | Deployment | Explicit cutover blocker, no gateway Docker socket and no provider secrets | Static compose tests | No production deployment or backup/restore proof |
-| SAST/SCA | Focused Bandit Python static scan added to CI | See current Actions `security-static` report for result | No repository-wide SCA/SAST, secret scanning, dynamic penetration test |
+| SAST/SCA | Focused Bandit Python static scan added to CI | Focused `security-static` job passed and uploaded a JSON report | No repository-wide SCA/SAST, secret scanning, dynamic penetration test |
 
 ## Measurable Phase 4 acceptance gates
 
@@ -32,9 +32,9 @@ A checked item means a specific implementation plus corresponding CI tests.
 5. [x] Bearer tokens are locally minted, hashed, expire and can be revoked (HTTP TestClient).
 6. [x] `/api/v4` enforces cross-tenant RBAC on jobs, events, budget, usage and cancellation (HTTP TestClient).
 7. [x] Real Docker CI executes a limited no-network, read-only, non-root test project with cleanup.
-8. [ ] Docker CI inspects actual limits and tests simultaneous project containers. **Check after CI green on latest SHA**.
+8. [x] Docker CI inspects actual CPU/RAM/PID/volume limits and tests simultaneous project containers, with recorded runtime assertions.
 9. [x] Legacy frontend/backend and browser E2E quality gates remain present.
-10. [ ] Focused Bandit SAST completes on latest commit. **Check after CI green**.
+10. [x] Focused Bandit SAST passes medium/high severity checks and uploads the JSON report.
 11. [ ] All paid chat, streaming and multi-provider requests use metered ledger and invoice reconciliation.
 12. [ ] Generated coding tasks use project-scope Docker QA, cancellation and artifact verification end to end.
 13. [ ] Full-stack project preview supports React, FastAPI, PostgreSQL, WebSocket, SSE, auth and cleanup.
@@ -44,10 +44,9 @@ A checked item means a specific implementation plus corresponding CI tests.
 17. [ ] Real GPU WebGL, fallback, animation and mobile accessibility/performance tests on target devices.
 18. [ ] Whole-repository SCA, SAST, secret scanning and egress/network threat tests pass.
 
-**Conservative progress while awaiting final CI: 8 / 18 = 44.4%** of
-these specific Phase 4 gates. Recalculate after actual evidence for items
-8 and 10. This is NOT the percentage of total WFS development or
-production readiness.
+**10 / 18 = 55.6%** of these deliberately bounded Phase 4 checks, verified
+by successful workflow [42467839168](https://github.com/wawanwfs/AI-Office/actions/runs/42467839168).
+This is NOT the percentage of total WFS development or production readiness.
 
 ## Deployment / risk control
 
