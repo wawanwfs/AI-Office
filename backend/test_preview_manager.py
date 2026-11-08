@@ -965,11 +965,11 @@ def test_phase15_tampering_signed_log_blocks_docker_commands(preview):
     forged["receipt_digests"][0]="f"*64
     log.inventory_path.write_text(json.dumps(forged,sort_keys=True))
     try:
-        with pytest.raises(AdmissionDenied,match="root mismatch"):
+        with pytest.raises(AdmissionDenied,match="not last transparency leaf"):
             manager.logs("alpha",token)
-        with pytest.raises(AdmissionDenied,match="root mismatch"):
+        with pytest.raises(AdmissionDenied,match="not last transparency leaf"):
             manager.restart("alpha",token)
-        with pytest.raises(AdmissionDenied,match="root mismatch"):
+        with pytest.raises(AdmissionDenied,match="not last transparency leaf"):
             manager.stop("alpha",token,allow_data_loss=True)
         assert len(calls)==before
     finally:
