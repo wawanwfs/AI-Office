@@ -9,23 +9,27 @@
 }
 
 :root {
-  --bg: #010722;
-  --surface: #071230;
-  --surface-card: rgba(12, 20, 38, 0.88);
-  --teal: #4D9FFF;
-  --amber: #F59E0B;
+  --bg: #080c20;
+  --surface: #111634;
+  --surface-card: rgba(21, 23, 53, 0.9);
+  --teal: #bca8ff;
+  --amber: #dbc08d;
   --green: #10E5A0;
   --rose: #FB7185;
-  --purple: #8B5CF6;
+  --purple: #9f86e9;
   --text-primary: rgba(255, 255, 255, 0.96);
   --text-secondary: rgba(255, 255, 255, 0.78);
   --text-tertiary: rgba(255, 255, 255, 0.55);
-  --border: rgba(255, 255, 255, 0.1);
-  --border-highlight: rgba(255, 255, 255, 0.18);
+  --border: rgba(191, 178, 228, 0.17);
+  --border-highlight: rgba(216, 187, 132, 0.33);
   --fs-xs: 11px; --fs-sm: 12px; --fs-md: 14px;
   --r-sm: 8px; --r-md: 14px; --r-pill: 999px;
   --z-canvas: 0; --z-vignette: 5; --z-hud: 20; --z-dock: 25;
   --z-panel: 30; --z-widget: 35; --z-toast: 50; --z-modal: 100;
+  --wfs-gold: #d8bb84;
+  --wfs-gold-bright: #ead4ab;
+  --wfs-violet: #ac95ee;
+  --wfs-glass-border: rgba(190, 177, 233, 0.24);
   --safe-b: env(safe-area-inset-bottom, 0px);
 }
 
@@ -2932,4 +2936,74 @@ button { font-family: inherit; }
   .dock button[aria-label="Tambah task baru"] .lb,
   .dock button[aria-label^="Proyek"] .lb { display: block; font-size: 10px; }
   .dock button[aria-label="Dashboard"], .dock button[aria-label^="Proyek"] { min-width: 65px; }
+}
+
+
+/* Phase 2: one UI skin across WFS HQ landing and operational workspace.
+   Applied after existing responsive/dock dimensions; no geometry changes. */
+.dock {
+  background: linear-gradient(155deg, rgba(29, 28, 67, .9), rgba(9, 13, 36, .96));
+  border-color: var(--wfs-glass-border);
+  box-shadow: 0 18px 56px rgba(0, 0, 0, .55), inset 0 1px 0 rgba(255, 255, 255, .13);
+}
+.panel {
+  background: linear-gradient(165deg, rgba(30, 29, 64, .97), rgba(10, 14, 35, .985));
+  border-color: var(--wfs-glass-border);
+  box-shadow: 0 24px 70px rgba(0, 0, 0, .58), inset 0 1px 0 rgba(255, 255, 255, .09);
+}
+.panel .ph { background: rgba(187, 164, 239, .045); }
+.ibtn.accent, .btn.primary {
+  background: linear-gradient(125deg, var(--wfs-gold-bright), #c6a671);
+  color: #17152a;
+  border-color: rgba(232, 208, 168, .42);
+  box-shadow: 0 6px 20px rgba(206, 165, 109, .2);
+}
+.ibtn.accent:hover, .btn.primary:hover {
+  box-shadow: 0 9px 26px rgba(206, 165, 109, .34);
+}
+.ibtn[aria-expanded=true], .ibtn.on, .ibtn.accent[aria-expanded=true], .ibtn.accent.on {
+  background: linear-gradient(155deg, rgba(172, 149, 238, .24), rgba(172, 149, 238, .07));
+  color: #d5c5ff;
+  border-color: rgba(188, 168, 255, .5);
+  box-shadow: 0 0 17px rgba(172, 149, 238, .17);
+}
+.hdr h1 span {
+  background: linear-gradient(110deg, var(--wfs-gold-bright), var(--wfs-gold), #b6a4ee);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  filter: drop-shadow(0 2px 14px rgba(216, 187, 132, .2));
+}
+.tabs button[aria-selected=true] {
+  background: rgba(172, 149, 238, .14);
+  color: #dbcaff;
+  border-bottom-color: var(--wfs-gold);
+}
+.dash-card {
+  background: linear-gradient(140deg, rgba(78, 63, 129, .18), rgba(17, 22, 52, .56));
+  border-color: rgba(196, 175, 241, .22);
+  border-radius: 14px;
+}
+.dash-row:hover, .taskrow:hover {
+  background: rgba(155, 131, 226, .12);
+  border-color: rgba(198, 177, 245, .37);
+}
+.dock .ibtn:focus-visible,
+.panel button:focus-visible,
+.panel input:focus-visible,
+.panel textarea:focus-visible,
+.panel select:focus-visible {
+  outline: 3px solid var(--wfs-gold-bright);
+  outline-offset: 2px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .dock, .panel, .panel button, .panel input, .ibtn, .taskrow, .dash-row {
+    animation: none !important;
+    transition: none !important;
+  }
+  .ibtn:hover, .btn:hover, .taskrow:hover { transform: none !important; }
+}
+@media (prefers-contrast: more) {
+  .dock, .panel, .dash-card { border-color: #d8bb84; }
+  .panel .ph .t small, .dash-card span { color: #e7ddf2; }
 }
