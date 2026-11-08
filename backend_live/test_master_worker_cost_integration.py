@@ -102,3 +102,10 @@ def test_missing_price_denied_without_sending_request(cost_ctx,monkeypatch):
     with pytest.raises(BudgetDenied,match="price"):
         asyncio.run(tasks.call_llm("agent-1","system","brief"))
     assert FakeClient.calls==0
+
+
+def test_new_worker_never_syncs_files_into_shared_agent_sandbox(cost_ctx):
+    ledger,queue,claim=cost_ctx
+    result=tasks.sync_sandbox("fe1",["index.html"])
+    assert "not synced" in result
+    assert "project-scoped" in result

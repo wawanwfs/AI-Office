@@ -748,7 +748,14 @@ async def _execute_task(tid, attempt_no=0):
 
 
 def sync_sandbox(agent_id: str, files: list) -> str:
-    """Salin file hasil agent ke sandbox docker agent tsb (jalan). Return path atau ''."""
+    """Sync only in legacy mode. New worker never copies across projects.
+
+    Project-scoped sandbox provisioning is a separate Phase 3/4 gate.
+    """
+    if _WFS_BILLING_CONTEXT.get() is not None:
+        # The old ~/wfs-office/sandboxes/<agent>/workspace is shared across
+        # projects and MUST NOT receive a scoped project's generated files.
+        return "not synced: project-scoped sandbox not yet provisioned"
     import shutil
     if not isinstance(agent_id, str) or not re.fullmatch(r"[A-Za-z0-9_-]+", agent_id):
         return ""
