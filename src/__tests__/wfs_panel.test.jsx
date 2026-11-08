@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, fireEvent, cleanup, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, cleanup, waitFor, act } from '@testing-library/react'
 import WfsPanel from '../components/WfsPanel'
 
 const AGENTS_RESP = [
@@ -142,5 +142,25 @@ describe('WfsPanel — gateway chat AI + konfigurasi agent', () => {
     const alert = await screen.findByRole('alert')
     expect(alert.textContent).toMatch(/Gagal memuat daftar agent/)
     expect(screen.getByRole('button', { name: 'Muat ulang' })).toBeTruthy()
+  })
+
+  it('config agent yang lambat tidak menimpa konfigurasi agent berikutnya', async () => {
+    let resolveA, resolveB
+    stubFetch({
+      '/wfs-api/agents': AGENTS_RESP,
+      '/wfs-api/agents/status': STATUS_RESP,
+      '/wfs-api/config/a1': () => new Promise(resolve => { resolveA = resolve }),
+      '/wfs-api/config/a2': () => new Promise(resolve => { resolveB = resolve }),
+    })
+    await openPanel()
+    fireEvent.click(screen.getByRole('tab', { name: /Model API/ }))
+    await waitFor(() => expect(typeof resolveA).toBe('function'))
+    fireEvent.change(screen.getByLabelText('Pilih agent'), { target: { value: 'a2' } })
+    await waitFor(() => expect(typeof resolveB).toBe('function'))
+    await act(async () => resolveB({ base: 'https://second.example/v1', model: 'model-b' }))
+    await waitFor(() => expect(screen.getByLabelText('Model').value).toBe('model-b'))
+    await act(async () => resolveA({ base: 'https://old.example/v1', model: 'model-a' }))
+    expect(screen.getByLabelText('Model').value).toBe('model-b')
+    expect(screen.getByLabelText('Base URL').value).toBe('https://second.example/v1')
   })
 })

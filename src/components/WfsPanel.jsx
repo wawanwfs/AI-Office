@@ -36,6 +36,8 @@ export default function WfsPanel() {
   const [cfg, setCfg] = useState({ base_url: '', api_key: '', model: '', instructions: '', key_hint: '' })
   const [cfgMsg, setCfgMsg] = useState('')
   const [stat, setStat] = useState({})
+  const cfgRid = useRef(0)
+  const selectedAgentIdRef = useRef(null)
   const logRef = useRef(null)
   const inputRef = useRef(null)
   const agentsRef = useRef([])
@@ -50,14 +52,27 @@ export default function WfsPanel() {
   const pushLog = (id, m) => setLogs(l => ({ ...l, [id]: [...(l[id] || []), m] }))
 
   const loadCfg = useCallback(async (a) => {
+    const rid = ++cfgRid.current
     setCfgMsg('')
     try {
       const d = await api('config/' + a.id)
+      // Responses can arrive out of order when switching agents; never show
+      // agent A's API key hint/model in agent B's form.
+      if (rid !== cfgRid.current || selectedAgentIdRef.current !== a.id) return
       setCfg({ base_url: d.base || '', api_key: '', model: d.model || '', instructions: d.prompt || '', key_hint: d.key_hint || '' })
-    } catch { setCfg({ base_url: '', api_key: '', model: '', instructions: '', key_hint: '' }); setCfgMsg('⚠ Gagal memuat konfigurasi') }
+    } catch {
+      if (rid !== cfgRid.current || selectedAgentIdRef.current !== a.id) return
+      setCfg({ base_url: '', api_key: '', model: '', instructions: '', key_hint: '' })
+      setCfgMsg('⚠ Gagal memuat konfigurasi')
+    }
   }, [])
 
-  const choose = useCallback((a) => { setSel(a); loadCfg(a); window.__wfsSceneSelect && window.__wfsSceneSelect(a.name) }, [loadCfg])
+  const choose = useCallback((a) => {
+    if (!a) return
+    selectedAgentIdRef.current = a.id
+    setSel(a)
+    window.__wfsSceneSelect && window.__wfsSceneSelect(a.name)
+  }, [])
 
   const loadAgents = useCallback(() => {
     setLoading(true); setLoadErr('')
@@ -90,7 +105,7 @@ export default function WfsPanel() {
     const t0 = setTimeout(ld, 0); const iv = setInterval(() => { if (document.visibilityState === 'visible') ld() }, 15000)
     return () => { dead = true; clearTimeout(t0); clearInterval(iv) }
   }, [open])
-  useEffect(() => { if (sel) loadCfg(sel) }, [sel, loadCfg])   // eslint-disable-line react-hooks/set-state-in-effect
+  useEffect(() => { if (sel) { selectedAgentIdRef.current = sel.id; loadCfg(sel) } }, [sel, loadCfg])   // eslint-disable-line react-hooks/set-state-in-effect
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight }, [logs, chatBusy])
   useEffect(() => {
     if (!open) return
@@ -118,9 +133,14 @@ export default function WfsPanel() {
     try {
       const body = reset ? { base: '-', key: '-', model: '-', prompt: '-' }
         : { base: cfg.base_url, key: cfg.api_key, model: cfg.model, prompt: cfg.instructions }
-      const d = await api('config/' + sel.id, { method: 'POST', body })
-      await loadCfg(sel)   // muat ulang cfg dulu (loadCfg mengosongkan pesan), baru tampilkan hasil simpan — tanpa ini pesan sukses/gagal langsung terhapus dan tak pernah terlihat
-      setCfgMsg(d.ok ? (reset ? '✅ Direset ke default' : '✅ Tersimpan') : '⚠ ' + (d.error || 'gagal'))
+      const activeId = sel.id
+      const d = await api('config/' + activeId, { method: 'POST', body })
+      if (selectedAgentIdRef.current === activeId) {
+        await loadCfg(sel)
+        if (selectedAgentIdRef.current === activeId) {
+          setCfgMsg(d.ok ? (reset ? '✅ Direset ke default' : '✅ Tersimpan') : '⚠ ' + (d.error || 'gagal'))
+        }
+      }
     } catch (e) { setCfgMsg('⚠ ' + e.message) }
     setCfgBusy(false)
   }

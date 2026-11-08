@@ -33,9 +33,11 @@ export default function ProjectPanel() {
     try {
       // siklus 203: deadline 20 dtk — dulu sinyal mati (ac tak pernah di-abort)
       const r = await fetchWithTimeout('/wfs-project', { signal, timeoutMs: 20000 })
-      if (rid !== loadRid.current) return // poll lebih baru / panel ditutup — basi, abaikan
       if (!r.ok) throw new Error('HTTP ' + r.status)
-      setD(await r.json()); setErr(false)
+      const payload = await r.json()
+      // JSON decoding can itself be async; check freshness AFTER it resolves.
+      if (rid !== loadRid.current) return
+      setD(payload); setErr(false)
     } catch (e) { if (e.name !== 'AbortError' && rid === loadRid.current) setErr(true) }
   }, [])
 
