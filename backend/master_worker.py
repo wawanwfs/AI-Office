@@ -64,7 +64,7 @@ class ApprovedMasterWorker:
             raise PermissionError("task status is not runnable")
         if t.get("role") in _CODE_ROLES and (
                 self.code_qa is None or t["role"] not in _PYTHON_QA_ROLES):
-            raise PermissionError("code task needs approved role-specific Docker QA")
+            raise PermissionError("code task needs project-scoped sandbox with approved role-specific Docker QA")
         if self.engine.is_paused():
             raise PermissionError("legacy engine is paused")
         self.engine.require_launch_approval(t["project"])
