@@ -176,7 +176,8 @@ def test_authenticated_brief_creates_real_task_and_durable_job_only_when_ready(a
     assert client.post(path,headers=headers("bob"),json=body).status_code==404
     assert client.post(path,headers=headers("observer"),json=body).status_code==404
     assert not getattr(engine,"created",None)
-    ok=client.post(path,headers=headers("alice"),json=body)
+    key={"Idempotency-Key":"alpha-inventory-brief-001"}
+    ok=client.post(path,headers={**headers("alice"),**key},json=body)
     assert ok.status_code==202,ok.text
     payload=ok.json()
     assert payload["execution_started"] is False
@@ -188,6 +189,16 @@ def test_authenticated_brief_creates_real_task_and_durable_job_only_when_ready(a
     assert job["task_id"]==str(payload["task_id"]) and job["project_id"]=="alpha"
     assert job["status"]=="queued" and job["max_attempts"]==1
     assert ok.headers["Cache-Control"]=="no-store"
+    again=client.post(path,headers={**headers("alice"),**key},json=body)
+    assert again.status_code==202
+    assert again.json()["already_exists"] is True
+    assert again.json()["job_id"]==payload["job_id"]
+    assert len(engine.created)==1 and len(q.list("alpha"))==1
+    collision=client.post(path,headers={**headers("alice"),**key},
+                          json={**body,"title":"Different inventory"})
+    assert collision.status_code==409
+    assert len(engine.created)==1
+
 
 
 def test_brief_intake_rejects_unapproved_paused_invalid_roles_and_payloads(api):
@@ -198,7 +209,7 @@ def test_brief_intake_rejects_unapproved_paused_invalid_roles_and_payloads(api):
     client=TestClient(app)
     q.set_paused(False)
     url="/api/v4/projects/alpha/briefs"
-    auth=headers("alice")
+    auth={**headers("alice"),"Idempotency-Key":"alpha-rejected-input-001"}
     good={"title":"Proyek pengujian","brief":"Buat kode layanan berbasis Python dengan pengujian yang dapat dieksekusi.","role":"backend2"}
     for changes in ({"role":"frontend"},{"role":"devops"},{"brief":"short"},
                     {"title":"a"},{"project_id":"bravo"},{"command":"docker ps"}):
@@ -222,5 +233,35 @@ def test_brief_intake_disabled_by_default_and_bare_client_fields_never_create(ap
     c,q,acl,ledger,tokens,engine,headers=api
     url="/api/v4/projects/alpha/briefs"
     body={"title":"Make service","brief":"An approved isolated service with at least one objective unittest."}
-    assert c.post(url,headers=headers("alice"),json=body).status_code==503
+    assert c.post(url,headers={**headers("alice"),
+        "Idempotency-Key":"alpha-disabled-brief-001"},json=body).status_code==503
     assert not getattr(engine,"created",None)
+
+
+
+def test_missing_idempotency_header_fails_before_task_creation(api):
+    c,q,acl,ledger,tokens,engine,headers=api
+    assert c.post("/api/v4/projects/alpha/briefs",headers=headers("alice"),
+                  json={"title":"Example job","brief":"A real Python application with runnable unittest tests."}
+                  ).status_code==422
+    assert not getattr(engine,"created",None)
+
+
+
+def test_duplicate_brief_concurrent_requests_never_create_two_paid_jobs(api):
+    from concurrent.futures import ThreadPoolExecutor
+    c,q,acl,ledger,tokens,engine,headers=api
+    q.set_paused(False)
+    app=FastAPI()
+    app.include_router(create_secure_router(queue=q,rbac=acl,ledger=ledger,
+        tokens=tokens,taskengine=engine,code_qa_intake_enabled=True))
+    client=TestClient(app)
+    auth={**headers("alice"),"Idempotency-Key":"concurrency-brief-alpha-00001"}
+    payload={"title":"Inventory API","brief":"Implement a reliable inventory API and unit tests for valid stock."}
+    def send(_):
+        return client.post("/api/v4/projects/alpha/briefs",headers=auth,json=payload)
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        results=list(pool.map(send,range(4)))
+    assert all(response.status_code in (202,409) for response in results)
+    assert len(engine.created)==1
+    assert len(q.list("alpha"))==1

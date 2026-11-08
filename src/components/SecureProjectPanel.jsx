@@ -27,11 +27,13 @@ export default function SecureProjectPanel() {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const pending = useRef(null)
+  const briefKey = useRef(null)
 
   useEffect(() => () => pending.current?.abort(), [])
 
   const close = () => {
     pending.current?.abort()
+    briefKey.current = null
     setToken('')
     setBriefTitle('')
     setBriefText('')
@@ -44,12 +46,12 @@ export default function SecureProjectPanel() {
     setExpanded(false)
   }
 
-  const request = async (suffix, method = 'GET', ctrl, body = null) => {
+  const request = async (suffix, method = 'GET', ctrl, body = null, extraHeaders = {}) => {
     const base = '/api/v4/projects/' + encodeURIComponent(project)
     const response = await fetch(base + suffix, {
       method, credentials: 'omit', cache: 'no-store', signal: ctrl.signal,
       headers: { Authorization: 'Bearer ' + token, Accept: 'application/json',
-        ...(body ? { 'Content-Type': 'application/json' } : {}) },
+        ...(body ? { 'Content-Type': 'application/json' } : {}), ...extraHeaders },
       ...(body ? { body: JSON.stringify(body) } : {}),
     })
     if (!response.ok) {
@@ -82,9 +84,16 @@ export default function SecureProjectPanel() {
     setNotice('')
     try {
       if (kind === 'create') {
+        if (!briefKey.current) {
+          if (typeof crypto?.randomUUID !== 'function') {
+            throw new Error('Browser tidak menyediakan ID aman; gunakan koneksi HTTPS.')
+          }
+          briefKey.current = 'brief-' + crypto.randomUUID()
+        }
         const result = await request('/briefs', 'POST', ctrl, {
           title: briefTitle.trim(), brief: briefText.trim(), role: codeRole,
-        })
+        }, { 'Idempotency-Key': briefKey.current })
+        briefKey.current = null
         setTaskId(String(result.task_id))
         setNotice('Brief tersimpan sebagai task #' + result.task_id +
           ', job ' + result.job_id + '. Menunggu worker terotorisasi & Docker QA; preview belum dipublikasikan.')
@@ -151,17 +160,17 @@ export default function SecureProjectPanel() {
             <p>Hanya Python backend yang dapat diantrekan saat worker QA telah disetujui. Pembuatan file, pengujian Docker dan publikasi preview adalah tahap terpisah, bukan simulasi instan.</p>
             <label>Judul tugas
               <input aria-label="Judul brief coding" value={briefTitle} maxLength={120}
-                onChange={e => setBriefTitle(e.target.value)} placeholder="API inventori dengan tes unittest" />
+                onChange={e => { briefKey.current = null; setBriefTitle(e.target.value) }} placeholder="API inventori dengan tes unittest" />
             </label>
             <label>Instruksi aplikasi
               <textarea aria-label="Instruksi brief coding" value={briefText} maxLength={12000}
-                onChange={e => setBriefText(e.target.value)} rows={4}
+                onChange={e => { briefKey.current = null; setBriefText(e.target.value) }} rows={4}
                 placeholder="Jelaskan fitur API, format data dan kebutuhan tes objektif…" />
             </label>
             <div className="wfs-secure-brief-footer">
               <label>Agent
                 <select aria-label="Peran coding" value={codeRole}
-                  onChange={e => setCodeRole(e.target.value)}>
+                  onChange={e => { briefKey.current = null; setCodeRole(e.target.value) }}>
                   <option value="backend">Python Backend</option>
                   <option value="backend2">Python Backend 2</option>
                 </select>

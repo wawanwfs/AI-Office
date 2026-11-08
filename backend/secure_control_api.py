@@ -17,6 +17,7 @@ import time
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Literal
+from brief_intake import BriefIntakeKeys, IntakeConflict
 
 try:
     from .project_rbac import AccessDenied, ident
@@ -103,6 +104,7 @@ def create_secure_router(*, queue, rbac, ledger, tokens, taskengine=None, artifa
                          code_qa_intake_enabled=False):
     """Dependency-injected data sources; no unauthenticated fallback."""
     router=APIRouter(prefix="/api/v4", tags=["WFS Secure Control API"])
+    brief_keys=BriefIntakeKeys(tokens)
 
     def authenticated(authorization: str | None=Header(default=None)):
         if not authorization or not authorization.startswith("Bearer "):
@@ -164,6 +166,7 @@ def create_secure_router(*, queue, rbac, ledger, tokens, taskengine=None, artifa
 
     @router.post("/projects/{project_id}/briefs",status_code=202)
     def submit_coding_brief(project_id:str,brief:CodingBrief,response:Response,
+                            idempotency_key:str=Header(...,alias="Idempotency-Key"),
                             principal:str=Depends(authenticated)):
         """User brief -> persisted legacy task -> durable isolated queue.
 
@@ -188,19 +191,38 @@ def create_secure_router(*, queue, rbac, ledger, tokens, taskengine=None, artifa
             scoped(project_id,principal,"enqueue")
         except PermissionError as exc:
             raise HTTPException(403,"Execution approval or budget unavailable") from exc
-        # The project comes ONLY from the checked URL; the request body has
-        # no project/agent/image/command/host attributes.
-        task_id=taskengine.add_task(project_id,title,brief.role,description)
+        # A reused Idempotency-Key is never allowed to mint a second task.
+        # A crash after the pending marker is committed stays quarantined
+        # until local operator reconciliation, not automatic paid retry.
         try:
+            receipt=brief_keys.claim(principal,project_id,idempotency_key,{
+                "title":title,"brief":description,"role":brief.role})
+        except (IntakeConflict,ValueError) as exc:
+            raise HTTPException(409,"Conflicting or invalid Idempotency-Key") from exc
+        if receipt["state"]=="pending":
+            raise HTTPException(409,"Request outcome uncertain; operator reconciliation required")
+        if receipt["state"]=="complete":
+            prior=queue.get(receipt["job_id"])
+            if prior is None or prior["project_id"]!=project_id:
+                raise HTTPException(503,"Prior receipt requires operator reconciliation")
+            no_cache(response)
+            return {"task_id":int(receipt["task_id"]),"job_id":prior["id"],
+                    "status":prior["status"],"execution_started":prior["status"]!="queued",
+                    "already_exists":True,"qa_required":True,
+                    "preview_published":False}
+        # The project comes ONLY from the checked URL; user-supplied Docker
+        # image, shell commands, environment and agent IDs are not accepted.
+        try:
+            task_id=taskengine.add_task(project_id,title,brief.role,description)
             job_id=queue.submit(project_id,str(task_id),brief.role,max_attempts=1)
+            brief_keys.complete(receipt["digest"],task_id,job_id)
         except Exception as exc:
-            # Task is still persisted for operator reconciliation. The
-            # caller must NOT blindly re-submit paid work on this 503.
-            raise HTTPException(503,"Queue intake uncertain; operator reconciliation required") from exc
+            # Intentionally preserve pending receipt; no blind retry allowed.
+            raise HTTPException(503,"Intake uncertain; operator reconciliation required") from exc
         no_cache(response)
         return {"task_id":task_id,"job_id":job_id,"status":"queued",
-                "execution_started":False,"qa_required":True,
-                "preview_published":False}
+                "execution_started":False,"already_exists":False,
+                "qa_required":True,"preview_published":False}
 
     @router.post("/projects/{project_id}/tasks/{task_id}/enqueue",status_code=202)
     def enqueue(project_id:str,task_id:int,response:Response,

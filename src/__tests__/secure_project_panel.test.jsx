@@ -52,6 +52,7 @@ describe('Phase 6 real brief intake', () => {
   afterEach(() => { cleanup(); vi.unstubAllGlobals() })
 
   it('submits a scoped non-executing Python brief without leaking bearer into legacy routes', async () => {
+    vi.stubGlobal('crypto', { randomUUID: () => '9ba8fede-8752-4027-92b0-2a0b69c9966d' })
     const request = vi.fn(async (url, options) => {
       const data = url.endsWith('/briefs')
         ? { task_id: 42, job_id: 'job-proof', status: 'queued', execution_started: false }
@@ -74,6 +75,7 @@ describe('Phase 6 real brief intake', () => {
     const create = request.mock.calls.find(([url]) => url.endsWith('/briefs'))
     expect(create[0]).toBe('/api/v4/projects/alpha/briefs')
     expect(create[1].method).toBe('POST')
+    expect(create[1].headers['Idempotency-Key']).toMatch(/^brief-/)
     expect(create[1].credentials).toBe('omit')
     expect(create[1].headers.Authorization).toBe('Bearer ' + 'X'.repeat(43))
     expect(JSON.parse(create[1].body).role).toBe('backend')
