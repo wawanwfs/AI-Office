@@ -182,7 +182,7 @@ def test_tree_log_identity_independent_and_pinned(log, tmp_path):
         log["check"](trust=log["verifier"](log_pem=wrong_key))
     with pytest.raises(AdmissionDenied,match="signing key not independent"):
         log["check"](witness=_fingerprint(log["key"]))
-    with pytest.raises(AdmissionDenied,match="signed tree head"):
+    with pytest.raises(AdmissionDenied,match="latest tree head"):
         log["verifier"](latest_pin="")
 
 
