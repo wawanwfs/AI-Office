@@ -37,50 +37,70 @@ Yang membedakan dari sekadar animasi: **UI terhubung ke backend nyata**.
 | Widget AI CS | Widget embed untuk toko, dengan riwayat per tenant |
 | Responsif | Dock bawah tunggal, panel jadi bottom-sheet di HP, kamera adaptif portrait |
 
-## Arsitektur
+## Arsitektur dan status snapshot
 
-```
-Browser (React + Three.js)
-   |  same-origin, POST wajib header X-WFS-Token
-   v
-backend/hq_proxy.py   (:9503)  -> menyajikan UI statis + proxy /wfs-api/*
-   v
-backend/server.py     (:8787)  -> FastAPI: agent, chat, task, order
-   |-- tasks.py        task engine + QA + retry (SQLite)
-   |-- orders.py       order service (SQLite)
-   `-- sandbox_exec.py eksekusi terbatas di sandbox
-```
-
-Satu sumber kebenaran: `tasks.py`, `orders.py`, dan `server.py` produksi disalin
-dari superset `backend_live/wfs_tasks.py`, `wfs_orders.py`, dan `wfs_server.py`
-(siklus 208-209). Salin ketiganya flat ke `backend/` sebelum menjalankan gateway;
-tanpa `backend/database.py` gateway masuk mode LIVE read-only (tanpa workspace SH).
-
-## Menjalankan
-
-### Frontend
-```bash
-npm install
-npm run dev        # mode pengembangan
-npm run build      # hasil di dist/
-npm test           # vitest
+```text
+Browser (React + Three.js, Vite)
+    ├── /                 → Landing (lazy workspace entry)
+    └── /app/?mode=...    → Dashboard / Full AI Office
+                │
+           same-origin API
+                │
+backend_live/wfs_hq_server.py  → HQ gateway / reverse proxy
+                │
+backend_live/wfs_server.py     → FastAPI task engine :8787
+    ├── wfs_tasks.py, wfs_orders.py
+    ├── wfs_api_service.py, wfs_sh_console.py
+    └── backend/database.py, backend/sandbox_exec.py
 ```
 
-### Backend
-```bash
-cd backend
-python3 -m venv .venv && . .venv/bin/activate
-pip install fastapi uvicorn httpx
-cp ../backend_live/wfs_tasks.py tasks.py
-cp ../backend_live/wfs_orders.py orders.py
-cp ../backend_live/wfs_server.py server.py
-export WFS_AI_BASE=... WFS_AI_KEY=... WFS_AI_MODEL=...   # lihat .env.example
-python3 server.py        # :8787
-python3 hq_proxy.py      # :9503 (menyajikan dist/)
+File `backend_live/wfs_*.py` merupakan sumber superset yang diuji CI.
+Snapshot ini **tidak** berisi `backend/server.py` atau `backend/hq_proxy.py`
+sebagai entrypoint siap pakai. Nama tersebut masih digunakan di lingkungan
+deployment tersendiri. Beberapa skrip deployment bergantung pada path absolut,
+Docker host, konfigurasi API, dan service lain; **jangan menganggap clone
+repository langsung merupakan full-stack production deployment**.
+
+## Menjalankan dan memverifikasi
+
+### Frontend (Windows PowerShell, Linux, macOS)
+
+```sh
+npm ci
+npm test
+npm run build
+npm run dev
 ```
 
-> **Keamanan:** token UI dibuat otomatis di `backend/.wfs_ui_token` (di-ignore git). Jangan commit `.env`,
-> database `*.db`, atau token apa pun. Eksekusi task memakai kuota API berbayar, jadi selalu lewat dialog konfirmasi.
+Akses alamat lokal yang dicetak Vite, biasanya `http://localhost:5173/`.
+Landing tetap dapat dibuka tanpa backend; operasi agent/task memerlukan
+gateway yang dikonfigurasi dan terkoneksi. Endpoint API tidak otomatis
+dipalsukan ketika backend belum tersedia.
+
+### Pengujian backend (Python 3.11)
+
+Windows PowerShell:
+
+```powershell
+py -3.11 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r requirements-pytest.txt
+python -m pytest backend_live backend -q
+```
+
+Linux/macOS:
+
+```sh
+python3.11 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r requirements-pytest.txt
+python -m pytest backend_live backend -q
+```
+
+Untuk audit integrasi yang membutuhkan host live, lihat
+[mode audit CI](docs/ci-audit-execution.md). Untuk risiko dan pekerjaan
+lanjutan lihat [laporan audit 2026-11-08](docs/AUDIT_2026-11-08.md).
+Jangan menyimpan key API di source maupun mem-publish Docker socket.
 
 ## Struktur repo
 
@@ -88,8 +108,9 @@ python3 hq_proxy.py      # :9503 (menyajikan dist/)
 src/scene/OfficeScene.js   scene 3D (kantor, karakter, perilaku)
 src/components/            Dock, HUD, Papan Task, Chat, Statistik, Log, dll.
 src/lib/api.js             klien API + token otomatis
-backend/                   gateway FastAPI + task engine
-docs/                      catatan arsitektur & changelog
+backend/                   database & sandbox (unit test)
+backend_live/              superset gateway & task engine (uji CI)
+docs/                      catatan arsitektur, audit & changelog
 DEV_LOG.md                 log pengembangan harian
 ```
 

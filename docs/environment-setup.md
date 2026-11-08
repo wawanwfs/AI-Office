@@ -2,32 +2,50 @@
 
 Dokumen hidup.
 
-## Backend (FastAPI)
+## Checkout baru: verifikasi portabel (bukan deployment produksi)
 
-```bash
-cd backend
-python3 -m venv .venv && . .venv/bin/activate
-pip install -r requirements.txt   # fastapi uvicorn httpx pydantic
-python3 server.py          # :8787 (API)
-python3 hq_proxy.py        # :9503 (UI statis + proxy /wfs-api)
+Sumber gateway hidup dan beberapa test ada di `backend_live/`. Dua file
+`backend/server.py` dan `backend/hq_proxy.py` yang disebut panduan lama
+sudah tidak disertakan pada git snapshot ini. Jangan menyalin nama perintah
+lama dan mengharapkan API otomatis menyala di mesin baru.
+
+### Frontend
+
+```sh
+npm ci
+npm test
+npm run build
+npm run dev
 ```
 
-Environment variables:
-- `WFS_AI_BASE` — base URL provider AI (default https://api.openai.com/v1)
-- `WFS_AI_KEY` — API key (JANGAN commit; lewat env/secret manager)
-- `WFS_AI_MODEL` — default model (default gpt-4o-mini)
-- Konfigurasi per-agent disimpan di `backend/config/agents.json` (600, di-ignore git).
+Vite biasanya mendengarkan di :5173. Landing bisa digunakan tanpa API;
+status agent, project, dan eksekusi nyata memerlukan gateway dan token.
 
-## Frontend (Vite)
+### Backend regression suite (Python 3.11)
 
-```bash
-npm install
-npm run dev          # :5173 (dev, perlu proxy manual ke backend)
-npm run build        # → dist/
-cp -r dist/* backend/static/   # agar UI proxy :9503 ter-update
-npm test             # vitest (1328 test baseline)
-npm run lint
+```sh
+python3.11 -m venv .venv
+. .venv/bin/activate
+python -m pip install -r requirements-pytest.txt
+python -m pytest backend_live backend -q
 ```
+
+Windows PowerShell: gunakan `py -3.11 -m venv .venv` dan
+`.\\.venv\\Scripts\\Activate.ps1` untuk aktivasi.
+
+### Deployment
+
+Sumber superset ada di `backend_live/wfs_server.py` dan
+`backend_live/wfs_hq_server.py`. Script `scripts/apply_wfs_*.py` dan
+`deploy/docker/` mengacu pada layanan dan path absolut host tertentu;
+audit terlebih dahulu dan siapkan rollback sebelum digunakan. Jangan
+memakai konfigurasi host networking + Docker socket tanpa isolasi jaringan
+dan pembatasan izin.
+
+Variabel AI seperti `WFS_AI_BASE`, `WFS_AI_KEY`, dan `WFS_AI_MODEL`
+harus disediakan melalui environment/secret manager, bukan commit.
+Lihat [mode audit](ci-audit-execution.md) dan
+[laporan pemeriksaan](AUDIT_2026-11-08.md).
 
 ## Docker sandbox (Fase 5 — blocker)
 
