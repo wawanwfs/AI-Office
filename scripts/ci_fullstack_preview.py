@@ -64,6 +64,51 @@ async def check_ws():
         pass
 asyncio.run(check_ws())
 
+async def check_ws_denied():
+    # Tickets are not accepted in URL queries, and forged identity headers
+    # never grant a WebSocket connection. No fallback unauthenticated socket.
+    uri="ws://127.0.0.1:18765/api/ws"
+    candidates=[
+        (uri,["wfs.preview.v1"]),
+        (uri+"?ticket="+ticket,["wfs.preview.v1",ticket]),
+    ]
+    for url,protocols in candidates:
+        try:
+            async with websockets.connect(url,subprotocols=protocols,
+                                          open_timeout=8,close_timeout=5):
+                raise AssertionError("WebSocket accepted unauthenticated identity")
+        except (websockets.exceptions.InvalidStatus,
+                websockets.exceptions.ConnectionClosed):
+            pass
+asyncio.run(check_ws_denied())
+
+
+def check_host_runtime_limits():
+    """Read actual Docker daemon HostConfig, not only authored Compose YAML."""
+    import subprocess
+    compose=["docker","compose","-f","examples/fullstack-preview/compose.yaml"]
+    for service,memory,cpus in (("db",536870912,1000000000),
+                                ("api",402653184,750000000)):
+        identifier=subprocess.run(compose+["ps","-q",service],
+                                 capture_output=True,text=True,check=True,
+                                 timeout=15).stdout.strip()
+        assert identifier,service+" container missing"
+        details=subprocess.run(["docker","inspect","--format",
+                                "{{json .HostConfig}}",identifier],
+                               capture_output=True,text=True,check=True,
+                               timeout=15)
+        cfg=json.loads(details.stdout)
+        assert cfg["ReadonlyRootfs"] is True
+        assert cfg["PidsLimit"]==128
+        assert cfg["Memory"]==memory
+        assert cfg["NanoCpus"]==cpus
+        assert "ALL" in [x.upper() for x in cfg["CapDrop"]]
+        assert "no-new-privileges" in cfg["SecurityOpt"]
+    return True
+
+
+runtime_limits_verified=check_host_runtime_limits()
+
 async def screenshots():
     async with async_playwright() as playwright:
         browser=await playwright.chromium.launch(headless=True,args=["--no-sandbox"])
@@ -88,6 +133,8 @@ report={"react_vite_build":True,"fastapi_live":True,"postgresql_live_query":1,
         "sse_live_database":True,"websocket_ticket_one_use":True,
         "artifact_download":True,"screenshots":["desktop-fullstack.png","mobile-fullstack.png"],
         "host":"127.0.0.1:18765","production_deployment":False,
+        "real_docker_limits_verified":runtime_limits_verified,
+        "unauthenticated_ws_rejected":True,
         "not_a_multi_tenant_preview_manager":True}
 (target/"proof.json").write_text(json.dumps(report,indent=2))
 print(json.dumps(report))

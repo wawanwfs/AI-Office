@@ -11,6 +11,9 @@ services:
     # CI-only ephemeral DB. Run as postgres UID, never invoke root entrypoint
     # chmod/chown without container capabilities.
     user: "70:70"
+    pids_limit: 128
+    mem_limit: 512m
+    cpus: 1.0
     read_only: true
     tmpfs:
       - /tmp:rw,nosuid,nodev,uid=70,gid=70
@@ -35,6 +38,9 @@ services:
     restart: "no"
     read_only: true
     user: "65534:65534"
+    pids_limit: 128
+    mem_limit: 384m
+    cpus: 0.75
     cap_drop:
       - ALL
     security_opt:
