@@ -6172,6 +6172,12 @@
 - smoke_go_live.sh legacy dieksekusi utk baseline: 10/10 PASS (health, default-ai auto, agents 15, projects 6, orders 4, SSE, sandboxes, tulis DB, exec 42).
 - Gate rutin: vitest 251 file / 3633 passed + 6 skipped (0 fail); e2e_err_probe OK (agents=26, 0 error, shot 703508 B, nonbg 0.991, hygiene 0 missing); dist & scene produksi tidak berubah.
 - Sisa backlog: (a) gateway :8787→Docker — image+preflight SIAP, tinggal smoke Phase 3 baru → persetujuan user → APPLY; (b) saas-dibantuin push GitHub; (d) keputusan omniroute; penghapus wfs-hq tak teridentifikasi.
+## 2026-11-08 20:25 WIB — Siklus 295: drift wfs_server.py ditemukan & dideploy — vitest kembali 0 fail
+- vitest penuh menemukan 1 fail drift-gate: live :8787 server.py (b040cd74, hasil deploy siklus 294) != sumber ter-track 88d1ff36 (commit d290c0d: SSE/WS scoped auth + revocation guards belum disinkronkan ke live).
+- Deploy via scripts/apply_wfs_server.py --apply (backup server.py.bak-1794140624, smoke fase-1+fase-2 OK, pause tetap ON): live == sumber 88d1ff36.
+- Gate pasca-deploy: vitest drift suite 17/17 pass (full run sebelumnya 3643 pass / 1 fail kini tertutup); build sukses (precache 43); dist→~/wfs-hq diperbarui; e2e_errors.py exit 0 (tanpa 'Scene init failed'); :9503 agents OK, :8787 /api/health 200.
+- Sisa backlog: (a) gateway :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push; (d) keputusan omniroute; penghapus wfs-hq tak teridentifikasi.
+
 ## 2026-11-09 20:05 WIB — Siklus 294: DRIFT server.py/tasks.py :8787 ditemukan & dideploy — vitest kembali 0 fail
 
 - vitest penuh menemukan 2 fail drift-gate: backend_live/wfs_server.py (commit 30084da artifacts QA + d4a47d5 strict-v4 route closure + 1498390 sandbox terminate) & wfs_tasks.py (f6db0fa/2460f3c) tidak tersinkron ke live :8787 oleh sesi lain (pola sama dgn siklus 290).
