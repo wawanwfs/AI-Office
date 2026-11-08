@@ -480,6 +480,8 @@ def set_cfg(agent_id: str, body: CfgIn):
 
 @app.post("/api/test")
 async def test_conn(body: TestIn):
+    if os.environ.get("WFS_METERING_REQUIRED") == "1":
+        raise HTTPException(503, "Provider test disabled in strict mode")
     c = {"base": body.base or DEFAULT_AI["base"],
          "key": body.key or (DEFAULT_AI["key"] if not body.base else ""),
          "model": body.model}
@@ -1076,6 +1078,10 @@ def _check_task(tid):
 
 
 def _schedule(tids):
+    # Only the authorized, budget-metered standalone worker may dispatch when
+    # secure master-queue mode is selected. No HTTP shortcut to paid execution.
+    if os.environ.get("WFS_MASTER_QUEUE_REQUIRED") == "1":
+        raise HTTPException(503, "Legacy HTTP execution disabled: use approved Master Queue worker")
     # Reserve all tasks before returning; rollback reservations on any conflict.
     claims = {}
     try:
@@ -1389,6 +1395,10 @@ async def api_run_all(body: dict):
 
 @app.post("/api/chat")
 async def chat(body: ChatIn):
+    # The old public chat route has no CostLedger settlement. In secure mode
+    # fail closed instead of generating unmetered provider charges.
+    if os.environ.get("WFS_METERING_REQUIRED") == "1":
+        raise HTTPException(503, "Unmetered chat disabled until metered chat adapter is installed")
     meta = AGENTS_META.get(body.agent_id)
     if not meta:
         raise HTTPException(404, "Agent tidak ditemukan")

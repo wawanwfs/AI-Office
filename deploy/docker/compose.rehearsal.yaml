@@ -24,6 +24,8 @@ services:
       - "127.0.0.1:8788:8788"
     environment:
       WFS_PORT: "8788"
+      WFS_MASTER_QUEUE_REQUIRED: "1"
+      WFS_METERING_REQUIRED: "1"
       WFS_HERMES_HOME: /hermes-home
     volumes:
       # kode host read-only (satu sumber kebenaran dgn produksi)

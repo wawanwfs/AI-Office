@@ -32,6 +32,8 @@ services:
     user: "1002:1003"
     environment:
       WFS_PORT: "8787"
+      WFS_MASTER_QUEUE_REQUIRED: "1"
+      WFS_METERING_REQUIRED: "1"
       WFS_HERMES_HOME: /hermes-home
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request,sys; sys.exit(0 if urllib.request.urlopen('http://127.0.0.1:8787/api/health', timeout=4).status==200 else 1)"]
