@@ -4,6 +4,7 @@ The caller still controls launch authorization and the Docker daemon. This modul
 validates agent ids and workspace paths, uses unique per-run script files, and
 preserves pytest exit codes instead of masking them through shell pipelines.
 """
+import os
 import re
 import subprocess
 import tempfile
