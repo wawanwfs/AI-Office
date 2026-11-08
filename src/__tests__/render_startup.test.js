@@ -6,7 +6,7 @@ import { drawScreenFrame, shouldRedrawScreenAt } from '../scene/parts/effects.js
 it('initializes all 26 low-quality monitor textures before freezing their redraws', () => {
   const src = readFileSync(new URL('../scene/OfficeScene.js', import.meta.url), 'utf8');
   const draw = src.match(/const drawScreen=\(s,i\)=>\{[^\n]+/)[0];
-  const schedule = src.match(/  if\(!__quality.low[^\n]+screenData.forEach\(drawScreen\);/)[0];
+  const schedule = src.match(/ {2}if\(!__quality.low[^\n]+screenData.forEach\(drawScreen\);/)[0];
   const screens = Array.from({ length: 26 }, () => ({
     ctx: new Proxy({}, { get: (target, key) => target[key] ?? (() => {}) }),
     canvas: { width: 256, height: 128 }, type: 'terminal', hex: '#38bdf8',
@@ -24,7 +24,7 @@ it('initializes all 26 low-quality monitor textures before freezing their redraw
 it('reports rotation off by default in low quality but honors explicit user override', () => {
   const src = readFileSync(new URL('../scene/OfficeScene.js', import.meta.url), 'utf8');
   const defaults = src.match(/const autoRotDefault=\(\)=>[^\n]+/)[0];
-  const rotation = src.match(/  if\(autoRot[^\n]+autoRotateStep\(sph,delta\);updCam\(\)\}/)[0];
+  const rotation = src.match(/ {2}if\(autoRot[^\n]+autoRotateStep\(sph,delta\);updCam\(\)\}/)[0];
   const listener = src.match(/const __prmListener=\(e\)=>\{[^\n]+/)[0];
   const setter = src.match(/setAutoRotate: \(v\) => (\{[^\n]+\}),/)[1];
   const run = new Function('__quality', '__userRot', '__prm', 'localStorage', 'autoRotateStep',

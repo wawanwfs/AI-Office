@@ -30,6 +30,11 @@
     "vite-plugin-pwa": "^2.0.0",
     "vitest": "^5.0.4"
   },
+  "overrides": {
+    "workbox-build": {
+      "glob": "^14.0.4"
+    }
+  },
   "description": "WFS Project HQ — kantor virtual 3D isometrik tempat tim agent AI bekerja, ngobrol, rapat, dan mengerjakan task nyata. React + Three.js.",
   "author": "Wahyu Fajar Setiawan <https://github.com/wawanwfs>",
   "license": "MIT",
