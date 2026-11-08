@@ -88,6 +88,51 @@ try:
         assert manager.restart(project,token)["phase"]=="running"
         assert health(port,token,other)
     proof["restart_proved"]=True
+    # Actual HTTP gateway TestClient -> authenticated project RBAC ->
+    # read-only registry -> running loopback preview -> live PostgreSQL.
+    # The HTTP gateway is never given the Docker socket or operator runner.
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from preview_proxy import PreviewRegistryReader, AuthenticatedPreviewRead
+    from secure_control_api import create_secure_router, TokenStore
+    from master_queue import DurableMasterQueue
+    from cost_ledger import CostLedger
+    from project_rbac import ProjectRBAC
+
+    acl=ProjectRBAC(root/"rbac.db")
+    http_tokens=TokenStore(root/"http_tokens.db")
+    for index,project in enumerate(names):
+        acl.bootstrap_owner(project,f"owner-{index}")
+    app=FastAPI()
+    credentials=dict(zip(names,tokens))
+    reader=AuthenticatedPreviewRead(PreviewRegistryReader(root/"registry.db"),
+                                    token_for_project=credentials.get)
+    app.include_router(create_secure_router(
+        queue=DurableMasterQueue(root/"queue.db"),
+        rbac=acl,ledger=CostLedger(root/"ledger.db"),
+        tokens=http_tokens,preview_reader=reader))
+    with TestClient(app) as gateway:
+        auth=[{"Authorization":"Bearer "+http_tokens.mint_local(f"owner-{i}")}
+              for i in range(2)]
+        base="/api/v4/projects/"
+        for i,project in enumerate(names):
+            endpoint=base+project+"/preview/api/db"
+            assert gateway.get(endpoint).status_code==401
+            assert gateway.get(endpoint,headers=auth[1-i]).status_code==404
+            verified=gateway.get(endpoint,headers=auth[i])
+            assert verified.status_code==200,verified.text
+            assert verified.json()["postgres_query"]==1
+            assert verified.headers["cache-control"]=="no-store"
+            assert "set-cookie" not in verified.headers
+            readonly=gateway.get(base+project+"/preview",headers=auth[i])
+            assert readonly.status_code==200
+            assert readonly.headers["x-frame-options"]=="DENY"
+            assert gateway.get(base+project+"/preview/api/events",
+                               headers=auth[i]).status_code==409
+    proof["authenticated_preview_http_two_tenants"]=True
+    proof["upstream_public_bearer_not_forwarded"]=True
+    proof["operator_registry_read_only"]=True
+
 finally:
     errors=[]
     for project,token in zip(names,tokens):

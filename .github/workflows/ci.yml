@@ -116,7 +116,7 @@ jobs:
             backend/secure_control_api.py backend/sandbox_runtime.py \
             backend/code_qa.py backend/legacy_api_firewall.py \
             backend/metered_stream_provider.py backend/brief_intake.py \
-            backend/preview_manager.py
+            backend/preview_manager.py backend/preview_proxy.py
       - name: Upload scoped static scan report
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -300,7 +300,7 @@ jobs:
           python-version: '3.11'
       - run: npm ci
       - run: npx vite build --config examples/fullstack-preview/frontend/vite.config.mjs
-      - run: python -m pip install --no-cache-dir httpx==0.28.1
+      - run: python -m pip install --no-cache-dir -r requirements-pytest.txt
       - name: Real Docker Compose template-managed two-project lifecycle
         run: |
           docker info >/dev/null
