@@ -1,7 +1,7 @@
 """Phase 10: independently pinned, rechecked reviewer trust for ALL preview manager paths.
 
-Operator-owned policy and trust-anchor SHA256 are provisioned outside GitHub,
-uploads and AI code. A signed candidate is NOT independent review. CI uses
+Operator-owned policy SHA256 and a SEPARATE Ed25519 roster-root fingerprint
+are pinned outside GitHub, uploads and AI code. A signed candidate is NOT independent review. CI uses
 synthetic, ephemeral signers solely to prove fail-closed behavior.
 """
 import hashlib
@@ -11,6 +11,7 @@ import re
 
 from preview_admission_v2 import AdmissionDenied
 from preview_signature import _read_trusted, verify_review_signature
+from preview_root_authority import verify_roster_signature
 
 _SHA256 = re.compile(r"[a-f0-9]{64}\Z")
 
@@ -33,7 +34,8 @@ class SignedPreviewAuthority:
     """
 
     def __init__(self, *, public_key_path, signature_path, policy_path,
-                 trusted_policy_sha256):
+                 trusted_policy_sha256, root_public_key_path,
+                 root_signature_path, trusted_root_fingerprint):
         if (not isinstance(trusted_policy_sha256, str) or
                 not _SHA256.fullmatch(trusted_policy_sha256)):
             raise AdmissionDenied("independent reviewer policy SHA-256 pin required")
@@ -41,6 +43,9 @@ class SignedPreviewAuthority:
         self.signature_path = signature_path
         self.policy_path = policy_path
         self.trusted_policy_sha256 = trusted_policy_sha256
+        self.root_public_key_path = root_public_key_path
+        self.root_signature_path = root_signature_path
+        self.trusted_root_fingerprint = trusted_root_fingerprint
 
     def verify(self, reviewed_manifest):
         # Snapshot the externally pinned authority policy, not supplied by
@@ -73,11 +78,20 @@ class SignedPreviewAuthority:
         # pinned policy instead of using a fingerprint from the manifest.
         # A second filesystem read between these checks is fail-closed for
         # ordinary mutation, but atomic snapshot / TOCTOU defense remains P0.
+        approved_reviewer = self._public_fingerprint(active, revoked)
+        # The roster itself is signed by a DIFFERENT, out-of-band pinned
+        # authority. Rehashing a new self-written policy is not approval.
+        verify_roster_signature(
+            raw, root_public_key_path=self.root_public_key_path,
+            root_signature_path=self.root_signature_path,
+            trusted_root_fingerprint=self.trusted_root_fingerprint,
+            reviewer_fingerprint=approved_reviewer,
+        )
         fingerprint = verify_review_signature(
             reviewed_manifest,
             public_key_path=self.public_key_path,
             signature_path=self.signature_path,
-            trusted_fingerprint=self._public_fingerprint(active, revoked),
+            trusted_fingerprint=approved_reviewer,
         )
         if fingerprint in revoked or fingerprint not in active:
             raise AdmissionDenied("reviewer key revoked or not active")
