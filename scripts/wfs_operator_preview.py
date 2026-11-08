@@ -37,6 +37,12 @@ def main():
         help="operator-owned allowlist/revocation policy v1, provisioned out of band")
     parser.add_argument("--trusted-policy-sha256",required=True,
         help="independently pinned policy file SHA256; never derive from upload")
+    parser.add_argument("--roster-root-public-key",required=True,
+        help="separately provisioned Ed25519 roster authority public key")
+    parser.add_argument("--roster-root-signature",required=True,
+        help="base64 detached root signature of exact reviewer-policy JSON bytes")
+    parser.add_argument("--trusted-roster-root-fingerprint",required=True,
+        help="out-of-band SHA256 of roster authority raw public key")
     parser.add_argument("--discard-data",action="store_true",
                         help="required to remove disposable PostgreSQL volumes")
     args=parser.parse_args()
@@ -75,6 +81,9 @@ def main():
         signature_path=args.review_signature,
         policy_path=args.reviewer_policy,
         trusted_policy_sha256=args.trusted_policy_sha256,
+        root_public_key_path=args.roster_root_public_key,
+        root_signature_path=args.roster_root_signature,
+        trusted_root_fingerprint=args.trusted_roster_root_fingerprint,
     )
     manager=TemplatePreviewManager(state/"registry.db",template,
         enabled=True,reviewed_files=approved_hashes,
