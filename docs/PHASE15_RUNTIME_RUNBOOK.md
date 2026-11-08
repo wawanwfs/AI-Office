@@ -1,3 +1,11 @@
+> **Phase 16 trust update:** The operator now **additionally** requires
+> a compact RFC6962 inclusion + consistency proof with
+> `--log-compact-proof`, in addition to the independently pinned
+> signed head and complete leaf inventory described below.
+> Read the [Phase 16 runbook](PHASE16_RUNTIME_RUNBOOK.md) before executing
+> any reviewed local Docker preview; old CLI examples lack this argument.
+> The new proof verifier is not an independently hosted public log.
+
 # Phase 15 — signed Merkle receipt history verifier (bounded operator use)
 
 **Do not treat this as a deployed transparency log.** It is an offline,
