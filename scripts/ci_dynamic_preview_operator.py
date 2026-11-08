@@ -26,6 +26,7 @@ from preview_authority import SignedPreviewAuthority
 from preview_signature import canonical_review_bytes
 from preview_root_authority import canonical_roster_bytes
 from preview_witness import SignedReviewerCheckpoint, canonical_checkpoint_bytes
+from preview_transparency import SignedTransparencyEvidence, canonical_tree_head, merkle_root
 from preview_admission_v2 import AdmissionDenied
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -85,11 +86,40 @@ witness_receipt.write_text(json.dumps({
 },sort_keys=True))
 witness_sig.write_bytes(base64.b64encode(ci_witness.sign(
     canonical_checkpoint_bytes(witness_receipt.read_bytes()))))
+# FOURTH synthetic CI authority: signs a one-leaf Merkle tree head.
+# Key/signatures are not a deployed transparent append-only service.
+ci_log=Ed25519PrivateKey.generate()
+log_public=root/"synthetic-ci-log-public.pem"
+log_head=root/"synthetic-ci-log-head.json"
+log_signature=root/"synthetic-ci-log-head.sig"
+log_inventory=root/"synthetic-ci-log-inventory.json"
+log_public.write_bytes(ci_log.public_key().public_bytes(
+    serialization.Encoding.PEM,serialization.PublicFormat.SubjectPublicKeyInfo))
+log_fingerprint=hashlib.sha256(ci_log.public_key().public_bytes(
+    serialization.Encoding.Raw,serialization.PublicFormat.Raw)).hexdigest()
+assert log_fingerprint not in (fingerprint,roster_root_fp,witness_fp)
+receipt_digest=hashlib.sha256(witness_receipt.read_bytes()).hexdigest()
+log_inventory.write_text(json.dumps({
+    "version":1,"receipt_digests":[receipt_digest]},sort_keys=True))
+log_head.write_text(json.dumps({
+    "version":1,"tree_size":1,
+    "root_sha256":merkle_root([bytes.fromhex(receipt_digest)]).hex(),
+},sort_keys=True))
+log_signature.write_bytes(base64.b64encode(
+    ci_log.sign(canonical_tree_head(log_head.read_bytes()))))
+transparency=SignedTransparencyEvidence(
+    public_key_path=log_public,signature_path=log_signature,
+    head_path=log_head,inventory_path=log_inventory,
+    trusted_log_fingerprint=log_fingerprint,
+    trusted_head_sha256=hashlib.sha256(log_head.read_bytes()).hexdigest(),
+    trusted_previous_size=0,
+    trusted_previous_root_sha256=hashlib.sha256(b"").hexdigest())
 witness=SignedReviewerCheckpoint(
     receipt_path=witness_receipt,signature_path=witness_sig,
     public_key_path=witness_pem,
     trusted_receipt_sha256=hashlib.sha256(witness_receipt.read_bytes()).hexdigest(),
-    trusted_witness_fingerprint=witness_fp)
+    trusted_witness_fingerprint=witness_fp,
+    transparency_evidence=transparency)
 authority=SignedPreviewAuthority(
     public_key_path=reviewer_pem,
     signature_path=signature,
@@ -143,7 +173,8 @@ proof={"mode":"real-disposable-operator-template-preview",
        "all_runtime_image_references_immutable":True,
        "phase10_test_signature_only":"ephemeral synthetic CI identity; NOT independent review",
        "phase12_roster_authority":"separate synthetic key, not an independently audited human/device",
-       "phase14_checkpoint_witness":"third synthetic signer and independently pinned receipt hash; not external append-only log"}
+       "phase14_checkpoint_witness":"third synthetic signer and independently pinned receipt hash; not external append-only log",
+       "phase15_merkle_proof":"fourth synthetic log signer; full-leaf inclusion and genesis-prefix proof, NOT externally hosted transparency"}
 names=("tenant-a","tenant-b")
 ports=(19010,19011)
 tokens=(token_a,token_b)
