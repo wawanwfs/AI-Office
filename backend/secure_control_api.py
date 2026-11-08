@@ -15,7 +15,8 @@ import sqlite3
 import time
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
+from typing import Literal
 
 try:
     from .project_rbac import AccessDenied, ident
@@ -91,6 +92,12 @@ class CancelReply(BaseModel):
     status:str
 
 
+class CodingBrief(BaseModel):
+    title:str=Field(min_length=3,max_length=120)
+    brief:str=Field(min_length=30,max_length=12000)
+    role:Literal["backend","backend2"]="backend"
+
+
 def create_secure_router(*, queue, rbac, ledger, tokens, taskengine=None, artifact_store=None,
                          code_qa_intake_enabled=False):
     """Dependency-injected data sources; no unauthenticated fallback."""
@@ -153,6 +160,46 @@ def create_secure_router(*, queue, rbac, ledger, tokens, taskengine=None, artifa
         scoped(project_id,principal,"read")
         no_cache(response)
         return {"members":rbac.members(principal,project_id)}
+
+    @router.post("/projects/{project_id}/briefs",status_code=202)
+    def submit_coding_brief(project_id:str,brief:CodingBrief,response:Response,
+                            principal:str=Depends(authenticated)):
+        """User brief -> persisted legacy task -> durable isolated queue.
+
+        Never runs a model, shell, Docker or preview from the HTTP gateway.
+        A separate approved Python QA worker must explicitly process the job.
+        """
+        scoped(project_id,principal,"enqueue")
+        if not code_qa_intake_enabled or taskengine is None or not callable(getattr(taskengine,"add_task",None)):
+            raise HTTPException(503,"Approved Python coding intake unavailable")
+        title=brief.title.strip()
+        description=brief.brief.strip()
+        if len(title)<3 or len(description)<30:
+            raise HTTPException(422,"Title and brief must contain substantive text")
+        try:
+            taskengine.require_launch_approval(project_id)
+            if taskengine.is_paused() or queue.is_paused():
+                raise PermissionError("work queue paused")
+            current=ledger.summary(project_id)
+            if not current["approved"] or current["remaining_microusd"]<=0:
+                raise PermissionError("approved spending budget required")
+            # Recheck the project ACL before the first durable mutation.
+            scoped(project_id,principal,"enqueue")
+        except PermissionError as exc:
+            raise HTTPException(403,"Execution approval or budget unavailable") from exc
+        # The project comes ONLY from the checked URL; the request body has
+        # no project/agent/image/command/host attributes.
+        task_id=taskengine.add_task(project_id,title,brief.role,description)
+        try:
+            job_id=queue.submit(project_id,str(task_id),brief.role,max_attempts=1)
+        except Exception as exc:
+            # Task is still persisted for operator reconciliation. The
+            # caller must NOT blindly re-submit paid work on this 503.
+            raise HTTPException(503,"Queue intake uncertain; operator reconciliation required") from exc
+        no_cache(response)
+        return {"task_id":task_id,"job_id":job_id,"status":"queued",
+                "execution_started":False,"qa_required":True,
+                "preview_published":False}
 
     @router.post("/projects/{project_id}/tasks/{task_id}/enqueue",status_code=202)
     def enqueue(project_id:str,task_id:int,response:Response,

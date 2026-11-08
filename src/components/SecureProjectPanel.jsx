@@ -17,6 +17,9 @@ export default function SecureProjectPanel() {
   const [project, setProject] = useState('')
   const [token, setToken] = useState('')
   const [taskId, setTaskId] = useState('')
+  const [briefTitle, setBriefTitle] = useState('')
+  const [briefText, setBriefText] = useState('')
+  const [codeRole, setCodeRole] = useState('backend')
   const [jobs, setJobs] = useState(null)
   const [budget, setBudget] = useState(null)
   const [events, setEvents] = useState(null)
@@ -30,6 +33,8 @@ export default function SecureProjectPanel() {
   const close = () => {
     pending.current?.abort()
     setToken('')
+    setBriefTitle('')
+    setBriefText('')
     setJobs(null)
     setBudget(null)
     setEvents(null)
@@ -39,11 +44,13 @@ export default function SecureProjectPanel() {
     setExpanded(false)
   }
 
-  const request = async (suffix, method = 'GET', ctrl) => {
+  const request = async (suffix, method = 'GET', ctrl, body = null) => {
     const base = '/api/v4/projects/' + encodeURIComponent(project)
     const response = await fetch(base + suffix, {
       method, credentials: 'omit', cache: 'no-store', signal: ctrl.signal,
-      headers: { Authorization: 'Bearer ' + token, Accept: 'application/json' },
+      headers: { Authorization: 'Bearer ' + token, Accept: 'application/json',
+        ...(body ? { 'Content-Type': 'application/json' } : {}) },
+      ...(body ? { body: JSON.stringify(body) } : {}),
     })
     if (!response.ok) {
       throw new Error(response.status === 401 ? 'Token tidak valid atau telah kedaluwarsa.'
@@ -58,6 +65,11 @@ export default function SecureProjectPanel() {
       setError('Masukkan project ID dan bearer token dari operator yang sah.')
       return
     }
+    if (kind === 'create' && (briefTitle.trim().length < 3 || briefText.trim().length < 30 ||
+      briefTitle.length > 120 || briefText.length > 12000)) {
+      setError('Judul minimal 3 karakter dan brief minimal 30 karakter (maks. 12.000).')
+      return
+    }
     if (kind === 'enqueue' && !SAFE_NUMBER.test(taskId)) {
       setError('Task ID harus berupa angka.')
       return
@@ -69,7 +81,14 @@ export default function SecureProjectPanel() {
     setError('')
     setNotice('')
     try {
-      if (kind === 'enqueue') {
+      if (kind === 'create') {
+        const result = await request('/briefs', 'POST', ctrl, {
+          title: briefTitle.trim(), brief: briefText.trim(), role: codeRole,
+        })
+        setTaskId(String(result.task_id))
+        setNotice('Brief tersimpan sebagai task #' + result.task_id +
+          ', job ' + result.job_id + '. Menunggu worker terotorisasi & Docker QA; preview belum dipublikasikan.')
+      } else if (kind === 'enqueue') {
         const result = await request('/tasks/' + encodeURIComponent(taskId) + '/enqueue', 'POST', ctrl)
         setNotice('Task masuk antrean: ' + result.job_id + '. Belum berarti sedang dieksekusi.')
       } else if (kind === 'cancel') {
@@ -102,7 +121,7 @@ export default function SecureProjectPanel() {
       <div className="wfs-secure-heading">
         <div>
           <strong>WFS Secure Control</strong>
-          <small>Antrean, budget, QA dan audit dari backend nyata · Phase 5</small>
+          <small>Brief coding Python, antrean, budget, QA dan audit dari backend nyata · Phase 6</small>
         </div>
         <button className="btn" onClick={() => expanded ? close() : setExpanded(true)}
           aria-expanded={expanded} aria-controls="wfs-secure-body">
@@ -127,7 +146,32 @@ export default function SecureProjectPanel() {
               {busy ? 'Menghubungkan…' : 'Muat data nyata'}
             </button>
           </div>
-          {error && <p className="wfs-secure-error" role="alert">{error}</p>}
+          <div className="wfs-secure-brief">
+            <strong>Buat aplikasi dari brief</strong>
+            <p>Hanya Python backend yang dapat diantrekan saat worker QA telah disetujui. Pembuatan file, pengujian Docker dan publikasi preview adalah tahap terpisah, bukan simulasi instan.</p>
+            <label>Judul tugas
+              <input aria-label="Judul brief coding" value={briefTitle} maxLength={120}
+                onChange={e => setBriefTitle(e.target.value)} placeholder="API inventori dengan tes unittest" />
+            </label>
+            <label>Instruksi aplikasi
+              <textarea aria-label="Instruksi brief coding" value={briefText} maxLength={12000}
+                onChange={e => setBriefText(e.target.value)} rows={4}
+                placeholder="Jelaskan fitur API, format data dan kebutuhan tes objektif…" />
+            </label>
+            <div className="wfs-secure-brief-footer">
+              <label>Agent
+                <select aria-label="Peran coding" value={codeRole}
+                  onChange={e => setCodeRole(e.target.value)}>
+                  <option value="backend">Python Backend</option>
+                  <option value="backend2">Python Backend 2</option>
+                </select>
+              </label>
+              <button className="btn" disabled={busy} onClick={() => act('create')}>
+                Buat task & antrekan
+              </button>
+            </div>
+          </div>
+          {error && <p className="wfs-secure-error" role="alert">{error}</p>
           {notice && <p className="wfs-secure-notice" role="status">{notice}</p>}
           {budget && <div className="wfs-secure-budget" aria-label="Budget proyek">
             <b>{budget.approved ? 'Approved' : 'Belum disetujui'}</b>

@@ -27,6 +27,13 @@ class StubEngine:
             raise PermissionError("revoked")
     def is_paused(self):
         return self.paused
+    def add_task(self,project,title,role,prompt):
+        self.created=getattr(self,"created",[])
+        task_id=100+len(self.created)
+        task={"id":task_id,"project":project,"title":title,"role":role,
+              "prompt":prompt,"status":"pending"}
+        self.created.append(task)
+        return task_id
 
 
 @pytest.fixture
@@ -152,3 +159,66 @@ def test_only_explicitly_approved_python_code_roles_may_enter_queue(api):
     assert outcome.status_code==202
     assert outcome.json()["execution_started"] is False
     assert q.get(outcome.json()["job_id"])["role"]=="backend"
+
+
+
+def test_authenticated_brief_creates_real_task_and_durable_job_only_when_ready(api):
+    c,q,acl,ledger,tokens,engine,headers=api
+    app=FastAPI()
+    app.include_router(create_secure_router(queue=q,rbac=acl,ledger=ledger,
+        tokens=tokens,taskengine=engine,code_qa_intake_enabled=True))
+    client=TestClient(app)
+    path="/api/v4/projects/alpha/briefs"
+    body={"title":"Buat API inventori","brief":"Bangun aplikasi inventori dengan endpoint daftar barang dan pengujian unittest minimal.","role":"backend"}
+    assert client.post(path,json=body).status_code==401
+    assert client.post(path,headers={"X-Principal":"alice"},json=body).status_code==401
+    assert client.post(path,headers=headers("bob"),json=body).status_code==404
+    assert client.post(path,headers=headers("observer"),json=body).status_code==404
+    assert not getattr(engine,"created",None)
+    ok=client.post(path,headers=headers("alice"),json=body)
+    assert ok.status_code==202,ok.text
+    payload=ok.json()
+    assert payload["execution_started"] is False
+    assert payload["qa_required"] is True
+    assert payload["preview_published"] is False
+    task=engine.created[0]
+    assert task["project"]=="alpha" and task["role"]=="backend"
+    job=q.get(payload["job_id"])
+    assert job["task_id"]==str(payload["task_id"]) and job["project_id"]=="alpha"
+    assert job["status"]=="queued" and job["max_attempts"]==1
+    assert ok.headers["Cache-Control"]=="no-store"
+
+
+def test_brief_intake_rejects_unapproved_paused_invalid_roles_and_payloads(api):
+    c,q,acl,ledger,tokens,engine,headers=api
+    app=FastAPI()
+    app.include_router(create_secure_router(queue=q,rbac=acl,ledger=ledger,
+        tokens=tokens,taskengine=engine,code_qa_intake_enabled=True))
+    client=TestClient(app)
+    url="/api/v4/projects/alpha/briefs"
+    auth=headers("alice")
+    good={"title":"Proyek pengujian","brief":"Buat kode layanan berbasis Python dengan pengujian yang dapat dieksekusi.","role":"backend2"}
+    for changes in ({"role":"frontend"},{"role":"devops"},{"brief":"short"},
+                    {"title":"a"},{"project_id":"bravo"},{"command":"docker ps"}):
+        body={**good,**changes}
+        expected=202 if "project_id" in changes or "command" in changes else 422
+        # Extra input fields have no authority; strict role and length validate.
+        result=client.post(url,headers=auth,json=body)
+        assert result.status_code==expected
+    before=len(getattr(engine,"created",[]))
+    engine.approved=False
+    assert client.post(url,headers=auth,json=good).status_code==403
+    engine.approved=True
+    engine.paused=True
+    assert client.post(url,headers=auth,json=good).status_code==403
+    engine.paused=False
+    q.set_paused(False)
+    assert len(engine.created)==before
+
+
+def test_brief_intake_disabled_by_default_and_bare_client_fields_never_create(api):
+    c,q,acl,ledger,tokens,engine,headers=api
+    url="/api/v4/projects/alpha/briefs"
+    body={"title":"Make service","brief":"An approved isolated service with at least one objective unittest."}
+    assert c.post(url,headers=headers("alice"),json=body).status_code==503
+    assert not getattr(engine,"created",None)
