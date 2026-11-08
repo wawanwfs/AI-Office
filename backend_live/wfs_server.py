@@ -1491,6 +1491,12 @@ if os.environ.get("WFS_SECURE_CONTROL_API_ENABLED") == "YES":
         artifact_store=(__import__("artifact_store").VerifiedArtifacts(
             os.environ["WFS_WORKSPACE_ROOT"])
             if os.environ.get("WFS_WORKSPACE_ROOT") else None)))
+    from secure_streams import create_event_stream_router
+    app.include_router(create_event_stream_router(
+        queue=DurableMasterQueue(os.environ["WFS_MASTER_QUEUE_DB"],
+                                 max_per_project=1),
+        rbac=ProjectRBAC(os.environ["WFS_RBAC_DB"]),
+        tokens=TokenStore(os.environ["WFS_AUTH_DB"])))
 
 
 # In strict project mode, old unscoped routes remain intentionally CLOSED.
