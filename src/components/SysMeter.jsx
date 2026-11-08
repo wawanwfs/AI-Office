@@ -33,8 +33,12 @@ export default function SysMeter() {
     // hitungan agen dari scene 3D (window.__agentData diisi OfficeScene) — sumber kebenaran visual
     const readScene = () => setSceneAgents((window.__agentData || []).length || null)
     readScene()
-    const iv2 = setInterval(readScene, 4000)
-    return () => { stop = true; clearInterval(iv); clearInterval(iv2) }
+    // Siklus 319: gerbang visibilityState (paritas 315-318) + baca ulang
+    // segera saat tab kembali visible; cleanup listener saat unmount.
+    const iv2 = setInterval(() => { if (document.visibilityState === 'visible') readScene() }, 4000)
+    const onVis = () => { if (document.visibilityState === 'visible') readScene() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { stop = true; clearInterval(iv); clearInterval(iv2); document.removeEventListener('visibilitychange', onVis) }
   }, [])
 
   if (!d) {

@@ -398,8 +398,12 @@ export default function App() {
       })
     }
     read()
-    const iv = setInterval(read, 2000)
-    return () => clearInterval(iv)
+    // Siklus 319: gerbang visibilityState (paritas 315-318) — __perf dibekukan
+    // saat render loop pause; baca ulang segera saat tab kembali visible.
+    const iv = setInterval(() => { if (document.visibilityState === 'visible') read() }, 2000)
+    const onVis = () => { if (document.visibilityState === 'visible') read() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', onVis) }
   }, [])
 
   const [sceneReady, setSceneReady] = useState(false)

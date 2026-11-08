@@ -6370,3 +6370,13 @@
 - Redeploy dist → ~/wfs-hq; bersihkan 7 orphan asset hash lama → hygiene 13 hashed/0 orphan (probe pertama FAIL hygiene, fixed).
 - e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 709354 B, nonbg 0.992, hygiene 13/0.
 - Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 2026-11-09 06:00 WIB — Siklus 319: Ticker, SysMeter & perf chip digerbang visibilityState
+
+- Tanpa upstream baru. Paritas gerbang visibilityState (siklus 315-318) ke tiga poller scene terakhir yang masih bebas gerbang: Ticker presence (1 dtk), SysMeter hitungan avatar (4 dtk), App perf chip GPU (__perf, 2 dtk).
+- Ketiganya: interval digerbang document.visibilityState (tab hidden tidak menimpa UI dengan snapshot basi — render loop scene pause) + listener 'visibilitychange' membaca ulang SEGERA saat kembali visible; cleanup listener saat unmount. Semua komponen yang membaca window.__agentData/__perf kini konsisten digerbang.
+- +1 file tes visibility_parity_319.test.jsx (5 kasus: Ticker hidden beku/visible segar/cleanup; SysMeter hidden beku/visible segar).
+- Build PWA OK; vitest 254 file / 3679 passed + 6 skipped, 0 fail (+5 tes vs siklus 318).
+- Redeploy dist → ~/wfs-hq; bersihkan 7 orphan asset hash lama → hygiene 13 hashed/0 orphan (probe pertama FAIL hygiene, fixed).
+- e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 712291 B, nonbg 0.992, hygiene 13/0.
+- Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

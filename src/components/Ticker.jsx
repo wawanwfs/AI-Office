@@ -26,8 +26,12 @@ export default function Ticker({ conn }) {
   useEffect(() => {
     const read = () => setPresence(tickerPresenceSummary(window.__agentData))
     read()
-    const iv = setInterval(read, 1000)
-    return () => clearInterval(iv)
+    // Siklus 319: gerbang visibilityState (paritas FloorNavigator 318) — tab
+    // hidden tidak menimpa presence dengan snapshot basi (render loop pause).
+    const iv = setInterval(() => { if (document.visibilityState === 'visible') read() }, 1000)
+    const onVis = () => { if (document.visibilityState === 'visible') read() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', onVis) }
   }, [])
 
   useEffect(() => {
