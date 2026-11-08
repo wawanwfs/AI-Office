@@ -61,12 +61,56 @@ class TemplatePreviewManager:
                     ('reserved','running','stopped','uncertain')),
                   compose_name TEXT NOT NULL UNIQUE
                 );
+                CREATE TABLE IF NOT EXISTS wfs_preview_reviewer_epoch(
+                  singleton INTEGER PRIMARY KEY CHECK(singleton = 1),
+                  epoch INTEGER NOT NULL CHECK(epoch BETWEEN 1 AND 4611686018427387904),
+                  policy_sha256 TEXT NOT NULL
+                );
             """)
+        self._enforce_epoch(self.authority.verify(self.reviewed_manifest))
+
+    def _enforce_epoch(self, decision):
+        """Local crash-durable epoch floor and equal-epoch policy pin.
+
+        Protection assumes an operator-owned SQLite registry that an
+        attacker cannot delete, restore, replace or modify directly.
+        It does not provide a remote transparency log / hardware counter.
+        """
+        epoch=decision["epoch"]
+        policy_sha=self.authority.trusted_policy_sha256
+        if type(epoch) is not int or not 1 <= epoch <= 4611686018427387904:
+            raise AdmissionDenied("reviewer epoch outside SQLite bounds")
+        with closing(self._db()) as db:
+            try:
+                db.execute("BEGIN IMMEDIATE")
+                previous=db.execute(
+                    "SELECT epoch,policy_sha256 FROM wfs_preview_reviewer_epoch "
+                    "WHERE singleton=1"
+                ).fetchone()
+                if previous is not None:
+                    if epoch < previous["epoch"]:
+                        raise AdmissionDenied("reviewer policy epoch rollback denied")
+                    if (epoch == previous["epoch"] and
+                            policy_sha != previous["policy_sha256"]):
+                        raise AdmissionDenied("reviewer policy changed at same epoch")
+                if previous is None:
+                    db.execute(
+                        "INSERT INTO wfs_preview_reviewer_epoch VALUES(1,?,?)",
+                        (epoch,policy_sha))
+                elif epoch > previous["epoch"]:
+                    db.execute(
+                        "UPDATE wfs_preview_reviewer_epoch SET epoch=?,policy_sha256=? "
+                        "WHERE singleton=1", (epoch,policy_sha))
+                db.commit()
+            except BaseException:
+                db.rollback()
+                raise
 
     def _verify(self):
         """Fail closed for revoked/policy-changed approvals and altered bytes."""
-        self.authority.verify(self.reviewed_manifest)
+        decision=self.authority.verify(self.reviewed_manifest)
         self.admission.verify()
+        self._enforce_epoch(decision)
         return True
 
     def _db(self):
