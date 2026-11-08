@@ -101,8 +101,9 @@ describe('WfsPanel — gateway chat AI + konfigurasi agent', () => {
     })
     await openPanel()
     fireEvent.click(screen.getByRole('tab', { name: /Model API/ }))
-    // nilai dari API terisi ke form
-    expect(screen.getByLabelText('Base URL').value).toBe('https://api.example.com/v1')
+    // Nilai konfigurasi tiba async sesudah daftar agent; tunggu state stabil.
+    // Assertion sinkron di sini sebelumnya flaky di runner CI yang lebih lambat.
+    await waitFor(() => expect(screen.getByLabelText('Base URL').value).toBe('https://api.example.com/v1'))
     expect(screen.getByLabelText('Model').value).toBe('gpt-4o-mini')
     fireEvent.change(screen.getByLabelText('Model'), { target: { value: 'gpt-4o' } })
     fireEvent.click(screen.getByRole('button', { name: /Simpan/ }))
