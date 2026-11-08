@@ -6192,3 +6192,11 @@
 - e2e_err_probe OK: agents=26, 0 console/page error, shot 702252 B, nonbg 0.991, hygiene 37 refs/0 missing.
 - Layanan: :9503 200, :8787 /api/health 200; produksi tidak diubah.
 - Sisa backlog: (a) cutover gateway :8787→Docker (persetujuan user); (b) saas-dibantuin push; (d) keputusan omniroute.
+
+## 2026-11-08 21:40 WIB — Siklus 298: DRIFT server.py :8787 (deploy siklus 295 hilang) ditemukan & dideploy ulang — vitest kembali 0 fail
+
+- vitest penuh menemukan 1 fail drift-gate: live ~/wfs-office/server.py (88d1ff36) != sumber ter-track backend_live/wfs_server.py (42585b05) — live kembali ke sha lama (file backup live: bak-1794144387 ada; kemungkinan di-revert sesi lain).
+- Deploy via scripts/apply_wfs_server.py --apply (backup server.py.bak-1794144387, smoke fase-1+fase-2 OK, pause tetap ON): DEPLOY OK live==sumber 42585b05.
+- Gate pasca-deploy: vitest 252 file / 3646 passed + 6 skipped (0 fail); :8787 /api/health 200; e2e_err_probe.py OK (agents=26, 0 error, init_failed false, shot 705873 B, nonbg 0.991, hygiene 37 refs/0 missing). Catatan: scratch/e2e_err.py & shot.sh tidak ada lagi di scratch (pruned 24h) — probe pakai scripts/e2e_err_probe.py.
+- Produksi & dist scene tidak berubah.
+- Sisa backlog: (a) cutover gateway :8787→Docker (persetujuan user); (b) saas-dibantuin push; (d) keputusan omniroute.
