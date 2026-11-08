@@ -396,3 +396,25 @@ Actual external transparency and cross-host gossip, OS immutable
 staging, signed offline OCI builds, real host/DNS firewall acceptance,
 generated-source QA, public HTTPS tenant previews and billable provider
 authorization all remain blocked.
+
+
+## Phase 16 — Compact RFC6962 inclusion and consistency proof (bounded)
+
+The fixed reviewed local Docker preview now verifies an extra,
+**mandatory compact RFC6962 Merkle audit and prefix consistency proof**
+against the independently signed, pinned Phase 15 head and separately
+archived prior root. Compact inclusion verification uses the current
+witness-receipt digest directly and does not depend on the full leaf
+inventory. Existing Phase 15 full-inventory verification remains active
+for defense in depth; proofs cannot self-authorize new head/root pins.
+
+Native Windows/Linux Python tests and the two real disposable Docker
+tenant stacks use synthetic test authorities only. The scope is **offline
+cryptographic verification**, NOT an independently operated public
+transparency service, non-equivocation/freshness monitor, trusted
+third-party reviewer custody, immutable builder, public preview or
+production deployment. AI provider execution remains unauthorized.
+
+- [Phase 16 scoped acceptance gates](docs/REA_PHASE16.md)
+- [Phase 16 compact proof operator runbook](docs/PHASE16_RUNTIME_RUNBOOK.md)
+- [Phase 17 accelerated continuation prompt](docs/NEXT_PHASE17_PROMPT.md)

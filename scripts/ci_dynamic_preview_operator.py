@@ -27,6 +27,7 @@ from preview_signature import canonical_review_bytes
 from preview_root_authority import canonical_roster_bytes
 from preview_witness import SignedReviewerCheckpoint, canonical_checkpoint_bytes
 from preview_transparency import SignedTransparencyEvidence, canonical_tree_head, merkle_root
+from preview_compact_merkle import make_inclusion_path, make_consistency_path
 from preview_admission_v2 import AdmissionDenied
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -101,6 +102,15 @@ assert log_fingerprint not in (fingerprint,roster_root_fp,witness_fp)
 receipt_digest=hashlib.sha256(witness_receipt.read_bytes()).hexdigest()
 log_inventory.write_text(json.dumps({
     "version":1,"receipt_digests":[receipt_digest]},sort_keys=True))
+log_compact=root/"synthetic-ci-log-compact.json"
+leaf_bytes=[bytes.fromhex(receipt_digest)]
+log_compact.write_text(json.dumps({
+    "version":1,"tree_size":1,"leaf_index":0,
+    "receipt_sha256":receipt_digest,
+    "inclusion":make_inclusion_path(leaf_bytes,0),
+    "previous_size":0,
+    "consistency":make_consistency_path(leaf_bytes,0)
+},sort_keys=True))
 log_head.write_text(json.dumps({
     "version":1,"tree_size":1,
     "root_sha256":merkle_root([bytes.fromhex(receipt_digest)]).hex(),
@@ -110,6 +120,7 @@ log_signature.write_bytes(base64.b64encode(
 transparency=SignedTransparencyEvidence(
     public_key_path=log_public,signature_path=log_signature,
     head_path=log_head,inventory_path=log_inventory,
+    compact_proof_path=log_compact,
     trusted_log_fingerprint=log_fingerprint,
     trusted_head_sha256=hashlib.sha256(log_head.read_bytes()).hexdigest(),
     trusted_previous_size=0,
@@ -174,7 +185,8 @@ proof={"mode":"real-disposable-operator-template-preview",
        "phase10_test_signature_only":"ephemeral synthetic CI identity; NOT independent review",
        "phase12_roster_authority":"separate synthetic key, not an independently audited human/device",
        "phase14_checkpoint_witness":"third synthetic signer and independently pinned receipt hash; not external append-only log",
-       "phase15_merkle_proof":"fourth synthetic log signer; full-leaf inclusion and genesis-prefix proof, NOT externally hosted transparency"}
+       "phase15_merkle_proof":"fourth synthetic log signer; full-leaf inclusion and genesis-prefix proof, NOT externally hosted transparency",
+       "phase16_compact_proof":"real RFC6962 compact audit and genesis-prefix proof verified separately; synthetic CI only"}
 names=("tenant-a","tenant-b")
 ports=(19010,19011)
 tokens=(token_a,token_b)

@@ -12,6 +12,8 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 from preview_admission_v2 import AdmissionDenied
+from preview_compact_merkle import (make_inclusion_path, make_consistency_path,
+                                   verify_compact_proof)
 from preview_transparency import (
     SignedTransparencyEvidence, canonical_tree_head, merkle_root,
 )
@@ -39,13 +41,25 @@ def log(tmp_path):
     signature = tmp_path / "log-head.sig"
     head = tmp_path / "log-head.json"
     inventory = tmp_path / "log-leaves.json"
+    compact = tmp_path / "log-compact.json"
     public.write_bytes(_public(signing_key))
 
     def sign_head(items=None, signature_key=None, head_root=None):
         values = leaf if items is None else items
         inventory.write_text(json.dumps({
             "version": 1, "receipt_digests": values}, sort_keys=True))
-        tree_root = merkle_root([bytes.fromhex(x) for x in values]).hex()
+        digests=[bytes.fromhex(x) for x in values]
+        # Existing Phase15 tests use a trusted 2-leaf previous root; the
+        # newly introduced fixture additionally supplies compact proofs.
+        old_size=min(2,len(values))
+        compact.write_text(json.dumps({
+            "version":1,"tree_size":len(values),
+            "leaf_index":len(values)-1,"receipt_sha256":values[-1],
+            "inclusion":make_inclusion_path(digests,len(values)-1),
+            "previous_size":old_size,
+            "consistency":make_consistency_path(digests,old_size),
+        },sort_keys=True))
+        tree_root = merkle_root(digests).hex()
         head.write_text(json.dumps({
             "version": 1, "tree_size": len(values),
             "root_sha256": tree_root if head_root is None else head_root,
@@ -60,12 +74,13 @@ def log(tmp_path):
 
     def verifier(*, latest_pin=None, log_pem=None, log_sig=None,
                  earlier_size=2, earlier_root=None, log_hash=None,
-                 inventory_file=None, head_file=None):
+                 inventory_file=None, head_file=None, compact_file=None):
         return SignedTransparencyEvidence(
             head_path=head if head_file is None else head_file,
             signature_path=signature if log_sig is None else log_sig,
             public_key_path=public if log_pem is None else log_pem,
             inventory_path=inventory if inventory_file is None else inventory_file,
+            compact_proof_path=compact if compact_file is None else compact_file,
             trusted_head_sha256=pin if latest_pin is None else latest_pin,
             trusted_log_fingerprint=(
                 _fingerprint(signing_key) if log_hash is None else log_hash),
@@ -87,7 +102,7 @@ def log(tmp_path):
 
     return {"key":signing_key, "leaf":leaf,
             "public":public, "head":head, "signature":signature,
-            "inventory":inventory, "pin":pin, "prev":previous,
+            "inventory":inventory, "compact":compact, "pin":pin, "prev":previous,
             "sign_head":sign_head, "verifier":verifier, "check":check,
             "witness":_fingerprint(witness_key)}
 
