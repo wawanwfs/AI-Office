@@ -17,6 +17,7 @@ from preview_manager import TemplatePreviewManager, PreviewDenied
 from preview_signature import verify_review_signature
 from preview_authority import SignedPreviewAuthority
 from preview_witness import SignedReviewerCheckpoint
+from preview_transparency import SignedTransparencyEvidence
 
 
 def main():
@@ -54,6 +55,22 @@ def main():
         help="out-of-band SHA256 fingerprint of raw witness Ed25519 public key")
     parser.add_argument("--trusted-checkpoint-sha256",required=True,
         help="latest approved witness receipt SHA256; never derive from input")
+    parser.add_argument("--log-head",required=True,
+        help="signed current transparency Merkle tree head JSON")
+    parser.add_argument("--log-head-signature",required=True,
+        help="separate log Ed25519 signature of exact domain-separated head")
+    parser.add_argument("--log-public-key",required=True,
+        help="independently controlled transparency log public Ed25519 key")
+    parser.add_argument("--log-leaf-inventory",required=True,
+        help="complete ordered receipt digest inventory of current tree")
+    parser.add_argument("--trusted-log-head-sha256",required=True,
+        help="latest signed tree head file hash approved out of band")
+    parser.add_argument("--trusted-log-fingerprint",required=True,
+        help="log signer raw public-key fingerprint provisioned out of band")
+    parser.add_argument("--trusted-previous-tree-size",required=True,type=int,
+        help="independently archived earlier log tree size; 0 for genesis")
+    parser.add_argument("--trusted-previous-tree-root",required=True,
+        help="independently archived earlier tree root SHA256; empty-tree for 0")
     parser.add_argument("--discard-data",action="store_true",
                         help="required to remove disposable PostgreSQL volumes")
     args=parser.parse_args()
@@ -87,12 +104,23 @@ def main():
         signature_path=args.review_signature,
         trusted_fingerprint=args.trusted_reviewer_fingerprint,
     )
+    transparency=SignedTransparencyEvidence(
+        head_path=args.log_head,
+        signature_path=args.log_head_signature,
+        public_key_path=args.log_public_key,
+        inventory_path=args.log_leaf_inventory,
+        trusted_head_sha256=args.trusted_log_head_sha256,
+        trusted_log_fingerprint=args.trusted_log_fingerprint,
+        trusted_previous_size=args.trusted_previous_tree_size,
+        trusted_previous_root_sha256=args.trusted_previous_tree_root,
+    )
     witness=SignedReviewerCheckpoint(
         public_key_path=args.witness_public_key,
         receipt_path=args.witness_receipt,
         signature_path=args.witness_signature,
         trusted_witness_fingerprint=args.trusted_witness_fingerprint,
         trusted_receipt_sha256=args.trusted_checkpoint_sha256,
+        transparency_evidence=transparency,
     )
     authority=SignedPreviewAuthority(
         public_key_path=args.reviewer_public_key,

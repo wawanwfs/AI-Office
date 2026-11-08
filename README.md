@@ -369,3 +369,30 @@ signed OCI provenance remain P0 and are **not** claimed ready.
 - [Phase 14 bounded REA](docs/REA_PHASE14.md)
 - [Phase 14 operator witness guide](docs/PHASE14_RUNTIME_RUNBOOK.md)
 - [Phase 15 continuation](docs/NEXT_PHASE15_PROMPT.md)
+
+
+## Phase 15 — signed Merkle history proof for reviewer checkpoints
+
+The fixed reviewed Docker preview operator now requires a separately
+signed, independently pinned **Merkle tree head** and complete ordered
+receipt inventory. The Phase 14 witness receipt must be the latest
+leaf; the new tree must match a separately archived previous size/root
+when the trusted prefix is not empty. All manager operations re-verify
+the head signature, four signer identities, latest-leaf inclusion and
+trusted-prefix consistency before touching Docker.
+
+Native Linux/Windows and real two-tenant Docker CI use FOUR **synthetic**
+temporary Ed25519 keys. Tests reject replayed receipts after SQLite
+restores, forged/forked/altered inventories, wrong signing keys and
+tampered Merkle history. **This is a bounded full-leaf verifier,
+not an actually hosted append-only log, real external key custody,
+non-equivocation or a production distributed trust service.**
+
+- [Phase 15 scoped REA](docs/REA_PHASE15.md)
+- [Phase 15 operator signed-log runbook](docs/PHASE15_RUNTIME_RUNBOOK.md)
+- [Phase 16 continuation](docs/NEXT_PHASE16_PROMPT.md)
+
+Actual external transparency and cross-host gossip, OS immutable
+staging, signed offline OCI builds, real host/DNS firewall acceptance,
+generated-source QA, public HTTPS tenant previews and billable provider
+authorization all remain blocked.

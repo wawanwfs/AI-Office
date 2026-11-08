@@ -13,6 +13,7 @@ from cryptography.hazmat.primitives.asymmetric import ed25519, rsa
 
 from preview_admission_v2 import AdmissionDenied
 from preview_witness import SignedReviewerCheckpoint, canonical_checkpoint_bytes
+from preview_transparency import (SignedTransparencyEvidence, canonical_tree_head, merkle_root)
 
 def _pub(key):
     return key.public_key().public_bytes(
@@ -43,6 +44,32 @@ def proof(tmp_path):
     signature.write_bytes(base64.b64encode(
         witness.sign(canonical_checkpoint_bytes(receipt.read_bytes()))))
 
+    # A fourth, test-only log key signs a one-leaf Merkle head. This is
+    # deliberately NOT a hosted external transparency service.
+    log_key = ed25519.Ed25519PrivateKey.generate()
+    log_pem = tmp_path / "transparency-log.pem"
+    log_head = tmp_path / "transparency-head.json"
+    log_sig = tmp_path / "transparency-head.sig"
+    log_inventory = tmp_path / "transparency-leaves.json"
+    log_pem.write_bytes(_pub(log_key))
+    digest = hashlib.sha256(receipt.read_bytes()).hexdigest()
+    leaves = [digest]
+    log_inventory.write_text(json.dumps(
+        {"version":1,"receipt_digests":leaves},sort_keys=True))
+    log_head.write_text(json.dumps({
+        "version":1,"tree_size":1,
+        "root_sha256":merkle_root([bytes.fromhex(digest)]).hex(),
+    },sort_keys=True))
+    log_sig.write_bytes(base64.b64encode(
+        log_key.sign(canonical_tree_head(log_head.read_bytes()))))
+    transparency = SignedTransparencyEvidence(
+        head_path=log_head,signature_path=log_sig,public_key_path=log_pem,
+        inventory_path=log_inventory,
+        trusted_head_sha256=hashlib.sha256(log_head.read_bytes()).hexdigest(),
+        trusted_log_fingerprint=_fingerprint(log_key),
+        trusted_previous_size=0,
+        trusted_previous_root_sha256=hashlib.sha256(b"").hexdigest())
+
     def checkpoint(*, current_pin=None, key_path=None, sig_path=None,
                    receipt_path=None, witness_pin=None):
         return SignedReviewerCheckpoint(
@@ -52,7 +79,8 @@ def proof(tmp_path):
             trusted_witness_fingerprint=witness_fp if witness_pin is None else witness_pin,
             trusted_receipt_sha256=(
                 hashlib.sha256(receipt.read_bytes()).hexdigest()
-                if current_pin is None else current_pin))
+                if current_pin is None else current_pin),
+            transparency_evidence=transparency)
     def check(instance=None, **overrides):
         return (checkpoint() if instance is None else instance).verify(
             policy_sha256=overrides.get("policy_sha256",policy_sha),
@@ -64,6 +92,9 @@ def proof(tmp_path):
         "pem":pem,"receipt":receipt,"signature":signature,
         "policy_sha":policy_sha,"root_fp":root_fp,"reviewer_fp":reviewer_fp,
         "witness_fp":witness_fp,"checkpoint":checkpoint,"check":check,
+        "transparency":transparency, "log_key":log_key,
+        "log_head":log_head, "log_inventory":log_inventory,
+        "log_sig":log_sig, "log_pem":log_pem,
     }
 
 

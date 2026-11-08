@@ -7,8 +7,9 @@ Even when an old registry is restored, a newer independently pinned witness
 rejects older policy/epoch. An attacker who can also roll back the external
 witness pin or compromise the witness signer can still replay history.
 
-This is NOT a network transparency log, hardware monotonic counter, external
-human approval or cryptographically enforced append-only storage.
+This is NOT an externally hosted transparency service, hardware monotonic
+counter, external human approval or globally non-equivocating history.
+Phase 15 additionally requires a signed Merkle log head and full-leaf proof.
 """
 import base64
 import binascii
@@ -23,6 +24,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from preview_admission_v2 import AdmissionDenied
 from preview_signature import _read_trusted
+from preview_transparency import SignedTransparencyEvidence
 
 _CONTEXT = b"WFS-AI-OFFICE:REVIEWER-CHECKPOINT:V1\n"
 _SHA = re.compile(r"[a-f0-9]{64}\Z")
@@ -49,7 +51,8 @@ class SignedReviewerCheckpoint:
     """One immutable operator-supplied witness receipt and independent anchor."""
 
     def __init__(self, *, receipt_path, signature_path, public_key_path,
-                 trusted_receipt_sha256, trusted_witness_fingerprint):
+                 trusted_receipt_sha256, trusted_witness_fingerprint,
+                 transparency_evidence):
         if (not isinstance(trusted_receipt_sha256, str)
                 or not _SHA.fullmatch(trusted_receipt_sha256)):
             raise AdmissionDenied("independent checkpoint SHA256 pin required")
@@ -61,6 +64,9 @@ class SignedReviewerCheckpoint:
         self.public_key_path = public_key_path
         self.trusted_receipt_sha256 = trusted_receipt_sha256
         self.trusted_witness_fingerprint = trusted_witness_fingerprint
+        if not isinstance(transparency_evidence, SignedTransparencyEvidence):
+            raise AdmissionDenied("independent signed transparency evidence required")
+        self.transparency_evidence = transparency_evidence
 
     def verify(self, *, policy_sha256, epoch, roster_root_fingerprint,
                reviewer_fingerprint):
@@ -117,6 +123,16 @@ class SignedReviewerCheckpoint:
                 not hmac.compare_digest(receipt["roster_root_fingerprint"],
                                         roster_root_fingerprint)):
             raise AdmissionDenied("witness checkpoint policy epoch/root mismatch")
+        # Signed current witness is not enough: prove it is the last
+        # leaf of a separately signed and independently pinned Merkle log
+        # whose prefix is consistent with a separately archived old root.
+        verified_log = self.transparency_evidence.verify(
+            receipt_sha256=self.trusted_receipt_sha256,
+            witness_fingerprint=fingerprint,
+            roster_root_fingerprint=roster_root_fingerprint,
+            reviewer_fingerprint=reviewer_fingerprint,
+        )
         return {"epoch": receipt["epoch"],
                 "policy_sha256": receipt["policy_sha256"],
-                "witness_fingerprint": fingerprint}
+                "witness_fingerprint": fingerprint,
+                "transparency_tree_size": verified_log["tree_size"]}
