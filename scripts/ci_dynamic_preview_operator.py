@@ -21,6 +21,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"backend"))
 from preview_manager import TemplatePreviewManager,PreviewDenied
 from preview_admission import REVIEWED_FILES, candidate_manifest_for_ci_only
 from ci_preview_network_probe import prove_disposable_container_egress
+from ci_phase13_real_dns_rebind import prove_real_docker_dns_rebinding
 from preview_authority import SignedPreviewAuthority
 from preview_signature import canonical_review_bytes
 from preview_root_authority import canonical_roster_bytes
@@ -214,6 +215,18 @@ print('outbound IPv4 denied for both targets')
         proof["phase9_egress"][identifier] = (
             prove_disposable_container_egress(manager,project,token)
         )
+    # Phase 13 real UDP authoritative DNS sidecar: alternating A/AAAA
+    # responses, TTL=0, and actual outbound connect() to both answers.
+    # Separate per-tenant sidecars keep all packets on internal networks.
+    proof["phase13_real_controlled_dns_rebinding"]={}
+    for project,token in zip(names,tokens):
+        identifier=hashlib.sha256(project.encode()).hexdigest()[:12]
+        proof["phase13_real_controlled_dns_rebinding"][identifier]=(
+            prove_real_docker_dns_rebinding(manager,project,token)
+        )
+    # This CI network proof is NOT a host/rootless/Windows firewall audit.
+    proof["phase13_host_firewall_certified"]=False
+    proof["phase13_external_authoritative_resolver_certified"]=False
     # Verify actual Docker network membership, not only Compose declarations.
     proof["phase9_service_networks"]={}
     for project,token in zip(names,tokens):
