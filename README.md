@@ -285,3 +285,24 @@ slice — not a production offline container build or independent provenance.
 The generic untrusted-code preview, public interactive TLS gateway,
 complete OCI/JS/Python supply chain, paid AI authorization and production
 hardening remain blocked.
+
+
+## Phase 11 — Verified source staging and locally durable reviewer epoch
+
+The operator preview now builds from an exact private, project-specific,
+manifest-verified staging tree, never directly from mutable source paths.
+An automated CI regression mutates the original API file during a real
+Docker Compose build and verifies that the staged context stays intact.
+The local operator SQLite registry records a monotonic reviewer policy
+epoch and hash, rejecting old correctly signed policy replay or
+same-epoch policy substitution. **This is not OS-immutable storage,
+independent signed reviewer authority, or protection from deleting the
+registry / malicious same-UID staging writers.**
+
+- [Phase 11 scoped REA](docs/REA_PHASE11.md)
+- [Phase 11 operator runbook](docs/PHASE11_RUNTIME_RUNBOOK.md)
+- [Phase 12 continuation](docs/NEXT_PHASE12_PROMPT.md)
+
+Full OCI/SBOM provenance, authoritative DNS firewall tests, interactive
+public TLS preview, paid-provider approval and production acceptance
+remain blocked.
