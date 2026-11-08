@@ -13,6 +13,13 @@ services:
     image: wfs-office-gw:latest
     container_name: wfs-office-rehearsal
     restart: unless-stopped
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 200
+    mem_limit: 1g
+    cpus: 1.0
     ports:
       - "127.0.0.1:8788:8788"
     environment:
@@ -34,7 +41,6 @@ services:
       - /home/agentuser/wfs-office/rehearsal-data/config:/app/config
       # default AI (baca .hermes/.env via HOME=/hermes-home)
       - /home/agentuser/.hermes/.env:/hermes-home/.hermes/.env:ro
-      # fitur sandbox: exec container agent via socket docker host
-      - /var/run/docker.sock:/var/run/docker.sock
+      # No Docker socket in public gateway (worker separated).
       # sandbox_exec.py me-expand ~/wfs-office/sandboxes -> HOME=/hermes-home di container
       - /home/agentuser/wfs-office/sandboxes:/hermes-home/wfs-office/sandboxes

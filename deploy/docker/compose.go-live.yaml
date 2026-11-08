@@ -2,19 +2,12 @@
 #   scripts/go_live_gateway_docker.sh APPLY — WAJIB persetujuan eksplisit user).
 #
 # Beda dgn compose.rehearsal.yaml (siklus 155):
-#   - network_mode: host + WFS_PORT=8787 — container memegang 0.0.0.0:8787 di netns
-#     host, PERSIS server.py produksi (uvicorn.run port=8787 host 0.0.0.0). Wajib:
-#     proxy :9503 hardcode 127.0.0.1:8787 (GATEWAY + SSE passthrough), jadi port
-#     produksi tidak boleh berubah. Bind bentrok dgn systemd dilarang oleh desain:
-#     cutover = stop systemd dulu, baru `docker restart` container.
-#   - DB = tasks.db + orders.db + config/ PRODUKSI langsung (bukan salinan).
-#   - Healthcheck di-override ke :8787 (image punya healthcheck hardcoded :8788
-#     dari context rehearsal — di sini komposisi menang, tanpa menyentuh Dockerfile).
-#   - restart: unless-stopped + docker enabled = auto-restart (preferensi user).
+# SECURITY CHANGE: network_mode: host and Docker socket are REMOVED.
+# A gateway accessible to HTTP clients MUST NOT control the host Docker daemon.
+# Agent sandbox operations need a separately authorized, unexposed worker.
+# This manifest is a migration target, not a deploy claim. Verify cutover and
+# rollback; legacy /api/sandbox/{agent_id}/exec can no longer control Docker.
 #
-# Rollback kapan pun: scripts/go_live_gateway_docker.sh ROLLBACK
-#   (docker rm -f gateway lalu systemctl start wfs-office — unit tidak pernah
-#   diubah/disabled, jadi start manual selalu valid).
 name: wfs-office-gw-golive
 
 services:
@@ -25,15 +18,18 @@ services:
     image: wfs-office-gw:go-live
     container_name: wfs-office-gateway
     restart: unless-stopped
-    network_mode: host
-    # Harden siklus 156: container jalan sebagai uid/gid agentuser (1002:1003),
-    # BUKAN root — bug rehearsal 155 (container root menulis _task_script.py
-    # root-owned ke bind sandboxes/ -> exec gateway systemd 500 PermissionError)
-    # tidak akan terulang. group_add 125 = gid /var/run/docker.sock di host,
-    # supaya endpoint sandbox (docker CLI via socket) tetap berfungsi non-root.
+    # Reverse proxy on the host still uses 127.0.0.1:8787; never share host netns.
+    ports:
+      - "127.0.0.1:8787:8787"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    pids_limit: 200
+    mem_limit: 1g
+    cpus: 1.0
+    # Keep existing host file permissions; run as non-root service identity.
     user: "1002:1003"
-    group_add:
-      - "125"
     environment:
       WFS_PORT: "8787"
       WFS_HERMES_HOME: /hermes-home
@@ -59,8 +55,7 @@ services:
       - /home/agentuser/wfs-office/config:/app/config
       # default AI (baca .hermes/.env via HOME=/hermes-home)
       - /home/agentuser/.hermes/.env:/hermes-home/.hermes/.env:ro
-      # fitur sandbox: exec container agent via socket docker host
-      - /var/run/docker.sock:/var/run/docker.sock
+      # HTTP gateway deliberately has no access to Docker socket.
       # sandbox_exec.py me-expand ~/wfs-office/sandboxes -> HOME=/hermes-home di container
       - /home/agentuser/wfs-office/sandboxes:/hermes-home/wfs-office/sandboxes
       # tasks.py mkdir ~/wfs-office/saas-dibantuin saat import (REPO agen) —
