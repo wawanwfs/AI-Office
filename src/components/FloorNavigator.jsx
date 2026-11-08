@@ -50,8 +50,12 @@ export default function FloorNavigator({ onSelectFloor, currentFloor }) {
   useEffect(() => {
     const read = () => setOccupancy(floorOccupancy(window.__agentData))
     read()
-    const iv = setInterval(read, 1000)
-    return () => clearInterval(iv)
+    // Gerbang visibilityState: snapshot __agentData basi saat tab hidden (render
+    // loop scene pause); baca ulang SEGERA saat kembali visible.
+    const iv = setInterval(() => { if (document.visibilityState === 'visible') read() }, 1000)
+    const onVis = () => { if (document.visibilityState === 'visible') read() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', onVis) }
   }, [])
   const isControlled = currentFloor !== undefined && currentFloor !== null
   const activeFloor = isControlled ? currentFloor : internalFloor

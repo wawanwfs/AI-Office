@@ -26,8 +26,13 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
       setLiveFloor(agentLiveLevel(entry))
     }
     read()
-    const iv = setInterval(read, 1000)
-    return () => clearInterval(iv)
+    // Gerbang visibilityState: saat tab hidden render loop scene pause → snapshot
+    // window.__agentData basi; jangan timpa status dgn fase lama. Baca ulang
+    // SEGERA saat tab kembali visible (paritas siklus 315-317).
+    const iv = setInterval(() => { if (document.visibilityState === 'visible') read() }, 1000)
+    const onVis = () => { if (document.visibilityState === 'visible') read() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', onVis) }
   }, [agent])
   useEffect(() => {
     if (!agent) return

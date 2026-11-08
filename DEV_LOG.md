@@ -6360,3 +6360,13 @@
 - Redeploy dist → ~/wfs-hq; bersihkan 7 orphan asset hash lama → hygiene 13 hashed/0 orphan.
 - e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 707585 B, nonbg 0.992, hygiene 13 hashed/0 orphan.
 - Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 2026-11-09 05:40 WIB — Siklus 318: FloorNavigator & AgentInspector digerbang visibilityState
+
+- Tanpa upstream baru. Paritas gerbang visibilityState (siklus 315-317) ke dua komponen terakhir yang poll window.__agentData tiap 1 dtk tanpa gerbang: FloorNavigator (badge okupansi lantai) & AgentInspector (status live & lantai agen).
+- Keduanya: interval digerbang document.visibilityState (tab hidden tidak menimpa dengan snapshot basi — render loop scene pause) + listener 'visibilitychange' membaca ulang SEGERA saat kembali visible; cleanup listener saat unmount.
+- +1 file tes visibility_parity_318.test.jsx (5 kasus: FloorNavigator hidden beku/visible segar/cleanup; AgentInspector hidden tidak jadi "Makan Siang"/visible segar).
+- Build PWA OK; vitest 253 file / 3674 passed + 6 skipped, 0 fail (+5 tes vs siklus 317).
+- Redeploy dist → ~/wfs-hq; bersihkan 7 orphan asset hash lama → hygiene 13 hashed/0 orphan (probe pertama FAIL hygiene, fixed).
+- e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 709354 B, nonbg 0.992, hygiene 13/0.
+- Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
