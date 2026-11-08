@@ -1,0 +1,3 @@
+# Phase 9 local Ed25519 reviewer verifier, deliberately separate from the
+# six-invariant historical pytest core lock. Audit both requirement files.
+cryptography==50.0.2
