@@ -118,6 +118,7 @@ jobs:
             backend/metered_stream_provider.py backend/brief_intake.py \
             backend/preview_manager.py backend/preview_proxy.py \
             backend/billing_reconcile.py backend/preview_admission.py \
+            backend/preview_admission_v2.py \
             examples/fullstack-preview/ingress.py
       - name: Upload scoped static scan report
         if: always()
@@ -303,6 +304,11 @@ jobs:
       - run: npm ci
       - run: npx vite build --config examples/fullstack-preview/frontend/vite.config.mjs
       - run: python -m pip install --no-cache-dir -r requirements-pytest.txt
+      - name: Build trust-bound CycloneDX frontend SBOM for disposable review
+        run: |
+          mkdir -p artifacts/fullstack-preview
+          npm sbom --sbom-format=cyclonedx --omit=dev > artifacts/fullstack-preview/sbom.cdx.json
+          python -c 'import json; p=json.load(open("artifacts/fullstack-preview/sbom.cdx.json")); assert p["bomFormat"]=="CycloneDX" and p["components"]'
       - name: Real Docker Compose template-managed two-project lifecycle
         run: |
           docker info >/dev/null
