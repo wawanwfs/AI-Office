@@ -6156,6 +6156,13 @@
 - e2e_err_probe OK: agents=26, 0 console/page error, shot 705668 B, nonbg 0.992, hygiene 37 refs/0 missing.
 - Layanan: wfs-hq & wfs-office active; :9503 200, :8787 307 (redirect landing) — produksi & dist tidak diubah (verifikasi-only).
 - Sisa backlog: (a) gateway :8787→Docker; (b) saas-dibantuin push GitHub; (d) keputusan omniroute; penghapus wfs-hq tak teridentifikasi.
+## 2026-11-09 19:35 WIB — Siklus 293: SMOKE PHASE 3 BARU utk cutover gateway Docker — 8 cek, baseline systemd :8787 exit 0
+
+- Backlog (a) maju: gap dari siklus 292 ditutup — scripts/smoke_go_live_phase3.sh menggantikan cek 5 (sandboxes via docker.sock) & 7 (exec via docker.sock) smoke legacy yang tak kompatibel topologi Phase 3 hardened (gateway tanpa docker.sock).
+- 8 cek: health, hardened-exec (503 wajib pasca-cutover; 200 legacy di baseline systemd = WARN bukan fail — unit systemd ternyata belum set WFS_MASTER_QUEUE_REQUIRED, ditemukan via /proc environ), /api/sandboxes schema list (anti-poisoning [] diterima), agents 15, projects 6, SSE connected, tulis DB via gateway (INSERT+DELETE bersih), proxy :9503 /wfs-api/health.
+- Temuan keamanan penting: unit systemd wfs-office TANPA Environment= hardened → /api/sandbox/exec & /api/chat masih terbuka legacy di :8787 (exec 200 "42" terukur). Container Phase 3 selalu set flag → lebih ketat dari baseline.
+- Produksi & dist tidak diubah (tooling-only); smoke legacy siklus 156 tetap 10/10 baseline systemd.
+- Sisa backlog: (a) gateway :8787→Docker — image go-live + preflight 7/7 + smoke Phase 3 SIAP → tinggal persetujuan user + WFS_PHASE3_CUTOVER_REHEARSED=YES; (b) saas-dibantuin push; (d) keputusan omniroute; penghapus wfs-hq tak teridentifikasi.
 ## 2026-11-08 19:20 WIB — Siklus 292: PREFLIGHT migrasi gateway :8787→Docker — 7/7 hijau, image go-live dibangun, gap smoke legacy didokumentasikan
 
 - Backlog (a) maju satu fase TANPA menyentuh produksi: systemd wfs-office tetap pegang :8787 (APPLY butuh persetujuan user eksplisit + gate WFS_PHASE3_CUTOVER_REHEARSED=YES).
