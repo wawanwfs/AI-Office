@@ -139,12 +139,16 @@ for project in ("alpha","bravo"):
     workers.append(worker)
     jobs[project]=worker.enqueue_task(str(tasks[project]))
 q.set_paused(False)
-outcomes=asyncio.run(asyncio.gather(*[])) if False else None
-
 async def run_workers():
     return await asyncio.gather(*(w.run_once() for w in workers))
 outcomes=asyncio.run(run_workers())
-assert len(outcomes)==2 and all(o["queue_status"]=="completed" for o in outcomes),outcomes
+if len(outcomes)!=2 or not all(o["queue_status"]=="completed" for o in outcomes):
+    # Disposable fixture only; print engine failure reasons, not prompts or
+    # tokens from user-facing systems. Required for actionable CI triage.
+    detail={project:{"status":wfs_tasks.get_task(tid)["status"],
+                     "error":wfs_tasks.get_task(tid)["result"]}
+            for project,tid in tasks.items()}
+    raise AssertionError(json.dumps({"queue":outcomes,"engine":detail}))
 store=VerifiedArtifacts(BASE)
 files={}
 for project in ("alpha","bravo"):
