@@ -121,6 +121,7 @@ jobs:
             backend/billing_reconcile.py backend/preview_admission.py \
             backend/preview_admission_v2.py backend/preview_signature.py \
             backend/preview_authority.py backend/preview_snapshot.py \
+            backend/preview_root_authority.py \
             examples/fullstack-preview/ingress.py
       - name: Upload scoped static scan report
         if: always()
@@ -366,7 +367,7 @@ jobs:
           PYTHONPATH: backend
         run: |
           New-Item -ItemType Directory -Force artifacts/windows-native | Out-Null
-          python -m pytest backend/test_recovery_snapshot.py backend/test_preview_proxy.py backend/test_billing_reconcile.py backend/test_secure_control_api.py backend/test_brief_reconciliation.py backend/test_reconcile_cli.py backend/test_preview_signature.py backend/test_preview_manager.py -q --junitxml=artifacts/windows-native/pytest.xml
+          python -m pytest backend/test_recovery_snapshot.py backend/test_preview_proxy.py backend/test_billing_reconcile.py backend/test_secure_control_api.py backend/test_brief_reconciliation.py backend/test_reconcile_cli.py backend/test_preview_signature.py backend/test_preview_root_authority.py backend/test_preview_manager.py -q --junitxml=artifacts/windows-native/pytest.xml
       - name: Upload independent Windows Python evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
