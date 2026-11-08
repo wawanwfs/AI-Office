@@ -1,0 +1,16 @@
+:root{font-family:Inter,system-ui,sans-serif;color:#f5f3ff;background:#080c20}
+*{box-sizing:border-box}body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 65% 15%,#352455 0,transparent 52%),#080c20}
+.preview-shell{max-width:1100px;margin:0 auto;padding:56px 24px 80px}
+.hero{position:relative;padding:54px 56px;border-radius:28px;border:1px solid #574d77;background:linear-gradient(120deg,#121a38e8,#2a214aee);box-shadow:0 28px 100px #0006}
+.eyebrow{font-size:11px;letter-spacing:.28em;color:#d8bb84;font-weight:700}.brand-icon{position:absolute;right:58px;top:46px;font-size:44px;color:#ead4ab;border:1px solid #9e88bc;border-radius:21px;padding:9px 20px;box-shadow:inset 0 1px 15px #d8bb8433}
+h1{font-size:clamp(37px,5.5vw,72px);letter-spacing:-.05em;line-height:1.06;margin:48px 0 22px}h1 em{color:#d9c096;font-style:normal}
+p{color:#c4bfd7;line-height:1.7;max-width:740px}.cards{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-top:48px}
+article{border:1px solid #6e638d77;border-radius:15px;background:#161e3e;padding:22px;min-height:142px}article span,article strong,article small{display:block}
+article span{font-size:10px;letter-spacing:.18em;color:#bca8ff}article strong{font-size:22px;margin:12px 0;color:#f9f5ff}article small{color:#bfbcd1;line-height:1.5}
+.status{margin-top:26px;padding:15px 20px;background:#122a34;border-radius:12px;color:#c0f5d9;display:flex;gap:14px;flex-wrap:wrap;font-size:13px}
+.protected{margin-top:24px;padding:26px;border:1px solid #443c6a;border-radius:20px;background:#13182e}.protected h2{color:#ead4ab;margin:0}
+.protected div{display:flex;gap:10px;margin-top:18px}.protected input{flex:1;min-width:0;border-radius:9px;border:1px solid #7b6e9c;background:#0b0f26;padding:11px;color:white}
+button{cursor:pointer;border:none;border-radius:9px;background:#ddc28f;color:#15152d;padding:12px 20px;font-weight:700}
+.error{color:#ffa4b4}:focus-visible{outline:2px solid #ead4ab;outline-offset:3px}
+@media(max-width:640px){.preview-shell{padding:18px 14px}.hero{padding:30px 20px}.brand-icon{position:static;display:inline-block;margin-top:25px}.cards{grid-template-columns:1fr}h1{margin-top:28px}.protected div{flex-direction:column}}
+@media(prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}

@@ -1,0 +1,58 @@
+# Disposable CI proof ONLY. Do NOT deploy to production or expose ports.
+name: wfs-phase5-preview-demo
+services:
+  db:
+    image: postgres:16-alpine
+    restart: "no"
+    environment:
+      POSTGRES_DB: wfsdemo
+      POSTGRES_USER: wfsdemo
+      POSTGRES_PASSWORD: test-only-disposable
+    volumes:
+      - postgres-preview-data:/var/lib/postgresql/data
+    tmpfs:
+      - /tmp
+      - /var/run/postgresql
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U wfsdemo -d wfsdemo"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks:
+      - preview-internal
+
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    restart: "no"
+    read_only: true
+    user: "65534:65534"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    tmpfs:
+      - /tmp:rw,nosuid,nodev,noexec,size=32m
+    ports:
+      - "127.0.0.1:18765:8000"
+    environment:
+      DATABASE_URL: postgresql://wfsdemo:test-only-disposable@db:5432/wfsdemo
+      WFS_PREVIEW_TEST_TOKEN: "${WFS_PREVIEW_TEST_TOKEN:?ephemeral token required}"
+    volumes:
+      - ../../artifacts/fullstack-preview/dist:/app/dist:ro
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - preview-internal
+
+networks:
+  preview-internal:
+    internal: true
+volumes:
+  postgres-preview-data:
