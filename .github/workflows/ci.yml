@@ -83,7 +83,7 @@ jobs:
       - name: Verify real Docker daemon on isolated CI host
         run: docker info >/dev/null
       - name: Pull pinned-version Python sandbox image
-        run: docker pull python:3.11-alpine
+        run: docker pull python:3.11-alpine@sha256:bb1d70c1df30d8ee1e05214dbe82d6cdfd29833c1f47ce917f20991aca93acaa
       - name: Real sandbox isolation and cleanup tests
         run: PYTHONPATH=backend python scripts/ci_docker_sandbox_smoke.py
       - name: Save runtime security evidence
