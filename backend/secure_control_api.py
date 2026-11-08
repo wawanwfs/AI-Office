@@ -18,6 +18,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Literal
 from brief_intake import BriefIntakeKeys, IntakeConflict
+from preview_proxy import PreviewProxyUnavailable
 
 try:
     from .project_rbac import AccessDenied, ident
@@ -101,7 +102,7 @@ class CodingBrief(BaseModel):
 
 
 def create_secure_router(*, queue, rbac, ledger, tokens, taskengine=None, artifact_store=None,
-                         code_qa_intake_enabled=False):
+                         code_qa_intake_enabled=False, preview_reader=None):
     """Dependency-injected data sources; no unauthenticated fallback."""
     router=APIRouter(prefix="/api/v4", tags=["WFS Secure Control API"])
     brief_keys=BriefIntakeKeys(tokens)
@@ -130,6 +131,27 @@ def create_secure_router(*, queue, rbac, ledger, tokens, taskengine=None, artifa
     def me(response:Response, principal:str=Depends(authenticated)):
         no_cache(response)
         return {"principal":principal, "authentication":"bearer", "mode":"real"}
+
+    async def _preview_read(project_id, path, principal):
+        scoped(project_id, principal, "read")
+        if preview_reader is None:
+            raise HTTPException(503, "Approved preview inspection is not configured")
+        try:
+            data = await preview_reader.fetch(project_id, path)
+        except (PreviewProxyUnavailable, ValueError) as exc:
+            raise HTTPException(409, "Preview unavailable or denied") from exc
+        return Response(content=data["body"], status_code=data["status"],
+                        media_type=data["content_type"], headers=data["headers"])
+
+    @router.get("/projects/{project_id}/preview")
+    async def inspect_preview_root(project_id: str,
+                                   principal: str = Depends(authenticated)):
+        return await _preview_read(project_id, "", principal)
+
+    @router.get("/projects/{project_id}/preview/{asset_path:path}")
+    async def inspect_preview_asset(project_id: str, asset_path: str,
+                                    principal: str = Depends(authenticated)):
+        return await _preview_read(project_id, asset_path, principal)
 
     @router.get("/projects/{project_id}/jobs")
     def jobs(project_id:str,response:Response,limit:int=Query(100,ge=1,le=500),
