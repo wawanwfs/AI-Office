@@ -102,6 +102,21 @@ Untuk audit integrasi yang membutuhkan host live, lihat
 lanjutan lihat [laporan audit 2026-11-08](docs/AUDIT_2026-11-08.md).
 Jangan menyimpan key API di source maupun mem-publish Docker socket.
 
+## Phase 7 continuation — fail-closed recovery and reviewed Docker input
+
+Local operator recovery now attaches uncertain brief receipts ONLY to
+existing matching project tasks and queue jobs, without generating a second
+paid job. Preview operators provide approved SHA-256 digests for Compose,
+Dockerfile, API and ingress sources; Docker refuses altered input.
+Billed provider worker URL/port/path/proxy policies are also stricter.
+
+Read the updated [Phase 7 REA](docs/REA_PHASE7.md),
+[operator runbook](docs/PHASE7_RUNTIME_RUNBOOK.md), and
+[Phase 8 handoff](docs/NEXT_PHASE8_PROMPT.md).
+No official paid AI call, general AI-built preview or production deployment
+was performed.
+
+
 ## Phase 7 — Real preview RBAC, Docker egress and Windows recovery
 
 The Phase 7 secure project panel now inspects **real** QA manifests,

@@ -46,9 +46,9 @@ API sockets. These scripts cannot demonstrate a real paid AI call.
 
 ~~~sh
 export WFS_PREVIEW_TEST_TOKEN="$(python -c 'import secrets; print(secrets.token_urlsafe(32))')"
-python scripts/wfs_operator_preview.py start --approved --project demo-alpha --port 19010 --state-root "$HOME/wfs-preview-private"
-python scripts/wfs_operator_preview.py status --approved --project demo-alpha --state-root "$HOME/wfs-preview-private"
-python scripts/wfs_operator_preview.py stop --approved --discard-data --project demo-alpha --state-root "$HOME/wfs-preview-private"
+python scripts/wfs_operator_preview.py start --approved --reviewed-manifest "$HOME/preview-reviewed.json" --project demo-alpha --port 19010 --state-root "$HOME/wfs-preview-private"
+python scripts/wfs_operator_preview.py status --approved --reviewed-manifest "$HOME/preview-reviewed.json" --project demo-alpha --state-root "$HOME/wfs-preview-private"
+python scripts/wfs_operator_preview.py stop --approved --discard-data --reviewed-manifest "$HOME/preview-reviewed.json" --project demo-alpha --state-root "$HOME/wfs-preview-private"
 ~~~
 
 Stop removes disposable PostgreSQL volumes. Both app/db networks are
@@ -80,3 +80,46 @@ SQLite WAL backup and create-only restore never overwrite live data.
 The native Windows runner verifies file handles, URI paths and backup
 integrity; encrypted multi-DB recovery and production rollback are NOT
 yet demonstrated. Preserve the live server.
+
+
+### Review before launching a template
+
+The operator now must save preview-reviewed.json with EXACTLY four keys:
+compose.yaml, Dockerfile.api, api.py and ingress.py, whose values are
+64-character lowercase SHA-256 hashes independently reviewed against a
+trusted Git commit. Generate checksum candidates with SHA256sum or
+PowerShell Get-FileHash and compare against reviewed source. Computing
+checksums from an untrusted checkout is NOT approval. The preview CLI
+requires --reviewed-manifest for start, status, logs, restart and stop;
+every Docker command refuses altered bytes. This review does NOT attest
+frontend dist, mutable database image or transitive dependencies.
+
+### Operator-only crash receipt recovery
+
+When a coding brief returns an uncertain 409, NEVER invent a new
+Idempotency-Key and re-submit paid work. Stop writers, pause the queue
+and take approved backups. Prepare a PRIVATE JSON file with exact keys:
+principal, project_id, idempotency_key, title, brief, role, task_id and
+job_id. It must contain exactly the ORIGINAL request and identifiers
+observed in the existing engine and queue databases.
+
+Run locally, after independent authorization (example placeholders):
+
+~~~powershell
+$env:PYTHONPATH = "backend"
+python scripts/wfs_reconcile_brief.py --approved --writers-stopped --auth-db "C:\WFS-Test\auth.db" --task-db "C:\WFS-Test\tasks.db" --queue-db "C:\WFS-Test\queue.db" --request-file "C:\WFS-Test\original-brief.json"
+~~~
+
+The command only transitions a matching pending receipt to complete, or
+reports that it was already complete. It cannot create/retry a task, run
+Docker, call an AI provider or settle a budget. If any original record is
+missing or mismatched, it FAILS CLOSED and requires human investigation.
+Pausing all writers is an operator obligation, not automatically proven.
+
+### Paid-provider URL restrictions
+
+Worker-mode HTTPS model calls now reject arbitrary URL paths, alternate
+ports, fragments, query parameters, URL credentials and literal IPs.
+Ambient HTTP(S)_PROXY settings are disabled on the billed worker client.
+This reduces redirect/proxy exposure but cannot replace DNS rebinding
+and independent worker network egress firewall verification.

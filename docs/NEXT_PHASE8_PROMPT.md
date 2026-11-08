@@ -41,3 +41,13 @@ recovery evidence and rollback. Upload source/screenshot/evidence artifacts.
 Push verified commits to main via wawanwfs without force. Report final
 full SHA, green CI URLs, bounded REA numerator/denominator and blockers.
 NEVER claim 100% production-ready while P0 remains.
+
+
+## Follow-up after Phase 7 continuation
+
+Preserve the new local crash receipt repair and four-file SHA256 admission.
+Phase 8 must make the preview admission supply-chain complete: frontend
+assets, all base images including PostgreSQL, SBOM and dependency lock
+must be verified, ideally with signed manifests. Test DNS rebinding and
+network egress independently. Preserve the strict worker HTTP origin
+policy; keep all paid provider acceptance blocked until authorization.

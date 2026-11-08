@@ -47,3 +47,29 @@ The demonstration does not use customer or production data.
 No production server, financial account or paid provider was touched.
 
 See PHASE7_RUNTIME_RUNBOOK.md and NEXT_PHASE8_PROMPT.md.
+
+
+## Phase 7 continuation — additional acceptance boundaries
+
+Three new narrow tests extend the prior **27/33**:
+
+34. [x] Explicit local operator reconciliation of a crash-interrupted
+    request into an EXISTING task and EXISTING queue job; checks exact
+    original principal/project/role/title/brief/key and both IDs.
+    No task creation, no second job, no provider spend. Denials, negative
+    cases and CLI invocation run on Linux and Windows.
+35. [x] Reviewed runtime admission requires operator-supplied SHA-256 of
+    exactly four files: compose.yaml, Dockerfile.api, api.py, ingress.py.
+    All Docker actions recheck source hashes and reject tampering/symlink
+    substitutions before execution. This is NOT a signed manifest, nor
+    a full image/dependency/frontend-dist admission policy.
+36. [x] Billed worker provider HTTP transport has strict allowed origin,
+    exact /v1 or /api/v1 path, no literal IP, URL credentials, path prefixes,
+    fragments, query or alternate port, and ambient HTTP proxy disabled.
+    No genuine provider money was spent; DNS rebinding risk remains P0.
+
+**Conditional total: 30 / 36 = 83.3% of bounded automated gates,**
+only when final HEAD GitHub Actions including native Windows and Docker are
+green. This is NOT production-ready status and six inherited P0 blockers
+remain fully open. Browser previews are still fixed reviewed templates.
+The offline task fixture is NOT real AI-generated output.
