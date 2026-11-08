@@ -167,6 +167,11 @@ def main():
             return val
 
         cmd("Page.enable"); cmd("Runtime.enable")
+        # Siklus 282: landing kini default route (6230629) — paksa masuk mode
+        # office jika probe mendarat di landing (__agentData tetap kosong).
+        if ev("window.__agentData?window.__agentData.length:0") in (0, None):
+            ev("location.assign('http://127.0.0.1:9503/app/?mode=office')")
+            time.sleep(3)
         time.sleep(15)  # scene init + beberapa frame animasi
 
         st0 = jval(ev(

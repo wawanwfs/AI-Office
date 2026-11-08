@@ -196,6 +196,14 @@ def main():
                 if r.get("id") == mid[0]: return r
             return None  # siklus 197: batas loop habis -> None tercatat
         cmd("Runtime.enable"); cmd("Log.enable"); cmd("Page.enable")
+        # Siklus 282: landing kini default route (6230629) — paksa masuk mode
+        # office jika probe mendarat di landing (__agentData tetap kosong).
+        _r0 = cmd("Runtime.evaluate", expression="window.__agentData?window.__agentData.length:0",
+                  returnByValue=True)
+        _v0 = (((_r0 or {}).get("result") or {}).get("result") or {}).get("value")
+        if _v0 in (0, None):
+            cmd("Runtime.evaluate", expression="location.assign('http://127.0.0.1:9503/app/?mode=office')")
+            time.sleep(3)
         if mobile:
             # Viewport HP dari awal init scene (bukan emulasi setelahnya):
             # override metrik + reload, error console tetap terkumpul di socket.

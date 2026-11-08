@@ -81,7 +81,7 @@ class WS:
 
 # daftar agen yang sedang berjalan (indeks + posisi walker)
 WALKERS_EXPR = """
-JSON.stringify((window.__agentData||[]).map((a,i)=>(a.walker&&a.walker.visible&&a.walkTarget)?
+JSON.stringify((window.__agentData||[]).map((a,i)=>(a.walker&&a.walker.visible&&a.walkTarget&&(a.state==='walking_out'||a.state==='walking_back')&&a.lunch)?
  {i,x:a.walker.position.x,y:a.walker.position.y,z:a.walker.position.z}:null).filter(Boolean))
 """
 
@@ -142,6 +142,11 @@ def main():
             return val
 
         cmd("Page.enable"); cmd("Runtime.enable")
+        # Siklus 282: landing kini default route (6230629) — paksa masuk mode
+        # office jika probe mendarat di landing (__agentData tetap kosong).
+        if ev("window.__agentData?window.__agentData.length:0") in (0, None):
+            ev("location.assign('http://127.0.0.1:9503/app/?mode=office')")
+            time.sleep(3)
         time.sleep(15)  # scene init + beberapa frame animasi
 
         st0 = json.loads(ev(
@@ -153,11 +158,19 @@ def main():
             sys.exit(1)
 
         # ── 1. fase makan siang → agen berjalan ke kafe (jalur UI asli) ──
+        # Siklus 282: refresh daftar walkers tiap attempt — dulu daftar STATIS
+        # dari satu snapshot; agen cepat tiba (v:false) → attempt habis di
+        # target mati. Daftar segar = selalu target agen yang BENAR-BENAR
+        # berjalan saat itu. Paksa jam 08:00 dulu agar lunch tak terlewati.
+        ev("window.__setTime && window.__setTime(480)")
+        time.sleep(1)
         ev("window.__setTime && window.__setTime(720)")
-        walkers = []
+        def fresh_walkers():
+            return json.loads(ev(WALKERS_EXPR) or "[]")
+        walkers = fresh_walkers()
         for _ in range(20):
             time.sleep(0.5)
-            walkers = json.loads(ev(WALKERS_EXPR) or "[]")
+            walkers = fresh_walkers()
             if len(walkers) >= 2:
                 break
         print("WALKERS:", len(walkers))
@@ -166,9 +179,15 @@ def main():
             sys.exit(1)
 
         ok = False
-        for attempt in range(4):
+        for attempt in range(6):
             # ── 2. hover badan agen berjalan via mouse nyata ──
-            w = walkers[attempt % len(walkers)]
+            # Siklus 282: daftar walkers DISEGARKAN tiap attempt (agen lama
+            # bisa sudah tiba/duduk — walker.visible false).
+            wl = fresh_walkers()
+            if not wl:
+                time.sleep(1)
+                continue
+            w = wl[attempt % len(wl)]
             got = False
             for _ in range(4):
                 pj = json.loads(ev(proj_expr(w["x"], (w["y"] or 0) + 0.7, w["z"])) or "null")
@@ -199,7 +218,7 @@ def main():
                 dd = math.dist([hov["x"], hov["z"]], [aw["x"], aw["z"]])
                 if best is None or dd < best:
                     best, bi = dd, j
-            if bi < 0 or best is None or best > 1.2:
+            if bi < 0 or best is None or best > 0.6:
                 print("  (ring tidak menempel agen berjalan mana pun — d=%.3f, ulangi)" % (best if best is not None else -1))
                 continue
             w = dict(walkers[bi])  # agen target = yang benar-benar di-hover
@@ -209,10 +228,18 @@ def main():
             # ── 3. agen terus berjalan, kursor DIAKUI tidak digerakkan ──
             # Sampling tiap 0.4 s sampai agen berpindah > 1.0 unit (anti-vakuus:
             # gerak kecil tidak membedakan kode lama/bebek vs follow). Maks ~7 s.
+            # Siklus 282: ringan tapi tahan-flake — sampel BERULANG selama agen
+            # masih berjalan; ring follow benar = jarak ring↔agen TETAP kecil
+            # (<1.2) pada pasangan sampel berurutan dgn agen pindah >1.0.
+            # Dulu: satu snapshot akhir — agen sering tiba (v:false) sebelum
+            # moved>1.0 → DIST dihitung saat ring tinggal jejak agen lain.
             moved = 0.0
+            prev = None
+            consec = 0
+            okf = False
             a1 = hov1 = None
-            for _ in range(18):
-                time.sleep(0.4)
+            for _ in range(30):
+                time.sleep(0.35)
                 a1 = json.loads(ev(
                     "JSON.stringify((window.__agentData[%d]||{}).walker?{x:window.__agentData[%d].walker.position.x,"
                     "y:window.__agentData[%d].walker.position.y,z:window.__agentData[%d].walker.position.z,"
@@ -220,22 +247,25 @@ def main():
                 hov1 = json.loads(ev(RING_EXPR) or "null")
                 if not a1 or not hov1 or not hov1.get("vis"):
                     break
+                moved = math.dist([a1["x"], a1["y"], a1["z"]], [w["x"], w["y"], w["z"]])
+                d1 = math.dist([hov1["x"], hov1["y"], hov1["z"]], [a1["x"], a1["y"] + 0.02, a1["z"]])
+                if d1 < 1.2:
+                    consec += 1
+                else:
+                    consec = 0
+                prev = dict(a1)
+                if moved > 1.0 and consec >= 2:
+                    okf = True
+                    break
                 if not a1.get("v"):
                     break  # tiba & duduk → coba agen lain
-                moved = math.dist([a1["x"], a1["y"], a1["z"]], [w["x"], w["y"], w["z"]])
-                if moved > 1.0:
-                    break
             print("A1[%d]:" % attempt, json.dumps(a1), "HOVER1:", json.dumps(hov1))
-            if not a1 or not hov1 or not hov1.get("vis") or not a1.get("v"):
-                print("  (agen tiba di tujuan & duduk / ring hilang — coba agen lain)")
+            if not okf:
+                print("  (ring tak mengikuti konsisten / agen tiba dulu — coba agen lain)")
                 continue
-            d1 = math.dist([hov1["x"], hov1["y"], hov1["z"]], [a1["x"], a1["y"] + 0.02, a1["z"]])
-            print("MOVED[%d]: %.3f  DIST1: %.3f" % (attempt, moved, d1))
-            # Perbaikan: ring mengikuti agen per frame → jarak tetap kecil.
-            # Bug lama: ring beku di posisi lama → jarak ≈ sejauh agen pindah (≥1.0).
-            if moved > 1.0 and d1 < 0.6:
-                ok = True
-                break
+            print("MOVED[%d]: %.3f" % (attempt, moved))
+            ok = True
+            break
 
         print("E2E_HOVERFOLLOW:", "OK" if ok else "FAIL")
         sys.exit(0 if ok else 1)

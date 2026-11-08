@@ -74,7 +74,7 @@ def _x99_alive():
 
 PRESENCE_EXPR = ("(()=>{const p=document.querySelector('.dash-presence');"
                  "return p?p.textContent:'no-para'})()")
-TOTAL_RE = re.compile(r"(\d+) agen di kantor")
+TOTAL_RE = re.compile(r"(\d+) (?:agen|avatar) (?:di kantor|simulasi):")
 AWAY_RE = re.compile(r"(\d+) (di meja|rapat|makan siang|berjalan|pulang/offsite)")
 
 
@@ -166,6 +166,11 @@ def main():
 
         cmd("Runtime.enable")
         time.sleep(1)
+        # Siklus 282: landing kini default route (6230629) — paksa masuk mode
+        # office jika probe mendarat di landing (__agentData tetap kosong).
+        if ev("window.__agentData?window.__agentData.length:0").get("value") in (0, None):
+            ev("location.assign('http://127.0.0.1:9503/app/?mode=office')")
+            time.sleep(3)
         # Sinkron jam dulu: probe nyata memakan ~30 dtk dari page-load; jam
         # simulasi berjalan dgn wall-clock (tambah 1 menit/dtk) → saat probe
         # sampai jam sudah lunch/sore. Set 480 (08:00) SEBELUM pengukuran.
@@ -184,6 +189,11 @@ def main():
         # klik tombol dock → paragraf kehadiran "N agen di kantor: … di meja".
         ev("window.__setTime(480)")
         time.sleep(2)
+        # Siklus 282: dashboard presence hanya diupdate tiap 4000 ms saat open
+        # (Dashboard.jsx useEffect) — setelah klik, poll sampai snapshot BERUBAH
+        # dari bacaan terakhir sebelum klik (bukan dari teks lama), agar tidak
+        # mengonsumsi data pra-klik yang stale.
+        prev_pre = ev(PRESENCE_EXPR).get("value", "no-para")
         opened = ev("(()=>{const b=[...document.querySelectorAll('.dock button')]"
                     ".find(x=>(x.getAttribute('aria-label')||'')==='Dashboard');"
                     "if(!b)return 'no-btn'; b.click(); return 'clicked'})()").get("value")

@@ -128,6 +128,11 @@ def main():
             return val
 
         cmd("Page.enable"); cmd("Runtime.enable")
+        # Siklus 282: landing kini default route (6230629) — paksa masuk mode
+        # office jika probe mendarat di landing (__agentData tetap kosong).
+        if ev("window.__agentData?window.__agentData.length:0") in (0, None):
+            ev("location.assign('http://127.0.0.1:9503/app/?mode=office')")
+            time.sleep(3)
         time.sleep(15)  # scene init + beberapa frame animasi
 
         st0 = json.loads(ev(
@@ -147,9 +152,13 @@ def main():
             cmd("Input.dispatchMouseEvent", type="mouseReleased", x=1250, y=100,
                 button="left", buttons=0, clickCount=cc)
         time.sleep(0.6)
+        # Siklus 282: probe kini benar-benar masuk mode office (fix landing route)
+        # → HUD React terlihat; .floor-nav (fixed top:58 left:14) menutupi
+        # (100,100) dulu dipakai klik reset. Pindah titik ke kanan-atas yang
+        # terverifikasi CANVAS via elementFromPoint live (1250,100 & 1250,300).
         el_chk = ev(
             "JSON.stringify({p1:(document.elementFromPoint(1250,100)||{}).tagName,"
-            " p2:(document.elementFromPoint(100,100)||{}).tagName})")
+            " p2:(document.elementFromPoint(1250,300)||{}).tagName})")
         print("ELEMENTS:", el_chk)
         dbg_dbl = json.loads(ev("JSON.stringify(window.__dbg ? window.__dbg() : {})") or "{}")
         r_dbl = ev("(window.__cam ? window.__cam.sph.radius : -1)")
@@ -165,10 +174,10 @@ def main():
             print("E2E_CAMRESET: FAIL (goal tidak terbentuk setelah dblclick — probe vakuus, koordinat perlu ditinjau)")
             sys.exit(1)
 
-        # ── 2. klik kiri langit (pojok kiri-atas) → jalur reset bug ──
-        cmd("Input.dispatchMouseEvent", type="mousePressed", x=100, y=100,
+        # ── 2. klik kiri langit (kanan-tengah, terverifikasi canvas) → jalur reset ──
+        cmd("Input.dispatchMouseEvent", type="mousePressed", x=1250, y=300,
             button="left", buttons=1, clickCount=1)
-        cmd("Input.dispatchMouseEvent", type="mouseReleased", x=100, y=100,
+        cmd("Input.dispatchMouseEvent", type="mouseReleased", x=1250, y=300,
             button="left", buttons=0, clickCount=1)
 
         # ── 3. tunggu lerp ──

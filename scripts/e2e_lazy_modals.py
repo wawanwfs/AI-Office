@@ -131,6 +131,11 @@ def main():
             try: return json.loads(v) if isinstance(v, str) else v
             except Exception: return v
         cmd("Runtime.enable"); cmd("Page.enable")
+        # Siklus 282: landing kini default route (6230629) — paksa masuk mode
+        # office jika probe mendarat di landing (__agentData tetap kosong).
+        if ev("window.__agentData?window.__agentData.length:0") in (0, None):
+            ev("location.assign('http://127.0.0.1:9503/app/?mode=office')")
+            time.sleep(3)
         print("PROG: enabled", flush=True)
         time.sleep(18)
         print("PROG: settled", flush=True)  # scene init (SwiftShader lambat) + sampling pertama
