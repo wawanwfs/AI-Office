@@ -6,6 +6,7 @@ SQLite's backup API preserves one database-consistent WAL snapshot per file.
 For a multi-database coherent checkpoint the operator MUST stop workers,
 gateway and other writers before backing up and before cutover.
 """
+from contextlib import closing
 import hashlib
 import json
 import os
@@ -46,7 +47,9 @@ def _safe_dir(path):
 
 def _db_valid(path):
     try:
-        with sqlite3.connect(path.as_uri()+"?mode=ro",uri=True,timeout=5) as db:
+        # sqlite3.Connection context manager commits; it DOES NOT close.
+        # Explicit closing is required on Windows to release file handles.
+        with closing(sqlite3.connect(path.as_uri()+"?mode=ro",uri=True,timeout=5)) as db:
             if db.execute("PRAGMA quick_check").fetchone()[0]!="ok":
                 raise SnapshotDenied("SQLite integrity check failed")
     except sqlite3.DatabaseError as exc:
@@ -76,9 +79,10 @@ def backup_sqlite(sources,destination,*,approved=False):
         files={}
         for name,source in sorted(checked.items()):
             target=stage/(name+".sqlite3")
-            with sqlite3.connect(source.as_uri()+"?mode=ro",uri=True,timeout=10) as inp:
-                with sqlite3.connect(str(target),timeout=10) as out:
+            with closing(sqlite3.connect(source.as_uri()+"?mode=ro",uri=True,timeout=10)) as inp:
+                with closing(sqlite3.connect(str(target),timeout=10)) as out:
                     inp.backup(out)
+                    out.commit()
             os.chmod(target,0o600)
             _db_valid(target)
             with open(target,"rb") as stream:
