@@ -5,6 +5,7 @@ Disposable CI Docker host ONLY. No public gateway, arbitrary untrusted
 source builds, provider credentials, or production deployment.
 """
 import hashlib
+import base64
 import json
 import os
 from pathlib import Path
@@ -20,6 +21,11 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"backend"))
 from preview_manager import TemplatePreviewManager,PreviewDenied
 from preview_admission import REVIEWED_FILES, candidate_manifest_for_ci_only
 from ci_preview_network_probe import prove_disposable_container_egress
+from preview_authority import SignedPreviewAuthority
+from preview_signature import canonical_review_bytes
+from preview_admission_v2 import AdmissionDenied
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 
 repo=Path(__file__).resolve().parents[1]
 root=Path(tempfile.mkdtemp(prefix="wfs-preview-operator-"))
@@ -29,8 +35,32 @@ reviewed_root=repo/"examples/fullstack-preview"
 # This CI runner trusts the reviewed checkout; an actual operator must
 # supply expected hashes independently, not calculate approval from uploads.
 reviewed_files=candidate_manifest_for_ci_only(reviewed_root)
+# Ephemeral SYNTHETIC CI review, never an operator-approved signature.
+# The private key exists only in this CI process memory.
+ci_key=Ed25519PrivateKey.generate()
+reviewer_pem=root/"synthetic-ci-public.pem"
+signature=root/"synthetic-ci.sig"
+reviewer_policy=root/"synthetic-ci-policy.json"
+reviewer_pem.write_bytes(ci_key.public_key().public_bytes(
+    serialization.Encoding.PEM,serialization.PublicFormat.SubjectPublicKeyInfo))
+signature.write_bytes(base64.b64encode(ci_key.sign(
+    canonical_review_bytes(reviewed_files))))
+fingerprint=hashlib.sha256(ci_key.public_key().public_bytes(
+    serialization.Encoding.Raw,serialization.PublicFormat.Raw)).hexdigest()
+reviewer_policy.write_text(json.dumps({
+    "version":1,"epoch":1,"active_fingerprints":[fingerprint],
+    "revoked_fingerprints":[]
+},sort_keys=True))
+original_policy=reviewer_policy.read_bytes()
+authority=SignedPreviewAuthority(
+    public_key_path=reviewer_pem,
+    signature_path=signature,
+    policy_path=reviewer_policy,
+    trusted_policy_sha256=hashlib.sha256(original_policy).hexdigest(),
+)
 manager=TemplatePreviewManager(root/"registry.db",
-    reviewed_root/"compose.yaml",enabled=True,reviewed_files=reviewed_files)
+    reviewed_root/"compose.yaml",enabled=True,reviewed_files=reviewed_files,
+    reviewer_authority=authority)
 proof={"mode":"real-disposable-operator-template-preview",
        "paid_provider_used":False,"production_deployment":False,
        "generic_user_code_preview":False,
@@ -41,7 +71,8 @@ proof={"mode":"real-disposable-operator-template-preview",
        "checked_frontend_asset_count":len(reviewed_files["frontend"]),
        "cyclonedx_sbom_hash_checked":True,
        "dependency_lock_hash_checked":True,
-       "all_runtime_image_references_immutable":True}
+       "all_runtime_image_references_immutable":True,
+       "phase10_test_signature_only":"ephemeral synthetic CI identity; NOT independent review"}
 names=("tenant-a","tenant-b")
 ports=(19010,19011)
 tokens=(token_a,token_b)
@@ -198,6 +229,22 @@ print('outbound IPv4 denied for both targets')
     proof["authenticated_preview_http_two_tenants"]=True
     proof["upstream_public_bearer_not_forwarded"]=True
     proof["operator_registry_read_only"]=True
+    # A policy change or revocation halts every manager action before
+    # Docker. Restore exact trusted bytes so disposable cleanup still works.
+    try:
+        reviewer_policy.write_text(json.dumps({
+            "version":1,"epoch":2,"active_fingerprints":[],
+            "revoked_fingerprints":[fingerprint]
+        }))
+        try:
+            manager.logs(names[0],tokens[0])
+            raise AssertionError("revoked reviewer was permitted")
+        except AdmissionDenied:
+            pass
+        proof["phase10_policy_mutation_denied_before_docker"]=True
+    finally:
+        reviewer_policy.write_bytes(original_policy)
+    assert manager.status(names[0])["phase"]=="running"
 
 finally:
     errors=[]
