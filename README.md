@@ -346,3 +346,26 @@ production changes.
 - [Phase 13 scoped acceptance evidence](docs/REA_PHASE13.md)
 - [Phase 13 disposable DNS runbook](docs/PHASE13_RUNTIME_RUNBOOK.md)
 - [Next Phase 14 execution prompt](docs/NEXT_PHASE14_PROMPT.md)
+
+
+## Phase 14 — independent witness-signed reviewer checkpoint
+
+A third, distinct Ed25519 **witness** now signs an exact policy SHA256,
+reviewer-roster root fingerprint and epoch checkpoint. The operator
+must provide an independently verified latest receipt SHA256 and pinned
+witness public-key fingerprint in addition to all previous manifest and
+roster signatures. Manager/CLI operations fail closed if witness evidence
+is missing, stale, forged, untrusted or modified, before Docker execution.
+
+Native Windows/Linux tests exercise tampered signatures and **a real
+SQLite registry backup/restore**: an old correctly signed policy is
+rejected after restore when the independently pinned newest witness
+checkpoint remains current. CI's three signing identities are
+**synthetic**; this is not an actual external transparency log, hardware
+counter or proof of real organizational custody. Full immutable Docker,
+external authoritative DNS/host firewall, TLS multi-tenant and offline
+signed OCI provenance remain P0 and are **not** claimed ready.
+
+- [Phase 14 bounded REA](docs/REA_PHASE14.md)
+- [Phase 14 operator witness guide](docs/PHASE14_RUNTIME_RUNBOOK.md)
+- [Phase 15 continuation](docs/NEXT_PHASE15_PROMPT.md)
