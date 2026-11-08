@@ -63,6 +63,8 @@ def main():
         help="independently controlled transparency log public Ed25519 key")
     parser.add_argument("--log-leaf-inventory",required=True,
         help="complete ordered receipt digest inventory of current tree")
+    parser.add_argument("--log-compact-proof",required=True,
+        help="separate compact RFC6962 inclusion and consistency JSON for current head")
     parser.add_argument("--trusted-log-head-sha256",required=True,
         help="latest signed tree head file hash approved out of band")
     parser.add_argument("--trusted-log-fingerprint",required=True,
@@ -109,6 +111,7 @@ def main():
         signature_path=args.log_head_signature,
         public_key_path=args.log_public_key,
         inventory_path=args.log_leaf_inventory,
+        compact_proof_path=args.log_compact_proof,
         trusted_head_sha256=args.trusted_log_head_sha256,
         trusted_log_fingerprint=args.trusted_log_fingerprint,
         trusted_previous_size=args.trusted_previous_tree_size,
