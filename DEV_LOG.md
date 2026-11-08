@@ -6137,3 +6137,9 @@
 - git rm scripts/apply_events.py, apply_dashboard_stats.py, apply_sh_console.py; apply_wfs_* (4 script sinkron server/tasks/api) tetap dipertahankan & CHECK identik.
 - Tidak ada perubahan kode produksi scene/server; build & vitest tidak dijalankan ulang (hapus script saja).
 - Sisa backlog: (a) gateway :8787→Docker; (b) saas-dibantuin push; (d) keputusan omniroute; penghapus wfs-hq tak teridentifikasi.
+## 2026-11-09 18:02 WIB — Siklus 289: e2e_sw_update DITEMBUS — root cause LANDING-ROUTE kelas 281: probe load /app/ TANPA ?mode=office, profil sekali-pakai (localStorage kosong) → viewMode default '2d' → scene 3D tak init → tes5 agents=0 PERMANEN
+
+- Diagnosis: probe SW generasi-2 (backlog siklus 287) gagal hanya di TES5 (hooks pasca reload): agents=0 sementara tes1-tes4 semua lulus. Poll 10 dtk + path=location.pathname → '/app/' benar tapi __agentData tetap 0 → scene tak pernah init. Akar: URL '/app/' tanpa query; App.jsx viewMode default = localStorage 'wfs_view_mode' ('2d') — profil sekali-pakai = kosong = Dashboard 2D, tanpa canvas 3D/__agentData.
+- Fix (probe-only): fallback siklus 281 ditambahkan — bila __agentData kosong saat Runtime.enable → location.assign('/app/?mode=office') + Runtime.enable ulang; tes5 diperkuat polling 10 dtk (500ms interval) + diagnosis path. ev() di probe ini return value mentah (bukan dict) → cek tanpa .get('value').
+- Bukti: e2e_sw_update OK 2× beruntun (tes1-tes5 all true, agents=26, errors=0, banner+skip-waiting+controllerchange lengkap). Produksi scene/dist TIDAK berubah (probe-only) — build/vitest tidak dijalankan ulang.
+- Sisa backlog: (a) gateway :8787→Docker (menunggu keputusan user); (b) saas-dibantuin push GitHub; (d) keputusan omniroute :20128; penghapus wfs-hq tak teridentifikasi (backup harian aktif).

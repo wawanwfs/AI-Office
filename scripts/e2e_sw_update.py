@@ -170,6 +170,14 @@ def main():
             except Exception: return v
 
         cmd("Runtime.enable"); cmd("Page.enable")
+        # Siklus 289: URL /app/ TANPA ?mode=office → profil sekali-pakai
+        # (localStorage kosong) default viewMode '2d' (Dashboard) — scene 3D
+        # tidak pernah init, __agentData tidak pernah diisi (tes5 agents=0).
+        # Fallback sama dgn siklus 281: paksa entry /app/?mode=office.
+        if ev("window.__agentData?window.__agentData.length:0") in (0, None):
+            ev("location.assign('http://127.0.0.1:9503/app/?mode=office')")
+            time.sleep(3)
+            cmd("Runtime.enable")
         # Pemungut exception sederhana: interleave recv di antara cmd via polling
         def drain_events(sec):
             end = time.time() + sec
@@ -298,9 +306,16 @@ def main():
         for attempt in range(2):
             try:
                 t5 = ev("""(async () => {
-                  await new Promise(r => setTimeout(r, 2000))
-                  const n = (window.__agentData || []).length
-                  return JSON.stringify({ agents: n, banner2: !!document.querySelector('[data-testid=sw-update-banner]') })
+                  const t0 = performance.now()
+                  let n = 0, path = location.pathname
+                  while (performance.now() - t0 < 10000) {
+                    n = (window.__agentData || []).length
+                    path = location.pathname
+                    if (n > 0) break
+                    await new Promise(r => setTimeout(r, 500))
+                  }
+                  return JSON.stringify({ agents: n, path,
+                    banner2: !!document.querySelector('[data-testid=sw-update-banner]') })
                 })()""", await_p=True)
                 break
             except Exception:
