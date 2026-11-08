@@ -9,6 +9,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from preview_signature import canonical_review_bytes
 from preview_root_authority import canonical_roster_bytes
 from preview_witness import SignedReviewerCheckpoint, canonical_checkpoint_bytes
+from preview_transparency import (SignedTransparencyEvidence, canonical_tree_head, merkle_root)
 from preview_authority import SignedPreviewAuthority
 from types import SimpleNamespace
 import pytest
@@ -18,6 +19,7 @@ from preview_admission import AdmissionDenied,REVIEWED_FILES,candidate_manifest_
 
 _TEST_ROSTER_SIGNERS={}
 _TEST_WITNESS_SIGNERS={}
+_TEST_LOG_SIGNERS={}
 
 
 def root_args(authority):
@@ -34,6 +36,50 @@ def resign_roster_for_synthetic_test(authority):
     authority.root_signature_path.write_bytes(
         base64.b64encode(key.sign(canonical_roster_bytes(
             authority.policy_path.read_bytes()))))
+
+
+def synthetic_signed_log(root, receipt_path, label, previous=None):
+    """Synthetic signed full-leaf log, NOT an external append-only authority."""
+    if previous is None:
+        key=Ed25519PrivateKey.generate()
+        public=root/"test-log-key.pem"
+        public.write_bytes(key.public_key().public_bytes(
+            serialization.Encoding.PEM,serialization.PublicFormat.SubjectPublicKeyInfo))
+        _TEST_LOG_SIGNERS[str(public)]=key
+        old_leaves=[]
+        previous_size=0
+        previous_root=hashlib.sha256(b"").hexdigest()
+    else:
+        public=previous.public_key_path
+        key=_TEST_LOG_SIGNERS[str(public)]
+        old_leaves=json.loads(previous.inventory_path.read_text())["receipt_digests"]
+        previous_size=len(old_leaves)
+        previous_root=merkle_root(
+            [bytes.fromhex(item) for item in old_leaves]).hex()
+    newest=hashlib.sha256(receipt_path.read_bytes()).hexdigest()
+    if newest in old_leaves:
+        raise AssertionError("test-only transparency log cannot duplicate receipts")
+    values=old_leaves+[newest]
+    inventory=root/("test-log-leaves-"+label+".json")
+    head=root/("test-log-head-"+label+".json")
+    sig=root/("test-log-head-"+label+".sig")
+    inventory.write_text(json.dumps({
+        "version":1,"receipt_digests":values},sort_keys=True))
+    head.write_text(json.dumps({
+        "version":1,"tree_size":len(values),
+        "root_sha256":merkle_root([bytes.fromhex(x) for x in values]).hex(),
+    },sort_keys=True))
+    sig.write_bytes(base64.b64encode(
+        key.sign(canonical_tree_head(head.read_bytes()))))
+    fingerprint=hashlib.sha256(key.public_key().public_bytes(
+        serialization.Encoding.Raw,serialization.PublicFormat.Raw)).hexdigest()
+    return SignedTransparencyEvidence(
+        public_key_path=public,head_path=head,signature_path=sig,
+        inventory_path=inventory,
+        trusted_head_sha256=hashlib.sha256(head.read_bytes()).hexdigest(),
+        trusted_log_fingerprint=fingerprint,
+        trusted_previous_size=previous_size,
+        trusted_previous_root_sha256=previous_root)
 
 
 def issue_synthetic_test_checkpoint(authority, label):
@@ -56,7 +102,9 @@ def issue_synthetic_test_checkpoint(authority, label):
         public_key_path=previous.public_key_path,
         signature_path=signature,receipt_path=receipt,
         trusted_witness_fingerprint=previous.trusted_witness_fingerprint,
-        trusted_receipt_sha256=hashlib.sha256(receipt.read_bytes()).hexdigest())
+        trusted_receipt_sha256=hashlib.sha256(receipt.read_bytes()).hexdigest(),
+        transparency_evidence=synthetic_signed_log(
+            state, receipt, label, previous=previous.transparency_evidence))
 
 
 def hashes(directory):
@@ -104,11 +152,14 @@ def ci_authority(root, reviewed):
     witness_sig.write_bytes(base64.b64encode(
         witness_key.sign(canonical_checkpoint_bytes(witness_receipt.read_bytes()))))
     _TEST_WITNESS_SIGNERS[str(witness_public)]=witness_key
+    synthetic_log=synthetic_signed_log(root,witness_receipt,"initial")
+    assert synthetic_log.trusted_log_fingerprint not in (fingerprint,root_fp,witness_fp)
     witness=SignedReviewerCheckpoint(
         public_key_path=witness_public,receipt_path=witness_receipt,
         signature_path=witness_sig,
         trusted_witness_fingerprint=witness_fp,
-        trusted_receipt_sha256=hashlib.sha256(witness_receipt.read_bytes()).hexdigest())
+        trusted_receipt_sha256=hashlib.sha256(witness_receipt.read_bytes()).hexdigest(),
+        transparency_evidence=synthetic_log)
     return SignedPreviewAuthority(
         public_key_path=pem,signature_path=sig,policy_path=policy,
         trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),
@@ -818,7 +869,8 @@ def test_phase14_absent_or_swapped_witness_is_not_valid_authority(preview,tmp_pa
         signature_path=witness.signature_path,
         receipt_path=witness.receipt_path,
         trusted_receipt_sha256=witness.trusted_receipt_sha256,
-        trusted_witness_fingerprint=manager.authority.trusted_root_fingerprint)
+        trusted_witness_fingerprint=manager.authority.trusted_root_fingerprint,
+        transparency_evidence=witness.transparency_evidence)
     new=SignedPreviewAuthority(
         public_key_path=manager.authority.public_key_path,
         signature_path=manager.authority.signature_path,
