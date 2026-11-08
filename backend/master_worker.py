@@ -71,9 +71,16 @@ class ApprovedMasterWorker:
         if not project_id or not project_id.isascii() or not all(
                 c.isalnum() or c in "-_." for c in project_id):
             raise PermissionError("invalid project workspace identifier")
-        folder = (self.workspace_root / project_id).resolve()
-        if folder == self.workspace_root or not folder.is_relative_to(self.workspace_root):
-            raise PermissionError("workspace escape denied")
+        candidate = self.workspace_root / project_id
+        # The lexical name must resolve to its OWN directory, not an existing
+        # sibling project's directory reached through an attacker-set symlink.
+        # Reject even symlinks that remain inside the authorized root.
+        if candidate.is_symlink():
+            raise PermissionError("symlinked project workspace denied")
+        folder = candidate.resolve()
+        if (folder != candidate or folder == self.workspace_root or
+                not folder.is_relative_to(self.workspace_root)):
+            raise PermissionError("workspace escape or alias denied")
         folder.mkdir(parents=True, exist_ok=True)
         return str(folder)
 

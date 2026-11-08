@@ -153,3 +153,18 @@ def test_revoke_permission_after_enqueue_prevents_paid_execution(ready):
     assert outcome["engine_result"]=="failed"
     assert not engine.runs
     assert q.get(job)["status"]=="queued"
+
+
+def test_project_workspace_symlink_alias_rejected(ready,tmp_path):
+    q,ledger,engine,worker=ready
+    root=worker.workspace_root
+    root.mkdir(parents=True,exist_ok=True)
+    (root/"p2").mkdir()
+    (root/"p1").symlink_to(root/"p2",target_is_directory=True)
+    worker.enqueue_task("1")
+    q.set_paused(False)
+    result=asyncio.run(worker.run_once())
+    assert result["queue_status"]=="queued"
+    assert result["engine_result"]=="failed"
+    assert "symlinked" in result["error"]
+    assert engine.runs==[]
