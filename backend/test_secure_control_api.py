@@ -171,12 +171,12 @@ def test_authenticated_brief_creates_real_task_and_durable_job_only_when_ready(a
     q.set_paused(False)
     path="/api/v4/projects/alpha/briefs"
     body={"title":"Buat API inventori","brief":"Bangun aplikasi inventori dengan endpoint daftar barang dan pengujian unittest minimal.","role":"backend"}
-    assert client.post(path,json=body).status_code==401
-    assert client.post(path,headers={"X-Principal":"alice"},json=body).status_code==401
-    assert client.post(path,headers=headers("bob"),json=body).status_code==404
-    assert client.post(path,headers=headers("observer"),json=body).status_code==404
-    assert not getattr(engine,"created",None)
     key={"Idempotency-Key":"alpha-inventory-brief-001"}
+    assert client.post(path,headers=key,json=body).status_code==401
+    assert client.post(path,headers={**key,"X-Principal":"alice"},json=body).status_code==401
+    assert client.post(path,headers={**headers("bob"),**key},json=body).status_code==404
+    assert client.post(path,headers={**headers("observer"),**key},json=body).status_code==404
+    assert not getattr(engine,"created",None)
     ok=client.post(path,headers={**headers("alice"),**key},json=body)
     assert ok.status_code==202,ok.text
     payload=ok.json()

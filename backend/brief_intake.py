@@ -12,7 +12,7 @@ import sqlite3
 
 from project_rbac import ident
 
-_IDEMP=re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{15,127}\\Z")
+_IDEMP=re.compile(r"[A-Za-z0-9][A-Za-z0-9._-]{15,127}\Z")
 
 
 class IntakeConflict(RuntimeError):
@@ -45,7 +45,7 @@ class BriefIntakeKeys:
         if not isinstance(key,str) or not _IDEMP.fullmatch(key):
             raise ValueError("Idempotency-Key must have 16..128 safe characters")
         return hashlib.sha256(
-            ("wfs-intake-v1\\0"+principal+"\\0"+project+"\\0"+key).encode()).hexdigest()
+            ("wfs-intake-v1\0"+principal+"\0"+project+"\0"+key).encode()).hexdigest()
 
     def claim(self,principal,project,key,payload):
         digest=self._digest(principal,project,key)
