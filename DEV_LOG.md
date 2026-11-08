@@ -6408,3 +6408,11 @@
 - Redeploy dist → ~/wfs-hq via deploy.py (9503: 200) + prune orphan eksplisit (7 file hash lama → hygiene 13 hashed/0 orphan).
 - e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 692057 B, nonbg 0.992, hygiene 13/0.
 - Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 2026-11-09 07:33 WIB — Siklus 323: TeamStats & Dashboard API refresh SEGERA saat tab kembali visible
+
+- Tanpa upstream baru (0 commit HEAD..origin/main). Dua poller API terakhir yang ter-gate visibility tapi TANPA listener visible-refresh (celah sisa paritas 315-322): TeamStats tasks+resources (15 dtk) & Dashboard stats+tasks+projects+resources+status (10 dtk) — tanpa ini data bisa usang hingga satu periode interval penuh setelah tab lama disembunyikan lalu kembali visible.
+- TeamStats.jsx: listener 'visibilitychange' load(ac.signal) SEGERA saat visible + removeEventListener cleanup. Dashboard.jsx: pola sama. Paritas visible-refresh API/scene kini benar-benar menyeluruh (re-audit grep setInterval/fetch semua komponen).
+- +1 file tes visibility_parity_323.test.jsx (5 kasus: TeamStats visible segera load/hidden digerbang; Dashboard visible segera/hidden digerbang; cleanup melepas listener kedua komponen). Paritas keseluruhan: 258 file / 3695 passed + 6 skipped, 0 fail (+5 tes vs 322).
+- Redeploy dist → ~/wfs-hq via deploy.py (9503: 200). Probe pertama FAIL hygiene (7 orphan dari deploy aditif) → prune eksplisit offline (scripts/deploy.prune_orphan_assets) → 13 hashed/0 orphan.
+- e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 689107 B, nonbg 0.992, hygiene 13/0.
+- Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

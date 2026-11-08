@@ -62,9 +62,12 @@ export default function TeamStats() {
     const ac = new AbortController()
     const t0 = setTimeout(() => load(ac.signal), 0)
     const iv = setInterval(() => { if (document.visibilityState === 'visible') load(ac.signal) }, 15000)
+    // Siklus 323: refresh SEGERA saat tab kembali visible (paritas 315-322)
+    const onVis = () => { if (document.visibilityState === 'visible') load(ac.signal) }
+    document.addEventListener('visibilitychange', onVis)
     const k = e => { if (e.key === 'Escape') setOpen(false) }
     document.addEventListener('keydown', k)
-    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('keydown', k);
+    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('visibilitychange', onVis); document.removeEventListener('keydown', k);
       // eslint-disable-next-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async), bukan membaca snapshot ref
       loadRid.current++ }
   }, [open, load])
