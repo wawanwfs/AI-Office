@@ -102,6 +102,32 @@ Untuk audit integrasi yang membutuhkan host live, lihat
 lanjutan lihat [laporan audit 2026-11-08](docs/AUDIT_2026-11-08.md).
 Jangan menyimpan key API di source maupun mem-publish Docker socket.
 
+## Phase 6 — Authenticated Briefs, Real Coding QA & Operator Preview
+
+**Implemented / tested:** A user may submit a scoped Python coding brief
+from the secure panel, creating a persisted task and durable queue job after
+bearer authentication, project permission and approved spending checks.
+A hashed SQLite idempotency receipt blocks duplicates on network retries.
+The CI end-to-end test runs the **actual** legacy task engine through a
+separate Master Worker, real Docker unittest QA, and content-checked artifact
+download for two independent projects. Actual generated **synthetic source
+files** and test files are attached to CI evidence.
+
+A worker-only OpenAI-compatible SSE billing adapter records final provider
+usage and fails closed on uncertain output; its provider tests use mocks.
+An operator-only template-preview manager launches/restarts/cleans two real
+React/FastAPI/PostgreSQL Compose stacks with independent ports and tokens.
+
+**Not yet supported:** a real paid-provider code-generation acceptance test
+(the CI model is an offline deterministic fixture), every paid route metered,
+arbitrary AI-generated fullstack preview deployment, a public authenticated
+reverse proxy, production daemon isolation or tested Windows/Linux cutover.
+Production remains untouched; no provider account was billed.
+
+- [Phase 6 REA and acceptance matrix](docs/REA_PHASE6.md)
+- [Phase 6 Windows/Linux operator and backup runbook](docs/PHASE6_RUNTIME_RUNBOOK.md)
+- [Phase 7 next implementation prompt](docs/NEXT_PHASE7_PROMPT.md)
+
 ## Phase 5 — Verified Python QA, Authenticated Streams & Disposable Fullstack
 
 Phase 5 validates **real Docker-based Python code QA**, per-attempt SHA-256
