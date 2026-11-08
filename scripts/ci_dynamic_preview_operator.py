@@ -23,6 +23,7 @@ from preview_admission import REVIEWED_FILES, candidate_manifest_for_ci_only
 from ci_preview_network_probe import prove_disposable_container_egress
 from preview_authority import SignedPreviewAuthority
 from preview_signature import canonical_review_bytes
+from preview_root_authority import canonical_roster_bytes
 from preview_admission_v2 import AdmissionDenied
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -52,11 +53,26 @@ reviewer_policy.write_text(json.dumps({
     "revoked_fingerprints":[]
 },sort_keys=True))
 original_policy=reviewer_policy.read_bytes()
+# Disposable synthetic ROOT is separate from the reviewer signing identity.
+# Never use this CI key material as an operator's production trust anchor.
+ci_roster_root=Ed25519PrivateKey.generate()
+roster_root_pem=root/"synthetic-ci-roster-root.pem"
+roster_root_sig=root/"synthetic-ci-roster-root.sig"
+roster_root_pem.write_bytes(ci_roster_root.public_key().public_bytes(
+    serialization.Encoding.PEM,serialization.PublicFormat.SubjectPublicKeyInfo))
+roster_root_sig.write_bytes(base64.b64encode(ci_roster_root.sign(
+    canonical_roster_bytes(original_policy))))
+roster_root_fp=hashlib.sha256(ci_roster_root.public_key().public_bytes(
+    serialization.Encoding.Raw,serialization.PublicFormat.Raw)).hexdigest()
+assert roster_root_fp != fingerprint
 authority=SignedPreviewAuthority(
     public_key_path=reviewer_pem,
     signature_path=signature,
     policy_path=reviewer_policy,
     trusted_policy_sha256=hashlib.sha256(original_policy).hexdigest(),
+    root_public_key_path=roster_root_pem,
+    root_signature_path=roster_root_sig,
+    trusted_root_fingerprint=roster_root_fp,
 )
 # Run a REAL Docker build against the staged Compose context while a
 # separate local write modifies the live checkout. The runner always restores
@@ -99,7 +115,8 @@ proof={"mode":"real-disposable-operator-template-preview",
        "cyclonedx_sbom_hash_checked":True,
        "dependency_lock_hash_checked":True,
        "all_runtime_image_references_immutable":True,
-       "phase10_test_signature_only":"ephemeral synthetic CI identity; NOT independent review"}
+       "phase10_test_signature_only":"ephemeral synthetic CI identity; NOT independent review",
+       "phase12_roster_authority":"separate synthetic key, not an independently audited human/device"}
 names=("tenant-a","tenant-b")
 ports=(19010,19011)
 tokens=(token_a,token_b)
