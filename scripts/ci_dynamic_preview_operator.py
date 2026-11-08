@@ -18,17 +18,25 @@ import httpx
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"backend"))
 from preview_manager import TemplatePreviewManager,PreviewDenied
+from preview_admission import REVIEWED_FILES
 
 repo=Path(__file__).resolve().parents[1]
 root=Path(tempfile.mkdtemp(prefix="wfs-preview-operator-"))
 token_a=secrets.token_urlsafe(32)
 token_b=secrets.token_urlsafe(32)
+reviewed_root=repo/"examples/fullstack-preview"
+# This CI runner trusts the reviewed checkout; an actual operator must
+# supply expected hashes independently, not calculate approval from uploads.
+reviewed_files={name:hashlib.sha256((reviewed_root/name).read_bytes()).hexdigest()
+                for name in REVIEWED_FILES}
 manager=TemplatePreviewManager(root/"registry.db",
-    repo/"examples/fullstack-preview/compose.yaml",enabled=True)
+    reviewed_root/"compose.yaml",enabled=True,reviewed_files=reviewed_files)
 proof={"mode":"real-disposable-operator-template-preview",
        "paid_provider_used":False,"production_deployment":False,
        "generic_user_code_preview":False,
-       "stacks":[],"cleanup_confirmed":False}
+       "stacks":[],"cleanup_confirmed":False,
+       "reviewed_template_files":list(REVIEWED_FILES),
+       "reviewed_template_source":"CI-trusted-repository-checkout"}
 names=("tenant-a","tenant-b")
 ports=(19010,19011)
 tokens=(token_a,token_b)

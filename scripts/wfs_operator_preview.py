@@ -7,6 +7,7 @@ The current preview is the fixed reviewed React/FastAPI/Postgres template;
 arbitrary generated project source admission is NOT available.
 """
 import argparse
+import json
 import os
 from pathlib import Path
 import sys
@@ -22,6 +23,8 @@ def main():
     parser.add_argument("--port",type=int,help="19000-22000; required only on start")
     parser.add_argument("--state-root",required=True,help="private local disposable directory")
     parser.add_argument("--approved",action="store_true")
+    parser.add_argument("--reviewed-manifest",required=True,
+        help="operator-approved JSON mapping of exact four SHA-256 runtime files")
     parser.add_argument("--discard-data",action="store_true",
                         help="required to remove disposable PostgreSQL volumes")
     args=parser.parse_args()
@@ -39,7 +42,17 @@ def main():
     if not state.is_dir() or state.resolve()!=state:
         parser.error("unsafe state root")
     template=Path(__file__).resolve().parents[1]/"examples"/"fullstack-preview"/"compose.yaml"
-    manager=TemplatePreviewManager(state/"registry.db",template,enabled=True)
+    admission_file=Path(args.reviewed_manifest).absolute()
+    if (admission_file.is_symlink() or not admission_file.is_file() or
+            admission_file.resolve()!=admission_file or
+            admission_file.stat().st_size>4096):
+        parser.error("unsafe reviewed admission manifest")
+    try:
+        approved_hashes=json.loads(admission_file.read_text(encoding="utf-8"))
+    except (OSError,ValueError) as exc:
+        parser.error("invalid reviewed admission JSON")
+    manager=TemplatePreviewManager(state/"registry.db",template,
+        enabled=True,reviewed_files=approved_hashes)
     if args.action=="status":
         result=manager.status(args.project)
     else:

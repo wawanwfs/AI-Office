@@ -13,6 +13,7 @@ import sqlite3
 import subprocess
 
 from project_rbac import ident
+from preview_admission import ReviewedPreviewAdmission, AdmissionDenied
 
 
 class PreviewDenied(PermissionError):
@@ -21,7 +22,7 @@ class PreviewDenied(PermissionError):
 
 class TemplatePreviewManager:
     def __init__(self, registry_path, template_path, *, enabled=False,
-                 runner=None, docker="docker"):
+                 runner=None, docker="docker", reviewed_files=None):
         if not enabled:
             raise PreviewDenied("operator approval required for Docker preview")
         template=Path(template_path).absolute()
@@ -29,6 +30,9 @@ class TemplatePreviewManager:
             template.resolve()!=template or template.name!="compose.yaml" or
             "examples/fullstack-preview" not in template.as_posix()):
             raise PreviewDenied("unreviewed or symlinked preview template denied")
+        # A plausible filename is NEVER enough for Docker build approval.
+        # Exact expected hashes must be supplied out-of-band by the operator.
+        self.admission=ReviewedPreviewAdmission(template.parent,reviewed_files)
         self.template=template
         self.registry=Path(registry_path).absolute()
         if not self.registry.parent.is_dir() or self.registry.is_symlink():
@@ -126,6 +130,9 @@ class TemplatePreviewManager:
             db.close()
 
     def _invoke(self,record,token,args,*,timeout=120):
+        # Do not rely on a one-time constructor check: the source may have
+        # changed after reservation or while a preview was running.
+        self.admission.verify()
         if not isinstance(token,str) or len(token)<32 or not token.isascii():
             raise PreviewDenied("operator-supplied ephemeral token required")
         # A tiny environment allowlist: no LLM/provider keys, no HTTP-proxy

@@ -1,8 +1,15 @@
 """Template-only preview manager: local Docker authority never in HTTP gateway."""
 from pathlib import Path
+import hashlib
 from types import SimpleNamespace
 import pytest
 from preview_manager import TemplatePreviewManager,PreviewDenied
+from preview_admission import AdmissionDenied,REVIEWED_FILES
+
+
+def hashes(directory):
+    return {name:hashlib.sha256((directory/name).read_bytes()).hexdigest()
+            for name in REVIEWED_FILES}
 
 
 @pytest.fixture
@@ -11,12 +18,15 @@ def preview(tmp_path):
     folder.mkdir(parents=True)
     compose=folder/"compose.yaml"
     compose.write_text("services:\\n  api:\\n    image: example\\n")
+    for name in REVIEWED_FILES:
+        if name!="compose.yaml":
+            (folder/name).write_text("reviewed disposable fixture: "+name)
     calls=[]
     def runner(argv,**kwargs):
         calls.append((argv,kwargs))
         return SimpleNamespace(returncode=0,stdout="ok",stderr="")
     manager=TemplatePreviewManager(tmp_path/"registry.db",compose,
-                                   enabled=True,runner=runner)
+                                   enabled=True,runner=runner,reviewed_files=hashes(folder))
     return manager,calls
 
 
@@ -30,7 +40,11 @@ def test_deny_default_and_unreviewed_template(tmp_path):
     link=root/"alias-compose.yaml"
     link.symlink_to(path)
     with pytest.raises(PreviewDenied,match="template"):
-        TemplatePreviewManager(tmp_path/"registry.db",link,enabled=True)
+        TemplatePreviewManager(tmp_path/"registry.db",link,enabled=True,
+            reviewed_files={})
+    with pytest.raises(AdmissionDenied,match="approved"):
+        TemplatePreviewManager(tmp_path/"registry.db",path,enabled=True,
+            reviewed_files=None)
 
 
 def test_distinct_project_names_ports_and_cross_project_port_collision(preview):
@@ -131,3 +145,42 @@ def test_stopped_teardown_idempotent_and_uncertain_can_be_cleaned(preview):
     m._phase("alpha","uncertain")
     assert m.stop("alpha",token,allow_data_loss=True)["phase"]=="stopped"
     assert calls[-1][0][-3:]==["down","--volumes","--remove-orphans"]
+
+
+
+def test_reviewed_runtime_file_mutation_denied_before_docker(preview):
+    manager,calls=preview
+    folder=manager.template.parent
+    # A successful build may later be modified by an accidental deploy or
+    # a malicious local writer. Every Docker mutation must check hashes.
+    manager.reserve("alpha",19010)
+    (folder/"Dockerfile.api").write_text("unapproved privileged container")
+    with pytest.raises(AdmissionDenied,match="changed"):
+        manager.start("alpha",19010,"X"*43)
+    assert calls==[]
+    assert manager.status("alpha")["phase"]=="uncertain"
+
+
+def test_reviewed_template_rejects_digest_mismatch_before_construction(preview):
+    manager,calls=preview
+    folder=manager.template.parent
+    approved=hashes(folder)
+    approved["api.py"]="0"*64
+    with pytest.raises(AdmissionDenied,match="changed"):
+        TemplatePreviewManager(folder/"other-registry.db",manager.template,
+            enabled=True,reviewed_files=approved)
+    assert calls==[]
+
+
+def test_reviewed_runtime_symlink_denied_before_docker(preview):
+    manager,calls=preview
+    folder=manager.template.parent
+    good=folder/"api.py"
+    good.unlink()
+    try:
+        good.symlink_to(folder/"ingress.py")
+    except OSError:
+        pytest.skip("host cannot create symlinks without elevated permission")
+    with pytest.raises(AdmissionDenied,match="unsafe"):
+        manager.start("alpha",19010,"X"*43)
+    assert calls==[]
