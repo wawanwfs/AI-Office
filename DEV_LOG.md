@@ -6224,3 +6224,11 @@
 - e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 706720 B, nonbg 0.991, hygiene 37 refs/0 missing.
 - Layanan: wfs-hq & wfs-office active; :9503 200, :8787 /api/health 200. Produksi & dist tidak diubah.
 - Sisa backlog: (a) cutover gateway :8787→Docker (persetujuan user); (b) saas-dibantuin push; (d) keputusan omniroute.
+
+## 2026-11-08 23:00 WIB — Siklus 302: backlog (b) saas-dibantuin push — lokal commit 4479d11 siap, push diblokir deploy key
+
+- Repo lokal ~/wfs-office/saas-dibantuin: 66 file untracked (backend FastAPI, widget, frontend, docs, deploy) di-commit jadi 4479d11 di branch main (di atas 943bbfb HEAD==GET).
+- Push ke git@github.com:wawanwfs/saas-dibantuin.git GAGAL: "Repository not found" — deploy key yang terpasang di VM hanya ter-autentikasi sebagai wawanwfs/AI-Office (scoped per-repo), token GITHUB_TOKEN di .env kosong/dikomentari (API 401).
+- Butuh tindakan user: buat repo GitHub wawanwfs/saas-dibantuin + daftarkan deploy key (read/write) untuk repo itu, atau sediakan token PAT. Setelah itu `git push origin main` cukup satu perintah.
+- Gate rutin AI-Office tidak diubah siklus ini; produksi & dist tidak tersentuh.
+- Sisa backlog: (a) cutover gateway :8787→Docker (persetujuan user); (b) push saas-dibantuin (menunggu repo+key dari user — lokal siap); (d) keputusan omniroute.
