@@ -35,8 +35,10 @@ def _approve_origin(base,allowed_hosts):
         pass
     else:
         raise ProviderStreamDenied("literal IP destination not approved")
-    if not parsed.path.rstrip("/").endswith("/v1"):
-        raise ProviderStreamDenied("only the operator-configured /v1 chat API is supported")
+    # Block arbitrary path prefixes such as /private/v1 even when the
+    # hostname is allowlisted. Standard public API versions are explicit.
+    if parsed.path.rstrip("/") not in ("/v1","/api/v1"):
+        raise ProviderStreamDenied("only vetted /v1 or /api/v1 chat APIs are supported")
     return host,base.rstrip("/")+"/chat/completions"
 
 
