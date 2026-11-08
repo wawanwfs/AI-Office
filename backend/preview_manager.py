@@ -16,6 +16,7 @@ import subprocess
 from project_rbac import ident
 from preview_admission import ReviewedPreviewAdmission, AdmissionDenied
 from preview_authority import SignedPreviewAuthority
+from preview_snapshot import ReviewedPreviewSnapshot
 
 
 class PreviewDenied(PermissionError):
@@ -49,6 +50,8 @@ class TemplatePreviewManager:
             raise PreviewDenied("private registry parent is not provisioned")
         self.docker=docker
         self.runner=runner or subprocess.run
+        self.snapshots=ReviewedPreviewSnapshot(
+            template.parent, self.registry.parent, self.reviewed_manifest)
         with closing(self._db()) as db:
             db.executescript("""
                 CREATE TABLE IF NOT EXISTS wfs_preview_instances(
@@ -162,7 +165,10 @@ class TemplatePreviewManager:
         env.update({"WFS_PREVIEW_PROJECT_NAME":record["compose_name"],
                     "WFS_PREVIEW_HOST_PORT":str(record["port"]),
                     "WFS_PREVIEW_TEST_TOKEN":token})
-        argv=[self.docker,"compose","-f",str(self.template),*args]
+        # Compose's relative build context and bind mounts resolve under the
+        # private, reviewed snapshot. Never point Docker at mutable checkout.
+        staged_compose=self.snapshots.verify(record["project_id"])
+        argv=[self.docker,"compose","-f",str(staged_compose),*args]
         try:
             result=self.runner(argv,env=env,capture_output=True,text=True,
                                timeout=timeout,check=False)
@@ -179,6 +185,9 @@ class TemplatePreviewManager:
         if record["phase"] in ("running","uncertain"):
             raise PreviewDenied("preview is active or uncertain; reconcile before retry")
         self._claim_transition(project_id,("reserved","stopped"))
+        # Copies only previously approved bytes into a project-scoped directory;
+        # abort if ANY source changed during the copy.
+        self.snapshots.stage(project_id)
         self._invoke(record,token,["up","-d","--build"],timeout=240)
         self._phase(project_id,"running")
         return self.status(project_id)
@@ -207,4 +216,5 @@ class TemplatePreviewManager:
         self._claim_transition(project_id,("running","uncertain","reserved"))
         self._invoke(record,token,["down","--volumes","--remove-orphans"])
         self._phase(project_id,"stopped")
+        self.snapshots.discard_after_authorized_stop(project_id)
         return self.status(project_id)
