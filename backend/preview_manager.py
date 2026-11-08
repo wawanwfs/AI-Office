@@ -213,7 +213,11 @@ class TemplatePreviewManager:
             raise PreviewDenied("explicit disposable volume deletion approval required")
         if record["phase"]=="stopped":
             return record
-        self._claim_transition(project_id,("running","uncertain","reserved"))
+        if record["phase"]=="reserved":
+            # Never started, so there is no Docker volume to delete.
+            self._phase(project_id,"stopped")
+            return self.status(project_id)
+        self._claim_transition(project_id,("running","uncertain"))
         self._invoke(record,token,["down","--volumes","--remove-orphans"])
         self._phase(project_id,"stopped")
         self.snapshots.discard_after_authorized_stop(project_id)
