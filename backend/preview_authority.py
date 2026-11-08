@@ -10,7 +10,7 @@ import json
 import re
 
 from preview_admission_v2 import AdmissionDenied
-from preview_signature import _read_trusted, canonical_review_bytes, verify_review_signature
+from preview_signature import _read_trusted, verify_review_signature
 
 _SHA256 = re.compile(r"[a-f0-9]{64}\Z")
 
@@ -90,7 +90,11 @@ class SignedPreviewAuthority:
         """
         from cryptography.hazmat.primitives import serialization
         from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
-        key = serialization.load_pem_public_key(_read_trusted(self.public_key_path, 4096))
+        try:
+            key = serialization.load_pem_public_key(
+                _read_trusted(self.public_key_path, 4096))
+        except (ValueError, TypeError) as exc:
+            raise AdmissionDenied("reviewer public key malformed") from exc
         if not isinstance(key, Ed25519PublicKey):
             raise AdmissionDenied("only Ed25519 reviewer keys accepted")
         raw = key.public_bytes(serialization.Encoding.Raw,
