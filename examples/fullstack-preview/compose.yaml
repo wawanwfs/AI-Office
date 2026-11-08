@@ -1,5 +1,5 @@
 # Disposable CI proof ONLY. Do NOT deploy to production or expose ports.
-name: wfs-phase5-preview-demo
+name: ${WFS_PREVIEW_PROJECT_NAME:-wfs-phase5-preview-demo}
 services:
   db:
     image: postgres:16-alpine
@@ -48,7 +48,7 @@ services:
     tmpfs:
       - /tmp:rw,nosuid,nodev,noexec,size=32m
     ports:
-      - "127.0.0.1:18765:8000"
+      - "127.0.0.1:${WFS_PREVIEW_HOST_PORT:-18765}:8000"
     environment:
       DATABASE_URL: postgresql://wfsdemo:test-only-disposable@db:5432/wfsdemo
       WFS_PREVIEW_TEST_TOKEN: "${WFS_PREVIEW_TEST_TOKEN:?ephemeral token required}"

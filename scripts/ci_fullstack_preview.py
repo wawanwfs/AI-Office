@@ -13,12 +13,15 @@ import httpx
 import websockets
 from playwright.async_api import async_playwright
 
-BASE="http://127.0.0.1:18765"
+BASE=os.environ.get("WFS_PREVIEW_BASE","http://127.0.0.1:18765")
 TOKEN=os.environ.get("WFS_PREVIEW_TEST_TOKEN")
 if not TOKEN or len(TOKEN)<32:
     raise SystemExit("CI-only preview bearer missing")
 auth={"Authorization":"Bearer "+TOKEN}
-target=Path("artifacts/fullstack-preview")
+label=os.environ.get("WFS_PREVIEW_EVIDENCE_LABEL","")
+if label and (not label.isascii() or not label.isalnum() or len(label)>24):
+    raise SystemExit("Invalid preview evidence label")
+target=Path("artifacts/fullstack-preview")/label
 target.mkdir(parents=True,exist_ok=True)
 
 with httpx.Client(timeout=5) as client:
@@ -35,6 +38,9 @@ with httpx.Client(timeout=5) as client:
     assert h.json()["services"]==["React/Vite","FastAPI","PostgreSQL"]
     assert client.get(BASE+"/api/db").status_code==401
     assert client.get(BASE+"/api/db",headers={"X-Principal":"owner"}).status_code==401
+    other=os.environ.get("WFS_PREVIEW_OTHER_TOKEN")
+    if other:
+        assert client.get(BASE+"/api/db",headers={"Authorization":"Bearer "+other}).status_code==401
     db=client.get(BASE+"/api/db",headers=auth)
     assert db.status_code==200 and db.json()=={"postgres_query":1,"synthetic":False}
     stream=client.get(BASE+"/api/events",headers=auth)
@@ -50,7 +56,7 @@ with httpx.Client(timeout=5) as client:
     ticket=t.json()["ticket"]
 
 async def check_ws():
-    url="ws://127.0.0.1:18765/api/ws"
+    url=BASE.replace("http://","ws://",1)+"/api/ws"
     async with websockets.connect(url,subprotocols=["wfs.preview.v1",ticket],
                                   open_timeout=8,close_timeout=5) as ws:
         message=json.loads(await asyncio.wait_for(ws.recv(),timeout=8))
@@ -67,7 +73,7 @@ asyncio.run(check_ws())
 async def check_ws_denied():
     # Tickets are not accepted in URL queries, and forged identity headers
     # never grant a WebSocket connection. No fallback unauthenticated socket.
-    uri="ws://127.0.0.1:18765/api/ws"
+    uri=BASE.replace("http://","ws://",1)+"/api/ws"
     candidates=[
         (uri,["wfs.preview.v1"]),
         (uri+"?ticket="+ticket,["wfs.preview.v1",ticket]),
@@ -132,7 +138,8 @@ report={"react_vite_build":True,"fastapi_live":True,"postgresql_live_query":1,
         "auth_denies_missing_bearer":True,
         "sse_live_database":True,"websocket_ticket_one_use":True,
         "artifact_download":True,"screenshots":["desktop-fullstack.png","mobile-fullstack.png"],
-        "host":"127.0.0.1:18765","production_deployment":False,
+        "host":BASE,"production_deployment":False,
+        "cross_preview_token_denied":bool(os.environ.get("WFS_PREVIEW_OTHER_TOKEN")),
         "real_docker_limits_verified":runtime_limits_verified,
         "unauthenticated_ws_rejected":True,
         "not_a_multi_tenant_preview_manager":True}

@@ -226,13 +226,26 @@ jobs:
         run: |
           set -euo pipefail
           mkdir -p artifacts/fullstack-preview
-          export WFS_PREVIEW_TEST_TOKEN="$(python -c 'import secrets;print(secrets.token_urlsafe(32))')"
+          alpha_token="$(python -c 'import secrets;print(secrets.token_urlsafe(32))')"
+          bravo_token="$(python -c 'import secrets;print(secrets.token_urlsafe(32))')"
           cleanup() {
-            docker compose -f examples/fullstack-preview/compose.yaml logs --no-color > artifacts/fullstack-preview/compose-logs.txt 2>&1 || true
-            docker compose -f examples/fullstack-preview/compose.yaml down --volumes --remove-orphans || true
+            WFS_PREVIEW_PROJECT_NAME=wfs-preview-alpha WFS_PREVIEW_HOST_PORT=18765 WFS_PREVIEW_TEST_TOKEN="$alpha_token" docker compose -f examples/fullstack-preview/compose.yaml logs --no-color > artifacts/fullstack-preview/alpha-compose-logs.txt 2>&1 || true
+            WFS_PREVIEW_PROJECT_NAME=wfs-preview-bravo WFS_PREVIEW_HOST_PORT=18766 WFS_PREVIEW_TEST_TOKEN="$bravo_token" docker compose -f examples/fullstack-preview/compose.yaml logs --no-color > artifacts/fullstack-preview/bravo-compose-logs.txt 2>&1 || true
+            WFS_PREVIEW_PROJECT_NAME=wfs-preview-alpha WFS_PREVIEW_HOST_PORT=18765 WFS_PREVIEW_TEST_TOKEN="$alpha_token" docker compose -f examples/fullstack-preview/compose.yaml down --volumes --remove-orphans || true
+            WFS_PREVIEW_PROJECT_NAME=wfs-preview-bravo WFS_PREVIEW_HOST_PORT=18766 WFS_PREVIEW_TEST_TOKEN="$bravo_token" docker compose -f examples/fullstack-preview/compose.yaml down --volumes --remove-orphans || true
           }
           trap cleanup EXIT
+          export WFS_PREVIEW_PROJECT_NAME=wfs-preview-alpha WFS_PREVIEW_HOST_PORT=18765 WFS_PREVIEW_TEST_TOKEN="$alpha_token"
           docker compose -f examples/fullstack-preview/compose.yaml up -d --build
+          export WFS_PREVIEW_PROJECT_NAME=wfs-preview-bravo WFS_PREVIEW_HOST_PORT=18766 WFS_PREVIEW_TEST_TOKEN="$bravo_token"
+          docker compose -f examples/fullstack-preview/compose.yaml up -d --build
+          export WFS_PREVIEW_PROJECT_NAME=wfs-preview-alpha WFS_PREVIEW_HOST_PORT=18765 WFS_PREVIEW_TEST_TOKEN="$alpha_token"
+          export WFS_PREVIEW_BASE=http://127.0.0.1:18765 WFS_PREVIEW_EVIDENCE_LABEL=alpha
+          export WFS_PREVIEW_OTHER_TOKEN="$bravo_token"
+          python scripts/ci_fullstack_preview.py
+          export WFS_PREVIEW_PROJECT_NAME=wfs-preview-bravo WFS_PREVIEW_HOST_PORT=18766 WFS_PREVIEW_TEST_TOKEN="$bravo_token"
+          export WFS_PREVIEW_BASE=http://127.0.0.1:18766 WFS_PREVIEW_EVIDENCE_LABEL=bravo
+          export WFS_PREVIEW_OTHER_TOKEN="$alpha_token"
           python scripts/ci_fullstack_preview.py
       - name: Save full-stack proof and browser screenshots
         if: always()
