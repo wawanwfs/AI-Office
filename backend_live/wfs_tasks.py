@@ -24,10 +24,27 @@ DEPLOY: python3 scripts/apply_wfs_tasks.py --apply
 JANGAN mengedit ~/wfs-office/tasks.py langsung — drift gate vitest akan FAIL.
 """
 import sqlite3, json, os, time, threading, httpx, re
+from contextvars import ContextVar
+from urllib.parse import urlsplit
 from pathlib import Path
 
-DB = os.path.join(os.path.dirname(os.path.abspath(__file__)), "tasks.db")
-REPO = os.path.expanduser("~/wfs-office/saas-dibantuin")
+DB = os.path.abspath(os.path.expanduser(os.environ.get(
+    "WFS_TASKS_DB", os.path.join(os.path.dirname(os.path.abspath(__file__)), "tasks.db"))))
+REPO = os.path.expanduser(os.environ.get(
+    "WFS_TASK_WORKSPACE", "~/wfs-office/saas-dibantuin"))
+# Set ONLY inside an explicitly enabled standalone worker. Never filled by
+# public HTTP routes or direct legacy calls. ContextVars isolate async tasks.
+_WFS_BILLING_CONTEXT = ContextVar("wfs_billing_context", default=None)
+
+
+def _require_worker_fence():
+    ctx = _WFS_BILLING_CONTEXT.get()
+    if ctx is None:
+        return
+    queue, claim = ctx["queue"], ctx["claim"]
+    if not queue.verify_lease(claim["id"], claim["worker_id"], claim["lease_token"]):
+        raise PermissionError("worker lease expired, cancelled or fenced off")
+
 Path(REPO).mkdir(parents=True, exist_ok=True)
 
 def db():
@@ -286,9 +303,33 @@ async def call_llm(agent_id, sys_prompt, user_prompt):
     key = cfg.get("key") or DEFAULT_AI["key"]
     model = cfg.get("model") or DEFAULT_AI["model"]
     last_err = None
-    async with httpx.AsyncClient(timeout=300) as cl:
+    billing = _WFS_BILLING_CONTEXT.get()
+    if billing is not None:
+        _require_worker_fence()
+        # No DNS-based trust inference: the operator must explicitly allow
+        # the destination origin, and only HTTPS is accepted in worker mode.
+        parsed = urlsplit(base)
+        allow = {x.strip().lower() for x in
+                 os.environ.get("WFS_AI_ALLOWED_HOSTS", "").split(",") if x.strip()}
+        if (parsed.scheme != "https" or parsed.username or parsed.password or
+                parsed.hostname is None or parsed.hostname.lower() not in allow):
+            raise PermissionError("AI provider origin is not in the HTTPS allowlist")
+    async with httpx.AsyncClient(timeout=300, follow_redirects=False) as cl:
         for attempt in range(2):
+            reservation = None
             try:
+                _require_worker_fence()
+                if billing is not None:
+                    # Reserved prompt tokens use UTF-8 byte length as a
+                    # conservative admission estimate. A model with unusual
+                    # tokenization remains guarded by the overage ledger state.
+                    messages = [{"role":"system","content":sys_prompt},
+                                {"role":"user","content":user_prompt}]
+                    prompt_upper = len(json.dumps(messages,ensure_ascii=False).encode("utf-8"))
+                    reservation = billing["ledger"].reserve(
+                        billing["project_id"],billing["task_id"],agent_id,
+                        parsed.hostname.lower(),model,
+                        prompt_tokens=prompt_upper,max_completion_tokens=60000)
                 # Siklus 245 — reasoning_effort "low": model 'auto' (GLM)
                 # terbukti memakan 17K+ token untuk reasoning lalu kehabisan
                 # token sebelum menulis jawaban final (content kosong).
@@ -299,7 +340,20 @@ async def call_llm(agent_id, sys_prompt, user_prompt):
                           "reasoning_effort": "low",
                           "messages":[{"role":"system","content":sys_prompt},
                                       {"role":"user","content":user_prompt}]})
-                d = r.json()
+                try:
+                    d = r.json()
+                except Exception:
+                    if reservation is not None:
+                        billing["ledger"].mark_uncertain(reservation,
+                            "provider response not valid JSON")
+                    raise
+                if reservation is not None:
+                    # Even 4xx and blank outputs can be billed; no usage
+                    # means uncertain cost, not a free request.
+                    billing["ledger"].settle(reservation,d.get("usage"))
+                    _require_worker_fence()
+                if r.status_code != 200:
+                    raise RuntimeError(f"provider HTTP {r.status_code}")
                 msg = d.get("choices",[{}])[0].get("message",{})
                 content = (msg.get("content") or "").strip()
                 if content:
@@ -318,6 +372,13 @@ async def call_llm(agent_id, sys_prompt, user_prompt):
                     continue
                 last_err = RuntimeError("empty content: "+str(d)[:200])
             except Exception as e:
+                if billing is not None:
+                    if reservation is not None:
+                        billing["ledger"].mark_uncertain(reservation,
+                            f"request result uncertain: {type(e).__name__}")
+                    # Never auto-repeat a possibly billable request. This
+                    # includes timeouts and missing usage: money stays held.
+                    raise
                 last_err = e
     raise last_err or RuntimeError("no output")
 
@@ -338,6 +399,7 @@ def _contained_file(root, relative):
         return None
 
 def write_json_files(task_id, output):
+    _require_worker_fence()
     """Parse JSON array [{path, code}] / {"files":[...]} → tulis file. Return list path atau None."""
     import json as _json
     txt = output.strip()
@@ -403,12 +465,14 @@ def write_json_files(task_id, output):
         fp = _contained_file(REPO, path)
         if fp is None:
             continue
+        _require_worker_fence()
         fp.parent.mkdir(parents=True, exist_ok=True)
         fp.write_text(code)
         written.append(path)
     return written or None
 
 def write_output_files(task_id, output):
+    _require_worker_fence()
     """Parse '### FILE: path ```...```' → tulis file nyata, return list path"""
     written = []
     if FILE_RE_SPLIT not in output:
@@ -440,6 +504,7 @@ def write_output_files(task_id, output):
         fp = _contained_file(REPO, path)
         if fp is None:
             continue  # safety
+        _require_worker_fence()
         fp.parent.mkdir(parents=True, exist_ok=True)
         fp.write_text(body)
         written.append(path)
@@ -555,11 +620,13 @@ async def run_task(tid, attempt_no=0):
 
 
 async def _execution_llm(tid, *args):
+    _require_worker_fence()
     import asyncio
     if is_paused():
         raise asyncio.CancelledError()
     require_launch_approval(get_task(tid)['project'])
     result = await call_llm(*args)
+    _require_worker_fence()
     if is_paused():
         raise asyncio.CancelledError()
     require_launch_approval(get_task(tid)['project'])
