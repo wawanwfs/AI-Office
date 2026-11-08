@@ -130,10 +130,10 @@ def parse_qa_verdict(review):
     - Pola teks prompt: "VERDICT: pass" / "VERDICT: revise" (case-insensitive)
     - Pola JSON: {"verdict": "pass"} / {"verdict": "revise"}
     - Pola awalan: kata pertama baris diawali 'pass' atau 'revise'
-    Fallback aman: 'pass'.
+    Fallback fail-closed: 'revise' (ambiguous is NOT a passing QA verdict).
     """
     if not review or not isinstance(review, str):
-        return "pass"
+        return "revise"
     m = re.search(r'(?:verdict\s*[:=]\s*["\']?|["\']verdict["\']\s*:\s*["\'])(pass|revise)["\']?', review, re.IGNORECASE)
     if m:
         return m.group(1).lower()
@@ -142,7 +142,8 @@ def parse_qa_verdict(review):
         return "revise"
     if first_line.startswith("pass"):
         return "pass"
-    return "pass"
+    # Ambiguous QA is never evidence of success.
+    return "revise"
 
 def add_project(name, brief):
     c = db()
@@ -640,13 +641,15 @@ async def _execute_task(tid, attempt_no=0):
         # QA review utk task kode — mulai dari hasil test sandbox (bukti objektif)
         if t["role"] in ("backend","backend2","frontend","frontend2","devops"):
             test_evidence = ""
+            sandbox_tests_passed = False
             try:
                 import sandbox_exec
                 tr = sandbox_exec.run_tests_in_sandbox(t["agent_id"], timeout=90)
-                if "collected" in tr.get("output","") or "passed" in tr.get("output","") or "error" in tr.get("output",""):
-                    test_evidence = f"\n\nHASIL TEST SANDBOX (ok={tr['ok']}):\n{tr['output'][:1500]}"
-            except Exception:
-                pass
+                sandbox_tests_passed = tr.get("ok") is True
+                test_evidence = (f"\n\nHASIL TEST SANDBOX (ok={sandbox_tests_passed}):\n"
+                                 f"{str(tr.get('output', ''))[:1500]}")
+            except Exception as exc:
+                test_evidence = f"\n\nHASIL TEST SANDBOX: unavailable ({type(exc).__name__})"
             # Siklus 242 — QA WAJIB tahu deliverable nyata: tanpa file kode
             # (hanya placeholder 'no files produced') task TIDAK boleh pass.
             _code_files = [f for f in (files or [])
@@ -663,8 +666,8 @@ async def _execute_task(tid, attempt_no=0):
                 ROLE_SYS['qa'],
                 f"Review task ini: '{t['title']}'. Output agent:\n\n{result_out[:6000]}{test_evidence}{files_note}\n\nNilai layak/pass atau perlu revisi.")
             verdict = parse_qa_verdict(review)
-            if not _code_files:
-                verdict = "revise"  # hard guard: tanpa file kode = tidak pernah pass
+            if not _code_files or not sandbox_tests_passed:
+                verdict = "revise"  # no code or failed/unavailable objective tests -> never pass
             set_status(tid, 'done' if verdict=='pass' else 'review',
                        review=review[:3000])
             if verdict != "pass" and attempt_no < 1:

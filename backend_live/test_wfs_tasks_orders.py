@@ -180,9 +180,9 @@ def test_parse_qa_verdict_json_and_edge_cases():
     assert tasks.parse_qa_verdict("Revise - test sandbox gagal pada endpoint auth") == "revise"
     assert tasks.parse_qa_verdict("Pass - implementasi sesuai spesifikasi") == "pass"
     # Fallback aman jika kosong / non-string / output ambigu
-    assert tasks.parse_qa_verdict("") == "pass"
-    assert tasks.parse_qa_verdict(None) == "pass"
-    assert tasks.parse_qa_verdict("Teks penjelasan bebas tanpa putusan tegas") == "pass"
+    assert tasks.parse_qa_verdict("") == "revise"
+    assert tasks.parse_qa_verdict(None) == "revise"
+    assert tasks.parse_qa_verdict("Teks penjelasan bebas tanpa putusan tegas") == "revise"
 
 
 def test_parse_qa_verdict_closes_prompt_regex_discrepancy():
@@ -334,3 +334,9 @@ def test_get_task_full_detail_has_prompt_and_result(tmp_tasks_db):
     assert row2["prompt"] == "buat login + JWT refresh"  # brief tak tertimpa
 
     assert tasks.get_task(999999) is None
+
+
+def test_qa_ambiguous_cannot_auto_pass():
+    """No explicit approval in a QA text means a review, not a success."""
+    for invalid in ("", None, "All good, probably", "Need additional tests"):
+        assert tasks.parse_qa_verdict(invalid) == "revise"
