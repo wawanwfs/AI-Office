@@ -9,6 +9,7 @@ import subprocess
 import time
 import urllib.request
 import json
+from html import escape as html_escape
 try:
     from .database import get_db, log_event
 except (ImportError, ValueError):
@@ -55,6 +56,10 @@ class DockerSandboxManager:
         ws = cls.get_workspace_path(project_id)
         os.makedirs(ws, exist_ok=True)
 
+        # Names and stack values come from user/LLM input: never interpolate as HTML.
+        safe_name = html_escape(str(name), quote=True)
+        safe_type = html_escape(str(project_type).upper(), quote=True)
+        safe_stack = html_escape(str(tech_stack), quote=True)
         index_file = os.path.join(ws, "index.html")
         if not os.path.exists(index_file):
             content = f"""<!DOCTYPE html>
@@ -62,7 +67,7 @@ class DockerSandboxManager:
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{name} — WFS PROJECT Software House</title>
+    <title>{safe_name} — WFS PROJECT Software House</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         body {{ background-color: #0B0F17; color: #F8FAFC; font-family: system-ui, -apple-system, sans-serif; }}
@@ -76,18 +81,18 @@ class DockerSandboxManager:
             <span class="text-xl font-bold tracking-wider text-white">WFS PROJECT</span>
             <span class="text-xs px-2.5 py-0.5 rounded-full bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 font-mono">LIVE PREVIEW</span>
         </div>
-        <div class="text-xs text-slate-400 font-mono">{project_type.upper()} · {tech_stack}</div>
+        <div class="text-xs text-slate-400 font-mono">{safe_type} · {safe_stack}</div>
     </header>
 
     <main class="max-w-4xl mx-auto px-6 py-16 text-center">
         <div class="inline-block px-4 py-1.5 rounded-full bg-blue-500/10 border border-blue-500/20 text-blue-400 text-sm font-medium mb-6">
-            Autonomous AI Software House Artifact
+            Project Scaffold Preview
         </div>
         <h1 class="text-5xl font-extrabold tracking-tight mb-6 bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-            {name}
+            {safe_name}
         </h1>
         <p class="text-lg text-slate-400 mb-10 max-w-2xl mx-auto leading-relaxed">
-            Aplikasi ini dibangun secara otomatis dan berjalan di dalam Docker Sandbox terisolasi WFS PROJECT.
+            Ini adalah scaffold proyek awal WFS PROJECT, bukan bukti aplikasi telah dikembangkan atau diuji.
         </p>
 
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6 text-left">
@@ -104,13 +109,13 @@ class DockerSandboxManager:
             <div class="glass p-6 rounded-2xl">
                 <div class="text-purple-400 font-mono text-sm mb-2">03. QUALITY</div>
                 <h3 class="text-white font-semibold text-lg mb-2">Auto Verified</h3>
-                <p class="text-slate-400 text-sm">Diverifikasi secara otomatis oleh agent QA, Security, dan Code Reviewer.</p>
+                <p class="text-slate-400 text-sm">Jalankan test, review, dan security scan sebelum menganggap proyek selesai.</p>
             </div>
         </div>
     </main>
 
     <footer class="border-t border-slate-800 glass px-6 py-4 text-center text-xs text-slate-500 font-mono">
-        Built autonomously by WFS PROJECT Multi-Agent System · Status: Active Healthy
+        WFS PROJECT · Template awal · Status build & QA belum diverifikasi
     </footer>
 </body>
 </html>

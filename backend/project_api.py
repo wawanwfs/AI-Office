@@ -17,7 +17,7 @@ def project_snapshot():
     snap = {
         "project": "WFS PROJECT",
         "tasks": {"done": 0, "pending": 0, "running": 0, "failed": 0, "review": 0, "total": 0, "recent": []},
-        "saas": {"online": True, "stats": {"projects": 0, "tasks": 0}},
+        "saas": {"online": None, "stats": None},
         "agents": [],
         "omniroute": {"online": False, "port": 20128},
         "updated": int(now),

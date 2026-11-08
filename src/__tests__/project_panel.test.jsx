@@ -167,4 +167,17 @@ describe('ProjectPanel', () => {
     expect(within(footer).getByText('Esc')).toBeTruthy()
     expect(within(footer).getByText('P')).toBeTruthy()
   })
+
+  it('SaaS tanpa health check tidak boleh tampil online atau offline palsu', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => ({
+      ok: true, status: 200, json: async () => ({
+        ...DATA, saas: { online: null, stats: null },
+      }),
+    })))
+    render(<ProjectPanel />)
+    openPanel()
+    expect(await screen.findByText(/Status backend SaaS belum diverifikasi/)).toBeTruthy()
+    expect(screen.queryByText(/Backend online/)).toBeNull()
+    expect(screen.queryByText(/Backend SaaS tidak merespons/)).toBeNull()
+  })
 })

@@ -95,6 +95,11 @@ class TestProjectApiBuckets(unittest.TestCase):
         self.assertEqual(t["pending"], 2)
         self.assertEqual(t["total"], 8)
 
+    def test_saas_unproven_must_not_be_online(self):
+        snap = self._snapshot_with_db([("task-1", "T", "ready", 1.0, "x")])
+        self.assertIsNone(snap["saas"]["online"])
+        self.assertIsNone(snap["saas"]["stats"])
+
     def test_unknown_status_falls_to_pending(self):
         """Status tak dikenal → pending (bukan hilang dari total)."""
         rows = [("t1", "A", "queued", 1.0, "x"), ("t2", "B", "weird-status", 2.0, "x")]

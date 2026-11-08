@@ -120,3 +120,18 @@ def test_scaffold_idempoten_tidak_menimpa_file_ada(tmp_path, monkeypatch):
 
     DockerSandboxManager.scaffold_project("p2", "Nama Baru")
     assert index.read_text(encoding="utf-8") == "KONTEN KUSTOM"
+
+
+def test_scaffold_html_escapes_untrusted_project_metadata(tmp_path, monkeypatch):
+    monkeypatch.setattr(docker_sandbox, "PROJECTS_ROOT", str(tmp_path))
+    DockerSandboxManager.scaffold_project(
+        "safe", '<img src=x onerror="alert(1)">',
+        project_type='<script>alert(2)</script>',
+        tech_stack='<svg onload="alert(3)">',
+    )
+    html = (tmp_path / "safe" / "index.html").read_text(encoding="utf-8")
+    assert "<img" not in html
+    assert "<script>alert(2)</script>" not in html
+    assert "<svg" not in html
+    assert "&lt;img" in html
+    assert "Status build & QA belum diverifikasi" in html

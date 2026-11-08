@@ -158,7 +158,7 @@ export default function ProjectPanel() {
 
                 {/* SaaS live */}
                 <label className="note">Produk SaaS (live)</label>
-                {S.online ? (
+                {S.online === true ? (
                   <div style={{ background: 'rgba(16,229,160,.08)', border: '1px solid rgba(16,229,160,.25)', borderRadius: 10, padding: '8px 12px', margin: '6px 0 14px' }}>
                     <div className="note" style={{ color: '#10E5A0', fontWeight: 600 }}>● Backend online</div>
                     <div className="note" style={{ marginTop: 4 }}>
@@ -168,8 +168,14 @@ export default function ProjectPanel() {
                       Tenant: {(S.tenants || []).map(t => t.name).join(', ') || '—'}
                     </div>
                   </div>
-                ) : (
+                ) : S.online === false ? (
                   <div className="msg err" style={{ margin: '6px 0 14px' }}>Backend SaaS tidak merespons</div>
+                ) : (
+                  <div className="note" role="status" style={{
+                    margin: '6px 0 14px', padding: '10px 12px',
+                    borderRadius: 10, border: '1px solid rgba(216,187,132,.3)',
+                    background: 'rgba(216,187,132,.07)', color: '#d8bb84',
+                  }}>Status backend SaaS belum diverifikasi — tidak ada bukti health check.</div>
                 )}
 
                 {/* Sandbox agent */}
