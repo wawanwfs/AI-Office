@@ -69,3 +69,28 @@ jobs:
           path: artifacts/browser/
           if-no-files-found: warn
           retention-days: 14
+
+  docker-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+      - name: Verify real Docker daemon on isolated CI host
+        run: docker info >/dev/null
+      - name: Pull pinned-version Python sandbox image
+        run: docker pull python:3.11-alpine
+      - name: Real sandbox isolation and cleanup tests
+        run: PYTHONPATH=backend python scripts/ci_docker_sandbox_smoke.py
+      - name: Save runtime security evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase4-docker-runtime-proof
+          path: artifacts/docker/
+          if-no-files-found: warn
+          retention-days: 14
