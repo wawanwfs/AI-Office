@@ -364,3 +364,65 @@ def test_reject_bogus_payload_and_symlink_journal(service,tmp_path):
     with pytest.raises(AdmissionDenied,match="unsafe"):
         ReferenceLog(link,service["key"])
     service["proc"]=_launch(service["journal"],service["pem"],port)
+
+
+
+def test_live_journal_tamper_denies_all_new_signatures(service):
+    port=service["port"]
+    _add(port,1)
+    saved=service["journal"].read_bytes()
+    # A same-UID attacker can still edit local bytes (NOT physical WORM),
+    # but any later head issue or append must stop until reconciled.
+    service["journal"].write_bytes(saved[:-1])
+    try:
+        assert _request(port,"/v1/head")[0]==503
+        assert _request(port,"/v1/inventory")[0]==503
+        assert _request(port,"/v1/proof?previous_size=0")[0]==503
+        assert _request(port,"/v1/append",data={
+            "receipt_sha256":"a"*64, "expected_size":1,
+            "expected_root_sha256":"b"*64})[0]==409
+    finally:
+        service["journal"].write_bytes(saved)
+    assert _request(port,"/v1/head")[0]==200
+
+
+def test_signing_key_fork_alarm_from_two_local_services(service,tmp_path):
+    first, _ = _add(service["port"],1)
+    archive=service["journal"].read_bytes()
+    _, signed = _add(service["port"],2)
+    genuine_pin=_check_signed_head(signed,service["key"])
+    old_root=merkle_root([bytes.fromhex(first)]).hex()
+    public=tmp_path/"externally-archived-public.pem"
+    public.write_bytes(_public_bytes(service["key"]))
+
+    # Simulate a malicious alternate branch signed by the SAME key.
+    # Its size can match, but independently pinned latest head hash MUST
+    # differ and the separate verifier refuses the fork.
+    competing=tmp_path/"forked-journal.jsonl"
+    competing.write_bytes(archive)
+    fake=ReferenceLog(competing,service["key"])
+    fake.append(hashlib.sha256(b"hostile-fork").hexdigest(),1,old_root)
+    fork_port=_port()
+    fork_proc=_launch(competing,service["pem"],fork_port)
+    try:
+        with pytest.raises(AssertionError,match="independent verifier failed"):
+            _client(fork_port,public,genuine_pin,
+                    _fingerprint(service["key"]),old_root)
+    finally:
+        _terminate(fork_proc)
+    assert _client(service["port"],public,genuine_pin,
+                   _fingerprint(service["key"]),old_root)["size"]==2
+
+
+def test_posix_signer_permissions_are_enforced(service):
+    if os.name!="posix":
+        pytest.skip("POSIX mode bits are not Windows ACLs")
+    from reference_transparency_log import serve_reference
+    pem=service["pem"]
+    pem.chmod(0o644)
+    try:
+        with pytest.raises(AdmissionDenied,match="permissions too broad"):
+            serve_reference(journal_path=service["journal"],
+                            private_pem_path=pem,token=TOKEN)
+    finally:
+        pem.chmod(0o600)
