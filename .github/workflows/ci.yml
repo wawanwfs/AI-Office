@@ -94,3 +94,31 @@ jobs:
           path: artifacts/docker/
           if-no-files-found: warn
           retention-days: 14
+
+  security-static:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --no-cache-dir bandit==1.8.6
+      - name: Medium/high severity static analysis of Phase 4 security paths
+        run: |
+          mkdir -p artifacts/security
+          python -m compileall -q backend backend_live
+          bandit -r -ll -f json -o artifacts/security/bandit.json \
+            backend/master_queue.py backend/master_worker.py \
+            backend/cost_ledger.py backend/project_rbac.py \
+            backend/secure_control_api.py backend/sandbox_runtime.py
+      - name: Upload scoped static scan report
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase4-scoped-sast
+          path: artifacts/security/
+          if-no-files-found: warn
+          retention-days: 14
