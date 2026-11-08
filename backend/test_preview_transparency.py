@@ -147,7 +147,9 @@ def test_tree_inventory_edit_or_reorder_fails_against_signed_root(log):
 def test_tree_current_signed_head_repinned_but_old_signature_denied(log):
     original=log["head"].read_bytes()
     changed=json.loads(original)
-    changed["tree_size"]=1
+    # Keep tree size valid so a re-pinned forged head reaches the Ed25519
+    # signature verification instead of the earlier rollback-size guard.
+    changed["root_sha256"]="f"*64
     log["head"].write_text(json.dumps(changed,sort_keys=True))
     try:
         with pytest.raises(AdmissionDenied,match="tree head changed"):
