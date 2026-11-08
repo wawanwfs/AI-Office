@@ -10,6 +10,7 @@ from preview_signature import canonical_review_bytes
 from preview_root_authority import canonical_roster_bytes
 from preview_witness import SignedReviewerCheckpoint, canonical_checkpoint_bytes
 from preview_transparency import (SignedTransparencyEvidence, canonical_tree_head, merkle_root)
+from preview_compact_merkle import make_inclusion_path, make_consistency_path
 from preview_authority import SignedPreviewAuthority
 from types import SimpleNamespace
 import pytest
@@ -65,6 +66,15 @@ def synthetic_signed_log(root, receipt_path, label, previous=None):
     sig=root/("test-log-head-"+label+".sig")
     inventory.write_text(json.dumps({
         "version":1,"receipt_digests":values},sort_keys=True))
+    digests=[bytes.fromhex(x) for x in values]
+    compact=root/("test-log-compact-"+label+".json")
+    compact.write_text(json.dumps({
+        "version":1,"tree_size":len(values),
+        "leaf_index":len(values)-1,"receipt_sha256":values[-1],
+        "inclusion":make_inclusion_path(digests,len(values)-1),
+        "previous_size":previous_size,
+        "consistency":make_consistency_path(digests,previous_size)
+    },sort_keys=True))
     head.write_text(json.dumps({
         "version":1,"tree_size":len(values),
         "root_sha256":merkle_root([bytes.fromhex(x) for x in values]).hex(),
@@ -75,7 +85,7 @@ def synthetic_signed_log(root, receipt_path, label, previous=None):
         serialization.Encoding.Raw,serialization.PublicFormat.Raw)).hexdigest()
     return SignedTransparencyEvidence(
         public_key_path=public,head_path=head,signature_path=sig,
-        inventory_path=inventory,
+        inventory_path=inventory,compact_proof_path=compact,
         trusted_head_sha256=hashlib.sha256(head.read_bytes()).hexdigest(),
         trusted_log_fingerprint=fingerprint,
         trusted_previous_size=previous_size,
