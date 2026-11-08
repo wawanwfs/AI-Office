@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import React from 'react'
-import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor, cleanup } from '@testing-library/react'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import SecureProjectPanel from '../components/SecureProjectPanel'
 
@@ -9,7 +9,7 @@ describe('Phase 5 secure project panel', () => {
     vi.stubGlobal('fetch', vi.fn())
     localStorage.clear()
   })
-  afterEach(() => { vi.unstubAllGlobals(); localStorage.clear() })
+  afterEach(() => { cleanup(); vi.unstubAllGlobals(); localStorage.clear() })
 
   it('requires scoped credentials and never persists token', async () => {
     render(<SecureProjectPanel />)
