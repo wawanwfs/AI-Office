@@ -47,10 +47,16 @@ class BriefIntakeKeys:
         return hashlib.sha256(
             ("wfs-intake-v1\0"+principal+"\0"+project+"\0"+key).encode()).hexdigest()
 
+    @staticmethod
+    def _fingerprint(payload):
+        if not isinstance(payload,dict) or set(payload)!={"title","brief","role"}:
+            raise ValueError("only canonical coding brief content may be reconciled")
+        return hashlib.sha256(json.dumps(payload,sort_keys=True,
+                      separators=(",",":"),ensure_ascii=False).encode()).hexdigest()
+
     def claim(self,principal,project,key,payload):
         digest=self._digest(principal,project,key)
-        fingerprint=hashlib.sha256(json.dumps(payload,sort_keys=True,
-                      separators=(",",":"),ensure_ascii=False).encode()).hexdigest()
+        fingerprint=self._fingerprint(payload)
         db=self.tokens._db()
         try:
             db.execute("BEGIN IMMEDIATE")
@@ -93,3 +99,71 @@ class BriefIntakeKeys:
             except BaseException:
                 db.rollback()
                 raise
+
+    def reconcile_existing(self,principal,project,key,payload,task_id,job_id,
+                           *,taskengine,queue,approved=False):
+        """Operator-only recovery after crash between task/queue and receipt.
+
+        NEVER creates or retries a job. Requires exact original brief,
+        linked existing engine task AND queue job, operator approval, and
+        matching durable pending receipt. Existing complete is idempotent.
+        Task and queue are independent DBs: caller must hold their writers
+        quiescent for a coherent reconciliation.
+        """
+        if approved is not True:
+            raise IntakeConflict("local operator approval required")
+        principal=ident(principal)
+        project=ident(project)
+        digest=self._digest(principal,project,key)
+        fingerprint=self._fingerprint(payload)
+        if payload["role"] not in ("backend","backend2"):
+            raise IntakeConflict("only explicitly admitted Python code roles")
+        if isinstance(task_id,bool) or not isinstance(task_id,int) or task_id<1:
+            raise ValueError("valid positive task ID required")
+        job_id=ident(job_id)
+        # Inspect old durable data; no mutation or worker dispatch permitted.
+        task=taskengine.get_task(task_id)
+        job=queue.get(job_id)
+        if (not isinstance(task,dict) or task.get("id")!=task_id or
+            task.get("project")!=project or
+            task.get("role")!=payload["role"] or
+            task.get("title")!=payload["title"] or
+            task.get("prompt")!=payload["brief"] or
+            not isinstance(job,dict) or job.get("id")!=job_id or
+            job.get("project_id")!=project or job.get("task_id")!=str(task_id) or
+            job.get("role")!=payload["role"] or job.get("max_attempts")!=1):
+            raise IntakeConflict("existing task and queue job do not match brief")
+        db=self.tokens._db()
+        try:
+            db.execute("BEGIN IMMEDIATE")
+            record=db.execute("""SELECT principal,project_id,request_sha256,
+                                 state,task_id,job_id FROM wfs_brief_receipts
+                                 WHERE digest=?""",(digest,)).fetchone()
+            if (record is None or record["principal"]!=principal or
+                record["project_id"]!=project or
+                record["request_sha256"]!=fingerprint):
+                raise IntakeConflict("matching receipt not found; no mutation")
+            if record["state"]=="complete":
+                if (record["task_id"]!=str(task_id) or
+                    record["job_id"]!=job_id):
+                    raise IntakeConflict("receipt already points to another job")
+                recovered=False
+            elif record["state"]=="pending":
+                cur=db.execute("""UPDATE wfs_brief_receipts
+                    SET state='complete',task_id=?,job_id=?,updated_at=?
+                    WHERE digest=? AND state='pending'
+                    AND principal=? AND project_id=? AND request_sha256=?""",
+                    (str(task_id),job_id,float(self.tokens.clock()),
+                     digest,principal,project,fingerprint))
+                if cur.rowcount!=1:
+                    raise IntakeConflict("pending receipt could not be finalized")
+                recovered=True
+            else:
+                raise IntakeConflict("unknown receipt state")
+            db.commit()
+            return {"recovered":recovered,"task_id":task_id,"job_id":job_id}
+        except BaseException:
+            db.rollback()
+            raise
+        finally:
+            db.close()
