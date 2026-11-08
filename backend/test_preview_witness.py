@@ -12,6 +12,7 @@ from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric import ed25519, rsa
 
 from preview_admission_v2 import AdmissionDenied
+from preview_compact_merkle import make_inclusion_path, make_consistency_path
 from preview_witness import SignedReviewerCheckpoint, canonical_checkpoint_bytes
 from preview_transparency import (SignedTransparencyEvidence, canonical_tree_head, merkle_root)
 
@@ -56,6 +57,15 @@ def proof(tmp_path):
     leaves = [digest]
     log_inventory.write_text(json.dumps(
         {"version":1,"receipt_digests":leaves},sort_keys=True))
+    log_compact=tmp_path/"transparency-compact.json"
+    leaf_bytes=[bytes.fromhex(digest)]
+    log_compact.write_text(json.dumps({
+        "version":1,"tree_size":1,"leaf_index":0,
+        "receipt_sha256":digest,
+        "inclusion":make_inclusion_path(leaf_bytes,0),
+        "previous_size":0,
+        "consistency":make_consistency_path(leaf_bytes,0),
+    },sort_keys=True))
     log_head.write_text(json.dumps({
         "version":1,"tree_size":1,
         "root_sha256":merkle_root([bytes.fromhex(digest)]).hex(),
@@ -64,7 +74,7 @@ def proof(tmp_path):
         log_key.sign(canonical_tree_head(log_head.read_bytes()))))
     transparency = SignedTransparencyEvidence(
         head_path=log_head,signature_path=log_sig,public_key_path=log_pem,
-        inventory_path=log_inventory,
+        inventory_path=log_inventory,compact_proof_path=log_compact,
         trusted_head_sha256=hashlib.sha256(log_head.read_bytes()).hexdigest(),
         trusted_log_fingerprint=_fingerprint(log_key),
         trusted_previous_size=0,
