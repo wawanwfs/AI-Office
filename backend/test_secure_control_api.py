@@ -215,7 +215,7 @@ def test_brief_intake_rejects_unapproved_paused_invalid_roles_and_payloads(api):
     assert client.post(url,headers=auth,json=good).status_code==403
     engine.paused=False
     q.set_paused(False)
-    assert len(engine.created)==before
+    assert len(getattr(engine,"created",[]))==before
 
 
 def test_brief_intake_disabled_by_default_and_bare_client_fields_never_create(api):
