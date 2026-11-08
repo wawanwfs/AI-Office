@@ -4,12 +4,11 @@ import hashlib
 from types import SimpleNamespace
 import pytest
 from preview_manager import TemplatePreviewManager,PreviewDenied
-from preview_admission import AdmissionDenied,REVIEWED_FILES
+from preview_admission import AdmissionDenied,REVIEWED_FILES,candidate_manifest_for_ci_only
 
 
 def hashes(directory):
-    return {name:hashlib.sha256((directory/name).read_bytes()).hexdigest()
-            for name in REVIEWED_FILES}
+    return candidate_manifest_for_ci_only(directory)
 
 
 @pytest.fixture
@@ -21,6 +20,24 @@ def preview(tmp_path):
     for name in REVIEWED_FILES:
         if name!="compose.yaml":
             (folder/name).write_text("reviewed disposable fixture: "+name)
+    compose.write_text(
+        "services:\n  db:\n    image: postgres:16-alpine@sha256:"
+        "721873c34ceb9f8d8fc265984940dc982404c105f19ad51be9fdc5970a6080ea\n"
+        "  ingress:\n    image: python:3.11-alpine@sha256:"
+        "bb1d70c1df30d8ee1e05214dbe82d6cdfd29833c1f47ce917f20991aca93acaa\n"
+    )
+    (folder/"Dockerfile.api").write_text(
+        "FROM python:3.11-alpine@sha256:"
+        "bb1d70c1df30d8ee1e05214dbe82d6cdfd29833c1f47ce917f20991aca93acaa\n"
+    )
+    (tmp_path/"package-lock.json").write_text('{"lockfileVersion":3}')
+    out=tmp_path/"artifacts"/"fullstack-preview"
+    (out/"dist"/"assets").mkdir(parents=True)
+    (out/"dist"/"index.html").write_text("<html><body>trusted</body></html>")
+    (out/"dist"/"assets"/"app.js").write_text("console.log('trusted')")
+    (out/"sbom.cdx.json").write_text(
+        '{"bomFormat":"CycloneDX","components":[{"name":"fixture","version":"1"}]}'
+    )
     calls=[]
     def runner(argv,**kwargs):
         calls.append((argv,kwargs))
@@ -165,7 +182,7 @@ def test_reviewed_template_rejects_digest_mismatch_before_construction(preview):
     manager,calls=preview
     folder=manager.template.parent
     approved=hashes(folder)
-    approved["api.py"]="0"*64
+    approved["sources"]["api.py"]="0"*64
     with pytest.raises(AdmissionDenied,match="changed"):
         TemplatePreviewManager(folder/"other-registry.db",manager.template,
             enabled=True,reviewed_files=approved)
@@ -183,4 +200,76 @@ def test_reviewed_runtime_symlink_denied_before_docker(preview):
         pytest.skip("host cannot create symlinks without elevated permission")
     with pytest.raises(AdmissionDenied,match="unsafe"):
         manager.start("alpha",19010,"X"*43)
+    assert calls==[]
+
+
+def test_phase8_frontend_mutation_is_rejected_before_docker(preview):
+    manager,calls=preview
+    manager.reserve("alpha",19010)
+    dist=manager.template.parent.parent.parent/"artifacts"/"fullstack-preview"/"dist"
+    (dist/"assets"/"app.js").write_text("injected bundle")
+    with pytest.raises(AdmissionDenied,match="frontend content changed"):
+        manager.start("alpha",19010,"X"*43)
+    assert calls==[]
+    assert manager.status("alpha")["phase"]=="uncertain"
+
+
+def test_phase8_unlisted_new_frontend_asset_denied(preview):
+    manager,calls=preview
+    dist=manager.template.parent.parent.parent/"artifacts"/"fullstack-preview"/"dist"
+    (dist/"assets"/"extra.js").write_text("unreviewed")
+    with pytest.raises(AdmissionDenied,match="inventory changed"):
+        manager.start("alpha",19010,"X"*43)
+    assert calls==[]
+
+
+def test_phase8_lock_and_sbom_mutations_denied(preview):
+    manager,calls=preview
+    repo=manager.template.parent.parent.parent
+    for path in (repo/"package-lock.json",
+                 repo/"artifacts"/"fullstack-preview"/"sbom.cdx.json"):
+        previous=path.read_bytes()
+        path.write_bytes(b"tampered")
+        with pytest.raises(AdmissionDenied,match="lock changed|SBOM changed"):
+            manager.admission.verify()
+        path.write_bytes(previous)
+    assert calls==[]
+
+
+def test_phase8_symlinked_asset_denied(preview):
+    manager,calls=preview
+    dist=manager.template.parent.parent.parent/"artifacts"/"fullstack-preview"/"dist"
+    (dist/"assets"/"app.js").unlink()
+    try:
+        (dist/"assets"/"app.js").symlink_to(dist/"index.html")
+    except OSError:
+        pytest.skip("host cannot create symlinks")
+    with pytest.raises(AdmissionDenied,match="symlink"):
+        manager.admission.verify()
+    assert calls==[]
+
+
+def test_phase8_old_unversioned_or_unpinned_manifests_denied(preview):
+    manager,calls=preview
+    folder=manager.template.parent
+    manifest=hashes(folder)
+    with pytest.raises(AdmissionDenied,match="version 2"):
+        TemplatePreviewManager(folder/"legacy.db",manager.template,enabled=True,
+                               reviewed_files=manifest["sources"])
+    manifest["images"]["db"]="postgres:16-alpine"
+    with pytest.raises(AdmissionDenied,match="manifest fields"):
+        TemplatePreviewManager(folder/"mutable.db",manager.template,enabled=True,
+                               reviewed_files=manifest)
+    assert calls==[]
+
+
+def test_phase8_broken_cyclonedx_is_denied_even_if_checksum_reapproved(preview):
+    manager,calls=preview
+    repo=manager.template.parent.parent.parent
+    sbom=repo/"artifacts"/"fullstack-preview"/"sbom.cdx.json"
+    sbom.write_text('{"bomFormat":"CycloneDX","components":[]}')
+    manifest=hashes(manager.template.parent)
+    with pytest.raises(AdmissionDenied,match="CycloneDX"):
+        TemplatePreviewManager(repo/"bad-bom.db",manager.template,enabled=True,
+                               reviewed_files=manifest)
     assert calls==[]
