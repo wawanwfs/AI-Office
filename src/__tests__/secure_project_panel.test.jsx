@@ -95,3 +95,46 @@ describe('Phase 6 real brief intake', () => {
     expect(request).not.toHaveBeenCalled()
   })
 })
+
+
+describe('Phase 7 actual QA, preview health and budget owner inspection', () => {
+  afterEach(() => { cleanup(); vi.unstubAllGlobals() })
+  it('requests only project-scoped authenticated endpoints and never displays fake preview', async () => {
+    const calls=vi.fn(async (url,opts) => {
+      const payload=url.endsWith('/jobs') ?
+        { jobs: [{id:'job-abc',role:'backend',status:'completed'}] } :
+        url.endsWith('/budget') ?
+          { approved:true,cap_microusd:100,remaining_microusd:30 } :
+        url.endsWith('/events') ? { events: [] } :
+        url.endsWith('/preview/api/health') ? { ok:true } :
+        url.endsWith('/billing/reconciliation') ?
+          {matched:1,requires_review:2,provider_invoice_verified:false} :
+        { tests_passed:3,files:[{path:'app/mathlib.py',sha256:'a'.repeat(64)}] }
+      return {ok:true,json:async()=>payload}
+    })
+    vi.stubGlobal('fetch',calls)
+    render(<SecureProjectPanel />)
+    fireEvent.click(screen.getByRole('button',{name:/Buka kontrol proyek/i}))
+    fireEvent.change(screen.getByLabelText('Project ID terautentikasi'),
+      {target:{value:'alpha'}})
+    fireEvent.change(screen.getByLabelText('Bearer token operator'),
+      {target:{value:'X'.repeat(43)}})
+    fireEvent.click(screen.getByRole('button',{name:/Muat data nyata/i}))
+    await waitFor(()=>expect(screen.getByText('job-abc')).toBeTruthy())
+    fireEvent.click(screen.getByRole('button',{name:/Bukti QA/i}))
+    await waitFor(()=>expect(screen.getByText(/Hasil QA: 3 tes lulus/)).toBeTruthy())
+    fireEvent.click(screen.getByRole('button',{name:/Periksa preview read-only/i}))
+    await waitFor(()=>expect(screen.getByText(/Preview health: server terhubung/)).toBeTruthy())
+    fireEvent.click(screen.getByRole('button',{name:/Audit invoice proyek/i}))
+    await waitFor(()=>expect(screen.getByText(/Invoice provider resmi: belum diverifikasi/)).toBeTruthy())
+    const urls=calls.mock.calls.map(([url])=>url)
+    expect(urls).toContain('/api/v4/projects/alpha/jobs/job-abc/artifacts')
+    expect(urls).toContain('/api/v4/projects/alpha/preview/api/health')
+    expect(urls).toContain('/api/v4/projects/alpha/billing/reconciliation')
+    for(const [url,options] of calls.mock.calls) {
+      expect(url).toMatch(/^\/api\/v4\/projects\/alpha\//)
+      expect(options.credentials).toBe('omit')
+      expect(options.headers.Authorization).toBe('Bearer '+'X'.repeat(43))
+    }
+  })
+})

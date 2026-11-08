@@ -3056,3 +3056,9 @@ button { font-family: inherit; }
 .wfs-secure-brief textarea:focus-visible,.wfs-secure-brief select:focus-visible{outline:2px solid var(--wfs-gold);outline-offset:2px}
 .wfs-secure-brief-footer{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
 @media(max-width:640px){.wfs-secure-brief-footer{flex-direction:column;align-items:stretch}.wfs-secure-brief-footer>*{width:100%}}
+
+.wfs-secure-inspector{margin:10px 0;padding:12px;border:1px solid rgba(202,177,238,.2);border-radius:12px;background:rgba(14,19,42,.62)}
+.wfs-secure-inspector>div:first-child{display:flex;gap:8px;flex-wrap:wrap}
+.wfs-secure-inspector p{color:var(--text-secondary);font-size:11px;overflow-wrap:anywhere;margin:10px 0}
+.wfs-secure-inspector strong{color:var(--wfs-gold-bright);font-size:12px}
+.wfs-secure-inspector code{font-size:10px}

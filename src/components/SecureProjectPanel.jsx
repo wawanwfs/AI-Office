@@ -23,6 +23,9 @@ export default function SecureProjectPanel() {
   const [jobs, setJobs] = useState(null)
   const [budget, setBudget] = useState(null)
   const [events, setEvents] = useState(null)
+  const [evidence, setEvidence] = useState(null)
+  const [previewCheck, setPreviewCheck] = useState(null)
+  const [invoiceCheck, setInvoiceCheck] = useState(null)
   const [busy, setBusy] = useState(false)
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
@@ -40,6 +43,9 @@ export default function SecureProjectPanel() {
     setJobs(null)
     setBudget(null)
     setEvents(null)
+    setEvidence(null)
+    setPreviewCheck(null)
+    setInvoiceCheck(null)
     setError('')
     setNotice('')
     setBusy(false)
@@ -100,6 +106,19 @@ export default function SecureProjectPanel() {
       } else if (kind === 'enqueue') {
         const result = await request('/tasks/' + encodeURIComponent(taskId) + '/enqueue', 'POST', ctrl)
         setNotice('Task masuk antrean: ' + result.job_id + '. Belum berarti sedang dieksekusi.')
+      } else if (kind === 'evidence') {
+        if (!SAFE_ID.test(value)) throw new Error('Job ID tidak valid.')
+        const result = await request('/jobs/' + encodeURIComponent(value) + '/artifacts', 'GET', ctrl)
+        setEvidence(result)
+        setNotice('Manifest QA terverifikasi untuk job ' + value + '. Tidak berarti preview aplikasi aktif.')
+      } else if (kind === 'preview') {
+        const result = await request('/preview/api/health', 'GET', ctrl)
+        setPreviewCheck(result)
+        setNotice('Healthcheck berasal dari backend preview yang diizinkan operator.')
+      } else if (kind === 'invoice') {
+        const result = await request('/billing/reconciliation', 'GET', ctrl)
+        setInvoiceCheck(result)
+        setNotice('Audit invoice hanya memeriksa bukti lokal; tidak membuktikan tagihan provider resmi.')
       } else if (kind === 'cancel') {
         if (!SAFE_ID.test(value)) throw new Error('Job ID tidak valid.')
         const result = await request('/jobs/' + encodeURIComponent(value) + '/cancel', 'POST', ctrl)
@@ -130,7 +149,7 @@ export default function SecureProjectPanel() {
       <div className="wfs-secure-heading">
         <div>
           <strong>WFS Secure Control</strong>
-          <small>Brief coding Python, antrean, budget, QA dan audit dari backend nyata · Phase 6</small>
+          <small>Brief coding, QA artifact, preview inspection & billing audit · backend nyata · Phase 7</small>
         </div>
         <button className="btn" onClick={() => expanded ? close() : setExpanded(true)}
           aria-expanded={expanded} aria-controls="wfs-secure-body">
@@ -187,6 +206,31 @@ export default function SecureProjectPanel() {
             <span>Cap: {budget.cap_microusd.toLocaleString('id-ID')} µUSD</span>
             <span>Sisa: {budget.remaining_microusd.toLocaleString('id-ID')} µUSD</span>
           </div>}
+          {jobs !== null && <div className="wfs-secure-inspector" aria-label="Inspeksi backend nyata">
+            <div>
+              <button className="btn" onClick={() => act('preview')} disabled={busy}>
+                Periksa preview read-only
+              </button>
+              <button className="btn" onClick={() => act('invoice')} disabled={busy}>
+                Audit invoice proyek
+              </button>
+            </div>
+            {previewCheck && <p role="status">
+              Preview health: {previewCheck.ok ? 'server terhubung' : 'server belum sehat'}.
+              Ini bukan preview kode AI yang baru dibuat.
+            </p>}
+            {invoiceCheck && <p role="status">
+              Rekonsiliasi lokal: {invoiceCheck.matched} cocok;
+              {' '}{invoiceCheck.requires_review} butuh pemeriksaan.
+              Invoice provider resmi: {invoiceCheck.provider_invoice_verified ? 'terverifikasi' : 'belum diverifikasi'}.
+            </p>}
+            {evidence && <div aria-label="Manifest QA terverifikasi">
+              <strong>Hasil QA: {evidence.tests_passed} tes lulus</strong>
+              {evidence.files.map(f => (
+                <p key={f.path}><code>{f.path}</code> · SHA256: <code>{f.sha256}</code></p>
+              ))}
+            </div>}
+          </div>}
           {jobs !== null && (
             <>
               <div className="wfs-secure-queue-head">
@@ -203,6 +247,9 @@ export default function SecureProjectPanel() {
                   <div key={job.id} className="wfs-secure-job">
                     <div><b>{job.role}</b> <span>{job.status}</span>
                       <small>{job.id}</small></div>
+                    {job.status === 'completed' &&
+                      <button className="btn" disabled={busy}
+                        onClick={() => act('evidence', job.id)}>Bukti QA</button>}
                     {(job.status === 'queued' || job.status === 'leased') &&
                       <button className="btn" disabled={busy}
                         onClick={() => act('cancel', job.id)}>Batalkan</button>}
