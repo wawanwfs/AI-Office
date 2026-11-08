@@ -1,4 +1,5 @@
 """Offline SQLite WAL backup, tamper, create-only rollback and fail-close."""
+import os
 import sqlite3
 from pathlib import Path
 import pytest
@@ -69,13 +70,18 @@ def test_corrupt_backup_cannot_restore_or_create_target(sample):
 def test_symlink_alias_and_path_traversal_denied(sample):
     root,source,con=sample
     try:
-        alias=root/"alias.db"
-        alias.symlink_to(source)
-        with pytest.raises(SnapshotDenied,match="ordinary"):
-            backup_sqlite({"queue":alias},root/"snap",approved=True)
         with pytest.raises(SnapshotDenied,match="name"):
             backup_sqlite({"../queue":source},root/"snap",approved=True)
         assert not (root/"snap").exists()
+        alias=root/"alias.db"
+        try:
+            alias.symlink_to(source)
+        except OSError as exc:
+            if os.name=="nt":
+                pytest.skip("Windows host disallows unprivileged symlink creation")
+            raise
+        with pytest.raises(SnapshotDenied,match="ordinary"):
+            backup_sqlite({"queue":alias},root/"snap",approved=True)
     finally:
         con.close()
 
@@ -100,7 +106,8 @@ def test_two_real_databases_back_up_to_independent_files(sample):
 def test_sqlite_uri_paths_with_spaces_query_and_hash_are_portable(tmp_path):
     directory=tmp_path/"Windows Data & Project"
     directory.mkdir()
-    source=directory/"finance?2026#source.db"
+    # '?' is forbidden in native Windows filenames; '#' and spaces remain URI-sensitive.
+    source=directory/("finance 2026#source.db" if os.name=="nt" else "finance?2026#source.db")
     with sqlite3.connect(source) as db:
         db.execute("CREATE TABLE audit(value TEXT)")
         db.execute("INSERT INTO audit VALUES(?)",("persisted",))

@@ -40,3 +40,19 @@ def test_http_gateway_image_contains_no_docker_cli_or_socket_bootstrap():
     assert "ADD https://" not in src
     assert "docker --version" not in src
     assert "COPY docker-entrypoint.sh" in src
+
+
+def test_disposable_preview_requires_internal_api_network_and_trusted_ingress():
+    content=_active_lines(ROOT/"examples/fullstack-preview/compose.yaml")
+    assert "internal: true" in content
+    assert "ingress-public:" in content
+    api=content.split("  api:",1)[1].split("  ingress:",1)[0]
+    ingress=content.split("  ingress:",1)[1].split("\nnetworks:",1)[0]
+    assert "ingress-public" not in api
+    assert "preview-internal" in api and "preview-edge" in api
+    assert "ingress-public" in ingress and "preview-edge" in ingress
+    assert "127.0.0.1:" in ingress and "127.0.0.1:" not in api
+    assert "read_only: true" in ingress
+    assert "no-new-privileges:true" in ingress
+    assert "sha256:" in ingress
+    assert "/var/run/docker.sock" not in content

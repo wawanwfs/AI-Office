@@ -313,3 +313,29 @@ jobs:
           path: artifacts/phase6-preview-manager/
           if-no-files-found: warn
           retention-days: 14
+
+  windows-native-offline-recovery:
+    runs-on: windows-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --no-cache-dir -r requirements-pytest.txt
+      - name: Windows native WAL backup, restore, auth and invoice validation
+        env:
+          PYTHONPATH: backend
+        run: |
+          New-Item -ItemType Directory -Force artifacts/windows-native | Out-Null
+          python -m pytest backend/test_recovery_snapshot.py backend/test_preview_proxy.py backend/test_billing_reconcile.py backend/test_secure_control_api.py -q --junitxml=artifacts/windows-native/pytest.xml
+      - name: Upload independent Windows Python evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase7-windows-native-recovery
+          path: artifacts/windows-native/
+          if-no-files-found: warn
+          retention-days: 14
