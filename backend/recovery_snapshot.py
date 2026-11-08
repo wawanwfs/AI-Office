@@ -16,7 +16,7 @@ import sqlite3
 import tempfile
 import time
 
-_NAME = re.compile(r"[a-z][a-z0-9_-]{0,31}\\Z")
+_NAME = re.compile(r"[a-z][a-z0-9_-]{0,31}\Z")
 _FORMAT = "wfs-sqlite-snapshot-v1"
 
 
@@ -116,8 +116,8 @@ def restore_sqlite(snapshot,destination,*,approved=False):
     except (OSError,ValueError) as exc:
         raise SnapshotDenied("invalid snapshot manifest") from exc
     files=manifest.get("files") if isinstance(manifest,dict) else None
-    if (manifest.get("format")!=_FORMAT or not isinstance(files,dict)
-            or not 1<=len(files)<=8):
+    if (not isinstance(manifest,dict) or manifest.get("format")!=_FORMAT
+            or not isinstance(files,dict) or not 1<=len(files)<=8):
         raise SnapshotDenied("unsupported snapshot format")
     final=_safe_dir(destination)
     verified={}
