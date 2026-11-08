@@ -1,3 +1,9 @@
+> **Phase 13 CI note:** The disposable operator now tests actual
+> DNS response packets from an isolated internal-only Docker DNS
+> container (not merely simulated address replacement).
+> See [Phase 13 runtime runbook](PHASE13_RUNTIME_RUNBOOK.md).
+> This does not expand the Phase 12 reviewer approval boundary.
+
 # Phase 12 — independent offline signature for reviewer-roster policy
 
 This is a **disposable local operator** security boundary only. Continue
