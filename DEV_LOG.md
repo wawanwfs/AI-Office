@@ -6143,3 +6143,9 @@
 - Fix (probe-only): fallback siklus 281 ditambahkan — bila __agentData kosong saat Runtime.enable → location.assign('/app/?mode=office') + Runtime.enable ulang; tes5 diperkuat polling 10 dtk (500ms interval) + diagnosis path. ev() di probe ini return value mentah (bukan dict) → cek tanpa .get('value').
 - Bukti: e2e_sw_update OK 2× beruntun (tes1-tes5 all true, agents=26, errors=0, banner+skip-waiting+controllerchange lengkap). Produksi scene/dist TIDAK berubah (probe-only) — build/vitest tidak dijalankan ulang.
 - Sisa backlog: (a) gateway :8787→Docker (menunggu keputusan user); (b) saas-dibantuin push GitHub; (d) keputusan omniroute :20128; penghapus wfs-hq tak teridentifikasi (backup harian aktif).
+## 2026-11-09 18:35 WIB — Siklus 290: DRIFT server.py/tasks.py :8787 KEMBALI DITEMBUS — commit 3bcc7b1/2460f3c (16:11–16:25) belum dideploy oleh sesi lain; vitest 2 fail → 0
+
+- vitest penuh menemukan 2 fail drift-gate: ~/wfs-office/server.py & tasks.py != sumber backend_live (root cause sama pola siklus 287: commit security/fitur di-commit dulu hari yang sama oleh sesi lain, live :8787 tidak disinkronkan). Delta: server.py — secure control plane /api/v4 opt-in (bearer, strict startup gates); tasks.py — _workspace_root() ContextVar per-job attempt workspace.
+- Deploy via apply script (backup bak-1794133481/bak-1794133488, smoke fase-1+fase-2 OK, pause tetap ON, AUTO-ROLLBACK tersedia): DEPLOY OK live==sumber 05a12924/95a9ca57.
+- Gate: vitest 251 file / 3633 passed + 6 skipped (0 fail) · build sukses · dist→~/wfs-hq diperbarui · e2e_err_probe OK (agents=26, 0 error, shot 705726 B, nonbg 0.992, hygiene 0 missing) · wfs-office & wfs-hq active.
+- Sisa backlog: (a) gateway :8787→Docker; (b) saas-dibantuin push GitHub; (d) keputusan omniroute; penghapus wfs-hq tak teridentifikasi.
