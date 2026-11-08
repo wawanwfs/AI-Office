@@ -11,7 +11,7 @@ import time
 
 import httpx
 import websockets
-from playwright.async_api import async_playwright
+from playwright.async_api import async_playwright, Error as PlaywrightError
 
 BASE=os.environ.get("WFS_PREVIEW_BASE","http://127.0.0.1:18765")
 TOKEN=os.environ.get("WFS_PREVIEW_TEST_TOKEN")
@@ -125,7 +125,18 @@ async def screenshots():
                 ("mobile",{"width":390,"height":844}),
             ):
                 page=await browser.new_page(viewport=viewport,device_scale_factor=1)
-                await page.goto(BASE,wait_until="networkidle",timeout=20000)
+                # Docker creates independent bridge networks immediately
+                # before Chromium opens the page. Linux can briefly emit
+                # ERR_NETWORK_CHANGED while routes settle. Retry ONLY that
+                # transient network event, still require real SQL proof.
+                for attempt in range(3):
+                    try:
+                        await page.goto(BASE,wait_until="domcontentloaded",timeout=20000)
+                        break
+                    except PlaywrightError as exc:
+                        if "ERR_NETWORK_CHANGED" not in str(exc) or attempt==2:
+                            raise
+                        await asyncio.sleep(0.5*(attempt+1))
                 await page.get_by_text("Live SELECT 1 succeeded").wait_for(timeout=12000)
                 assert "Full-Stack Preview Proof" in await page.title()
                 await page.screenshot(path=str(target/(label+"-fullstack.png")),
