@@ -34,6 +34,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: python -m pip install --no-cache-dir -r requirements-pytest.txt
+      - run: python -m pip install --no-cache-dir -r requirements-preview-crypto.txt
       - run: python -m pytest backend_live backend -q
 
   browser:
@@ -176,6 +177,8 @@ jobs:
       - run: python -m pip install --no-cache-dir pip-audit==2.9.0
       - name: Audit pinned Python dependency requirements
         run: pip-audit --requirement requirements-pytest.txt --format=json --output=artifacts/security/pip-audit.json
+      - name: Audit separately pinned preview reviewer crypto
+        run: pip-audit --requirement requirements-preview-crypto.txt --format=json --output=artifacts/security/preview-crypto-audit.json
       - name: Upload dependency vulnerability evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
@@ -272,6 +275,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: python -m pip install --no-cache-dir -r requirements-pytest.txt
+      - run: python -m pip install --no-cache-dir -r requirements-preview-crypto.txt
       - name: Authorized disposable Docker worker and pinned image
         run: |
           docker info >/dev/null
@@ -304,6 +308,7 @@ jobs:
       - run: npm ci
       - run: npx vite build --config examples/fullstack-preview/frontend/vite.config.mjs
       - run: python -m pip install --no-cache-dir -r requirements-pytest.txt
+      - run: python -m pip install --no-cache-dir -r requirements-preview-crypto.txt
       - name: Build trust-bound CycloneDX frontend SBOM for disposable review
         run: |
           mkdir -p artifacts/fullstack-preview
@@ -333,6 +338,7 @@ jobs:
         with:
           python-version: '3.11'
       - run: python -m pip install --no-cache-dir -r requirements-pytest.txt
+      - run: python -m pip install --no-cache-dir -r requirements-preview-crypto.txt
       - name: Windows native WAL backup, restore, auth and invoice validation
         env:
           PYTHONPATH: backend
