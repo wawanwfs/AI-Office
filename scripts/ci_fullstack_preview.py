@@ -103,7 +103,7 @@ def check_host_runtime_limits():
         assert cfg["Memory"]==memory
         assert cfg["NanoCpus"]==cpus
         assert "ALL" in [x.upper() for x in cfg["CapDrop"]]
-        assert "no-new-privileges" in cfg["SecurityOpt"]
+        assert any(option.startswith("no-new-privileges") for option in (cfg["SecurityOpt"] or []))
     return True
 
 
