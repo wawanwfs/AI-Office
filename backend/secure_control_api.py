@@ -15,7 +15,7 @@ import sqlite3
 import time
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Query, Response
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Literal
 
 try:
@@ -93,6 +93,7 @@ class CancelReply(BaseModel):
 
 
 class CodingBrief(BaseModel):
+    model_config = ConfigDict(extra="forbid")
     title:str=Field(min_length=3,max_length=120)
     brief:str=Field(min_length=30,max_length=12000)
     role:Literal["backend","backend2"]="backend"

@@ -168,6 +168,7 @@ def test_authenticated_brief_creates_real_task_and_durable_job_only_when_ready(a
     app.include_router(create_secure_router(queue=q,rbac=acl,ledger=ledger,
         tokens=tokens,taskengine=engine,code_qa_intake_enabled=True))
     client=TestClient(app)
+    q.set_paused(False)
     path="/api/v4/projects/alpha/briefs"
     body={"title":"Buat API inventori","brief":"Bangun aplikasi inventori dengan endpoint daftar barang dan pengujian unittest minimal.","role":"backend"}
     assert client.post(path,json=body).status_code==401
@@ -195,13 +196,14 @@ def test_brief_intake_rejects_unapproved_paused_invalid_roles_and_payloads(api):
     app.include_router(create_secure_router(queue=q,rbac=acl,ledger=ledger,
         tokens=tokens,taskengine=engine,code_qa_intake_enabled=True))
     client=TestClient(app)
+    q.set_paused(False)
     url="/api/v4/projects/alpha/briefs"
     auth=headers("alice")
     good={"title":"Proyek pengujian","brief":"Buat kode layanan berbasis Python dengan pengujian yang dapat dieksekusi.","role":"backend2"}
     for changes in ({"role":"frontend"},{"role":"devops"},{"brief":"short"},
                     {"title":"a"},{"project_id":"bravo"},{"command":"docker ps"}):
         body={**good,**changes}
-        expected=202 if "project_id" in changes or "command" in changes else 422
+        expected=422
         # Extra input fields have no authority; strict role and length validate.
         result=client.post(url,headers=auth,json=body)
         assert result.status_code==expected

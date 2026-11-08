@@ -171,7 +171,7 @@ export default function SecureProjectPanel() {
               </button>
             </div>
           </div>
-          {error && <p className="wfs-secure-error" role="alert">{error}</p>
+          {error && <p className="wfs-secure-error" role="alert">{error}</p>}
           {notice && <p className="wfs-secure-notice" role="status">{notice}</p>}
           {budget && <div className="wfs-secure-budget" aria-label="Budget proyek">
             <b>{budget.approved ? 'Approved' : 'Belum disetujui'}</b>

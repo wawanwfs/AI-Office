@@ -70,7 +70,7 @@ describe('Phase 6 real brief intake', () => {
       value: 'Bangun REST API inventori yang memiliki endpoint daftar barang dan unit tests.'
     } })
     fireEvent.click(screen.getByRole('button', { name: /Buat task & antrekan/i }))
-    await waitFor(() => expect(screen.getByText(/job-proof/)).toBeTruthy())
+    await waitFor(() => expect(screen.getAllByText(/job-proof/).length).toBeGreaterThan(0))
     const create = request.mock.calls.find(([url]) => url.endsWith('/briefs'))
     expect(create[0]).toBe('/api/v4/projects/alpha/briefs')
     expect(create[1].method).toBe('POST')
