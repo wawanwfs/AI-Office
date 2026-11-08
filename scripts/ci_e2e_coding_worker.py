@@ -173,6 +173,17 @@ for project in ("alpha","bravo"):
 assert len(calls)==10,len(calls)
 assert all(len(ledger.history(project))==5 for project in ("alpha","bravo"))
 
+# Publish the ACTUAL synthetic source produced by the legacy engine to the
+# CI evidence artifact. Read it only through the verified artifact store,
+# after queue completion and objective Docker QA, not directly from staging.
+output=Path("artifacts/e2e-worker")
+for project in ("alpha","bravo"):
+    job=q.get(jobs[project])
+    for relative in CODES:
+        destination=output/project/relative
+        destination.parent.mkdir(parents=True,exist_ok=True)
+        destination.write_bytes(store.read(project,job,relative))
+
 containers=__import__("subprocess").run(
     ["docker","ps","-a","--filter","name=wfs-sbx-","--format","{{.Names}}"],
     capture_output=True,text=True,check=True,timeout=15)
