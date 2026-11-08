@@ -116,6 +116,8 @@ def service(tmp_path):
     key = Ed25519PrivateKey.generate()
     pem = tmp_path / "reference-key.pem"
     pem.write_bytes(_key_bytes(key))
+    if os.name == "posix":
+        pem.chmod(0o600)
     journal = tmp_path / "reference-journal.jsonl"
     port = _port()
     proc = _launch(journal, pem, port)
