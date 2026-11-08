@@ -889,3 +889,89 @@ def test_phase14_absent_or_swapped_witness_is_not_valid_authority(preview,tmp_pa
             trusted_policy_sha256=manager.authority.trusted_policy_sha256,
             **root_args(manager.authority),witness_checkpoint=None)
     assert calls==[]
+
+
+
+def test_phase15_log_rejects_old_signed_witness_even_after_sqlite_restore(preview):
+    manager,calls=preview
+    policy=manager.authority.policy_path
+    original_policy=policy.read_bytes()
+    original_witness=manager.authority.witness_checkpoint
+    registry_backup=manager.registry.parent/"pre-log-upgrade.db"
+
+    with sqlite3.connect(manager.registry) as source, sqlite3.connect(
+            registry_backup) as saved:
+        source.backup(saved)
+
+    policy.write_text(json.dumps({
+        **json.loads(original_policy),"epoch":2},sort_keys=True))
+    resign_roster_for_synthetic_test(manager.authority)
+    current=issue_synthetic_test_checkpoint(manager.authority,"phase15-current")
+    assert current.transparency_evidence.trusted_previous_size==1
+    assert current.verify(
+        epoch=2,
+        policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),
+        reviewer_fingerprint=json.loads(policy.read_bytes())[
+            "active_fingerprints"][0],
+        roster_root_fingerprint=manager.authority.trusted_root_fingerprint,
+    )["transparency_tree_size"]==2
+
+    newer=SignedPreviewAuthority(
+        public_key_path=manager.authority.public_key_path,
+        signature_path=manager.authority.signature_path,
+        policy_path=policy,
+        trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),
+        **root_args(manager.authority),witness_checkpoint=current)
+    upgraded=TemplatePreviewManager(
+        manager.registry,manager.template,enabled=True,runner=manager.runner,
+        reviewed_files=manager.reviewed_manifest,reviewer_authority=newer)
+    upgraded.reserve("alpha",19010)
+    with sqlite3.connect(registry_backup) as saved, sqlite3.connect(
+            manager.registry) as target:
+        saved.backup(target)
+    # Replaying the old fully signed policy and a former signed witness
+    # cannot use the NEW independently pinned Merkle tree head.
+    policy.write_bytes(original_policy)
+    resign_roster_for_synthetic_test(manager.authority)
+    replay_witness=SignedReviewerCheckpoint(
+        public_key_path=original_witness.public_key_path,
+        receipt_path=original_witness.receipt_path,
+        signature_path=original_witness.signature_path,
+        trusted_receipt_sha256=original_witness.trusted_receipt_sha256,
+        trusted_witness_fingerprint=original_witness.trusted_witness_fingerprint,
+        transparency_evidence=current.transparency_evidence)
+    replay=SignedPreviewAuthority(
+        public_key_path=manager.authority.public_key_path,
+        signature_path=manager.authority.signature_path,
+        policy_path=policy,
+        trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),
+        **root_args(manager.authority),witness_checkpoint=replay_witness)
+    with pytest.raises(AdmissionDenied,match="not last transparency leaf"):
+        TemplatePreviewManager(
+            manager.registry,manager.template,enabled=True,
+            runner=manager.runner,reviewed_files=manager.reviewed_manifest,
+            reviewer_authority=replay)
+    assert calls==[]
+
+
+def test_phase15_tampering_signed_log_blocks_docker_commands(preview):
+    manager,calls=preview
+    token="X"*43
+    assert manager.start("alpha",19010,token)["phase"]=="running"
+    log=manager.authority.witness_checkpoint.transparency_evidence
+    before=len(calls)
+    original=log.inventory_path.read_bytes()
+    forged=json.loads(original)
+    forged["receipt_digests"][0]="f"*64
+    log.inventory_path.write_text(json.dumps(forged,sort_keys=True))
+    try:
+        with pytest.raises(AdmissionDenied,match="root mismatch"):
+            manager.logs("alpha",token)
+        with pytest.raises(AdmissionDenied,match="root mismatch"):
+            manager.restart("alpha",token)
+        with pytest.raises(AdmissionDenied,match="root mismatch"):
+            manager.stop("alpha",token,allow_data_loss=True)
+        assert len(calls)==before
+    finally:
+        log.inventory_path.write_bytes(original)
+    assert manager.stop("alpha",token,allow_data_loss=True)["phase"]=="stopped"
