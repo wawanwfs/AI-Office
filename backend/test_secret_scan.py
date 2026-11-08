@@ -5,7 +5,7 @@ from scripts.ci_secret_scan import inspect_bytes
 
 def test_high_confidence_secrets_are_rejected_without_echo():
     examples=[
-        b"-----BEGIN OPENSSH PRIVATE KEY-----",
+        b"-----" + b"BEGIN OPENSSH PRIVATE KEY-----",
         b"AKIA"+"X".encode()*16,
         b"ghp_" + b"A"*36,
         b"sk-proj-" + b"A"*48,
