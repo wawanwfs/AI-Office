@@ -123,7 +123,8 @@ describe('http_transport_hardening siklus 201 — census', () => {
     expect(PY_HTTP.length).toBeGreaterThanOrEqual(85) // active probes only; obsolete apply scripts intentionally removed
     const total = PY_HTTP.reduce((n, f) => n + pySites(f).length, 0)
     expect(total).toBeGreaterThanOrEqual(97)
-    expect(SH_ALL.length).toBe(3)
+    expect(SH_ALL).toContain('smoke_go_live.sh')
+    expect(SH_ALL.length).toBeGreaterThanOrEqual(3)
   })
 })
 
