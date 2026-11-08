@@ -85,7 +85,8 @@ def backup_sqlite(sources,destination,*,approved=False):
                     out.commit()
             os.chmod(target,0o600)
             _db_valid(target)
-            with open(target,"rb") as stream:
+            with open(target,"r+b") as stream:
+                # Windows requires a writable file descriptor for fsync.
                 os.fsync(stream.fileno())
             files[name]={"file":name+".sqlite3","sha256":_digest(target),
                          "bytes":target.stat().st_size}
@@ -146,7 +147,8 @@ def restore_sqlite(snapshot,destination,*,approved=False):
             target=stage/(name+".sqlite3")
             shutil.copyfile(source,target)
             os.chmod(target,0o600)
-            with open(target,"rb") as stream:
+            with open(target,"r+b") as stream:
+                # Windows requires a writable file descriptor for fsync.
                 os.fsync(stream.fileno())
             if _digest(target)!=files[name]["sha256"]:
                 raise SnapshotDenied("copy checksum mismatch")
