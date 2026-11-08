@@ -10,6 +10,7 @@ import re
 import secrets
 import subprocess
 import time
+import selectors
 
 _SAFE=re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,95}\Z")
 
@@ -117,23 +118,52 @@ class SandboxRuntime:
         argv=self.command(project_id,job_id,attempt,arguments,container_name=name)
         process=None
         began=time.monotonic()
+        # A malicious generated test may print indefinitely. Pipes must be
+        # drained without ever allocating unbounded host memory; after 4 MiB
+        # across both streams the container is forcibly terminated.
+        max_total=4*1024*1024
+        max_saved=16384
+        total=0
+        saved={"stdout":bytearray(),"stderr":bytearray()}
         try:
             process=subprocess.Popen(argv,stdout=subprocess.PIPE,
-                                     stderr=subprocess.PIPE,text=True)
-            while True:
-                fence()
-                if time.monotonic()-began>=timeout_seconds:
-                    return {"status":"timeout","returncode":None,"stdout":"",
-                            "stderr":"Docker sandbox deadline exceeded","container":name}
-                try:
-                    out,err=process.communicate(timeout=0.25)
+                                     stderr=subprocess.PIPE)
+            with selectors.DefaultSelector() as selector:
+                for kind,stream in (("stdout",process.stdout),
+                                    ("stderr",process.stderr)):
+                    os.set_blocking(stream.fileno(),False)
+                    selector.register(stream,selectors.EVENT_READ,kind)
+                while selector.get_map() or process.poll() is None:
                     fence()
-                    return {"status":"passed" if process.returncode==0 else "failed",
-                            "returncode":process.returncode,
-                            "stdout":str(out or "")[-16384:],
-                            "stderr":str(err or "")[-16384:],"container":name}
-                except subprocess.TimeoutExpired:
-                    continue
+                    if time.monotonic()-began>=timeout_seconds:
+                        return {"status":"timeout","returncode":None,"stdout":"",
+                                "stderr":"Docker sandbox deadline exceeded","container":name}
+                    for event,_ in selector.select(timeout=0.25):
+                        stream=event.fileobj
+                        try:
+                            chunk=os.read(stream.fileno(),8192)
+                        except BlockingIOError:
+                            continue
+                        if not chunk:
+                            selector.unregister(stream)
+                            continue
+                        total+=len(chunk)
+                        if total>max_total:
+                            return {"status":"output_limit","returncode":None,
+                                    "stdout":"","stderr":"Docker QA output limit exceeded",
+                                    "container":name}
+                        bucket=saved[event.data]
+                        bucket.extend(chunk)
+                        if len(bucket)>max_saved:
+                            del bucket[:-max_saved]
+            fence()
+            if process.returncode is None:
+                process.wait(timeout=3)
+            return {"status":"passed" if process.returncode==0 else "failed",
+                    "returncode":process.returncode,
+                    "stdout":saved["stdout"].decode("utf-8","replace"),
+                    "stderr":saved["stderr"].decode("utf-8","replace"),
+                    "container":name}
         finally:
             # A revoked lease is a physical container kill, not only a DB flag.
             try:
@@ -141,9 +171,13 @@ class SandboxRuntime:
                                text=True,timeout=15)
             except (subprocess.TimeoutExpired,OSError):
                 pass
-            if process is not None and process.poll() is None:
-                process.kill()
+            if process is not None:
+                if process.poll() is None:
+                    process.kill()
                 try:
-                    process.communicate(timeout=5)
+                    process.wait(timeout=5)
                 except subprocess.TimeoutExpired:
                     pass
+                for stream in (process.stdout,process.stderr):
+                    if stream is not None:
+                        stream.close()
