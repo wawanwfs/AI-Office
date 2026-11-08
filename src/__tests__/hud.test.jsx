@@ -92,4 +92,27 @@ describe('components/HUD', () => {
       vi.useRealTimers()
     }
   })
+
+  // Siklus 315: tab kembali visible → chip membaca segera (bukan menunggu
+  // sisa interval 10 dtk), sehingga tak menampilkan jam usang.
+  it('memperbarui chip jam nyata segera saat visibilitychange → visible', () => {
+    vi.setSystemTime(new Date(2026, 10, 9, 3, 42))
+    try {
+      vi.useFakeTimers()
+      render(<HUD {...baseProps} />)
+      const chip = screen.getByTitle('Jam nyata host (bukan waktu simulasi)')
+      expect(chip.textContent).toBe('03.42')
+      // tab disembunyikan, waktu berjalan → read() dilewati (gerbang visible)
+      Object.defineProperty(document, 'visibilityState', { value: 'hidden', configurable: true })
+      vi.setSystemTime(new Date(2026, 10, 9, 9, 5))
+      vi.advanceTimersByTime(30000)
+      expect(chip.textContent).toBe('03.42')
+      // kembali visible → update segera tanpa nunggu interval berikutnya
+      Object.defineProperty(document, 'visibilityState', { value: 'visible', configurable: true })
+      fireEvent(document, new Event('visibilitychange'))
+      expect(chip.textContent).toBe('09.05')
+    } finally {
+      vi.useRealTimers()
+    }
+  })
 })

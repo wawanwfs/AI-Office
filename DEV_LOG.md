@@ -6329,3 +6329,13 @@
 - Redeploy dist → ~/wfs-hq; bersihkan 8 orphan asset hash lama → e2e hygiene 13 hashed/0 orphan.
 - e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 704775 B, nonbg 0.991.
 - Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 2026-11-09 04:20 WIB — Siklus 315: chip jam host update segera saat tab kembali visible
+
+- Tanpa upstream baru (0 commit HEAD..origin/main). Lanjut polish chip jam host siklus 314: setelah tab lama disembunyikan lalu kembali visible, chip bisa menampilkan jam usang hingga 10 dtk (interval tidak membaca segera).
+- HUD.jsx: tambah listener 'visibilitychange' yang memanggil read() langsung (tetap digerbang visibleState); cleanup listener saat unmount.
+- +1 tes hud.test.jsx (hidden → chip beku di 03.42, visible kembali → segera 09.05 tanpa nunggu interval).
+- Build PWA OK; vitest 252 file / 3667 passed + 6 skipped, 0 fail (+1 tes vs siklus 314).
+- Redeploy dist → ~/wfs-hq; bersihkan 7 orphan asset hash lama → hygiene 13 hashed/0 orphan.
+- e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 707383 B, nonbg 0.992, hygiene 13 hashed/0 orphan.
+- Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

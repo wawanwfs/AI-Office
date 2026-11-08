@@ -37,7 +37,13 @@ export default function HUD({
     }
     read()
     const iv = setInterval(read, 10000)
-    return () => clearInterval(iv)
+    // Tab kembali terlihat setelah sembunyi lama: interval mungkin baru "bangun"
+    // di tengah periode → baca segera agar chip tidak menampilkan jam usang.
+    document.addEventListener('visibilitychange', read)
+    return () => {
+      clearInterval(iv)
+      document.removeEventListener('visibilitychange', read)
+    }
   }, [])
   const statusLabel = getAmbienceStatusLabel({ enabled: ambienceEnabled, muted, volume: ambienceVolume })
   const tooltipText = getAmbienceTooltip({ enabled: ambienceEnabled, muted, volume: ambienceVolume })
