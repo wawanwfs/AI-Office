@@ -29,8 +29,9 @@ def test_missing_budget_and_price_fail_closed(ledger):
 
 
 def test_reserve_caps_and_actual_usage_settlement(ledger):
-    ident=book(ledger)
-    assert ledger.summary("project-1")["committed_microusd"]==2_000_000
+    ident=ledger.reserve("project-1","task-1","agent-1","provider-a","model-a",
+                         prompt_tokens=100,max_completion_tokens=1_000_000)
+    assert ledger.summary("project-1")["committed_microusd"]==2_000_100
     value=ledger.settle(ident,{"prompt_tokens":100,"completion_tokens":500_000})
     assert value==1_000_100
     assert ledger.summary("project-1")["committed_microusd"]==1_000_100
