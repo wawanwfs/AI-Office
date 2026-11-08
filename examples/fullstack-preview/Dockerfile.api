@@ -1,6 +1,6 @@
 # Disposable CI-only FastAPI runtime. Pinned base and no root privileges.
 FROM python:3.11-alpine@sha256:bb1d70c1df30d8ee1e05214dbe82d6cdfd29833c1f47ce917f20991aca93acaa
-RUN python -m pip install --no-cache-dir fastapi==0.162.0 uvicorn==0.54.0 "psycopg[binary]==3.2.12"
+RUN python -m pip install --no-cache-dir fastapi==0.162.0 "uvicorn[standard]==0.54.0" "psycopg[binary]==3.2.12"
 WORKDIR /app
 COPY api.py /app/api.py
 USER 65534:65534
