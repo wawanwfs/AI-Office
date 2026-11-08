@@ -72,14 +72,14 @@ def reviewed_snapshot_runner(argv,**kwargs):
         race_proof["attempted"]=True
         try:
             live_api.write_bytes(b"raise SystemExit('UNAPPROVED DURING DOCKER BUILD')\\n")
-            result=subprocess.run(argv,**kwargs)
+            result=subprocess.run(argv,timeout=kwargs.pop("timeout",240),**kwargs)
             race_proof["staged_bytes_unchanged"]=(
                 staged.read_bytes()==original
             )
             return result
         finally:
             live_api.write_bytes(original)
-    return subprocess.run(argv,**kwargs)
+    return subprocess.run(argv,timeout=kwargs.pop("timeout",240),**kwargs)
 
 manager=TemplatePreviewManager(root/"registry.db",
     reviewed_root/"compose.yaml",enabled=True,reviewed_files=reviewed_files,
