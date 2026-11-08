@@ -25,6 +25,7 @@ from ci_phase13_real_dns_rebind import prove_real_docker_dns_rebinding
 from preview_authority import SignedPreviewAuthority
 from preview_signature import canonical_review_bytes
 from preview_root_authority import canonical_roster_bytes
+from preview_witness import SignedReviewerCheckpoint, canonical_checkpoint_bytes
 from preview_admission_v2 import AdmissionDenied
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
@@ -66,6 +67,29 @@ roster_root_sig.write_bytes(base64.b64encode(ci_roster_root.sign(
 roster_root_fp=hashlib.sha256(ci_roster_root.public_key().public_bytes(
     serialization.Encoding.Raw,serialization.PublicFormat.Raw)).hexdigest()
 assert roster_root_fp != fingerprint
+# A THIRD synthetic signer produces a separate currently pinned checkpoint.
+# This is only cryptographic CI; no external transparency service exists.
+ci_witness=Ed25519PrivateKey.generate()
+witness_pem=root/"synthetic-ci-witness-public.pem"
+witness_receipt=root/"synthetic-ci-witness-checkpoint.json"
+witness_sig=root/"synthetic-ci-witness-checkpoint.sig"
+witness_pem.write_bytes(ci_witness.public_key().public_bytes(
+    serialization.Encoding.PEM,serialization.PublicFormat.SubjectPublicKeyInfo))
+witness_fp=hashlib.sha256(ci_witness.public_key().public_bytes(
+    serialization.Encoding.Raw,serialization.PublicFormat.Raw)).hexdigest()
+assert witness_fp not in (fingerprint,roster_root_fp)
+witness_receipt.write_text(json.dumps({
+    "version":1,"epoch":1,
+    "policy_sha256":hashlib.sha256(original_policy).hexdigest(),
+    "roster_root_fingerprint":roster_root_fp,
+},sort_keys=True))
+witness_sig.write_bytes(base64.b64encode(ci_witness.sign(
+    canonical_checkpoint_bytes(witness_receipt.read_bytes()))))
+witness=SignedReviewerCheckpoint(
+    receipt_path=witness_receipt,signature_path=witness_sig,
+    public_key_path=witness_pem,
+    trusted_receipt_sha256=hashlib.sha256(witness_receipt.read_bytes()).hexdigest(),
+    trusted_witness_fingerprint=witness_fp)
 authority=SignedPreviewAuthority(
     public_key_path=reviewer_pem,
     signature_path=signature,
@@ -74,6 +98,7 @@ authority=SignedPreviewAuthority(
     root_public_key_path=roster_root_pem,
     root_signature_path=roster_root_sig,
     trusted_root_fingerprint=roster_root_fp,
+    witness_checkpoint=witness,
 )
 # Run a REAL Docker build against the staged Compose context while a
 # separate local write modifies the live checkout. The runner always restores
@@ -117,7 +142,8 @@ proof={"mode":"real-disposable-operator-template-preview",
        "dependency_lock_hash_checked":True,
        "all_runtime_image_references_immutable":True,
        "phase10_test_signature_only":"ephemeral synthetic CI identity; NOT independent review",
-       "phase12_roster_authority":"separate synthetic key, not an independently audited human/device"}
+       "phase12_roster_authority":"separate synthetic key, not an independently audited human/device",
+       "phase14_checkpoint_witness":"third synthetic signer and independently pinned receipt hash; not external append-only log"}
 names=("tenant-a","tenant-b")
 ports=(19010,19011)
 tokens=(token_a,token_b)
