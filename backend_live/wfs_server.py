@@ -1461,6 +1461,35 @@ async def chat(body: ChatIn):
 if SH_DB is None and _wfs_stats is not None:
     app.include_router(_wfs_stats.router)
 
+# ---------- Phase 4 secure HTTP control plane (explicit operator opt-in) ----------
+# The legacy API remains independent: enabling this adds a distinct, scoped
+# /api/v4 contract; it is NOT proof that all old HTTP routes have RBAC.
+# Deny startup if strict paid-route guards are not active.
+if os.environ.get("WFS_SECURE_CONTROL_API_ENABLED") == "YES":
+    if (os.environ.get("WFS_MASTER_QUEUE_REQUIRED") != "1" or
+            os.environ.get("WFS_METERING_REQUIRED") != "1"):
+        raise RuntimeError("Secure control API requires both legacy paid-route guards")
+    _secure_required = ("WFS_MASTER_QUEUE_DB", "WFS_COST_DB",
+                        "WFS_RBAC_DB", "WFS_AUTH_DB")
+    _missing_secure = [name for name in _secure_required if not os.environ.get(name)]
+    if _missing_secure:
+        raise RuntimeError("Secure control API requires configured private DB paths: " +
+                           ", ".join(_missing_secure))
+    # This import is intentionally NOT guarded: a missing security adapter must
+    # prevent a configured secure API from starting, never expose fallback URLs.
+    from secure_control_api import create_secure_router, TokenStore
+    from master_queue import DurableMasterQueue
+    from project_rbac import ProjectRBAC
+    from cost_ledger import CostLedger
+    app.include_router(create_secure_router(
+        queue=DurableMasterQueue(os.environ["WFS_MASTER_QUEUE_DB"],
+                                 max_per_project=1),
+        rbac=ProjectRBAC(os.environ["WFS_RBAC_DB"]),
+        ledger=CostLedger(os.environ["WFS_COST_DB"]),
+        tokens=TokenStore(os.environ["WFS_AUTH_DB"]),
+        taskengine=taskengine))
+
+
 # ---------- orders (satu sumber, siklus 208) ----------
 app.include_router(orders_router)
 
