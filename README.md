@@ -102,6 +102,25 @@ Untuk audit integrasi yang membutuhkan host live, lihat
 lanjutan lihat [laporan audit 2026-11-08](docs/AUDIT_2026-11-08.md).
 Jangan menyimpan key API di source maupun mem-publish Docker socket.
 
+## Phase 5 — Verified Python QA, Authenticated Streams & Disposable Fullstack
+
+Phase 5 validates **real Docker-based Python code QA**, per-attempt SHA-256
+artifact attestation, bounded worker output and cleanup on cancellation;
+**scoped bearer-authenticated** project control/SSE/WebSocket; and **two**
+disposable React/Vite + FastAPI + PostgreSQL preview stacks using separate
+Docker Compose projects, loopback ports and tokens in GitHub Actions.
+
+A separate, explicitly approved worker can process limited Python coding
+roles. The public HTTP gateway has **no Docker socket**; older unscoped APIs
+remain denied in strict mode. Added offline WAL-aware SQLite snapshots and
+create-only restore, with tamper/integrity tests. These are safety and
+rehearsal building blocks, **not** general-purpose production multi-tenant
+project deployment or live paid-provider validation.
+
+- [Phase 5 REA and measurable gates](docs/REA_PHASE5.md)
+- [Windows/Linux validation and recovery runbook](docs/PHASE5_RUNTIME_RUNBOOK.md)
+- [Phase 6 activation implementation prompt](docs/NEXT_PHASE6_PROMPT.md)
+
 ## Phase 4 — Isolated execution and secure project control
 
 Phase 4 adds **ContextVar-isolated per-attempt worker workspaces**, bounded
