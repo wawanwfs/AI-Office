@@ -6416,3 +6416,13 @@
 - Redeploy dist → ~/wfs-hq via deploy.py (9503: 200). Probe pertama FAIL hygiene (7 orphan dari deploy aditif) → prune eksplisit offline (scripts/deploy.prune_orphan_assets) → 13 hashed/0 orphan.
 - e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 689107 B, nonbg 0.992, hygiene 13/0.
 - Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 2026-11-09 07:58 WIB — Siklus 324: poller status utama App refresh SEGERA saat tab kembali visible
+
+- Upstream: fast-forward ke origin/main 50ef347 (Phase16 compact RFC6962 Merkle, backend/docs saja — tanpa sentuhan UI).
+- Celah terakhir paritas visible-refresh (pola 315-323) yang nyaris terlewat: poller status utama App.jsx (tasks+paused, siklus adaptif 15 dtk sehat / backoff eksponensial hingga 80 dtk) memakai STALE_AFTER_MS saat tab hidden tapi TANPA listener 'visibilitychange' — setelah tab lama disembunyikan lalu kembali visible, status header + notifikasi perubahan task bisa usang hingga timeout terpanjang berjalan penuh.
+- App.jsx: listener 'visibilitychange' → clearTimeout timer berjalan + tick() + schedule ulang SEGERA saat kembali visible (guard `alive`), cleanup removeEventListener saat unmount. Re-audit grep seluruh setInterval/addEventListener('visibilitychange'): kini semua poller scene/API/central punya pasangan gate+listener.
+- +1 file tes visibility_parity_324.test.jsx (3 kasus: hidden→visible fetch SEGERA; visible→visible tepat satu tick dari listener tanpa fetch ganda; unmount melepas listener).
+- Build PWA OK; vitest 259 file / 3699 passed + 6 skipped, 0 fail (+3 tes vs 323; +4 file tes dari upstream Phase16).
+- Redeploy dist → ~/wfs-hq; probe pertama FAIL hygiene (7 orphan deploy aditif) → prune_orphan_assets() offline → 13 hashed/0 orphan.
+- e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 689634 B, nonbg 0.992, hygiene 13/0.
+- Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

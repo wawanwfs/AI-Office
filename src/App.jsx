@@ -349,10 +349,16 @@ export default function App() {
     const on = () => { flash('Koneksi kembali'); tick() }
     window.addEventListener('offline', off)
     window.addEventListener('online', on)
+    // Siklus 324: saat tab lama disembunyikan scheduler memakai STALE_AFTER_MS,
+    // sehingga begitu kembali visible status bisa basi hingga timeout terpanjang
+    // (backoff hingga 80 dtk) berjalan penuh. Refresh SEGERA saat kembali visible.
+    const onVis = () => { if (alive && document.visibilityState === 'visible') { clearTimeout(timer); tick(); schedule() } }
+    document.addEventListener('visibilitychange', onVis)
     return () => {
       alive = false
       clearTimeout(timer)
       clearInterval(iv)
+      document.removeEventListener('visibilitychange', onVis)
       // eslint-disable-next-line react-hooks/exhaustive-deps -- bump generasi rid saat unmount memang disengaja (guard async), bukan membaca snapshot ref
       pollRid.current++ // guard: respons poll in-flight setelah unmount tak menulis state
       window.removeEventListener('offline', off)
