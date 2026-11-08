@@ -53,7 +53,12 @@ services:
         condition: service_healthy
     networks:
       - preview-internal
+      - preview-edge
 
 networks:
   preview-internal:
     internal: true
+  # API edge is connected only to loopback-published port, not the DB.
+  # This disposable demo does not yet prove API egress firewall isolation.
+  preview-edge:
+    driver: bridge
