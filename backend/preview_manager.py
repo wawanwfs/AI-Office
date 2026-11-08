@@ -6,6 +6,7 @@ separate operator/worker host with Docker rights; the HTTP gateway NEVER
 imports or exposes this module. No client/LLM controls flags/images/volumes.
 """
 from contextlib import closing
+import copy
 import hashlib
 import os
 from pathlib import Path
@@ -14,6 +15,7 @@ import subprocess
 
 from project_rbac import ident
 from preview_admission import ReviewedPreviewAdmission, AdmissionDenied
+from preview_authority import SignedPreviewAuthority
 
 
 class PreviewDenied(PermissionError):
@@ -22,7 +24,8 @@ class PreviewDenied(PermissionError):
 
 class TemplatePreviewManager:
     def __init__(self, registry_path, template_path, *, enabled=False,
-                 runner=None, docker="docker", reviewed_files=None):
+                 runner=None, docker="docker", reviewed_files=None,
+                 reviewer_authority=None):
         if not enabled:
             raise PreviewDenied("operator approval required for Docker preview")
         template=Path(template_path).absolute()
@@ -30,9 +33,16 @@ class TemplatePreviewManager:
             template.resolve()!=template or template.name!="compose.yaml" or
             "examples/fullstack-preview" not in template.as_posix()):
             raise PreviewDenied("unreviewed or symlinked preview template denied")
-        # A plausible filename is NEVER enough for Docker build approval.
-        # Exact expected hashes must be supplied out-of-band by the operator.
-        self.admission=ReviewedPreviewAdmission(template.parent,reviewed_files)
+        # An approved digest mapping alone is not authorization. Every
+        # programmatic caller (including CI) must supply a signed, independently
+        # pinned reviewer authority. A candidate self-signature is NOT an
+        # independent operator approval.
+        if not isinstance(reviewer_authority, SignedPreviewAuthority):
+            raise AdmissionDenied("signed reviewer authority required by preview manager")
+        self.authority=reviewer_authority
+        self.reviewed_manifest=copy.deepcopy(reviewed_files)
+        self.authority.verify(self.reviewed_manifest)
+        self.admission=ReviewedPreviewAdmission(template.parent,self.reviewed_manifest)
         self.template=template
         self.registry=Path(registry_path).absolute()
         if not self.registry.parent.is_dir() or self.registry.is_symlink():
@@ -50,6 +60,12 @@ class TemplatePreviewManager:
                 );
             """)
 
+    def _verify(self):
+        """Fail closed for revoked/policy-changed approvals and altered bytes."""
+        self.authority.verify(self.reviewed_manifest)
+        self.admission.verify()
+        return True
+
     def _db(self):
         db=sqlite3.connect(str(self.registry),timeout=15,isolation_level=None)
         db.row_factory=sqlite3.Row
@@ -61,6 +77,7 @@ class TemplatePreviewManager:
         return "wfs-preview-"+hashlib.sha256(project.encode("ascii")).hexdigest()[:20]
 
     def reserve(self,project_id,port):
+        self._verify()
         project_id=ident(project_id)
         if isinstance(port,bool) or not isinstance(port,int) or not 19000<=port<=22000:
             raise PreviewDenied("preview port must be in the operator range 19000..22000")
@@ -91,6 +108,7 @@ class TemplatePreviewManager:
             db.close()
 
     def status(self,project_id):
+        self._verify()
         project_id=ident(project_id)
         with closing(self._db()) as db:
             r=db.execute("SELECT * FROM wfs_preview_instances WHERE project_id=?",
@@ -113,6 +131,7 @@ class TemplatePreviewManager:
         begin-immediate makes a second operator/worker fail closed rather
         than executing docker compose simultaneously for the same project.
         """
+        self._verify()
         db=self._db()
         try:
             db.execute("BEGIN IMMEDIATE")
@@ -132,7 +151,7 @@ class TemplatePreviewManager:
     def _invoke(self,record,token,args,*,timeout=120):
         # Do not rely on a one-time constructor check: the source may have
         # changed after reservation or while a preview was running.
-        self.admission.verify()
+        self._verify()
         if not isinstance(token,str) or len(token)<32 or not token.isascii():
             raise PreviewDenied("operator-supplied ephemeral token required")
         # A tiny environment allowlist: no LLM/provider keys, no HTTP-proxy
