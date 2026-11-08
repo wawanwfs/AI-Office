@@ -102,6 +102,21 @@ Untuk audit integrasi yang membutuhkan host live, lihat
 lanjutan lihat [laporan audit 2026-11-08](docs/AUDIT_2026-11-08.md).
 Jangan menyimpan key API di source maupun mem-publish Docker socket.
 
+## Phase 4 — Isolated execution and secure project control
+
+Phase 4 adds **ContextVar-isolated per-attempt worker workspaces**, bounded
+parallel job slots, fail-closed paid retry quarantine, deny-by-default scoped
+bearer-token `/api/v4` routes, and a separately executed Docker test runner.
+A real GitHub Actions Docker runtime test exercises non-root, read-only,
+no-network project isolation and cleanup. These are production-oriented
+components, **not** confirmation that the entire platform is production-ready.
+
+Read the [Phase 4 REA matrix](docs/REA_PHASE4.md),
+[runtime setup and safety runbook](docs/PHASE4_RUNTIME_RUNBOOK.md),
+and [next Phase 5 implementation handoff](docs/NEXT_PHASE5_PROMPT.md).
+The legacy engine, authenticated full-stack preview, production deployment
+and complete per-project authorization still have P0 blockers.
+
 ## Pengembangan Phase 3 — guarded integration
 
 Phase 3 adds an **opt-in** separate Master Queue worker, per-project RBAC
