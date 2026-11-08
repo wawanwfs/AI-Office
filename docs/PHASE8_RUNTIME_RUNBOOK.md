@@ -1,3 +1,9 @@
+> **Superseded for operator CLI usage:** Phase 9 requires a detached Ed25519
+> signature, trusted reviewer PEM and independently pinned key fingerprint.
+> See [Phase 9 operator runbook](PHASE9_RUNTIME_RUNBOOK.md) before invoking
+> any `wfs_operator_preview.py` command. The older examples below are
+> historical and are expected to fail closed.
+
 # Phase 8 — disposable preview supply-chain operator runbook
 
 **Disposable developer environment only.** Do not expose a preview to a
