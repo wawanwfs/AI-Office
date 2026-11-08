@@ -242,7 +242,8 @@ def test_phase8_frontend_mutation_is_rejected_before_docker(preview):
     with pytest.raises(AdmissionDenied,match="frontend content changed"):
         manager.start("alpha",19010,"X"*43)
     assert calls==[]
-    assert manager.status("alpha")["phase"]=="uncertain"
+    with sqlite3.connect(manager.registry) as db:
+        assert db.execute("SELECT phase FROM wfs_preview_instances WHERE project_id='alpha'").fetchone()[0]=="reserved"
 
 
 def test_phase8_unlisted_new_frontend_asset_denied(preview):
@@ -283,6 +284,7 @@ def test_phase8_symlinked_asset_denied(preview):
 def test_phase8_old_unversioned_or_unpinned_manifests_denied(preview):
     manager,calls=preview
     folder=manager.template.parent
+    repo=folder.parent.parent
     manifest=hashes(folder)
     with pytest.raises(AdmissionDenied,match="v2"):
         TemplatePreviewManager(folder/"legacy.db",manager.template,enabled=True,
