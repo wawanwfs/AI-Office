@@ -169,10 +169,18 @@ def test_index_content():
             "docker", "run", "-d",
             "--name", cname,
             "-p", f"127.0.0.1:{port}:8080",
-            "-v", f"{ws}:/app",
+            # This container is a static preview server, not a build/exec
+            # worker. Mount code read-only and drop Linux capabilities.
+            "-v", f"{ws}:/app:ro",
+            "--read-only",
+            "--tmpfs", "/tmp:rw,nosuid,nodev,size=16m",
+            "--cap-drop=ALL",
+            "--security-opt=no-new-privileges",
+            "--user=65534:65534",
             "--memory=512m",
             "--cpus=1.0",
             "--pids-limit=100",
+            "--init",
             "-w", "/app",
             "python:3.12-slim",
             "python3", "-m", "http.server", "8080"

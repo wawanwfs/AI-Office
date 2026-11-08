@@ -135,3 +135,44 @@ def test_scaffold_html_escapes_untrusted_project_metadata(tmp_path, monkeypatch)
     assert "<svg" not in html
     assert "&lt;img" in html
     assert "Status build & QA belum diverifikasi" in html
+
+
+def test_preview_container_is_readonly_unprivileged_and_loopback_only(tmp_path, monkeypatch):
+    from unittest.mock import patch
+    monkeypatch.setattr(docker_sandbox, "PROJECTS_ROOT", str(tmp_path))
+    DockerSandboxManager.scaffold_project("safe-project", "Safe Project")
+    calls = []
+
+    def fake_run(args, **kwargs):
+        calls.append(args)
+        class Result:
+            returncode = 0
+            stdout = "deadbeef"
+            stderr = ""
+        return Result()
+
+    class Response:
+        status = 200
+        def __enter__(self):
+            return self
+        def __exit__(self, *args):
+            return False
+
+    with patch.object(docker_sandbox.subprocess, "run", side_effect=fake_run), \\
+         patch.object(docker_sandbox.time, "sleep"), \\
+         patch.object(docker_sandbox.urllib.request, "urlopen", return_value=Response()), \\
+         patch.object(docker_sandbox, "log_event"):
+        result = DockerSandboxManager.start_container("safe-project", port=3500)
+
+    assert result["healthy"] is True  # HTTP response, not QA passed
+    cmd = next(c for c in calls if c[:2] == ["docker", "run"])
+    assert "-p" in cmd and "127.0.0.1:3500:8080" in cmd
+    assert "--read-only" in cmd
+    assert "--cap-drop=ALL" in cmd
+    assert "--security-opt=no-new-privileges" in cmd
+    assert "--user=65534:65534" in cmd
+    assert "--memory=512m" in cmd
+    assert "--pids-limit=100" in cmd
+    assert any(x.endswith("/app:ro") for x in cmd)
+    assert "--privileged" not in cmd
+    assert "--network=host" not in cmd
