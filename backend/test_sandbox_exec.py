@@ -68,12 +68,13 @@ def test_script_ditulis_ke_workspace_dan_eksekusi_ok(fake_docker):
     res = sandbox_exec.run_in_sandbox("a1", "print('hai')")
     assert res["ok"] is True
     assert res["output"] == "hasil"
-    # script tersimpan di workspace agent
-    script = pathlib.Path(sandbox_exec.SANDBOX_BASE) / "a1" / "workspace" / "_task_script.py"
-    assert script.read_text() == "print('hai')"
-    # docker exec dipanggil dgn nama container & path /workspace
+    # File unik per-run dipakai oleh Docker, kemudian dibersihkan sesudah exec.
     exec_args = [c[0] for c in calls if c[0][1] == "exec"]
-    assert exec_args == [["docker", "exec", "wfs-agent-a1", "python3", "/workspace/_task_script.py"]]
+    assert len(exec_args) == 1
+    assert exec_args[0][:4] == ["docker", "exec", "wfs-agent-a1", "python3"]
+    assert exec_args[0][4].startswith("/workspace/.wfs-task-")
+    assert exec_args[0][4].endswith(".py")
+    assert list((pathlib.Path(sandbox_exec.SANDBOX_BASE) / "a1" / "workspace").glob(".wfs-task-*.py")) == []
 
 
 def test_returncode_nonzero_ok_false(fake_docker):
@@ -194,7 +195,9 @@ def test_preexisting_script_symlink_cannot_overwrite_external_file(fake_docker, 
     response = sandbox_exec.run_in_sandbox("a1", "print('safe')")
     assert response["ok"] is True
     assert sensitive.read_text() == "DO NOT CHANGE"
-    assert (ws / "_task_script.py").read_text() == "print('safe')"
+    # Fixed symlink remains untouched: no shared script target is replaced.
+    assert (ws / "_task_script.py").is_symlink()
+    assert list(ws.glob(".wfs-task-*.py")) == []
 
 
 def test_pytest_failure_exit_code_is_not_masked_by_tail(fake_docker):
@@ -217,3 +220,32 @@ def test_invalid_timeout_fails_closed_before_docker(fake_docker, bad_timeout):
     assert sandbox_exec.run_in_sandbox("a1", "print(1)", bad_timeout)["ok"] is False
     assert sandbox_exec.run_tests_in_sandbox("a1", bad_timeout)["ok"] is False
     assert calls == []
+
+
+def test_concurrent_agent_runs_use_independent_scripts(tmp_path, monkeypatch):
+    """Two jobs on the same agent must never execute the other's code."""
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+
+    monkeypatch.setattr(sandbox_exec, "SANDBOX_BASE", str(tmp_path))
+    ws = _mkdir_workspace(tmp_path, "a1")
+    barrier = threading.Barrier(2)
+    observed = []
+
+    def fake_run(args, **kwargs):
+        if args[1] == "ps":
+            return _FakeProc(stdout="wfs-agent-a1\n")
+        assert args[1] == "exec"
+        script_path = ws / pathlib.Path(args[4]).name
+        barrier.wait(timeout=5)
+        observed.append((args[4], script_path.read_text()))
+        return _FakeProc(stdout="ok")
+
+    monkeypatch.setattr(subprocess, "run", fake_run)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        futures = [pool.submit(sandbox_exec.run_in_sandbox, "a1", "print('task-%d')" % i) for i in range(2)]
+        assert all(f.result()["ok"] for f in futures)
+
+    assert len({path for path, _ in observed}) == 2
+    assert sorted(code for _, code in observed) == ["print('task-0')", "print('task-1')"]
+    assert list(ws.glob(".wfs-task-*.py")) == []

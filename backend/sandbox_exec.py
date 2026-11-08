@@ -1,10 +1,9 @@
 """Execute agent Python and tests in a constrained, existing Docker sandbox.
 
 The caller still controls launch authorization and the Docker daemon. This module
-validates agent ids and workspace paths, avoids overwriting symlink targets, and
+validates agent ids and workspace paths, uses unique per-run script files, and
 preserves pytest exit codes instead of masking them through shell pipelines.
 """
-import os
 import re
 import subprocess
 import tempfile
@@ -67,31 +66,25 @@ def run_in_sandbox(agent_id: str, code: str, timeout: int = 60) -> dict:
     if not running:
         return {"ok": False, "output": error}
 
-    # A temporary file plus os.replace avoids following a preexisting symlink
-    # at _task_script.py. File permissions default to 0600.
-    tmp_name = None
+    # Each invocation gets its own file, so simultaneous runs for one agent
+    # cannot execute a different task's code by overwriting _task_script.py.
+    script_host = None
     try:
         workspace = _safe_workspace(agent_id)
         with tempfile.NamedTemporaryFile(
             mode="w", encoding="utf-8", dir=workspace,
-            prefix=".wfs-script-", suffix=".tmp", delete=False,
+            prefix=".wfs-task-", suffix=".py", delete=False,
         ) as tmp:
+            script_host = Path(tmp.name)
             tmp.write(code)
-            tmp_name = tmp.name
-        os.replace(tmp_name, workspace / "_task_script.py")
-        tmp_name = None
     except Exception as exc:
+        if script_host is not None:
+            script_host.unlink(missing_ok=True)
         return {"ok": False, "output": f"gagal menulis script: {exc}"}
-    finally:
-        if tmp_name is not None:
-            try:
-                os.unlink(tmp_name)
-            except OSError:
-                pass
 
     try:
         result = subprocess.run(
-            ["docker", "exec", name, "python3", "/workspace/_task_script.py"],
+            ["docker", "exec", name, "python3", f"/workspace/{script_host.name}"],
             capture_output=True, text=True, timeout=limit,
         )
         return {"ok": result.returncode == 0,
@@ -100,6 +93,10 @@ def run_in_sandbox(agent_id: str, code: str, timeout: int = 60) -> dict:
         return {"ok": False, "output": f"timeout setelah {limit}s"}
     except Exception as exc:
         return {"ok": False, "output": f"exec error: {exc}"}
+    finally:
+        # Also runs on timeout or Docker errors; no residual scripts or shared
+        # fixed target remain on the host between task executions.
+        script_host.unlink(missing_ok=True)
 
 
 def run_tests_in_sandbox(agent_id: str, timeout: int = 120) -> dict:
