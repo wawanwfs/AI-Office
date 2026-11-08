@@ -87,9 +87,16 @@ class PythonCodeQA:
             raise CodeQAFailed("Python source and objective unittest test_*.py required")
         # trusted, constant command: LLM cannot select image, test command,
         # arguments, environment variables or host mounts.
-        result=self.runtime.execute(project_id,claim["id"],claim["attempt"],
-              ["python","-B","-m","unittest","discover","-s","/workspace",
-               "-p","test_*.py","-v"],timeout_seconds=90)
+        command=["python","-B","-m","unittest","discover","-s","/workspace",
+                 "-p","test_*.py","-v"]
+        fenced=getattr(self.runtime,"execute_fenced",None)
+        if callable(fenced):
+            result=fenced(project_id,claim["id"],claim["attempt"],command,
+                          fence=fence,timeout_seconds=90)
+        else:
+            # Compatibility for isolated unit-test adapters only.
+            result=self.runtime.execute(project_id,claim["id"],claim["attempt"],
+                                        command,timeout_seconds=90)
         fence()
         if result["status"]!="passed":
             raise CodeQAFailed("Docker objective QA failed: "+str(result["status"]))

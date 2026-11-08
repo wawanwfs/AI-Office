@@ -53,6 +53,14 @@ def _require_worker_fence():
     if ctx is None:
         return
     queue, claim = ctx["queue"], ctx["claim"]
+    if ctx.get("stop_event") is not None and ctx["stop_event"].is_set():
+        raise PermissionError("worker shutdown cancelled physical side effects")
+    if queue.is_paused():
+        raise PermissionError("worker queue paused during execution")
+    if ctx.get("is_engine_paused") is not None and ctx["is_engine_paused"]():
+        raise PermissionError("task engine paused during execution")
+    if ctx.get("check_approval") is not None:
+        ctx["check_approval"](ctx["project_id"])
     if not queue.verify_lease(claim["id"], claim["worker_id"], claim["lease_token"]):
         raise PermissionError("worker lease expired, cancelled or fenced off")
     # RBAC may be revoked while an LLM request or task is executing.

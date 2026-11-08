@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 import socket
 import sys
+import threading
 
 try:
     from .master_queue import DurableMasterQueue
@@ -111,6 +112,7 @@ class ApprovedMasterWorker:
         result = "failed"
         error = ""
         ctx_token = None
+        stop_event = threading.Event()
         try:
             t = self._task(claim["task_id"])
             if (str(t["project"]) != claim["project_id"] or
@@ -122,6 +124,9 @@ class ApprovedMasterWorker:
                 "queue":self.queue,"claim":claim,"ledger":self.ledger,
                 "acl":self.access_control,"principal":self.principal,
                 "workspace":workspace,"code_qa":self.code_qa,
+                "stop_event":stop_event,
+                "is_engine_paused":self.engine.is_paused,
+                "check_approval":self.engine.require_launch_approval,
                 "project_id":claim["project_id"],"task_id":claim["task_id"]})
             if not self.queue.record_phase(jid,self.worker_id,token,"executing",
                                            "legacy taskengine.run_task"):
@@ -158,6 +163,7 @@ class ApprovedMasterWorker:
         except Exception as exc:
             error = f"{type(exc).__name__}: {exc}"
         finally:
+            stop_event.set()  # background Docker QA thread must terminate on shutdown
             if ctx_token is not None:
                 self.engine._WFS_BILLING_CONTEXT.reset(ctx_token)
             # Only the still-valid lease holder can settle. Stale workers

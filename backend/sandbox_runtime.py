@@ -9,6 +9,7 @@ from pathlib import Path
 import re
 import secrets
 import subprocess
+import time
 
 _SAFE=re.compile(r"[A-Za-z0-9][A-Za-z0-9_.-]{0,95}\Z")
 
@@ -99,3 +100,50 @@ class SandboxRuntime:
                             capture_output=True,text=True,timeout=15)
             except (subprocess.TimeoutExpired,OSError):
                 pass
+
+    def execute_fenced(self,project_id,job_id,attempt,arguments,*,fence,timeout_seconds=90):
+        """Run the real container and terminate it if authorization is revoked.
+
+        Invoke ONLY from the dedicated worker. The trusted fence rechecks
+        project ACL, queue lease, launch approval, pause and worker shutdown.
+        Never wait until the full QA timeout to notice a cancelled lease.
+        """
+        if not callable(fence):
+            raise SandboxDenied("live lease fence callback is mandatory")
+        if isinstance(timeout_seconds,bool) or not isinstance(timeout_seconds,int) or not 1<=timeout_seconds<=600:
+            raise ValueError("timeout_seconds must be 1..600")
+        fence()
+        name="wfs-sbx-"+self._id(project_id,"project_id")[:16]+"-"+secrets.token_hex(8)
+        argv=self.command(project_id,job_id,attempt,arguments,container_name=name)
+        process=None
+        began=time.monotonic()
+        try:
+            process=subprocess.Popen(argv,stdout=subprocess.PIPE,
+                                     stderr=subprocess.PIPE,text=True)
+            while True:
+                fence()
+                if time.monotonic()-began>=timeout_seconds:
+                    return {"status":"timeout","returncode":None,"stdout":"",
+                            "stderr":"Docker sandbox deadline exceeded","container":name}
+                try:
+                    out,err=process.communicate(timeout=0.25)
+                    fence()
+                    return {"status":"passed" if process.returncode==0 else "failed",
+                            "returncode":process.returncode,
+                            "stdout":str(out or "")[-16384:],
+                            "stderr":str(err or "")[-16384:],"container":name}
+                except subprocess.TimeoutExpired:
+                    continue
+        finally:
+            # A revoked lease is a physical container kill, not only a DB flag.
+            try:
+                subprocess.run([self.docker,"rm","-f",name],capture_output=True,
+                               text=True,timeout=15)
+            except (subprocess.TimeoutExpired,OSError):
+                pass
+            if process is not None and process.poll() is None:
+                process.kill()
+                try:
+                    process.communicate(timeout=5)
+                except subprocess.TimeoutExpired:
+                    pass
