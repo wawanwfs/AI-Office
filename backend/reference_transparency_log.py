@@ -90,29 +90,41 @@ class ReferenceLog:
                 self.journal.parent.is_symlink() or
                 self.journal.is_symlink()):
             raise AdmissionDenied("reference-log journal path unsafe")
-        self.leaves = []
+        self.leaves = self._recover()
+
+    def _recover(self):
+        leaves = []
         if self.journal.exists():
             raw = _safe_read(self.journal, _MAX_JOURNAL)
-            if raw and not raw.endswith(b"\n"):
+            if raw and not raw.endswith(b"\\n"):
                 raise AdmissionDenied("reference-log journal is truncated")
             for line in raw.splitlines():
-                if len(self.leaves) >= _MAX_ROWS or len(line) > 200:
+                if len(leaves) >= _MAX_ROWS or len(line) > 200:
                     raise AdmissionDenied("reference-log record bound exceeded")
                 row = _json(line)
                 if (not isinstance(row, dict) or
                         set(row) != {"index", "receipt_sha256", "root_sha256"} or
                         type(row["index"]) is not int or
-                        row["index"] != len(self.leaves) or
+                        row["index"] != len(leaves) or
                         not _digest(row["receipt_sha256"]) or
                         not _digest(row["root_sha256"]) or
-                        row["receipt_sha256"] in self.leaves):
+                        row["receipt_sha256"] in leaves):
                     raise AdmissionDenied("reference-log journal record invalid")
-                self.leaves.append(row["receipt_sha256"])
-                root = merkle_root([bytes.fromhex(x) for x in self.leaves]).hex()
+                leaves.append(row["receipt_sha256"])
+                root = merkle_root([bytes.fromhex(x) for x in leaves]).hex()
                 if not hmac.compare_digest(root, row["root_sha256"]):
                     raise AdmissionDenied("reference-log journal root conflict")
+        return leaves
+
+    def _ensure_unchanged(self):
+        # Detect external edits, truncations and file replacement before
+        # issuing ANY new signed head or accepting another append. This
+        # does not protect a malicious same-UID actor racing between reads.
+        if self._recover() != self.leaves:
+            raise AdmissionDenied("reference-log journal externally modified")
 
     def tree_head(self):
+        self._ensure_unchanged()
         size = len(self.leaves)
         return {"version": 1, "tree_size": size,
                 "root_sha256":merkle_root(
@@ -205,14 +217,23 @@ def handler_for(log, token):
                 return self._response(401, {"error":"authentication required"})
             url = urlsplit(self.path)
             if url.path == "/v1/head" and not url.query:
-                return self._response(200, log.signed_head())
+                try:
+                    return self._response(200, log.signed_head())
+                except AdmissionDenied:
+                    return self._response(503, {"error":"journal integrity unavailable"})
             if url.path == "/v1/inventory" and not url.query:
-                return self._response(200, {
-                    **log.signed_head(),
-                    "inventory":{"version":1,
-                                 "receipt_digests":list(log.leaves)}})
+                try:
+                    return self._response(200, {
+                        **log.signed_head(),
+                        "inventory":{"version":1,
+                                     "receipt_digests":list(log.leaves)}})
+                except AdmissionDenied:
+                    return self._response(503, {"error":"journal integrity unavailable"})
             if url.path == "/v1/proof":
-                args = parse_qs(url.query, strict_parsing=True)
+                try:
+                    args = parse_qs(url.query, strict_parsing=True)
+                except ValueError:
+                    return self._response(400, {"error":"invalid proof query"})
                 if set(args) != {"previous_size"} or len(args["previous_size"]) != 1:
                     return self._response(400, {"error":"invalid proof query"})
                 raw = args["previous_size"][0]
@@ -222,7 +243,10 @@ def handler_for(log, token):
                     proof = log.proof(int(raw))
                 except AdmissionDenied:
                     return self._response(409, {"error":"prior tree unavailable"})
-                return self._response(200, {**log.signed_head(), "proof":proof})
+                try:
+                    return self._response(200, {**log.signed_head(), "proof":proof})
+                except AdmissionDenied:
+                    return self._response(503, {"error":"journal integrity unavailable"})
             return self._response(404, {"error":"route denied"})
 
         def do_POST(self):
@@ -255,6 +279,10 @@ def handler_for(log, token):
 
 
 def serve_reference(*, journal_path, private_pem_path, token, port=0):
+    # A production signer requires external custody; this disposable
+    # reference at minimum refuses group/world-readable POSIX key files.
+    if os.name == "posix" and os.stat(private_pem_path).st_mode & 0o077:
+        raise AdmissionDenied("reference log private key permissions too broad")
     key_bytes = _safe_read(private_pem_path, 4096)
     try:
         key = serialization.load_pem_private_key(key_bytes, password=None)
