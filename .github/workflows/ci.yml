@@ -120,7 +120,7 @@ jobs:
             backend/preview_manager.py backend/preview_proxy.py \
             backend/billing_reconcile.py backend/preview_admission.py \
             backend/preview_admission_v2.py backend/preview_signature.py \
-            backend/preview_authority.py \
+            backend/preview_authority.py backend/preview_snapshot.py \
             examples/fullstack-preview/ingress.py
       - name: Upload scoped static scan report
         if: always()
