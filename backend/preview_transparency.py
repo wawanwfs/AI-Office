@@ -1,7 +1,8 @@
 """Phase 15: bounded full-leaf Merkle inclusion and prefix consistency verifier.
 
-This is a VERIFIER of operator-provisioned signed tree heads and complete
-leaf inventories, not a hosted transparency service or an append-only log.
+This is a VERIFIER of operator-provisioned signed tree heads, complete
+leaf inventories AND Phase 16 compact audit/consistency proof paths,
+not a hosted transparency service or an append-only log.
 It cannot prove global non-equivocation, online freshness, independent human
 custody, or prevent rollback of ALL independently pinned trust anchors.
 
@@ -23,6 +24,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PublicKey
 
 from preview_admission_v2 import AdmissionDenied
 from preview_signature import _read_trusted
+from preview_compact_merkle import verify_compact_proof
 
 _SHA = re.compile(r"[a-f0-9]{64}\Z")
 _CONTEXT = b"WFS-AI-OFFICE:TRANSPARENCY-TREE-HEAD:V1\n"
@@ -87,8 +89,9 @@ class SignedTransparencyEvidence:
     """
 
     def __init__(self, *, head_path, signature_path, public_key_path,
-                 inventory_path, trusted_head_sha256, trusted_log_fingerprint,
-                 trusted_previous_size, trusted_previous_root_sha256):
+                 inventory_path, compact_proof_path, trusted_head_sha256,
+                 trusted_log_fingerprint, trusted_previous_size,
+                 trusted_previous_root_sha256):
         if not _valid_hash(trusted_head_sha256):
             raise AdmissionDenied("independently pinned latest tree head required")
         if not _valid_hash(trusted_log_fingerprint):
@@ -105,6 +108,9 @@ class SignedTransparencyEvidence:
         self.signature_path = signature_path
         self.public_key_path = public_key_path
         self.inventory_path = inventory_path
+        if compact_proof_path is None:
+            raise AdmissionDenied("mandatory compact Merkle proof path missing")
+        self.compact_proof_path = compact_proof_path
         self.trusted_head_sha256 = trusted_head_sha256
         self.trusted_log_fingerprint = trusted_log_fingerprint
         self.trusted_previous_size = trusted_previous_size
@@ -178,6 +184,17 @@ class SignedTransparencyEvidence:
         if not hmac.compare_digest(previous_root,
                                    self.trusted_previous_root_sha256):
             raise AdmissionDenied("transparency prefix consistency mismatch")
+        # Phase 16: separately verify compact RFC6962 audit + prefix paths
+        # from signed head and previous root, independent of the inventory
+        # bytes. Keep Phase 15 full-inventory proof as a second check.
+        verify_compact_proof(
+            _read_trusted(self.compact_proof_path, 8192),
+            receipt_sha256=receipt_sha256,
+            tree_size=head["tree_size"],
+            signed_root_sha256=head["root_sha256"],
+            previous_size=self.trusted_previous_size,
+            trusted_previous_root_sha256=self.trusted_previous_root_sha256,
+        )
         return {"tree_size": head["tree_size"],
                 "tree_root_sha256": current_root,
                 "previous_size": self.trusted_previous_size,
