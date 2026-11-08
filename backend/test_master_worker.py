@@ -192,3 +192,38 @@ def test_concurrent_workers_use_contextvar_not_shared_repo(ready):
     assert paths[2].parents[1].name=="p2"
     assert paths[1]!=paths[2]
     assert engine.REPO=="legacy"
+
+
+
+def test_bounded_serve_runs_two_projects_in_parallel(ready):
+    q,ledger,engine,worker=ready
+    worker.enqueue_task("1")
+    worker.enqueue_task("2")
+    q.set_paused(False)
+    engine.block=asyncio.Event()
+    async def scenario():
+        service=asyncio.create_task(worker.serve(polling_seconds=.002,concurrency=2))
+        try:
+            for _ in range(150):
+                if len(engine.runs)==2:
+                    break
+                await asyncio.sleep(.004)
+            assert len(engine.runs)==2
+            assert len({p for _,p in engine.runs})==2
+            engine.block.set()
+            for _ in range(150):
+                if q.metrics()["completed"]==2:
+                    break
+                await asyncio.sleep(.004)
+            assert q.metrics()["completed"]==2
+        finally:
+            service.cancel()
+            await asyncio.gather(service,return_exceptions=True)
+    asyncio.run(asyncio.wait_for(scenario(),2))
+
+
+@pytest.mark.parametrize("concurrency",[0,9,True])
+def test_parallel_worker_slot_count_is_bounded(ready,concurrency):
+    q,ledger,engine,worker=ready
+    with pytest.raises(ValueError,match="concurrency"):
+        asyncio.run(worker.serve(concurrency=concurrency))

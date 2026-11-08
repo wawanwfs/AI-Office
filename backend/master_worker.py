@@ -167,13 +167,31 @@ class ApprovedMasterWorker:
         return {"job_id":jid,"engine_result":result,"queue_status":settled,
                 "error":error}
 
-    async def serve(self, *, polling_seconds=2):
-        """Run forever with single in-process dispatch; spawn separate workers
-        for cross-project parallelism. Queue controls global/per-project caps."""
-        while True:
-            outcome = await self.run_once()
-            if outcome is None:
-                await asyncio.sleep(polling_seconds)
+    async def serve(self, *, polling_seconds=2, concurrency=4):
+        """Run bounded parallel worker slots (actual isolated ContextVars).
+
+        Each slot has a unique lease identity. SQLite queue enforces global
+        concurrency and one active job per project; slots never share a mutable
+        workspace. Cancellation tears down all child slots.
+        """
+        if isinstance(concurrency,bool) or not isinstance(concurrency,int) or not 1<=concurrency<=8:
+            raise ValueError("concurrency must be 1..8")
+        if not 0 < polling_seconds <= 60:
+            raise ValueError("polling_seconds must be in (0, 60]")
+        slots=[self]
+        for index in range(1,concurrency):
+            slots.append(ApprovedMasterWorker(
+                self.queue,self.engine,self.ledger,self.workspace_root,
+                worker_id=f"{self.worker_id}-slot{index}",
+                access_control=self.access_control,principal=self.principal,
+                heartbeat_seconds=self.heartbeat_seconds,
+                lease_seconds=self.lease_seconds))
+        async def pump(slot):
+            while True:
+                outcome=await slot.run_once()
+                if outcome is None:
+                    await asyncio.sleep(polling_seconds)
+        await asyncio.gather(*(pump(slot) for slot in slots))
 
 
 def main(argv=None):
@@ -184,6 +202,8 @@ def main(argv=None):
     action.add_argument("--serve",action="store_true")
     action.add_argument("--resume",action="store_true")
     action.add_argument("--pause",action="store_true")
+    parser.add_argument("--concurrency",type=int,default=4,
+                        help="in-process parallel worker slots (1..8)")
     args=parser.parse_args(argv)
     if os.environ.get("WFS_MASTER_WORKER_ENABLED") != "YES":
         parser.error("worker disabled; set WFS_MASTER_WORKER_ENABLED=YES locally")
@@ -226,7 +246,7 @@ def main(argv=None):
     elif args.once:
         print(asyncio.run(worker.run_once()))
     else:
-        asyncio.run(worker.serve())
+        asyncio.run(worker.serve(concurrency=args.concurrency))
 
 
 if __name__=="__main__":
