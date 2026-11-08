@@ -170,8 +170,10 @@ def main():
                 time.sleep(0.5)
             return {}
 
-        cmd("Runtime.enable")
-        time.sleep(1)
+        # Siklus 284: landing default route (6230629) — paksa mode office
+        if ev("window.__agentData?window.__agentData.length:0").get("value") in (0, None):
+            ev("location.assign('http://127.0.0.1:9503/app/?mode=office')")
+            time.sleep(3)
         # Sinkron jam dulu: probe nyata memakan ~30 dtk dari page-load; jam
         # simulasi berjalan dgn wall-clock (tambah 1 menit/dtk) → saat probe
         # sampai jam sudah lunch/sore. Set 480 (08:00) SEBELUM pengukuran.

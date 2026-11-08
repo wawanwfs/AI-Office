@@ -6105,3 +6105,9 @@
 - Tanpa perubahan kode produksi maupun probe — verifikasi berkala dari backlog siklus 282.
 - Gate: probe 5/5 OK; vitest/build tidak dijalankan ulang (tidak ada perubahan kode); wfs-hq & wfs-office active.
 - Sisa backlog: (a) gateway :8787→Docker; (b) saas-dibantuin push GitHub; (d) keputusan omniroute :20128; rerun probe patched sisanya (9 lagi) pada siklus berikutnya.
+## 2026-11-08 23:35 WIB — Siklus 284: AUDIT LANDING-ROUTE TUNTAS — 7 probe CDP sisa diberi fallback /app/?mode=office (office_phase, scene_hooks, team_presence, ticker_presence, meeting_follow, meeting_pick, zoom_follow) — SEMUA RERUN HIJAU
+
+- Audit lanjutan siklus 282: grep URL 9503 di semua scripts/ → 7 probe masih memuat root '/' (landing default sejak 6230629) dan menunggu __agentData. Diberi fallback identik siklus 281/282: bila __agentData kosong saat Runtime.enable → location.assign('/app/?mode=office') + tunggu scene init. Pola ev() dict vs raw disesuaikan per probe (office_phase/team/ticker pakai .get("value"); scene_hooks/meeting_*/zoom_follow ev() sudah return value mentah). py_compile 7/7 OK.
+- Rerun live semua hijau: office_phase OK (agents=26, chip Fokus sore→Istirahat makan siang); scene_hooks OK (destroy→sisa hook 0, recreate→zona=5); team_presence OK (3/4→0/4 di pod, lunch terdeteksi); ticker_presence OK (26 di meja→26 makan siang); meeting_pick OK (r=12, seleksi+__saved); meeting_follow OK (rapat usai kamera pulang, dist=0.103); zoom_follow OK (r 24→12, follow dipertahankan).
+- Gate: e2e_err_probe OK (0 error, hooks 26 agen/5 zona, shot 671947 B, nonbg 0.994, hygiene 37 refs/0 missing) — produksi scene & dist TIDAK berubah (probe-only), build/tidak dijalankan ulang.
+- Sisa backlog: (a) gateway :8787→Docker (menunggu keputusan user); (b) saas-dibantuin push GitHub; (d) keputusan omniroute :20128; audit landing-route probe TUNTAS (281+282+284).

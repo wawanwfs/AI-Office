@@ -222,7 +222,13 @@ def main():
             return (res.get("result") or {}).get("value")
 
         cmd("Page.enable"); cmd("Runtime.enable")
-        time.sleep(15)  # scene init + beberapa frame animasi
+        time.sleep(1)
+        # Siklus 284: landing default route (6230629) — paksa mode office
+        if ev("window.__agentData?window.__agentData.length:0") in (0, None):
+            ev("location.assign('http://127.0.0.1:9503/app/?mode=office')")
+            time.sleep(15)  # scene init + beberapa frame animasi
+        else:
+            time.sleep(15)  # scene init + beberapa frame animasi
 
         # ── 1. scene siap ──
         st = jval(ev(STATE_EXPR))

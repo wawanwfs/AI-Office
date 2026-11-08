@@ -195,6 +195,9 @@ def main():
                 x=683, y=384, deltaX=0, deltaY=delta_y)
 
         cmd("Page.enable"); cmd("Runtime.enable")
+        # Siklus 284: landing default route (6230629) — paksa mode office
+        if ev("window.__agentData?window.__agentData.length:0") in (0, None):
+            ev("location.assign('http://127.0.0.1:9503/app/?mode=office')")
         # f4 (205): tunggu hooks scene siap — polling adaptif (maks 30 dtk)
         # menggantikan sleep(15) rigid: VM berat → render belum jalan & hooks
         # belum terpasang → dulu FAIL "scene tidak siap" palsu.

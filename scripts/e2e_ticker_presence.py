@@ -162,8 +162,10 @@ def main():
                 time.sleep(0.5)
             return {}
 
-        cmd("Runtime.enable")
-        time.sleep(1)
+        # Siklus 284: landing default route (6230629) — paksa mode office
+        if ev("window.__agentData?window.__agentData.length:0").get("value") in (0, None):
+            ev("location.assign('http://127.0.0.1:9503/app/?mode=office')")
+            time.sleep(3)
 
         agents = -1
         for _ in range(40):
