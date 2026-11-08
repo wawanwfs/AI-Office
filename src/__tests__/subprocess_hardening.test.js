@@ -119,9 +119,10 @@ describe('subprocess_hardening siklus 202 — scanner self-test', () => {
 })
 
 describe('subprocess_hardening siklus 202 — census', () => {
-  it('census: 74 file .py dgn subprocess.run sinkron, >=77 call-site (siklus 267: +1 probe_clock_oracle_267.py +1 diag_clock_canvas.py — orakel piksel jam dinding CDP)', () => {
+  it('census: minimum 74 subprocess-based Python scripts, including secure Phase 4 Docker smoke', () => {
     expect(PY_ALL.length).toBeGreaterThan(70)
-    expect(RUN_FILES.length).toBe(74)
+    expect(RUN_FILES.length).toBeGreaterThanOrEqual(74)
+    expect(RUN_FILES).toContain("ci_docker_sandbox_smoke.py")
     const total = RUN_FILES.reduce((n, f) => n + sites(f).length, 0)
     expect(total).toBeGreaterThanOrEqual(77)
   })

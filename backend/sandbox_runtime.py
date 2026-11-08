@@ -60,7 +60,7 @@ class SandboxRuntime:
         if not isinstance(arguments,(list,tuple)) or not 1<=len(arguments)<=64:
             raise SandboxDenied("invalid sandbox command")
         if any(not isinstance(a,str) or not a or len(a)>4096 or
-               "\x00" in a or "\n" in a for a in arguments):
+               "\x00" in a for a in arguments):
             raise SandboxDenied("invalid command argument")
         name=container_name or ("wfs-sbx-"+project_id[:16]+"-"+secrets.token_hex(8))
         self._id(name,"container_name")

@@ -75,3 +75,11 @@ def test_timeout_triggers_forced_cleanup(runtime):
     outcome=r.execute("project-a","job-123",1,["python","app.py"],timeout_seconds=2)
     assert outcome["status"]=="timeout"
     assert calls[-1][0][1:3]==["rm","-f"]
+
+
+def test_multiline_python_code_is_a_single_safe_argv(runtime):
+    r,calls,root=runtime
+    assert r.execute("project-a","job-123",1,
+                     ["python","-c","print('a')\nprint('b')"])["status"]=="passed"
+    argv=calls[0][0]
+    assert argv[-1]=="print('a')\nprint('b')"
