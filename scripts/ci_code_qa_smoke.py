@@ -77,6 +77,15 @@ with ThreadPoolExecutor(max_workers=1) as pool:
         pass
 assert time.monotonic()-began<12, "container termination after revocation too slow"
 
+# Generated tests may flood stdout indefinitely; the dedicated Docker
+# worker MUST cap host memory and physically remove the offending container.
+flood_workspace=make_project("flood")
+flood=qa.runtime.execute_fenced("flood","job-probe",1,
+    ["python","-c","import sys;sys.stdout.write('X'*6000000);sys.stdout.flush()"],
+    fence=lambda:None,timeout_seconds=25)
+assert flood["status"]=="output_limit", "unbounded generated-test output was accepted"
+assert flood["returncode"] is None
+
 listout=subprocess.run(["docker","ps","-a","--filter","name=wfs-sbx-",
                          "--format","{{.Names}}"],
                         capture_output=True,text=True,check=True,timeout=10)
@@ -91,6 +100,7 @@ report={
     "bad_code_rejected":True,
     "revoked_lease_terminates_container":True,
     "container_cleanup":True,
+    "untrusted_output_hard_capped":True,
     "production_deployed":False,
 }
 target=Path("artifacts/code-qa")
