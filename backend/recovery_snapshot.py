@@ -46,7 +46,7 @@ def _safe_dir(path):
 
 def _db_valid(path):
     try:
-        with sqlite3.connect(f"file:{path.as_posix()}?mode=ro",uri=True,timeout=5) as db:
+        with sqlite3.connect(path.as_uri()+"?mode=ro",uri=True,timeout=5) as db:
             if db.execute("PRAGMA quick_check").fetchone()[0]!="ok":
                 raise SnapshotDenied("SQLite integrity check failed")
     except sqlite3.DatabaseError as exc:
@@ -76,7 +76,7 @@ def backup_sqlite(sources,destination,*,approved=False):
         files={}
         for name,source in sorted(checked.items()):
             target=stage/(name+".sqlite3")
-            with sqlite3.connect(f"file:{source.as_posix()}?mode=ro",uri=True,timeout=10) as inp:
+            with sqlite3.connect(source.as_uri()+"?mode=ro",uri=True,timeout=10) as inp:
                 with sqlite3.connect(str(target),timeout=10) as out:
                     inp.backup(out)
             os.chmod(target,0o600)

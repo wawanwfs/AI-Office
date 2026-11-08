@@ -95,3 +95,16 @@ def test_two_real_databases_back_up_to_independent_files(sample):
             assert db.execute("SELECT cap FROM budget").fetchone()[0]==10000
     finally:
         con.close()
+
+
+def test_sqlite_uri_paths_with_spaces_query_and_hash_are_portable(tmp_path):
+    directory=tmp_path/"Windows Data & Project"
+    directory.mkdir()
+    source=directory/"finance?2026#source.db"
+    with sqlite3.connect(source) as db:
+        db.execute("CREATE TABLE audit(value TEXT)")
+        db.execute("INSERT INTO audit VALUES(?)",("persisted",))
+    backup_sqlite({"source":source},tmp_path/"snapshot",approved=True)
+    restore_sqlite(tmp_path/"snapshot",tmp_path/"recovered",approved=True)
+    with sqlite3.connect(tmp_path/"recovered/source.sqlite3") as db:
+        assert db.execute("SELECT value FROM audit").fetchone()[0]=="persisted"
