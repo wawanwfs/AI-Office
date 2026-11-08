@@ -96,7 +96,7 @@ class ReferenceLog:
         leaves = []
         if self.journal.exists():
             raw = _safe_read(self.journal, _MAX_JOURNAL)
-            if raw and not raw.endswith(b"\\n"):
+            if raw and not raw.endswith(b"\n"):
                 raise AdmissionDenied("reference-log journal is truncated")
             for line in raw.splitlines():
                 if len(leaves) >= _MAX_ROWS or len(line) > 200:
