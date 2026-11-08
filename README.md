@@ -306,3 +306,23 @@ registry / malicious same-UID staging writers.**
 Full OCI/SBOM provenance, authoritative DNS firewall tests, interactive
 public TLS preview, paid-provider approval and production acceptance
 remain blocked.
+
+
+## Phase 12 — independently signed reviewer roster
+
+Preview admission now requires **two different Ed25519 signers**: a reviewer
+for the approved v2 manifest and a separately pinned offline roster root
+for the allowlist/revocation policy. The exact roster JSON bytes must match
+both their independently provisioned SHA-256 and a detached root signature;
+a rehashed fake roster cannot authorize a manager. Native Windows/Linux
+tests and disposable two-tenant CI use **synthetic one-time identities**
+for assurance only, NOT a production authority.
+
+- [Phase 12 acceptance gates](docs/REA_PHASE12.md)
+- [Phase 12 operator runbook](docs/PHASE12_RUNTIME_RUNBOOK.md)
+- [Phase 13 continuation prompt](docs/NEXT_PHASE13_PROMPT.md)
+
+External identity/custody verification, hardware anti-rollback,
+truly immutable Docker build context, fully verified OCI dependencies,
+DNS/firewall, generic generated-code admission and interactive TLS previews
+remain unproven. Paid AI and production deployment stay BLOCKED.
