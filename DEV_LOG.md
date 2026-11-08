@@ -6111,3 +6111,10 @@
 - Rerun live semua hijau: office_phase OK (agents=26, chip Fokus sore→Istirahat makan siang); scene_hooks OK (destroy→sisa hook 0, recreate→zona=5); team_presence OK (3/4→0/4 di pod, lunch terdeteksi); ticker_presence OK (26 di meja→26 makan siang); meeting_pick OK (r=12, seleksi+__saved); meeting_follow OK (rapat usai kamera pulang, dist=0.103); zoom_follow OK (r 24→12, follow dipertahankan).
 - Gate: e2e_err_probe OK (0 error, hooks 26 agen/5 zona, shot 671947 B, nonbg 0.994, hygiene 37 refs/0 missing) — produksi scene & dist TIDAK berubah (probe-only), build/tidak dijalankan ulang.
 - Sisa backlog: (a) gateway :8787→Docker (menunggu keputusan user); (b) saas-dibantuin push GitHub; (d) keputusan omniroute :20128; audit landing-route probe TUNTAS (281+282+284).
+
+## 2026-11-08 16:20 WIB — Siklus 285: BACKUP P0 wfs-hq (insiden 279 isi ~/wfs-hq terhapus misterius) — cron harian + arsip terverifikasi
+
+- Mengikuti temuan siklus 279 (server.py/.wfs_ui_token/dll hilang dari disk, proses systemd hidup dari memori): dibuat script ~/bin/backup_wfs_hq.sh (700) — tar.gz ~/wfs-hq penuh (exclude __pycache__) ke ~/backups/wfs-hq, retensi 7 arsip, log ke backups/backup.log.
+- Cron harian 04:15 (`15 4 * * *`) terpasang; run manual pertama sukses.
+- Verifikasi restore: arsip wfs-hq-20261108-1618.tgz (1.8M) diekstrak ke scratch, md5 server.py arsip == live; server.py, api_service.py, .wfs_ui_token terkonfirmasi ada dalam arsip.
+- Sisa backlog: (a) gateway :8787→Docker; (b) saas-dibantuin push GitHub; (d) keputusan omniroute :20128; (siapa penghapus wfs-hq tetap belum ketemu — kini mitigasi backup harian ada).
