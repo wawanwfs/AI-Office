@@ -23,7 +23,7 @@ export default function SysMeter() {
         if (stop || my !== rid) return
         setD({ ...st, load: res?.load ?? '—', ram: res?.ram_mb ?? '—' })
         setErr(false)
-        setUpdatedAt(new Date().toLocaleTimeString())
+        setUpdatedAt(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
       } catch {
         if (!stop && my === rid) setErr(true)
       }
@@ -46,7 +46,10 @@ export default function SysMeter() {
   }
   return (
     <div className="sysmeter" role="status" aria-label="Status host">
-      {err && <span className="sm-item" role="alert">Data host usang · terakhir {updatedAt}</span>}
+      {err && <span className="sm-item" role="alert" title="Poll terakhir gagal; data mungkin usang">⚠ data usang · {updatedAt}</span>}
+      {!err && (
+        <span className="sm-item sm-hl" title="Gateway terhubung, data live"><i aria-hidden="true" /> host live</span>
+      )}
       <span className="sm-item" title="Agen dari status backend">{d.agents ?? '—'} agen task engine</span>
       {sceneAgents && <span className="sm-item" title="Avatar ambient, bukan status pekerjaan">{sceneAgents} avatar simulasi</span>}
       <span className="sm-item" title="Load average host">⚡ {d.load}</span>

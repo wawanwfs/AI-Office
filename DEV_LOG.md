@@ -6302,6 +6302,16 @@
 - tasks.py live==sumber bae12503 (IDENTIK, smoke strict OK); :9503 & :8787 /api/health 200 (pause engine tetap).
 - Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
 
+## 2026-11-09 03:35 WIB — Siklus 313: polish SysMeter — indikator host live & badge usang saling eksklusif
+- Tanpa upstream baru (0 commit HEAD..origin/main). Ambil perbaikan kualitas kecil: widget SysMeter (kanan-atas).
+- SysMeter.jsx: tambah indikator titik hijau "host live" (class sm-hl yang sudah ada) saat poll sukses; badge "⚠ data usang · HH.MM.SS" kini saling eksklusif dgn indikator live (sebelumnya keduanya bisa tampil bareng); timestamp pakai id-ID + detik.
+- host_freshness.test.jsx diadaptasi ke teks baru + asersi eksklusivitas; sys_meter.test.jsx +2 kasus (kondisi baik tanpa alert; gagal poll → badge usang menggantikan host live).
+- Build PWA OK; vitest 252 file / 3664 passed + 6 skipped, 0 fail (+2 tes vs siklus 312).
+- Redeploy dist → ~/wfs-hq; bersihkan 7 orphan asset hash lama (App/CsWidget/OfficeScene dll) → hygiene 13 hashed/0 orphan.
+- e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 707696 B, nonbg 0.991.
+- wfs-hq & wfs-office active; `/` & `/app/?mode=office` 200; :8787 /api/health 200 (pause engine tetap).
+- Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
 ## 2026-11-09 02:55 WIB — Siklus 312: tarik upstream phase14 (86ebd1a), semua gate hijau
 - git pull --rebase menarik 1 commit upstream: 86ebd1a feat(phase14) independently witnessed reviewer checkpoint cegah rollback SQLite lokal (backend/CI, tidak sentuh scene).
 - Build PWA OK; vitest 252 file / 3662 passed + 6 skipped, 0 fail (+1 tes vs siklus 311).

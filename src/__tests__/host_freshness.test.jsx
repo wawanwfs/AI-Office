@@ -16,8 +16,10 @@ it('distinguishes scene avatars from backend agents and marks cached host data s
   expect(screen.getByText('15 agen task engine')).toBeTruthy()
   api.mockRejectedValue(new Error('offline'))
   await act(async () => { vi.advanceTimersByTime(12000) })
-  expect(screen.getByText(/Data host usang/)).toBeTruthy()
+  expect(screen.getByText(/data usang/)).toBeTruthy()
+  expect(screen.queryByText('host live')).toBeNull() // indikator live hilang saat data usang
   api.mockResolvedValue({agents:15,load:2,ram_mb:1024})
   await act(async () => { vi.advanceTimersByTime(12000) })
-  expect(screen.queryByText(/Data host usang/)).toBeNull()
+  expect(screen.queryByText(/data usang/)).toBeNull()
+  expect(screen.getByText('host live')).toBeTruthy() // live kembali setelah sukses
 })

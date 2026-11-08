@@ -1,6 +1,6 @@
 // @vitest-environment jsdom
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest'
-import { render, screen, waitFor, cleanup } from '@testing-library/react'
+import { render, screen, waitFor, cleanup, act } from '@testing-library/react'
 import SysMeter from '../components/SysMeter'
 
 // Mock modul api: kendalikan respons tanpa fetch asli.
@@ -44,4 +44,20 @@ describe('SysMeter', () => {
     render(<SysMeter />)
     await waitFor(() => expect(screen.getByText('Gateway offline')).toBeTruthy())
   })
+
+  it('kondisi baik: tidak ada badge "data usang", ada indikator host live', async () => {
+    render(<SysMeter />)
+    await waitFor(() => expect(screen.getByText('host live')).toBeTruthy())
+    expect(screen.queryByText(/data usang/)).toBeNull()
+    expect(screen.queryByRole('alert')).toBeNull()
+  })
+
+  it('gagal poll sesudah sukses: badge "data usang" muncul dan menggantikan host live', async () => {
+    render(<SysMeter />)
+    await waitFor(() => expect(screen.getByText('host live')).toBeTruthy())
+    api.mockRejectedValueOnce(new Error('drop'))
+    // tunggu interval poll real 12 dtk memicu panggilan gagal
+    await waitFor(() => expect(screen.getByText(/data usang/)).toBeTruthy(), { timeout: 13000 })
+    await waitFor(() => expect(screen.queryByText('host live')).toBeNull(), { timeout: 3000 })
+  }, 15000)
 })
