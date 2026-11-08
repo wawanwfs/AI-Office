@@ -418,3 +418,26 @@ production deployment. AI provider execution remains unauthorized.
 - [Phase 16 scoped acceptance gates](docs/REA_PHASE16.md)
 - [Phase 16 compact proof operator runbook](docs/PHASE16_RUNTIME_RUNBOOK.md)
 - [Phase 17 accelerated continuation prompt](docs/NEXT_PHASE17_PROMPT.md)
+
+
+## Phase 17 — authenticated local reference transparency HTTP log
+
+A disposable, single-writer reference log now provides **real loopback
+HTTP** authenticated append (tree-size/root compare-and-swap), a
+revalidated and `fsync`'d JSONL journal, domain-separated
+Ed25519-signed Merkle heads, and real RFC6962 compact inclusion and
+consistency endpoints. Native Linux/Windows tests launch a separate
+HTTP process and two independent verifying Python processes on one
+CI machine, exercise restart/corruption/replay/fork denial, and check
+compatibility with the existing Phase 15/16 trust verifier.
+
+**Important:** this is **NOT** a physically immutable log, external
+organization/host, HTTPS public service, signed revocation authority,
+independent signing-key custody or production approval. Existing
+source/Docker admission remains unchanged; full external transparency,
+OS immutable builders, signed offline OCI and public multi-tenant
+previews remain blocked. No provider spend or production deployment.
+
+- [Phase 17 scoped acceptance report](docs/REA_PHASE17.md)
+- [Phase 17 Windows/Linux local reference log runbook](docs/PHASE17_RUNTIME_RUNBOOK.md)
+- [Next Phase 18 accelerated execution prompt](docs/NEXT_PHASE18_PROMPT.md)
