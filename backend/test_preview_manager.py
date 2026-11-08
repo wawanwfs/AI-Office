@@ -985,3 +985,47 @@ def test_phase15_tampering_signed_log_blocks_docker_commands(preview):
     finally:
         log.inventory_path.write_bytes(original)
     assert manager.stop("alpha",token,allow_data_loss=True)["phase"]=="stopped"
+
+
+
+def test_phase16_compact_merkle_evidence_is_required_before_docker_calls(preview):
+    manager,calls=preview
+    token="X"*43
+    assert manager.start("alpha",19010,token)["phase"]=="running"
+    proof=manager.authority.witness_checkpoint.transparency_evidence
+    compact=proof.compact_proof_path
+    original=compact.read_bytes()
+    before=len(calls)
+    forged=json.loads(original)
+    forged["inclusion"]=["f"*64]
+    compact.write_text(json.dumps(forged,sort_keys=True))
+    try:
+        for operation in (
+                lambda:manager.logs("alpha",token),
+                lambda:manager.restart("alpha",token),
+                lambda:manager.stop("alpha",token,allow_data_loss=True)):
+            with pytest.raises(AdmissionDenied,match="compact inclusion has extra siblings"):
+                operation()
+        assert len(calls)==before
+    finally:
+        compact.write_bytes(original)
+    assert manager.stop("alpha",token,allow_data_loss=True)["phase"]=="stopped"
+
+
+def test_phase16_compact_proof_symlink_is_rejected_even_with_valid_inventory(preview):
+    manager,calls=preview
+    proof=manager.authority.witness_checkpoint.transparency_evidence
+    compact=proof.compact_proof_path
+    link=compact.parent/"malicious-compact-link.json"
+    try:
+        link.symlink_to(compact)
+    except OSError:
+        pytest.skip("host does not permit symlinks")
+    old=proof.compact_proof_path
+    proof.compact_proof_path=link
+    try:
+        with pytest.raises(AdmissionDenied,match="unsafe"):
+            manager.reserve("alpha",19010)
+        assert calls==[]
+    finally:
+        proof.compact_proof_path=old
