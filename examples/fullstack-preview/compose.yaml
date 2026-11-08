@@ -47,8 +47,6 @@ services:
       - no-new-privileges:true
     tmpfs:
       - /tmp:rw,nosuid,nodev,noexec,size=32m
-    ports:
-      - "127.0.0.1:${WFS_PREVIEW_HOST_PORT:-18765}:8000"
     environment:
       DATABASE_URL: postgresql://wfsdemo:test-only-disposable@db:5432/wfsdemo
       WFS_PREVIEW_TEST_TOKEN: "${WFS_PREVIEW_TEST_TOKEN:?ephemeral token required}"
@@ -61,13 +59,38 @@ services:
       - preview-internal
       - preview-edge
 
+  # Reviewed, nonroot ingress is the ONLY service with an external bridge.
+  # Byte forwarding target is fixed at api:8000, never a request-supplied URL.
+  ingress:
+    image: python:3.11-alpine@sha256:bb1d70c1df30d8ee1e05214dbe82d6cdfd29833c1f47ce917f20991aca93acaa
+    restart: "no"
+    command: ["python", "-u", "/app/ingress.py"]
+    user: "65534:65534"
+    read_only: true
+    pids_limit: 64
+    mem_limit: 128m
+    cpus: 0.25
+    cap_drop: [ALL]
+    security_opt:
+      - no-new-privileges:true
+    environment:
+      PYTHONDONTWRITEBYTECODE: "1"
+    volumes:
+      - ./ingress.py:/app/ingress.py:ro
+    ports:
+      - "127.0.0.1:${WFS_PREVIEW_HOST_PORT:-18765}:8000"
+    depends_on:
+      - api
+    networks:
+      - preview-edge
+      - ingress-public
+
 networks:
   preview-internal:
     internal: true
-  # Both bridges are internal: no default route to external IPs.
-  # Host-loopback published API is separately verified in CI. This is
-  # useful isolation evidence, NOT an independent host firewall or proof
-  # against all Docker-daemon/network misconfigurations.
   preview-edge:
     driver: bridge
     internal: true
+  # No untrusted user build, worker or API may join this external bridge.
+  ingress-public:
+    driver: bridge

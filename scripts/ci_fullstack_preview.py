@@ -93,8 +93,9 @@ def check_host_runtime_limits():
     """Read actual Docker daemon HostConfig, not only authored Compose YAML."""
     import subprocess
     compose=["docker","compose","-f","examples/fullstack-preview/compose.yaml"]
-    for service,memory,cpus in (("db",536870912,1000000000),
-                                ("api",402653184,750000000)):
+    for service,memory,cpus,pids in (("db",536870912,1000000000,128),
+                                     ("api",402653184,750000000,128),
+                                     ("ingress",134217728,250000000,64)):
         identifier=subprocess.run(compose+["ps","-q",service],
                                  capture_output=True,text=True,check=True,
                                  timeout=15).stdout.strip()
@@ -105,7 +106,7 @@ def check_host_runtime_limits():
                                timeout=15)
         cfg=json.loads(details.stdout)
         assert cfg["ReadonlyRootfs"] is True
-        assert cfg["PidsLimit"]==128
+        assert cfg["PidsLimit"]==pids
         assert cfg["Memory"]==memory
         assert cfg["NanoCpus"]==cpus
         assert "ALL" in [x.upper() for x in cfg["CapDrop"]]
