@@ -158,10 +158,7 @@ def test_preview_container_is_readonly_unprivileged_and_loopback_only(tmp_path, 
         def __exit__(self, *args):
             return False
 
-    with patch.object(docker_sandbox.subprocess, "run", side_effect=fake_run), \\
-         patch.object(docker_sandbox.time, "sleep"), \\
-         patch.object(docker_sandbox.urllib.request, "urlopen", return_value=Response()), \\
-         patch.object(docker_sandbox, "log_event"):
+    with (,        patch.object(docker_sandbox.subprocess, "run", side_effect=fake_run),,        patch.object(docker_sandbox.time, "sleep"),,        patch.object(docker_sandbox.urllib.request, "urlopen", return_value=Response()),,        patch.object(docker_sandbox, "log_event"),,    ):
         result = DockerSandboxManager.start_container("safe-project", port=3500)
 
     assert result["healthy"] is True  # HTTP response, not QA passed
