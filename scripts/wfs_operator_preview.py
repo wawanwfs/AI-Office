@@ -16,6 +16,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"backend"))
 from preview_manager import TemplatePreviewManager, PreviewDenied
 from preview_signature import verify_review_signature
 from preview_authority import SignedPreviewAuthority
+from preview_witness import SignedReviewerCheckpoint
 
 
 def main():
@@ -43,6 +44,16 @@ def main():
         help="base64 detached root signature of exact reviewer-policy JSON bytes")
     parser.add_argument("--trusted-roster-root-fingerprint",required=True,
         help="out-of-band SHA256 of roster authority raw public key")
+    parser.add_argument("--witness-public-key",required=True,
+        help="separately provisioned offline witness Ed25519 public key PEM")
+    parser.add_argument("--witness-receipt",required=True,
+        help="current independently issued and approved checkpoint JSON")
+    parser.add_argument("--witness-signature",required=True,
+        help="witness detached base64 signature over exact checkpoint bytes")
+    parser.add_argument("--trusted-witness-fingerprint",required=True,
+        help="out-of-band SHA256 fingerprint of raw witness Ed25519 public key")
+    parser.add_argument("--trusted-checkpoint-sha256",required=True,
+        help="latest approved witness receipt SHA256; never derive from input")
     parser.add_argument("--discard-data",action="store_true",
                         help="required to remove disposable PostgreSQL volumes")
     args=parser.parse_args()
@@ -76,6 +87,13 @@ def main():
         signature_path=args.review_signature,
         trusted_fingerprint=args.trusted_reviewer_fingerprint,
     )
+    witness=SignedReviewerCheckpoint(
+        public_key_path=args.witness_public_key,
+        receipt_path=args.witness_receipt,
+        signature_path=args.witness_signature,
+        trusted_witness_fingerprint=args.trusted_witness_fingerprint,
+        trusted_receipt_sha256=args.trusted_checkpoint_sha256,
+    )
     authority=SignedPreviewAuthority(
         public_key_path=args.reviewer_public_key,
         signature_path=args.review_signature,
@@ -84,6 +102,7 @@ def main():
         root_public_key_path=args.roster_root_public_key,
         root_signature_path=args.roster_root_signature,
         trusted_root_fingerprint=args.trusted_roster_root_fingerprint,
+        witness_checkpoint=witness,
     )
     manager=TemplatePreviewManager(state/"registry.db",template,
         enabled=True,reviewed_files=approved_hashes,
