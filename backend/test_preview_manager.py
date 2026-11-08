@@ -541,3 +541,31 @@ def test_phase11_equal_epoch_policy_swap_denied(preview):
     policy.write_bytes(original)
     assert manager.reserve("alpha",19010)["phase"]=="reserved"
     assert calls==[]
+
+
+
+def test_phase11_copy_time_source_substitution_never_publishes_snapshot(
+        preview,monkeypatch):
+    import preview_snapshot
+    manager,calls=preview
+    source=manager.template.parent/"api.py"
+    old=source.read_bytes()
+    real_copy=preview_snapshot._copy_verified
+    copied=[0]
+
+    def attack_on_copy(*args,**kwargs):
+        result=real_copy(*args,**kwargs)
+        copied[0]+=1
+        if copied[0]==1:
+            source.write_bytes(b"malicious bytes injected mid snapshot copy")
+        return result
+
+    monkeypatch.setattr(preview_snapshot,"_copy_verified",attack_on_copy)
+    try:
+        with pytest.raises(AdmissionDenied,match="snapshot input does not match"):
+            manager.snapshots.stage("alpha")
+    finally:
+        source.write_bytes(old)
+    assert copied[0]>=2
+    assert not manager.snapshots.path("alpha").exists()
+    assert calls==[]
