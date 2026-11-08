@@ -1488,6 +1488,7 @@ if os.environ.get("WFS_SECURE_CONTROL_API_ENABLED") == "YES":
         ledger=CostLedger(os.environ["WFS_COST_DB"]),
         tokens=TokenStore(os.environ["WFS_AUTH_DB"]),
         taskengine=taskengine,
+        code_qa_intake_enabled=os.environ.get("WFS_CODE_QA_INTAKE_READY") == "YES",
         artifact_store=(__import__("artifact_store").VerifiedArtifacts(
             os.environ["WFS_WORKSPACE_ROOT"])
             if os.environ.get("WFS_WORKSPACE_ROOT") else None)))

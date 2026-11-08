@@ -91,7 +91,8 @@ class CancelReply(BaseModel):
     status:str
 
 
-def create_secure_router(*, queue, rbac, ledger, tokens, taskengine=None, artifact_store=None):
+def create_secure_router(*, queue, rbac, ledger, tokens, taskengine=None, artifact_store=None,
+                         code_qa_intake_enabled=False):
     """Dependency-injected data sources; no unauthenticated fallback."""
     router=APIRouter(prefix="/api/v4", tags=["WFS Secure Control API"])
 
@@ -167,7 +168,11 @@ def create_secure_router(*, queue, rbac, ledger, tokens, taskengine=None, artifa
         if task.get("status") not in ("pending","review","failed"):
             raise HTTPException(409,"Task is not runnable")
         if task.get("role") in ("backend","backend2","frontend","frontend2","devops"):
-            raise HTTPException(409,"Code tasks require isolated QA sandbox")
+            # The public gateway never gets Docker access. Coding intake is
+            # enabled by an independent operator after a Python QA worker is
+            # provisioned. Frontend/DevOps roles have no approved sandbox.
+            if not code_qa_intake_enabled or task["role"] not in ("backend","backend2"):
+                raise HTTPException(409,"Code role requires an approved isolated QA worker")
         try:
             taskengine.require_launch_approval(project_id)
             if taskengine.is_paused():

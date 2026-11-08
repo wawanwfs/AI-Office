@@ -17,6 +17,10 @@ class StubEngine:
             return {"id":1,"project":"alpha","role":"design","status":"pending"}
         if task_id==2:
             return {"id":2,"project":"bravo","role":"qa","status":"pending"}
+        if task_id==3:
+            return {"id":3,"project":"alpha","role":"backend","status":"pending"}
+        if task_id==4:
+            return {"id":4,"project":"alpha","role":"frontend","status":"pending"}
         return None
     def require_launch_approval(self,project_id):
         if not self.approved:
@@ -119,3 +123,32 @@ def test_scope_checked_after_principal_role_revocation(api):
     assert c.get(url,headers=token).status_code==200
     acl.revoke("alice","alpha","observer")
     assert c.get(url,headers=token).status_code==404
+
+
+
+def test_coding_task_intake_disabled_by_default_even_for_project_owner(api):
+    c,q,acl,ledger,tokens,engine,headers=api
+    resp=c.post("/api/v4/projects/alpha/tasks/3/enqueue",headers=headers("alice"))
+    assert resp.status_code==409
+    assert q.list("alpha")==[]
+
+
+def test_only_explicitly_approved_python_code_roles_may_enter_queue(api):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from secure_control_api import create_secure_router
+    c,q,acl,ledger,tokens,engine,headers=api
+    app=FastAPI()
+    app.include_router(create_secure_router(
+        queue=q,rbac=acl,ledger=ledger,tokens=tokens,taskengine=engine,
+        code_qa_intake_enabled=True))
+    approved=TestClient(app)
+    owner=headers("alice")
+    assert approved.post("/api/v4/projects/alpha/tasks/3/enqueue",
+                         headers=headers("observer")).status_code==404
+    assert approved.post("/api/v4/projects/alpha/tasks/4/enqueue",
+                         headers=owner).status_code==409
+    outcome=approved.post("/api/v4/projects/alpha/tasks/3/enqueue",headers=owner)
+    assert outcome.status_code==202
+    assert outcome.json()["execution_started"] is False
+    assert q.get(outcome.json()["job_id"])["role"]=="backend"
