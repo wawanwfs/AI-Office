@@ -102,6 +102,26 @@ Untuk audit integrasi yang membutuhkan host live, lihat
 lanjutan lihat [laporan audit 2026-11-08](docs/AUDIT_2026-11-08.md).
 Jangan menyimpan key API di source maupun mem-publish Docker socket.
 
+## Phase 7 — Real preview RBAC, Docker egress and Windows recovery
+
+The Phase 7 secure project panel now inspects **real** QA manifests,
+approved read-only preview health and owner invoice discrepancy reports.
+An opt-in /api/v4 read-only proxy checks project RBAC and an operator
+registry; no Docker credential is provided to the public gateway.
+Two disposable fullstack templates run behind a pinned nonroot TCP ingress:
+database and application join only internal networks, preserving
+WebSocket/SSE while actual Docker tests reject direct external IPv4 traffic.
+Windows native CI also verifies SQLite WAL/create-only backup and restore.
+
+**Boundaries:** no authorized paid AI provider generation, no verified
+official invoice, no arbitrary generated-app preview admission, no public
+interactive proxy, no production daemon approval, no full Windows/Linux
+cleanroom Docker Desktop installation or rollback. Production was untouched.
+
+- [Phase 7 REA and acceptance matrix](docs/REA_PHASE7.md)
+- [Phase 7 Windows/Linux operator runbook](docs/PHASE7_RUNTIME_RUNBOOK.md)
+- [Phase 8 handoff](docs/NEXT_PHASE8_PROMPT.md)
+
 ## Phase 6 — Authenticated Briefs, Real Coding QA & Operator Preview
 
 **Implemented / tested:** A user may submit a scoped Python coding brief

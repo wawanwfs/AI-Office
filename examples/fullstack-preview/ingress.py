@@ -47,7 +47,7 @@ async def handle(client_reader, client_writer):
 
 async def main():
     server = await asyncio.start_server(
-        handle, "0.0.0.0", 8000, backlog=128, limit=65536
+        handle, "0.0.0.0", 8000, backlog=128, limit=65536  # nosec B104: container-only ingress; host binds 127.0.0.1
     )
     async with server:
         await server.serve_forever()
