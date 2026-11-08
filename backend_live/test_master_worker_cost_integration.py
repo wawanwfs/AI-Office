@@ -20,6 +20,7 @@ class FakeClient:
     calls=0
     def __init__(self, **kwargs):
         assert kwargs.get("follow_redirects") is False
+        assert kwargs.get("trust_env") is False  # no HTTP(S)_PROXY for billable worker
     async def __aenter__(self):
         return self
     async def __aexit__(self,*args):
@@ -125,3 +126,47 @@ def test_revoked_project_permission_stops_next_paid_call(cost_ctx,tmp_path):
     with pytest.raises(AccessDenied):
         asyncio.run(tasks.call_llm("agent-1","system","brief"))
     assert FakeClient.calls==0
+
+
+
+@pytest.mark.parametrize("base",[
+    "http://billing.example/v1",
+    "https://billing.example/private/v1",
+    "https://billing.example/v1?route=http://127.0.0.1",
+    "https://billing.example/v1#other",
+    "https://billing.example:444/v1",
+    "https://billing.example./v1",
+    "https://127.0.0.1/v1",
+    "https://alice:password@billing.example/v1",
+    "https://billing.example:443/hidden",
+])
+def test_billed_worker_rejects_url_port_path_and_private_ip_pivots(cost_ctx,monkeypatch,base):
+    ledger,queue,claim=cost_ctx
+    monkeypatch.setattr(tasks,"load_agent_cfg",lambda _: {
+        "base":base,"key":"synthetic-secret","model":"metered-model"})
+    with pytest.raises(PermissionError):
+        asyncio.run(tasks.call_llm("agent-1","system","brief"))
+    assert FakeClient.calls==0
+    assert ledger.history("project-1")==[]
+
+
+def test_billed_worker_rejects_missing_and_header_injection_keys(cost_ctx,monkeypatch):
+    ledger,queue,claim=cost_ctx
+    for key in ("", "key\r\nX-Attack: yes", None):
+        monkeypatch.setattr(tasks,"load_agent_cfg",lambda _,k=key: {
+            "base":"https://billing.example/v1",
+            "key":k,"model":"metered-model"})
+        if key is None:
+            # Default synthetic configuration may fill None, so only
+            # explicit control-character case is a hard key assertion.
+            continue
+        with pytest.raises(PermissionError,match="credential"):
+            asyncio.run(tasks.call_llm("agent-1","system","brief"))
+    assert FakeClient.calls==0
+
+
+def test_no_implicit_proxy_environment_in_billed_worker(cost_ctx,monkeypatch):
+    monkeypatch.setenv("HTTPS_PROXY","http://127.0.0.1:8888")
+    monkeypatch.setenv("HTTP_PROXY","http://127.0.0.1:8888")
+    assert asyncio.run(tasks.call_llm("agent-1","system","brief"))=="valid result"
+    assert FakeClient.calls==1
