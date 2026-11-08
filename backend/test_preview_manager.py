@@ -7,11 +7,31 @@ import sqlite3
 from cryptography.hazmat.primitives import serialization
 from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from preview_signature import canonical_review_bytes
+from preview_root_authority import canonical_roster_bytes
 from preview_authority import SignedPreviewAuthority
 from types import SimpleNamespace
 import pytest
 from preview_manager import TemplatePreviewManager,PreviewDenied
 from preview_admission import AdmissionDenied,REVIEWED_FILES,candidate_manifest_for_ci_only
+
+
+_TEST_ROSTER_SIGNERS={}
+
+
+def root_args(authority):
+    return {
+        "root_public_key_path":authority.root_public_key_path,
+        "root_signature_path":authority.root_signature_path,
+        "trusted_root_fingerprint":authority.trusted_root_fingerprint,
+    }
+
+
+def resign_roster_for_synthetic_test(authority):
+    """In-memory test-only root signer; NOT permitted in operator production."""
+    key=_TEST_ROSTER_SIGNERS[str(authority.root_public_key_path)]
+    authority.root_signature_path.write_bytes(
+        base64.b64encode(key.sign(canonical_roster_bytes(
+            authority.policy_path.read_bytes()))))
 
 
 def hashes(directory):
@@ -32,9 +52,21 @@ def ci_authority(root, reviewed):
     document={"version":1,"epoch":1,"active_fingerprints":[fingerprint],
               "revoked_fingerprints":[]}
     policy.write_text(json.dumps(document,sort_keys=True))
+    root_key=Ed25519PrivateKey.generate()
+    root_pem=root/"test-roster-root.pem"
+    root_signature=root/"test-roster-root.sig"
+    root_pem.write_bytes(root_key.public_key().public_bytes(
+        serialization.Encoding.PEM,serialization.PublicFormat.SubjectPublicKeyInfo))
+    root_signature.write_bytes(
+        base64.b64encode(root_key.sign(canonical_roster_bytes(policy.read_bytes()))))
+    _TEST_ROSTER_SIGNERS[str(root_pem)]=root_key
+    root_fp=hashlib.sha256(root_key.public_key().public_bytes(
+        serialization.Encoding.Raw,serialization.PublicFormat.Raw)).hexdigest()
     return SignedPreviewAuthority(
         public_key_path=pem,signature_path=sig,policy_path=policy,
-        trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest()
+        trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),
+        root_public_key_path=root_pem,root_signature_path=root_signature,
+        trusted_root_fingerprint=root_fp
     )
 
 
@@ -354,7 +386,8 @@ def test_phase10_policy_changes_and_revocation_fail_closed(preview):
             public_key_path=manager.authority.public_key_path,
             signature_path=manager.authority.signature_path,
             policy_path=policy,
-            trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest())
+            trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),
+            **root_args(manager.authority))
         with pytest.raises(AdmissionDenied,match="revoked"):
             TemplatePreviewManager(manager.registry.parent/"revoked.db",
                 manager.template,enabled=True,runner=manager.runner,
@@ -417,7 +450,8 @@ def test_phase10_bad_policy_structure_and_duplicate_keys_rejected(preview):
             public_key_path=manager.authority.public_key_path,
             signature_path=manager.authority.signature_path,
             policy_path=policy,
-            trusted_policy_sha256=hashlib.sha256(payload).hexdigest())
+            trusted_policy_sha256=hashlib.sha256(payload).hexdigest(),
+            **root_args(manager.authority))
         with pytest.raises(AdmissionDenied,match="policy"):
             authority.verify(manager.reviewed_manifest)
     policy.write_bytes(original)
@@ -493,11 +527,13 @@ def test_phase11_local_reviewer_epoch_rollback_denied_across_manager_restart(pre
     previous=json.loads(old)
     upgraded={**previous,"epoch":2}
     policy.write_text(json.dumps(upgraded,sort_keys=True))
+    resign_roster_for_synthetic_test(manager.authority)
     authority=SignedPreviewAuthority(
         public_key_path=manager.authority.public_key_path,
         signature_path=manager.authority.signature_path,
         policy_path=policy,
-        trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest())
+        trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),
+            **root_args(manager.authority))
     replacement=TemplatePreviewManager(manager.registry,manager.template,
         enabled=True,runner=manager.runner,
         reviewed_files=manager.reviewed_manifest,reviewer_authority=authority)
@@ -509,6 +545,7 @@ def test_phase11_local_reviewer_epoch_rollback_denied_across_manager_restart(pre
     # Restore perfectly valid old, signed policy and the original pin.
     # Version 1 cannot be replayed against the operator-owned registry.
     policy.write_bytes(old)
+    resign_roster_for_synthetic_test(manager.authority)
     with pytest.raises(AdmissionDenied,match="epoch rollback"):
         TemplatePreviewManager(manager.registry,manager.template,
             enabled=True,runner=manager.runner,
@@ -528,17 +565,20 @@ def test_phase11_equal_epoch_policy_swap_denied(preview):
     policy.write_text(json.dumps({
         **approved,"revoked_fingerprints":[other]
     },sort_keys=True))
+    resign_roster_for_synthetic_test(manager.authority)
     independent=SignedPreviewAuthority(
         public_key_path=manager.authority.public_key_path,
         signature_path=manager.authority.signature_path,
         policy_path=policy,
-        trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest())
+        trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),
+            **root_args(manager.authority))
     with pytest.raises(AdmissionDenied,match="same epoch"):
         TemplatePreviewManager(manager.registry,manager.template,
             enabled=True,runner=manager.runner,
             reviewed_files=manager.reviewed_manifest,
             reviewer_authority=independent)
     policy.write_bytes(original)
+    resign_roster_for_synthetic_test(manager.authority)
     assert manager.reserve("alpha",19010)["phase"]=="reserved"
     assert calls==[]
 
@@ -568,4 +608,68 @@ def test_phase11_copy_time_source_substitution_never_publishes_snapshot(
         source.write_bytes(old)
     assert copied[0]>=2
     assert not manager.snapshots.path("alpha").exists()
+    assert calls==[]
+
+
+
+def test_phase12_roster_signature_required_even_with_new_hash_pin(preview):
+    manager,calls=preview
+    roster=manager.authority.policy_path
+    original=roster.read_bytes()
+    updated=json.loads(original)
+    updated["epoch"]+=1
+    roster.write_text(json.dumps(updated,sort_keys=True))
+    # An attacker can recalculate this SHA but CANNOT forge the separately
+    # pinned offline root Ed25519 signature.
+    attacker_authority=SignedPreviewAuthority(
+        public_key_path=manager.authority.public_key_path,
+        signature_path=manager.authority.signature_path,
+        policy_path=roster,
+        trusted_policy_sha256=hashlib.sha256(roster.read_bytes()).hexdigest(),
+        **root_args(manager.authority))
+    try:
+        with pytest.raises(AdmissionDenied,match="roster signature mismatch"):
+            TemplatePreviewManager(manager.registry,manager.template,
+                enabled=True,runner=manager.runner,
+                reviewed_files=manager.reviewed_manifest,
+                reviewer_authority=attacker_authority)
+    finally:
+        roster.write_bytes(original)
+    assert manager.reserve("alpha",19010)["phase"]=="reserved"
+    assert calls==[]
+
+
+def test_phase12_root_signature_rotation_requires_separate_root_trust(preview):
+    manager,calls=preview
+    signed_root=manager.authority.root_signature_path
+    original=signed_root.read_bytes()
+    try:
+        signed_root.write_bytes(b"not-a-signature")
+        with pytest.raises(AdmissionDenied,match="roster signature"):
+            manager.reserve("alpha",19010)
+        with pytest.raises(AdmissionDenied,match="roster signature"):
+            manager.status("alpha")
+    finally:
+        signed_root.write_bytes(original)
+    assert manager.reserve("alpha",19010)["phase"]=="reserved"
+    assert calls==[]
+
+
+def test_phase12_reviewer_cannot_self_sign_authority(preview):
+    manager,calls=preview
+    reviewer_fp=json.loads(manager.authority.policy_path.read_bytes())[
+        "active_fingerprints"][0]
+    swapped=SignedPreviewAuthority(
+        public_key_path=manager.authority.public_key_path,
+        signature_path=manager.authority.signature_path,
+        policy_path=manager.authority.policy_path,
+        trusted_policy_sha256=manager.authority.trusted_policy_sha256,
+        root_public_key_path=manager.authority.public_key_path,
+        root_signature_path=manager.authority.root_signature_path,
+        trusted_root_fingerprint=reviewer_fp)
+    with pytest.raises(AdmissionDenied,match="distinct key"):
+        TemplatePreviewManager(manager.registry.parent/"same-root.db",
+            manager.template,enabled=True,runner=manager.runner,
+            reviewed_files=manager.reviewed_manifest,
+            reviewer_authority=swapped)
     assert calls==[]
