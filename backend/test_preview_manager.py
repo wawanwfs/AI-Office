@@ -1,6 +1,13 @@
 """Template-only preview manager: local Docker authority never in HTTP gateway."""
 from pathlib import Path
 import hashlib
+import base64
+import json
+import sqlite3
+from cryptography.hazmat.primitives import serialization
+from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
+from preview_signature import canonical_review_bytes
+from preview_authority import SignedPreviewAuthority
 from types import SimpleNamespace
 import pytest
 from preview_manager import TemplatePreviewManager,PreviewDenied
@@ -9,6 +16,26 @@ from preview_admission import AdmissionDenied,REVIEWED_FILES,candidate_manifest_
 
 def hashes(directory):
     return candidate_manifest_for_ci_only(directory)
+
+
+def ci_authority(root, reviewed):
+    """SYNTHETIC one-time test signer, NOT an independent reviewer approval."""
+    key=Ed25519PrivateKey.generate()
+    pem=root/"test-reviewer.pem"
+    sig=root/"test-review.sig"
+    policy=root/"test-policy.json"
+    pem.write_bytes(key.public_key().public_bytes(
+        serialization.Encoding.PEM,serialization.PublicFormat.SubjectPublicKeyInfo))
+    sig.write_bytes(base64.b64encode(key.sign(canonical_review_bytes(reviewed))))
+    fingerprint=hashlib.sha256(key.public_key().public_bytes(
+        serialization.Encoding.Raw,serialization.PublicFormat.Raw)).hexdigest()
+    document={"version":1,"epoch":1,"active_fingerprints":[fingerprint],
+              "revoked_fingerprints":[]}
+    policy.write_text(json.dumps(document,sort_keys=True))
+    return SignedPreviewAuthority(
+        public_key_path=pem,signature_path=sig,policy_path=policy,
+        trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest()
+    )
 
 
 @pytest.fixture
@@ -42,8 +69,10 @@ def preview(tmp_path):
     def runner(argv,**kwargs):
         calls.append((argv,kwargs))
         return SimpleNamespace(returncode=0,stdout="ok",stderr="")
+    approved=hashes(folder)
     manager=TemplatePreviewManager(tmp_path/"registry.db",compose,
-                                   enabled=True,runner=runner,reviewed_files=hashes(folder))
+        enabled=True,runner=runner,reviewed_files=approved,
+        reviewer_authority=ci_authority(tmp_path,approved))
     return manager,calls
 
 
@@ -59,7 +88,7 @@ def test_deny_default_and_unreviewed_template(tmp_path):
     with pytest.raises(PreviewDenied,match="template"):
         TemplatePreviewManager(tmp_path/"registry.db",link,enabled=True,
             reviewed_files={})
-    with pytest.raises(AdmissionDenied,match="approved"):
+    with pytest.raises(AdmissionDenied,match="signed reviewer authority"):
         TemplatePreviewManager(tmp_path/"registry.db",path,enabled=True,
             reviewed_files=None)
 
@@ -175,7 +204,8 @@ def test_reviewed_runtime_file_mutation_denied_before_docker(preview):
     with pytest.raises(AdmissionDenied,match="changed"):
         manager.start("alpha",19010,"X"*43)
     assert calls==[]
-    assert manager.status("alpha")["phase"]=="uncertain"
+    with sqlite3.connect(manager.registry) as db:
+        assert db.execute("SELECT phase FROM wfs_preview_instances WHERE project_id='alpha'").fetchone()[0]=="reserved"
 
 
 def test_reviewed_template_rejects_digest_mismatch_before_construction(preview):
@@ -183,9 +213,10 @@ def test_reviewed_template_rejects_digest_mismatch_before_construction(preview):
     folder=manager.template.parent
     approved=hashes(folder)
     approved["sources"]["api.py"]="0"*64
-    with pytest.raises(AdmissionDenied,match="changed"):
+    with pytest.raises(AdmissionDenied,match="signature does not match"):
         TemplatePreviewManager(folder/"other-registry.db",manager.template,
-            enabled=True,reviewed_files=approved)
+            enabled=True,reviewed_files=approved,
+            reviewer_authority=manager.authority)
     assert calls==[]
 
 
@@ -253,13 +284,14 @@ def test_phase8_old_unversioned_or_unpinned_manifests_denied(preview):
     manager,calls=preview
     folder=manager.template.parent
     manifest=hashes(folder)
-    with pytest.raises(AdmissionDenied,match="version 2"):
+    with pytest.raises(AdmissionDenied,match="v2"):
         TemplatePreviewManager(folder/"legacy.db",manager.template,enabled=True,
-                               reviewed_files=manifest["sources"])
+            reviewed_files=manifest["sources"],
+            reviewer_authority=manager.authority)
     manifest["images"]["db"]="postgres:16-alpine"
     with pytest.raises(AdmissionDenied,match="manifest fields"):
         TemplatePreviewManager(folder/"mutable.db",manager.template,enabled=True,
-                               reviewed_files=manifest)
+            reviewed_files=manifest,reviewer_authority=ci_authority(repo,manifest))
     assert calls==[]
 
 
@@ -271,7 +303,7 @@ def test_phase8_broken_cyclonedx_is_denied_even_if_checksum_reapproved(preview):
     manifest=hashes(manager.template.parent)
     with pytest.raises(AdmissionDenied,match="CycloneDX"):
         TemplatePreviewManager(repo/"bad-bom.db",manager.template,enabled=True,
-                               reviewed_files=manifest)
+            reviewed_files=manifest,reviewer_authority=ci_authority(repo,manifest))
     assert calls==[]
 
 
