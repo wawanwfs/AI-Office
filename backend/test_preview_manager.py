@@ -609,3 +609,67 @@ def test_phase11_copy_time_source_substitution_never_publishes_snapshot(
     assert copied[0]>=2
     assert not manager.snapshots.path("alpha").exists()
     assert calls==[]
+
+
+
+def test_phase12_roster_signature_required_even_with_new_hash_pin(preview):
+    manager,calls=preview
+    roster=manager.authority.policy_path
+    original=roster.read_bytes()
+    updated=json.loads(original)
+    updated["epoch"]+=1
+    roster.write_text(json.dumps(updated,sort_keys=True))
+    # An attacker can recalculate this SHA but CANNOT forge the separately
+    # pinned offline root Ed25519 signature.
+    attacker_authority=SignedPreviewAuthority(
+        public_key_path=manager.authority.public_key_path,
+        signature_path=manager.authority.signature_path,
+        policy_path=roster,
+        trusted_policy_sha256=hashlib.sha256(roster.read_bytes()).hexdigest(),
+        **root_args(manager.authority))
+    try:
+        with pytest.raises(AdmissionDenied,match="roster signature mismatch"):
+            TemplatePreviewManager(manager.registry,manager.template,
+                enabled=True,runner=manager.runner,
+                reviewed_files=manager.reviewed_manifest,
+                reviewer_authority=attacker_authority)
+    finally:
+        roster.write_bytes(original)
+    assert manager.reserve("alpha",19010)["phase"]=="reserved"
+    assert calls==[]
+
+
+def test_phase12_root_signature_rotation_requires_separate_root_trust(preview):
+    manager,calls=preview
+    signed_root=manager.authority.root_signature_path
+    original=signed_root.read_bytes()
+    try:
+        signed_root.write_bytes(b"not-a-signature")
+        with pytest.raises(AdmissionDenied,match="roster signature"):
+            manager.reserve("alpha",19010)
+        with pytest.raises(AdmissionDenied,match="roster signature"):
+            manager.status("alpha")
+    finally:
+        signed_root.write_bytes(original)
+    assert manager.reserve("alpha",19010)["phase"]=="reserved"
+    assert calls==[]
+
+
+def test_phase12_reviewer_cannot_self_sign_authority(preview):
+    manager,calls=preview
+    reviewer_fp=json.loads(manager.authority.policy_path.read_bytes())[
+        "active_fingerprints"][0]
+    swapped=SignedPreviewAuthority(
+        public_key_path=manager.authority.public_key_path,
+        signature_path=manager.authority.signature_path,
+        policy_path=manager.authority.policy_path,
+        trusted_policy_sha256=manager.authority.trusted_policy_sha256,
+        root_public_key_path=manager.authority.public_key_path,
+        root_signature_path=manager.authority.root_signature_path,
+        trusted_root_fingerprint=reviewer_fp)
+    with pytest.raises(AdmissionDenied,match="distinct key"):
+        TemplatePreviewManager(manager.registry.parent/"same-root.db",
+            manager.template,enabled=True,runner=manager.runner,
+            reviewed_files=manager.reviewed_manifest,
+            reviewer_authority=swapped)
+    assert calls==[]
