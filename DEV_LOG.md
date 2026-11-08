@@ -6098,3 +6098,10 @@
 - **Bukti gate:** vitest **3628/3628 (249 file)** · build sukses (precache 43, 1903.76 KiB) → cp dist → deploy live · e2e_err_probe **OK** (0/0 error, hooks 26/5, shot 669082 B, hygiene 11/0) · probe hijau live: dashboard_presence 2×, inspector_status, lazy_modals, dblclick_nexus, hover_follow 6×, hover_leave 2×, camera_reset 2×, async_destroy, events_stream, floor_occupancy, camera_floor_live, audio_signal, bubble_leak · produksi scene TIDAK diubah (probe-only).
 - Commit: scripts/ 14 probe (fallback office) + dashboard_presence (regex) + camera_reset (koordinat) + hover_follow (state-filter/refresh/sampling) + DEV_LOG.
 - **Sisa backlog:** (a) gateway :8787→Docker (menunggu keputusan user); (b) saas-dibantuin push GitHub (repo belum ada); (d) keputusan omniroute :20128; kandidat lanjutan: rerun berkala seluruh probe patched utk deteksi flake sisa.
+
+## 2026-11-08 21:20 WIB — Siklus 283: RERUN probe patched (flake check) — 5/5 HIJAU, tanpa regresi
+
+- Rerun live: dashboard_presence (agents=26, initial→final presence benar), camera_reset (reset flag true), hover_follow (moved 4.668, v:true — stabil), events_stream (connected_fast, sse_err=0), async_destroy (resolved 3, hooks bersih).
+- Tanpa perubahan kode produksi maupun probe — verifikasi berkala dari backlog siklus 282.
+- Gate: probe 5/5 OK; vitest/build tidak dijalankan ulang (tidak ada perubahan kode); wfs-hq & wfs-office active.
+- Sisa backlog: (a) gateway :8787→Docker; (b) saas-dibantuin push GitHub; (d) keputusan omniroute :20128; rerun probe patched sisanya (9 lagi) pada siklus berikutnya.
