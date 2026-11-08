@@ -152,9 +152,10 @@ describe('subprocess_hardening siklus 202 — anchor file kunci', () => {
     expect(src).toMatch(/subprocess\.run\(\["xdpyinfo", "-display", ":99"\], timeout=10,/)
     expect(viol('e2e_err_probe.py')).toEqual([])
   })
-  it('apply_dashboard_stats.py: sh() systemctl restart ber-deadline 120s', () => {
-    expect(readFileSync(resolve(SCRIPTS, 'apply_dashboard_stats.py'), 'utf-8'))
-      .toMatch(/subprocess\.run\(cmd, capture_output=True, text=True, timeout=120\)/)
+  it('Phase 4 Docker runtime verifier: every synchronous host operation has a deadline', () => {
+    const src = readFileSync(resolve(SCRIPTS, 'ci_docker_sandbox_smoke.py'), 'utf-8')
+    expect(src).toContain('docker')
+    expect(viol('ci_docker_sandbox_smoke.py')).toEqual([])
   })
   it('e2e_widget_chat.py: kontrol kode-lama INLINE data: URL (siklus 273, tanpa docker) + urlopen ber-deadline', () => {
     const src = readFileSync(resolve(SCRIPTS, 'e2e_widget_chat.py'), 'utf-8')

@@ -118,9 +118,9 @@ describe('http_transport_hardening siklus 201 — scanner self-test', () => {
 })
 
 describe('http_transport_hardening siklus 201 — census', () => {
-  it('census: 90 file .py dgn call-site urlopen, >=97 call-site, 3 file .sh curl (siklus 267: +1 probe_clock_oracle_267.py +1 diag_clock_canvas.py — orakel piksel jam dinding CDP)', () => {
+  it('census: existing urlopen/curl sites remain deadline-guarded as obsolete scripts are removed', () => {
     expect(PY_ALL.length).toBeGreaterThan(70)
-    expect(PY_HTTP.length).toBe(91) // + real-viewport UI acceptance script
+    expect(PY_HTTP.length).toBeGreaterThanOrEqual(85) // active probes only; obsolete apply scripts intentionally removed
     const total = PY_HTTP.reduce((n, f) => n + pySites(f).length, 0)
     expect(total).toBeGreaterThanOrEqual(97)
     expect(SH_ALL.length).toBe(3)
