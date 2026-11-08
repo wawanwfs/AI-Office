@@ -6390,3 +6390,12 @@
 - Redeploy dist → ~/wfs-hq; bersihkan 7 orphan asset hash lama → hygiene 13 hashed/0 orphan (probe pertama FAIL hygiene, fixed).
 - e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 707014 B, nonbg 0.992, hygiene 13/0.
 - Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 2026-11-09 06:45 WIB — Siklus 321: Ticker feed & SysMeter API refresh SEGERA saat tab kembali visible
+
+- Tanpa upstream baru (0 commit HEAD..origin/main). Dua poller API terakhir tanpa listener visible-refresh (paritas pola 315-320): Ticker feed tasks+agents+status (20 dtk) & SysMeter status+resources (12 dtk) — tanpa ini data bisa usang hingga satu periode penuh setelah tab kembali visible.
+- Ticker.jsx: listener 'visibilitychange' baca ulang SEGERA + removeEventListener cleanup. SysMeter.jsx: listener kedua (onVisApi) untuk API load, terpisah dari listener readScene siklus 319; keduanya dibersihkan saat unmount.
+- +1 file tes visibility_parity_321.test.jsx (4 kasus: Ticker segera, SysMeter API+scene keduanya segera, hidden digerbang, cleanup melepas 2 listener). Paritas visible-refresh kini menyeluruh di semua poller scene & API.
+- Build PWA OK; vitest 256 file / 3686 passed + 6 skipped, 0 fail (+4 tes vs siklus 320).
+- Redeploy dist → ~/wfs-hq via deploy.py (9503: 200, pruned 0); hygiene 13 hashed/0 orphan.
+- e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 707183 B, nonbg 0.992, hygiene 13/0.
+- Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

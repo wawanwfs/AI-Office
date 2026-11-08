@@ -66,7 +66,11 @@ export default function Ticker({ conn }) {
     // tetap menghantam 3 endpoint (tasks+agents+status) tiap 20 dtk tanpa penonton.
     // Mount load() tetap jalan; hanya tick interval yang digerbang.
     const iv = setInterval(() => { if (document.visibilityState === 'visible') load() }, 20000)
-    return () => { stop = true; clearInterval(iv) }
+    // Siklus 321: refresh SEGERA saat tab kembali visible (pola 315-320) —
+    // tanpa ini ticker bisa usang hingga 20 dtk setelah kembali.
+    const onVis = () => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { stop = true; clearInterval(iv); document.removeEventListener('visibilitychange', onVis) }
   }, [])
 
   const list = [...msgs, ...msgs]

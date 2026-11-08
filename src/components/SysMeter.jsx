@@ -30,6 +30,10 @@ export default function SysMeter() {
     }
     load()
     const iv = setInterval(() => { if (document.visibilityState === 'visible') load() }, 12000)
+    // Siklus 321: refresh SEGERA saat tab kembali visible (pola 315-320) —
+    // load/agensi scene terpisah, jadi API ini perlu listener sendiri.
+    const onVisApi = () => { if (document.visibilityState === 'visible') load() }
+    document.addEventListener('visibilitychange', onVisApi)
     // hitungan agen dari scene 3D (window.__agentData diisi OfficeScene) — sumber kebenaran visual
     const readScene = () => setSceneAgents((window.__agentData || []).length || null)
     readScene()
@@ -38,7 +42,7 @@ export default function SysMeter() {
     const iv2 = setInterval(() => { if (document.visibilityState === 'visible') readScene() }, 4000)
     const onVis = () => { if (document.visibilityState === 'visible') readScene() }
     document.addEventListener('visibilitychange', onVis)
-    return () => { stop = true; clearInterval(iv); clearInterval(iv2); document.removeEventListener('visibilitychange', onVis) }
+    return () => { stop = true; clearInterval(iv); clearInterval(iv2); document.removeEventListener('visibilitychange', onVis); document.removeEventListener('visibilitychange', onVisApi) }
   }, [])
 
   if (!d) {
