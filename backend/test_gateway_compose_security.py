@@ -32,3 +32,11 @@ def test_migrated_production_gateway_preserves_existing_loopback_contract():
     assert re.search(r"127\.0\.0\.1:8787:8787",config)
     assert 'WFS_PORT: "8787"' in config
     assert 'user: "1002:1003"' in config
+
+
+def test_http_gateway_image_contains_no_docker_cli_or_socket_bootstrap():
+    src=(ROOT/"deploy/docker/Dockerfile.wfs-office-gw").read_text()
+    assert "download.docker.com/linux/static" not in src
+    assert "ADD https://" not in src
+    assert "docker --version" not in src
+    assert "COPY docker-entrypoint.sh" in src
