@@ -68,6 +68,14 @@ class DurableMasterQueue:
                   ON wfs_master_jobs(status, available_at, priority DESC, created_at);
                 CREATE INDEX IF NOT EXISTS wfs_master_jobs_project
                   ON wfs_master_jobs(project_id, status);
+                CREATE TABLE IF NOT EXISTS wfs_master_events (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    job_id TEXT NOT NULL, project_id TEXT NOT NULL,
+                    phase TEXT NOT NULL, detail TEXT NOT NULL DEFAULT '',
+                    created_at REAL NOT NULL
+                );
+                CREATE INDEX IF NOT EXISTS wfs_master_events_project
+                    ON wfs_master_events(project_id,id);
                 CREATE TABLE IF NOT EXISTS wfs_master_control (
                     key TEXT PRIMARY KEY,
                     value INTEGER NOT NULL
@@ -123,28 +131,45 @@ class DurableMasterQueue:
                 (id,project_id,task_id,role,status,priority,max_attempts,available_at,created_at,updated_at)
                 VALUES (?,?,?,?,'queued',?,?,?,?,?)""",
                 (jid, project_id, task_id, role, priority, max_attempts, now, now, now))
+            self._event(conn,jid,project_id,"queued","submitted",now)
             return jid
 
     @staticmethod
-    def _recover(conn, now):
-        # A lease is not success; crashed workers cannot leave tasks stuck forever.
-        conn.execute("""UPDATE wfs_master_jobs
-            SET status=CASE
-                  WHEN cancel_requested=1 THEN 'cancelled'
-                  WHEN attempt>=max_attempts THEN 'failed'
-                  ELSE 'queued' END,
-                lease_until=NULL, worker_id=NULL, lease_token=NULL,
-                available_at=?, updated_at=?
-            WHERE status='leased' AND lease_until<=?""", (now, now, now))
+    def _event(conn, job_id, project_id, phase, detail, now):
+        conn.execute("""INSERT INTO wfs_master_events
+            (job_id,project_id,phase,detail,created_at) VALUES(?,?,?,?,?)""",
+            (job_id,project_id,phase,str(detail)[:500],now))
 
-    def recover_expired(self):
+    @staticmethod
+    def _recover(conn, now, policy="requeue"):
+        # A lease is not success; crashed workers cannot leave tasks stuck forever.
+        if policy not in ("requeue", "quarantine"):
+            raise ValueError("unknown recovery policy")
+        expired = conn.execute(
+            """SELECT id,project_id,attempt,max_attempts,cancel_requested
+               FROM wfs_master_jobs WHERE status='leased' AND lease_until<=?""",
+            (now,),
+        ).fetchall()
+        for item in expired:
+            phase = ("cancelled" if item["cancel_requested"] else
+                     "failed" if policy == "quarantine" or item["attempt"] >= item["max_attempts"]
+                     else "queued")
+            reason = "expired lease requires operator reconciliation" if phase == "failed" else ""
+            conn.execute("""UPDATE wfs_master_jobs SET status=?,last_error=?,
+                lease_until=NULL, worker_id=NULL, lease_token=NULL,
+                available_at=?, updated_at=? WHERE id=?""",
+                (phase, reason, now, now, item["id"]))
+            DurableMasterQueue._event(conn,item["id"],item["project_id"],phase,
+                                      reason or "lease expired",now)
+
+    def recover_expired(self, *, policy="requeue"):
         now = float(self.clock())
         with self._transaction() as conn:
             n = conn.execute(
                 "SELECT COUNT(*) FROM wfs_master_jobs WHERE status='leased' AND lease_until<=?",
                 (now,),
             ).fetchone()[0]
-            self._recover(conn, now)
+            self._recover(conn, now, policy)
             return n
 
     def set_paused(self, paused):
@@ -160,7 +185,7 @@ class DurableMasterQueue:
                 "SELECT value FROM wfs_master_control WHERE key='paused'"
             ).fetchone()[0])
 
-    def claim(self, worker_id, *, lease_seconds=120):
+    def claim(self, worker_id, *, lease_seconds=120, recover_policy="requeue"):
         """Return private claim token; atomic across workers and projects.
 
         A worker MUST verify existing project_launch approval separately before
@@ -171,7 +196,7 @@ class DurableMasterQueue:
             raise ValueError("lease_seconds must be 5..3600")
         now = float(self.clock())
         with self._transaction() as conn:
-            self._recover(conn, now)
+            self._recover(conn, now, recover_policy)
             if conn.execute(
                 "SELECT value FROM wfs_master_control WHERE key='paused'"
             ).fetchone()[0]:
@@ -198,6 +223,8 @@ class DurableMasterQueue:
                        lease_token=?, updated_at=? WHERE id=? AND status='queued'""",
                     (until, worker_id, token, now, row["id"]),
                 )
+                self._event(conn,row["id"],row["project_id"],"leased",
+                            "worker claimed task",now)
                 return {"id": row["id"], "project_id": row["project_id"],
                         "task_id": row["task_id"], "role": row["role"],
                         "attempt": row["attempt"]+1, "worker_id": worker_id,
@@ -211,6 +238,40 @@ class DurableMasterQueue:
                  AND lease_token=? AND lease_until>?""",
             (job_id, worker_id, lease_token, now),
         ).fetchone()
+
+    def verify_lease(self, job_id, worker_id, lease_token):
+        """Worker-side fencing. Old worker must stop before more side effects."""
+        job_id,worker_id = _ident(job_id,"job_id"),_ident(worker_id,"worker_id")
+        if not isinstance(lease_token,str) or len(lease_token)!=32:
+            return False
+        with self._connect() as conn:
+            row=self._owns(conn,job_id,worker_id,lease_token,float(self.clock()))
+            return bool(row and not row["cancel_requested"])
+
+    def record_phase(self, job_id, worker_id, lease_token, phase, detail=""):
+        """Authenticated lease holders may report real phases, not fake success."""
+        if phase not in ("executing","reviewing"):
+            raise ValueError("phase must be executing or reviewing")
+        job_id,worker_id=_ident(job_id,"job_id"),_ident(worker_id,"worker_id")
+        now=float(self.clock())
+        with self._transaction() as conn:
+            row=self._owns(conn,job_id,worker_id,lease_token,now)
+            if not row or row["cancel_requested"]:
+                return False
+            proj=conn.execute("SELECT project_id FROM wfs_master_jobs WHERE id=?",
+                              (job_id,)).fetchone()[0]
+            self._event(conn,job_id,proj,phase,detail,now)
+            return True
+
+    def events(self, project_id, *, limit=100):
+        p=_ident(project_id,"project_id")
+        if isinstance(limit,bool) or not isinstance(limit,int) or not 1<=limit<=500:
+            raise ValueError("invalid limit")
+        with self._connect() as conn:
+            rows=conn.execute("""SELECT id,job_id,project_id,phase,detail,created_at
+                FROM wfs_master_events WHERE project_id=?
+                ORDER BY id DESC LIMIT ?""",(p,limit)).fetchall()
+            return [dict(row) for row in rows]
 
     def heartbeat(self, job_id, worker_id, lease_token, *, lease_seconds=120):
         job_id, worker_id = _ident(job_id, "job_id"), _ident(worker_id, "worker_id")
@@ -250,6 +311,9 @@ class DurableMasterQueue:
                 last_error=?,updated_at=? WHERE id=?""",
                 (status, available, str(error)[:1000] if not success else None,
                  now, job_id))
+            proj=conn.execute("SELECT project_id FROM wfs_master_jobs WHERE id=?",
+                              (job_id,)).fetchone()[0]
+            self._event(conn,job_id,proj,status,str(error)[:500] if not success else "",now)
             return status
 
     def cancel(self, job_id):
@@ -266,6 +330,9 @@ class DurableMasterQueue:
             else:
                 conn.execute("UPDATE wfs_master_jobs SET status='cancelled',updated_at=? WHERE id=?",
                              (now, job_id))
+            proj=conn.execute("SELECT project_id FROM wfs_master_jobs WHERE id=?",
+                              (job_id,)).fetchone()[0]
+            self._event(conn,job_id,proj,"cancel_requested" if row["status"]=="leased" else "cancelled","operator request",now)
             return True
 
     def cancel_requested(self, job_id, worker_id, lease_token):

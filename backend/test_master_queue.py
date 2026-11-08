@@ -146,3 +146,35 @@ def test_metrics_are_real_db_counts(setup):
     q.submit("p", "t2", "qa")
     assert q.metrics() == {"cancelled": 0, "completed": 0, "failed": 0,
                            "leased": 0, "queued": 2}
+
+
+def test_quarantine_expired_lease_requires_manual_reconciliation(setup):
+    new, now = setup
+    q = new()
+    job = q.submit("p", "task", "backend")
+    q.set_paused(False)
+    claim = q.claim("worker", lease_seconds=10, recover_policy="quarantine")
+    now[0] += 11
+    assert new().claim("new-worker", recover_policy="quarantine") is None
+    assert q.get(job)["status"] == "failed"
+    assert "reconciliation" in q.get(job)["last_error"]
+    assert q.finish(job,"worker",claim["lease_token"],success=True) is None
+
+
+def test_fencing_and_append_only_actual_execution_events(setup):
+    new, _ = setup
+    q = new()
+    job = q.submit("proj", "task", "qa")
+    q.set_paused(False)
+    claim = q.claim("worker", recover_policy="quarantine")
+    token = claim["lease_token"]
+    assert q.verify_lease(job,"worker",token)
+    assert not q.record_phase(job,"attacker",token,"executing")
+    assert q.record_phase(job,"worker",token,"executing","real task started")
+    assert q.record_phase(job,"worker",token,"reviewing","LLM QA pending")
+    assert q.finish(job,"worker",token,success=True) == "completed"
+    assert not q.verify_lease(job,"worker",token)
+    phases = [x["phase"] for x in q.events("proj")]
+    assert phases == ["completed","reviewing","executing","leased","queued"]
+    with pytest.raises(ValueError):
+        q.record_phase(job,"worker",token,"simulated")
