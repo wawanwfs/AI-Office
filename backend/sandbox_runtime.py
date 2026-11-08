@@ -165,12 +165,9 @@ class SandboxRuntime:
                     "stderr":saved["stderr"].decode("utf-8","replace"),
                     "container":name}
         finally:
-            # A revoked lease is a physical container kill, not only a DB flag.
-            try:
-                subprocess.run([self.docker,"rm","-f",name],capture_output=True,
-                               text=True,timeout=15)
-            except (subprocess.TimeoutExpired,OSError):
-                pass
+            # Stop the attached Docker CLI first; otherwise a flood-producing
+            # container can keep the attached pipe open while rm -f races.
+            # A cleanup failure must NEVER appear as a successful QA result.
             if process is not None:
                 if process.poll() is None:
                     process.kill()
@@ -181,3 +178,18 @@ class SandboxRuntime:
                 for stream in (process.stdout,process.stderr):
                     if stream is not None:
                         stream.close()
+            removed=False
+            for _ in range(8):
+                try:
+                    subprocess.run([self.docker,"rm","-f",name],
+                                   capture_output=True,text=True,timeout=10)
+                    probe=subprocess.run([self.docker,"container","inspect",name],
+                                         capture_output=True,text=True,timeout=10)
+                    if probe.returncode!=0:
+                        removed=True
+                        break
+                except (subprocess.TimeoutExpired,OSError):
+                    pass
+                time.sleep(0.25)
+            if not removed:
+                raise SandboxDenied("Docker sandbox cleanup not confirmed")
