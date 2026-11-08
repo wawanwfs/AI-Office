@@ -157,8 +157,12 @@ class ApprovedMasterWorker:
                 self.engine._WFS_BILLING_CONTEXT.reset(ctx_token)
             # Only the still-valid lease holder can settle. Stale workers
             # cannot write completion; expired work is quarantined, not retried.
+            # A failed AI request may already have incurred an irreversible
+            # charge or external side effect. Never auto-retry without a
+            # provider idempotency key and manual reconciliation.
             settled = self.queue.finish(jid,self.worker_id,token,
-                                        success=result=="completed",error=error)
+                                        success=result=="completed",error=error,
+                                        retryable=False)
         return {"job_id":jid,"engine_result":result,"queue_status":settled,
                 "error":error}
 

@@ -112,6 +112,13 @@ class ProjectRBAC:
         with self._tx() as con:
             if not self._allowed(con,actor,project_id,"grant"):
                 raise AccessDenied("only project owner can grant permissions")
+            current=con.execute("SELECT role FROM wfs_project_acl WHERE project_id=? AND principal=?",
+                                (project_id,subject)).fetchone()
+            if current and current[0]=="owner" and role!="owner":
+                count=con.execute("SELECT COUNT(*) FROM wfs_project_acl WHERE project_id=? AND role='owner'",
+                                  (project_id,)).fetchone()[0]
+                if count<=1:
+                    raise AccessDenied("cannot demote the last project owner")
             con.execute("""INSERT INTO wfs_project_acl VALUES(?,?,?)
                 ON CONFLICT(project_id,principal) DO UPDATE SET role=excluded.role""",
                 (project_id,subject,role))

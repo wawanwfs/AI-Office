@@ -288,7 +288,10 @@ class DurableMasterQueue:
                          (now + lease_seconds, now, job_id))
             return True
 
-    def finish(self, job_id, worker_id, lease_token, *, success, error=""):
+    def finish(self, job_id, worker_id, lease_token, *, success, error="", retryable=True):
+        """retryable=False prevents replay of an uncertain paid side effect."""
+        if not isinstance(retryable, bool):
+            raise ValueError("retryable must be bool")
         if not isinstance(success, bool):
             raise ValueError("success must be bool")
         job_id, worker_id = _ident(job_id, "job_id"), _ident(worker_id, "worker_id")
@@ -301,7 +304,7 @@ class DurableMasterQueue:
                 status, available = "cancelled", now
             elif success:
                 status, available = "completed", now
-            elif row["attempt"] >= row["max_attempts"]:
+            elif not retryable or row["attempt"] >= row["max_attempts"]:
                 status, available = "failed", now
             else:
                 status = "queued"

@@ -51,3 +51,14 @@ def test_unsafe_principal_rejected(acl,bad):
 def test_unknown_action_denied(acl):
     with pytest.raises(ValueError):
         acl.require("alice","proj-a","screenshot-host-secrets")
+
+
+def test_last_owner_cannot_be_demoted_by_set_role(acl):
+    with pytest.raises(AccessDenied,match="last project owner"):
+        acl.set_role("alice","proj-a","alice","viewer")
+    assert acl.require("alice","proj-a","grant")
+    acl.set_role("alice","proj-a","second-owner","owner")
+    acl.set_role("alice","proj-a","alice","viewer")
+    assert acl.require("second-owner","proj-a","grant")
+    with pytest.raises(AccessDenied):
+        acl.require("alice","proj-a","grant")

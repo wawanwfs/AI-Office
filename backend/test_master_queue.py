@@ -178,3 +178,16 @@ def test_fencing_and_append_only_actual_execution_events(setup):
     assert phases == ["completed","reviewing","executing","leased","queued"]
     with pytest.raises(ValueError):
         q.record_phase(job,"worker",token,"simulated")
+
+
+def test_explicit_nonretryable_failure_quarantines_uncertain_side_effects(setup):
+    new,_ = setup
+    q=new()
+    jid=q.submit("project","billable", "design",max_attempts=3)
+    q.set_paused(False)
+    claim=q.claim("worker",recover_policy="quarantine")
+    assert q.finish(jid,"worker",claim["lease_token"],success=False,
+                    error="provider timeout after request",retryable=False)=="failed"
+    assert q.claim("worker2") is None
+    assert q.get(jid)["status"]=="failed"
+    assert [event["phase"] for event in q.events("project")][0]=="failed"

@@ -68,7 +68,7 @@ def test_requires_explicit_resume_and_launch_approval(ready):
     engine.approved.remove("p1")
     q.set_paused(False)
     result=asyncio.run(worker.run_once())
-    assert result["queue_status"]=="queued"
+    assert result["queue_status"]=="failed"
     assert engine.runs==[]
     assert "approval" in result["error"]
 
@@ -94,8 +94,8 @@ def test_legacy_engine_cannot_fabricate_pass_without_done(ready):
     q.set_paused(False)
     outcome=asyncio.run(worker.run_once())
     assert outcome["engine_result"]=="failed"
-    assert outcome["queue_status"]=="queued"
-    assert q.get(job)["status"]=="queued"
+    assert outcome["queue_status"]=="failed"
+    assert q.get(job)["status"]=="failed"
 
 
 def test_code_roles_rejected_until_sandbox_is_scoped(ready):
@@ -154,7 +154,7 @@ def test_revoke_permission_after_enqueue_prevents_paid_execution(ready):
     outcome=asyncio.run(worker.run_once())
     assert outcome["engine_result"]=="failed"
     assert not engine.runs
-    assert q.get(job)["status"]=="queued"
+    assert q.get(job)["status"]=="failed"
 
 
 def test_project_workspace_symlink_alias_rejected(ready,tmp_path):
@@ -166,7 +166,7 @@ def test_project_workspace_symlink_alias_rejected(ready,tmp_path):
     worker.enqueue_task("1")
     q.set_paused(False)
     result=asyncio.run(worker.run_once())
-    assert result["queue_status"]=="queued"
+    assert result["queue_status"]=="failed"
     assert result["engine_result"]=="failed"
     assert "symlinked" in result["error"]
     assert engine.runs==[]
