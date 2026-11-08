@@ -331,13 +331,19 @@ async def call_llm(agent_id, sys_prompt, user_prompt):
         _require_worker_fence()
         # No DNS-based trust inference: the operator must explicitly allow
         # the destination origin, and only HTTPS is accepted in worker mode.
+        # Share the strict, worker-only provider URL policy with the
+        # metered SSE adapter; never accept path pivots, alternate ports,
+        # literal IPs, fragments, query credentials or proxy environment.
+        from metered_stream_provider import _approve_origin
         parsed = urlsplit(base)
         allow = {x.strip().lower() for x in
                  os.environ.get("WFS_AI_ALLOWED_HOSTS", "").split(",") if x.strip()}
-        if (parsed.scheme != "https" or parsed.username or parsed.password or
-                parsed.hostname is None or parsed.hostname.lower() not in allow):
-            raise PermissionError("AI provider origin is not in the HTTPS allowlist")
-    async with httpx.AsyncClient(timeout=300, follow_redirects=False) as cl:
+        _, provider_endpoint = _approve_origin(base, allow)
+        if (not isinstance(key,str) or not key or
+                "\n" in key or "\r" in key):
+            raise PermissionError("valid approved provider credential required")
+    async with httpx.AsyncClient(timeout=300, follow_redirects=False,
+                                 trust_env=(billing is None)) as cl:
         for attempt in range(2):
             reservation = None
             try:
@@ -357,7 +363,8 @@ async def call_llm(agent_id, sys_prompt, user_prompt):
                 # terbukti memakan 17K+ token untuk reasoning lalu kehabisan
                 # token sebelum menulis jawaban final (content kosong).
                 # Dengan effort rendah, reasoning singkat & kode lengkap keluar.
-                r = await cl.post(base.rstrip("/")+"/chat/completions",
+                r = await cl.post(provider_endpoint if billing is not None
+                                  else base.rstrip("/")+"/chat/completions",
                     headers={"Authorization": f"Bearer {key}"},
                     json={"model": model, "max_tokens": 60000, "temperature": 0.2,
                           "reasoning_effort": "low",
