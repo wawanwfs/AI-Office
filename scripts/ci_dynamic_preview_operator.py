@@ -18,7 +18,7 @@ import httpx
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"backend"))
 from preview_manager import TemplatePreviewManager,PreviewDenied
-from preview_admission import REVIEWED_FILES
+from preview_admission import REVIEWED_FILES, candidate_manifest_for_ci_only
 
 repo=Path(__file__).resolve().parents[1]
 root=Path(tempfile.mkdtemp(prefix="wfs-preview-operator-"))
@@ -27,8 +27,7 @@ token_b=secrets.token_urlsafe(32)
 reviewed_root=repo/"examples/fullstack-preview"
 # This CI runner trusts the reviewed checkout; an actual operator must
 # supply expected hashes independently, not calculate approval from uploads.
-reviewed_files={name:hashlib.sha256((reviewed_root/name).read_bytes()).hexdigest()
-                for name in REVIEWED_FILES}
+reviewed_files=candidate_manifest_for_ci_only(reviewed_root)
 manager=TemplatePreviewManager(root/"registry.db",
     reviewed_root/"compose.yaml",enabled=True,reviewed_files=reviewed_files)
 proof={"mode":"real-disposable-operator-template-preview",
@@ -36,7 +35,12 @@ proof={"mode":"real-disposable-operator-template-preview",
        "generic_user_code_preview":False,
        "stacks":[],"cleanup_confirmed":False,
        "reviewed_template_files":list(REVIEWED_FILES),
-       "reviewed_template_source":"CI-trusted-repository-checkout"}
+       "reviewed_template_source":"CI-trusted-repository-checkout",
+       "approved_supply_chain_manifest_version":2,
+       "checked_frontend_asset_count":len(reviewed_files["frontend"]),
+       "cyclonedx_sbom_hash_checked":True,
+       "dependency_lock_hash_checked":True,
+       "all_runtime_image_references_immutable":True}
 names=("tenant-a","tenant-b")
 ports=(19010,19011)
 tokens=(token_a,token_b)
