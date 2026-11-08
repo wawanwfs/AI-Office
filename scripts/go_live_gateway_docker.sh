@@ -12,7 +12,8 @@
 #     (ss: LISTEN 0.0.0.0:8787 hanya systemd; cron hanya backup_db 03:30; agents exec
 #     docker CLI via docker.sock — bukan HTTP).
 #   - Proxy :9503 hardcode 127.0.0.1:8787 => container HARUS memegang 0.0.0.0:8787 di
-#     netns host => network_mode: host + WFS_PORT=8787, tanpa perubahan proxy/agent/cron.
+#     Phase 3: port loopback 127.0.0.1:8787:8787; no host netns/socket.
+#     Legacy HTTP exec disabled in secure mode. Validate worker before cutover.
 #   - Rollback systemd aman kapan pun: bind host kembali bebas setelah container stop;
 #     unit tidak diubah/disabled (hanya stop/start).
 #   - DB journal=delete + sqlite timeout default 5s (tasks.py) => downtime 3-4 dtk aman
@@ -102,6 +103,14 @@ case "${1:-}" in
     exit 0
     ;;
   APPLY)
+    # Phase 3 changed gateway isolation: no host Docker socket, no host netns,
+    # and legacy paid endpoints disabled. Previous 10/10 smoke was designed
+    # for the OLD privileged topology and cannot certify this new one.
+    # Fail closed until operator verifies the independent worker, all API
+    # dependencies, backup snapshots, and updated rollback rehearsal.
+    if [ "${WFS_PHASE3_CUTOVER_REHEARSED:-}" != "YES" ]; then
+      die "Phase 3 hardened compose: cutover BLOCKED. Validate separate worker, budget guard, new smoke, backup+rollback; then explicitly set WFS_PHASE3_CUTOVER_REHEARSED=YES."
+    fi
     ;;
   *)
     die "pakai: $0 APPLY | ROLLBACK"
