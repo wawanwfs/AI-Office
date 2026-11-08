@@ -102,6 +102,21 @@ Untuk audit integrasi yang membutuhkan host live, lihat
 lanjutan lihat [laporan audit 2026-11-08](docs/AUDIT_2026-11-08.md).
 Jangan menyimpan key API di source maupun mem-publish Docker socket.
 
+## Pengembangan Phase 3 — guarded integration
+
+Phase 3 adds an **opt-in** separate Master Queue worker, per-project RBAC
+and transactional AI token/cost ledger. The hardened gateway compose removes
+host Docker socket, host networking and provider secret mounts; strict mode
+blocks unmetered legacy execution/chat. It is **not a drop-in production
+deployment** until separate worker, metered chat, container sandbox and
+backup/rollback rehearsal are complete.
+
+See [Phase 3 REA and acceptance gates](docs/REA_PHASE3.md),
+[Phase 4 handoff](docs/NEXT_PHASE4_PROMPT.md) and the
+[Phase 2 queue contracts](docs/master-queue-phase2.md). Browser Actions
+generate desktop/mobile screenshots of the frontend and WebGL fallback;
+the CI browser may report "Gateway offline" and does not validate live APIs.
+
 ## Pengembangan Phase 2
 
 Antrean persisten (belum terhubung ke worker produksi) tersedia di

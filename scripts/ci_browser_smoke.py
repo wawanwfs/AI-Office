@@ -62,6 +62,14 @@ with sync_playwright() as pw:
     m=mobile.new_page()
     m.goto(BASE+"/",wait_until="domcontentloaded",timeout=30000)
     m.locator(".hq-landing h1").wait_for(timeout=20000)
+    # Pixel/layout evidence: no mobile choice heading clipped or two-column squeeze.
+    tiles=m.locator(".landing-choice")
+    assert tiles.count()==2
+    first=tiles.nth(0).bounding_box()
+    second=tiles.nth(1).bounding_box()
+    assert first and second and second["y"] >= first["y"] + first["height"] - 1, "mobile choice cards are not stacked"
+    assert m.evaluate("""() => [...document.querySelectorAll('.landing-choice h3')].every(
+        el => el.scrollWidth <= el.clientWidth + 1)"""), "choice title clipped on mobile"
     capture(m,"mobile-landing")
     m.get_by_role("link",name="Mulai dari dashboard").click()
     m.wait_for_url("**/app/?mode=dashboard",timeout=20000)

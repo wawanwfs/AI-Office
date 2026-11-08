@@ -87,3 +87,13 @@ body:has(.hq-landing) #root{height:auto;min-height:100vh}
 @media(max-width:760px){.landing-header{height:82px;margin-inline:6%;gap:12px}.landing-header-nav{display:none}.landing-monogram{font-size:41px}.landing-brand-name{font-size:12px}.landing-brand-name small{font-size:7px}.landing-header-link{margin-left:auto;padding:12px;font-size:10px;gap:7px}.landing-hero{height:auto;min-height:880px;align-items:flex-start}.landing-hero-copy{padding:61px 0 0;width:88%;margin-left:6%}.landing-hero h1{font-size:clamp(68px,13.5vw,100px);margin:25px 0 24px}.landing-intro{font-size:15px}.landing-hero-actions{margin-top:28px}.landing-hero-footnote{margin-top:30px}.landing-sculpture{top:420px;right:-19%;width:132%;height:430px}.landing-sculpture-floor{bottom:8%}.landing-art-caption{bottom:22px;right:6%;font-size:10px}.landing-capabilities{padding:66px 6%}.landing-section-heading{gap:18px;margin-bottom:28px}.landing-step-grid{grid-template-columns:1fr;gap:10px}.landing-step{min-height:190px;padding:25px}.landing-step h3{margin-top:16px}.landing-choices{padding:70px 6%;gap:14px}.landing-choice{min-height:272px}.landing-choice h3{margin-top:38px}.landing-footer{padding:27px 6%}}
 @media(max-width:440px){.landing-header-link{font-size:0;min-height:42px;min-width:42px;justify-content:center}.landing-header-link span{font-size:20px}.landing-hero{min-height:850px}.landing-hero-copy{padding-top:45px}.landing-eyebrow{font-size:8px;letter-spacing:.10em}.landing-hero h1{font-size:clamp(61px,15vw,76px)}.landing-hero-actions{gap:9px}.landing-button{padding:13px 15px;gap:10px;min-height:47px;font-size:11px}.landing-sculpture{top:423px;right:-23%;width:144%;height:380px}.landing-hero-footnote{font-size:8px;gap:7px}.landing-choice-heading h2{font-size:36px}.landing-choice{padding:25px;min-height:265px}.landing-footer>span:nth-child(2){order:3;width:100%}}
 @media(prefers-reduced-motion:reduce){html:has(.hq-landing){scroll-behavior:auto}.hq-landing *, .hq-landing *::before,.hq-landing *::after{animation:none!important;transition:none!important;scroll-behavior:auto!important}.landing-choice:hover,.landing-button:hover{transform:none}}
+
+/* Phase 3 real Chromium screenshot regression: at 390px the two choice
+   tiles previously stayed side by side and clipped "Dashboard"/3D headings.
+   Stack the cards into one readable column on small touch screens. */
+@media(max-width:560px){
+  .landing-choices{grid-template-columns:minmax(0,1fr);gap:14px}
+  .landing-choice-heading{grid-column:1;padding-right:0}
+  .landing-choice{min-height:245px;padding:25px;min-width:0}
+  .landing-choice h3{margin-top:26px;font-size:clamp(28px,8vw,36px);overflow-wrap:anywhere}
+}
