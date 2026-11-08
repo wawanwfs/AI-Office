@@ -75,10 +75,17 @@ export default function TeamStats() {
   const [presence, setPresence] = useState(null)
   useEffect(() => {
     if (!open) return
-    const read = () => setPresence(teamPresenceSummary(window.__agentData))
+    // Siklus 317: gate visibilityState — saat tab hidden render loop scene pause,
+    // snapshot __agentData basi (pola Dashboard siklus 316); saat kembali visible
+    // baca ulang SEGERA agar ringkasan tidak usang hingga 4 dtk.
+    const read = () => {
+      if (document.visibilityState !== 'visible') return
+      setPresence(teamPresenceSummary(window.__agentData))
+    }
     read()
     const iv = setInterval(read, 4000)
-    return () => clearInterval(iv)
+    document.addEventListener('visibilitychange', read)
+    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', read) }
   }, [open])
 
   const byStatus = {}

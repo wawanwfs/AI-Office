@@ -196,6 +196,33 @@ describe('TeamStats — chip kehadiran LIVE (integrasi)', () => {
     expect(screen.getByRole('button', { name: 'Fokus kamera ke pod Backend & Data' })).toBeTruthy()
   })
 
+  // Siklus 317: parity Dashboard 316 — tab hidden → snapshot __agentData basi
+  // (render loop scene pause) TIDAK menimpa chip; kembali visible → baca segera.
+  it('tab hidden → chip tidak diperbarui; visible kembali → segera tanpa nunggu interval', async () => {
+    vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
+    try {
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+      window.__agentData = [meeting('GILANG'), meeting('BUDI'), meeting('RIZKY'), meeting('FERRY')]
+      mockFetchOk()
+      render(<TeamStats />)
+      fireEvent.click(screen.getByRole('button', { name: 'Statistik tim' }))
+      await waitFor(() => expect(screen.getByRole('region', { name: 'Progres per divisi kerja' })).toBeTruthy())
+      expect(card('Backend & Data').querySelector('.team-presence').textContent).toContain('0/4 di pod')
+      // scene berubah makan siang, TAPI tab hidden — interval 4 dtk tak menimpa
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'hidden' })
+      window.__agentData = [lunch('GILANG'), lunch('BUDI'), lunch('RIZKY'), lunch('FERRY')]
+      act(() => { vi.advanceTimersByTime(4500) })
+      expect(card('Backend & Data').querySelector('.team-presence-away').textContent).toBe('4 di rapat')
+      // tab visible lagi → listener visibilitychange membaca SEGERA
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+      act(() => { document.dispatchEvent(new Event('visibilitychange')) })
+      expect(card('Backend & Data').querySelector('.team-presence-away').textContent).toBe('4 makan siang')
+    } finally {
+      vi.useRealTimers()
+      Object.defineProperty(document, 'visibilityState', { configurable: true, value: 'visible' })
+    }
+  })
+
   it('cleanup: unmount panel menghentikan interval scene (clearInterval dipanggil)', async () => {
     vi.useFakeTimers({ toFake: ['setInterval', 'clearInterval'] })
     try {

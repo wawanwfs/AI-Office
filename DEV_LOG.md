@@ -6341,7 +6341,17 @@
 - Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
 
 
-## 2026-11-09 04:55 WIB — Siklus 316: Dashboard presence tak usang saat tab kembali visible
+## 2026-11-09 05:05 WIB — Siklus 317: TeamStats presence tak usang saat tab kembali visible
+
+- Tanpa upstream baru (0 commit HEAD..origin/main). Paritas perbaikan siklus 316 ke panel lain: poll kehadiran TeamStats (4 dtk) belum digerbang visibilityState — setelah tab lama disembunyikan lalu visible lagi, chip pod bisa menampilkan fase usang hingga 4 dtk (snapshot __agentData basi saat render loop scene pause).
+- TeamStats.jsx: read() digerbang visibleState (tab hidden tidak menimpa chip) + listener 'visibilitychange' baca ulang SEGERA saat kembali visible; cleanup listener saat unmount.
+- +1 tes team_presence.test.jsx (hidden → tetap "4 di rapat"; visible → segera "4 makan siang").
+- Build PWA OK; vitest 252 file / 3669 passed + 6 skipped, 0 fail (+1 tes vs siklus 316).
+- Redeploy dist → ~/wfs-hq; bersihkan 7 orphan asset hash lama → hygiene 13 hashed/0 orphan (probe pertama sempat FAIL hygiene, fixed).
+- e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 706653 B, nonbg 0.992, hygiene 13 hashed/0 orphan.
+- Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+
 
 - Tanpa upstream baru (0 commit HEAD..origin/main). Lanjut polish ringkasan kehadiran Dashboard (siklus 151): setelah tab lama disembunyikan lalu kembali visible, interval 4 dtk bisa membaca snapshot scene usang dan menampilkan fase lama (rapat → seharusnya makan siang) hingga 4 dtk.
 - Dashboard.jsx: poll scene digerbang visibilityState (tab hidden tidak menimpa ringkasan; scene render loop juga pause → snapshotnya basi) + listener visibilitychange membaca ulang SEGERA saat kembali visible; cleanup listener saat unmount.
