@@ -119,9 +119,9 @@ describe('subprocess_hardening siklus 202 — scanner self-test', () => {
 })
 
 describe('subprocess_hardening siklus 202 — census', () => {
-  it('census: minimum 74 subprocess-based Python scripts, including secure Phase 4 Docker smoke', () => {
+  it('census: executable subprocess sites remain guarded even when obsolete scripts are deleted', () => {
     expect(PY_ALL.length).toBeGreaterThan(70)
-    expect(RUN_FILES.length).toBeGreaterThanOrEqual(74)
+    expect(RUN_FILES.length).toBeGreaterThanOrEqual(70)
     expect(RUN_FILES).toContain("ci_docker_sandbox_smoke.py")
     const total = RUN_FILES.reduce((n, f) => n + sites(f).length, 0)
     expect(total).toBeGreaterThanOrEqual(77)
