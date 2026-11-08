@@ -206,6 +206,8 @@ def create_secure_router(*, queue, rbac, ledger, tokens, taskengine=None, artifa
             raise HTTPException(503,"Artifact storage unavailable")
         try:
             job=queue.get(job_id)
+            if job is None or job["project_id"] != project_id:
+                raise HTTPException(404,"Job not found")
             value=artifact_store.listing(project_id,job)
         except (ValueError,PermissionError) as exc:
             raise HTTPException(409,"Verified artifact not ready") from exc
@@ -220,6 +222,8 @@ def create_secure_router(*, queue, rbac, ledger, tokens, taskengine=None, artifa
             raise HTTPException(503,"Artifact storage unavailable")
         try:
             job=queue.get(job_id)
+            if job is None or job["project_id"] != project_id:
+                raise HTTPException(404,"Job not found")
             data=artifact_store.read(project_id,job,path)
         except (ValueError,PermissionError) as exc:
             raise HTTPException(409,"Verified artifact not ready") from exc
