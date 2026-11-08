@@ -14,9 +14,11 @@ import sys
 try:
     from .master_queue import DurableMasterQueue
     from .cost_ledger import CostLedger
+    from .project_rbac import ProjectRBAC
 except ImportError:
     from master_queue import DurableMasterQueue
     from cost_ledger import CostLedger
+    from project_rbac import ProjectRBAC
 
 
 _CODE_ROLES = frozenset(("backend","backend2","frontend","frontend2","devops"))
@@ -25,13 +27,18 @@ _RUNNABLE = frozenset(("pending","review","failed"))
 
 class ApprovedMasterWorker:
     def __init__(self, queue, taskengine, ledger, workspace_root, *,
-                 worker_id, heartbeat_seconds=10, lease_seconds=3600):
+                 worker_id, access_control, principal,
+                 heartbeat_seconds=10, lease_seconds=3600):
         if not 0 < heartbeat_seconds < lease_seconds:
             raise ValueError("heartbeat must be shorter than lease")
         self.queue = queue
         self.engine = taskengine
         self.ledger = ledger
         self.workspace_root = Path(workspace_root).resolve()
+        if access_control is None or not principal:
+            raise PermissionError("worker requires authenticated principal and project RBAC")
+        self.access_control = access_control
+        self.principal = principal
         self.worker_id = worker_id
         self.heartbeat_seconds = heartbeat_seconds
         self.lease_seconds = lease_seconds
@@ -44,9 +51,10 @@ class ApprovedMasterWorker:
             raise LookupError("task not found")
         return t
 
-    def _preflight(self, t):
+    def _preflight(self, t, action="run"):
         if not t.get("project"):
             raise PermissionError("project is mandatory for isolated execution")
+        self.access_control.require(self.principal,str(t["project"]),action)
         if str(t.get("status")) not in _RUNNABLE:
             raise PermissionError("task status is not runnable")
         if t.get("role") in _CODE_ROLES:
@@ -72,7 +80,7 @@ class ApprovedMasterWorker:
     def enqueue_task(self, task_id):
         """Owner-authorized intake: validate actual task and approvals first."""
         t = self._task(str(task_id))
-        self._preflight(t)
+        self._preflight(t, action="enqueue")
         return self.queue.submit(str(t["project"]),str(t["id"]),str(t["role"]),
                                  max_attempts=2)
 
@@ -166,7 +174,7 @@ def main(argv=None):
     if os.environ.get("WFS_MASTER_WORKER_ENABLED") != "YES":
         parser.error("worker disabled; set WFS_MASTER_WORKER_ENABLED=YES locally")
     vars=("WFS_MASTER_QUEUE_DB","WFS_TASKS_DB","WFS_APPROVALS_DB",
-          "WFS_COST_DB","WFS_WORKSPACE_ROOT")
+          "WFS_COST_DB","WFS_WORKSPACE_ROOT","WFS_RBAC_DB","WFS_WORKER_PRINCIPAL")
     missing=[v for v in vars if not os.environ.get(v)]
     if missing:
         parser.error("missing required configuration: "+", ".join(missing))
@@ -186,8 +194,10 @@ def main(argv=None):
     import wfs_tasks
     q=DurableMasterQueue(os.environ["WFS_MASTER_QUEUE_DB"],max_per_project=1)
     ledger=CostLedger(os.environ["WFS_COST_DB"])
+    acl=ProjectRBAC(os.environ["WFS_RBAC_DB"])
     worker=ApprovedMasterWorker(q,wfs_tasks,ledger,
          os.environ["WFS_WORKSPACE_ROOT"],
+         access_control=acl,principal=os.environ["WFS_WORKER_PRINCIPAL"],
          worker_id=f"worker-{socket.gethostname()[:30]}-{os.getpid()}")
     if args.pause:
         q.set_paused(True)

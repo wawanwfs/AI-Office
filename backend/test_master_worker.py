@@ -6,6 +6,7 @@ import pytest
 from master_queue import DurableMasterQueue
 from cost_ledger import CostLedger
 from master_worker import ApprovedMasterWorker
+from project_rbac import ProjectRBAC, AccessDenied
 
 
 class Engine:
@@ -49,7 +50,11 @@ def ready(tmp_path):
     for proj in ("p1","p2"):
         ledger.set_budget(proj,1_000_000,approved_by="owner")
     engine=Engine()
+    acl=ProjectRBAC(tmp_path/"rbac.db")
+    acl.bootstrap_owner("p1","owner")
+    acl.bootstrap_owner("p2","owner")
     worker=ApprovedMasterWorker(q,engine,ledger,tmp_path/"projects",
+                                 access_control=acl,principal="owner",
                                  worker_id="worker-1",heartbeat_seconds=.02,lease_seconds=10)
     return q,ledger,engine,worker
 
@@ -126,3 +131,25 @@ def test_cooperative_cancel_and_pause(ready):
     assert result["queue_status"]=="cancelled"
     assert q.get(job)["status"]=="cancelled"
     assert engine.tasks[1]["status"]=="pending"
+
+
+def test_worker_rejects_cross_project_principal_even_if_approved(ready):
+    q,ledger,engine,worker=ready
+    worker.access_control.set_role("owner","p1","limited","worker")
+    worker.principal="limited"
+    with pytest.raises(AccessDenied):
+        worker.enqueue_task("2")
+    with pytest.raises(AccessDenied):
+        worker.enqueue_task("1")  # worker role may run but not enqueue
+    assert q.metrics()["queued"]==0
+
+
+def test_revoke_permission_after_enqueue_prevents_paid_execution(ready):
+    q,ledger,engine,worker=ready
+    job=worker.enqueue_task("1")
+    worker.principal="unauthorized"
+    q.set_paused(False)
+    outcome=asyncio.run(worker.run_once())
+    assert outcome["engine_result"]=="failed"
+    assert not engine.runs
+    assert q.get(job)["status"]=="queued"
