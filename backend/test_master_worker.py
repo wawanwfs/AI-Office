@@ -227,3 +227,17 @@ def test_parallel_worker_slot_count_is_bounded(ready,concurrency):
     q,ledger,engine,worker=ready
     with pytest.raises(ValueError,match="concurrency"):
         asyncio.run(worker.serve(concurrency=concurrency))
+
+
+def test_code_task_requires_opt_in_qa_and_restricts_to_python_roles(ready):
+    q,ledger,engine,worker=ready
+    with pytest.raises(PermissionError,match="Docker QA"):
+        worker.enqueue_task("3")
+    approved=ApprovedMasterWorker(q,engine,ledger,worker.workspace_root,
+        access_control=worker.access_control,principal="owner",worker_id="qa-owner",
+        code_qa=object())
+    job=approved.enqueue_task("3")
+    assert q.get(job)["status"]=="queued"
+    engine.tasks[4]={"id":4,"project":"p1","role":"frontend","status":"pending"}
+    with pytest.raises(PermissionError,match="role-specific"):
+        approved.enqueue_task("4")

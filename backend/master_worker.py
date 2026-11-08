@@ -22,13 +22,15 @@ except ImportError:
 
 
 _CODE_ROLES = frozenset(("backend","backend2","frontend","frontend2","devops"))
+_PYTHON_QA_ROLES = frozenset(("backend","backend2"))
 _RUNNABLE = frozenset(("pending","review","failed"))
 
 
 class ApprovedMasterWorker:
     def __init__(self, queue, taskengine, ledger, workspace_root, *,
                  worker_id, access_control, principal,
-                 heartbeat_seconds=10, lease_seconds=3600):
+                 heartbeat_seconds=10, lease_seconds=3600,
+                 code_qa=None):
         if not 0 < heartbeat_seconds < lease_seconds:
             raise ValueError("heartbeat must be shorter than lease")
         self.queue = queue
@@ -43,6 +45,7 @@ class ApprovedMasterWorker:
         self.worker_id = worker_id
         self.heartbeat_seconds = heartbeat_seconds
         self.lease_seconds = lease_seconds
+        self.code_qa = code_qa
 
     def _task(self, task_id):
         if not isinstance(task_id,str) or not task_id.isascii() or not task_id.isdecimal():
@@ -58,8 +61,9 @@ class ApprovedMasterWorker:
         self.access_control.require(self.principal,str(t["project"]),action)
         if str(t.get("status")) not in _RUNNABLE:
             raise PermissionError("task status is not runnable")
-        if t.get("role") in _CODE_ROLES:
-            raise PermissionError("code task needs project-scoped sandbox and objective QA")
+        if t.get("role") in _CODE_ROLES and (
+                self.code_qa is None or t["role"] not in _PYTHON_QA_ROLES):
+            raise PermissionError("code task needs approved role-specific Docker QA")
         if self.engine.is_paused():
             raise PermissionError("legacy engine is paused")
         self.engine.require_launch_approval(t["project"])
@@ -117,7 +121,7 @@ class ApprovedMasterWorker:
             ctx_token = self.engine._WFS_BILLING_CONTEXT.set({
                 "queue":self.queue,"claim":claim,"ledger":self.ledger,
                 "acl":self.access_control,"principal":self.principal,
-                "workspace":workspace,
+                "workspace":workspace,"code_qa":self.code_qa,
                 "project_id":claim["project_id"],"task_id":claim["task_id"]})
             if not self.queue.record_phase(jid,self.worker_id,token,"executing",
                                            "legacy taskengine.run_task"):
@@ -185,7 +189,8 @@ class ApprovedMasterWorker:
                 worker_id=f"{self.worker_id}-slot{index}",
                 access_control=self.access_control,principal=self.principal,
                 heartbeat_seconds=self.heartbeat_seconds,
-                lease_seconds=self.lease_seconds))
+                lease_seconds=self.lease_seconds,
+                code_qa=self.code_qa))
         async def pump(slot):
             while True:
                 outcome=await slot.run_once()
@@ -229,10 +234,17 @@ def main(argv=None):
     q=DurableMasterQueue(os.environ["WFS_MASTER_QUEUE_DB"],max_per_project=1)
     ledger=CostLedger(os.environ["WFS_COST_DB"])
     acl=ProjectRBAC(os.environ["WFS_RBAC_DB"])
+    code_qa = None
+    if os.environ.get("WFS_CODE_SANDBOX_ENABLED") == "YES":
+        # No Docker-capable module is imported into the public gateway.
+        from code_qa import PythonCodeQA
+        code_qa=PythonCodeQA(os.environ["WFS_WORKSPACE_ROOT"],
+             os.environ.get("WFS_QA_PYTHON_IMAGE",""),enabled=True)
     worker=ApprovedMasterWorker(q,wfs_tasks,ledger,
          os.environ["WFS_WORKSPACE_ROOT"],
          access_control=acl,principal=os.environ["WFS_WORKER_PRINCIPAL"],
-         worker_id=f"worker-{socket.gethostname()[:30]}-{os.getpid()}")
+         worker_id=f"worker-{socket.gethostname()[:30]}-{os.getpid()}",
+         code_qa=code_qa)
     if args.pause:
         q.set_paused(True)
         print("Master Queue paused")

@@ -725,11 +725,23 @@ async def _execute_task(tid, attempt_no=0):
             test_evidence = ""
             sandbox_tests_passed = False
             try:
-                import sandbox_exec
-                tr = sandbox_exec.run_tests_in_sandbox(t["agent_id"], timeout=90)
-                sandbox_tests_passed = tr.get("ok") is True
-                test_evidence = (f"\n\nHASIL TEST SANDBOX (ok={sandbox_tests_passed}):\n"
-                                 f"{str(tr.get('output', ''))[:1500]}")
+                billing = _WFS_BILLING_CONTEXT.get()
+                if billing is not None:
+                    code_qa = billing.get("code_qa")
+                    if code_qa is None:
+                        raise PermissionError("separate Docker QA worker is not enabled")
+                    manifest = await asyncio.to_thread(
+                        code_qa.verify,billing["project_id"],billing["claim"],
+                        billing["workspace"],list(files or []),_require_worker_fence)
+                    sandbox_tests_passed = manifest["tests_passed"] > 0
+                    test_evidence = (f"\n\nDOCKER QA: {manifest['tests_passed']} objective tests passed; "
+                                     f"SHA-256 artifact manifest created under isolated job workspace.")
+                else:
+                    import sandbox_exec
+                    tr = sandbox_exec.run_tests_in_sandbox(t["agent_id"], timeout=90)
+                    sandbox_tests_passed = tr.get("ok") is True
+                    test_evidence = (f"\n\nHASIL TEST SANDBOX (ok={sandbox_tests_passed}):\n"
+                                     f"{str(tr.get('output', ''))[:1500]}")
             except Exception as exc:
                 test_evidence = f"\n\nHASIL TEST SANDBOX: unavailable ({type(exc).__name__})"
             # Siklus 242 — QA WAJIB tahu deliverable nyata: tanpa file kode
@@ -744,6 +756,12 @@ async def _execute_task(tid, attempt_no=0):
             if not _code_files:
                 files_note += ("\nCATATAN WAJIB: agent TIDAK menghasilkan file "
                                "kode sama sekali — ini otomatis REVISE.")
+            # A worker with failed objective Docker QA cannot pay a model to
+            # override this outcome. The job remains in review for a human.
+            if _WFS_BILLING_CONTEXT.get() is not None and (
+                    not _code_files or not sandbox_tests_passed):
+                set_status(tid,"review",review=(test_evidence+files_note)[:3000])
+                return
             review = await _execution_llm(tid, 'qa1',
                 ROLE_SYS['qa'],
                 f"Review task ini: '{t['title']}'. Output agent:\n\n{result_out[:6000]}{test_evidence}{files_note}\n\nNilai layak/pass atau perlu revisi.")
