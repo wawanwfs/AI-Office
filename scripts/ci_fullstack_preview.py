@@ -75,7 +75,7 @@ async def screenshots():
                 page=await browser.new_page(viewport=viewport,device_scale_factor=1)
                 await page.goto(BASE,wait_until="networkidle",timeout=20000)
                 await page.get_by_text("Live SELECT 1 succeeded").wait_for(timeout=12000)
-                assert "Preview Proof" in await page.title() if False else True
+                assert "Full-Stack Preview Proof" in await page.title()
                 await page.screenshot(path=str(target/(label+"-fullstack.png")),
                                       full_page=True)
                 await page.close()
