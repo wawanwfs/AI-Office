@@ -122,3 +122,28 @@ jobs:
           path: artifacts/security/
           if-no-files-found: warn
           retention-days: 14
+
+  code-qa-runtime:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+      - name: Verify dedicated CI Docker daemon and pinned image
+        run: |
+          docker info >/dev/null
+          docker pull python:3.11-alpine@sha256:bb1d70c1df30d8ee1e05214dbe82d6cdfd29833c1f47ce917f20991aca93acaa
+      - name: Real code QA, two projects, rejected test and revoked lease
+        run: PYTHONPATH=backend python scripts/ci_code_qa_smoke.py
+      - name: Save actual code QA evidence
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: phase5-real-code-qa
+          path: artifacts/code-qa/
+          if-no-files-found: warn
+          retention-days: 14
