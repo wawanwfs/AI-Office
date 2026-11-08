@@ -102,6 +102,16 @@ Untuk audit integrasi yang membutuhkan host live, lihat
 lanjutan lihat [laporan audit 2026-11-08](docs/AUDIT_2026-11-08.md).
 Jangan menyimpan key API di source maupun mem-publish Docker socket.
 
+## Pengembangan Phase 2
+
+Antrean persisten (belum terhubung ke worker produksi) tersedia di
+`backend/master_queue.py`. Fitur ini dimulai paused dan hanya menyimpan
+metadata job, bukan mengeksekusi task atau memakai API berbayar.
+
+Lihat [matriks REA Phase 2](docs/REA_PHASE2.md) dan
+[panduan Master Queue](docs/master-queue-phase2.md) untuk hasil verifikasi,
+keterbatasan produksi dan tahapan integrasi yang aman.
+
 ## Struktur repo
 
 ```

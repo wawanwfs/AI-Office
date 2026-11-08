@@ -1,24 +1,35 @@
 name: CI
 on: [push, pull_request]
+
+# Fork PRs and compromised dependency scripts may not write repository content.
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with: { node-version: 22, cache: npm }
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version: '22'
+          cache: npm
       - run: npm ci
       - run: npm test
       - run: npm run build
 
-  # Siklus 213: backend pytest tidak lagi buta di CI (141 test backend_live+backend).
-  # Semua file produksi yang diuji ter-track; test full-mock (tanpa Docker
-  # daemon, tanpa file produksi /home/agentuser — diverifikasi siklus 213).
   pytest:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with: { python-version: '3.11' }
-      - run: pip install --no-cache-dir -r requirements-pytest.txt
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6
+        with:
+          python-version: '3.11'
+      - run: python -m pip install --no-cache-dir -r requirements-pytest.txt
       - run: python -m pytest backend_live backend -q
