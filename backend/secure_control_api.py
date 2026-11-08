@@ -102,7 +102,8 @@ class CodingBrief(BaseModel):
 
 
 def create_secure_router(*, queue, rbac, ledger, tokens, taskengine=None, artifact_store=None,
-                         code_qa_intake_enabled=False, preview_reader=None):
+                         code_qa_intake_enabled=False, preview_reader=None,
+                         invoice_audit=None):
     """Dependency-injected data sources; no unauthenticated fallback."""
     router=APIRouter(prefix="/api/v4", tags=["WFS Secure Control API"])
     brief_keys=BriefIntakeKeys(tokens)
@@ -179,6 +180,17 @@ def create_secure_router(*, queue, rbac, ledger, tokens, taskengine=None, artifa
         scoped(project_id,principal,"read")
         no_cache(response)
         return {"calls":ledger.history(project_id,limit=limit)}
+
+    @router.get("/projects/{project_id}/billing/reconciliation")
+    def billing_reconciliation(project_id: str, response: Response,
+                                principal: str = Depends(authenticated)):
+        # Only owner principals with the budget permission may see invoice
+        # discrepancy data. No public upload/write/paid reconciliation route.
+        scoped(project_id, principal, "budget")
+        if invoice_audit is None:
+            raise HTTPException(503, "Provider reconciliation not configured")
+        no_cache(response)
+        return invoice_audit.report(project_id)
 
     @router.get("/projects/{project_id}/members")
     def members(project_id:str,response:Response,principal:str=Depends(authenticated)):

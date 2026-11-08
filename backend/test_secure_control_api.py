@@ -265,3 +265,23 @@ def test_duplicate_brief_concurrent_requests_never_create_two_paid_jobs(api):
     assert all(response.status_code in (202,409) for response in results)
     assert len(engine.created)==1
     assert len(q.list("alpha"))==1
+
+
+def test_billing_reconciliation_requires_owner_budget_permission(api):
+    from billing_reconcile import InvoiceReconciliation
+    c,q,acl,ledger,tokens,engine,headers=api
+    app=FastAPI()
+    app.include_router(create_secure_router(
+        queue=q,rbac=acl,ledger=ledger,tokens=tokens,
+        taskengine=engine,invoice_audit=InvoiceReconciliation(ledger)))
+    client=TestClient(app)
+    endpoint="/api/v4/projects/alpha/billing/reconciliation"
+    assert client.get(endpoint).status_code==401
+    for actor in ("bob","observer","worker"):
+        assert client.get(endpoint,headers=headers(actor)).status_code==404
+    before=ledger.summary("alpha")
+    r=client.get(endpoint,headers=headers("alice"))
+    assert r.status_code==200
+    assert r.json()["provider_invoice_verified"] is False
+    assert r.headers["Cache-Control"]=="no-store"
+    assert ledger.summary("alpha")==before
