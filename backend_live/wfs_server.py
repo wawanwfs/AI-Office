@@ -1490,6 +1490,13 @@ if os.environ.get("WFS_SECURE_CONTROL_API_ENABLED") == "YES":
         taskengine=taskengine))
 
 
+# In strict project mode, old unscoped routes remain intentionally CLOSED.
+# Merely attaching a bearer principal to the legacy HTTP handler would leak
+# cross-project prompts, logs, artifacts and terminal output.
+if os.environ.get("WFS_SECURE_CONTROL_API_ENABLED") == "YES":
+    from legacy_api_firewall import LegacyAPIFirewall
+    app.add_middleware(LegacyAPIFirewall)
+
 # ---------- orders (satu sumber, siklus 208) ----------
 app.include_router(orders_router)
 
