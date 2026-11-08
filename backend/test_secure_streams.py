@@ -7,6 +7,7 @@ from master_queue import DurableMasterQueue
 from project_rbac import ProjectRBAC
 from secure_control_api import TokenStore
 from secure_streams import create_event_stream_router,StreamTickets
+from legacy_api_firewall import LegacyAPIFirewall
 
 
 @pytest.fixture
@@ -18,6 +19,7 @@ def ctx(tmp_path):
     tokens=TokenStore(tmp_path/"token.db")
     app=FastAPI()
     app.include_router(create_event_stream_router(queue=q,rbac=acl,tokens=tokens))
+    app.add_middleware(LegacyAPIFirewall)
     c=TestClient(app)
     auth=lambda p:tokens.mint_local(p)
     return c,q,acl,tokens,auth

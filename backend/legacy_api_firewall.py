@@ -5,6 +5,9 @@ only new per-project /api/v4 routes and health checks are allowed. Gateway
 static assets may still render, but legacy APIs, terminal, preview, SSE and
 WebSocket are closed pending a project-scoped authenticated replacement.
 """
+import re
+
+
 class LegacyAPIFirewall:
     def __init__(self, app):
         self.app=app
@@ -13,7 +16,12 @@ class LegacyAPIFirewall:
     def allowed(scope):
         path=scope.get("path","")
         if scope.get("type")=="websocket":
-            return False
+            # Only the new project-scoped, ticket-authenticated stream is
+            # reachable. All legacy sockets remain blocked, including
+            # unknown WebSocket routes under /api/v4.
+            return bool(re.fullmatch(
+                r"/api/v4/projects/[A-Za-z0-9][A-Za-z0-9_.@-]{0,127}/events/ws",
+                path))
         if path=="/api/health" and scope.get("method") in ("GET","HEAD"):
             return True
         if path=="/api/v4" or path.startswith("/api/v4/"):
