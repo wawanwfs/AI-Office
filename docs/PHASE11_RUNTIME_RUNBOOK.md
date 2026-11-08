@@ -1,3 +1,8 @@
+> **Phase 12 update:** Independent signed reviewer-roster authority is
+> now mandatory at every manager entry point, in addition to the Phase 11
+> SHA-pin and local epoch floor. Use the
+> [Phase 12 runbook](PHASE12_RUNTIME_RUNBOOK.md) for the three new CLI args.
+
 # Phase 11 — staged Docker source and local reviewer epoch protection
 
 For **isolated, disposable operator use only**. Read [Phase 10 runbook](PHASE10_RUNTIME_RUNBOOK.md)
