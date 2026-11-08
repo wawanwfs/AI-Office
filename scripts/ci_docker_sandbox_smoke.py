@@ -84,7 +84,8 @@ finally:
                    capture_output=True,text=True,timeout=15)
 
 # Two real containers with project-specific mounts running concurrently.
-probe_bravo=probe.replace("ALPHA_ONLY","BRAVO_ONLY")
+probe_bravo=(probe.replace("ALPHA_ONLY","BRAVO_ONLY")
+                 .replace("'BRAVO_ONLY' not in", "'ALPHA_ONLY' not in"))
 with ThreadPoolExecutor(max_workers=2) as pool:
     future_a=pool.submit(runner.execute,"alpha","job-one",1,
                          ["python","-c",probe],timeout_seconds=40)

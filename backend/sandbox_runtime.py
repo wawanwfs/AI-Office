@@ -69,7 +69,7 @@ class SandboxRuntime:
                 "--cap-drop","ALL","--security-opt","no-new-privileges",
                 "--pids-limit","64","--memory","256m","--cpus","0.5",
                 "--ulimit","nofile=128:128","--user","65534:65534",
-                "--tmpfs","/tmp:rw,nosuid,nodev,noexec,size=64m",
+                "--tmpfs","/tmp:rw,nosuid,nodev,noexec,size=64m",  # nosec B108 -- private container tmpfs, not a host temp directory
                 "--env","HOME=/tmp","--workdir","/workspace",
                 "--mount",f"type=bind,src={workspace},dst=/workspace,readonly",
                 self.image,*arguments]

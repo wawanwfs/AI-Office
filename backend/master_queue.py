@@ -349,7 +349,9 @@ class DurableMasterQueue:
         job_id = _ident(job_id, "job_id")
         with self._connect() as conn:
             r = conn.execute(
-                "SELECT " + ",".join(_PUBLIC) + " FROM wfs_master_jobs WHERE id=?", (job_id,),
+                """SELECT id,project_id,task_id,role,status,priority,attempt,max_attempts,
+                   available_at,lease_until,worker_id,cancel_requested,last_error,created_at,updated_at
+                   FROM wfs_master_jobs WHERE id=?""", (job_id,),
             ).fetchone()
             return dict(r) if r else None
 
@@ -359,12 +361,21 @@ class DurableMasterQueue:
         if isinstance(limit, bool) or not isinstance(limit, int) or not 1 <= limit <= 500:
             raise ValueError("invalid limit")
         with self._connect() as conn:
-            rows = conn.execute(
-                "SELECT " + ",".join(_PUBLIC) + " FROM wfs_master_jobs"
-                + (" WHERE project_id=?" if project_id is not None else "")
-                + " ORDER BY created_at DESC,id DESC LIMIT ?",
-                ((project_id, limit) if project_id is not None else (limit,)),
-            ).fetchall()
+            if project_id is not None:
+                rows = conn.execute(
+                    """SELECT id,project_id,task_id,role,status,priority,attempt,max_attempts,
+                   available_at,lease_until,worker_id,cancel_requested,last_error,created_at,updated_at
+                       FROM wfs_master_jobs WHERE project_id=?
+                       ORDER BY created_at DESC,id DESC LIMIT ?""",
+                    (project_id,limit),
+                ).fetchall()
+            else:
+                rows = conn.execute(
+                    """SELECT id,project_id,task_id,role,status,priority,attempt,max_attempts,
+                   available_at,lease_until,worker_id,cancel_requested,last_error,created_at,updated_at
+                       FROM wfs_master_jobs ORDER BY created_at DESC,id DESC LIMIT ?""",
+                    (limit,),
+                ).fetchall()
             return [dict(r) for r in rows]
 
     def metrics(self):
