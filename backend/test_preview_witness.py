@@ -112,10 +112,11 @@ def test_witness_wrong_key_and_forged_signature_denied(proof,tmp_path):
 
 
 def test_witness_separation_from_roster_and_reviewer(proof):
-    for identity in (proof["root_fp"],proof["reviewer_fp"]):
-        with pytest.raises(AdmissionDenied,match="independent of both signing"):
-            proof["check"](instance=proof["checkpoint"](witness_pin=identity),
-                           root_fp=identity)
+    # The cryptographically VALID witness must not also be either signer.
+    with pytest.raises(AdmissionDenied,match="independent of both signing"):
+        proof["check"](root_fp=proof["witness_fp"])
+    with pytest.raises(AdmissionDenied,match="independent of both signing"):
+        proof["check"](reviewer_fp=proof["witness_fp"])
 
 
 def test_witness_duplicate_field_boolean_epoch_and_oversized_denied(proof):
