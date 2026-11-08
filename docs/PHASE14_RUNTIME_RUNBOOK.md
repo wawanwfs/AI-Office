@@ -1,3 +1,9 @@
+> **Phase 15 trust update:** The Phase 14 witness-signed checkpoint
+> now additionally requires a SEPARATELY signed, independently pinned
+> Merkle tree head and ordered receipt inventory with prefix checks.
+> Follow [Phase 15 operator instructions](PHASE15_RUNTIME_RUNBOOK.md).
+> Older CLI examples do not contain all mandatory current arguments.
+
 # WFS AI Office Phase 14 — witness-signed reviewer policy checkpoint
 
 This is an incremental trust control for the **fixed reviewed disposable
