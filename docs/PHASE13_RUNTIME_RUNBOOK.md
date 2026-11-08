@@ -1,3 +1,9 @@
+> **Phase 14 trust update:** In addition to the Phase 12 independently
+> signed reviewer roster, preview operators now MUST supply a separately
+> signed and independently pinned CURRENT witness checkpoint. Follow the
+> [Phase 14 witness runbook](PHASE14_RUNTIME_RUNBOOK.md) for the five new
+> mandatory CLI args. The CI DNS proof remains disposable/internal only.
+
 # Phase 13 — controlled real UDP DNS rebinding in Docker CI
 
 The new probe is test-only. Follow [Phase 12 runbook](PHASE12_RUNTIME_RUNBOOK.md)
