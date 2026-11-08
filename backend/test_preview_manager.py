@@ -729,3 +729,111 @@ def test_phase12_reviewer_cannot_self_sign_authority(preview):
             reviewed_files=manager.reviewed_manifest,
             reviewer_authority=swapped)
     assert calls==[]
+
+
+
+def test_phase14_witness_still_blocks_old_policy_after_local_sqlite_restore(preview):
+    manager,calls=preview
+    registry=manager.registry
+    backup=registry.parent/"saved-before-epoch-rotation.db"
+    policy=manager.authority.policy_path
+    original=policy.read_bytes()
+    # A coherent SQLite backup is made BEFORE the newer approval is issued.
+    with sqlite3.connect(registry) as current, sqlite3.connect(backup) as old:
+        current.backup(old)
+    assert sqlite3.connect(backup).execute(
+        "SELECT epoch FROM wfs_preview_reviewer_epoch").fetchone()[0]==1
+
+    updated={**json.loads(original),"epoch":2}
+    policy.write_text(json.dumps(updated,sort_keys=True))
+    resign_roster_for_synthetic_test(manager.authority)
+    latest=issue_synthetic_test_checkpoint(manager.authority,"phase14-current")
+    newer=SignedPreviewAuthority(
+        public_key_path=manager.authority.public_key_path,
+        signature_path=manager.authority.signature_path,
+        policy_path=policy,
+        trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),
+        **root_args(manager.authority), witness_checkpoint=latest)
+    accepted=TemplatePreviewManager(
+        registry,manager.template,enabled=True,runner=manager.runner,
+        reviewed_files=manager.reviewed_manifest,reviewer_authority=newer)
+    assert accepted.reserve("alpha",19010)["phase"]=="reserved"
+    with sqlite3.connect(registry) as db:
+        assert db.execute(
+            "SELECT epoch FROM wfs_preview_reviewer_epoch").fetchone()[0]==2
+
+    # Restore the older SQLite database with its old local epoch floor.
+    # The separately kept current signed witness/pin does NOT roll back.
+    with sqlite3.connect(backup) as source, sqlite3.connect(registry) as restored:
+        source.backup(restored)
+    with sqlite3.connect(registry) as db:
+        assert db.execute(
+            "SELECT epoch FROM wfs_preview_reviewer_epoch").fetchone()[0]==1
+    policy.write_bytes(original)
+    resign_roster_for_synthetic_test(manager.authority)
+    # Old policy and old roster signature are VALID, but checkpoint
+    # epoch=2 is independently pinned and detects the replay.
+    replay=SignedPreviewAuthority(
+        public_key_path=manager.authority.public_key_path,
+        signature_path=manager.authority.signature_path,
+        policy_path=policy,
+        trusted_policy_sha256=hashlib.sha256(policy.read_bytes()).hexdigest(),
+        **root_args(manager.authority), witness_checkpoint=latest)
+    with pytest.raises(AdmissionDenied,match="witness checkpoint policy epoch/root mismatch"):
+        TemplatePreviewManager(
+            registry,manager.template,enabled=True,runner=manager.runner,
+            reviewed_files=manager.reviewed_manifest,reviewer_authority=replay)
+    with pytest.raises(AdmissionDenied,match="witness checkpoint policy epoch/root mismatch"):
+        replay.verify(manager.reviewed_manifest)
+    assert calls==[]
+
+
+def test_phase14_tampered_witness_signature_blocks_all_docker_lifecycle(preview):
+    manager,calls=preview
+    token="X"*43
+    assert manager.start("alpha",19010,token)["phase"]=="running"
+    count=len(calls)
+    witness_sig=manager.authority.witness_checkpoint.signature_path
+    original=witness_sig.read_bytes()
+    witness_sig.write_bytes(base64.b64encode(b"corrupt-signature-bytes"))
+    try:
+        with pytest.raises(AdmissionDenied,match="witness signature length"):
+            manager.logs("alpha",token)
+        with pytest.raises(AdmissionDenied,match="witness signature length"):
+            manager.restart("alpha",token)
+        with pytest.raises(AdmissionDenied,match="witness signature length"):
+            manager.stop("alpha",token,allow_data_loss=True)
+        assert len(calls)==count
+    finally:
+        witness_sig.write_bytes(original)
+    assert manager.stop("alpha",token,allow_data_loss=True)["phase"]=="stopped"
+
+
+def test_phase14_absent_or_swapped_witness_is_not_valid_authority(preview,tmp_path):
+    manager,calls=preview
+    witness=manager.authority.witness_checkpoint
+    from preview_witness import SignedReviewerCheckpoint
+    wrong=SignedReviewerCheckpoint(
+        public_key_path=manager.authority.root_public_key_path,
+        signature_path=witness.signature_path,
+        receipt_path=witness.receipt_path,
+        trusted_receipt_sha256=witness.trusted_receipt_sha256,
+        trusted_witness_fingerprint=manager.authority.trusted_root_fingerprint)
+    new=SignedPreviewAuthority(
+        public_key_path=manager.authority.public_key_path,
+        signature_path=manager.authority.signature_path,
+        policy_path=manager.authority.policy_path,
+        trusted_policy_sha256=manager.authority.trusted_policy_sha256,
+        **root_args(manager.authority),witness_checkpoint=wrong)
+    with pytest.raises(AdmissionDenied,match="independent of both signing keys"):
+        TemplatePreviewManager(tmp_path/"swapped.db",manager.template,
+            enabled=True,runner=manager.runner,
+            reviewed_files=manager.reviewed_manifest,reviewer_authority=new)
+    with pytest.raises(AdmissionDenied,match="signed witness checkpoint required"):
+        SignedPreviewAuthority(
+            public_key_path=manager.authority.public_key_path,
+            signature_path=manager.authority.signature_path,
+            policy_path=manager.authority.policy_path,
+            trusted_policy_sha256=manager.authority.trusted_policy_sha256,
+            **root_args(manager.authority),witness_checkpoint=None)
+    assert calls==[]
