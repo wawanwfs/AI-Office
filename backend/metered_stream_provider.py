@@ -51,7 +51,7 @@ async def buffered_metered_chat(*,ledger,project_id,task_id,agent_id,base_url,
     """
     if not callable(fence):
         raise ProviderStreamDenied("live lease/approval fence is required")
-    if not isinstance(api_key,str) or not api_key or "\\n" in api_key or "\\r" in api_key:
+    if not isinstance(api_key,str) or not api_key or "\n" in api_key or "\r" in api_key:
         raise ProviderStreamDenied("operator-owned provider secret required")
     if (isinstance(max_completion_tokens,bool) or
         not isinstance(max_completion_tokens,int) or not 1<=max_completion_tokens<=8192):

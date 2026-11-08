@@ -10,11 +10,11 @@ from metered_stream_provider import buffered_metered_chat,ProviderStreamDenied
 def sse(chunks,usage=None,done=True):
     data=[]
     for part in chunks:
-        data.append("data: "+json.dumps({"choices":[{"delta":{"content":part}}]})+"\\n\\n")
+        data.append("data: "+json.dumps({"choices":[{"delta":{"content":part}}]})+"\n\n")
     if usage is not None:
-        data.append("data: "+json.dumps({"choices":[],"usage":usage})+"\\n\\n")
+        data.append("data: "+json.dumps({"choices":[],"usage":usage})+"\n\n")
     if done:
-        data.append("data: [DONE]\\n\\n")
+        data.append("data: [DONE]\n\n")
     return "".join(data).encode()
 
 
@@ -64,7 +64,7 @@ def test_complete_provider_sse_reconciles_usage_and_returns_content(env):
 @pytest.mark.parametrize("body",[
     sse(["partial"],None),
     sse(["partial"],{"prompt_tokens":3,"completion_tokens":5},done=False),
-    b"data: not-valid-json\\n\\ndata: [DONE]\\n\\n",
+    b"data: not-valid-json\n\ndata: [DONE]\n\n",
 ])
 def test_incomplete_or_invalid_provider_sse_is_held_not_free(env,body):
     ledger,calls,factory,invoke=env

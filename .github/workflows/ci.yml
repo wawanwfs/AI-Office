@@ -114,7 +114,7 @@ jobs:
             backend/master_queue.py backend/master_worker.py \
             backend/cost_ledger.py backend/project_rbac.py \
             backend/secure_control_api.py backend/sandbox_runtime.py \
-            backend/code_qa.py backend/legacy_api_firewall.py \\
+            backend/code_qa.py backend/legacy_api_firewall.py \
             backend/metered_stream_provider.py
       - name: Upload scoped static scan report
         if: always()
