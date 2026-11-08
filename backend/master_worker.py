@@ -35,6 +35,7 @@ class ApprovedMasterWorker:
         self.engine = taskengine
         self.ledger = ledger
         self.workspace_root = Path(workspace_root).resolve()
+        self.workspace_root.mkdir(parents=True, exist_ok=True)
         if access_control is None or not principal:
             raise PermissionError("worker requires authenticated principal and project RBAC")
         self.access_control = access_control
