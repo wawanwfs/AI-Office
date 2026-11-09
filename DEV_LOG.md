@@ -6564,6 +6564,16 @@
 - Redeploy dist → ~/wfs-hq (cp -r) + prune_orphan_assets 7 file hash lama → hygiene 13 hashed/0 orphan.
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 709680 B, nonbg 0.992, hygiene_ok true.
 - Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 2026-11-09 20:55 WIB — Siklus 341: muat awal tergerbang visibility satu sumber — useVisibleLoad
+
+- Audit lanjutan pasca 337-340: satu salinan pola dua-effect berpasangan pola 322 tersisa di WfsPanel — effect mount-load dgn gerbang `visibilityState !== 'visible'` + setTimeout 0, PLUS listener `visibilitychange` manual terpisah utk reload SEGERA saat tab kembali visible (rawan drift, pelajaran 333).
+- Fix: hook `useVisibleLoad(load, { deps })` baru di dialogA11y.js (load via ref; tick awal via setTimeout 0 saat visible; listener visibilitychange + cleanup berpasangan di satu tempat). WfsPanel direfaktor memakainya — grep: 0 occurence `visibilitychange` di komponen.
+- +1 file tes visible_load_single_source_341.test.jsx (5 kasus: hook di lib, salinan inline hilang, tick awal visible/hidden, reload segera saat visible, hook lain tak diregresikan).
+- Build PWA OK (43 precache); vitest 270 file / 3736 passed + 6 skipped, 0 fail (+5 tes vs 340).
+- Deploy via deploy.py (sync copy + prune 0 orphan) → hygiene 13 hashed/0 orphan; 9503 → 200.
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 708917 B, nonbg 0.992, hygiene_ok true.
+- Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
 ## 2026-11-09 20:10 WIB — Siklus 340: animasi angka satu sumber — useTween dipindah ke lib
 
 - Audit lanjutan pasca 333-339: hook tween angka lokal di TeamStats (lerp raf + easing cubic-out + performance.now, 5 angka status) hidup di file komponen — pola animasi tidak bisa dipakai ulang tanpa menyalin salinan baru (rawan drift, pelajaran 333).

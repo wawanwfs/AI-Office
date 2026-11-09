@@ -48,6 +48,28 @@ export function useWindowEvent(type, handler, { enabled = true } = {}) {
   }, [type, enabled])
 }
 
+/* Siklus 341: muat awal tergerbang visibility SATU sumber — useVisibleLoad(
+ * load, { deps }). Pola lama WfsPanel (322): effect dgn gerbang
+ * document.visibilityState !== 'visible' → skip + setTimeout 0 utk tick awal,
+ * PLUS listener visibilitychange terpisah utk reload SEGERA saat tab kembali
+ * visible — dua effect berpasangan yang rawan drift (pelajaran 333).
+ * load via ref (closure terbaru); deps dikirim pemanggil bila load berubah. */
+export function useVisibleLoad(load, { deps = [] } = {}) {
+  const loadRef = useRef(load)
+  useEffect(() => { loadRef.current = load })
+  useEffect(() => {
+    let cleanupT0
+    if (document.visibilityState === 'visible') {
+      const t0 = setTimeout(() => loadRef.current(), 0)
+      cleanupT0 = () => clearTimeout(t0)
+    }
+    const onVis = () => { if (document.visibilityState === 'visible') loadRef.current() }
+    document.addEventListener('visibilitychange', onVis)
+    return () => { if (cleanupT0) cleanupT0(); document.removeEventListener('visibilitychange', onVis) }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- deps eksplisit dari pemanggil
+  }, deps)
+}
+
 /* Siklus 337: polling berbasis visibilitas SATU sumber — useVisibilityPoll(
  * read, intervalMs, { enabled }). Pola lama tiap komponen: setInterval dgn
  * gerbang document.visibilityState + listener visibilitychange utk refresh

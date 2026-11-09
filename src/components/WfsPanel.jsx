@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
-import { useDialogA11y, useEscapeClose, useVisibilityPoll } from '../lib/dialogA11y'
+import { useDialogA11y, useEscapeClose, useVisibleLoad, useVisibilityPoll } from '../lib/dialogA11y'
 import { IconChat, IconClose, IconGear, IconSave, IconPlay, IconRotate } from './Icons'
 
 // Navigasi panah tablist (pola WAI-ARIA tabs): Left/Right/Home/End memindahkan
@@ -97,19 +97,11 @@ export default function WfsPanel() {
     }).catch(e => setLoadErr('Gagal memuat daftar agent: ' + e.message)).finally(() => setLoading(false))
   }, [choose])
 
-  // Siklus 322: mount-time load digerbang visibility (tab dibuka di background
-  // tidak memicu fetch saat hidden), dan saat kembali visible daftar agent +
-  // status dimuat ulang SEGERA — sebelumnya daftar bisa basi tanpa batas waktu
-  // karena hanya dimuat sekali saat mount (pola 315-321).
-  useEffect(() => {
-    if (document.visibilityState !== 'visible') return
-    const t0 = setTimeout(loadAgents, 0); return () => clearTimeout(t0)
-  }, [loadAgents])
-  useEffect(() => {
-    const onVis = () => { if (document.visibilityState === 'visible') loadAgents() }
-    document.addEventListener('visibilitychange', onVis)
-    return () => document.removeEventListener('visibilitychange', onVis)
-  }, [loadAgents])
+  // Siklus 322→341: mount-time load digerbang visibility (tab dibuka di
+  // background tidak memicu fetch saat hidden), dan saat kembali visible
+  // daftar agent + status dimuat ulang SEGERA — satu sumber via useVisibleLoad
+  // (dua effect berpasangan 322 digabung ke lib).
+  useVisibleLoad(loadAgents, { deps: [loadAgents] })
   // Siklus 337: poll status agents satu sumber via useVisibilityPoll.
   useVisibilityPoll(() => api('agents/status').then(d => setStat(d.agents || {})).catch(() => {}), 15000, { enabled: open })
   useEffect(() => { if (sel) { selectedAgentIdRef.current = sel.id; loadCfg(sel) } }, [sel, loadCfg])   // eslint-disable-line react-hooks/set-state-in-effect
