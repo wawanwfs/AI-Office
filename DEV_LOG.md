@@ -6583,3 +6583,12 @@
 - Redeploy dist → ~/wfs-hq (cp -r) + hapus 7 file hash orphan lama → hygiene 13 hashed/0 orphan.
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 709606 B, nonbg 0.992, hygiene_ok true.
 - Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 09/11/2026 21:00 WIB — Siklus 342: nama bulan ID satu sumber — MONTH_NAMES_ID di kanban_date.js
+- Audit lanjutan satu sumber: 3 salinan array literal bulan ['Jan'..'Des'] di lib/kanban_date.js (formatSimpleDate, formatCustomDateRange, formatTaskDate) — nama bulan UI berisiko beda antar formatter (rawan drift, pelajaran 333).
+- Fix: konstanta diekspor satu sumber MONTH_NAMES_ID di kanban_date.js; ketiga formatter kini memakainya (output identik).
+- +1 file tes src/__tests__/month_single_source_342.test.js (4 kasus: konstanta 12 entri + literal duplikat hilang, formatSimpleDate paritas + anti-poisoning, formatCustomDateRange 1 hari & lintas bulan, formatTaskDate "Hari ini, HH:MM").
+- Build PWA OK (43 precache); vitest 271 file / 3740 passed + 6 skipped, 0 fail (+4 tes vs 341).
+- Redeploy dist -> ~/wfs-hq (cp -r) + prune_orphan_assets 7 file hash lama -> hygiene 13 hashed/0 orphan; 9503 -> 200.
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 708494 B, nonbg 0.992, hygiene_ok true.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

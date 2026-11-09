@@ -8,6 +8,10 @@
  * dan pemformat tanggal ramah pengguna.
  */
 
+/** Satu sumber nama bulan singkat ID (siklus 342) — dipakai formatSimpleDate,
+ * formatCustomDateRange & formatTaskDate. */
+export const MONTH_NAMES_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
 export const DATE_RANGE_PRESETS = [
   { key: 'all', label: 'Semua Waktu', shortLabel: 'Semua', icon: '📅', days: null, description: 'Semua task tanpa batasan rentang tanggal' },
   { key: 'today', label: 'Hari Ini', shortLabel: 'Hari Ini', icon: '☀️', days: 1, description: 'Task yang dibuat atau diperbarui hari ini' },
@@ -192,7 +196,7 @@ export function formatSimpleDate(timestamp) {
   const ts = parseTimestampMs(timestamp);
   if (ts == null || ts <= 0) return '';
   const d = new Date(ts);
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  const months = MONTH_NAMES_ID;
   return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
 }
 
@@ -207,7 +211,7 @@ export function formatCustomDateRange(range) {
   if (norm.startTs != null && norm.endTs != null) {
     const sDate = new Date(norm.startTs);
     const eDate = new Date(norm.endTs);
-    const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+    const months = MONTH_NAMES_ID;
     if (sDate.getFullYear() === eDate.getFullYear()) {
       if (sDate.getMonth() === eDate.getMonth()) {
         if (sDate.getDate() === eDate.getDate()) {
@@ -325,7 +329,7 @@ export function formatTaskDate(task, options = {}) {
     return `Kemarin, ${timeStr}`;
   }
 
-  const months = ['Jan', 'Feb', 'Mar', 'Apr', 'Mei', 'Jun', 'Jul', 'Agu', 'Sep', 'Okt', 'Nov', 'Des'];
+  const months = MONTH_NAMES_ID;
   const day = d.getDate();
   const monthName = months[d.getMonth()] || '';
   const year = d.getFullYear();
