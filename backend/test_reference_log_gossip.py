@@ -347,3 +347,62 @@ def test_gossip_previous_anchor_is_not_discovered_from_untrusted_peer(replicas):
     with pytest.raises(AdmissionDenied,match="prior approved tree size"):
         monitor.check(
             trusted_previous_size=True,trusted_previous_root_sha256=_EMPTY)
+
+
+
+def _operator_cli(replicas,previous_size,previous_root):
+    a,b=replicas
+    cli=_ROOT.parent/"scripts"/"wfs_phase18_gossip_check.py"
+    args=[
+        sys.executable,str(cli),
+        "--primary-url","https://127.0.0.1:"+str(a["port"]),
+        "--primary-ca",str(a["cert"]),
+        "--primary-tls-pin",a["cert_pin"],
+        "--mirror-url","https://127.0.0.1:"+str(b["port"]),
+        "--mirror-ca",str(b["cert"]),
+        "--mirror-tls-pin",b["cert_pin"],
+        "--log-public-key",str(a["public_pem"]),
+        "--log-key-pin",a["signer_fp"],
+        "--previous-size",str(previous_size),
+        "--previous-root",previous_root,
+    ]
+    env={**os.environ,
+         "WFS_LOG_PRIMARY_BEARER":_TOKEN,
+         "WFS_LOG_MIRROR_BEARER":_TOKEN}
+    return subprocess.run(args,capture_output=True,text=True,
+                          timeout=15,check=False,env=env)
+
+
+def test_owner_cli_real_two_tls_endpoints_green_and_fork_fails(replicas):
+    first=_append_both(replicas,1)
+    result=_operator_cli(replicas,0,_EMPTY)
+    assert result.returncode==0,result.stderr
+    assert json.loads(result.stdout)["tree_size"]==1
+    assert _TOKEN not in result.stdout
+    _append(replicas[0],_receipt(2))
+    _append(replicas[1],_receipt(3))
+    refused=_operator_cli(replicas,1,_root([first]))
+    assert refused.returncode==2
+    assert "DENIED" in refused.stderr
+    assert _TOKEN not in refused.stderr
+    assert not refused.stdout.strip()
+
+
+def test_owner_cli_rejects_missing_environment_bearer(replicas):
+    cli=_ROOT.parent/"scripts"/"wfs_phase18_gossip_check.py"
+    run=subprocess.run(
+        [sys.executable,str(cli),
+         "--primary-url","https://127.0.0.1:18000",
+         "--primary-ca",str(replicas[0]["cert"]),
+         "--primary-tls-pin",replicas[0]["cert_pin"],
+         "--mirror-url","https://127.0.0.1:18001",
+         "--mirror-ca",str(replicas[1]["cert"]),
+         "--mirror-tls-pin",replicas[1]["cert_pin"],
+         "--log-public-key",str(replicas[0]["public_pem"]),
+         "--log-key-pin",replicas[0]["signer_fp"],
+         "--previous-size","0","--previous-root",_EMPTY],
+        env={k:v for k,v in os.environ.items()
+             if k not in ("WFS_LOG_PRIMARY_BEARER","WFS_LOG_MIRROR_BEARER")},
+        capture_output=True,text=True,timeout=10,check=False)
+    assert run.returncode==2
+    assert "DENIED" in run.stderr
