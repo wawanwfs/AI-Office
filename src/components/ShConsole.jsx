@@ -3,7 +3,7 @@
 // Tab: Overview | Projects | Tasks | Agents | Project Baru.
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
-import { useDialogA11y } from '../lib/dialogA11y'
+import { useDialogA11y, useVisibilityPoll } from '../lib/dialogA11y'
 import { useModalFlag } from '../lib/modal'
 import { STATUS_HEX } from '../scene/parts/agent_status'
 
@@ -225,19 +225,18 @@ export default function ShConsole({ show, onClose }) {
     } catch (e) { if (!guardAct('term', rid)) return; setTermOut('ERROR: ' + e.message) }
   }
 
+  // Siklus 339: poll overview satu sumber via useVisibilityPoll — interval
+  // 10 dtk ter-gerbang visibilityState + refresh SEGERA saat tab kembali
+  // visible (pola 320), cleanup berpasangan. Hook di level komponen (Rules of
+  // Hooks) dgn enabled=show && tab==='overview'; EventSource overview tetap
+  // di effect tab (setup sekali per masuk tab, siklus 204).
+  useVisibilityPoll(loadOverview, 10000, { enabled: show && tab === 'overview' })
+
   useEffect(() => {
     if (!show) return
     if (tab === 'overview') {
-      // Guard visibilitas (pola Dashboard 151/TaskBoard 203): tab drawer terbuka
-      // tapi tab browser disembunyikan → interval tetap menghantam /api/sh/overview
-      // tiap 10 dtk tanpa ada yang melihat hasilnya. Mount tick pertama tetap jalan
-      // (data awal dibutuhkan saat tab kembali); hanya tick interval yang digerbang.
-      loadOverview()
-      const iv = setInterval(() => { if (document.visibilityState === 'visible') loadOverview() }, 10000)
-      // Siklus 320: refresh SEGERA saat tab kembali visible (pola 315-319) —
-      // tanpa ini data overview bisa usang hingga 10 dtk setelah kembali.
-      const onVis = () => { if (document.visibilityState === 'visible') loadOverview() }
-      document.addEventListener('visibilitychange', onVis)
+      // Tick awal data overview saat masuk tab kini di hook useVisibilityPoll
+      // di atas (tick awal tak digerbang, paritas load mount lama).
       let es = null
       let esAlive = true // pesan EventSource yang disetel setelah cleanup tak menulis state
       setEsState('connecting') // masuk tab overview = handshake baru
@@ -259,8 +258,9 @@ export default function ShConsole({ show, onClose }) {
         } catch { /* EventSource tidak tersedia */ }
       } else { setEsState('error') }
       return () => {
-        clearInterval(iv)
-        document.removeEventListener('visibilitychange', onVis)
+        // Siklus 337 (pasca 338): interval+listener visibilitychange overview
+        // kini di-cleanup oleh hook useVisibilityPoll (baris useVisibilityPoll
+        // di atas tidak dipasang bila tab != 'overview', cleanup otomatis).
         // eslint-disable-next-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async), bukan membaca snapshot ref
         ovRid.current++ // invalidate respons in-flight (tab/drawer ditutup)
         esAlive = false

@@ -38,7 +38,9 @@ const POLLERS = srcFiles().filter((p) => {
 
 describe('poll_visibility_guard — census interval poll HTTP', () => {
   it('kandidat terdeteksi (census tidak boleh kosong — guard test sendiri hidup)', () => {
-    expect(POLLERS.length).toBeGreaterThanOrEqual(5)
+    // Siklus 339: sisa salinan setInterval di komponen tinggal scene parts &
+    // ShConsole (pollers HTTP murni berkurang); census >= 4.
+    expect(POLLERS.length).toBeGreaterThanOrEqual(4)
   })
 
   it.each(POLLERS.map((p) => [p.replace(ROOT + '/', ''), p]))(
@@ -67,9 +69,11 @@ describe('poll_visibility_guard — census interval poll HTTP', () => {
     }
   )
 
-  it('ShConsole overview: interval 10 dtk ter-gerbang visibilityState', () => {
+  it('ShConsole overview: poll via hook useVisibilityPoll (satu sumber, interval 10 dtk)', () => {
     const s = readFileSync(join(SRC, 'components', 'ShConsole.jsx'), 'utf8')
-    expect(s).toMatch(/setInterval\(\(\) => \{ if \(document\.visibilityState === 'visible'\) loadOverview\(\) \}, 10000\)/)
+    // Siklus 339: gerbang+listener kini di hook useVisibilityPoll (satu sumber).
+    expect(s).toMatch(/useVisibilityPoll\(loadOverview, 10000, \{ enabled: show && tab === 'overview' \}\)/)
+    expect(s).not.toMatch(/setInterval\(\(\) => \{ if \(document\.visibilityState === 'visible'\) loadOverview\(\) \}, 10000\)/)
     expect(s).not.toMatch(/setInterval\(loadOverview, 10000\)/)
   })
 

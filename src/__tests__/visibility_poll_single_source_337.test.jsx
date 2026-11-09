@@ -88,17 +88,18 @@ describe('siklus 337 — useVisibilityPoll satu sumber', () => {
     } catch { out = '' }
     const leftovers = out.trim().split('\n').filter(Boolean)
     // Sisa penggunaan visibilitychange di komponen hanya yang benar-benar khusus:
-    // - SysMeter: 2 listener (API + scene), interval berbeda dgn read berbeda.
-    // - ShConsole: interval digabung dgn setup EventSource di effect overview.
+    // - WfsPanel: mount-time gate loadAgents dgn listener reload SEGERA (pola 322,
+    //   bukan polling berkala) — gerbang mount terpisah, intervalnya sudah via hook.
+    // - App.jsx: scheduler koneksi (setTimeout rekursif, bukan setInterval) + wake
+    //   lock reacquire — pola khusus, bukan salinan poll berkala.
     // Bertambah = audit ulang.
     const whitelist = new Set([
-      'src/components/SysMeter.jsx',
-      'src/components/ShConsole.jsx',
+      'src/components/WfsPanel.jsx',
+      'src/App.jsx',
     ])
     for (const f of leftovers) {
       if (!whitelist.has(f)) {
         const src = readFileSync(join(process.cwd(), f), 'utf8')
-        // boleh ada listener visibilitychange hanya bila TIDAK berpasangan dgn setInterval gate di effect yang sama
         const paired = /setInterval\(\(\) => \{ if \(document\.visibilityState/.test(src)
         expect(paired, `${f} masih punya salinan setInterval+gate visibilityState`).toBe(false)
       }

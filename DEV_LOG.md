@@ -6554,3 +6554,13 @@
 - Redeploy dist → ~/wfs-hq (cp -r) + prune_orphan_assets 7 file hash lama → hygiene ok.
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 710005 B, hygiene_ok true.
 - Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 2026-11-09 19:20 WIB — Siklus 339: sisa polling visibility terakhir migrasi ke useVisibilityPoll — SysMeter & ShConsole
+
+- Audit lanjutan pasca 337: dua salinan setInterval+gate visibilityState+listener visibilitychange tersisa — SysMeter ×2 (API status 12 dtk + hitungan avatar scene 4 dtk) dan ShConsole overview (10 dtk, digabung setup EventSource). Rawan drift pola sama (pelajaran 333).
+- Fix: keduanya direfaktor memakai useVisibilityPoll. SysMeter: guard rid out-of-order dipindah ke ref level komponen (load jadi useCallback, tak ada lagi hook dalam useEffect). ShConsole: hook di level komponen dgn `enabled: show && tab === 'overview'` (Rules of Hooks — hook dalam effect memicu Invalid hook call, terdeteksi tes); tick awal overview kini milik hook.
+- +1 file tes visibility_poll_leftovers_339.test.jsx (3 kasus). Tes lama disegarkan: poll_visibility_guard (asersi ShConsole), visibility_poll_single_source_337 (whitelist tinggal WfsPanel mount-gate & App scheduler/wakelock — pola khusus non-poll), census poller 5→4.
+- Build PWA OK (43 precache); vitest 268 file / 3728 passed + 6 skipped, 0 fail (+3 tes vs 338; naik 1 file, -2? net +3 kasus).
+- Redeploy dist → ~/wfs-hq (cp -r) + prune_orphan_assets 7 file hash lama → hygiene 13 hashed/0 orphan.
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 709680 B, nonbg 0.992, hygiene_ok true.
+- Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

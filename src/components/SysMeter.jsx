@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { api } from '../lib/api'
 import { fmtUptime } from '../lib/uptime'
+import { useVisibilityPoll } from '../lib/dialogA11y'
 
 // Meter status host — data NYATA dari gateway (status + resources), polled tiap 12 dtk.
 // Widget kecil kanan-atas supaya "data yang ada" selalu terlihat tanpa buka panel.
@@ -10,40 +11,34 @@ export default function SysMeter() {
   const [sceneAgents, setSceneAgents] = useState(null)
   const [updatedAt, setUpdatedAt] = useState(null)
   const [err, setErr] = useState(false)
+  const stateRef = useRef({ stop: false, rid: 0 })
 
-  useEffect(() => {
-    let stop = false
-    let rid = 0 // guard out-of-order (pola TaskBoard siklus 131): poll #2 menyusul
-    // saat #1 menggantung (tak di-abort) → respons LAMA tak menimpa data BARU,
-    // kegagalan poll basi tak menampilkan "Gateway offline" palsu.
-    const load = async () => {
-      const my = ++rid
-      try {
-        const [st, res] = await Promise.all([api('status'), api('system/resources')])
-        if (stop || my !== rid) return
-        setD({ ...st, load: res?.load ?? '—', ram: res?.ram_mb ?? '—' })
-        setErr(false)
-        setUpdatedAt(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
-      } catch {
-        if (!stop && my === rid) setErr(true)
-      }
+  // guard out-of-order (pola TaskBoard siklus 131): poll #2 menyusul saat #1
+  // menggantung (tak di-abort) → respons LAMA tak menimpa data BARU,
+  // kegagalan poll basi tak menampilkan "Gateway offline" palsu.
+  const load = useCallback(async () => {
+    const s = stateRef.current
+    const my = ++s.rid
+    try {
+      const [st, res] = await Promise.all([api('status'), api('system/resources')])
+      if (s.stop || my !== s.rid) return
+      setD({ ...st, load: res?.load ?? '—', ram: res?.ram_mb ?? '—' })
+      setErr(false)
+      setUpdatedAt(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
+    } catch {
+      if (!s.stop && my === s.rid) setErr(true)
     }
-    load()
-    const iv = setInterval(() => { if (document.visibilityState === 'visible') load() }, 12000)
-    // Siklus 321: refresh SEGERA saat tab kembali visible (pola 315-320) —
-    // load/agensi scene terpisah, jadi API ini perlu listener sendiri.
-    const onVisApi = () => { if (document.visibilityState === 'visible') load() }
-    document.addEventListener('visibilitychange', onVisApi)
-    // hitungan agen dari scene 3D (window.__agentData diisi OfficeScene) — sumber kebenaran visual
-    const readScene = () => setSceneAgents((window.__agentData || []).length || null)
-    readScene()
-    // Siklus 319: gerbang visibilityState (paritas 315-318) + baca ulang
-    // segera saat tab kembali visible; cleanup listener saat unmount.
-    const iv2 = setInterval(() => { if (document.visibilityState === 'visible') readScene() }, 4000)
-    const onVis = () => { if (document.visibilityState === 'visible') readScene() }
-    document.addEventListener('visibilitychange', onVis)
-    return () => { stop = true; clearInterval(iv); clearInterval(iv2); document.removeEventListener('visibilitychange', onVis); document.removeEventListener('visibilitychange', onVisApi) }
   }, [])
+  // Siklus 339: poll API status satu sumber via useVisibilityPoll — interval
+  // 12 dtk ter-gerbang visibilityState + refresh SEGERA saat tab kembali
+  // visible (siklus 321), cleanup berpasangan. Keduanya kini bagian dari hook.
+  useVisibilityPoll(load, 12000)
+  // hitungan agen dari scene 3D (window.__agentData diisi OfficeScene) — sumber kebenaran visual
+  // Siklus 319→339: gerbang visibilityState + baca ulang segera saat visible
+  // kini satu sumber via useVisibilityPoll.
+  useVisibilityPoll(() => setSceneAgents((window.__agentData || []).length || null), 4000)
+
+  useEffect(() => () => { stateRef.current.stop = true }, [])
 
   if (!d) {
     return (
