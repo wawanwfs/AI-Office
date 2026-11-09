@@ -6751,3 +6751,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (uv run --with playwright): agents=26, init_failed false, 0 error, shot 717979 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 06:15 WIB — Siklus 359: tanggal panjang ID satu sumber — idDateLong
+
+- Audit lanjutan satu sumber: format 'D MMM YYYY' (id-ID) tersalin 4x di kanban_date.js — formatSimpleDate, formatCustomDateRange (3 cabang), formatTaskDate.
+- Fix: format_time.js ditambah idDateLong(d) (anti-poisoning: non-Date/Date rusak → null); MONTH_NAMES_ID dipindah satu sumber ke format_time.js, kanban_date re-export (kompatibilitas); 4 titik format kini pakai idDateLong.
+- +1 file tes src/__tests__/id_date_long_single_source_359.test.js (5 kasus: salinan hilang, paritas '26 Okt 2026', anti-poisoning 4 bentuk, formatSimpleDate racun, formatTaskDate tahun lain).
+- Build PWA OK (44 precache); vitest 288 file / 3811 passed + 6 skipped, 0 fail (+5 tes vs 358).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK: agents=26, init_failed false, 0 error, shot 700705 B (catatan: playwright latest tak bisa unduh browser — CDN 403 kawasan; pin playwright==1.49.0).
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

@@ -8,11 +8,12 @@
  * dan pemformat tanggal ramah pengguna.
  */
 
-import { clockFromDate } from './format_time.js';
+import { clockFromDate, idDateLong, MONTH_NAMES_ID } from './format_time.js';
 
-/** Satu sumber nama bulan singkat ID (siklus 342) — dipakai formatSimpleDate,
- * formatCustomDateRange & formatTaskDate. */
-export const MONTH_NAMES_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+/** Satu sumber nama bulan singkat ID (siklus 342, dipindah ke format_time.js
+ * siklus 359 agar idDateLong tidak tergantung variabel sini — re-export
+ * untuk kompatibilitas pemanggil lama). */
+export { MONTH_NAMES_ID } from './format_time.js';
 
 export const DATE_RANGE_PRESETS = [
   { key: 'all', label: 'Semua Waktu', shortLabel: 'Semua', icon: '📅', days: null, description: 'Semua task tanpa batasan rentang tanggal' },
@@ -198,8 +199,7 @@ export function formatSimpleDate(timestamp) {
   const ts = parseTimestampMs(timestamp);
   if (ts == null || ts <= 0) return '';
   const d = new Date(ts);
-  const months = MONTH_NAMES_ID;
-  return `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+  return idDateLong(d) || '';
 }
 
 /**
@@ -213,15 +213,14 @@ export function formatCustomDateRange(range) {
   if (norm.startTs != null && norm.endTs != null) {
     const sDate = new Date(norm.startTs);
     const eDate = new Date(norm.endTs);
-    const months = MONTH_NAMES_ID;
     if (sDate.getFullYear() === eDate.getFullYear()) {
       if (sDate.getMonth() === eDate.getMonth()) {
         if (sDate.getDate() === eDate.getDate()) {
-          return `${sDate.getDate()} ${months[sDate.getMonth()]} ${sDate.getFullYear()}`;
+          return `${idDateLong(sDate)}`;
         }
-        return `${sDate.getDate()} – ${eDate.getDate()} ${months[sDate.getMonth()]} ${sDate.getFullYear()}`;
+        return `${sDate.getDate()} – ${eDate.getDate()} ${MONTH_NAMES_ID[eDate.getMonth()] || ''} ${sDate.getFullYear()}`;
       }
-      return `${sDate.getDate()} ${months[sDate.getMonth()]} – ${eDate.getDate()} ${months[eDate.getMonth()]} ${sDate.getFullYear()}`;
+      return `${sDate.getDate()} ${MONTH_NAMES_ID[sDate.getMonth()] || ''} ${sDate.getFullYear()} – ${idDateLong(eDate)}`;
     }
     return `${formatSimpleDate(norm.startTs)} – ${formatSimpleDate(norm.endTs)}`;
   }
@@ -329,16 +328,15 @@ export function formatTaskDate(task, options = {}) {
     return `Kemarin, ${timeStr}`;
   }
 
-  const months = MONTH_NAMES_ID;
-  const day = d.getDate();
-  const monthName = months[d.getMonth()] || '';
-  const year = d.getFullYear();
+  const long = idDateLong(d);
+  if (long == null) return '—';
+  const [day, monthName, year] = long.split(' ');
   const nowYear = new Date(now).getFullYear();
 
-  if (year === nowYear) {
+  if (year === String(nowYear)) {
     return `${day} ${monthName}, ${timeStr}`;
   }
-  return `${day} ${monthName} ${year}, ${timeStr}`;
+  return `${long}, ${timeStr}`;
 }
 
 export function formatDateRangeSummary(rangeKey, count, options = {}) {

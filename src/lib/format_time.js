@@ -11,6 +11,9 @@
  */
 import { parseTimestampMs } from './kanban_date.js'
 
+/** Siklus 359: satu sumber nama bulan singkat ID (dipindah dari kanban_date). */
+export const MONTH_NAMES_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
+
 export function fmtTime(ts) {
   const ms = parseTimestampMs(ts)
   if (ms == null || ms <= 0) return ''
@@ -47,6 +50,14 @@ export function fmtStampId(ts) {
 export function isoDateFromDate(d) {
   if (typeof d?.getTime !== 'function' || Number.isNaN(d.getTime())) return null
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+/** Siklus 359: satu sumber 'D MMM YYYY' Indonesia (mis. '26 Okt 2026')
+ * dari Date — formatSimpleDate, formatCustomDateRange, formatTaskDate.
+ * Anti-poisoning: non-Date / Date rusak → null (pemanggil pakai fallback). */
+export function idDateLong(d) {
+  if (typeof d?.getTime !== 'function' || Number.isNaN(d.getTime())) return null
+  return `${d.getDate()} ${MONTH_NAMES_ID[d.getMonth()] || ''} ${d.getFullYear()}`
 }
 
 /** Siklus 357: satu sumber 'HH:MM' dari Date (formatTaskDate & nama snapshot).
