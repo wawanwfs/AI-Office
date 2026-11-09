@@ -6524,3 +6524,13 @@
 - Redeploy dist → ~/wfs-hq (cp -r) + prune_orphan_assets 7 file hash lama → hygiene 13 hashed/0 orphan.
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 687204 B, nonbg 0.992, hygiene_ok true.
 - Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 2026-11-09 16:10 WIB — Siklus 336: event kustom window satu sumber — useWindowEvent hook
+
+- Audit lanjutan pasca 335: 6 salinan pasangan add/removeEventListener event kustom tersisa di komponen — TaskBoard ×3 (wfs-toggle-task-board, wfs-cycle-div-preset; wfs-open-task-board sengaja dibiarkan karena handler bergantung dep tasks/customPresets per-render), ProjectPanel ×2 (open/toggle-project-panel), Dashboard ×1 (toggle-dashboard). Rawan drift sama seperti pola Escape (siklus 333).
+- Fix: hook `useWindowEvent(type, handler, { enabled })` di dialogA11y.js (handler via hRef agar tak memo; enabled opsional); 5 salinan di 3 komponen direfaktor memakainya, listener window komponen kini hanya 1 (wfs-open-task-board, dependensi data nyata).
+- +1 file tes window_event_single_source_336.test.jsx (5 kasus: hook ada di lib, salinan inline hilang & pemakaian hook terverifikasi, dispatch+cleanup benar, handler via ref tak dipasang ulang saat re-render, hook lain tak diregresikan).
+- Build PWA OK (43 precache); vitest 266 file / 3728 passed + 6 skipped, 0 fail (+5 tes vs 335).
+- Redeploy dist → ~/wfs-hq (cp -r) + prune_orphan_assets 7 file hash lama → hygiene ok.
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 689538 B, nonbg 0.992, hygiene_ok true.
+- Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

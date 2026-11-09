@@ -34,6 +34,21 @@ export function useOutsideClose(open, ref, onClose) {
   }, [open, ref])
 }
 
+/* Siklus 336: pasang event kustom window SATU sumber — useWindowEvent(type,
+ * handler). Enam salinan add/removeEventListener pasangan (TaskBoard ×3,
+ * ProjectPanel ×2, Dashboard ×1) dihapus. Handler via ref agar pemanggil
+ * tak perlu memo; enabled=false melewati pemasangan. */
+export function useWindowEvent(type, handler, { enabled = true } = {}) {
+  const hRef = useRef(handler)
+  useEffect(() => { hRef.current = handler })
+  useEffect(() => {
+    if (!enabled) return
+    const h = (e) => hRef.current(e)
+    window.addEventListener(type, h)
+    return () => window.removeEventListener(type, h)
+  }, [type, enabled])
+}
+
 export function useDialogA11y({ open, onClose, ref, initialFocus }) {
   useEffect(() => {
     if (!open) return

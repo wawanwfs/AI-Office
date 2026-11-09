@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
-import { useDialogA11y, useEscapeClose } from '../lib/dialogA11y'
+import { useDialogA11y, useEscapeClose, useWindowEvent } from '../lib/dialogA11y'
 import { parseFileList } from '../lib/files'
 import { setupCardDragData, canDropTaskInColumn, formatDragDropNotification } from '../lib/kanban_drag'
 import { calcSearchStats, getSearchMatchSegments, getKanbanColumnSearchEmptyState } from '../lib/kanban_search'
@@ -391,19 +391,16 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
     return () => window.removeEventListener('wfs-open-task-board', handleOpen)
   }, [tasks, customPresets, customDivPresets])
 
-  useEffect(() => {
-    const handleToggle = () => {
-      setOpen(prev => {
-        if (prev) {
-          setSel(null)
-          return false
-        }
-        return true
-      })
-    }
-    window.addEventListener('wfs-toggle-task-board', handleToggle)
-    return () => window.removeEventListener('wfs-toggle-task-board', handleToggle)
-  }, [])
+  // Siklus 336: toggle papan via event kustom satu sumber (useWindowEvent)
+  useWindowEvent('wfs-toggle-task-board', () => {
+    setOpen(prev => {
+      if (prev) {
+        setSel(null)
+        return false
+      }
+      return true
+    })
+  })
 
   useEffect(() => {
     if (!open) return
@@ -552,23 +549,20 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
 
   // Shortcut keyboard cepat switch preset divisi (D / Shift+D dari App.jsx):
   // siklus maju/mundur melewati semua preset divisi bawaan + kustom, lalu kembali ke 'all'.
-  useEffect(() => {
-    const handleCycleDivPreset = (e) => {
-      const backward = Boolean(e?.detail?.backward)
-      setOpen(true)
-      setDivision((prev) => {
-        const next = cycleDivisionPreset(prev, allDivPresets, { backward })
-        const summary = formatDivisionFilterSummary(next, customDivPresets)
-        if (onFlash) onFlash(backward ? `◀ Preset divisi sebelumnya: ${summary}` : `Preset divisi berikutnya: ${summary} ▶`)
-        return next
-      })
-      if (typeof window !== 'undefined' && window.__officeSound) {
-        window.__officeSound.playSelect?.()
-      }
+  // Siklus 336: listener event kustom via useWindowEvent (satu sumber).
+  useWindowEvent('wfs-cycle-div-preset', (e) => {
+    const backward = Boolean(e?.detail?.backward)
+    setOpen(true)
+    setDivision((prev) => {
+      const next = cycleDivisionPreset(prev, allDivPresets, { backward })
+      const summary = formatDivisionFilterSummary(next, customDivPresets)
+      if (onFlash) onFlash(backward ? `◀ Preset divisi sebelumnya: ${summary}` : `Preset divisi berikutnya: ${summary} ▶`)
+      return next
+    })
+    if (typeof window !== 'undefined' && window.__officeSound) {
+      window.__officeSound.playSelect?.()
     }
-    window.addEventListener('wfs-cycle-div-preset', handleCycleDivPreset)
-    return () => window.removeEventListener('wfs-cycle-div-preset', handleCycleDivPreset)
-  }, [allDivPresets, customDivPresets, onFlash])
+  })
 
   const tagCloud = useMemo(() => computeTagCloud(tasks, { divisionFilter: division, customDivPresets }), [tasks, division, customDivPresets])
   const allPresets = useMemo(() => getAllPresets(customPresets), [customPresets])

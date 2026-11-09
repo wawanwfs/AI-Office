@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { api } from '../lib/api'
 import SecureProjectPanel from './SecureProjectPanel'
 import { useModalFlag } from '../lib/modal'
-import { useDialogA11y } from '../lib/dialogA11y'
+import { useDialogA11y, useWindowEvent } from '../lib/dialogA11y'
 import { IconClose, IconStats } from './Icons'
 import { clip } from '../lib/clip.js'
 import { fileCount } from '../lib/files'
@@ -81,11 +81,8 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
   }, [open, load])
 
   // Toggle via shortcut D / tombol lain (pola sama dgn ProjectPanel & TaskBoard)
-  useEffect(() => {
-    const h = () => setOpen(v => !v)
-    window.addEventListener('wfs-toggle-dashboard', h)
-    return () => window.removeEventListener('wfs-toggle-dashboard', h)
-  }, [])
+  // Siklus 336: listener event kustom satu sumber via useWindowEvent.
+  useWindowEvent('wfs-toggle-dashboard', () => setOpen(v => !v))
 
   // Siklus 151: kehadiran LIVE agen kantor dari scene (window.__agentData) —
   // poll 4 dtk hanya saat panel terbuka (pola TeamStats 150/Ticker 149; scene

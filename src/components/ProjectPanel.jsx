@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
 import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js'
-import { useDialogA11y, useEscapeClose } from '../lib/dialogA11y'
+import { useDialogA11y, useEscapeClose, useWindowEvent } from '../lib/dialogA11y'
 import { fetchWithTimeout } from '../lib/fetch_timeout.js'
 import { IconRocket, IconClose } from './Icons'
 import { normalizeTaskStatus, formatTaskId } from '../scene/parts/projectboard_data'
@@ -41,16 +41,9 @@ export default function ProjectPanel() {
     } catch (e) { if (e.name !== 'AbortError' && rid === loadRid.current) setErr(true) }
   }, [])
 
-  useEffect(() => {
-    const handleOpen = () => setOpen(true)
-    const handleToggle = () => setOpen(v => !v)
-    window.addEventListener('wfs-open-project-panel', handleOpen)
-    window.addEventListener('wfs-toggle-project-panel', handleToggle)
-    return () => {
-      window.removeEventListener('wfs-open-project-panel', handleOpen)
-      window.removeEventListener('wfs-toggle-project-panel', handleToggle)
-    }
-  }, [])
+  // Siklus 336: open/toggle panel via event kustom satu sumber (useWindowEvent)
+  useWindowEvent('wfs-open-project-panel', () => setOpen(true))
+  useWindowEvent('wfs-toggle-project-panel', () => setOpen(v => !v))
 
   useEffect(() => {
     if (!open) return
