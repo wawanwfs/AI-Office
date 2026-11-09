@@ -34,7 +34,7 @@
 export const MIN_SNAPSHOT_CHARS = 30000; // ≈22 KB biner — ambang "render nyata"
 export const SNAPSHOT_MIME = 'image/png';
 
-import { clockFromDate } from '../../lib/format_time.js';
+import { clockFromDate, isoDateFromDate } from '../../lib/format_time.js';
 
 const isCanvas = (c) => !!c && typeof HTMLCanvasElement !== 'undefined'
   ? c instanceof HTMLCanvasElement
@@ -66,7 +66,6 @@ export function snapshotDataUrl(canvas, renderFn, filename = '') {
   }
 }
 
-const p2 = (n) => (n < 10 ? '0' + n : String(n));
 
 /**
  * Nama file foto: kantor-wfs-YYYY-MM-DD_HHMM.png (murni, deterministik —
@@ -75,7 +74,7 @@ const p2 = (n) => (n < 10 ? '0' + n : String(n));
 export function snapshotFilename(date) {
   const ok = date instanceof Date && Number.isFinite(date.getTime());
   if (!ok) return 'kantor-wfs.png';
-  return 'kantor-wfs-' + date.getFullYear() + '-' + p2(date.getMonth() + 1) + '-' + p2(date.getDate())
+  return 'kantor-wfs-' + (isoDateFromDate(date) || '')
     + '_' + (clockFromDate(date) || '0000').replace(':', '') + '.png';
 }
 

@@ -42,6 +42,13 @@ export function fmtStampId(ts) {
   })
 }
 
+/** Siklus 358: satu sumber 'YYYY-MM-DD' dari Date (nama snapshot & ekspor kanban).
+ * Anti-poisoning: non-Date / Date rusak → null (pemanggil pakai fallback). */
+export function isoDateFromDate(d) {
+  if (typeof d?.getTime !== 'function' || Number.isNaN(d.getTime())) return null
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 /** Siklus 357: satu sumber 'HH:MM' dari Date (formatTaskDate & nama snapshot).
  * Anti-poisoning: non-Date / Date rusak → null (pemanggil pakai fallback). */
 export function clockFromDate(d) {

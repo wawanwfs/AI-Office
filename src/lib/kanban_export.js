@@ -13,6 +13,7 @@ import {
   computeSprintMetrics,
 } from '../scene/parts/kanban_spec.js';
 import { findTeamByRole, findTeamByAgent } from '../scene/parts/team_spec.js';
+import { isoDateFromDate } from './format_time.js';
 
 export const CSV_HEADERS = [
   'ID',
@@ -172,10 +173,7 @@ export function buildTaskJson(tasks, options = {}) {
 export function generateTaskExportFilename(format = 'csv', options = {}) {
   const ext = String(format || 'csv').toLowerCase().replace(/^\./, '');
   const now = new Date(resolveNow(options.now));
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  const dateStr = `${year}-${month}-${day}`;
+  const dateStr = isoDateFromDate(now) || '';
 
   const parts = ['wfs-tasks'];
 

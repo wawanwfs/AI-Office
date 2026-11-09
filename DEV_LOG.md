@@ -6741,3 +6741,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 systemd tetap jalan.
 - e2e probe OK: agents=26, init_failed false, 0 error, shot 715495 B (catatan: skrip e2e butuh `--with playwright`, tanpa itu ModuleNotFoundError).
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 05:40 WIB — Siklus 358: tanggal YYYY-MM-DD satu sumber — isoDateFromDate
+
+- Audit lanjutan satu sumber: 2 salinan manual getFullYear/getMonth/getDate+padStart tersisa — snapshotFilename (snapshot_spec, plus helper p2 lokal) & generateTaskExportFilename (kanban_export).
+- Fix: format_time.js ditambah isoDateFromDate(d) (anti-poisoning: non-Date/Date rusak → null); snapshotFilename pakai `(isoDateFromDate(date) || '')`, kanban_export `isoDateFromDate(now) || ''`; helper p2 dihapus. 0 salinan manual tersisa di src non-tes.
+- +1 file tes src/__tests__/iso_date_single_source_358.test.js (5 kasus: salinan hilang di 2 file, paritas zero-pad, anti-poisoning 4 bentuk, snapshotFilename fallback+utuh).
+- Build PWA OK (44 precache); vitest 287 file / 3806 passed + 6 skipped, 0 fail (+5 tes vs 357).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (uv run --with playwright): agents=26, init_failed false, 0 error, shot 717979 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
