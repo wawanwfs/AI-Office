@@ -1,8 +1,7 @@
 /* Util a11y overlay: pasang aria-modal + pindahkan fokus ke elemen pertama
  * yang bisa difokuskan saat overlay terbuka, lalu kunci Tab di dalam dialog
  * (fokus trap per-dialog; chrome luar sudah inert via App). */
-import { useEffect } from 'react'
-import { useRef } from 'react'
+import { useEffect, useRef, useState } from 'react'
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
 
@@ -103,4 +102,32 @@ export function useDialogA11y({ open, onClose, ref, initialFocus }) {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps -- ref/initialFocus stabil
   }, [open, onClose])
+}
+
+/* Siklus 340: animasi angka (tween) SATU sumber — useTween(target, ms).
+ * Salinan hook lokal TeamStats (raf + easing cubic-out + performance.now)
+ * dipindah ke lib agar pola sama dapat dipakai komponen lain tanpa salin.
+ * Easing & paritas perilaku dijaga: tick awal `target === v` → langsung set,
+ * raf dibatalkan saat unmount / target berubah. */
+export function useTween(target, ms = 550) {
+  const [v, setV] = useState(0)
+  const vRef = useRef(0)
+  useEffect(() => {
+    if (target === vRef.current) { setV(target); return }
+    const from = vRef.current
+    const start = performance.now()
+    let raf
+    const step = () => {
+      const p = Math.min(1, (performance.now() - start) / ms)
+      const e = 1 - Math.pow(1 - p, 3)
+      const nv = Math.round(from + (target - from) * e)
+      vRef.current = nv
+      setV(nv)
+      if (p < 1) raf = requestAnimationFrame(step)
+    }
+    raf = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(raf)
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- sesuai pola lib: hanya re-run saat target berubah
+  }, [target])
+  return v
 }

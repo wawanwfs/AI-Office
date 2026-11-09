@@ -3,30 +3,10 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
 import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js'
-import { useDialogA11y, useEscapeClose, useVisibilityPoll } from '../lib/dialogA11y'
+import { useDialogA11y, useEscapeClose, useTween, useVisibilityPoll } from '../lib/dialogA11y'
 import { fileCount } from '../lib/files'
 import { IconStats, IconClose } from './Icons'
 import { computeTeamStats, teamPresenceSummary } from '../scene/parts/team_spec.js'
-
-// Animasi angka: lerp dengan easing untuk feedback visual yang hidup (tanpa lib tambahan).
-function useTween(target, ms = 550) {
-  const [v, setV] = useState(0)
-  useEffect(() => {
-    let raf
-    if (target === v) { setV(target); return }
-    const start = performance.now(), from = v
-    const step = t => {
-      const p = Math.min(1, (t - start) / ms)
-      const e = 1 - Math.pow(1 - p, 3)
-      setV(Math.round(from + (target - from) * e))
-      if (p < 1) raf = requestAnimationFrame(step)
-    }
-    raf = requestAnimationFrame(step)
-    return () => cancelAnimationFrame(raf)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [target])
-  return v
-}
 
 /* Statistik Tim — data nyata dari task engine + resource host */
 export default function TeamStats() {

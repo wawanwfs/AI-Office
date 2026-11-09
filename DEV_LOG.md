@@ -6564,3 +6564,12 @@
 - Redeploy dist → ~/wfs-hq (cp -r) + prune_orphan_assets 7 file hash lama → hygiene 13 hashed/0 orphan.
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 709680 B, nonbg 0.992, hygiene_ok true.
 - Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 2026-11-09 20:10 WIB — Siklus 340: animasi angka satu sumber — useTween dipindah ke lib
+
+- Audit lanjutan pasca 333-339: hook tween angka lokal di TeamStats (lerp raf + easing cubic-out + performance.now, 5 angka status) hidup di file komponen — pola animasi tidak bisa dipakai ulang tanpa menyalin salinan baru (rawan drift, pelajaran 333).
+- Fix: hook `useTween(target, ms)` dipindah ke lib/dialogA11y.js (satu sumber hook UI); TeamStats hanya import. Satu penyesuaian kecil: callback raf kini baca `performance.now()` langsung (bukan timestamp argumen raf) — paritas perilaku terjaga dan aman bila raf argumen berbeda.
+- +1 file tes tween_single_source_340.test.jsx (3 kasus: hook di lib & salinan lokal hilang & TeamStats tak ada lagi requestAnimationFrame; tick awal target=0 tanpa raf; tween mendarat tepat di target).
+- Build PWA OK (43 precache); vitest 269 file / 3731 passed + 6 skipped, 0 fail (+3 tes vs 339).
+- Redeploy dist → ~/wfs-hq (cp -r) + hapus 7 file hash orphan lama → hygiene 13 hashed/0 orphan.
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 709606 B, nonbg 0.992, hygiene_ok true.
+- Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
