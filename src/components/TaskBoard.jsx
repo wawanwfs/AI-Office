@@ -136,23 +136,24 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
   // baru. Tanpa AbortController tambahan: satu titik kebenaran (rid).
   const pollRid = useRef(0)
   useModalFlag(open || !!sel)
-  const onEscRef = useRef(() => {})
-  useEffect(() => {
-    onEscRef.current = () => {
-      if (showDivPresetCreator) {
-        setShowDivPresetCreator(false)
-      } else if (showPresetCreator) {
-        setShowPresetCreator(false)
-      } else if (q && document.activeElement === searchInputRef.current) {
-        setQ('')
-      } else if (sel) {
-        setSel(null)
-      } else {
-        setOpen(false)
-      }
+  // Siklus 332: rantai prioritas Escape disatukan ke satu sumber onEscRef —
+  // handler keydown poll di bawah kini memanggil onEscRef.current() alih-alih
+  // menduplikasi if/else yang sama (risiko drift bila salah satu diedit).
+  const closeBoard = useCallback(() => {
+    if (showDivPresetCreator) {
+      setShowDivPresetCreator(false)
+    } else if (showPresetCreator) {
+      setShowPresetCreator(false)
+    } else if (q && document.activeElement === searchInputRef.current) {
+      setQ('')
+    } else if (sel) {
+      setSel(null)
+    } else {
+      setOpen(false)
     }
-  })
-  const closeBoard = useCallback(() => onEscRef.current(), [])
+  }, [showDivPresetCreator, showPresetCreator, q, sel])
+  const onEscRef = useRef(closeBoard)
+  useEffect(() => { onEscRef.current = closeBoard })
   useDialogA11y({ open: open || !!sel, onClose: closeBoard, ref: board })
 
   // Pintasan keyboard: '/' untuk fokus cepat ke input pencarian
@@ -410,19 +411,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
     const onVis = () => { if (document.visibilityState === 'visible') load(ac.signal) }
     document.addEventListener('visibilitychange', onVis)
     const k = e => {
-      if (e.key === 'Escape') {
-        if (showDivPresetCreator) {
-          setShowDivPresetCreator(false)
-        } else if (showPresetCreator) {
-          setShowPresetCreator(false)
-        } else if (q && document.activeElement === searchInputRef.current) {
-          setQ('')
-        } else if (sel) {
-          setSel(null)
-        } else {
-          setOpen(false)
-        }
-      }
+      if (e.key === 'Escape') onEscRef.current() // Siklus 332: satu sumber rantai Escape
     }
     document.addEventListener('keydown', k)
     return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('visibilitychange', onVis); document.removeEventListener('keydown', k); pollRid.current++ } // eslint-disable-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async), bukan membaca snapshot ref

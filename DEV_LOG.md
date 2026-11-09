@@ -6486,3 +6486,12 @@
 - Redeploy dist → ~/wfs-hq via deploy.py (9503: 200, pruned 0).
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 670966 B, nonbg 0.992, hygiene ok/missing 0.
 - Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 2026-11-09 12:57 WIB — Siklus 332: Rantai Escape TaskBoard disatukan satu sumber — duplikasi if/else prioritas dihapus
+
+- Audit lanjutan kualitas keyboard: TaskBoard punya DUA salinan rantai prioritas Escape (creator div → creator preset → q di input → detail task → tutup papan) — satu di onEscRef (dipakai useDialogA11y), satu lagi inline di handler keydown poll effect. Risiko drift: mengedit salah satu (mis. tambah level baru) tak otomatis menyamakan yang lain.
+- Fix: rantai digabung ke closeBoard (useCallback deps [showDivPresetCreator, showPresetCreator, q, sel]) + onEscRef sinkron tiap render; handler poll Escape kini 1 baris `onEscRef.current()`. Perilaku identik — diverifikasi tes.
+- +1 file tes esc_chain_single_source_332.test.jsx (3 kasus: duplikat hilang — rantai hanya di closeBoard, Escape-1 mengosongkan q & papan tetap terbuka lalu Escape-2 menutup, closeBoard stabil via useCallback + sinkronisasi ref).
+- Audit pendukung: grep seluruh handler Escape di src — semua overlay lain sudah memakai useDialogA11y/useModalFlag atau guard masing-masing; tidak ditemukan duplikasi pola lain.
+- Build PWA OK (43 precache); vitest 263 file / 3715 passed + 6 skipped, 0 fail (+3 tes vs 331).
+- Redeploy dist → ~/wfs-hq (cp -r) + prune orphan hash lama 7 file; e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 674455 B, nonbg 0.992, hygiene 13 hashed/0 orphan.
+- Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
