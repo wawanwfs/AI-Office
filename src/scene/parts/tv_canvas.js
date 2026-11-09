@@ -1,7 +1,8 @@
 // Canvas TV lounge: render dasbor WFS HQ LIVE diekstrak murni dari drawTv
 // (OfficeScene.js) agar bisa di-unit-test: ctx 2D di-inject (mock recorder),
 // tidak ada THREE.
-import { parseTimestampMs, resolveNow } from '../../lib/kanban_date.js';
+import { parseTimestampMs, resolveNow } from '../../lib/kanban_date.js'
+import { fmtStampId } from '../../lib/format_time.js'
 
 // Warna palet & koordinat layout (satu sumber kebenaran untuk render & test).
 export const TV_W = 256;
@@ -91,5 +92,5 @@ export function drawTvDashboard(ctx,data,opts={}){
   ctx.fillStyle=TV_GREEN;
   ctx.fillText(AG.map(a=>a.name+(a.status==='Up'?'●':'○')).join(' ')||'-',56,120);
   ctx.fillStyle=TV_DIM;ctx.font='9px monospace';
-  ctx.fillText('update '+new Date(stampTs).toLocaleTimeString('id-ID'),12,138);
+  ctx.fillText('update '+(fmtStampId(stampTs) ?? ''),12,138);
 }

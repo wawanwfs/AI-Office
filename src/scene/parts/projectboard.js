@@ -7,6 +7,7 @@ import { computePct, clip, cardY, CARD_H, subtitle as subLine, bannerParts, bann
 import { applyPollResult, connectionBadge, nextPollDelay } from '../../lib/connection_spec.js'
 import { fetchWithTimeout } from '../../lib/fetch_timeout.js'
 import { parseTimestampMs } from '../../lib/kanban_date.js'
+import { fmtStampId } from '../../lib/format_time.js'
 import { uiTexture, uiMaterial } from './ui_colorspace.js'
 
 // Polling adaptif papan 3D: cadence sehat tetap 60 dtk (perilaku lama), tapi
@@ -64,7 +65,7 @@ export function createProjectBoard(office, THREE) {
     g.fillText('WFS PROJECT: SOFTWARE HOUSE', 36, 66)
     g.fillStyle = '#8fa3bd'; g.font = '30px sans-serif'
     const stampTs = snapshotStamp()
-    let sub = subLine(T, stampTs != null ? new Date(stampTs).toLocaleTimeString('id-ID') : '')
+    let sub = subLine(T, stampTs != null ? (fmtStampId(stampTs) ?? '') : '')
     g.fillText(sub, 36, 112)
 
     // progress bar

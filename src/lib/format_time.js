@@ -28,6 +28,31 @@ export function fmtMicroUSD(v) {
 }
 
 /**
+ * Siklus 345: satu sumber stempel 'HH.MM.SS' id-ID dari timestamp.
+ * Pengganti salinan `new Date(ts).toLocaleTimeString('id-ID')` di scene/parts
+ * (tv_canvas & projectboard). Anti-poisoning: masukan Date/number/timestamp
+ * detik-UNIX <1e10 auto ×1000 (paritas parseTimestampMs); tidak valid → null
+ * (pemanggil memutuskan fallback, tidak melukis "Invalid Date").
+ */
+export function fmtStampId(ts) {
+  const ms = parseTimestampMs(ts)
+  if (ms == null || ms <= 0) return null
+  return new Date(ms).toLocaleTimeString('id-ID', {
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+  })
+}
+
+/**
+ * Siklus 345: satu sumber jam 'HH.MM' id-ID dari Date saat ini.
+ * Pengganti salinan `new Date().toLocaleTimeString('id-ID', {hour,minute})`
+ * di App.jsx (stempel log aktivitas). Date rusak → null.
+ */
+export function clockNowShortId(d = new Date()) {
+  if (typeof d?.getTime !== 'function' || Number.isNaN(d.getTime())) return null
+  return d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
+}
+
+/**
  * Siklus 343: satu sumber jam 'HH.MM'/'HH.MM.SS' id-ID.
  * Pengganti salinan toLocaleTimeString('id-ID', ...) di komponen
  * (SysMeter updated_at dgn detik, HUD wall clock tanpa detik).

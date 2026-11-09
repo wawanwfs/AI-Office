@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react'
 import { clip } from './lib/clip.js'
+import { clockNowShortId } from './lib/format_time.js'
 import { useVisibilityPoll, useWindowEvent } from './lib/dialogA11y'
 import HUD from './components/HUD'
 import Header from './components/Header'
@@ -297,8 +298,7 @@ export default function App() {
         cur[x.id] = x.status
         if (prev && prev[x.id] !== undefined && prev[x.id] !== x.status) {
           const L = { done: 'selesai', failed: 'gagal', running: 'berjalan', review: 'perlu review', pending: 'antri' }
-          const d = new Date()
-          pushLog({ t: d.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }), id: x.id, status: x.status, label: L[x.status] || x.status, title: clip(x.title, 50) })
+          pushLog({ t: clockNowShortId() ?? '', id: x.id, status: x.status, label: L[x.status] || x.status, title: clip(x.title, 50) })
           flash(`Task #${x.id} ${L[x.status] || x.status}: ${clip(x.title, 40)}`, x.status === 'failed')
           const s = sceneRef.current
           if (s) {

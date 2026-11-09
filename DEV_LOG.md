@@ -6610,3 +6610,14 @@
 - Deploy via deploy.py + prune_orphan_assets 7 file hash lama -> hygiene 13 hashed/0 orphan; 9503 -> 200.
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 710156 B, nonbg 0.992, hygiene_ok true.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 09/11/2026 22:40 WIB — Siklus 345: stempel waktu scene & log satu sumber — fmtStampId/clockNowShortId
+
+- Audit lanjutan satu sumber: 3 salinan `toLocaleTimeString('id-ID')` telanjang — App.jsx (stempel log aktivitas), scene/parts/tv_canvas.js & projectboard.js (stempel "update" TV & papan 3D). TV/projectboard tanpa guard: timestamp aneh dari API bisa melukis "Invalid Date" permanen di canvas 3D.
+- Fix: `fmtStampId(ts)` (HH.MM.SS, parseTimestampMs guard, detik-UNIX auto ×1000, tak valid → null) + `clockNowShortId(d)` (HH.MM, Date rusak → null) diekspor di lib/format_time.js; ketiga pemanggil kini import, 0 salinan inline tersisa.
+- +1 file tes src/__tests__/stamp_single_source_345.test.js (4 kasus: salinan hilang, paritas detik/ISO/Date, anti-poisoning null/NaN/epoch≤0, clockNowShortId regresi).
+- Build PWA OK (43 precache); vitest 274 file / 3752 passed + 6 skipped, 0 fail (+4 tes vs 344).
+- Deploy cp -r dist → ~/wfs-hq + prune_orphan_assets (7 file hash lama) → hygiene_ok true; 9503 → 200.
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 709224 B, nonbg 0.992.
+- Catatan: patch pertama tv_canvas tak sengaja menghapus import resolveNow — tertangkap tes (12 fail), langsung dipulihkan.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
