@@ -21,6 +21,19 @@ export function useEscapeClose(open, onClose, { stopPropagation = false } = {}) 
   }, [open, stopPropagation])
 }
 
+/* Siklus 335: klik-di-luar SATU sumber — useOutsideClose(open, ref, onClose).
+ * Dua salinan handler pointerdown (QuickToolbar, ActionMenu) dihapus. */
+export function useOutsideClose(open, ref, onClose) {
+  const onCloseRef = useRef(onClose)
+  useEffect(() => { onCloseRef.current = onClose })
+  useEffect(() => {
+    if (!open) return
+    const c = (e) => { if (ref.current && !ref.current.contains(e.target)) onCloseRef.current() }
+    document.addEventListener('pointerdown', c)
+    return () => { document.removeEventListener('pointerdown', c) }
+  }, [open, ref])
+}
+
 export function useDialogA11y({ open, onClose, ref, initialFocus }) {
   useEffect(() => {
     if (!open) return

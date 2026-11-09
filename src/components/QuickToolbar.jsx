@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
-import { useEscapeClose } from '../lib/dialogA11y'
+import { useEscapeClose, useOutsideClose } from '../lib/dialogA11y'
 import {
   IconPlus, IconPlay, IconPause, IconZoomOut, IconZoomIn, IconHome, IconCamera,
   IconIso, IconFront, IconTop, IconNeon, IconMoon, IconSun, IconUserNext, IconUserPrev
@@ -11,12 +11,7 @@ export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onTog
   const [open, setOpen] = useState(false)
   useModalFlag(open)
   const ref = useRef(null)
-  useEffect(() => {
-    if (!open) return
-    const c = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('pointerdown', c)
-    return () => { document.removeEventListener('pointerdown', c) }
-  }, [open])
+  useOutsideClose(open, ref, () => setOpen(false)) // Siklus 335: satu sumber klik-di-luar
   useEscapeClose(open, () => setOpen(false)) // Siklus 333: satu sumber Escape
   return (
     <>

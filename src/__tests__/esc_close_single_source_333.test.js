@@ -15,7 +15,7 @@ describe('siklus 333 — useEscapeClose satu sumber', () => {
   it('semua 5 komponen memakai useEscapeClose', () => {
     for (const s of SRC) {
       expect(s).toMatch(/useEscapeClose\(open,/)
-      expect(s).toMatch(/useEscapeClose\s*\}\s*from\s*'\.\.\/lib\/dialogA11y'/)
+      expect(s).toMatch(/useEscapeClose[,}\s\w]*\}\s*from\s*'\.\.\/lib\/dialogA11y'/)
     }
   })
 

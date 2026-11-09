@@ -6514,3 +6514,13 @@
 - Redeploy dist → ~/wfs-hq (cp -r) + prune_orphan_assets 7 file hash lama → hygiene 13 hashed/0 orphan.
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 692854 B, nonbg 0.992, hygiene_ok true.
 - Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 2026-11-09 15:34 WIB — Siklus 335: Klik-di-luar popover satu sumber — useOutsideClose hook
+
+- Audit lanjutan pasca 333/334: dua salinan handler pointerdown click-outside tersisa di luar lib — QuickToolbar (`ref`) dan ActionMenu (`wrap`), pola identik `if (ref.current && !ref.current.contains(e.target)) setOpen(false)` + add/removeEventListener.
+- Fix: hook baru `useOutsideClose(open, ref, onClose)` di dialogA11y.js (onCloseRef agar inline closure tak masalah); kedua komponen direfaktor memakainya — listener pointerdown komponen kini hanya ada di dalam hook (grep: 1 occurence di lib, 0 di komponen).
+- +1 file tes outside_close_single_source_335.test.js (4 kasus: kedua komponen pakai hook, salinan inline hilang, pola ref+cleanup, useEscapeClose/useDialogA11y tak diregresikan). Tes 333 disegarkan (regex import menoleransi import gabungan useEscapeClose, useOutsideClose).
+- Build PWA OK (43 precache); vitest 265 file / 3723 passed + 6 skipped, 0 fail.
+- Redeploy dist → ~/wfs-hq (cp -r) + prune_orphan_assets 7 file hash lama → hygiene 13 hashed/0 orphan.
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 687204 B, nonbg 0.992, hygiene_ok true.
+- Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

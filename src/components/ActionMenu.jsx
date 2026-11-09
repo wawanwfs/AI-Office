@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useModalFlag } from '../lib/modal'
-import { useDialogA11y, useEscapeClose } from '../lib/dialogA11y'
+import { useDialogA11y, useEscapeClose, useOutsideClose } from '../lib/dialogA11y'
 import { IconBolt, IconMeeting, IconCoffee, IconBriefcase, IconWalk, IconTag, IconRotate, IconGear } from './Icons'
 
 export default function ActionMenu({ sceneRef, onFlash, actionMenuRef, onOpenSettings }) {
@@ -51,10 +51,8 @@ export default function ActionMenu({ sceneRef, onFlash, actionMenuRef, onOpenSet
       if (s.isNamesVisible) setNamesOn(v => (v === s.isNamesVisible() ? v : s.isNamesVisible())) // eslint-disable-line react-hooks/set-state-in-effect -- sinkronisasi sekali saat menu dibuka
       if (s.isAutoRotate) setRotOn(v => (v === s.isAutoRotate() ? v : s.isAutoRotate()))
     }
-    const c = e => { if (wrap.current && !wrap.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('pointerdown', c)
-    return () => { document.removeEventListener('pointerdown', c) }
   }, [open, sceneRef])
+  useOutsideClose(open, wrap, () => setOpen(false)) // Siklus 335: satu sumber klik-di-luar
   useEscapeClose(open, () => setOpen(false)) // Siklus 333: satu sumber Escape
 
   // Navigasi panah menu (Up/Down/Home/End) — pola WAI-ARIA menu
