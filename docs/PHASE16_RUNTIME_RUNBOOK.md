@@ -1,3 +1,9 @@
+> **Phase 17 update:** A disposable **loopback-only** authenticated
+> reference HTTP log is now available for local signed-head and compact
+> proof issuance. It is **not** an independent external authority,
+> HTTPS, WORM storage, or a replacement for any Phase 16 trust pin.
+> See [Phase 17 runtime runbook](PHASE17_RUNTIME_RUNBOOK.md).
+
 # WFS AI Office — Phase 16 compact Merkle evidence runbook
 
 **Scope:** bounded offline proof verification for the already

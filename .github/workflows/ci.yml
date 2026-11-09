@@ -123,6 +123,7 @@ jobs:
             backend/preview_authority.py backend/preview_snapshot.py \
             backend/preview_root_authority.py backend/preview_witness.py \
             backend/preview_transparency.py backend/preview_compact_merkle.py \
+            backend/reference_transparency_log.py \
             examples/fullstack-preview/ingress.py
       - name: Upload scoped static scan report
         if: always()
@@ -338,6 +339,10 @@ jobs:
           mkdir -p artifacts/fullstack-preview
           npm sbom --sbom-format=cyclonedx --omit=dev > artifacts/fullstack-preview/sbom.cdx.json
           python -c 'import json; p=json.load(open("artifacts/fullstack-preview/sbom.cdx.json")); assert p["bomFormat"]=="CycloneDX" and p["components"]'
+      - name: Phase 17 real HTTP reference log, independent verifier processes and persistent journal
+        env:
+          PYTHONPATH: backend
+        run: python -m pytest backend/test_reference_transparency_log.py -q
       - name: Real Docker Compose template-managed two-project lifecycle
         run: |
           docker info >/dev/null
@@ -368,7 +373,7 @@ jobs:
           PYTHONPATH: backend
         run: |
           New-Item -ItemType Directory -Force artifacts/windows-native | Out-Null
-          python -m pytest backend/test_recovery_snapshot.py backend/test_preview_proxy.py backend/test_billing_reconcile.py backend/test_secure_control_api.py backend/test_brief_reconciliation.py backend/test_reconcile_cli.py backend/test_preview_signature.py backend/test_preview_root_authority.py backend/test_preview_witness.py backend/test_preview_transparency.py backend/test_preview_compact_merkle.py backend/test_preview_manager.py -q --junitxml=artifacts/windows-native/pytest.xml
+          python -m pytest backend/test_recovery_snapshot.py backend/test_preview_proxy.py backend/test_billing_reconcile.py backend/test_secure_control_api.py backend/test_brief_reconciliation.py backend/test_reconcile_cli.py backend/test_preview_signature.py backend/test_preview_root_authority.py backend/test_preview_witness.py backend/test_preview_transparency.py backend/test_preview_compact_merkle.py backend/test_preview_manager.py backend/test_reference_transparency_log.py -q --junitxml=artifacts/windows-native/pytest.xml
       - name: Upload independent Windows Python evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
