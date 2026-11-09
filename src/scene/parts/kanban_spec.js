@@ -709,13 +709,21 @@ export function getKanbanColumnEmptyState(columnKey) {
   return KANBAN_EMPTY_STATES[k] || { icon: '📋', text: 'Tidak ada task' };
 }
 
+export function pctDone(done, total) {
+  const d = Number(done);
+  const t = Number(total);
+  if (!Number.isFinite(d) || !Number.isFinite(t) || t <= 0) return 0;
+  const pct = Math.round((d / t) * 100);
+  return Math.min(100, Math.max(0, pct));
+}
+
 export function computeColumnDistribution(columnCount, totalCount) {
   const count = Math.max(0, Number(columnCount) || 0);
   const total = Math.max(0, Number(totalCount) || 0);
   if (total <= 0) {
     return { count: 0, total: 0, pct: 0, widthPct: 0, ratio: '0/0' };
   }
-  const pct = Math.round((count / total) * 100);
+  const pct = pctDone(count, total);
   const widthPct = Math.min(100, Math.max(0, pct));
   return {
     count,
@@ -1210,7 +1218,7 @@ export function computeSprintMetrics(tasks, divisionFilter = 'all', customDivPre
     return { total: 0, done: 0, running: 0, pending: 0, review: 0, failed: 0, pct: 0 };
   }
   const counts = computeStatusCounts(filtered);
-  const pct = counts.total > 0 ? Math.round((counts.done / counts.total) * 100) : 0;
+  const pct = pctDone(counts.done, counts.total);
   return { ...counts, pct };
 }
 

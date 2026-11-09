@@ -5,6 +5,7 @@ import { useDialogA11y, useEscapeClose, useVisibilityPoll, useWindowEvent } from
 import { fetchWithTimeout } from '../lib/fetch_timeout.js'
 import { IconRocket, IconClose } from './Icons'
 import { normalizeTaskStatus, formatTaskId } from '../scene/parts/projectboard_data'
+import { pctDone } from '../scene/parts/kanban_spec.js'
 
 // Panel Proyek Nyata: data live dibantuin.com dari endpoint /wfs-project (server 9503).
 // Semua data diambil server-side — tidak ada kredensial di frontend.
@@ -56,7 +57,7 @@ export default function ProjectPanel() {
 
   const T = d?.tasks || {}
   const S = d?.saas || {}
-  const pct = T.total ? Math.round((T.done / T.total) * 100) : 0
+  const pct = pctDone(T.done, T.total)
 
   return (
     <>

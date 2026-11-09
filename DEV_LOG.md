@@ -6761,3 +6761,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK: agents=26, init_failed false, 0 error, shot 700705 B (catatan: playwright latest tak bisa unduh browser — CDN 403 kawasan; pin playwright==1.49.0).
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 07:05 WIB — Siklus 360: persen penyelesaian satu sumber — pctDone
+
+- Audit lanjutan satu sumber: rumus `Math.round((done/total)*100)` tersalin 3x — computeColumnDistribution & computeSprintMetrics (kanban_spec) + ProjectPanel.jsx (total falsy → 0, tanpa clamp >100/negatif).
+- Fix: kanban_spec.js ditambah pctDone(done, total) (anti-poisoning: NaN/null/total<=0 → 0, clamp 0..100, string numerik dinormalisasi); computeColumnDistribution, computeSprintMetrics, ProjectPanel kini satu sumber.
+- +1 file tes src/__tests__/pct_done_single_source_360.test.js (5 kasus: salinan hilang, import ada, paritas pembulatan, anti-poisoning 7 bentuk, konsistensi pemakai).
+- Build PWA OK (44 precache); vitest 289 file / 3816 passed + 6 skipped, 0 fail (+5 tes vs 359).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (playwright 1.49.0): agents=26, init_failed false, 0 error, shot 690072 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
