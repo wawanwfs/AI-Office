@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 // Siklus 143: okupansi lantai LIVE — dulu tombol lantai hanya daftar statis
 // (pod + nama agen meja), founder tak bisa lihat berapa agen yang SAAT INI ada
 // di tiap lantai (rapat L1, kafe L3, jalan kampus memindahkan agen lintas lantai
@@ -8,6 +8,7 @@ import React, { useEffect, useState } from 'react'
 // floorOccupancy murni tinggal di scene/parts/agent_status.js (bisa diuji unit,
 // aturan react-refresh: file komponen tak mengekspor non-komponen).
 import { floorOccupancy } from '../scene/parts/agent_status.js'
+import { useVisibilityPoll } from '../lib/dialogA11y'
 
 const FLOORS = [
   {
@@ -47,16 +48,9 @@ export default function FloorNavigator({ onSelectFloor, currentFloor }) {
   // Okupansi lantai live (siklus 143): {1: n, 2: n, 3: n} dari posisi karakter
   // scene; null = scene belum siap (badge disembunyikan — bukan angka karangan).
   const [occupancy, setOccupancy] = useState(null)
-  useEffect(() => {
-    const read = () => setOccupancy(floorOccupancy(window.__agentData))
-    read()
-    // Gerbang visibilityState: snapshot __agentData basi saat tab hidden (render
-    // loop scene pause); baca ulang SEGERA saat kembali visible.
-    const iv = setInterval(() => { if (document.visibilityState === 'visible') read() }, 1000)
-    const onVis = () => { if (document.visibilityState === 'visible') read() }
-    document.addEventListener('visibilitychange', onVis)
-    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', onVis) }
-  }, [])
+  // Siklus 337: poll okupansi satu sumber via useVisibilityPoll (gerbang
+  // visibilityState + refresh segera saat tab kembali visible).
+  useVisibilityPoll(() => setOccupancy(floorOccupancy(window.__agentData)), 1000)
   const isControlled = currentFloor !== undefined && currentFloor !== null
   const activeFloor = isControlled ? currentFloor : internalFloor
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
 import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js'
-import { useDialogA11y, useEscapeClose, useWindowEvent } from '../lib/dialogA11y'
+import { useDialogA11y, useEscapeClose, useVisibilityPoll, useWindowEvent } from '../lib/dialogA11y'
 import { fetchWithTimeout } from '../lib/fetch_timeout.js'
 import { IconRocket, IconClose } from './Icons'
 import { normalizeTaskStatus, formatTaskId } from '../scene/parts/projectboard_data'
@@ -45,18 +45,13 @@ export default function ProjectPanel() {
   useWindowEvent('wfs-open-project-panel', () => setOpen(true))
   useWindowEvent('wfs-toggle-project-panel', () => setOpen(v => !v))
 
-  useEffect(() => {
-    if (!open) return
+  // Siklus 337: poll projects satu sumber via useVisibilityPoll (rid guard
+  // bump saat cleanup dipecah ke effect terpisah — deps sama).
+  useVisibilityPoll(() => {
     const ac = new AbortController()
-    const t0 = setTimeout(() => load(ac.signal), 0)
-    const iv = setInterval(() => { if (document.visibilityState === 'visible') load(ac.signal) }, 15000)
-    // Siklus 320: refresh SEGERA saat tab kembali visible (pola 315-319).
-    const onVis = () => { if (document.visibilityState === 'visible') load(ac.signal) }
-    document.addEventListener('visibilitychange', onVis)
-    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('visibilitychange', onVis);
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async), bukan membaca snapshot ref
-      loadRid.current++ }
-  }, [open, load])
+    load(ac.signal).finally(() => ac.abort())
+  }, 15000, { enabled: open })
+  useEffect(() => () => { loadRid.current++ }, [open, load])
   useEscapeClose(open, () => setOpen(false)) // Siklus 333: satu sumber Escape
 
   const T = d?.tasks || {}

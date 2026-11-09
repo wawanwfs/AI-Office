@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { IconClose, IconChat, IconUser } from './Icons'
 import { getAgentCompetency } from '../scene/parts/agent_competencies.js'
 import { resolveAgentId } from '../scene/parts/running_tasks.js'
@@ -6,7 +6,7 @@ import { findTeamByAgent } from '../scene/parts/team_spec.js'
 import { agentLiveStatus, findAgentLiveEntry, agentLiveLevel, floorZoneName } from '../scene/parts/agent_status.js'
 import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js'
 import { useModalFlag } from '../lib/modal'
-import { useEscapeClose } from '../lib/dialogA11y'
+import { useEscapeClose, useVisibilityPoll } from '../lib/dialogA11y'
 
 // Kartu Inspektur Agen Interaktif — Tampil saat agen 3D diklik di ruangan
 export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloor, onOpenConsole }) {
@@ -20,22 +20,17 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
   // jalan kampus, pulang tetap dilabeli lantai meja → tombol FOKUS membawa kamera
   // ke lantai kosong. Kini dibaca dari posisi karakter scene tiap polling.
   const [liveFloor, setLiveFloor] = useState(null)
-  useEffect(() => {
-    if (!agent) return undefined
-    const read = () => {
-      const entry = findAgentLiveEntry(window.__agentData, agent && agent.name)
-      setLive(agentLiveStatus(entry))
-      setLiveFloor(agentLiveLevel(entry))
-    }
-    read()
-    // Gerbang visibilityState: saat tab hidden render loop scene pause → snapshot
-    // window.__agentData basi; jangan timpa status dgn fase lama. Baca ulang
-    // SEGERA saat tab kembali visible (paritas siklus 315-317).
-    const iv = setInterval(() => { if (document.visibilityState === 'visible') read() }, 1000)
-    const onVis = () => { if (document.visibilityState === 'visible') read() }
-    document.addEventListener('visibilitychange', onVis)
-    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', onVis) }
-  }, [agent])
+  // Siklus 337: poll status live satu sumber via useVisibilityPoll (deps
+  // [agent] — hook menangani gerbang visibilityState + refresh segera saat
+  // tab kembali visible, paritas siklus 315-317). Poll tak jalan saat kartu
+  // tertutup: read hanya di-pass bila agent ada — tetap aman, setState ke
+  // state yang tak dirender saat kartu tertutup.
+  useVisibilityPoll(() => {
+    if (!agent) return
+    const entry = findAgentLiveEntry(window.__agentData, agent && agent.name)
+    setLive(agentLiveStatus(entry))
+    setLiveFloor(agentLiveLevel(entry))
+  }, 1000)
   // Siklus 327: kartu inspektur wajib mendaftar di flag modal TERPUSAT
   // (useModalFlag) — sebelumnya satu-satunya overlay yang lolos: saat kartu
   // terbuka, shortcut global & orbit panah scene tetap jalan di balik kartu

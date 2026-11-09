@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import { api } from '../lib/api'
 import { clip } from '../lib/clip.js'
 import { tickerPresenceSummary } from '../scene/parts/agent_status.js'
+import { useVisibilityPoll } from '../lib/dialogA11y'
 
 const FALLBACK = [{ text: 'Gateway belum terhubung — menunggu data…', color: '#8b93a3' }]
 const COL = { done: '#10E5A0', running: '#F59E0B', failed: '#FB7185', review: '#60A5FA', pending: '#9aa3b5' }
@@ -23,28 +24,22 @@ export default function Ticker({ conn }) {
   // scene belum siap / 0 agen → baris disembunyikan (bukan teks kosong palsu).
   const [presence, setPresence] = useState(null)
 
-  useEffect(() => {
-    const read = () => setPresence(tickerPresenceSummary(window.__agentData))
-    read()
-    // Siklus 319: gerbang visibilityState (paritas FloorNavigator 318) — tab
-    // hidden tidak menimpa presence dengan snapshot basi (render loop pause).
-    const iv = setInterval(() => { if (document.visibilityState === 'visible') read() }, 1000)
-    const onVis = () => { if (document.visibilityState === 'visible') read() }
-    document.addEventListener('visibilitychange', onVis)
-    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', onVis) }
-  }, [])
+  // Siklus 337: poll presence satu sumber via useVisibilityPoll.
+  useVisibilityPoll(() => setPresence(tickerPresenceSummary(window.__agentData)), 1000)
 
-  useEffect(() => {
-    let stop = false
-    let rid = 0 // guard out-of-order (pola TaskBoard siklus 131): poll #2 menyusul
-    // saat #1 menggantung (tak di-abort) → batch LAMA tak menimpa batch BARU,
-    // kegagalan batch basi tak menampilkan "Gateway offline" palsu.
-    const load = async () => {
-      const my = ++rid
-      try {
-        const [t, a, s] = await Promise.all([api('tasks'), api('agents'), api('status')])
-        if (stop || my !== rid) return
-        const agents = Array.isArray(a) ? a : (a.agents || [])
+  // Siklus 337: poll API ticker satu sumber via useVisibilityPoll. Guard
+  // out-of-order (pola TaskBoard siklus 131) via ref di level komponen:
+  // poll #2 menyusul saat #1 menggantung → batch LAMA tak menimpa batch
+  // BARU, kegagalan batch basi tak menampilkan "Gateway offline" palsu.
+  const apiRid = useRef(0)
+  const apiStop = useRef(false)
+  useEffect(() => { apiStop.current = false; return () => { apiStop.current = true } }, [])
+  const load = useCallback(async () => {
+    const my = ++apiRid.current
+    try {
+      const [t, a, s] = await Promise.all([api('tasks'), api('agents'), api('status')])
+      if (apiStop.current || my !== apiRid.current) return
+      const agents = Array.isArray(a) ? a : (a.agents || [])
         const name = Object.fromEntries(agents.map(x => [x.id, x.name]))
         const tasks = t.tasks || []
         const out = []
@@ -56,22 +51,12 @@ export default function Ticker({ conn }) {
           color: COL[x.status] || '#fff',
         }))
         if (s && s.mem_total_mb) out.push({ text: `Host RAM tersedia ${s.mem_available_mb}/${s.mem_total_mb} MB · disk ${s.disk_used_gb}/${s.disk_total_gb} GB`, color: '#A78BFA' })
-        if (!stop && my === rid) setMsgs(out)
-      } catch {
-        if (!stop && my === rid) setMsgs([{ text: 'Gateway offline — mencoba lagi…', color: '#FB7185' }])
-      }
+      if (!apiStop.current && my === apiRid.current) setMsgs(out)
+    } catch {
+      if (!apiStop.current && my === apiRid.current) setMsgs([{ text: 'Gateway offline — mencoba lagi…', color: '#FB7185' }])
     }
-    load()
-    // Guard visibilitas (pola Dashboard 151/SysMeter): tab disembunyikan → ticker
-    // tetap menghantam 3 endpoint (tasks+agents+status) tiap 20 dtk tanpa penonton.
-    // Mount load() tetap jalan; hanya tick interval yang digerbang.
-    const iv = setInterval(() => { if (document.visibilityState === 'visible') load() }, 20000)
-    // Siklus 321: refresh SEGERA saat tab kembali visible (pola 315-320) —
-    // tanpa ini ticker bisa usang hingga 20 dtk setelah kembali.
-    const onVis = () => { if (document.visibilityState === 'visible') load() }
-    document.addEventListener('visibilitychange', onVis)
-    return () => { stop = true; clearInterval(iv); document.removeEventListener('visibilitychange', onVis) }
   }, [])
+  useVisibilityPoll(load, 20000)
 
   const list = [...msgs, ...msgs]
   const liveText = [conn && conn.label, ...msgs.map(m => m.text)].filter(Boolean).join(' · ')

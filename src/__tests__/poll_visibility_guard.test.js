@@ -75,6 +75,7 @@ describe('poll_visibility_guard — census interval poll HTTP', () => {
 
   it('Ticker: interval 20 dtk ter-gerbang visibilityState (3 endpoint batch)', () => {
     const s = readFileSync(join(SRC, 'components', 'Ticker.jsx'), 'utf8')
-    expect(s).toMatch(/setInterval\(\(\) => \{ if \(document\.visibilityState === 'visible'\) load\(\) \}, 20000\)/)
+    // Siklus 337: gerbang kini di hook useVisibilityPoll (satu sumber).
+    expect(s).toMatch(/useVisibilityPoll\(load, 20000\)/)
   })
 })

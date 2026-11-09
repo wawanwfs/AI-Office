@@ -6534,3 +6534,13 @@
 - Redeploy dist → ~/wfs-hq (cp -r) + prune_orphan_assets 7 file hash lama → hygiene ok.
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 689538 B, nonbg 0.992, hygiene_ok true.
 - Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 2026-11-09 17:20 WIB — Siklus 337: polling visibilitas satu sumber — useVisibilityPoll hook
+
+- Audit lanjutan pasca 333-336: pola `setInterval` + gerbang `document.visibilityState` + listener `visibilitychange` berpasangan tersalin di 13 lokasi komponen (Ticker ×2, FloorNavigator, HUD, Dashboard ×2, TeamStats ×2, AgentInspector, ProjectPanel, TaskBoard, WfsPanel, App perf-chip) — rawan drift sama seperti pola Escape (siklus 333).
+- Fix: hook `useVisibilityPoll(read, intervalMs, { enabled })` di dialogA11y.js — interval digerbang visibilityState, refresh SEGERA saat tab kembali visible, cleanup berpasangan, tick awal tak digerbang (paritas load mount lama), read via ref (closure terbaru selalu dipakai, tak perlu re-mount saat data berubah), `enabled=false` untuk panel tertutup. 13 salinan dihapus.
+- Guard rid out-of-order tetap di komponen (Dashboard/TeamStats/ProjectPanel/TaskBoard: effect bump rid terpisah; Ticker: ref apiRid di level komponen + apiStop unmount).
+- Tes lama yang mengasumsikan pola inline disegarkan: poll_visibility_guard (Ticker), visibility_parity_319 (Ticker presence), sisa lulus tanpa edit. +1 file tes visibility_poll_single_source_337.test.jsx (5 kasus).
+- Build PWA OK (43 precache); vitest 267 file / 3727 passed + 6 skipped, 0 fail (+5 tes vs 336).
+- Redeploy dist → ~/wfs-hq (cp -r) + prune_orphan_assets 7 file hash lama → hygiene ok.
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 696889 B, nonbg 0.992, hygiene_ok true.
+- Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom'
 import { api } from '../lib/api'
 import SecureProjectPanel from './SecureProjectPanel'
 import { useModalFlag } from '../lib/modal'
-import { useDialogA11y, useWindowEvent } from '../lib/dialogA11y'
+import { useDialogA11y, useVisibilityPoll, useWindowEvent } from '../lib/dialogA11y'
 import { IconClose, IconStats } from './Icons'
 import { clip } from '../lib/clip.js'
 import { fileCount } from '../lib/files'
@@ -67,18 +67,15 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
     setErr([t, p, r, st].some(result => result.status === 'rejected'))
   }, [])
 
-  useEffect(() => {
-    if (!open) return
+  // Siklus 337: poll data API satu sumber via useVisibilityPoll (rid guard
+  // tetap di load; t0/iv/onVis + cleanup berpasangan kini milik hook).
+  useVisibilityPoll(() => {
     const ac = new AbortController()
-    const t0 = setTimeout(() => load(ac.signal), 0)
-    const iv = setInterval(() => { if (document.visibilityState === 'visible') load(ac.signal) }, 10000)
-    // Siklus 323: refresh SEGERA saat tab kembali visible (paritas 315-322)
-    const onVis = () => { if (document.visibilityState === 'visible') load(ac.signal) }
-    document.addEventListener('visibilitychange', onVis)
-    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('visibilitychange', onVis);
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async), bukan membaca snapshot ref
-      loadRid.current++ }
-  }, [open, load])
+    load(ac.signal).finally(() => ac.abort())
+  }, 10000, { enabled: open })
+  // Invalidate poll in-flight saat panel ditutup / load berganti (dulu bagian
+  // cleanup effect poll; guard async sengaja, bukan membaca snapshot ref).
+  useEffect(() => () => { loadRid.current++ }, [open, load])
 
   // Toggle via shortcut D / tombol lain (pola sama dgn ProjectPanel & TaskBoard)
   // Siklus 336: listener event kustom satu sumber via useWindowEvent.
@@ -88,23 +85,9 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
   // poll 4 dtk hanya saat panel terbuka (pola TeamStats 150/Ticker 149; scene
   // absen/UI-only → null, paragraf disembunyikan, teks fallback task utuh).
   const [presence, setPresence] = useState(null)
-  useEffect(() => {
-    if (!open) return
-    const read = () => setPresence(dashboardPresenceSummary(window.__agentData))
-    read()
-    const iv = setInterval(() => {
-      // Tab disembunyikan → scene render loop ikut pause, data scene basi:
-      // jangan timpa ringkasan dengan snapshot usang (pola gate SysMeter/HUD).
-      if (document.visibilityState === 'visible') read()
-    }, 4000)
-    // Tab kembali terlihat setelah sembunyi lama: interval 4 dtk mungkin baru
-    // "bangun" di tengah periode → baca segera agar ringkasan tidak usang.
-    document.addEventListener('visibilitychange', read)
-    return () => {
-      clearInterval(iv)
-      document.removeEventListener('visibilitychange', read)
-    }
-  }, [open])
+  // Siklus 337: poll presence satu sumber via useVisibilityPoll (gate
+  // visibilityState + refresh segera saat tab kembali visible).
+  useVisibilityPoll(() => setPresence(dashboardPresenceSummary(window.__agentData)), 4000, { enabled: open })
 
   const byStatus = {}
   let totalFiles = 0

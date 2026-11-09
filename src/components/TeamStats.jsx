@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
 import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js'
-import { useDialogA11y, useEscapeClose } from '../lib/dialogA11y'
+import { useDialogA11y, useEscapeClose, useVisibilityPoll } from '../lib/dialogA11y'
 import { fileCount } from '../lib/files'
 import { IconStats, IconClose } from './Icons'
 import { computeTeamStats, teamPresenceSummary } from '../scene/parts/team_spec.js'
@@ -57,38 +57,23 @@ export default function TeamStats() {
     try { setRes(await api('system/resources', { signal })) } catch { /* abaikan */ }
   }, [])
 
-  useEffect(() => {
-    if (!open) return
+  // Siklus 337: poll data API satu sumber via useVisibilityPoll (rid guard
+  // tetap di load; t0/iv/onVis + cleanup berpasangan kini milik hook).
+  useVisibilityPoll(() => {
     const ac = new AbortController()
-    const t0 = setTimeout(() => load(ac.signal), 0)
-    const iv = setInterval(() => { if (document.visibilityState === 'visible') load(ac.signal) }, 15000)
-    // Siklus 323: refresh SEGERA saat tab kembali visible (paritas 315-322)
-    const onVis = () => { if (document.visibilityState === 'visible') load(ac.signal) }
-    document.addEventListener('visibilitychange', onVis)
-    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('visibilitychange', onVis);
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async), bukan membaca snapshot ref
-      loadRid.current++ }
-  }, [open, load])
+    load(ac.signal).finally(() => ac.abort())
+  }, 15000, { enabled: open })
+  // Invalidate poll in-flight saat panel ditutup / load berganti.
+  useEffect(() => () => { loadRid.current++ }, [open, load])
   useEscapeClose(open, () => setOpen(false)) // Siklus 333: satu sumber Escape
 
   // Siklus 150: kehadiran LIVE anggota tim dari scene (window.__agentData) —
   // poll 4 dtk hanya saat panel terbuka (pola sceneAgents SysMeter; scene
   // absen/UI-only → null, chip kehadiran disembunyikan per kartu).
   const [presence, setPresence] = useState(null)
-  useEffect(() => {
-    if (!open) return
-    // Siklus 317: gate visibilityState — saat tab hidden render loop scene pause,
-    // snapshot __agentData basi (pola Dashboard siklus 316); saat kembali visible
-    // baca ulang SEGERA agar ringkasan tidak usang hingga 4 dtk.
-    const read = () => {
-      if (document.visibilityState !== 'visible') return
-      setPresence(teamPresenceSummary(window.__agentData))
-    }
-    read()
-    const iv = setInterval(read, 4000)
-    document.addEventListener('visibilitychange', read)
-    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', read) }
-  }, [open])
+  // Siklus 337: poll presence satu sumber via useVisibilityPoll (gate
+  // visibilityState + refresh segera saat tab kembali visible, paritas 317).
+  useVisibilityPoll(() => setPresence(teamPresenceSummary(window.__agentData)), 4000, { enabled: open })
 
   const byStatus = {}
   let totalFiles = 0

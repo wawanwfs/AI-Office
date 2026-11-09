@@ -1,10 +1,11 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import {
   getAmbienceStatusLabel,
   getAmbienceTooltip,
   getAmbienceAriaLabel,
 } from '../scene/parts/sound_spec.js'
 import { phaseStyleFor } from '../scene/parts/office_phase.js'
+import { useVisibilityPoll } from '../lib/dialogA11y'
 
 // Pill kiri-atas: jam + fase kantor live + slider waktu + status gateway nyata + widget kontrol cepat audio ambience kantor.
 export default function HUD({
@@ -30,21 +31,9 @@ export default function HUD({
   // document.visibilityState agar tab tersembunyi tidak memicu re-render tiap
   // 10 dtk tanpa penonton (pola SysMeter/Ticker).
   const [wallClock, setWallClock] = useState('')
-  useEffect(() => {
-    const read = () => {
-      if (document.visibilityState !== 'visible') return
-      setWallClock(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' }))
-    }
-    read()
-    const iv = setInterval(read, 10000)
-    // Tab kembali terlihat setelah sembunyi lama: interval mungkin baru "bangun"
-    // di tengah periode → baca segera agar chip tidak menampilkan jam usang.
-    document.addEventListener('visibilitychange', read)
-    return () => {
-      clearInterval(iv)
-      document.removeEventListener('visibilitychange', read)
-    }
-  }, [])
+  // Siklus 337: jam host satu sumber via useVisibilityPoll (interval digerbang
+  // visibilityState; chip tak menampilkan jam usang saat tab kembali visible).
+  useVisibilityPoll(() => setWallClock(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })), 10000)
   const statusLabel = getAmbienceStatusLabel({ enabled: ambienceEnabled, muted, volume: ambienceVolume })
   const tooltipText = getAmbienceTooltip({ enabled: ambienceEnabled, muted, volume: ambienceVolume })
   const ariaLabelText = getAmbienceAriaLabel({ enabled: ambienceEnabled, muted, volume: ambienceVolume })

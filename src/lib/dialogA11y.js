@@ -49,6 +49,27 @@ export function useWindowEvent(type, handler, { enabled = true } = {}) {
   }, [type, enabled])
 }
 
+/* Siklus 337: polling berbasis visibilitas SATU sumber — useVisibilityPoll(
+ * read, intervalMs, { enabled }). Pola lama tiap komponen: setInterval dgn
+ * gerbang document.visibilityState + listener visibilitychange utk refresh
+ * SEGERA saat tab kembali visible + cleanup berpasangan. Hook menangani
+ * ketiganya; read via ref (closure terbaru selalu dipakai, effect tak perlu
+ * dipasang ulang saat data berubah). enabled=false melewati pemasangan
+ * (panel tertutup tak menghantam API). Tick awal jalan segera saat enabled
+ * (paritas load mount lama), tick interval digerbang visibilityState. */
+export function useVisibilityPoll(read, intervalMs, { enabled = true } = {}) {
+  const readRef = useRef(read)
+  useEffect(() => { readRef.current = read })
+  useEffect(() => {
+    if (!enabled) return
+    const tick = () => { if (document.visibilityState === 'visible') readRef.current() }
+    readRef.current() // tick awal tak digerbang (paritas load mount lama)
+    const iv = setInterval(tick, intervalMs)
+    document.addEventListener('visibilitychange', tick)
+    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', tick) }
+  }, [intervalMs, enabled])
+}
+
 export function useDialogA11y({ open, onClose, ref, initialFocus }) {
   useEffect(() => {
     if (!open) return

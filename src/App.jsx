@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react'
 import { clip } from './lib/clip.js'
+import { useVisibilityPoll } from './lib/dialogA11y'
 import HUD from './components/HUD'
 import Header from './components/Header'
 import SkipLink from './components/SkipLink'
@@ -390,27 +391,21 @@ export default function App() {
   // perf_quality). Polling 2 dtk sejajar rentang sampling FPS scene; chip hanya
   // tampil setelah sampel pertama (fps > 0), tanpa data → disembunyikan.
   const [perfChipState, setPerfChipState] = useState(null)
-  useEffect(() => {
-    const read = () => {
-      const p = typeof window !== 'undefined' ? window.__perf : null
-      const chip = perfChip(p)
-      // Siklus 172: bila konteks WebGL hilang → chip TETAP tampil ("GPU
-      // terputus…", state 'down') walau fps 0/kosong — perfChip menangani
-      // ini di atas guard fps.
-      setPerfChipState((prev) => {
-        if (!chip) return null
-        if (prev && prev.label === chip.label && prev.state === chip.state && prev.detail === chip.detail) return prev // hindari re-render sia-sia
-        return chip
-      })
-    }
-    read()
-    // Siklus 319: gerbang visibilityState (paritas 315-318) — __perf dibekukan
-    // saat render loop pause; baca ulang segera saat tab kembali visible.
-    const iv = setInterval(() => { if (document.visibilityState === 'visible') read() }, 2000)
-    const onVis = () => { if (document.visibilityState === 'visible') read() }
-    document.addEventListener('visibilitychange', onVis)
-    return () => { clearInterval(iv); document.removeEventListener('visibilitychange', onVis) }
-  }, [])
+  // Siklus 337: poll perf chip satu sumber via useVisibilityPoll (gerbang
+  // visibilityState + baca ulang segera saat tab kembali visible, paritas
+  // 315-318 — __perf dibekukan saat render loop pause).
+  useVisibilityPoll(() => {
+    const p = typeof window !== 'undefined' ? window.__perf : null
+    const chip = perfChip(p)
+    // Siklus 172: bila konteks WebGL hilang → chip TETAP tampil ("GPU
+    // terputus…", state 'down') walau fps 0/kosong — perfChip menangani
+    // ini di atas guard fps.
+    setPerfChipState((prev) => {
+      if (!chip) return null
+      if (prev && prev.label === chip.label && prev.state === chip.state && prev.detail === chip.detail) return prev // hindari re-render sia-sia
+      return chip
+    })
+  }, 2000)
 
   const [sceneReady, setSceneReady] = useState(false)
   const [sceneErr, setSceneErr] = useState(false)

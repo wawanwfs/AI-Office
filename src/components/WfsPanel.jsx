@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
-import { useDialogA11y, useEscapeClose } from '../lib/dialogA11y'
+import { useDialogA11y, useEscapeClose, useVisibilityPoll } from '../lib/dialogA11y'
 import { IconChat, IconClose, IconGear, IconSave, IconPlay, IconRotate } from './Icons'
 
 // Navigasi panah tablist (pola WAI-ARIA tabs): Left/Right/Home/End memindahkan
@@ -110,16 +110,8 @@ export default function WfsPanel() {
     document.addEventListener('visibilitychange', onVis)
     return () => document.removeEventListener('visibilitychange', onVis)
   }, [loadAgents])
-  useEffect(() => {
-    if (!open) return
-    let dead = false
-    const ld = () => api('agents/status').then(d => { if (!dead) setStat(d.agents || {}) }).catch(() => {})
-    const t0 = setTimeout(ld, 0); const iv = setInterval(() => { if (document.visibilityState === 'visible') ld() }, 15000)
-    // Siklus 320: refresh SEGERA saat tab kembali visible (pola 315-319).
-    const onVis = () => { if (document.visibilityState === 'visible') ld() }
-    document.addEventListener('visibilitychange', onVis)
-    return () => { dead = true; clearTimeout(t0); clearInterval(iv); document.removeEventListener('visibilitychange', onVis) }
-  }, [open])
+  // Siklus 337: poll status agents satu sumber via useVisibilityPoll.
+  useVisibilityPoll(() => api('agents/status').then(d => setStat(d.agents || {})).catch(() => {}), 15000, { enabled: open })
   useEffect(() => { if (sel) { selectedAgentIdRef.current = sel.id; loadCfg(sel) } }, [sel, loadCfg])   // eslint-disable-line react-hooks/set-state-in-effect
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight }, [logs, chatBusy])
   useEscapeClose(open, () => setOpen(false)) // Siklus 333: satu sumber Escape

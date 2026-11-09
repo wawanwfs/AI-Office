@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
 import { useEscapeClose, useOutsideClose } from '../lib/dialogA11y'
 import {
