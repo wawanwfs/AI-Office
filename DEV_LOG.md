@@ -6434,3 +6434,12 @@
 - Build PWA OK (43 precache entries); vitest 259 file / 3700 passed + 6 skipped, 0 fail.
 - Redeploy dist → ~/wfs-hq (cp -r + prune_orphan_assets: 0 orphan). Probe e2e_err OK: agents=26, 0 console/page error, init_failed false, shot 689406 B, nonbg 0.992, hygiene 13 hashed/0 orphan.
 - Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 2026-11-09 09:05 WIB — Siklus 326: ShConsole mendaftar flag modal terpusat — shortcut & orbit tak lagi "menembus" konsol
+
+- Defek ditemukan audit a11y modal: ShConsole (drawer Konsol, overlay z-2000) TIDAK memanggil useModalFlag — satu-satunya overlay internal yang lolos. Konsol terbuka → anyModalOpen() tetap false & showConsoleS tak ada di rumus modalOpen/agentCycleBlocked App → shortcut global (T/E/P/L/M/N/C/panah) tetap jalan di balik konsol: panel lain terbuka tersembunyi, scene ikut merespons keyboard milik modal. Semua panel internal lain (TaskBoard/WfsPanel/CsWidget/Dashboard/TeamStats/ProjectPanel/SettingsModal/QuickToolbar/ActionMenu) sudah terdaftar.
+- Fix: useModalFlag(show) di ShConsole.jsx (import + 1 baris + komentar). Tanpa perubahan perilaku App.
+- +1 file tes shconsole_modal_flag_326.test.jsx (4 kasus: open→flag naik, show=false→tidak naik, unmount melepas flag, toggle false→true→false simetris).
+- Build PWA OK (43 precache); vitest 260 file / 3704 passed + 6 skipped, 0 fail (+4 tes vs 325).
+- Redeploy dist → ~/wfs-hq (cp -r) + prune_orphan_assets 7 file hash lama → hygiene 20 hashed/0 orphan.
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 687255 B, hygiene_ok true.
+- Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

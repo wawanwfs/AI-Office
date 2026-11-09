@@ -4,6 +4,7 @@
 import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
 import { useDialogA11y } from '../lib/dialogA11y'
+import { useModalFlag } from '../lib/modal'
 import { STATUS_HEX } from '../scene/parts/agent_status'
 
 const STYLE = {
@@ -378,6 +379,13 @@ export default function ShConsole({ show, onClose }) {
   // a11y: Esc menutup, fokus pindah ke dalam drawer, Tab terkunci di dalamnya
   // (pola sama dengan dialog lain memakai useDialogA11y).
   useDialogA11y({ open: show, onClose, ref: drawerRef })
+  // Siklus 326: daftar di flag modal TERPUSAT (pola TaskBoard/WfsPanel/CsWidget/
+  // Dashboard/…) — sebelumnya konsol terbuka TIDAK menaikkan anyModalOpen() &
+  // tidak ada di rumus modalOpen App (konsol di-mount App lewat state
+  // showConsoleS) → shortcut global (T/E/P/L/M/N/…) & orbit panah scene tetap
+  // jalan "menembus" overlay: membuka/mengubah panel yang tersembunyi di balik
+  // konsol, dan scene tetap merespons keyboard yang seharusnya milik modal.
+  useModalFlag(show)
 
   if (!show) return null
 
