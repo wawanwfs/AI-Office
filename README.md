@@ -471,3 +471,31 @@ without real independent operator trust.
 OS-immutable builder isolation, fully signed offline supply chain,
 real external DNS/host firewall, generated-source QA, tenant HTTPS
 production previews and billed AI provider activation remain blocked.
+
+
+## Phase 19 — Linux kernel-sealed, reviewed Docker build input
+
+A real Linux BuildKit proof now constructs an allowlisted `Dockerfile.api`
+and `api.py` tar **only from the already signed and independently
+reviewed operator snapshot**. The operator rehashes exact source file
+bytes and freezes the tar using kernel `memfd` write/grow/shrink/seal
+operations before streaming the tar directly into `docker build`.
+A separate same-UID process is unable to overwrite the sealed file
+descriptor. The disposable Docker CI integration then actively changes
+the staging source while building and verifies the resulting image still
+contains the original reviewed API SHA256.
+
+**Limitation:** this is currently an *additional tested build pathway*;
+the normal Compose preview still rebuilds from its mutable staged
+directory. A privileged Docker daemon, independently authorized
+rootless builder principal, actual Windows Docker Desktop/WSL2 mount
+semantics, offline OCI image provenance, and cross-host external
+review authority remain unproven. Windows explicitly rejects unsealed
+fallback rather than claiming equivalent Linux protection.
+
+- [Phase 19 narrowly scoped REA](docs/REA_PHASE19.md)
+- [Phase 19 Linux/Windows operator runbook](docs/PHASE19_RUNTIME_RUNBOOK.md)
+- [Phase 20 next integration prompt](docs/NEXT_PHASE20_PROMPT.md)
+
+No production deployment, private organizational keys, generic
+generated Dockerfiles or billable AI execution are activated.

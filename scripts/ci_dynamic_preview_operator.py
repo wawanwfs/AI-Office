@@ -22,6 +22,7 @@ from preview_manager import TemplatePreviewManager,PreviewDenied
 from preview_admission import REVIEWED_FILES, candidate_manifest_for_ci_only
 from ci_preview_network_probe import prove_disposable_container_egress
 from ci_phase13_real_dns_rebind import prove_real_docker_dns_rebinding
+from ci_phase19_sealed_build import prove_sealed_build
 from preview_authority import SignedPreviewAuthority
 from preview_signature import canonical_review_bytes
 from preview_root_authority import canonical_roster_bytes
@@ -236,6 +237,12 @@ try:
         assert start["url"]==f"http://127.0.0.1:{port}"
         assert not start["public_preview_ready"]
         assert health(port,token,other)
+        # Phase 19: Linux kernel seals a signed Docker tar BEFORE BuildKit.
+        # Mutate the staged API as SAME UID while a real Docker image is
+        # built; the resulting image must still match reviewed bytes.
+        if project==names[0]:
+            proof["phase19_linux_sealed_build"]=prove_sealed_build(
+                manager,project)
         manager.logs(project,token)
         proof["stacks"].append({"project_sha256":hashlib.sha256(project.encode()).hexdigest(),
                                 "port":port,"postgresql_live":True,
