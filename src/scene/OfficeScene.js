@@ -2202,7 +2202,14 @@ if (typeof ResizeObserver !== 'undefined' && container) {
 }
 window.addEventListener('resize', onResize);
 window.__resizeScene = onResize;
-const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&focusGoal){focusGoal=resetFocusGoal(HOME_TGT,homeRadius,sph.radius);selectedIdx=-1;applySelected();if(onSelectAgent)onSelectAgent(null);delete sph.__saved;} };
+// Siklus 330: Escape juga GUARD INPUT (pola __onOrbitKey di atas) — dulu
+// mengetik di search/textarea/input lalu menekan Escape (kebiasaan umum:
+// kosongkan input / keluar fokus field) IKUT me-reset fokus kamera ke home &
+// membatalkan seleksi agen. Escape "kembali ke overview" hanya bermakna saat
+// fokus TIDAK sedang di field teks; modal tak perlu dicek di sini (snapshot
+// capture App __escModalAtDispatch sudah menangani overlay).
+const isTypingTarget=(t)=>t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable);
+const onKey=(e)=>{ if(e.key==='Escape'&&window.__escModalAtDispatch===false&&focusGoal&&!isTypingTarget(e.target)){focusGoal=resetFocusGoal(HOME_TGT,homeRadius,sph.radius);selectedIdx=-1;applySelected();if(onSelectAgent)onSelectAgent(null);delete sph.__saved;} };
 // Siklus 177 — orbit kamera via KEYBOARD (panah): satu-satunya jalur input
 // kamera yang belum ada (audit 174/175/176 menutup semua tepi pointer, tapi
 // PUTAR kamera hanya bisa drag pointer — tanpa mouse tak ada cara memutar
@@ -2218,7 +2225,7 @@ const __onOrbitKey=(e)=>{
   if(window.__wfsModalOpen||window.__escModalAtDispatch){return;} // modal terbuka → keyboard milik modal
   const isArrow=e.key==='ArrowLeft'||e.key==='ArrowRight'||e.key==='ArrowUp'||e.key==='ArrowDown';
   if(!isArrow)return;
-  const t=e.target; if(t&&(t.tagName==='INPUT'||t.tagName==='TEXTAREA'||t.tagName==='SELECT'||t.isContentEditable))return; // sedang mengetik
+  if(!isTypingTarget(e.target))return; // sedang mengetik
   e.preventDefault(); // panah = orbit, bukan scroll halaman
   const n=orbitStep(sph,e.key,e.shiftKey?ORBIT_KEY_STEP_FAST:ORBIT_KEY_STEP);
   sph.theta=n.theta;sph.phi=n.phi;

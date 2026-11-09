@@ -6468,3 +6468,12 @@
 - Redeploy dist → ~/wfs-hq via deploy.py (9503: 200) + prune 7 file hash orphan hasil double-deploy.
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 688172 B, hygiene 13 hashed/0 orphan.
 - Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 2026-11-09 11:04 WIB — Siklus 330: Escape scene reset-focus diberi guard input + guard typing dikonsolidasi satu helper
+
+- Defek: handler Escape scene (OfficeScene.js onKey) TIDAK punya guard target input — mengetik di search task board / form TaskModal / textarea lalu menekan Escape (kebiasaan umum: kosongkan input) IKUT me-reset fokus kamera ke home & membatalkan seleksi agen. __onOrbitKey sudah lama punya guard typing (siklus 177); onKey tertinggal.
+- Fix: helper isTypingTarget() (INPUT/TEXTAREA/SELECT/contentEditable) dipakai guard onKey Escape; __onOrbitKey direfaktor memakai helper yang sama (satu sumber kebenaran guard typing, hapus pola duplikat inline).
+- +1 file tes esc_input_guard_330.test.js (3 kasus: helper+guard onKey, guard modal snapshot tetap, konsolidasi helper dipakai kedua handler).
+- Build PWA OK (43 precache); vitest 262 file / 3712 passed + 6 skipped, 0 fail (+3 tes vs 329).
+- Redeploy dist → ~/wfs-hq via deploy.py (9503: 200) + prune 7 file hash orphan (double-deploy).
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 689814 B, nonbg 0.992, hygiene 13 hashed/0 orphan.
+- Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
