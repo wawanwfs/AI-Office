@@ -72,6 +72,10 @@ def _reviewed_bytes(path, expected_sha):
             return data
         finally:
             os.close(fd)
+    except AdmissionDenied:
+        # AdmissionDenied derives from PermissionError/OSError; keep
+        # explicit manifest-hash and source-type denials distinguishable.
+        raise
     except OSError as exc:
         raise AdmissionDenied("sealed context source read unavailable") from exc
 
