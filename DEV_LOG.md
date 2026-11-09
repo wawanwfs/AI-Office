@@ -6682,3 +6682,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 systemd tetap jalan.
 - e2e probe OK: agents=26, init_failed false, 0 error, shot 716753 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+
+## 10/11/2026 03:05 WIB — Siklus 352: pemanggil spec ambience bersih — try/catch redundan dihapus
+- Audit lanjutan satu sumber: 9 try/catch pembungkus loader/saver ambience di App.jsx (5) & OfficeScene.js (4) padahal sound_spec.js sudah punya try/catch + default internal (pelajaran 333: salinan drift). Perilaku sama persis (storage rusak → default/false).
+- Fix: pemanggil kini panggil langsung tanpa try/catch; 0 salinan tersisa di kedua file.
+- +1 file tes src/__tests__/ambience_callers_cleanup_352.test.js (4 kasus: salinan hilang + pemanggil tetap ada, loader tahan storage rusak, saver return false, paritas nilai clamp/default).
+- Build PWA OK (43 precache); vitest 281 file / 3782 passed + 6 skipped, 0 fail (+4 tes vs 351).
+- Deploy cp -r dist → ~/wfs-hq; 9503 systemd tetap jalan.
+- e2e probe OK: agents=26, init_failed false, 0 error, shot 714718 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

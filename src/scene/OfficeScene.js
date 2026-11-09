@@ -306,8 +306,8 @@ __onCanvas('touchcancel',()=>{
 let audioMuted=audioMutedPref();
 function saveMuted(){setAudioMutedPref(audioMuted)}
 let audioVolume=(function(){try{return loadAudioVolume(null)}catch{return DEFAULT_VOLUME}})();
-let ambienceEnabled=(function(){try{return loadAmbienceEnabled(null)}catch{return DEFAULT_AMBIENCE_ENABLED}})();
-let ambienceVolume=(function(){try{return loadAmbienceVolume(null)}catch{return DEFAULT_AMBIENCE_VOLUME}})();
+let ambienceEnabled=loadAmbienceEnabled(null);
+let ambienceVolume=loadAmbienceVolume(null);
 const __sound=createSoundEngine({
   ctxFactory:()=>new(window.AudioContext||window.webkitAudioContext)(),
   initialVolume:audioVolume,
@@ -2492,7 +2492,7 @@ window.addEventListener('keydown',onKey);
     setAmbienceEnabled: (v) => {
       ambienceEnabled = !!v;
       __sound.setAmbienceEnabled(ambienceEnabled);
-      try { saveAmbienceEnabled(null, ambienceEnabled); } catch { /* abaikan */ }
+      saveAmbienceEnabled(null, ambienceEnabled);
       __sound.dbg(s=>{window.__audio=s;});
       try {
         if (typeof window !== 'undefined' && window.dispatchEvent) {
@@ -2504,7 +2504,7 @@ window.addEventListener('keydown',onKey);
     setAmbienceVolume: (v) => {
       ambienceVolume = clampAmbienceVolume(v);
       __sound.setAmbienceVolume(ambienceVolume);
-      try { saveAmbienceVolume(null, ambienceVolume); } catch { /* abaikan */ }
+      saveAmbienceVolume(null, ambienceVolume);
       __sound.dbg(s=>{window.__audio=s;});
       try {
         if (typeof window !== 'undefined' && window.dispatchEvent) {

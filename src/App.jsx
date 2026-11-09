@@ -159,10 +159,10 @@ export default function App() {
     return audioMutedPref()
   })
   const [ambienceEnabled, setAmbienceEnabled] = useState(() => {
-    try { return loadAmbienceEnabled(null) } catch { return false }
+    return loadAmbienceEnabled(null)
   })
   const [ambienceVolume, setAmbienceVolume] = useState(() => {
-    try { return loadAmbienceVolume(null) } catch { return DEFAULT_AMBIENCE_VOLUME }
+    return loadAmbienceVolume(null)
   })
   const [selectedAgent, setSelectedAgent] = useState(null)
   const [currentFloor, setCurrentFloor] = useState(1)
@@ -228,7 +228,7 @@ export default function App() {
         s.setAmbienceVolume(nextVol)
         if (!muted && s.playSelect) s.playSelect()
       } else {
-        try { saveAmbienceVolume(null, nextVol) } catch { /* noop */ }
+        saveAmbienceVolume(null, nextVol)
       }
       flash(`Volume ambience kantor: ${formatAmbiencePercent(nextVol)}`)
       return
@@ -245,7 +245,7 @@ export default function App() {
       s.setAmbienceEnabled(next)
       if (next && s.playSelect) s.playSelect()
     } else {
-      try { saveAmbienceEnabled(null, next) } catch { /* noop */ }
+      saveAmbienceEnabled(null, next)
     }
     flash(next ? `Ambience kantor aktif (${formatAmbiencePercent(ambienceVolume)})` : 'Ambience kantor dinonaktifkan')
   }, [ambienceEnabled, ambienceVolume, muted, flash])
@@ -258,7 +258,7 @@ export default function App() {
       s.setAmbienceVolume(nextVol)
       if (!muted && s.playSelect) s.playSelect()
     } else {
-      try { saveAmbienceVolume(null, nextVol) } catch { /* noop */ }
+      saveAmbienceVolume(null, nextVol)
     }
     flash(`Volume ambience kantor: ${formatAmbiencePercent(nextVol)}`)
   }, [ambienceVolume, muted, flash])
