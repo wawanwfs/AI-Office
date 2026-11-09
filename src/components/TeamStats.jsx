@@ -7,6 +7,7 @@ import { useDialogA11y, useEscapeClose, useTween, useVisibilityPoll } from '../l
 import { fileCount } from '../lib/files'
 import { IconStats, IconClose } from './Icons'
 import { computeTeamStats, teamPresenceSummary } from '../scene/parts/team_spec.js'
+import { computeStatusCounts } from '../scene/parts/kanban_spec.js'
 
 /* Statistik Tim — data nyata dari task engine + resource host */
 export default function TeamStats() {
@@ -55,9 +56,11 @@ export default function TeamStats() {
   // visibilityState + refresh segera saat tab kembali visible, paritas 317).
   useVisibilityPoll(() => setPresence(teamPresenceSummary(window.__agentData)), 4000, { enabled: open })
 
-  const byStatus = {}
-  let totalFiles = 0
-  ;(data || []).forEach(t => { byStatus[t.status] = (byStatus[t.status] || 0) + 1; totalFiles += fileCount(t.files) })
+  // Siklus 354: penghitung status satu sumber via computeStatusCounts
+  // (kanban_spec) — pengganti salinan forEach byStatus; totalFiles tetap
+  // dihitung via fileCount (lib/files).
+  const byStatus = computeStatusCounts(data)
+  const totalFiles = (data || []).reduce((n, t) => n + fileCount(t?.files), 0)
   const teamStats = data && data.length > 0 ? computeTeamStats(data) : []
   const dot = s => s === 'done' ? '#10E5A0' : s === 'failed' ? '#f66' : s === 'running' ? '#f59e0b' : s === 'review' ? '#60A5FA' : '#9aa3b5'
   // Hook tween DIPANGGIL tanpa syarat (5 baris tetap) agar urutan hook stabil antar render.

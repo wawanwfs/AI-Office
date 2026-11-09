@@ -1181,6 +1181,25 @@ export function groupTasksByKanbanColumn(tasks, query = '', divisionFilter = 'al
  * Menghitung metrik agregat sprint (total, done, running, review, failed, pending, pct).
  * Mendukung filter divisi opsional.
  */
+/**
+ * Satu sumber penghitung status task (siklus 354).
+ */
+export function computeStatusCounts(tasks) {
+  const counts = { total: 0, done: 0, running: 0, pending: 0, review: 0, failed: 0 };
+  if (!Array.isArray(tasks)) return counts;
+  tasks.forEach((t) => {
+    if (!t) return;
+    const st = String(t.status || '').toLowerCase();
+    counts.total += 1;
+    if (st === 'done' || st === 'completed') counts.done++;
+    else if (st === 'running' || st === 'in_progress') counts.running++;
+    else if (st === 'failed') counts.failed++;
+    else if (st === 'review' || st === 'qa') counts.review++;
+    else counts.pending++;
+  });
+  return counts;
+}
+
 export function computeSprintMetrics(tasks, divisionFilter = 'all', customDivPresets = undefined) {
   if (!Array.isArray(tasks) || !tasks.length) {
     return { total: 0, done: 0, running: 0, pending: 0, review: 0, failed: 0, pct: 0 };
@@ -1190,19 +1209,9 @@ export function computeSprintMetrics(tasks, divisionFilter = 'all', customDivPre
   if (!filtered.length) {
     return { total: 0, done: 0, running: 0, pending: 0, review: 0, failed: 0, pct: 0 };
   }
-  let done = 0, running = 0, pending = 0, review = 0, failed = 0;
-  filtered.forEach((t) => {
-    if (!t) return;
-    const st = String(t.status || '').toLowerCase();
-    if (st === 'done' || st === 'completed') done++;
-    else if (st === 'running' || st === 'in_progress') running++;
-    else if (st === 'failed') failed++;
-    else if (st === 'review' || st === 'qa') review++;
-    else pending++;
-  });
-  const total = filtered.length;
-  const pct = total > 0 ? Math.round((done / total) * 100) : 0;
-  return { total, done, running, pending, review, failed, pct };
+  const counts = computeStatusCounts(filtered);
+  const pct = counts.total > 0 ? Math.round((counts.done / counts.total) * 100) : 0;
+  return { ...counts, pct };
 }
 
 /**

@@ -6702,3 +6702,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 systemd tetap jalan.
 - e2e probe OK: agents=26, init_failed false, 0 error, shot 715990 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 04:20 WIB — Siklus 354: penghitung status task satu sumber — computeStatusCounts
+
+- Audit lanjutan satu sumber: salinan forEach byStatus di TeamStats.jsx & Dashboard.jsx + loop hitung manual di computeSprintMetrics (kanban_spec) — tiga implementasi hitung status wfs dgn alias berbeda-beda, rawan drift (pelajaran 333).
+- Fix: kanban_spec.js ditambah computeStatusCounts(tasks) (anti-poisoning: bukan array → nol, entri null/status tak dikenal → pending, alias completed/in_progress/qa dipetakan). computeSprintMetrics kini panggil itu; TeamStats & Dashboard kini import & 0 salinan forEach byStatus / let totalFiles tersisa.
+- +1 file tes src/__tests__/status_counts_single_source_354.test.js (4 kasus: salinan hilang di 2 komponen, loop manual hilang di spec, anti-poisoning 4 bentuk input, paritas alias + metrik sprint/pct).
+- Build PWA OK (44 precache); vitest 283 file / 3790 passed + 6 skipped, 0 fail (+4 tes vs 353).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK: agents=26, init_failed false, 0 error, shot 718332 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

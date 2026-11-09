@@ -7,6 +7,7 @@ import { useDialogA11y, useVisibilityPoll, useWindowEvent } from '../lib/dialogA
 import { IconClose, IconStats } from './Icons'
 import { clip } from '../lib/clip.js'
 import { fileCount } from '../lib/files'
+import { computeStatusCounts } from '../scene/parts/kanban_spec.js'
 import { fmtTime } from '../lib/format_time.js'
 import { dashboardPresenceSummary } from '../scene/parts/agent_status.js'
 
@@ -89,11 +90,14 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
   // visibilityState + refresh segera saat tab kembali visible).
   useVisibilityPoll(() => setPresence(dashboardPresenceSummary(window.__agentData)), 4000, { enabled: open })
 
-  const byStatus = {}
-  let totalFiles = 0
-  ;(tasks || []).forEach(t => { byStatus[t.status] = (byStatus[t.status] || 0) + 1; totalFiles += fileCount(t.files) })
-  const running = (tasks || []).filter(t => t.status === 'running').length
-  const agentsBusy = (tasks || []).filter(t => t.status === 'running' && t.agent_id).map(t => t.agent_id)
+  // Siklus 354: penghitung status satu sumber via computeStatusCounts
+  // (kanban_spec) — pengganti salinan forEach byStatus; totalFiles tetap
+  // dihitung via fileCount (lib/files).
+  const statusCounts = computeStatusCounts(tasks)
+  const byStatus = { done: statusCounts.done, running: statusCounts.running, completed: 0 }
+  const totalFiles = (tasks || []).reduce((n, t) => n + fileCount(t?.files), 0)
+  const running = statusCounts.running
+  const agentsBusy = (tasks || []).filter(t => t && t.status === 'running' && t.agent_id).map(t => t.agent_id)
   const card = (label, val, color) => (
     <div key={label} className="dash-card" role="group" aria-label={label}>
       <b style={{ color }}>{val}</b>
