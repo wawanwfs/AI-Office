@@ -88,8 +88,9 @@ describe('wiring statis — G terhubung ke satu sumber snapshot', () => {
     expect(app).toMatch(/Foto gagal: /);
     // Tombol dock delegasi — dulu (178) inline duplikat 8 baris
     expect(app).toMatch(/onSnapshot=\{\(\) => \{\s*\/\/[^\n]*\n[^\n]*handleSnapshot\(\)/);
-    // handleSnapshot masuk deps useEffect keyboard (anti stale closure)
-    expect(app).toMatch(/cycleAmbienceVolume, handleSnapshot, setShowSettings\]\)/);
+    // Siklus 338: deps useEffect keyboard dihapus — handler via ref (hook
+    // useWindowEvent), closure onKey selalu terbaru tanpa re-mount listener.
+    expect(app).toMatch(/useWindowEvent\('keydown', onKey\)/);
   });
 
   it('QuickToolbar: tombol FOTO tetap utuh (prop onSnapshot + IconCamera + aria)', () => {

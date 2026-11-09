@@ -6544,3 +6544,13 @@
 - Redeploy dist → ~/wfs-hq (cp -r) + prune_orphan_assets 7 file hash lama → hygiene ok.
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 696889 B, nonbg 0.992, hygiene_ok true.
 - Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 2026-11-09 18:35 WIB — Siklus 338: listener keydown shortcut global satu sumber — useWindowEvent di App
+
+- Audit lanjutan pasca 336: listener keydown global shortcut App.jsx memakai useEffect dgn deps panjang (showTask/confirm/ask/showHelp/showSettings/showLog/selectedAgent/... 15 dep) → listener dicopot-pasang ulang di SETIAP perubahan state tersebut (churn tidak perlu).
+- Fix: handler onKey dijadikan const biasa + dipasang sekali via `useWindowEvent('keydown', onKey)` (hook siklus 336, handler via ref → closure terbaru tanpa re-mount). Deps panjang dihapus.
+- Tes lama snapshot_key disegarkan: asersi deps keyboard (anti stale closure) diganti asersi pemakaian hook useWindowEvent (ref closure).
+- Build PWA OK (43 precache); vitest 267 file / 3727 passed + 6 skipped, 0 fail.
+- Redeploy dist → ~/wfs-hq (cp -r) + prune_orphan_assets 7 file hash lama → hygiene ok.
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 710005 B, hygiene_ok true.
+- Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

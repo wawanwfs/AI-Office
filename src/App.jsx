@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react'
 import { clip } from './lib/clip.js'
-import { useVisibilityPoll } from './lib/dialogA11y'
+import { useVisibilityPoll, useWindowEvent } from './lib/dialogA11y'
 import HUD from './components/HUD'
 import Header from './components/Header'
 import SkipLink from './components/SkipLink'
@@ -620,8 +620,7 @@ export default function App() {
   }, [flash])
 
   // ---- shortcut keyboard (abaikan saat fokus di input/textarea/modal) ----
-  useEffect(() => {
-    const onKey = (e) => {
+  const onKey = (e) => {
       let activeModal = null
       if (showSettings) activeModal = 'settings'
       else if (showHelp) activeModal = 'help'
@@ -738,9 +737,11 @@ export default function App() {
         if (s && s.cycleAgent) s.cycleAgent(action.backward)
       }
     }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [showTask, confirm, ask, showHelp, showSettings, showLog, selectedAgent, handleCyberpunk, handleFloorSelect, zoom, flash, amRef, toggleAmbience, cycleAmbienceVolume, handleSnapshot, setShowSettings])
+  // Siklus 338: listener keydown global SATU SUMBER — useWindowEvent (hook
+  // siklus 336), handler via ref (closure onKey terbaru selalu dipakai).
+  // Efek lama memasang-ulang listener di SETIAP perubahan state (deps
+  // panjang showTask/confirm/ask/...) — kini terpasang sekali saat mount.
+  useWindowEvent('keydown', onKey)
 
   // ---- Pause / Resume nyata (konfirmasi dulu) ----
   // Guard rid (pola siklus 132/135): dialog konfirmasi bisa dibuka ulang kapan
