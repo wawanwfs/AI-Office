@@ -1,6 +1,7 @@
 // parts/team_spec.js — Spesifikasi Pembagian Divisi / Tim Kerja Kantor WFS PROJECT
 // Modul murni (tanpa dependensi THREE/DOM) agar dapat diuji unit 100% deterministik.
 import { agentLiveTone, agentLiveLevel } from './agent_status.js';
+import { pctDone } from './kanban_spec.js';
 
 export const TEAMS = [
   {
@@ -171,7 +172,7 @@ export function computeTeamStats(rawTasks) {
 
   return TEAMS.map((team) => {
     const s = statsMap[team.key];
-    s.pct = s.total > 0 ? Math.round((s.done / s.total) * 100) : 0;
+    s.pct = pctDone(s.done, s.total);
     return s;
   });
 }

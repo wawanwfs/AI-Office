@@ -709,13 +709,8 @@ export function getKanbanColumnEmptyState(columnKey) {
   return KANBAN_EMPTY_STATES[k] || { icon: '📋', text: 'Tidak ada task' };
 }
 
-export function pctDone(done, total) {
-  const d = Number(done);
-  const t = Number(total);
-  if (!Number.isFinite(d) || !Number.isFinite(t) || t <= 0) return 0;
-  const pct = Math.round((d / t) * 100);
-  return Math.min(100, Math.max(0, pct));
-}
+import { pctDone } from '../../lib/math_util.js';
+export { pctDone };
 
 export function computeColumnDistribution(columnCount, totalCount) {
   const count = Math.max(0, Number(columnCount) || 0);

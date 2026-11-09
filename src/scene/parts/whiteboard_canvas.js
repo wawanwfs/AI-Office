@@ -1,6 +1,7 @@
 // Whiteboard agenda sprint (ruang meeting) — painter kanvas murni.
 // Diekstrak dari parts/room.js agar bisa di-unit-test; ctx di-inject,
 // tanpa THREE/DOM. Urutan & parameter perintah identik kode inline lama.
+import { pctDone } from './kanban_spec.js';
 export const WB_W = 320, WB_H = 128;
 export const WB_BG = '#fbfbfa';
 export const WB_TITLE = { text: 'WFS SPRINT', color: '#f59e0b', font: 'bold 22px sans-serif', x: 14, y: 30 };
@@ -15,7 +16,7 @@ export const WB_LIVE_COLORS = { done: '#16a34a', review: '#448AFF', failed: '#ef
 export function sprintLiveRows(T) {
   if (!T || !Number.isFinite(+T.total) || +T.total < 0) return null;
   const total = +T.total, done = Math.min(Math.max(0, +T.done || 0), total);
-  const pct = total ? Math.round(done / total * 100) : 0;
+  const pct = pctDone(done, total);
   const rows = [
     ['selesai', done + '/' + total + ' (' + pct + '%)', WB_LIVE_COLORS.done],
   ];

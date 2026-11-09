@@ -6781,3 +6781,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (playwright 1.49.0): agents=26, init_failed false, 0 error, shot 686987 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 08:00 WIB — Siklus 362: pctDone pindah satu sumber ke lib/math_util
+
+- Audit lanjutan satu sumber: definisi pctDone (kanban_spec) + 3 salinan rumus `Math.round((x/y)*100)` tersisa — team_spec.computeTeamStats, whiteboard_canvas.sprintLiveRows, whiteboard_spec.getWhiteboardTooltipText.
+- Fix: pctDone dipindah ke lib/math_util.js (satu sumber bersama clamp01); kanban_spec import+re-export (API lama utuh); team_spec, whiteboard_canvas, whiteboard_spec kini import pctDone — tanpa menduplikasi rumus.
+- +1 file tes src/__tests__/pct_done_math_util_362.test.js (5 kasus: salinan hilang di 5 file, import math_util, identitas pctDone===pctFromUtil, paritas pembulatan, anti-poisoning 8 bentuk, konsistensi computeTeamStats/sprintLiveRows/tooltip/kanban).
+- Build PWA OK (43 precache); vitest 291 file / 3826 passed + 6 skipped, 0 fail (+5 tes vs 361).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (playwright 1.49.0): agents=26, init_failed false, 0 error, shot 685951 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

@@ -1,5 +1,6 @@
 // Spesifikasi Whiteboard Ruang Meeting Kampus WFS PROJECT.
 // Modul murni tanpa THREE/DOM agar dapat diuji secara independen.
+import { pctDone } from './kanban_spec.js';
 
 export const WB_FRAME_W = 2.7;
 export const WB_FRAME_H = 1.15;
@@ -52,7 +53,7 @@ export function getWhiteboardTooltipText(tasks, isMeetingActive = false) {
   }
   if (tasks && Number.isFinite(+tasks.total) && +tasks.total > 0) {
     const done = Math.min(Math.max(0, +tasks.done || 0), +tasks.total);
-    const pct = Math.round((done / +tasks.total) * 100);
+    const pct = pctDone(done, +tasks.total);
     return `Ruang Meeting — Whiteboard Agenda Sprint: ${done}/${tasks.total} selesai (${pct}%)`;
   }
   return 'Ruang Meeting — Whiteboard Agenda Sprint WFS Project';
