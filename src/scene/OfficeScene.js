@@ -18,6 +18,7 @@ import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam,
 import { nextAgentIndex } from './parts/agent_cycle.js';
 import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js';
 import { fetchWithTimeout } from '../lib/fetch_timeout.js';
+import { dayMinutesNow } from '../lib/format_time.js';
 import { orbitStep, orbitFocusGoal, ORBIT_KEY_STEP, ORBIT_KEY_STEP_FAST } from './parts/orbit_spec.js';
 import { snapshotDataUrl, snapshotFilename } from './parts/snapshot_spec.js';
 import { dblclickPointGoal, dblclickBlankGoal, tapCandidate, isDoubleTap, dtapRadius, DTAP_ZOOM_STEP } from './parts/dblclick_spec.js';
@@ -1485,7 +1486,7 @@ const drawScreen=(s,i)=>{ if(shouldRedrawScreenAt(frame,i)) drawScreenFrame(s,fr
 // status handled by React
 let timeOfDay=(()=>{ // mulai dari jam NYATA saat load (biar jam dinding & HUD terasa hidup),
   // dibulatkan ke menit; disinkronkan dgn sim clock (1 hari kerja ≈ 12 mnt nyata)
-  const d=new Date();return d.getHours()*60+d.getMinutes();})();
+  const d=new Date();return dayMinutesNow(d);})();
 const __light=createLighting({THREE,scene,renderer,sun,ambient,agentData,skyWinCanvas:__skyCv,wallPainter:__wallsRt&&__wallsRt.paintWallNight?__wallsRt:null,trimPainter:__wallsRt&&__wallsRt.paintTrimNight?__wallsRt:null,boardPainter:__mr&&__mr.paintBoardNight?{paintBoardNight:__mr.paintBoardNight}:null,titlePainter:{paintTitleNight},ceilPainter:__ceilRt&&__ceilRt.paintCeilNight?__ceilRt:null,onTimeUpdate,onStatusUpdate,onTick:m=>updateMeeting(m),onTime:m=>applySimTime(m,false)});
 let __sim={acc:0,last:null,manual:false,lastManualSet:0,time:timeOfDay};
 // Siklus 120: applySimTime = set jam simulasi TANPA re-apply lighting (dipakai

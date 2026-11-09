@@ -6722,3 +6722,12 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK: agents=26, init_failed false, 0 error, shot 715495 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 04:50 WIB — Siklus 356: init timeOfDay scene satu sumber
+
+- Audit lanjutan satu sumber: salinan inline `d.getHours()*60+d.getMinutes()` di init timeOfDay OfficeScene.js (setelah siklus 355 menyisihkan versi App.jsx) — kini import dayMinutesNow dari format_time.js; 0 salinan getHours*60 tersisa di src non-tes.
+- +1 file tes src/__tests__/scene_time_single_source_356.test.js (salinan hilang + import ada, paritas rumus + tahan Date rusak/null).
+- Build PWA OK (44 precache); vitest 285 file / 3796 passed + 6 skipped, 0 fail (+2 tes vs 355).
+- Deploy cp -r dist → ~/wfs-hq; 9503 systemd tetap jalan.
+- e2e probe OK: agents=26, init_failed false, 0 error, shot 715642 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
