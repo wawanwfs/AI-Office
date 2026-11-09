@@ -6731,3 +6731,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 systemd tetap jalan.
 - e2e probe OK: agents=26, init_failed false, 0 error, shot 715642 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 05:20 WIB — Siklus 357: jam HH:MM satu sumber — clockFromDate
+
+- Audit lanjutan satu sumber: 2 salinan format HH:MM tersisa — formatTaskDate (kanban_date.js, padStart manual) & snapshotFilename (snapshot_spec.js, helper p2 lokal + getHours/getMinutes).
+- Fix: format_time.js ditambah clockFromDate(d) (anti-poisoning: non-Date/Date rusak → null); formatTaskDate pakai `clockFromDate(d) || '—'`, snapshotFilename pakai `(clockFromDate(date) || '0000').replace(':','')`. 0 salinan padStart getHours tersisa di src non-tes.
+- +1 file tes src/__tests__/clock_date_single_source_357.test.js (5 kasus: salinan hilang, paritas HH:MM, anti-poisoning 3 bentuk, formatTaskDate hari ini/kemarin, snapshotFilename fallback).
+- Build PWA OK (44 precache); vitest 286 file / 3801 passed + 6 skipped, 0 fail (+5 tes vs 356).
+- Deploy cp -r dist → ~/wfs-hq; 9503 systemd tetap jalan.
+- e2e probe OK: agents=26, init_failed false, 0 error, shot 715495 B (catatan: skrip e2e butuh `--with playwright`, tanpa itu ModuleNotFoundError).
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

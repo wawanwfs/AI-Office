@@ -34,6 +34,8 @@
 export const MIN_SNAPSHOT_CHARS = 30000; // ≈22 KB biner — ambang "render nyata"
 export const SNAPSHOT_MIME = 'image/png';
 
+import { clockFromDate } from '../../lib/format_time.js';
+
 const isCanvas = (c) => !!c && typeof HTMLCanvasElement !== 'undefined'
   ? c instanceof HTMLCanvasElement
   : !!(c && typeof c.getContext === 'function' && typeof c.toDataURL === 'function');
@@ -74,7 +76,7 @@ export function snapshotFilename(date) {
   const ok = date instanceof Date && Number.isFinite(date.getTime());
   if (!ok) return 'kantor-wfs.png';
   return 'kantor-wfs-' + date.getFullYear() + '-' + p2(date.getMonth() + 1) + '-' + p2(date.getDate())
-    + '_' + p2(date.getHours()) + p2(date.getMinutes()) + '.png';
+    + '_' + (clockFromDate(date) || '0000').replace(':', '') + '.png';
 }
 
 /**

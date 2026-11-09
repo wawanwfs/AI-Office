@@ -8,6 +8,8 @@
  * dan pemformat tanggal ramah pengguna.
  */
 
+import { clockFromDate } from './format_time.js';
+
 /** Satu sumber nama bulan singkat ID (siklus 342) — dipakai formatSimpleDate,
  * formatCustomDateRange & formatTaskDate. */
 export const MONTH_NAMES_ID = ['Jan','Feb','Mar','Apr','Mei','Jun','Jul','Agu','Sep','Okt','Nov','Des'];
@@ -318,9 +320,7 @@ export function formatTaskDate(task, options = {}) {
   const startOfToday = getStartOfDay(now);
   const startOfYesterday = startOfToday - 86400000;
 
-  const hours = String(d.getHours()).padStart(2, '0');
-  const minutes = String(d.getMinutes()).padStart(2, '0');
-  const timeStr = `${hours}:${minutes}`;
+  const timeStr = clockFromDate(d) || '—';
 
   if (ts >= startOfToday && ts < startOfToday + 86400000) {
     return `Hari ini, ${timeStr}`;

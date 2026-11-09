@@ -42,6 +42,13 @@ export function fmtStampId(ts) {
   })
 }
 
+/** Siklus 357: satu sumber 'HH:MM' dari Date (formatTaskDate & nama snapshot).
+ * Anti-poisoning: non-Date / Date rusak → null (pemanggil pakai fallback). */
+export function clockFromDate(d) {
+  if (typeof d?.getTime !== 'function' || Number.isNaN(d.getTime())) return null
+  return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+}
+
 /** Siklus 355: satu sumber menit-of-day dari Date saat ini (init slider HUD). */
 export function dayMinutesNow(d = new Date()) {
   if (typeof d?.getTime !== 'function' || Number.isNaN(d.getTime())) return 0
