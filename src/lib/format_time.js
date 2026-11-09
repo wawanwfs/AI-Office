@@ -18,6 +18,16 @@ export function fmtTime(ts) {
 }
 
 /**
+ * Siklus 344: satu sumber format angka µUSD 'id-ID'.
+ * Anti-poisoning: nilai null/undefined/NaN/Infinity -> null
+ * (pemanggil memutuskan fallback, tidak melukis "NaN" di panel).
+ */
+export function fmtMicroUSD(v) {
+  if (typeof v !== 'number' || !Number.isFinite(v)) return null
+  return v.toLocaleString('id-ID')
+}
+
+/**
  * Siklus 343: satu sumber jam 'HH.MM'/'HH.MM.SS' id-ID.
  * Pengganti salinan toLocaleTimeString('id-ID', ...) di komponen
  * (SysMeter updated_at dgn detik, HUD wall clock tanpa detik).

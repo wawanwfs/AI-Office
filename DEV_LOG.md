@@ -6593,8 +6593,16 @@
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 708494 B, nonbg 0.992, hygiene_ok true.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
 
-## 09/11/2026 21:35 WIB — Siklus 343: jam id-ID satu sumber — clockNowId di lib/format_time
+## 09/11/2026 22:20 WIB — Siklus 344: format µUSD satu sumber — fmtMicroUSD di lib/format_time
+- Audit lanjutan satu sumber pasca 343: 2 salinan `toLocaleString('id-ID')` di SecureProjectPanel (cap & sisa budget µUSD) telanjang — nilai null/NaN dari API bakal melukis "NaN µUSD" di panel (pola anti-poisoning yang sama dgn pelajaran stempel log).
+- Fix: helper `fmtMicroUSD(v)` diekspor di lib/format_time.js (typeof number + Number.isFinite guard, bukan angka -> null; fallback pemanggil '—'). SecureProjectPanel kini import; 0 salinan inline tersisa di komponen.
+- +1 file tes src/__tests__/micro_usd_single_source_344.test.js (4 kasus: salinan inline hilang, paritas format id-ID bulat/desimal, anti-poisoning null/NaN/Inf/string, fallback '—').
+- Build PWA OK (43 precache); vitest 273 file / 3748 passed + 6 skipped, 0 fail (+4 tes vs 343).
+- Catatan deploy: `python3 scripts/deploy.py` kini memang additively (siklus 192: tidak memangkas) — butuh pemanggilan eksplisit `prune_orphan_assets()` (7 file hash lama diarsipkan) → hygiene 20 hashed/0 orphan; 9503 → 200.
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 711999 B, nonbg 0.992, hygiene_ok true.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
 
+## 09/11/2026 21:35 WIB — Siklus 343: jam id-ID satu sumber — clockNowId di lib/format_time
 - Audit lanjutan satu sumber: 2 salinan `toLocaleTimeString('id-ID', {hour,minute[,second]})` di komponen — SysMeter (stempel updated_at dgn detik) & HUD (wall clock tanpa detik). Pola sama rawan drift (pelajaran 333/342).
 - Fix: helper `clockNowId(withSeconds)` diekspor di lib/format_time.js (satu sumber formatter waktu; anti-poisoning Date NaN -> null). SysMeter & HUD kini import; 0 salinan inline tersisa di komponen.
 - +1 file tes src/__tests__/clock_single_source_343.test.js (4 kasus: pola HH.MM & HH.MM.SS, anti-poisoning Date rusak, salinan inline dihapus, regresi fmtTime siklus 270).

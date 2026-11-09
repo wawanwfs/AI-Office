@@ -1,4 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react'
+import { fmtMicroUSD } from '../lib/format_time.js'
 
 const SAFE_ID = /^[A-Za-z0-9][A-Za-z0-9_.-]{0,127}$/
 const SAFE_NUMBER = /^[0-9]{1,10}$/
@@ -203,8 +204,8 @@ export default function SecureProjectPanel() {
           {notice && <p className="wfs-secure-notice" role="status">{notice}</p>}
           {budget && <div className="wfs-secure-budget" aria-label="Budget proyek">
             <b>{budget.approved ? 'Approved' : 'Belum disetujui'}</b>
-            <span>Cap: {budget.cap_microusd.toLocaleString('id-ID')} µUSD</span>
-            <span>Sisa: {budget.remaining_microusd.toLocaleString('id-ID')} µUSD</span>
+            <span>Cap: {fmtMicroUSD(budget.cap_microusd) ?? '—'} µUSD</span>
+            <span>Sisa: {fmtMicroUSD(budget.remaining_microusd) ?? '—'} µUSD</span>
           </div>}
           {jobs !== null && <div className="wfs-secure-inspector" aria-label="Inspeksi backend nyata">
             <div>
