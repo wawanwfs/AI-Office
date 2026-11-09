@@ -86,7 +86,8 @@ def _tls_files(folder,label):
 
 def _get_https(port,cert,pth,body=None,token=_TOKEN):
     context=ssl.create_default_context(cafile=str(cert))
-    with HTTPSConnection("127.0.0.1",port,context=context,timeout=3) as conn:
+    conn=HTTPSConnection("127.0.0.1",port,context=context,timeout=3)
+    try:
         if body is None:
             conn.request("GET",pth,headers={"Authorization":"Bearer "+token})
         else:
@@ -95,6 +96,8 @@ def _get_https(port,cert,pth,body=None,token=_TOKEN):
                                   "Content-Type":"application/json"})
         resp=conn.getresponse()
         return resp.status,json.loads(resp.read())
+    finally:
+        conn.close()
 
 
 def _launch(node):
