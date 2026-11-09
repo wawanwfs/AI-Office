@@ -17,6 +17,7 @@ import os
 from pathlib import Path
 import re
 import stat
+import ssl
 from urllib.parse import parse_qs, urlsplit
 
 from cryptography.hazmat.primitives import serialization
@@ -278,7 +279,12 @@ def handler_for(log, token):
     return Handler
 
 
-def serve_reference(*, journal_path, private_pem_path, token, port=0):
+def serve_reference(*, journal_path, private_pem_path, token, port=0,
+                    tls_cert_path=None, tls_key_path=None):
+    # This is still a LOCAL disposable reference. TLS is an additional
+    # authenticated transport test; not independent host/key custody.
+    if (tls_cert_path is None) != (tls_key_path is None):
+        raise AdmissionDenied("TLS certificate and private key must be paired")
     # A production signer requires external custody; this disposable
     # reference at minimum refuses group/world-readable POSIX key files.
     if os.name == "posix" and os.stat(private_pem_path).st_mode & 0o077:
@@ -292,6 +298,27 @@ def serve_reference(*, journal_path, private_pem_path, token, port=0):
     # 127.0.0.1 is intentional. This service MUST NOT become an external
     # endpoint without independently approved TLS, auth and host custody.
     server = HTTPServer(("127.0.0.1", port), handler_for(reference, token))
+    if tls_cert_path is not None:
+        try:
+            # SSLContext reads cert+key files itself. Validate their type,
+            # symlinks and owner permissions BEFORE loading into OpenSSL.
+            _safe_read(tls_cert_path, 16384)
+            _safe_read(tls_key_path, 16384)
+            if (os.name == "posix" and
+                    os.stat(tls_key_path).st_mode & 0o077):
+                raise AdmissionDenied("TLS private key permissions too broad")
+            context = ssl.SSLContext(ssl.PROTOCOL_TLS_SERVER)
+            context.minimum_version = ssl.TLSVersion.TLSv1_2
+            context.load_cert_chain(certfile=str(tls_cert_path),
+                                    keyfile=str(tls_key_path))
+            server.socket = context.wrap_socket(
+                server.socket, server_side=True)
+        except (OSError, ssl.SSLError, ValueError) as exc:
+            server.server_close()
+            raise AdmissionDenied("reference TLS context invalid") from exc
+        except BaseException:
+            server.server_close()
+            raise
     return server
 
 
@@ -299,13 +326,19 @@ def main():
     parser = argparse.ArgumentParser(description="LOCAL disposable reference log; NOT production")
     parser.add_argument("--journal", required=True)
     parser.add_argument("--private-key", required=True)
+    parser.add_argument("--tls-cert", help="operator-provisioned LOCAL test certificate PEM")
+    parser.add_argument("--tls-key", help="operator-provisioned LOCAL test TLS private PEM")
     parser.add_argument("--port", type=int, default=18847)
     args = parser.parse_args()
     if not 1024 <= args.port <= 65535:
         parser.error("reference log port must be nonprivileged")
     token = os.environ.get("WFS_REF_LOG_TOKEN", "")
+    if (args.tls_cert is None) != (args.tls_key is None):
+        parser.error("--tls-cert and --tls-key must be provided together")
     with serve_reference(journal_path=args.journal, private_pem_path=args.private_key,
-                         token=token, port=args.port) as server:
+                         token=token, port=args.port,
+                         tls_cert_path=args.tls_cert,
+                         tls_key_path=args.tls_key) as server:
         server.serve_forever(poll_interval=0.1)
 
 

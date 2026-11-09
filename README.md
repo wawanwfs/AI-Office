@@ -441,3 +441,33 @@ previews remain blocked. No provider spend or production deployment.
 - [Phase 17 scoped acceptance report](docs/REA_PHASE17.md)
 - [Phase 17 Windows/Linux local reference log runbook](docs/PHASE17_RUNTIME_RUNBOOK.md)
 - [Next Phase 18 accelerated execution prompt](docs/NEXT_PHASE18_PROMPT.md)
+
+
+## Phase 18 — real pinned HTTPS signed-head gossip (two test processes)
+
+The existing Phase 17 loopback reference log now supports an optional
+TLS 1.2+ transport with operator-provisioned certificate/private key.
+A new fail-closed HTTPS monitor and operator CLI independently pin
+**each** TLS leaf DER SHA256, CA trust chain, the Ed25519 log signer,
+and an earlier Merkle tree size/root. It checks real server
+certificates/hostnames, verifies both signed RFC6962 heads and compact
+prefix proofs, and blocks same-size forks, replay/rollback, offline
+servers and lagging replicas. Bearers are read from private environment
+variables; no automatic pin discovery or HTTP downgrade is permitted.
+
+Linux, Windows-native and disposable Docker-operator CI exercise
+**two real TLS processes** with different certificates and journals,
+including malicious same-signer fork and rollback after restart.
+**Both processes run on one CI host.** This is not an externally
+operated or independently witnessed transparency service, mTLS,
+tamper-proof WORM storage, external freshness or production approval.
+The owner-run monitor is not wired to preview manager admission
+without real independent operator trust.
+
+- [Phase 18 bounded REA](docs/REA_PHASE18.md)
+- [Phase 18 private Windows/Linux TLS + gossip runbook](docs/PHASE18_RUNTIME_RUNBOOK.md)
+- [Phase 19 accelerated next prompt](docs/NEXT_PHASE19_PROMPT.md)
+
+OS-immutable builder isolation, fully signed offline supply chain,
+real external DNS/host firewall, generated-source QA, tenant HTTPS
+production previews and billed AI provider activation remain blocked.
