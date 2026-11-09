@@ -70,7 +70,7 @@ export const CARD_DROP_SEC = 0.055;
 export function calcCardSweepFreq(startFreq, endFreq, ratio = 0) {
   if (!Number.isFinite(startFreq) || startFreq <= 0) return 400;
   if (!Number.isFinite(endFreq) || endFreq <= 0) return startFreq;
-  const r = Math.max(0, Math.min(1, Number.isFinite(ratio) ? ratio : 0));
+  const r = clamp01(Number.isFinite(ratio) ? ratio : 0);
   return Math.round(startFreq * Math.pow(endFreq / startFreq, r));
 }
 
@@ -85,9 +85,11 @@ export const VOLUME_PRESET_LABELS = {
   1.00: '100% Penuh',
 };
 
+import { clamp01 } from '../../lib/math_util.js'
+
 export function clampVolume(v) {
   if (!Number.isFinite(v)) return DEFAULT_VOLUME;
-  return Math.max(0, Math.min(1, Math.round(v * 100) / 100));
+  return clamp01(Math.round(v * 100) / 100);
 }
 
 export function loadAudioVolume(storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {
@@ -147,7 +149,7 @@ export function calcAmbienceFilterFreq(ambienceVol = DEFAULT_AMBIENCE_VOLUME) {
 
 export function clampAmbienceVolume(v) {
   if (!Number.isFinite(v)) return DEFAULT_AMBIENCE_VOLUME;
-  return Math.max(0, Math.min(1, Math.round(v * 100) / 100));
+  return clamp01(Math.round(v * 100) / 100);
 }
 
 export function loadAmbienceEnabled(storage = (typeof localStorage !== 'undefined' ? localStorage : null)) {

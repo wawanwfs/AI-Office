@@ -1,5 +1,6 @@
 // Selection & hover ring parameters (extracted from OfficeScene.js).
 // Pure functions/constants only — no THREE, no canvas.
+import { clamp01 } from '../../lib/math_util.js'
 
 export const SEL_RING = {
   SIZE: 128,          // canvas px
@@ -48,7 +49,7 @@ export function ringDampFactor(rate, dt) {
   if (!(typeof dt === 'number' && Number.isFinite(dt)) || dt <= 0) return 0;
   if (!(typeof rate === 'number' && Number.isFinite(rate)) || rate <= 0) return 0;
   const f = 1 - Math.exp(-rate * dt);
-  return Math.max(0, Math.min(1, f));
+  return clamp01(f);
 }
 
 export function stepRingPosition(pos, target, factor) {
@@ -56,7 +57,7 @@ export function stepRingPosition(pos, target, factor) {
   const tx = Number.isFinite(target.x) ? target.x : pos.x;
   const ty = Number.isFinite(target.y) ? target.y : pos.y;
   const tz = Number.isFinite(target.z) ? target.z : pos.z;
-  const f = (typeof factor === 'number' && Number.isFinite(factor)) ? Math.max(0, Math.min(1, factor)) : 0;
+  const f = (typeof factor === 'number' && Number.isFinite(factor)) ? clamp01(factor) : 0;
   if (f <= 0) return false;
   pos.x += (tx - pos.x) * f;
   pos.y += (ty - pos.y) * f;

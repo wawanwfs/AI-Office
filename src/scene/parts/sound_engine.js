@@ -15,6 +15,7 @@ import {
   AMBIENCE_FILTER_FREQ, AMBIENCE_FILTER_Q, AMBIENCE_RAMP_SEC, AMBIENCE_PREVIEW_SEC,
   clampAmbienceVolume, calcAmbienceGain, calcAmbienceFilterFreq, generatePinkNoiseData,
 } from './sound_spec.js';
+import { clamp01 } from '../../lib/math_util.js';
 
 const noop = () => {};
 const noCtx = { state: 'none', close: noop };
@@ -477,7 +478,7 @@ export function createSoundEngine({
   }
 
   function setVolume(v) {
-    volume = Number.isFinite(v) ? Math.max(0, Math.min(1, v)) : DEFAULT_VOLUME;
+    volume = Number.isFinite(v) ? clamp01(v) : DEFAULT_VOLUME;
     if (masterGain) masterGain.gain.value = masterGainValue(muted, volume);
     syncAmbience();
     dbg();

@@ -1,3 +1,5 @@
+import { clamp01 } from '../../lib/math_util.js'
+
 // Canvas drawing bubble chat: panel rounded-rect + ekor segitiga + teks.
 // Diekstrak murni dari createBubble (OfficeScene.js) agar bisa di-unit-test:
 // ctx 2D di-inject (mock recorder), tidak ada THREE.
@@ -65,6 +67,6 @@ export function bubbleScale(hFrac = 0.034){
 // puncak 1.0 di tengah. (Dipakai createBubble + updateBubbles.)
 export function bubbleOpacity(ageSec, lifeSec = BUBBLE_LIFE_SEC){
   const fadeIn = Math.min(1, ageSec / BUBBLE_FADE_IN_SEC);
-  const fadeOut = Math.max(0, Math.min(1, lifeSec > 0 ? lifeSec / 0.5 : 0));
+  const fadeOut = clamp01(lifeSec > 0 ? lifeSec / 0.5 : 0);
   return fadeIn * fadeOut;
 }

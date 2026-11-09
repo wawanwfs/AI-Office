@@ -6771,3 +6771,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (playwright 1.49.0): agents=26, init_failed false, 0 error, shot 690072 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 07:26 WIB — Siklus 361: clamp 0..1 satu sumber — clamp01
+
+- Audit lanjutan satu sumber: pola `Math.max(0, Math.min(1, x))` tersalin 8x di 5 file — bubble_canvas (fadeOut), wall_fade (wallFadeOf), ring_spec (ringDampFactor + stepRingPosition), sound_spec (calcCardSweepFreq + clampVolume + clampAmbienceVolume), sound_engine (setVolume).
+- Fix: lib/math_util.js baru dengan clamp01(x) — anti-poisoning (NaN/null/±Infinity/string numerik dinormalisasi, non-numerik → 0); 8 titik kini satu sumber.
+- +1 file tes src/__tests__/clamp01_single_source_361.test.js (5 kasus: salinan hilang, import pemakai, paritas clamp, anti-poisoning 8 bentuk, konsistensi 6 fungsi pemakai).
+- Build PWA OK (44 precache); vitest 290 file / 3821 passed + 6 skipped, 0 fail (+5 tes vs 360).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (playwright 1.49.0): agents=26, init_failed false, 0 error, shot 686987 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

@@ -2,13 +2,15 @@
 // Murni: hitung nilai fade per dinding + visibilitas tiang sudut.
 // Penerapan opacity/visible ke mesh nyata tetap di OfficeScene (butuh referensi).
 
+import { clamp01 } from '../../lib/math_util.js'
+
 // fadeOf: 1 = solid, 0 = hilang. d = jarak kamera di luar bidang dinding (negatif = di dalam).
 // Persis kode lama: max(0, min(1, 1-(d+1.5)/6)).
 export function wallFadeOf(d) {
   // Guard anti-poisoning: jarak non-finite (NaN/±Infinity) → solid (1). Lebih aman
   // menampilkan dinding daripada menghilangkannya diam-diam (fade NaN → invisible).
   if (!Number.isFinite(d)) return 1;
-  return Math.max(0, Math.min(1, 1 - (d + 1.5) / 6));
+  return clamp01(1 - (d + 1.5) / 6);
 }
 
 // Satu langkah fade utk satu dinding. objs: daftar mesh; memutasi m.visible &
