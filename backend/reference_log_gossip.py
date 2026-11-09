@@ -155,6 +155,11 @@ class PinnedHTTPSLogEndpoint:
             if not isinstance(value, dict):
                 raise AdmissionDenied("monitored log response must be JSON object")
             return value
+        except AdmissionDenied:
+            # AdmissionDenied subclasses PermissionError -> OSError. Never
+            # hide a *deliberate* fail-closed reason behind a transport
+            # error (TLS pin, auth, payload, or signature validation).
+            raise
         except (OSError, ssl.SSLError, TimeoutError) as exc:
             raise AdmissionDenied("pinned HTTPS log unavailable") from exc
         finally:
