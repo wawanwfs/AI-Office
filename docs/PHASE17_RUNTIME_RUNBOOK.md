@@ -1,3 +1,11 @@
+> **Phase 18 update:** The local reference HTTP log now optionally serves
+> *pinned TLS 1.2+* on loopback, and a separate operator-only verifier
+> checks two TLS log endpoints with separately verified certificates,
+> signed heads and compact-prefix consistency. The acceptance tests
+> still run both endpoints on ONE CI host; this does not prove an
+> external independent authority or WORM. See
+> [Phase 18 TLS/gossip operator runbook](PHASE18_RUNTIME_RUNBOOK.md).
+
 # Phase 17 — local reference transparency HTTP log runbook
 
 **Test-only.** A real loopback HTTP service with digest-only authenticated
