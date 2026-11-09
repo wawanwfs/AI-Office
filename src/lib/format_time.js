@@ -16,3 +16,18 @@ export function fmtTime(ts) {
   if (ms == null || ms <= 0) return ''
   return new Date(ms).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })
 }
+
+/**
+ * Siklus 343: satu sumber jam 'HH.MM'/'HH.MM.SS' id-ID.
+ * Pengganti salinan toLocaleTimeString('id-ID', ...) di komponen
+ * (SysMeter updated_at dgn detik, HUD wall clock tanpa detik).
+ * Masukan boleh Date/number; null/NaN -> null (pemanggil memutuskan fallback).
+ */
+export function clockNowId(withSeconds = false) {
+  const d = withSeconds ? new Date() : null
+  const now = d || new Date()
+  const opts = { hour: '2-digit', minute: '2-digit' }
+  if (withSeconds) opts.second = '2-digit'
+  if (typeof now?.getTime !== 'function' || Number.isNaN(now.getTime())) return null
+  return now.toLocaleTimeString('id-ID', opts)
+}

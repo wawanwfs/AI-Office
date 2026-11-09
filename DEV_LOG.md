@@ -6592,3 +6592,13 @@
 - Redeploy dist -> ~/wfs-hq (cp -r) + prune_orphan_assets 7 file hash lama -> hygiene 13 hashed/0 orphan; 9503 -> 200.
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 708494 B, nonbg 0.992, hygiene_ok true.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 09/11/2026 21:35 WIB — Siklus 343: jam id-ID satu sumber — clockNowId di lib/format_time
+
+- Audit lanjutan satu sumber: 2 salinan `toLocaleTimeString('id-ID', {hour,minute[,second]})` di komponen — SysMeter (stempel updated_at dgn detik) & HUD (wall clock tanpa detik). Pola sama rawan drift (pelajaran 333/342).
+- Fix: helper `clockNowId(withSeconds)` diekspor di lib/format_time.js (satu sumber formatter waktu; anti-poisoning Date NaN -> null). SysMeter & HUD kini import; 0 salinan inline tersisa di komponen.
+- +1 file tes src/__tests__/clock_single_source_343.test.js (4 kasus: pola HH.MM & HH.MM.SS, anti-poisoning Date rusak, salinan inline dihapus, regresi fmtTime siklus 270).
+- Build PWA OK (43 precache); vitest 272 file / 3744 passed + 6 skipped, 0 fail (+4 tes vs 342).
+- Deploy via deploy.py + prune_orphan_assets 7 file hash lama -> hygiene 13 hashed/0 orphan; 9503 -> 200.
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 710156 B, nonbg 0.992, hygiene_ok true.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

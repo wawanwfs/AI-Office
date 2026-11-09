@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef, useCallback } from 'react'
 import { api } from '../lib/api'
 import { fmtUptime } from '../lib/uptime'
 import { useVisibilityPoll } from '../lib/dialogA11y'
+import { clockNowId } from '../lib/format_time'
 
 // Meter status host — data NYATA dari gateway (status + resources), polled tiap 12 dtk.
 // Widget kecil kanan-atas supaya "data yang ada" selalu terlihat tanpa buka panel.
@@ -24,7 +25,7 @@ export default function SysMeter() {
       if (s.stop || my !== s.rid) return
       setD({ ...st, load: res?.load ?? '—', ram: res?.ram_mb ?? '—' })
       setErr(false)
-      setUpdatedAt(new Date().toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', second: '2-digit' }))
+      setUpdatedAt(clockNowId(true))
     } catch {
       if (!s.stop && my === s.rid) setErr(true)
     }
