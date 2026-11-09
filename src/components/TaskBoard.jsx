@@ -4,6 +4,7 @@ import { useModalFlag } from '../lib/modal'
 import { useDialogA11y, useEscapeClose, useVisibilityPoll, useWindowEvent } from '../lib/dialogA11y'
 import { parseFileList } from '../lib/files'
 import { setupCardDragData, canDropTaskInColumn, formatDragDropNotification } from '../lib/kanban_drag'
+import { sfx, playDropFor } from '../lib/sfx'
 import { calcSearchStats, getSearchMatchSegments, getKanbanColumnSearchEmptyState } from '../lib/kanban_search'
 import { exportTasks } from '../lib/kanban_export'
 import {
@@ -180,9 +181,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
   const handleTagClick = useCallback((tagKey, e) => {
     const isMulti = Boolean(e && (e.shiftKey || e.ctrlKey || e.metaKey))
     setSelectedTag((prev) => toggleTagInFilter(tagKey, prev, { multi: isMulti }))
-    if (typeof window !== 'undefined' && window.__officeSound) {
-      window.__officeSound.playSelect?.()
-    }
+    sfx.playSelect()
   }, [])
 
   const handlePresetClick = useCallback((presetKey) => {
@@ -193,9 +192,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
       const p = getTagPreset(presetKey, customPresets)
       return p ? p.tags : 'all'
     })
-    if (typeof window !== 'undefined' && window.__officeSound) {
-      window.__officeSound.playSelect?.()
-    }
+    sfx.playSelect()
   }, [customPresets])
 
   const handleSaveCustomPreset = useCallback((e) => {
@@ -222,9 +219,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
     setShowPresetCreator(false)
     setPresetFormName('')
     if (onFlash) onFlash(`Preset kustom "${newPreset.label}" berhasil disimpan`)
-    if (typeof window !== 'undefined' && window.__officeSound) {
-      window.__officeSound.playSelect?.()
-    }
+    sfx.playSelect()
   }, [presetFormName, presetFormTags, presetFormIcon, presetFormColor, customPresets, onFlash])
 
   const handleDeleteCustomPreset = useCallback((presetKey, e) => {
@@ -243,24 +238,18 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
     }
 
     if (onFlash) onFlash(`Preset "${label}" dihapus`)
-    if (typeof window !== 'undefined' && window.__officeSound) {
-      window.__officeSound.playSelect?.()
-    }
+    sfx.playSelect()
   }, [customPresets, selectedTag, onFlash])
 
   const toggleTagMode = useCallback(() => {
     setTagMode((prev) => (prev === 'any' ? 'all' : 'any'))
-    if (typeof window !== 'undefined' && window.__officeSound) {
-      window.__officeSound.playSelect?.()
-    }
+    sfx.playSelect()
   }, [])
 
   const handleDivisionClick = useCallback((divKey, e) => {
     const isMulti = Boolean(e && (e.shiftKey || e.ctrlKey || e.metaKey))
     setDivision((prev) => toggleDivisionInFilter(divKey, prev, { multi: isMulti, customPresets: customDivPresets }))
-    if (typeof window !== 'undefined' && window.__officeSound) {
-      window.__officeSound.playSelect?.()
-    }
+    sfx.playSelect()
   }, [customDivPresets])
 
   const handleDivPresetClick = useCallback((presetKey) => {
@@ -271,9 +260,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
       const p = getDivisionPreset(presetKey, customDivPresets)
       return p ? p.key : 'all'
     })
-    if (typeof window !== 'undefined' && window.__officeSound) {
-      window.__officeSound.playSelect?.()
-    }
+    sfx.playSelect()
   }, [customDivPresets])
 
   const handleOpenDivPresetCreator = useCallback(() => {
@@ -285,9 +272,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
       }
       return next
     })
-    if (typeof window !== 'undefined' && window.__officeSound) {
-      window.__officeSound.playSelect?.()
-    }
+    sfx.playSelect()
   }, [division, customDivPresets])
 
   const handleSaveCustomDivPreset = useCallback((e) => {
@@ -314,9 +299,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
     setShowDivPresetCreator(false)
     setDivPresetFormName('')
     if (onFlash) onFlash(`Preset divisi kustom "${newPreset.label}" berhasil disimpan`)
-    if (typeof window !== 'undefined' && window.__officeSound) {
-      window.__officeSound.playSelect?.()
-    }
+    sfx.playSelect()
   }, [divPresetFormName, divPresetFormDivisions, divPresetFormIcon, divPresetFormColor, customDivPresets, onFlash])
 
   const handleDeleteCustomDivPreset = useCallback((presetKey, e) => {
@@ -335,9 +318,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
     }
 
     if (onFlash) onFlash(`Preset divisi "${label}" dihapus`)
-    if (typeof window !== 'undefined' && window.__officeSound) {
-      window.__officeSound.playSelect?.()
-    }
+    sfx.playSelect()
   }, [customDivPresets, division, onFlash])
 
   const load = useCallback(async (signal) => {
@@ -470,18 +451,8 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
 
     if (onFlash) onFlash(formatDragDropNotification(task, targetColKey, targetLabel))
 
-    // Audio feedback interaktif
-    if (typeof window !== 'undefined' && window.__officeSound) {
-      if (targetColKey === 'done') {
-        window.__officeSound.playTaskDone?.()
-      } else if (task.priority === 'urgent') {
-        window.__officeSound.playTaskUrgent?.()
-      } else if (window.__officeSound.playCardDrop) {
-        window.__officeSound.playCardDrop()
-      } else {
-        window.__officeSound.playSelect?.()
-      }
-    }
+    // Audio feedback interaktif (satu sumber: lib/sfx.js)
+    playDropFor({ status: targetColKey, priority: task.priority })
   }, [onFlash])
 
   const handleDragStart = useCallback((e, t) => {
@@ -490,9 +461,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
     if (e.dataTransfer) {
       setupCardDragData(e.dataTransfer, t)
     }
-    if (typeof window !== 'undefined' && window.__officeSound) {
-      window.__officeSound.playCardPickup?.()
-    }
+    sfx.playCardPickup()
   }, [])
 
   const handleDragEnd = useCallback(() => {
@@ -556,9 +525,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
       if (onFlash) onFlash(backward ? `◀ Preset divisi sebelumnya: ${summary}` : `Preset divisi berikutnya: ${summary} ▶`)
       return next
     })
-    if (typeof window !== 'undefined' && window.__officeSound) {
-      window.__officeSound.playSelect?.()
-    }
+    sfx.playSelect()
   })
 
   const tagCloud = useMemo(() => computeTagCloud(tasks, { divisionFilter: division, customDivPresets }), [tasks, division, customDivPresets])
@@ -639,9 +606,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
     if (onFlash) {
       onFlash(`${res.count} task diekspor ke ${format.toUpperCase()}`)
     }
-    if (typeof window !== 'undefined' && window.__officeSound) {
-      window.__officeSound.playSelect?.()
-    }
+    sfx.playSelect()
   }, [tasks, exportableTasks, viewMode, division, filter, selectedTag, tagMode, dateRange, customRange, q, sortBy, onFlash])
 
   return (
@@ -745,9 +710,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
           {sel ? (
             <div style={{ padding: 14, overflowY: 'auto' }}>
               <button className="btn" onClick={() => {
-                if (typeof window !== 'undefined' && window.__officeSound) {
-                  window.__officeSound.playSelect?.()
-                }
+                sfx.playSelect()
                 setSel(null)
               }} style={{ marginBottom: 10 }}>← Kembali</button>
               <h3 style={{ fontSize: 15, marginBottom: 6 }}>#{sel.id} {sel.title}</h3>
@@ -909,9 +872,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
                           onClick={() => {
                             setQ('')
                             searchInputRef.current?.focus()
-                            if (typeof window !== 'undefined' && window.__officeSound) {
-                              window.__officeSound.playSelect?.()
-                            }
+                            sfx.playSelect()
                           }}
                           aria-label="Hapus kata kunci pencarian"
                           title="Hapus pencarian (Esc)"
@@ -933,9 +894,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
                         value={dateRange}
                         onChange={e => {
                           setDateRange(e.target.value)
-                          if (typeof window !== 'undefined' && window.__officeSound) {
-                            window.__officeSound.playSelect?.()
-                          }
+                          sfx.playSelect()
                         }}
                         aria-label="Rentang waktu task"
                         title={formatDateRangeSummary(dateRange, dateStats[dateRange] ?? 0, { customRange })}
@@ -954,9 +913,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
                             setDateRange('all')
                             setCustomStartDate('')
                             setCustomEndDate('')
-                            if (typeof window !== 'undefined' && window.__officeSound) {
-                              window.__officeSound.playSelect?.()
-                            }
+                            sfx.playSelect()
                           }}
                           aria-label="Reset rentang waktu ke semua"
                           title="Reset filter tanggal"
@@ -990,9 +947,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
                       onClick={() => {
                         const nextSort = sortBy === 'priority' ? 'newest' : 'priority'
                         setSortBy(nextSort)
-                        if (nextSort === 'priority' && typeof window !== 'undefined' && window.__officeSound) {
-                          window.__officeSound.playTaskUrgent?.()
-                        }
+                        if (nextSort === 'priority') sfx.playTaskUrgent()
                       }}
                       title={`Terdapat ${priorityBreakdown.urgent} task urgent — klik untuk ${sortBy === 'priority' ? 'kembalikan ke urutan terbaru' : 'urutkan prioritas ke atas'}`}
                       aria-pressed={sortBy === 'priority'}
@@ -1014,7 +969,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
                         value={customStartDate}
                         onChange={e => {
                           setCustomStartDate(e.target.value)
-                          if (typeof window !== 'undefined' && window.__officeSound) window.__officeSound.playSelect?.()
+                          sfx.playSelect()
                         }}
                         aria-label="Tanggal awal kustom"
                         title="Pilih tanggal awal filter"
@@ -1027,7 +982,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
                         value={customEndDate}
                         onChange={e => {
                           setCustomEndDate(e.target.value)
-                          if (typeof window !== 'undefined' && window.__officeSound) window.__officeSound.playSelect?.()
+                          sfx.playSelect()
                         }}
                         aria-label="Tanggal akhir kustom"
                         title="Pilih tanggal akhir filter"
@@ -1039,7 +994,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
                           onClick={() => {
                             setCustomStartDate('')
                             setCustomEndDate('')
-                            if (typeof window !== 'undefined' && window.__officeSound) window.__officeSound.playSelect?.()
+                            sfx.playSelect()
                           }}
                           title="Kosongkan tanggal kustom"
                           aria-label="Kosongkan tanggal kustom"
@@ -1397,9 +1352,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
                         }
                       }
                       setShowPresetCreator(prev => !prev)
-                      if (typeof window !== 'undefined' && window.__officeSound) {
-                        window.__officeSound.playSelect?.()
-                      }
+                      sfx.playSelect()
                     }}
                     title={activeTags.length > 0 ? `Simpan ${activeTags.length} tag aktif sebagai preset baru` : 'Buat preset kombinasi tag baru'}
                     aria-label="Buat preset tag baru"
@@ -1544,9 +1497,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
                       onClick={() => {
                         setQ('')
                         searchInputRef.current?.focus()
-                        if (typeof window !== 'undefined' && window.__officeSound) {
-                          window.__officeSound.playSelect?.()
-                        }
+                        sfx.playSelect()
                       }}
                     >
                       ✕ Bersihkan Pencarian
@@ -1611,11 +1562,8 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
                                   onDragStart={(e) => handleDragStart(e, t)}
                                   onDragEnd={handleDragEnd}
                                   onClick={() => {
-                                    if (t.priority === 'urgent' && typeof window !== 'undefined' && window.__officeSound) {
-                                      window.__officeSound.playTaskUrgent?.()
-                                    } else if (typeof window !== 'undefined' && window.__officeSound) {
-                                      window.__officeSound.playSelect?.()
-                                    }
+                                    if (t.priority === 'urgent') sfx.playTaskUrgent()
+                                    else sfx.playSelect()
                                     setSel(t)
                                   }}
                                   style={{
@@ -1758,11 +1706,8 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
                         key={t.id}
                         className="taskrow"
                         onClick={() => {
-                          if (t.priority === 'urgent' && typeof window !== 'undefined' && window.__officeSound) {
-                            window.__officeSound.playTaskUrgent?.()
-                          } else if (typeof window !== 'undefined' && window.__officeSound) {
-                            window.__officeSound.playSelect?.()
-                          }
+                          if (t.priority === 'urgent') sfx.playTaskUrgent()
+                          else sfx.playSelect()
                           setSel(t)
                         }}
                         style={{ borderLeft: `4px solid ${ST[t.status]?.[1] || '#888'}` }}

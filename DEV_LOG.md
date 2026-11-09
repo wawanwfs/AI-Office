@@ -6672,3 +6672,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 systemd tetap jalan.
 - e2e_err probe OK: agents=26, init_failed false, 0 error, shot 716667 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 02:35 WIB — Siklus 351: SFX scene satu sumber — lib/sfx.js
+
+- Audit lanjutan satu sumber: 28 salinan guard inline `typeof window !== 'undefined' && { window.__officeSound` di TaskBoard.jsx (semua pemanggil playSelect/playCardPickup/playTaskUrgent + rantai if/else drop) — pelajaran 333: salinan drift & } ; rawan beda perilaku.
+- Fix: lib/sfx.js baru (sfx.playSelect/playCardPickup/playCardDrop/playTaskDone/playTaskUrgent + playDropFor rantai prioritas done>urgent>drop>select). Guard + optional-call + try/catch di satu tempat; engine mati/method tak ada/engine lempar → no-op false. TaskBoard.jsx kini 0 salinan `window.__officeSound`.
+- +1 file tes src/__tests__/sfx_single_source_351.test.js (4 kasus, jsdom: salinan inline hilang, panggil method tersedia, anti-poisoning 3 bentuk, rantai playDropFor).
+- Build PWA OK (43 precache); vitest 280 file / 3778 passed + 6 skipped, 0 fail (+4 tes vs 350).
+- Deploy cp -r dist → ~/wfs-hq; 9503 systemd tetap jalan.
+- e2e probe OK: agents=26, init_failed false, 0 error, shot 716753 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
