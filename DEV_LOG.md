@@ -6426,3 +6426,11 @@
 - Redeploy dist → ~/wfs-hq; probe pertama FAIL hygiene (7 orphan deploy aditif) → prune_orphan_assets() offline → 13 hashed/0 orphan.
 - e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 689634 B, nonbg 0.992, hygiene 13/0.
 - Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 2026-11-09 08:35 WIB — Siklus 325: audit menyeluruh paritas visible-refresh — TIDAK ada celah baru, upstream Phase17 di-merge
+
+- FF-merge upstream ke origin/main 0e312ac (Phase17 reference transparency log — backend/docs/CI saja, tanpa sentuhan UI).
+- Re-audit penuh paritas visible-refresh (pola 315-324): grep setInterval/addEventListener('visibilitychange') di seluruh src (App.jsx, 12 komponen poller, 3 part scene, landing, lib). HASIL: semua poller scene/API/scene-parts sudah punya pasangan gate+listener — TIDAK ada celah baru. Case khusus terverifikasi aman: ShConsole ES onerror/auto-reconnect + rid guard; WfsPanel mount-load digerbang visibility; scene pollStatus digerbang pageHidden + __pollBadges dipanggil instan di onVis scene; sw_update poll berhenti mandiri saat waiting terdeteksi; SecureProjectPanel/SettingsModal/TaskModal/CsWidget/Header/ActivityLog/QuickToolbar/OverlayHelp tidak punya interval sama sekali.
+- Tidak ada perubahan kode UI siklus ini; build+deploy ulang untuk membawa chunk upstream Phase17 (backend-only) ke dist.
+- Build PWA OK (43 precache entries); vitest 259 file / 3700 passed + 6 skipped, 0 fail.
+- Redeploy dist → ~/wfs-hq (cp -r + prune_orphan_assets: 0 orphan). Probe e2e_err OK: agents=26, 0 console/page error, init_failed false, shot 689406 B, nonbg 0.992, hygiene 13 hashed/0 orphan.
+- Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
