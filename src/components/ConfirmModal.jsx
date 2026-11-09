@@ -1,9 +1,11 @@
 import React, { useRef, useCallback, useEffect } from 'react'
 import { useDialogA11y } from '../lib/dialogA11y'
+import { useModalFlag } from '../lib/modal'
 import { IconClose } from './Icons'
 
 export default function ConfirmModal({ show, title, text, confirmLabel = 'Ya, lanjut', danger, busy, onConfirm, onCancel }) {
   const box = useRef(null)
+  useModalFlag(show)
   const onCancelRef = useRef(onCancel)
   useEffect(() => { onCancelRef.current = onCancel })
   const cancelViaA11y = useCallback(() => onCancelRef.current(), [])

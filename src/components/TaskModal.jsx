@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { api } from '../lib/api'
 import { useDialogA11y } from '../lib/dialogA11y'
+import { useModalFlag } from '../lib/modal'
 import { IconClose } from './Icons'
 
 const ROLES = ['backend', 'frontend', 'mobile', 'design', 'devops', 'qa', 'marketing', 'pm']
@@ -27,6 +28,7 @@ export default function TaskModal({ show, onClose, onDone }) {
   // Ref didefinisikan di ATAS early-return `if (!show)` — jumlah hook wajib
   // konsisten antar render (modal tutup vs buka), rules of hooks.
   const rid = useRef(0)
+  useModalFlag(show)
   useEffect(() => { onCloseRef.current = onClose })
   useEffect(() => {
     if (show) {

@@ -6460,3 +6460,11 @@
 - Build PWA OK (43 precache); vitest 261 file / 3709 passed + 6 skipped, 0 fail. Redeploy dist → ~/wfs-hq via deploy.py (9503: 200, pruned 0).
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 697070 B, nonbg 0.992, hygiene 13 hashed/0 orphan.
 - Sisa backlog: (a) cutover :8787→Docker — semua alat siap, menunggu persetujuan user; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 2026-11-09 10:35 WIB — Siklus 329: ConfirmModal & TaskModal mendaftar flag modal terpusat — audit overlay selesai 100%
+
+- Audit lanjutan pasca 327: dua modal lagi lolos dari useModalFlag — ConfirmModal (alertdialog konfirmasi, dipakai banyak aksi destruktif) dan TaskModal (form task POST /api/tasks). Keduanya overlay Escape-tutup tanpa flag → shortcut global & orbit tetap jalan di balik scrim.
+- Fix: useModalFlag(show) di ConfirmModal.jsx & TaskModal.jsx (hook di atas early-return, rules of hooks). Kini 14/14 overlay komponen terdaftar — audit overlay flag modal tuntas.
+- Build PWA OK (43 precache); vitest 261 file / 3709 passed + 6 skipped, 0 fail.
+- Redeploy dist → ~/wfs-hq via deploy.py (9503: 200) + prune 7 file hash orphan hasil double-deploy.
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 688172 B, hygiene 13 hashed/0 orphan.
+- Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
