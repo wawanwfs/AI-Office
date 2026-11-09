@@ -103,7 +103,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
   const [dragOverCol, setDragOverCol] = useState(null)
   const [customPresets, setCustomPresets] = useState(() => {
     try {
-      return loadCustomPresets(typeof localStorage !== 'undefined' ? localStorage : null)
+      return loadCustomPresets(null)
     } catch {
       return []
     }
@@ -116,7 +116,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
 
   const [customDivPresets, setCustomDivPresets] = useState(() => {
     try {
-      return loadCustomDivPresets(typeof localStorage !== 'undefined' ? localStorage : null)
+      return loadCustomDivPresets(null)
     } catch {
       return []
     }
@@ -215,7 +215,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
     const updated = [...customPresets, newPreset]
     setCustomPresets(updated)
     try {
-      saveCustomPresets(typeof localStorage !== 'undefined' ? localStorage : null, updated)
+      saveCustomPresets(null, updated)
     } catch { /* ignore */ }
 
     setSelectedTag(newPreset.tags)
@@ -235,7 +235,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
     const updated = deleteCustomPreset(presetKey, customPresets)
     setCustomPresets(updated)
     try {
-      saveCustomPresets(typeof localStorage !== 'undefined' ? localStorage : null, updated)
+      saveCustomPresets(null, updated)
     } catch { /* ignore */ }
 
     if (isPresetActive(presetKey, selectedTag, customPresets)) {
@@ -307,7 +307,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
     const updated = [...customDivPresets, newPreset]
     setCustomDivPresets(updated)
     try {
-      saveCustomDivPresets(typeof localStorage !== 'undefined' ? localStorage : null, updated)
+      saveCustomDivPresets(null, updated)
     } catch { /* ignore */ }
 
     setDivision(newPreset.key)
@@ -327,7 +327,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
     const updated = deleteCustomDivPreset(presetKey, customDivPresets)
     setCustomDivPresets(updated)
     try {
-      saveCustomDivPresets(typeof localStorage !== 'undefined' ? localStorage : null, updated)
+      saveCustomDivPresets(null, updated)
     } catch { /* ignore */ }
 
     if (isDivisionPresetActive(presetKey, division, customDivPresets) || division === presetKey) {

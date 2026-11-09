@@ -305,9 +305,9 @@ __onCanvas('touchcancel',()=>{
 // ═══════════════════════════════════════════════════
 let audioMuted=audioMutedPref();
 function saveMuted(){setAudioMutedPref(audioMuted)}
-let audioVolume=(function(){try{return loadAudioVolume(typeof localStorage!=='undefined'?localStorage:null)}catch{return DEFAULT_VOLUME}})();
-let ambienceEnabled=(function(){try{return loadAmbienceEnabled(typeof localStorage!=='undefined'?localStorage:null)}catch{return DEFAULT_AMBIENCE_ENABLED}})();
-let ambienceVolume=(function(){try{return loadAmbienceVolume(typeof localStorage!=='undefined'?localStorage:null)}catch{return DEFAULT_AMBIENCE_VOLUME}})();
+let audioVolume=(function(){try{return loadAudioVolume(null)}catch{return DEFAULT_VOLUME}})();
+let ambienceEnabled=(function(){try{return loadAmbienceEnabled(null)}catch{return DEFAULT_AMBIENCE_ENABLED}})();
+let ambienceVolume=(function(){try{return loadAmbienceVolume(null)}catch{return DEFAULT_AMBIENCE_VOLUME}})();
 const __sound=createSoundEngine({
   ctxFactory:()=>new(window.AudioContext||window.webkitAudioContext)(),
   initialVolume:audioVolume,
@@ -2485,14 +2485,14 @@ window.addEventListener('keydown',onKey);
     setAudioVolume: (v) => {
       audioVolume = clampVolume(v);
       __sound.setVolume(audioVolume);
-      try { saveAudioVolume(typeof localStorage !== 'undefined' ? localStorage : null, audioVolume); } catch { /* abaikan */ }
+      try { saveAudioVolume(null, audioVolume); } catch { /* abaikan */ }
       __sound.dbg(s=>{window.__audio=s;});
     },
     getAudioVolume: () => audioVolume,
     setAmbienceEnabled: (v) => {
       ambienceEnabled = !!v;
       __sound.setAmbienceEnabled(ambienceEnabled);
-      try { saveAmbienceEnabled(typeof localStorage !== 'undefined' ? localStorage : null, ambienceEnabled); } catch { /* abaikan */ }
+      try { saveAmbienceEnabled(null, ambienceEnabled); } catch { /* abaikan */ }
       __sound.dbg(s=>{window.__audio=s;});
       try {
         if (typeof window !== 'undefined' && window.dispatchEvent) {
@@ -2504,7 +2504,7 @@ window.addEventListener('keydown',onKey);
     setAmbienceVolume: (v) => {
       ambienceVolume = clampAmbienceVolume(v);
       __sound.setAmbienceVolume(ambienceVolume);
-      try { saveAmbienceVolume(typeof localStorage !== 'undefined' ? localStorage : null, ambienceVolume); } catch { /* abaikan */ }
+      try { saveAmbienceVolume(null, ambienceVolume); } catch { /* abaikan */ }
       __sound.dbg(s=>{window.__audio=s;});
       try {
         if (typeof window !== 'undefined' && window.dispatchEvent) {

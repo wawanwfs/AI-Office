@@ -6663,3 +6663,12 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 tetap jalan (systemd).
 - e2e_err probe OK: agents=26, init_failed false, 0 error, shot 717183 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 01:59 WIB — Siklus 350: pemanggil spec bersih — guard typeof localStorage redundan dihapus
+- Audit lanjutan: 20 pemanggil loader/saver sound_spec & kanban_spec masih mengirim 'typeof localStorage !== "undefined" ? localStorage : null' — padahal spec sudah punya default param storage=null & try/catch internal (App.jsx 5, SettingsModal 7, OfficeScene 3, TaskBoard 6).
+- Fix: semua pemanggil kini panggil tanpa arg / null; 0 ekspresi typeof localStorage tersisa di src (di luar spec & storage_prefs).
+- +1 file tes src/__tests__/storage_callers_cleanup_350.test.js (4 kasus: salinan guard hilang di 4 file, load default audio/ambience, save ke null tanpa lempar).
+- Build PWA OK (43 precache); vitest 279 file / 3774 passed + 6 skipped, 0 fail (+4 tes vs 349).
+- Deploy cp -r dist → ~/wfs-hq; 9503 systemd tetap jalan.
+- e2e_err probe OK: agents=26, init_failed false, 0 error, shot 716667 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

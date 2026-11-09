@@ -27,15 +27,15 @@ export default function SettingsModal({
   useModalFlag(show)
 
   const [volume, setVolume] = useState(() => {
-    return loadAudioVolume(typeof localStorage !== 'undefined' ? localStorage : null)
+    return loadAudioVolume()
   })
 
   const [ambienceOn, setAmbienceOn] = useState(() => {
-    return loadAmbienceEnabled(typeof localStorage !== 'undefined' ? localStorage : null)
+    return loadAmbienceEnabled()
   })
 
   const [ambienceVol, setAmbienceVol] = useState(() => {
-    return loadAmbienceVolume(typeof localStorage !== 'undefined' ? localStorage : null)
+    return loadAmbienceVolume()
   })
 
   const [namesOn, setNamesOn] = useState(namesPrefOn)
@@ -90,7 +90,7 @@ export default function SettingsModal({
     if (s && s.setAudioVolume) {
       s.setAudioVolume(next)
     } else {
-      saveAudioVolume(typeof localStorage !== 'undefined' ? localStorage : null, next)
+      saveAudioVolume(null, next)
     }
   }
 
@@ -102,7 +102,7 @@ export default function SettingsModal({
       s.setAudioVolume(next)
       if (!muted && s.playSelect) s.playSelect()
     } else {
-      saveAudioVolume(typeof localStorage !== 'undefined' ? localStorage : null, next)
+      saveAudioVolume(null, next)
     }
   }
 
@@ -114,7 +114,7 @@ export default function SettingsModal({
       s.setAmbienceEnabled(next)
       if (next && !muted && s.playSelect) s.playSelect()
     } else {
-      saveAmbienceEnabled(typeof localStorage !== 'undefined' ? localStorage : null, next)
+      saveAmbienceEnabled(null, next)
       try {
         if (typeof window !== 'undefined' && window.dispatchEvent) {
           window.dispatchEvent(new CustomEvent('wfs-ambience-changed', { detail: { enabled: next, volume: ambienceVol } }))
@@ -132,7 +132,7 @@ export default function SettingsModal({
     if (s && s.setAmbienceVolume) {
       s.setAmbienceVolume(next)
     } else {
-      saveAmbienceVolume(typeof localStorage !== 'undefined' ? localStorage : null, next)
+      saveAmbienceVolume(null, next)
       try {
         if (typeof window !== 'undefined' && window.dispatchEvent) {
           window.dispatchEvent(new CustomEvent('wfs-ambience-changed', { detail: { enabled: ambienceOn, volume: next } }))

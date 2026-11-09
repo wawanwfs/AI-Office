@@ -159,10 +159,10 @@ export default function App() {
     return audioMutedPref()
   })
   const [ambienceEnabled, setAmbienceEnabled] = useState(() => {
-    try { return loadAmbienceEnabled(typeof localStorage !== 'undefined' ? localStorage : null) } catch { return false }
+    try { return loadAmbienceEnabled(null) } catch { return false }
   })
   const [ambienceVolume, setAmbienceVolume] = useState(() => {
-    try { return loadAmbienceVolume(typeof localStorage !== 'undefined' ? localStorage : null) } catch { return DEFAULT_AMBIENCE_VOLUME }
+    try { return loadAmbienceVolume(null) } catch { return DEFAULT_AMBIENCE_VOLUME }
   })
   const [selectedAgent, setSelectedAgent] = useState(null)
   const [currentFloor, setCurrentFloor] = useState(1)
@@ -228,7 +228,7 @@ export default function App() {
         s.setAmbienceVolume(nextVol)
         if (!muted && s.playSelect) s.playSelect()
       } else {
-        try { saveAmbienceVolume(typeof localStorage !== 'undefined' ? localStorage : null, nextVol) } catch { /* noop */ }
+        try { saveAmbienceVolume(null, nextVol) } catch { /* noop */ }
       }
       flash(`Volume ambience kantor: ${formatAmbiencePercent(nextVol)}`)
       return
@@ -245,7 +245,7 @@ export default function App() {
       s.setAmbienceEnabled(next)
       if (next && s.playSelect) s.playSelect()
     } else {
-      try { saveAmbienceEnabled(typeof localStorage !== 'undefined' ? localStorage : null, next) } catch { /* noop */ }
+      try { saveAmbienceEnabled(null, next) } catch { /* noop */ }
     }
     flash(next ? `Ambience kantor aktif (${formatAmbiencePercent(ambienceVolume)})` : 'Ambience kantor dinonaktifkan')
   }, [ambienceEnabled, ambienceVolume, muted, flash])
@@ -258,7 +258,7 @@ export default function App() {
       s.setAmbienceVolume(nextVol)
       if (!muted && s.playSelect) s.playSelect()
     } else {
-      try { saveAmbienceVolume(typeof localStorage !== 'undefined' ? localStorage : null, nextVol) } catch { /* noop */ }
+      try { saveAmbienceVolume(null, nextVol) } catch { /* noop */ }
     }
     flash(`Volume ambience kantor: ${formatAmbiencePercent(nextVol)}`)
   }, [ambienceVolume, muted, flash])
