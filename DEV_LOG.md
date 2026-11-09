@@ -6452,3 +6452,11 @@
 - Redeploy dist → ~/wfs-hq via scripts/deploy.py (9503: 200) + prune_orphan_assets eksplisit 14 file hash lama.
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 687719 B, hygiene_ok true.
 - Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 2026-11-09 10:15 WIB — Siklus 328: runbook cutover gateway :8787→Docker dipasangkan smoke Phase 3 — auto-rollback palsu dihilangkan
+
+- Audit backlog cutover: scripts/go_live_gateway_docker.sh (APPLY) Fase 3 masih memanggil smoke LEGACY smoke_go_live.sh (siklus 156) — cek 5 (sandboxes via docker.sock) & cek 7 (exec 42 via gateway) MEMANG sengaja gagal di topologi Phase 3 hardened (no docker.sock, exec 503) → APPLY yang sukses pun selalu auto-rollback palsu. Inkonsisten dengan gate WFS_PHASE3_CUTOVER_REHEARSED.
+- Fix: smoke_10() kini menjalankan scripts/smoke_go_live_phase3.sh (8 cek hardened: health, exec-503, sandboxes-schema, agents, projects, SSE, tulis-DB, proxy :9503) dengan port dari BASE; dieksekusi terhadap baseline systemd :8787 → exit 0 (1 WARN legacy-exec 200 flag hardened belum di-set unit — expected baseline, fail=0).
+- Tidak ada perubahan UI; produksi :8787 systemd & :9503 tidak disentuh. Backlog cutover kini tinggal: persetujuan user + WFS_PHASE3_CUTOVER_REHEARSED=YES + rehearsal container.
+- Build PWA OK (43 precache); vitest 261 file / 3709 passed + 6 skipped, 0 fail. Redeploy dist → ~/wfs-hq via deploy.py (9503: 200, pruned 0).
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 697070 B, nonbg 0.992, hygiene 13 hashed/0 orphan.
+- Sisa backlog: (a) cutover :8787→Docker — semua alat siap, menunggu persetujuan user; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

@@ -82,12 +82,17 @@ auto_rollback() {
 }
 
 smoke_10() {
-  log "== smoke 10 cek (fixture go-live siklus 156) =="
-  if ! bash "$REPO/scripts/smoke_go_live.sh" "$BASE" >/tmp/go-live-smoke.log 2>&1; then
+  # Siklus 328: Phase 3 hardened topology WAJIB smoke Phase 3 (smoke_go_live_phase3.sh).
+  # Dulu smoke legacy smoke_go_live.sh (siklus 156) — cek 5 (sandboxes via
+  # docker.sock) & cek 7 (exec 42 via gateway) MEMANG sengaja gagal 503/[] di
+  # gateway hardened → APPLY yang SUKSES pun selalu auto-rollback palsu.
+  log "== smoke Phase 3 hardened (pengganti legacy 156) =="
+  local port="${BASE##*:}"
+  if ! bash "$REPO/scripts/smoke_go_live_phase3.sh" "$port" >/tmp/go-live-smoke.log 2>&1; then
     log "SMOKE GAGAL (log: /tmp/go-live-smoke.log)"; tail -n 5 /tmp/go-live-smoke.log
     return 1
   fi
-  log "SMOKE PASS 10/10 (log: /tmp/go-live-smoke.log)"
+  log "SMOKE PHASE3 PASS 0 fail (log: /tmp/go-live-smoke.log)"
 }
 
 case "${1:-}" in
