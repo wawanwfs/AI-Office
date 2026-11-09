@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y, useEscapeClose, useOutsideClose } from '../lib/dialogA11y'
 import { IconBolt, IconMeeting, IconCoffee, IconBriefcase, IconWalk, IconTag, IconRotate, IconGear } from './Icons'
+import { namesPrefOn, autoRotatePrefOn } from '../lib/storage_prefs.js'
 
 export default function ActionMenu({ sceneRef, onFlash, actionMenuRef, onOpenSettings }) {
   const [open, setOpen] = useState(false)
@@ -13,12 +14,8 @@ export default function ActionMenu({ sceneRef, onFlash, actionMenuRef, onOpenSet
   const onCloseRef = useRef(() => setOpen(false))
   const closeMenu = useCallback(() => onCloseRef.current(), [])
   useDialogA11y({ open, onClose: closeMenu, ref: pop })
-  const [namesOn, setNamesOn] = useState(() => {
-    try { return typeof localStorage !== 'undefined' ? localStorage.getItem('wfs_names') !== '0' : true } catch { return true }
-  })
-  const [rotOn, setRotOn] = useState(() => {
-    try { return typeof localStorage !== 'undefined' ? localStorage.getItem('wfs_autorot') === '1' : false } catch { return false }
-  })
+  const [namesOn, setNamesOn] = useState(namesPrefOn)
+  const [rotOn, setRotOn] = useState(autoRotatePrefOn)
   const wrap = useRef(null)
 
   // expose aksi nama/rotasi agar shortcut keyboard (K/R) bisa memicunya dari App

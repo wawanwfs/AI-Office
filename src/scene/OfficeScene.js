@@ -12,6 +12,7 @@ import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulate
 import { applyZoneLod } from './parts/zone_lod.js';
 import { occlusionPass, OCCL_MIN_OPACITY } from './parts/label_occlusion.js';
 import { perfStep } from './parts/perf_quality.js';
+import { namesPrefOn, autoRotatePrefOn, setNamesPref, setAutoRotatePref, hasStoredPref, PREF_AUTOROT_KEY } from '../lib/storage_prefs.js';
 import { startupQuality, applyLightBudget } from './parts/render_startup.js';
 import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam, resetFocusGoal, agentFocusPos } from './parts/kamera_focus.js';
 import { nextAgentIndex } from './parts/agent_cycle.js';
@@ -173,7 +174,7 @@ scene.name = 'Office3D';
 
 // ─── ORBIT ─────────────────────────────────────────
 let isDrag=false,prev={x:0,y:0};
-let namesVisible=(function(){try{return localStorage.getItem('wfs_names')!=='0'}catch{return true}})();
+let namesVisible=namesPrefOn();
 const __asp = computeAspect(container.clientWidth, container.clientHeight);
 const __portrait = isPortraitViewport(__asp);
 camera.fov = getResponsiveFov(__asp);
@@ -183,7 +184,7 @@ let sph = { theta: __portrait ? 2.35 : Math.PI * 0.78, phi: __portrait ? 0.78 : 
 const tgt=new THREE.Vector3(0,1.0,0.6);
 // Preferensi auto-rotate: hormati prefers-reduced-motion bila user belum set eksplisit (localStorage wfs_autorot 0/1)
 const __prm=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):null;
-let __userRot=null;try{const __v=localStorage.getItem('wfs_autorot');if(__v==='0')__userRot=false;else if(__v==='1')__userRot=true}catch{/* abaikan */}
+let __userRot=hasStoredPref(PREF_AUTOROT_KEY)?autoRotatePrefOn():null
 const autoRotDefault=()=>__userRot!==null?__userRot:(!__quality.low && (!__prm || !__prm.matches));
 let autoRot=autoRotDefault(),autoTmr;
 const __prmListener=(e)=>{if(__userRot===null)autoRot=!__quality.low && !e.matches}; // bernama: destroy() bisa melepas (siklus 123)
@@ -2277,14 +2278,14 @@ window.addEventListener('keydown',onKey);
   }
   const sceneControls = {
     teamAction,
-    toggleNames: () => { namesVisible=!namesVisible; try{localStorage.setItem('wfs_names',namesVisible?'1':'0')}catch{/* abaikan */};
+    toggleNames: () => { namesVisible=!namesVisible; setNamesPref(namesVisible);
       agentData.forEach(ad=>{ad.label.visible=namesVisible && ad.state !== 'offsite';ad.label.userData.antiY=0;ad.label.userData.antiX=0});
       if(window.__zoneLabels)resetZoneBaseOffsets(window.__zoneLabels.map(zt=>({ref:zt,base:window.__zoneBase&&window.__zoneBase.get(zt),visible:namesVisible}))); },
     isNamesVisible: () => namesVisible,
     setSelected: (idx) => { selectedIdx=idx; applySelected(); if(onSelectAgent)onSelectAgent(idx>=0&&idx<agentData.length?agentData[idx].agent:(idx===-2?(nxAgent?{...nxAgent,name:'Wahyu FS',floor:3}:{name:'Wahyu FS',color:0xF59E0B,hex:'#F59E0B',role:'Founder / CEO',floor:3}):null)); },
     getSelected: () => selectedIdx,
     resetFocus: () => { if(focusGoal){focusGoal=resetFocusGoal(HOME_TGT,homeRadius,sph.radius)} selectedIdx=-1; applySelected(); if(onSelectAgent)onSelectAgent(null); delete sph.__saved; },
-    setAutoRotate: (v) => { autoRot=!!v; __userRot=!!v; try{localStorage.setItem('wfs_autorot',autoRot?'1':'0')}catch{/* abaikan */} },
+    setAutoRotate: (v) => { autoRot=!!v; __userRot=!!v; setAutoRotatePref(autoRot) },
     isAutoRotate: () => autoRot,
     setTime: (minutes) => updateTime(minutes),
     // Siklus 178 — FOTO: snapshot PNG kanvas 3D (tombol QuickToolbar).

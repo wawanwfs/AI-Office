@@ -12,6 +12,7 @@ import {
   loadAmbienceVolume, saveAmbienceVolume,
   clampAmbienceVolume, formatAmbiencePercent,
 } from '../scene/parts/sound_spec'
+import { namesPrefOn, autoRotatePrefOn } from '../lib/storage_prefs.js'
 
 export default function SettingsModal({
   show,
@@ -37,21 +38,9 @@ export default function SettingsModal({
     return loadAmbienceVolume(typeof localStorage !== 'undefined' ? localStorage : null)
   })
 
-  const [namesOn, setNamesOn] = useState(() => {
-    try {
-      return typeof localStorage !== 'undefined' ? localStorage.getItem('wfs_names') !== '0' : true
-    } catch {
-      return true
-    }
-  })
+  const [namesOn, setNamesOn] = useState(namesPrefOn)
 
-  const [rotOn, setRotOn] = useState(() => {
-    try {
-      return typeof localStorage !== 'undefined' ? localStorage.getItem('wfs_autorot') === '1' : false
-    } catch {
-      return false
-    }
-  })
+  const [rotOn, setRotOn] = useState(autoRotatePrefOn)
 
   const [testTip, setTestTip] = useState('')
   const box = useRef(null)

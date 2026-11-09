@@ -6621,3 +6621,14 @@
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 709224 B, nonbg 0.992.
 - Catatan: patch pertama tv_canvas tak sengaja menghapus import resolveNow — tertangkap tes (12 fail), langsung dipulihkan.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+
+## 09/11/2026 23:35 WIB — Siklus 346: preferensi scene satu sumber — lib/storage_prefs.js
+- Audit lanjutan satu sumber: 4 salinan try/catch localStorage.getItem('wfs_names'/'wfs_autorot') di ActionMenu, SettingsModal, OfficeScene + 2 salinan localStorage.setItem di OfficeScene — nilai default & parsing rawan drift antar komponen (pelajaran 333).
+- Fix: lib/storage_prefs.js diekspor (namesPrefOn, autoRotatePrefOn, setNamesPref, setAutoRotatePref, hasStoredPref, PREF_*_KEY; default names=true, autorot=false; tahan localStorage rusak). Ketiga pemanggil kini import; 0 salinan inline tersisa.
+- +1 file tes src/__tests__/storage_prefs_single_source_346.test.js (4 kasus: salinan hilang di 3 file, paritas default/parsing kedua pref, set + anti-quota). Tes lama render_startup.test.js diadaptasi (setter setAutoRotate kini injectable, mock setAutoRotatePref) — perilaku yang diuji tetap sama.
+- Build PWA OK (43 precache); vitest 275 file / 3756 passed + 6 skipped, 0 fail (+4 tes vs 345).
+- Deploy cp -r dist → ~/wfs-hq + prune_orphan_assets (7 file hash lama) → hygiene 13 hashed/0 orphan; 9503 → 200.
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 707169 B, nonbg 0.992, hygiene_ok true.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+

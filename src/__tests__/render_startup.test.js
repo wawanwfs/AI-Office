@@ -27,17 +27,17 @@ it('reports rotation off by default in low quality but honors explicit user over
   const rotation = src.match(/ {2}if\(autoRot[^\n]+autoRotateStep\(sph,delta\);updCam\(\)\}/)[0];
   const listener = src.match(/const __prmListener=\(e\)=>\{[^\n]+/)[0];
   const setter = src.match(/setAutoRotate: \(v\) => (\{[^\n]+\}),/)[1];
-  const run = new Function('__quality', '__userRot', '__prm', 'localStorage', 'autoRotateStep',
+  const run = new Function('__quality', '__userRot', '__prm', 'localStorage', 'autoRotateStep', 'setAutoRotatePref',
     `${defaults}\nlet autoRot=autoRotDefault(); const sph={theta:0}; const delta=1; const updCam=()=>{};
      ${listener}\n__prmListener({matches:false}); const initial=autoRot;
      ${rotation}\nconst initialTheta=sph.theta;
      const setAutoRotate=(v)=>${setter}; setAutoRotate(true);
      ${rotation}\nconst enabledTheta=sph.theta; const enabled=autoRot;
      setAutoRotate(false); ${rotation}\nreturn {initial, initialTheta, enabled, enabledTheta, finalTheta:sph.theta, final:autoRot};`);
-  const result = run({low:true}, null, {matches:false}, {setItem(){}}, sph => {sph.theta++;});
+  const result = run({low:true}, null, {matches:false}, {setItem(){}}, sph => {sph.theta++;}, () => {});
   expect(result).toEqual({initial:false, initialTheta:0, enabled:true, enabledTheta:1, finalTheta:1, final:false});
-  expect(run({low:true}, true, {matches:true}, {setItem(){}}, sph => {sph.theta++;}).initialTheta).toBe(1);
-  expect(run({low:false}, null, {matches:false}, {setItem(){}}, sph => {sph.theta++;}).initialTheta).toBe(1);
+  expect(run({low:true}, true, {matches:true}, {setItem(){}}, sph => {sph.theta++;}, () => {}).initialTheta).toBe(1);
+  expect(run({low:false}, null, {matches:false}, {setItem(){}}, sph => {sph.theta++;}, () => {}).initialTheta).toBe(1);
 });
 
 it('applies capability quality and light budget before first render, samples initialization, and resets on visibility resume', () => {
