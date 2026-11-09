@@ -241,7 +241,10 @@ def pair_overlap_fires(a, b, pad=OCCL_PX, frac=OCCL_TIE_FRAC):
 CHROME = os.path.expanduser(
     "~/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell")
 PORT = 9498
-APP = "http://127.0.0.1:9503/app/"
+# Siklus 331: landing kini default route (paritas e2e_err_probe siklus 282) —
+# buka dengan ?mode=office eksplisit agar scene 3D selalu init; /app/ polos
+# jatuh ke mode ringan 2D → __occPts tak pernah ada → oracle FAIL senyap.
+APP = "http://127.0.0.1:9503/app/?mode=office"
 WS_TIMEOUT_S = 60
 
 

@@ -6477,3 +6477,12 @@
 - Redeploy dist → ~/wfs-hq via deploy.py (9503: 200) + prune 7 file hash orphan (double-deploy).
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 689814 B, nonbg 0.992, hygiene 13 hashed/0 orphan.
 - Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 2026-11-09 12:26 WIB — Siklus 331: Oracle oklusi audit_vision_claims dihidupkan kembali — URL ?mode=office eksplisit
+
+- Defek alat audit: audit_vision_claims.py (oracle oklusi live siklus 262) membuka /app/ polos — pasca siklus 282 landing jadi default route, /app/ jatuh ke mode ringan 2D → scene 3D tak init → __occPts tak pernah ada → audit selalu "FAIL: tidak konvergen dalam 90s" SECARA SENYAP tiap pemanggilan (alat verifikasi visual mati tanpa jejak).
+- Fix: APP URL → http://127.0.0.1:9503/app/?mode=office (paritas redirect paksa e2e_err_probe siklus 282).
+- Bukti hidup kembali: audit live penuh OK — SNAPSHOT pts=33 (5 zona/26 agen), 2 ronde oracle konsisten (5/5 zona occ == oracle), 12 klaim diverifikasi: 4 RESOLVED, 6 FALSIFIED, 2 FADED-BY-OTHER, bugs=0, exit 0.
+- Build PWA OK (43 precache); vitest 262 file / 3712 passed + 6 skipped, 0 fail.
+- Redeploy dist → ~/wfs-hq via deploy.py (9503: 200, pruned 0).
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 670966 B, nonbg 0.992, hygiene ok/missing 0.
+- Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
