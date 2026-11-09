@@ -6642,3 +6642,14 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 709967 B, nonbg 0.992, hygiene_ok true.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+
+## 10/11/2026 01:05 WIB — Siklus 348: log aktivitas satu sumber — lanjutan storage_prefs
+
+- Audit lanjutan satu sumber: 3 salinan inline try/catch localStorage['wfs_activity'] di App.jsx (read useState + write pushLog + removeItem clearLog) — JSON rusak butuh fallback [] di tiap pemanggil, rawan drift (pelajaran 333).
+- Fix: storage_prefs.js ditambah loadActivityLog/saveActivityLog/clearActivityLog + PREF_ACTIVITY_KEY & ACTIVITY_LOG_MAX=50 (Array.isArray guard, potong otomatis ke 50, tahan storage rusak). App.jsx kini import; 0 salinan inline wfs_activity tersisa di App.jsx.
+- +1 file tes src/__tests__/activity_log_single_source_348.test.js (4 kasus: salinan hilang di 3 titik, anti-poisoning JSON rusak/string bukan array, paritas slice(0,50) prepend+potong, clear hapus key).
+- Build PWA OK (43 precache); vitest 277 file / 3764 passed + 6 skipped, 0 fail (+4 tes vs 347).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- Catatan: e2e_err.py lama ter-prune dari scratch (pruning 24 jam) — dibuat ulang versi playwright di DISPLAY=:1 (WebGL headless=new di env ini gagal buat konteks; Xvfb :1 berjalan stabil). Probe OK: agents=26, init_failed false, 0 console/page error, shot 717650 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

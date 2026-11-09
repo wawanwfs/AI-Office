@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react'
 import { clip } from './lib/clip.js'
-import { viewModePref, setViewModePref, neonPrefOn, audioMutedPref } from './lib/storage_prefs.js'
+import { viewModePref, setViewModePref, neonPrefOn, audioMutedPref, loadActivityLog, saveActivityLog, clearActivityLog } from './lib/storage_prefs.js'
 import { clockNowShortId } from './lib/format_time.js'
 import { useVisibilityPoll, useWindowEvent } from './lib/dialogA11y'
 import HUD from './components/HUD'
@@ -190,17 +190,11 @@ export default function App() {
   const toggleMuteRef = useRef(toggleMute); toggleMuteRef.current = toggleMute
   const actionMenuApi = useRef(null) // diisi ActionMenu: {toggleNames, toggleRotate} utk shortcut K/R
   const amRef = actionMenuApi
-  const [logItems, setLogItems] = useState(() => {
-    try { return JSON.parse(localStorage.getItem('wfs_activity') || '[]') } catch { return [] }
-  })
+  const [logItems, setLogItems] = useState(() => loadActivityLog())
   const pushLog = useCallback((e) => {
-    setLogItems(prev => {
-      const n = [e, ...prev].slice(0, 50)
-      try { localStorage.setItem('wfs_activity', JSON.stringify(n)) } catch { /* abaikan */ }
-      return n
-    })
+    setLogItems(prev => saveActivityLog([e, ...prev]))
   }, [])
-  const clearLog = () => { setLogItems([]); try { localStorage.removeItem('wfs_activity') } catch { /* abaikan */ } }
+  const clearLog = () => { setLogItems([]); clearActivityLog() }
 
   const flash = useCallback((msg, err = false) => {
     setToast({ msg, err })

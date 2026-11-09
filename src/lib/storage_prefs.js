@@ -60,3 +60,29 @@ export const clearNeonPref = () => {
 export const PREF_MUTED_KEY = 'wfs_audio_muted'
 export const audioMutedPref = () => safeGet(PREF_MUTED_KEY) === '1'
 export const setAudioMutedPref = (on) => safeSet(PREF_MUTED_KEY, on ? '1' : '0')
+
+// Siklus 348: log aktivitas satu sumber — wfs_activity (JSON array, max 50).
+// Sebelumnya 3 salinan try/catch inline di App.jsx (read/write/clear) — rawan
+// drift: JSON rusak → semua pemanggil harus ingat fallback [] sendiri.
+export const PREF_ACTIVITY_KEY = 'wfs_activity'
+export const ACTIVITY_LOG_MAX = 50
+
+export const loadActivityLog = () => {
+  try {
+    const raw = safeGet(PREF_ACTIVITY_KEY)
+    const arr = raw ? JSON.parse(raw) : []
+    return Array.isArray(arr) ? arr : []
+  } catch { return [] }
+}
+
+export const saveActivityLog = (items) => {
+  const n = Array.isArray(items) ? items.slice(0, ACTIVITY_LOG_MAX) : []
+  safeSet(PREF_ACTIVITY_KEY, JSON.stringify(n))
+  return n
+}
+
+export const clearActivityLog = () => {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.removeItem(PREF_ACTIVITY_KEY)
+  } catch { /* abaikan */ }
+}
