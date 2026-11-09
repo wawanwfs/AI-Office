@@ -68,7 +68,7 @@ out={}
 for name,task in (
     ('write',lambda:os.write(fd,b'EVIL')),
     ('truncate',lambda:os.ftruncate(fd,1)),
-    ('open-write',lambda:os.open('/proc/self/fd/'+str(fd),os.O_WRONLY)),
+    ('reopened-write',lambda: (lambda d:(os.write(d,b'EVIL'),os.close(d)))(os.open('/proc/self/fd/'+str(fd),os.O_WRONLY))),
 ):
     try:
         out[name]='ALLOWED' if task() is not None else 'ALLOWED'
@@ -83,7 +83,7 @@ print(json.dumps(out))
         assert run.returncode == 0, run.stderr
         assert json.loads(run.stdout) == {
             "write": "DENIED", "truncate": "DENIED",
-            "open-write": "DENIED",
+            "reopened-write": "DENIED",
         }
         (stage / "api.py").write_bytes(b"print('MALICIOUS POST SEAL')\n")
         assert bundle.verify()
