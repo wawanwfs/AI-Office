@@ -6,6 +6,7 @@ import { findTeamByAgent } from '../scene/parts/team_spec.js'
 import { agentLiveStatus, findAgentLiveEntry, agentLiveLevel, floorZoneName } from '../scene/parts/agent_status.js'
 import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js'
 import { useModalFlag } from '../lib/modal'
+import { useEscapeClose } from '../lib/dialogA11y'
 
 // Kartu Inspektur Agen Interaktif — Tampil saat agen 3D diklik di ruangan
 export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloor, onOpenConsole }) {
@@ -40,17 +41,10 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
   // terbuka, shortcut global & orbit panah scene tetap jalan di balik kartu
   // (panel lain terbuka tersembunyi, kamera berputar di balik profil agen).
   useModalFlag(!!agent)
-  useEffect(() => {
-    if (!agent) return
-    const onKey = (e) => {
-      if (e.key === 'Escape') {
-        e.stopPropagation()
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [agent, onClose])
+  // Siklus 334: satu sumber Escape (hook siklus 333) — dulu salinan inline
+  // handler window keydown stopPropagation+onClose; kontrak stopPropagation
+  // kini milik useEscapeClose.
+  useEscapeClose(!!agent, onClose, { stopPropagation: true })
 
   if (!agent) return null
 

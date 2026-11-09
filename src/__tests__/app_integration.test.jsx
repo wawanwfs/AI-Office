@@ -342,7 +342,8 @@ describe('App — integrasi UI', () => {
     expect(mockSetView).not.toHaveBeenCalled()
 
     // Tekan Escape: kartu tertutup, scene di-reset
-    fireEvent.keyDown(window, { key: 'Escape' })
+    // (siklus 334: AgentInspector memakai useEscapeClose di document)
+    fireEvent.keyDown(document, { key: 'Escape' })
     expect(screen.queryByText('BUDI')).toBeNull()
     expect(mockSetSelected).toHaveBeenCalledWith(-1)
     expect(mockResetFocus).toHaveBeenCalled()

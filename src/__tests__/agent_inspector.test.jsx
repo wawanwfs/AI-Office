@@ -82,7 +82,7 @@ describe('AgentInspector — kartu profil agen 3D', () => {
   it('menekan tombol Escape memanggil onClose', () => {
     const onClose = vi.fn()
     render(<AgentInspector agent={mockAgent} onClose={onClose} onChatWith={vi.fn()} />)
-    fireEvent.keyDown(window, { key: 'Escape' })
+    fireEvent.keyDown(document, { key: 'Escape' }) // siklus 334: hook pakai document listener
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 

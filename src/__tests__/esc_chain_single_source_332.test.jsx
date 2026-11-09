@@ -10,7 +10,9 @@ const src = fs.readFileSync('src/components/TaskBoard.jsx', 'utf8')
 
 describe('siklus 332: rantai Escape TaskBoard satu sumber', () => {
   it('handler poll Escape memanggil onEscRef — tidak ada rantai if/else duplikat', () => {
-    expect(src).toContain("if (e.key === 'Escape') onEscRef.current()")
+    // siklus 334: listener keydown dipindah ke useEscapeClose (satu sumber)
+    expect(src).toContain('useEscapeClose(open || !!sel, () => onEscRef.current())')
+    expect(src.split("addEventListener('keydown'").length - 1).toBe(1) // hanya listener '/' fokus
     // Rantai prioritas hanya didefinisikan SEKALI (di closeBoard)
     const chains = src.split('showDivPresetCreator)').length - 1
     expect(chains).toBe(1) // hanya definisi closeBoard — duplikat hilang

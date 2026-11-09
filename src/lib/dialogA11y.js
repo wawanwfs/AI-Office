@@ -10,15 +10,15 @@ const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), selec
  * salinan handler `if (e.key === 'Escape') setOpen(false)` masing-masing
  * (rawan drift: menambah guard input/stopPropagation berarti edit 5 tempat).
  * Pakai onCloseRef agar pemanggil tak perlu memo onClose. */
-export function useEscapeClose(open, onClose) {
+export function useEscapeClose(open, onClose, { stopPropagation = false } = {}) {
   const onCloseRef = useRef(onClose)
   useEffect(() => { onCloseRef.current = onClose })
   useEffect(() => {
     if (!open) return
-    const k = (e) => { if (e.key === 'Escape') onCloseRef.current() }
+    const k = (e) => { if (e.key === 'Escape') { if (stopPropagation) e.stopPropagation(); onCloseRef.current() } }
     document.addEventListener('keydown', k)
     return () => document.removeEventListener('keydown', k)
-  }, [open])
+  }, [open, stopPropagation])
 }
 
 export function useDialogA11y({ open, onClose, ref, initialFocus }) {

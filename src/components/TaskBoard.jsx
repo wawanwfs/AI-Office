@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
-import { useDialogA11y } from '../lib/dialogA11y'
+import { useDialogA11y, useEscapeClose } from '../lib/dialogA11y'
 import { parseFileList } from '../lib/files'
 import { setupCardDragData, canDropTaskInColumn, formatDragDropNotification } from '../lib/kanban_drag'
 import { calcSearchStats, getSearchMatchSegments, getKanbanColumnSearchEmptyState } from '../lib/kanban_search'
@@ -155,6 +155,9 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
   const onEscRef = useRef(closeBoard)
   useEffect(() => { onEscRef.current = closeBoard })
   useDialogA11y({ open: open || !!sel, onClose: closeBoard, ref: board })
+  // Siklus 334: Escape satu sumber (hook siklus 333) — rantai prioritas tetap
+  // di closeBoard / onEscRef (siklus 332); listener poll effect dihapus.
+  useEscapeClose(open || !!sel, () => onEscRef.current())
 
   // Pintasan keyboard: '/' untuk fokus cepat ke input pencarian
   useEffect(() => {
@@ -410,11 +413,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
     // Siklus 320: refresh SEGERA saat tab kembali visible (pola 315-319).
     const onVis = () => { if (document.visibilityState === 'visible') load(ac.signal) }
     document.addEventListener('visibilitychange', onVis)
-    const k = e => {
-      if (e.key === 'Escape') onEscRef.current() // Siklus 332: satu sumber rantai Escape
-    }
-    document.addEventListener('keydown', k)
-    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('visibilitychange', onVis); document.removeEventListener('keydown', k); pollRid.current++ } // eslint-disable-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async), bukan membaca snapshot ref
+    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('visibilitychange', onVis); pollRid.current++ } // eslint-disable-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async), bukan membaca snapshot ref
   }, [open, load, sel, q, showPresetCreator, showDivPresetCreator])
 
   // Fokus ke panel detail saat task dibuka: tombol task yang diklik unmount,

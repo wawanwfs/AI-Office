@@ -114,7 +114,7 @@ describe('AgentInspector — integrasi status live', () => {
     window.__agentData = [{ agent: { name: 'BUDI' }, state: 'sitting' }]
     const onClose = vi.fn()
     render(<AgentInspector agent={agent} onClose={onClose} onChatWith={vi.fn()} />)
-    fireEvent.keyDown(window, { key: 'Escape' })
+    fireEvent.keyDown(document, { key: 'Escape' }) // siklus 334: hook pakai document listener
     expect(onClose).toHaveBeenCalledTimes(1)
   })
 })

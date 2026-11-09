@@ -6504,3 +6504,13 @@
 - Redeploy dist → ~/wfs-hq via deploy.py (9503: 200; deploy.py memang tak prune by design — 7 orphan dibersihkan eksplisit via prune_orphan_assets import) → hygiene 13 hashed/0 orphan.
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 689749 B, nonbg 0.992, hygiene_ok true.
 - Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 2026-11-09 14:45 WIB — Siklus 334: Escape AgentInspector & TaskBoard ikut satu sumber useEscapeClose
+
+- Audit lanjutan pasca 333: dua listener Escape tersisa di luar hook — AgentInspector (window keydown stopPropagation+onClose inline) dan TaskBoard (baris `onEscRef.current()` di poll effect, duplikat pola siklus 332). Keduanya direfaktor memakai useEscapeClose; hook diberi opsi `{ stopPropagation }` (default false) agar kontrak AgentInspector terjaga.
+- TaskBoard: rantai prioritas tetap di closeBoard/onEscRef (siklus 332); hook dipasang level komponen, poll effect kembali murni data-poll (tidak lagi mencampur listener keyboard).
+- Catatan perilaku: listener pindah window→document (jsdom tidak bubbling window→document? — fireEvent.keyDown(window) tidak sampai listener document) → 3 file tes adaptasi target keyDown ke document (agent_inspector, agent_live_status, app_integration); di browser nyata event keydown window & document setara via bubbling standar, runtime tak berubah.
+- Tes siklus 332/333 disegarkan: pattern hook kini match signature baru, asersi duplikat diganti (TaskBoard tinggal 1 listener keydown = '/' fokus).
+- Build PWA OK (43 precache); vitest 264 file / 3719 passed + 6 skipped, 0 fail (3 run berturut konsisten; flake transien TaskBoard rid 1/4 saat parallel penuh, lulus terisolasi & di full-run).
+- Redeploy dist → ~/wfs-hq (cp -r) + prune_orphan_assets 7 file hash lama → hygiene 13 hashed/0 orphan.
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 692854 B, nonbg 0.992, hygiene_ok true.
+- Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

@@ -27,7 +27,7 @@ describe('siklus 333 — useEscapeClose satu sumber', () => {
 
   it('hook ada di dialogA11y dengan pola ref + cleanup listener', () => {
     const lib = readFileSync(join(root, 'lib', 'dialogA11y.js'), 'utf8')
-    expect(lib).toMatch(/export function useEscapeClose\(open, onClose\)/)
+    expect(lib).toMatch(/export function useEscapeClose\(open, onClose/)
     expect(lib).toMatch(/onCloseRef\.current = onClose/)
     expect(lib).toMatch(/document\.addEventListener\('keydown', k\)/)
     expect(lib).toMatch(/removeEventListener\('keydown', k\)/)
