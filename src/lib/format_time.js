@@ -42,6 +42,22 @@ export function fmtStampId(ts) {
   })
 }
 
+/** Siklus 355: satu sumber menit-of-day dari Date saat ini (init slider HUD). */
+export function dayMinutesNow(d = new Date()) {
+  if (typeof d?.getTime !== 'function' || Number.isNaN(d.getTime())) return 0
+  return d.getHours() * 60 + d.getMinutes()
+}
+
+/** Siklus 355: satu sumber menit-of-day → 'HH:MM' (slider HUD).
+ * Anti-poisoning: input non-finite / non-angka → '00:00', bukan 'NaN:NaN'. */
+export function clockFromMinutes(min) {
+  const n = Number(min)
+  if (!Number.isFinite(n) || n < 0) return '00:00'
+  const clamped = Math.min(n, 1439)
+  const h = Math.floor(clamped / 60), m = Math.floor(clamped % 60)
+  return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
+}
+
 /**
  * Siklus 345: satu sumber jam 'HH.MM' id-ID dari Date saat ini.
  * Pengganti salinan `new Date().toLocaleTimeString('id-ID', {hour,minute})`

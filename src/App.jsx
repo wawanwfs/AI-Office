@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react'
 import { clip } from './lib/clip.js'
 import { viewModePref, setViewModePref, neonPrefOn, audioMutedPref, loadActivityLog, saveActivityLog, clearActivityLog, takeOpenDashboardFlag } from './lib/storage_prefs.js'
-import { clockNowShortId } from './lib/format_time.js'
+import { clockNowShortId, clockFromMinutes, dayMinutesNow } from './lib/format_time.js'
 import { useVisibilityPoll, useWindowEvent } from './lib/dialogA11y'
 import HUD from './components/HUD'
 import Header from './components/Header'
@@ -79,7 +79,7 @@ export default function App() {
   const toastTimer = useRef(null)
   const prevStatus = useRef(null)
   const [time, setTime] = useState(() => { // mulai dari jam nyata (sinkron dgn scene)
-    const d = new Date(); return d.getHours() * 60 + d.getMinutes(); })
+    const d = new Date(); return dayMinutesNow(d); })
   const [status, setStatus] = useState('Memuat…')
   const [statusKind, setStatusKind] = useState('')
   // Fase kantor live dari scene (daycycle.statusAt via onStatusUpdate) —
@@ -771,10 +771,8 @@ export default function App() {
     }
   }
 
-  const formatTime = (min) => {
-    const h = Math.floor(min / 60), m = Math.floor(min % 60)
-    return `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`
-  }
+  // Siklus 355: formatTime satu sumber via lib/format_time (anti 'NaN:NaN').
+  const formatTime = (min) => clockFromMinutes(min)
 
   const connBadge = connectionBadge(conn)
 

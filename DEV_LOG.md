@@ -6712,3 +6712,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK: agents=26, init_failed false, 0 error, shot 718332 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 04:45 WIB — Siklus 355: jam HUD satu sumber — dayMinutesNow & clockFromMinutes
+
+- Audit lanjutan satu sumber: 2 salinan di App.jsx — (a) init state waktu slider HUD `d.getHours()*60+d.getMinutes()`, (b) formatTime lokal dgn padStart manual (input rusak → "NaN:NaN" dilukis di HUD).
+- Fix: format_time.js ditambah dayMinutesNow() (Date rusak → 0) & clockFromMinutes() (anti-poisoning: NaN/null/negatif → '00:00', clamp 0..1439, string numerik dinormalisasi). App.jsx kini import keduanya; 0 salinan inline tersisa.
+- +1 file tes src/__tests__/clock_minutes_single_source_355.test.js (4 kasus: salinan hilang, paritas rumus + anti-Date-rusak, clamp HH:MM, anti-poisoning 4 bentuk + normalisasi string).
+- Build PWA OK (44 precache); vitest 284 file / 3794 passed + 6 skipped, 0 fail (+4 tes vs 354).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK: agents=26, init_failed false, 0 error, shot 715495 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
