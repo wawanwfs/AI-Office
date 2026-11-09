@@ -115,7 +115,10 @@ describe('kontrak statis App.jsx — HUD ikut di-inert saat panel dock terbuka',
   });
 
   it('deps effect menyertakan hudDockPanelOpen (re-run saat panel buka/tutup)', () => {
-    expect(app).toMatch(/\}, \[chromeModal, hudDockPanelOpen\]\)/);
+    // Siklus 327: +modalFlagNow — flag modal terpusat turun tanpa render App
+    // (kartu inspektur ditutup Escape) → inert basi di header/hud/ticker harus
+    // dilepas via re-run effect.
+    expect(app).toMatch(/\}, \[chromeModal, hudDockPanelOpen, modalFlagNow\]\)/);
   });
 
   it('rumus modalActive & wfsSetAppModalBase TIDAK berubah (kontrak 180/181 utk flag shortcut)', () => {

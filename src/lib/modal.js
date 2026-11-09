@@ -6,12 +6,21 @@ import { useEffect } from 'react'
  * panel-panel dengan state internal seperti TaskBoard/ProjectPanel/WfsPanel/
  * TeamStats/CsWidget/TaskModal memakai hook ini.) */
 let count = 0
+// Siklus 327: subscriber — count bisa berubah di effect cleanup TANPA render
+// App berikutnya (kartu AgentInspector ditutup via Escape: App sudah re-render
+// dengan selectedAgent null SEBELUM cleanup child menurunkan count → bacaan
+// render-time anyModalOpen() masih true → inert basi menempel). Subscriber
+// memberi tahu App saat count berubah agar effect yang membaca flag re-run.
+const listeners = new Set()
+export const subscribeModalFlag = (fn) => { listeners.add(fn); return () => listeners.delete(fn) }
+const notifyModalFlag = () => { listeners.forEach(fn => { try { fn(count) } catch { /* listener rusak tak boleh mematikan lainnya */ } }) }
 
 export function useModalFlag(open) {
   useEffect(() => {
     if (!open) return
     count++
-    return () => { count-- }
+    notifyModalFlag()
+    return () => { count--; notifyModalFlag() }
   }, [open])
 }
 

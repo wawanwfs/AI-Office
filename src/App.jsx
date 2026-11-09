@@ -30,7 +30,7 @@ const SettingsModal = lazy(() => import('./components/SettingsModal'))
 import FloorNavigator from './components/FloorNavigator'
 import { IconVolume, IconVolumeMute, IconScroll, IconHelp, IconGear } from './components/Icons'
 import { api } from './lib/api'
-import { anyModalOpen, wfsRefreshModalFlag, wfsSetAppModalBase } from './lib/modal'
+import { anyModalOpen, wfsRefreshModalFlag, wfsSetAppModalBase, subscribeModalFlag } from './lib/modal'
 import { watchDockHeight } from './lib/dock_h.js'
 import { createWakeLockManager } from './lib/wakelock.js'
 import { applyPollResult, nextPollDelay, connectionBadge, STALE_AFTER_MS } from './lib/connection_spec.js'
@@ -554,6 +554,15 @@ export default function App() {
   // klik; inert menutup celah navigasi keyboard.) Panel dgn state internal
   // (TaskBoard/WfsPanel/CsWidget/…) juga tercakup via anyModalOpen() (useModalFlag).
   const chromeModal = modalActive
+  // Siklus 327: pembanding render-time untuk flag modal terpusat. Kartu
+  // AgentInspector ditutup via Escape → count internal turun di effect cleanup
+  // TANPA render App berikutnya yang menyentuh __wfsModalOpen (snapshot capture
+  // Escape terjadi SEBELUM kartu tertutup) → inert basi menempel di
+  // header/hud/ticker. Baca ulang base+count langsung di render: nilai ini
+  // berubah → dep effect inert re-run → inert dilepas.
+  const [modalFlagTick, setModalFlagTick] = useState(0)
+  useEffect(() => subscribeModalFlag(() => setModalFlagTick(t => t + 1)), [])
+  const modalFlagNow = (window.__wfsAppModalBase === true || anyModalOpen()) && modalFlagTick >= 0
   useEffect(() => {
     // Catatan: panel-panel modal internal (Papan Task/Proyek/Statistik/…) dirender
     // DI DALAM elemen .dock. Meng-inert-kan dock utuh saat modal itu terbuka ikut
@@ -571,7 +580,7 @@ export default function App() {
       if (lock) el.setAttribute('inert', ''); else el.removeAttribute('inert')
     })
     return () => els.forEach(el => el.removeAttribute('inert'))
-  }, [chromeModal, hudDockPanelOpen])
+  }, [chromeModal, hudDockPanelOpen, modalFlagNow])
 
   // Siklus 184 — tinggi dock mobile ADAPTIF: ukur .dock live (ResizeObserver)
   // → CSS var --dock-h di documentElement; index.css ≤560px memakai

@@ -5,6 +5,7 @@ import { resolveAgentId } from '../scene/parts/running_tasks.js'
 import { findTeamByAgent } from '../scene/parts/team_spec.js'
 import { agentLiveStatus, findAgentLiveEntry, agentLiveLevel, floorZoneName } from '../scene/parts/agent_status.js'
 import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js'
+import { useModalFlag } from '../lib/modal'
 
 // Kartu Inspektur Agen Interaktif — Tampil saat agen 3D diklik di ruangan
 export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloor, onOpenConsole }) {
@@ -34,6 +35,11 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
     document.addEventListener('visibilitychange', onVis)
     return () => { clearInterval(iv); document.removeEventListener('visibilitychange', onVis) }
   }, [agent])
+  // Siklus 327: kartu inspektur wajib mendaftar di flag modal TERPUSAT
+  // (useModalFlag) — sebelumnya satu-satunya overlay yang lolos: saat kartu
+  // terbuka, shortcut global & orbit panah scene tetap jalan di balik kartu
+  // (panel lain terbuka tersembunyi, kamera berputar di balik profil agen).
+  useModalFlag(!!agent)
   useEffect(() => {
     if (!agent) return
     const onKey = (e) => {

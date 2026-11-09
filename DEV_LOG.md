@@ -6443,3 +6443,12 @@
 - Redeploy dist → ~/wfs-hq (cp -r) + prune_orphan_assets 7 file hash lama → hygiene 20 hashed/0 orphan.
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 687255 B, hygiene_ok true.
 - Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 2026-11-09 09:45 WIB — Siklus 327: AgentInspector mendaftar flag modal terpusat + inert basi saat kartu ditutup Escape dilepas
+
+- Audit lanjutan pasca 326: AgentInspector (kartu profil agen, overlay z-30) TIDAK memanggil useModalFlag — overlay internal terakhir yang lolos. Kartu terbuka → shortcut global & orbit panah tetap jalan di balik kartu.
+- Fix 1: useModalFlag(!!agent) di AgentInspector.jsx (+4 tes inspector_modal_flag_327.test.jsx).
+- Defek sekunder ditemukan tes integrasi & diperbaiki: kartu ditutup via Escape → count modal turun di effect cleanup TANPA render App berikutnya (App sudah re-render saat selectedAgent null SEBELUM cleanup child menurunkan count) → modalFlagNow render-time masih true → inert basi menempel permanen di header/hud/ticker (semua tombol chrome mati sampai interaksi berikutnya). Fix: subscribeModalFlag di modal.js (listener count berubah) + App effect setModalFlagTick → dep effect inert re-run & melepas inert. Kontrak dock_wrap.test.js deps diperbarui (+modalFlagNow).
+- Build PWA OK (43 precache); vitest 261 file / 3709 passed + 6 skipped, 0 fail (+4 tes vs 326).
+- Redeploy dist → ~/wfs-hq via scripts/deploy.py (9503: 200) + prune_orphan_assets eksplisit 14 file hash lama.
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 687719 B, hygiene_ok true.
+- Sisa backlog: (a) cutover :8787→Docker; (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
