@@ -86,3 +86,18 @@ export const clearActivityLog = () => {
     if (typeof localStorage !== 'undefined') localStorage.removeItem(PREF_ACTIVITY_KEY)
   } catch { /* abaikan */ }
 }
+
+// Siklus 349: flag handshake landing→app satu sumber.
+// Landing (public/landing.html) menulis 'wfs_open_dashboard'=1 sebelum redirect;
+// App.jsx membaca+hapus sekali lalu dispatch event dashboard. Dipindah ke sini
+// agar fallback anti-storage-rusak tidak tersebar di pemanggil.
+export const PREF_OPEN_DASHBOARD_KEY = 'wfs_open_dashboard'
+
+export const takeOpenDashboardFlag = () => {
+  try {
+    if (typeof localStorage === 'undefined') return false
+    if (localStorage.getItem(PREF_OPEN_DASHBOARD_KEY) !== '1') return false
+    localStorage.removeItem(PREF_OPEN_DASHBOARD_KEY)
+    return true
+  } catch { return false }
+}

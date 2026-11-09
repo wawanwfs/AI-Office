@@ -6653,3 +6653,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - Catatan: e2e_err.py lama ter-prune dari scratch (pruning 24 jam) — dibuat ulang versi playwright di DISPLAY=:1 (WebGL headless=new di env ini gagal buat konteks; Xvfb :1 berjalan stabil). Probe OK: agents=26, init_failed false, 0 console/page error, shot 717650 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 01:30 WIB — Siklus 349: fallback landing→app satu sumber — takeOpenDashboardFlag
+
+- Audit lanjutan satu sumber: pasangan inline localStorage 'wfs_open_dashboard' (landing.html menulis, App.jsx getItem+removeItem tanpa guard try/catch di luar blok) — storage terblokir/privat bisa melempar exception saat mount App (pelajaran 333).
+- Fix: storage_prefs.js ditambah PREF_OPEN_DASHBOARD_KEY + takeOpenDashboardFlag() (konsumsi sekali: getItem==='1' lalu removeItem; typeof guard + try/catch → false). App.jsx kini import; 0 salinan inline tersisa.
+- +1 file tes src/__tests__/open_dashboard_single_source_349.test.js (4 kasus: salinan inline hilang di App.jsx, konsumsi sekali, nilai lain → false, anti-storage-rusak + key konsisten dgn landing.html).
+- Build PWA OK (43 precache); vitest 278 file / 3768 passed + 6 skipped, 0 fail (+4 tes vs 348).
+- Deploy cp -r dist → ~/wfs-hq; 9503 tetap jalan (systemd).
+- e2e_err probe OK: agents=26, init_failed false, 0 error, shot 717183 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

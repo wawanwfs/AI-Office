@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react'
 import { clip } from './lib/clip.js'
-import { viewModePref, setViewModePref, neonPrefOn, audioMutedPref, loadActivityLog, saveActivityLog, clearActivityLog } from './lib/storage_prefs.js'
+import { viewModePref, setViewModePref, neonPrefOn, audioMutedPref, loadActivityLog, saveActivityLog, clearActivityLog, takeOpenDashboardFlag } from './lib/storage_prefs.js'
 import { clockNowShortId } from './lib/format_time.js'
 import { useVisibilityPoll, useWindowEvent } from './lib/dialogA11y'
 import HUD from './components/HUD'
@@ -97,11 +97,8 @@ export default function App() {
   }, [])
   // Fallback landing → app: hash bisa hilang oleh redirect/pengetikan manual.
   useEffect(() => {
-    try {
-      if (localStorage.getItem('wfs_open_dashboard') !== '1') return
-      localStorage.removeItem('wfs_open_dashboard')
-      window.dispatchEvent(new CustomEvent('wfs-toggle-dashboard'))
-    } catch { /* storage privat/terblokir — abaikan */ }
+    if (!takeOpenDashboardFlag()) return
+    window.dispatchEvent(new CustomEvent('wfs-toggle-dashboard'))
   }, [])
   const [conn, setConn] = useState(() => applyPollResult(null, { ok: false, error: 'init' }, 0))
   const [cyberpunk, setCyberpunk] = useState(() => {
