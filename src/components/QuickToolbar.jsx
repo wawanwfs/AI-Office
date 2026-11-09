@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
+import { useEscapeClose } from '../lib/dialogA11y'
 import {
   IconPlus, IconPlay, IconPause, IconZoomOut, IconZoomIn, IconHome, IconCamera,
   IconIso, IconFront, IconTop, IconNeon, IconMoon, IconSun, IconUserNext, IconUserPrev
@@ -12,11 +13,11 @@ export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onTog
   const ref = useRef(null)
   useEffect(() => {
     if (!open) return
-    const k = e => { if (e.key === 'Escape') setOpen(false) }
     const c = e => { if (ref.current && !ref.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('keydown', k); document.addEventListener('pointerdown', c)
-    return () => { document.removeEventListener('keydown', k); document.removeEventListener('pointerdown', c) }
+    document.addEventListener('pointerdown', c)
+    return () => { document.removeEventListener('pointerdown', c) }
   }, [open])
+  useEscapeClose(open, () => setOpen(false)) // Siklus 333: satu sumber Escape
   return (
     <>
       <button className="ibtn accent" onClick={onAddTask} title="Tambah task baru ke papan proyek" aria-label="Tambah task baru">

@@ -2,8 +2,24 @@
  * yang bisa difokuskan saat overlay terbuka, lalu kunci Tab di dalam dialog
  * (fokus trap per-dialog; chrome luar sudah inert via App). */
 import { useEffect } from 'react'
+import { useRef } from 'react'
 
 const FOCUSABLE = 'a[href], button:not([disabled]), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
+/* Siklus 333: Escape-tutup overlay SATU sumber — lima komponen dulu punya
+ * salinan handler `if (e.key === 'Escape') setOpen(false)` masing-masing
+ * (rawan drift: menambah guard input/stopPropagation berarti edit 5 tempat).
+ * Pakai onCloseRef agar pemanggil tak perlu memo onClose. */
+export function useEscapeClose(open, onClose) {
+  const onCloseRef = useRef(onClose)
+  useEffect(() => { onCloseRef.current = onClose })
+  useEffect(() => {
+    if (!open) return
+    const k = (e) => { if (e.key === 'Escape') onCloseRef.current() }
+    document.addEventListener('keydown', k)
+    return () => document.removeEventListener('keydown', k)
+  }, [open])
+}
 
 export function useDialogA11y({ open, onClose, ref, initialFocus }) {
   useEffect(() => {

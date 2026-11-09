@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
-import { useDialogA11y } from '../lib/dialogA11y'
+import { useDialogA11y, useEscapeClose } from '../lib/dialogA11y'
 import { IconChat, IconClose, IconGear, IconSave, IconPlay, IconRotate } from './Icons'
 
 // Navigasi panah tablist (pola WAI-ARIA tabs): Left/Right/Home/End memindahkan
@@ -122,12 +122,7 @@ export default function WfsPanel() {
   }, [open])
   useEffect(() => { if (sel) { selectedAgentIdRef.current = sel.id; loadCfg(sel) } }, [sel, loadCfg])   // eslint-disable-line react-hooks/set-state-in-effect
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight }, [logs, chatBusy])
-  useEffect(() => {
-    if (!open) return
-    const k = e => { if (e.key === 'Escape') setOpen(false) }
-    document.addEventListener('keydown', k)
-    return () => document.removeEventListener('keydown', k)
-  }, [open, tab])
+  useEscapeClose(open, () => setOpen(false)) // Siklus 333: satu sumber Escape
 
   const send = async () => {
     const q = input.trim()

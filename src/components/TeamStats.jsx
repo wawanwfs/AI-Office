@@ -3,7 +3,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
 import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js'
-import { useDialogA11y } from '../lib/dialogA11y'
+import { useDialogA11y, useEscapeClose } from '../lib/dialogA11y'
 import { fileCount } from '../lib/files'
 import { IconStats, IconClose } from './Icons'
 import { computeTeamStats, teamPresenceSummary } from '../scene/parts/team_spec.js'
@@ -65,12 +65,11 @@ export default function TeamStats() {
     // Siklus 323: refresh SEGERA saat tab kembali visible (paritas 315-322)
     const onVis = () => { if (document.visibilityState === 'visible') load(ac.signal) }
     document.addEventListener('visibilitychange', onVis)
-    const k = e => { if (e.key === 'Escape') setOpen(false) }
-    document.addEventListener('keydown', k)
-    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('visibilitychange', onVis); document.removeEventListener('keydown', k);
+    return () => { ac.abort(); clearTimeout(t0); clearInterval(iv); document.removeEventListener('visibilitychange', onVis);
       // eslint-disable-next-line react-hooks/exhaustive-deps -- bump rid saat cleanup memang disengaja (guard async), bukan membaca snapshot ref
       loadRid.current++ }
   }, [open, load])
+  useEscapeClose(open, () => setOpen(false)) // Siklus 333: satu sumber Escape
 
   // Siklus 150: kehadiran LIVE anggota tim dari scene (window.__agentData) —
   // poll 4 dtk hanya saat panel terbuka (pola sceneAgents SysMeter; scene

@@ -6495,3 +6495,12 @@
 - Build PWA OK (43 precache); vitest 263 file / 3715 passed + 6 skipped, 0 fail (+3 tes vs 331).
 - Redeploy dist → ~/wfs-hq (cp -r) + prune orphan hash lama 7 file; e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 674455 B, nonbg 0.992, hygiene 13 hashed/0 orphan.
 - Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 2026-11-09 13:35 WIB — Siklus 333: Escape-tutup overlay dikonsolidasi ke useEscapeClose — 5 salinan handler dihapus
+
+- Audit lanjutan kualitas keyboard: 5 komponen punya salinan identik `if (e.key === 'Escape') setOpen(false)` + add/removeEventListener — ProjectPanel, TeamStats, WfsPanel, QuickToolbar, ActionMenu. Rawan drift: guard input/stopPropagation baru berarti edit 5 tempat (pelajaran siklus 330).
+- Fix: hook baru `useEscapeClose(open, onClose)` di dialogA11y.js (ref onClose agar pemanggil tak perlu memo); kelima komponen direfaktor memakainya — handler Escape inline dihapus, listener pointerdown click-outside tetap di tempat masing-masing.
+- +1 file tes esc_close_single_source_333.test.js (4 kasus: 5 komponen pakai hook, salinan inline hilang, pola ref+cleanup hook ada, useDialogA11y tidak diregresikan).
+- Build PWA OK (43 precache); vitest 264 file / 3719 passed + 6 skipped, 0 fail (+4 tes vs 332).
+- Redeploy dist → ~/wfs-hq via deploy.py (9503: 200; deploy.py memang tak prune by design — 7 orphan dibersihkan eksplisit via prune_orphan_assets import) → hygiene 13 hashed/0 orphan.
+- e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 689749 B, nonbg 0.992, hygiene_ok true.
+- Sisa backlog: (a) cutover :8787→Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

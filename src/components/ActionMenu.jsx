@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { useModalFlag } from '../lib/modal'
-import { useDialogA11y } from '../lib/dialogA11y'
+import { useDialogA11y, useEscapeClose } from '../lib/dialogA11y'
 import { IconBolt, IconMeeting, IconCoffee, IconBriefcase, IconWalk, IconTag, IconRotate, IconGear } from './Icons'
 
 export default function ActionMenu({ sceneRef, onFlash, actionMenuRef, onOpenSettings }) {
@@ -51,11 +51,11 @@ export default function ActionMenu({ sceneRef, onFlash, actionMenuRef, onOpenSet
       if (s.isNamesVisible) setNamesOn(v => (v === s.isNamesVisible() ? v : s.isNamesVisible())) // eslint-disable-line react-hooks/set-state-in-effect -- sinkronisasi sekali saat menu dibuka
       if (s.isAutoRotate) setRotOn(v => (v === s.isAutoRotate() ? v : s.isAutoRotate()))
     }
-    const k = e => { if (e.key === 'Escape') setOpen(false) }
     const c = e => { if (wrap.current && !wrap.current.contains(e.target)) setOpen(false) }
-    document.addEventListener('keydown', k); document.addEventListener('pointerdown', c)
-    return () => { document.removeEventListener('keydown', k); document.removeEventListener('pointerdown', c) }
+    document.addEventListener('pointerdown', c)
+    return () => { document.removeEventListener('pointerdown', c) }
   }, [open, sceneRef])
+  useEscapeClose(open, () => setOpen(false)) // Siklus 333: satu sumber Escape
 
   // Navigasi panah menu (Up/Down/Home/End) — pola WAI-ARIA menu
   const menuKeys = e => {
