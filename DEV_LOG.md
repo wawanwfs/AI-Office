@@ -6632,3 +6632,13 @@
 - e2e_err probe OK: agents=26, 0 console/page error, init_failed false, shot 707169 B, nonbg 0.992, hygiene_ok true.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
 
+
+## 10/11/2026 00:20 WIB — Siklus 347: view mode/neon/mute satu sumber — lanjutan storage_prefs
+
+- Audit lanjutan satu sumber: 6 salinan inline try/catch localStorage tersisa — wfs_view_mode (2 di App.jsx: read useState + write switchView), wfs_neon (2 di App.jsx & OfficeScene.js + removeItem), wfs_audio_muted (2 di App.jsx & OfficeScene.js). Default & parsing rawan drift (pelajaran 333).
+- Fix: storage_prefs.js ditambah viewModePref/setViewModePref, neonPrefOn/setNeonPref/clearNeonPref, audioMutedPref/setAudioMutedPref (+ konstanta key). App.jsx & OfficeScene.js kini import; 0 salinan inline tersisa; MUTED_KEY tak lagi diimport scene (key tinggal di sound_spec untuk pemakai internalnya).
+- +1 file tes src/__tests__/view_neon_mute_single_source_347.test.js (4 kasus: salinan hilang di 5 titik, paritas view mode nilai asing → 2d, neon default off/set/clear, mute default unmuted/0-1). Stub localStorage Map ala tes 346.
+- Build PWA OK (43 precache); vitest 276 file / 3760 passed + 6 skipped, 0 fail (+4 tes vs 346).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e_err_probe OK: agents=26, 0 console/page error, init_failed false, shot 709967 B, nonbg 0.992, hygiene_ok true.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

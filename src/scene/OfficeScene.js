@@ -39,10 +39,11 @@ import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelScale, drawLabelText } from './p
 import { WALK_DESTINATIONS, CAMPUS_WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { OBSTACLES } from './parts/obstacles.js';
 import {
-  MUTED_KEY, VOLUME_KEY, DEFAULT_VOLUME, tickSoundTimer, loadAudioVolume, saveAudioVolume, clampVolume,
+  VOLUME_KEY, DEFAULT_VOLUME, tickSoundTimer, loadAudioVolume, saveAudioVolume, clampVolume,
   DEFAULT_AMBIENCE_ENABLED, DEFAULT_AMBIENCE_VOLUME, loadAmbienceEnabled, saveAmbienceEnabled,
   loadAmbienceVolume, saveAmbienceVolume, clampAmbienceVolume,
 } from './parts/sound_spec.js';
+import { audioMutedPref, setAudioMutedPref, neonPrefOn, setNeonPref, clearNeonPref } from '../lib/storage_prefs.js';
 import { advanceSimClock, setSimManual, SIM_SEC_PER_MIN as __SIM_SPM, MANUAL_RESUME_MS as __SIM_RESUME } from './parts/sim_clock.js';
 import { simClockSeconds, SIM_SEC_PER_MIN as __CLK_SPM } from './parts/clock_units.js';
 import { createSoundEngine } from './parts/sound_engine.js';
@@ -302,8 +303,8 @@ __onCanvas('touchcancel',()=>{
 // ═══════════════════════════════════════════════════
 // SOUND SYSTEM — Web Audio API (runtime di parts/sound_engine.js, teruji unit)
 // ═══════════════════════════════════════════════════
-let audioMuted=(function(){try{return localStorage.getItem(MUTED_KEY)==='1'}catch{return false}})();
-function saveMuted(){try{localStorage.setItem(MUTED_KEY,audioMuted?'1':'0')}catch{/* abaikan */}}
+let audioMuted=audioMutedPref();
+function saveMuted(){setAudioMutedPref(audioMuted)}
 let audioVolume=(function(){try{return loadAudioVolume(typeof localStorage!=='undefined'?localStorage:null)}catch{return DEFAULT_VOLUME}})();
 let ambienceEnabled=(function(){try{return loadAmbienceEnabled(typeof localStorage!=='undefined'?localStorage:null)}catch{return DEFAULT_AMBIENCE_ENABLED}})();
 let ambienceVolume=(function(){try{return loadAmbienceVolume(typeof localStorage!=='undefined'?localStorage:null)}catch{return DEFAULT_AMBIENCE_VOLUME}})();
@@ -1503,7 +1504,7 @@ updateTime(timeOfDay);
 // ═══════════════════════════════════════════════════
 // CYBERPUNK LIGHTS OFF MODE
 // ═══════════════════════════════════════════════════
-let cyberpunkMode=(function(){try{return localStorage.getItem('wfs_neon')==='1'}catch{return false}})();
+let cyberpunkMode=neonPrefOn();
 // btn handled by React
 
 // Store ceiling tube light refs
@@ -1558,10 +1559,10 @@ function toggleCyberpunk() {
     // SINKRONISASI SEMUA LANTAI KE MODE TERANG
     if (__terraces && __terraces.setMode) __terraces.setMode(false);
   }
-  try { localStorage.setItem('wfs_neon', cyberpunkMode ? '1' : '0'); } catch { /* abaikan */ }
+  setNeonPref(cyberpunkMode);
   return cyberpunkMode;
 }
-try { localStorage.removeItem('wfs_neon'); } catch { /* abaikan */ }
+clearNeonPref();
 cyberpunkMode = false;
 if (__terraces && __terraces.setMode) __terraces.setMode(false);
 

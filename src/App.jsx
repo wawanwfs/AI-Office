@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react'
 import { clip } from './lib/clip.js'
+import { viewModePref, setViewModePref, neonPrefOn, audioMutedPref } from './lib/storage_prefs.js'
 import { clockNowShortId } from './lib/format_time.js'
 import { useVisibilityPoll, useWindowEvent } from './lib/dialogA11y'
 import HUD from './components/HUD'
@@ -66,10 +67,10 @@ export default function App() {
     const mode = new URLSearchParams(window.location.search).get('mode')
     if (mode === 'dashboard') return '2d'
     if (mode === 'office') return '3d'
-    try { return localStorage.getItem('wfs_view_mode') === '3d' ? '3d' : '2d' } catch { return '2d' }
+    return viewModePref()
   })
   const switchView = (mode) => {
-    try { localStorage.setItem('wfs_view_mode', mode) } catch { /* private storage */ }
+    setViewModePref(mode)
     setSceneReady(false); setSceneErr(false); setOfficePhase(null); setInMeeting(false)
     setSelectedAgent(null); setViewMode(mode)
   }
@@ -104,7 +105,7 @@ export default function App() {
   }, [])
   const [conn, setConn] = useState(() => applyPollResult(null, { ok: false, error: 'init' }, 0))
   const [cyberpunk, setCyberpunk] = useState(() => {
-    try { return typeof localStorage !== 'undefined' && localStorage.getItem('wfs_neon') === '1' } catch { return false }
+    return neonPrefOn()
   })
   const [inMeeting, setInMeeting] = useState(false)
   const [showHelp, setShowHelp] = useState(false)
@@ -158,7 +159,7 @@ export default function App() {
   // memanggil taskBoardGateFlush → event terbuffer di-replay.
   const [tbWanted, setTbWanted] = useState(isTaskBoardGateReady())
   const [muted, setMuted] = useState(() => {
-    try { return typeof localStorage !== 'undefined' && localStorage.getItem('wfs_audio_muted') === '1' } catch { return false }
+    return audioMutedPref()
   })
   const [ambienceEnabled, setAmbienceEnabled] = useState(() => {
     try { return loadAmbienceEnabled(typeof localStorage !== 'undefined' ? localStorage : null) } catch { return false }

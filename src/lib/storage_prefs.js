@@ -37,3 +37,26 @@ export const hasStoredPref = (key) => {
   const v = safeGet(key)
   return v === '0' || v === '1'
 }
+
+// ── Siklus 347: view mode / neon / audio mute satu sumber ──
+// Sebelumnya: 2 salinan try/catch wfs_view_mode di App.jsx, 2 salinan
+// wfs_neon di App.jsx & OfficeScene.js, 2 salinan wfs_audio_muted di
+// App.jsx & OfficeScene.js — default & parsing rawan drift (pelajaran 333).
+
+export const PREF_VIEW_MODE_KEY = 'wfs_view_mode'
+// Landing links override; nilai tak dikenal → default '2d'.
+export const viewModePref = () => (safeGet(PREF_VIEW_MODE_KEY) === '3d' ? '3d' : '2d')
+export const setViewModePref = (mode) => safeSet(PREF_VIEW_MODE_KEY, mode)
+
+export const PREF_NEON_KEY = 'wfs_neon'
+export const neonPrefOn = () => safeGet(PREF_NEON_KEY) === '1'
+export const setNeonPref = (on) => safeSet(PREF_NEON_KEY, on ? '1' : '0')
+export const clearNeonPref = () => {
+  try {
+    if (typeof localStorage !== 'undefined') localStorage.removeItem(PREF_NEON_KEY)
+  } catch { /* abaikan */ }
+}
+
+export const PREF_MUTED_KEY = 'wfs_audio_muted'
+export const audioMutedPref = () => safeGet(PREF_MUTED_KEY) === '1'
+export const setAudioMutedPref = (on) => safeSet(PREF_MUTED_KEY, on ? '1' : '0')
