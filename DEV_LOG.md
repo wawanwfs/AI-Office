@@ -6692,3 +6692,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 systemd tetap jalan.
 - e2e probe OK: agents=26, init_failed false, 0 error, shot 714718 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 03:35 WIB — Siklus 353: pemanggil spec preset kanban & audio volume bersih
+
+- Audit lanjutan satu sumber: 8 try/catch pembungkus loader/saver di TaskBoard.jsx (6: load/saveCustomPresets & load/saveCustomDivPresets) & OfficeScene.js (2: load/saveAudioVolume) — padahal kanban_spec & sound_spec sudah punya try/catch + default internal (pelajaran 333).
+- Fix: pemanggil panggil langsung; TaskBoard 0 try/catch spec tersisa, OfficeScene audioVolume init langsung loadAudioVolume(null). Perilaku identik (storage rusak → [] / false / default).
+- +1 file tes src/__tests__/preset_volume_callers_cleanup_353.test.js (4 kasus: salinan hilang + pemanggil tetap ada, loader tahan storage rusak/JSON jelek/non-array, saver false, paritas clamp/default volume).
+- Build PWA OK (43 precache); vitest 282 file / 3786 passed + 6 skipped, 0 fail (+4 tes vs 352).
+- Deploy cp -r dist → ~/wfs-hq; 9503 systemd tetap jalan.
+- e2e probe OK: agents=26, init_failed false, 0 error, shot 715990 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

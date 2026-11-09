@@ -305,7 +305,7 @@ __onCanvas('touchcancel',()=>{
 // ═══════════════════════════════════════════════════
 let audioMuted=audioMutedPref();
 function saveMuted(){setAudioMutedPref(audioMuted)}
-let audioVolume=(function(){try{return loadAudioVolume(null)}catch{return DEFAULT_VOLUME}})();
+let audioVolume=loadAudioVolume(null);
 let ambienceEnabled=loadAmbienceEnabled(null);
 let ambienceVolume=loadAmbienceVolume(null);
 const __sound=createSoundEngine({
@@ -2485,7 +2485,7 @@ window.addEventListener('keydown',onKey);
     setAudioVolume: (v) => {
       audioVolume = clampVolume(v);
       __sound.setVolume(audioVolume);
-      try { saveAudioVolume(null, audioVolume); } catch { /* abaikan */ }
+      saveAudioVolume(null, audioVolume);
       __sound.dbg(s=>{window.__audio=s;});
     },
     getAudioVolume: () => audioVolume,

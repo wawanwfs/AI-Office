@@ -102,26 +102,14 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
   const [detail, setDetail] = useState(null)
   const [draggedTaskId, setDraggedTaskId] = useState(null)
   const [dragOverCol, setDragOverCol] = useState(null)
-  const [customPresets, setCustomPresets] = useState(() => {
-    try {
-      return loadCustomPresets(null)
-    } catch {
-      return []
-    }
-  })
+  const [customPresets, setCustomPresets] = useState(() => loadCustomPresets(null))
   const [showPresetCreator, setShowPresetCreator] = useState(false)
   const [presetFormName, setPresetFormName] = useState('')
   const [presetFormIcon, setPresetFormIcon] = useState('⚡')
   const [presetFormColor, setPresetFormColor] = useState('#38BDF8')
   const [presetFormTags, setPresetFormTags] = useState([])
 
-  const [customDivPresets, setCustomDivPresets] = useState(() => {
-    try {
-      return loadCustomDivPresets(null)
-    } catch {
-      return []
-    }
-  })
+  const [customDivPresets, setCustomDivPresets] = useState(() => loadCustomDivPresets(null))
   const [showDivPresetCreator, setShowDivPresetCreator] = useState(false)
   const [divPresetFormName, setDivPresetFormName] = useState('')
   const [divPresetFormIcon, setDivPresetFormIcon] = useState('⚡')
@@ -211,9 +199,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
 
     const updated = [...customPresets, newPreset]
     setCustomPresets(updated)
-    try {
-      saveCustomPresets(null, updated)
-    } catch { /* ignore */ }
+    saveCustomPresets(null, updated)
 
     setSelectedTag(newPreset.tags)
     setShowPresetCreator(false)
@@ -229,9 +215,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
 
     const updated = deleteCustomPreset(presetKey, customPresets)
     setCustomPresets(updated)
-    try {
-      saveCustomPresets(null, updated)
-    } catch { /* ignore */ }
+    saveCustomPresets(null, updated)
 
     if (isPresetActive(presetKey, selectedTag, customPresets)) {
       setSelectedTag('all')
@@ -291,9 +275,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
 
     const updated = [...customDivPresets, newPreset]
     setCustomDivPresets(updated)
-    try {
-      saveCustomDivPresets(null, updated)
-    } catch { /* ignore */ }
+    saveCustomDivPresets(null, updated)
 
     setDivision(newPreset.key)
     setShowDivPresetCreator(false)
@@ -309,9 +291,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
 
     const updated = deleteCustomDivPreset(presetKey, customDivPresets)
     setCustomDivPresets(updated)
-    try {
-      saveCustomDivPresets(null, updated)
-    } catch { /* ignore */ }
+    saveCustomDivPresets(null, updated)
 
     if (isDivisionPresetActive(presetKey, division, customDivPresets) || division === presetKey) {
       setDivision('all')
