@@ -1,7 +1,7 @@
 // parts/kamera_focus.js — Kamera fokus: follow agent + lerp ke target + auto-rotate (murni, diuji unit).
 // Diekstrak dari blok inline di OfficeScene.animate() agar logika lerp/follow/
 // reset dapat diuji tanpa renderer.
-import { clamp } from '../../lib/math_util.js';
+import { clamp, expDamp } from '../../lib/math_util.js';
 import { levelOf, agentLiveLevel } from './agent_status.js';
 
 // Anchor follow goal utk satu agen: peserta RAPAT (figAnchor terisi — kursi
@@ -73,7 +73,7 @@ export function focusStep(tgt, sph, goalT, goalR, goalPhi, dt = 0.016) {
     return false;
   }
   const dtv = (typeof dt === 'number' && Number.isFinite(dt) && dt > 0) ? dt : 0;
-  const k = 1 - Math.exp(-FOCUS_LERP_RATE * dtv);
+  const k = expDamp(FOCUS_LERP_RATE, dtv);
   tgt.x += (goalT.x - tgt.x) * k;
   tgt.y += (goalT.y - tgt.y) * k;
   tgt.z += (goalT.z - tgt.z) * k;

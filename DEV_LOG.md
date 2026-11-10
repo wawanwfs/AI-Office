@@ -6801,3 +6801,14 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 systemd tetap jalan.
 - e2e probe OK (playwright 1.49.0): agents=26, init_failed false, 0 error, shot 686156 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 09:00 WIB — Siklus 364: faktor damping eksponensial satu sumber — expDamp
+
+- Audit lanjutan satu sumber: pola `1 - Math.exp(-rate * dt)` tersalin 4x — kamera_focus (focusStep), ring_spec (ringDampFactor), bubbles (updateBubbles), OfficeScene (LBL_SMOOTH label relayout).
+- Fix: lib/math_util.js ditambah expDamp(rate, dt) (anti-poisoning: rate/dt non-finite atau <=0 → 0, hasil clamp 0..1); 4 situs kini satu sumber; import kamera_focus digabung { clamp, expDamp }.
+- +1 file tes src/__tests__/exp_damp_single_source_364.test.js (5 kasus: salinan hilang di 4 file, import pemakai, paritas pola lama 8 kasus, anti-poisoning 12 bentuk, konsistensi focusStep/ringDampFactor).
+- 3 tes drift-gate lama yang memegang pola sumber literal diperbarui ke panggilan expDamp (kamera_focus, label_occlusion, clamp_generic_363).
+- Build PWA OK; vitest 293 file / 3836 passed + 6 skipped, 0 fail (+5 tes vs 363).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (playwright 1.49.0): agents=26, init_failed false, 0 error, shot 683266 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

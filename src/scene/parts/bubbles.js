@@ -6,7 +6,7 @@
 // hanya baseline tinggi (anchor.y+1.35) yang dihaluskan — transisi duduk↔berdiri
 // jadi geser halus, bukan lompat. k=1 saat delta besar → tetap sampai tanpa lag
 // saat frame drop. Diekstrak murni agar bisa di-unit-test.
-import { clamp01 } from '../../lib/math_util.js';
+import { clamp01, expDamp } from '../../lib/math_util.js';
 const BUBBLE_SMOOTH_RATE = 10; // 1/dtk — konvergensi ±0.3 dtk, tanpa snap
 
 // Buang resource GPU/VRAM bubble yang dihapus: map tekstur (CanvasTexture)
@@ -28,7 +28,7 @@ export function updateBubbles(bubbles, delta, { remove }){
   // (NaN/±Infinity) TIDAK boleh menulari bubble — Math.exp(NaN)=NaN → posisi/
   // opacity bubble jadi NaN & hilang diam-diam. Perlakukan sebagai 0 (no-op aman).
   if (!Number.isFinite(delta)) delta = 0;
-  const k = 1 - Math.exp(-BUBBLE_SMOOTH_RATE * Math.max(0, delta));
+  const k = expDamp(BUBBLE_SMOOTH_RATE, Math.max(0, delta));
   for(let i=bubbles.length-1;i>=0;i--){
     const b=bubbles[i];
     // Guard anti-poisoning: life bubble rusak (NaN/±Infinity) → perlakukan sbg

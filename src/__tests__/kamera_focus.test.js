@@ -154,7 +154,7 @@ describe('focusStep — Siklus 261 lerp waktu-nyata (alpha = 1−e^(−RATE·dt)
   it('drift-gate sumber: pola per-frame * .06 DILARANG; OfficeScene meneruskan delta & TANPA cabang ganda', () => {
     const kf = readFileSync(resolve(root, 'src/scene/parts/kamera_focus.js'), 'utf8');
     expect(kf).toContain('export const FOCUS_LERP_RATE = 3.7125');
-    expect(kf).toContain('Math.exp(-FOCUS_LERP_RATE * dtv)');
+    expect(kf).toContain('expDamp(FOCUS_LERP_RATE, dtv)');
     expect(kf).not.toMatch(/\* ?\.06;/);
     const os = readFileSync(resolve(root, 'src/scene/OfficeScene.js'), 'utf8');
     // satu panggilan per frame dgn delta eksplisit

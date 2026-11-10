@@ -19,6 +19,7 @@ import { nextAgentIndex } from './parts/agent_cycle.js';
 import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js';
 import { fetchWithTimeout } from '../lib/fetch_timeout.js';
 import { dayMinutesNow } from '../lib/format_time.js';
+import { expDamp } from '../lib/math_util.js';
 import { orbitStep, orbitFocusGoal, ORBIT_KEY_STEP, ORBIT_KEY_STEP_FAST } from './parts/orbit_spec.js';
 import { snapshotDataUrl, snapshotFilename } from './parts/snapshot_spec.js';
 import { dblclickPointGoal, dblclickBlankGoal, tapCandidate, isDoubleTap, dtapRadius, DTAP_ZOOM_STEP } from './parts/dblclick_spec.js';
@@ -2003,7 +2004,7 @@ function animate(){
     // relayoutDelta diakumulasi SETIAP frame di animate() (bukan di dalam
     // blok throttled frame%4===0 ini sehingga 3 dari 4 frame tidak terbuang lagi).
     const wpp = worldPerPx(camera.position.distanceTo(tgt), camera.fov, container.clientHeight);
-    const LBL_SMOOTH=1-Math.exp(-12*Math.min(relayoutDelta,2));
+    const LBL_SMOOTH=expDamp(12,Math.min(relayoutDelta,2));
     relayoutDelta=0;
     // ── Siklus 251b: hitung posisi GAMBAR (pasca-clamp + damping) SEKARANG, lalu
     // tulis ke pt sbg drawnX/drawnY SEBELUM occlusionPass — pass oklusi kini

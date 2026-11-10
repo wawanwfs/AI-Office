@@ -175,7 +175,7 @@ describe('drift-gate sumber OfficeScene.js — oklusi terpasang di jalur relayou
     // pasangan tumpuk tetap opacity 1 (klaim vision "nameplate bertumpuk").
     // Kontrak: relayoutDelta diakumulasi antar tick & LBL_SMOOTH memakainya.
     expect(src).toMatch(/relayoutDelta \+= delta;/);
-    expect(src).toMatch(/const LBL_SMOOTH=1-Math\.exp\(-12\*Math\.min\(relayoutDelta,2\)\)/);
+    expect(src).toMatch(/const LBL_SMOOTH=expDamp\(12,Math\.min\(relayoutDelta,2\)\)/);
     expect(src).not.toMatch(/LBL_SMOOTH=1-Math\.exp\(-12\*\(deltaFrame/); // pola lama dilarang kembali
     expect(src).toMatch(/let relayoutDelta=0;/); // deklarasi ada (di-reset per tick)
   });

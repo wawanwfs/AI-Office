@@ -33,7 +33,7 @@ describe('clamp satu sumber (siklus 363)', () => {
       '../scene/parts/zoom_spec.js',
       '../scene/parts/kamera_focus.js',
       '../scene/parts/orbit_spec.js',
-    ]) expect(src(f)).toMatch(/import \{ clamp \} from '\.\.\/\.\.\/lib\/math_util\.js'/);
+    ]) expect(src(f)).toMatch(/import \{[^}]*clamp[^}]*\} from '\.\.\/\.\.\/lib\/math_util\.js'/);
   });
 
   it('paritas dengan pola Math.max/Math.min asli', () => {

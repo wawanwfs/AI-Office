@@ -34,6 +34,22 @@ export function clamp(x, lo, hi) {
 }
 
 /**
+ * Siklus 364: satu sumber faktor damping eksponensial waktu-nyata —
+ * pengganti pola `1 - Math.exp(-rate * dt)` di kamera_focus (focusStep),
+ * ring_spec (ringDampFactor), bubbles (updateBubbles) & OfficeScene
+ * (LBL_SMOOTH label relayout).
+ *
+ * ANTI-POISONING: rate/dt non-finite atau <= 0 → 0 (no-op, tidak bergerak);
+ * hasil selalu number finite dalam [0, 1] (kenaikan monotonic dgn dt).
+ */
+export function expDamp(rate, dt) {
+  const r = typeof rate === 'number' ? rate : Number(rate)
+  const d = typeof dt === 'number' ? dt : Number(dt)
+  if (!Number.isFinite(r) || !Number.isFinite(d) || r <= 0 || d <= 0) return 0
+  return Math.min(1, Math.max(0, 1 - Math.exp(-r * d)))
+}
+
+/**
  * Siklus 362: satu sumber persen penyelesaian — pengganti salinan
  * `Math.round((x/y)*100)` di kanban_spec, team_spec, whiteboard_canvas,
  * whiteboard_spec & ProjectPanel (memakai pctDone dari sini via re-export).

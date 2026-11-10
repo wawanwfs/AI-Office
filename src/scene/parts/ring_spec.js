@@ -1,6 +1,6 @@
 // Selection & hover ring parameters (extracted from OfficeScene.js).
 // Pure functions/constants only — no THREE, no canvas.
-import { clamp01 } from '../../lib/math_util.js'
+import { clamp01, expDamp } from '../../lib/math_util.js'
 
 export const SEL_RING = {
   SIZE: 128,          // canvas px
@@ -48,8 +48,8 @@ export const HOVER_RING_DAMP_RATE = 35.87;
 export function ringDampFactor(rate, dt) {
   if (!(typeof dt === 'number' && Number.isFinite(dt)) || dt <= 0) return 0;
   if (!(typeof rate === 'number' && Number.isFinite(rate)) || rate <= 0) return 0;
-  const f = 1 - Math.exp(-rate * dt);
-  return clamp01(f);
+  const f = expDamp(rate, dt);
+  return f;
 }
 
 export function stepRingPosition(pos, target, factor) {
