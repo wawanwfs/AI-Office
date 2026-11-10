@@ -7153,3 +7153,13 @@
 - Build PWA OK (46 precache); vitest 330 file / 3979 passed + 6 skipped, 0 fail (+2 vs 400). Deploy cp dist → ~/wfs-hq; 9503 → 200.
 - e2e probe (?mode=office, DISPLAY=:1, /tmp/e2e_err.py): agents=26, init_failed False, errs=[], shot 710471 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 04:45 WIB — Siklus 402: warna default divisi TaskBoard satu sumber
+
+- Audit: `#38BDF8` (sky) literal di TaskBoard.jsx — 2 nilai awal form preset/divisi, 2 fallback warna divisi aktif (bar progres sprint).
+- Fix: konstanta `SKY_DIVISION` baru di lib/ui_palette.js; TaskBoard.jsx delegasi (4 titik).
+- +1 file tes src/__tests__/sky_division_palette_402.test.js (3 kasus: nilai kanonik, drift hilang di TaskBoard, satu sumber ada).
+- Build PWA OK; vitest 331 file / 3982 passed + 6 skipped, 0 fail (+3 vs 401). Deploy cp dist → ~/wfs-hq; 9503 → 200.
+- e2e probe (?mode=office, DISPLAY=:1, playwright): agents=26, init_failed False, errs=[].
+- Catatan: e2e tanpa DISPLAY gagal (WebGL context tidak tersedia) — wajib DISPLAY=:1, sama seperti siklus 400.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

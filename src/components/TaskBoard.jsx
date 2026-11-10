@@ -64,6 +64,7 @@ import {
 } from '../scene/parts/kanban_spec'
 import { TEAMS, findTeamByRole, findTeamByAgent } from '../scene/parts/team_spec'
 import { taskStatusColor, taskStatusLabel, TASK_STATUS_COLORS } from '../lib/task_status_colors'
+import { SKY_DIVISION } from '../lib/ui_palette'
 // ST delegasi ke satu sumber warna/label status (siklus 373).
 const ST = {
   done: [taskStatusLabel('done'), taskStatusColor('done')],
@@ -113,14 +114,14 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
   const [showPresetCreator, setShowPresetCreator] = useState(false)
   const [presetFormName, setPresetFormName] = useState('')
   const [presetFormIcon, setPresetFormIcon] = useState('⚡')
-  const [presetFormColor, setPresetFormColor] = useState('#38BDF8')
+  const [presetFormColor, setPresetFormColor] = useState(SKY_DIVISION)
   const [presetFormTags, setPresetFormTags] = useState([])
 
   const [customDivPresets, setCustomDivPresets] = useState(() => loadCustomDivPresets(null))
   const [showDivPresetCreator, setShowDivPresetCreator] = useState(false)
   const [divPresetFormName, setDivPresetFormName] = useState('')
   const [divPresetFormIcon, setDivPresetFormIcon] = useState('⚡')
-  const [divPresetFormColor, setDivPresetFormColor] = useState('#38BDF8')
+  const [divPresetFormColor, setDivPresetFormColor] = useState(SKY_DIVISION)
   const [divPresetFormDivisions, setDivPresetFormDivisions] = useState([])
   const board = useRef(null)
   const searchInputRef = useRef(null)
@@ -687,8 +688,8 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
                 className="sprint-progress-fill"
                 style={{
                   width: `${metrics.pct}%`,
-                  background: !isDivAll && (activeDivision?.color || '#38BDF8')
-                    ? `linear-gradient(90deg, ${activeDivision?.color || '#38BDF8'}, ${TASK_STATUS_COLORS.review})`
+                  background: !isDivAll && (activeDivision?.color || SKY_DIVISION)
+                    ? `linear-gradient(90deg, ${activeDivision?.color || SKY_DIVISION}, ${TASK_STATUS_COLORS.review})`
                     : `linear-gradient(90deg, ${TASK_STATUS_COLORS.done}, ${TASK_STATUS_COLORS.review})`,
                 }}
               />

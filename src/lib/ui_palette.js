@@ -89,3 +89,9 @@ export const CYAN_NEON = '#00F0FF';
  */
 export const GREEN_ACCENT = '#10E5A0';
 export const VIOLET_STATS = '#A78BFA';
+
+/**
+ * Cyan default divisi/preset TaskBoard (#38BDF8, sky blue) — siklus 402.
+ * Fallback warna divisi aktif & warna awal form pembuat preset/divisi.
+ */
+export const SKY_DIVISION = '#38BDF8';
