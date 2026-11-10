@@ -33,13 +33,8 @@ export const CSV_HEADERS = [
   'Deskripsi',
 ];
 
-export const STATUS_LABELS = {
-  done: 'Selesai',
-  running: 'Jalan',
-  review: 'Review',
-  failed: 'Gagal',
-  pending: 'Antri',
-};
+import { TASK_STATUS_LABELS as STATUS_LABELS } from './task_status_colors.js';
+export { STATUS_LABELS };
 
 /**
  * Format sel CSV individual: escape tanda kutip ganda dan bungkus dengan tanda kutip jika perlu.

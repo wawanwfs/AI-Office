@@ -6921,3 +6921,12 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 696187 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 10/11/2026 16:55 WIB — Siklus 376: label status task satu sumber — TASK_STATUS_LABELS
+
+- Audit satu sumber: pelengkap siklus 373 (warna) — LABEL status task masih tersalin 3×: kanban_export.STATUS_LABELS (objek 5 entri duplikat penuh), TeamStats pasangan [['done','Selesai'],...] inline, TaskBoard FILTERS literal 'Antri'/'Jalan'/'Selesai'/'Gagal'. Geser satu tanpa lain = chip UI vs filter vs CSV ekspor tak konsisten diam-diam.
+- Fix: ketiganya delegasi ke TASK_STATUS_LABELS (task_status_colors) — kanban_export re-export STATUS_LABELS (API tes lama utuh), TeamStats Object.entries(TASK_STATUS_LABELS), TaskBoard FILTERS via taskStatusLabel().
+- +1 file tes src/__tests__/task_status_labels_single_source_376.test.js (4 kasus: salinan manual hilang, import delegasi ada, nilai kanonik 5 entri, paritas STATUS_LABELS === TASK_STATUS_LABELS).
+- Build PWA OK (43 precache); vitest 305 file / 3899 passed + 6 skipped, 0 fail (+4 tes vs 375).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 700309 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

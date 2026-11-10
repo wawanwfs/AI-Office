@@ -72,7 +72,7 @@ const ST = {
   failed: [taskStatusLabel('failed'), taskStatusColor('failed')],
   pending: [taskStatusLabel('pending'), taskStatusColor('pending')],
 }
-const FILTERS = [['all', 'Semua'], ['pending', 'Antri'], ['running', 'Jalan'], ['done', 'Selesai'], ['failed', 'Gagal']]
+const FILTERS = [['all', 'Semua'], ['pending', taskStatusLabel('pending')], ['running', taskStatusLabel('running')], ['done', taskStatusLabel('done')], ['failed', taskStatusLabel('failed')]]
 
 // Papan Task: daftar nyata dari task engine, filter divisi/status, kanban view, detail, jalankan per task.
 export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {

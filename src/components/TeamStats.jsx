@@ -9,7 +9,7 @@ import { POLL_PANEL_MS } from '../lib/connection_spec.js'
 import { IconStats, IconClose } from './Icons'
 import { computeTeamStats, teamPresenceSummary } from '../scene/parts/team_spec.js'
 import { computeStatusCounts } from '../scene/parts/kanban_spec.js'
-import { taskStatusColor } from '../lib/task_status_colors.js'
+import { TASK_STATUS_LABELS, taskStatusColor } from '../lib/task_status_colors'
 
 /* Statistik Tim — data nyata dari task engine + resource host */
 export default function TeamStats() {
@@ -91,7 +91,7 @@ export default function TeamStats() {
             {data && data.length > 0 && (
               <>
                 <div className="stat-grid">
-                  {[['done','Selesai'],['running','Jalan'],['review','Review'],['failed','Gagal'],['pending','Antri']].map(([s,l]) => (
+                  {Object.entries(TASK_STATUS_LABELS).map(([s, l]) => (
                     <div key={s} role="img" aria-label={`${byStatus[s] || 0} task ${l.toLowerCase()}`}>
                       <b style={{color:dot(s)}} aria-hidden="true">{TW[s]}</b>
                       <span aria-hidden="true">{l}</span>
