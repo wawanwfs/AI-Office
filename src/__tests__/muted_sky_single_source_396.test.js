@@ -26,7 +26,7 @@ describe('siklus 396 — warna muted & sky satu sumber', () => {
 
   it('ShConsole & SettingsModal mengimpor dari ui_palette', () => {
     expect(readFileSync('src/components/ShConsole.jsx', 'utf8'))
-      .toMatch(/import \{ MUTED_TEXT, BRIGHT_TEXT, FAINT_META, PANEL_BORDER, SUB_TEXT, TAB_BG, BTN_BG, INPUT_BG \} from '\.\.\/lib\/ui_palette'/);
+      .toMatch(/import \{ MUTED_TEXT, BRIGHT_TEXT, FAINT_META, PANEL_BORDER, SUB_TEXT, TAB_BG, BTN_BG, INPUT_BG[^}]*\} from '\.\.\/lib\/ui_palette'/);
     expect(readFileSync('src/components/SettingsModal.jsx', 'utf8'))
       .toMatch(/SKY_BUTTON/);
   });

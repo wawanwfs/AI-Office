@@ -119,6 +119,45 @@ export const BTN_BG = '#23324f';
 /** Latar input/select ShConsole (#0d1526, siklus 406). */
 export const INPUT_BG = '#0d1526';
 
+/** Teks isi drawer ShConsole (#d7e0f0, siklus 407). */
+export const DRAWER_TEXT = '#d7e0f0';
+
+/** Latar gradien drawer ShConsole (siklus 407). */
+export const DRAWER_GRADIENT = 'linear-gradient(180deg,#0c1220 0%,#0a0e18 100%)';
+
+/** Judul panel ShConsole (#f2f6ff, siklus 407). */
+export const TITLE_TEXT = '#f2f6ff';
+
+/** Latar tab non-aktif ShConsole (#141c30, siklus 407). */
+export const TAB_IDLE_BG = '#141c30';
+
+/** Latar kartu ShConsole (#111827, siklus 407). */
+export const CARD_BG = '#111827';
+
+/** Garis putus-putus baris ShConsole (#1b2944, siklus 407). */
+export const ROW_DASH = '#1b2944';
+
+/** Tombol ghost ShConsole (#1a2340, siklus 407). */
+export const GHOST_BG = '#1a2340';
+
+/** Teks tombol ghost ShConsole (#c5d2ec, siklus 407). */
+export const GHOST_TEXT = '#c5d2ec';
+
+/** Teks tag ShConsole (#aebfe0, siklus 407). */
+export const TAG_TEXT = '#aebfe0';
+
+/** Teks error ShConsole (#ff8080, siklus 407). */
+export const ERROR_TEXT = '#ff8080';
+
+/** Latar blok output monospace ShConsole (#0a101c, siklus 407). */
+export const PRE_BG = '#0a101c';
+
+/** Latar tombol Tolak ShConsole (#4a2030, siklus 407). */
+export const REJECT_BG = '#4a2030';
+
+/** Teks peringatan stale ShConsole (#c2884e, siklus 407). */
+export const STALE_TEXT = '#c2884e';
+
 /**
  * Siklus 405 — border panel ShConsole (satu sumber).
  *

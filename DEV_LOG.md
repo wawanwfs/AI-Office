@@ -7199,3 +7199,12 @@
 - Build PWA OK (46 precache); vitest 335 file / 3994 passed + 6 skipped, 0 fail (+3 vs 405). Deploy cp dist → ~/wfs-hq; 9503 → 200.
 - e2e probe (?mode=office, DISPLAY=:1): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 07:05 WIB — Siklus 407: ShConsole bebas literal warna
+
+- Audit: sisa 13 literal warna di ShConsole.jsx (drawer gradien/teks, judul, tab idle, kartu, dash row, ghost, tag, error, pre, reject, stale).
+- Fix: 13 konstanta baru di lib/ui_palette.js (DRAWER_TEXT, DRAWER_GRADIENT, TITLE_TEXT, TAB_IDLE_BG, CARD_BG, ROW_DASH, GHOST_BG, GHOST_TEXT, TAG_TEXT, ERROR_TEXT, PRE_BG, REJECT_BG, STALE_TEXT); ShConsole kini 0 hex literal.
+- +1 file tes src/__tests__/shconsole_nohex_palette_407.test.js (3 kasus, termasuk guard bebas-hex); regex import tes siklus 396 dilonggarkan agar tahan konstanta tambahan.
+- Catatan proses: e2e_err.py hilang dari scratch (pruned) — dibuat ulang; probe lama salah baca __agentData (objek vs array) dan timeout 8s terlalu pendek → agents=0 palsu; diperbaiki jadi agents=26, init_failed False, errs=[].
+- Build PWA OK; vitest 336 file / 3997 passed + 6 skipped, 0 fail (+3 vs 406). Deploy cp dist → ~/wfs-hq; 9503 → 200.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
