@@ -6,7 +6,7 @@ import { api } from '../lib/api'
 import { useDialogA11y, useVisibilityPoll } from '../lib/dialogA11y'
 import { useModalFlag } from '../lib/modal'
 import { STATUS_HEX } from '../scene/parts/agent_status'
-import { MUTED_TEXT, BRIGHT_TEXT } from '../lib/ui_palette'
+import { MUTED_TEXT, BRIGHT_TEXT, FAINT_META } from '../lib/ui_palette'
 
 const STYLE = {
   overlay: { position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,.45)' },
@@ -631,13 +631,13 @@ function Overview({ ov, liveLogs, esState }) {
         ))}
       </div>
       <div style={STYLE.card}>
-        <div style={{ fontWeight: 700, marginBottom: 8 }}>Log terbaru <span style={{ color: '#5f6f90', fontWeight: 400, fontSize: 11 }}>({streamMeta})</span></div>
+        <div style={{ fontWeight: 700, marginBottom: 8 }}>Log terbaru <span style={{ color: FAINT_META, fontWeight: 400, fontSize: 11 }}>({streamMeta})</span></div>
         <div role="log" aria-live="polite" aria-label="Log realtime">
           {/* bukti stream hidup: titik hijau + hitung frame log diterima SSE
               (siklus 154) — hanya saat stream TERBUKA & mengirim, bukan angka
               DB; siklus 204: state koneksi stream ikut ditampilkan jujur */}
           {streamOpen && live > 0 && (
-            <div style={{ fontSize: 11, color: '#5f6f90', marginBottom: 6 }} data-testid="live-log-badge">
+            <div style={{ fontSize: 11, color: FAINT_META, marginBottom: 6 }} data-testid="live-log-badge">
               <span aria-hidden="true" style={{ color: STATUS_HEX.work, marginRight: 4 }}>●</span>
               <span className="sr-only">Log realtime aktif: </span>
               {live} log diterima realtime
@@ -650,7 +650,7 @@ function Overview({ ov, liveLogs, esState }) {
           )}
           {(liveLogs && liveLogs.length) ? null : (ov.recent_logs || []).length === 0 && <div style={{ color: MUTED_TEXT, fontSize: 13 }}>Belum ada log.</div>}
           {(liveLogs && liveLogs.length ? liveLogs : (ov.recent_logs || [])).map((l, i) => (
-            <div key={i} style={STYLE.logLine}><b>{l.level || 'INFO'}</b> · {l.message} <span style={{ color: '#5f6f90' }}>({l.source || 'system'})</span></div>
+            <div key={i} style={STYLE.logLine}><b>{l.level || 'INFO'}</b> · {l.message} <span style={{ color: FAINT_META }}>({l.source || 'system'})</span></div>
           ))}
         </div>
       </div>

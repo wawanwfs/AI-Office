@@ -7172,3 +7172,12 @@
 - Build PWA OK; vitest 332 file / 3985 passed + 6 skipped, 0 fail (+3 vs 402). Deploy cp dist → ~/wfs-hq; 9503 → 200.
 - e2e probe (?mode=office, DISPLAY=:1): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 05:35 WIB — Siklus 404: meta redup ShConsole satu sumber
+
+- Audit: `#5f6f90` (abu redup) literal 3× di ShConsole.jsx (streamMeta, badge live-log, sumber log).
+- Fix: konstanta `FAINT_META` baru di lib/ui_palette.js; ShConsole delegasi 3 titik.
+- +1 file tes src/__tests__/faint_meta_palette_404.test.js (3 kasus); tes 396 disesuaikan ke import baru.
+- Build PWA OK; vitest 333 file / 3988 passed + 6 skipped, 0 fail (+3 vs 403). Deploy cp dist → ~/wfs-hq; 9503 → 200.
+- e2e probe (?mode=office, DISPLAY=:1): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

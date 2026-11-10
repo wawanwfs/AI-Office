@@ -103,3 +103,6 @@ export const SKY_DIVISION = '#38BDF8';
  * ShConsole.jsx. Bukan warna status task — teks utama panel konsol.
  */
 export const BRIGHT_TEXT = '#eaf1ff';
+
+// Abu-abu redup untuk meta kecil (timestamp, sumber log, badge stream).
+export const FAINT_META = '#5f6f90';
