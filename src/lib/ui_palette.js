@@ -46,3 +46,14 @@ export const MUTED_TEXT = '#8fa2c4';
 
 /** Ikon/tombol sky terang (tombol uji audio) — sebelumnya literal #38bdf8. */
 export const SKY_BUTTON = '#38bdf8';
+
+/**
+ * Siklus 398 — warna kartu statistik Dashboard tersisa (satu sumber).
+ *
+ * `#8B5CF6` (violet, kartu "Task") sebelumnya literal di Dashboard dan
+ * duplikat hex identik di agents_spec (TRAINER AI — identitas karakter,
+ * tetap di spec agen). `#ADDBF2` (biru muda, kartu "File dihasilkan")
+ * juga literal. Keduanya bukan warna status task — aksen kartu.
+ */
+export const VIOLET_CARD = '#8B5CF6';
+export const PALE_BLUE_CARD = '#ADDBF2';

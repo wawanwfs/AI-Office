@@ -7117,3 +7117,12 @@
 - Build PWA OK (46 precache); vitest 326 file / 3968 passed + 6 skipped, 0 fail (+2 vs 396). Deploy cp dist → ~/wfs-hq; 9503 → 200.
 - e2e probe (?mode=office, DISPLAY=:1, uv --with playwright): agents=26, init_failed False, errs=[], shot 713788 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 03:20 WIB — Siklus 398: warna kartu statistik Dashboard satu sumber
+
+- Audit: 2 literal aksen kartu Dashboard tersisa — `#8B5CF6` (kartu "Task") dan `#ADDBF2` (kartu "File dihasilkan"); sisanya sudah delegasi sejak siklus 393–397.
+- Fix: konstanta baru VIOLET_CARD + PALE_BLUE_CARD di lib/ui_palette.js; Dashboard delegasi. Hex identik 0x8B5CF6 di agents_spec (TRAINER AI) dipertahankan — identitas karakter agen, bukan aksen kartu.
+- +1 file tes src/__tests__/dashboard_card_palette_398.test.js (2 kasus).
+- Build PWA OK (46 precache); vitest 327 file / 3970 passed + 6 skipped, 0 fail (+2 vs 397). Deploy cp dist → ~/wfs-hq; 9503 → 200.
+- e2e probe (?mode=office, DISPLAY=:1, uv --with playwright): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

@@ -6,7 +6,7 @@ import { useModalFlag } from '../lib/modal'
 import { useDialogA11y, useVisibilityPoll, useWindowEvent } from '../lib/dialogA11y'
 import { IconClose, IconStats } from './Icons'
 import { taskStatusColor, TASK_STATUS_COLORS } from '../lib/task_status_colors.js'
-import { ACCENT_BLUE } from '../lib/ui_palette.js'
+import { ACCENT_BLUE, VIOLET_CARD, PALE_BLUE_CARD } from '../lib/ui_palette.js'
 
 import { clip } from '../lib/clip.js'
 import { fileCount } from '../lib/files'
@@ -133,11 +133,11 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
                 <div className="dash-grid">
                   {card('Proyek', stats.projects_total ?? (projects ? projects.length : '—'), ACCENT_BLUE)}
                   {card('Proyek jalan', stats.projects_running ?? (projects ? projects.filter(p => p.status === 'running').length : '—'), TASK_STATUS_COLORS.running)}
-                  {card('Task', stats.tasks_total ?? (tasks ? tasks.length : '—'), '#8B5CF6')}
+                  {card('Task', stats.tasks_total ?? (tasks ? tasks.length : '—'), VIOLET_CARD)}
                   {card('Task jalan', stats.tasks_running ?? (tasks ? running : '—'), TASK_STATUS_COLORS.running)}
                   {card('Selesai', stats.tasks_completed ?? (tasks ? (byStatus.done || byStatus.completed || 0) : '—'), TASK_STATUS_COLORS.done)}
                   {card('Agen task engine', stats.agents_count ?? '—', ACCENT_BLUE)}
-                  {card('File dihasilkan', tasks ? totalFiles : '—', '#ADDBF2')}
+                  {card('File dihasilkan', tasks ? totalFiles : '—', PALE_BLUE_CARD)}
                   {card('Sandbox', res ? (res.containers || []).filter(c => /wfs-sandbox|sbx/.test(c.name)).length : '—', TASK_STATUS_COLORS.review)}
                 </div>
 
