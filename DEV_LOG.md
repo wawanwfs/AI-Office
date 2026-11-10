@@ -6812,3 +6812,14 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (playwright 1.49.0): agents=26, init_failed false, 0 error, shot 683266 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 09:35 WIB — Siklus 365: lerp frame-rate-aware satu sumber — lerpTo
+
+- Audit lanjutan satu sumber: pola `cur + (target-cur)*k` tersalin 6x di OfficeScene — damping label antiY/antiX (agen & zona) + oklusi occO (agen & zona), semua pakai faktor LBL_SMOOTH.
+- Fix: lib/math_util.js ditambah lerpTo(cur, target, k) — anti-poisoning: k non-finite/out-of-range → 0 (no-op), k>1 clamp ke 1; cur non-finite/undefined → target (frame pertama tanpa damping); target non-finite → cur dipertahankan; hasil selalu finite.
+- Bonus: 4 salinan clamp manual `Math.max(-1.2,Math.min(1.6,dy))` & `Math.max(-1.5,Math.min(1.5,dx))` (agen & zona) kini pakai clamp() dari math_util (siklus 363).
+- +1 file tes src/__tests__/lerp_to_single_source_365.test.js (5 kasus: salinan pola hilang, 6 situs lerpTo + tidak ada clamp manual, paritas pola lama 7 kasus, undefined cur → target, anti-poisoning 8 bentuk).
+- Build PWA OK; vitest 294 file / 3841 passed + 6 skipped, 0 fail (+5 tes vs 364).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (playwright 1.49.0): agents=26, init_failed false, 0 error, shot 685103 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

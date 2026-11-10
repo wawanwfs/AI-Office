@@ -50,6 +50,27 @@ export function expDamp(rate, dt) {
 }
 
 /**
+ * Siklus 365: satu sumber lerp frame-rate-aware — pengganti pola
+ * `cur + (target - cur) * k` di OfficeScene (damping label antiY/antiX
+ * dan oklusi occO, agen maupun zona).
+ *
+ * ANTI-POISONING: k non-finite → 0 (no-op); cur non-finite/undefined →
+ * target (frame pertama, tanpa damping); target non-finite → cur (nilai
+ * valid terakhir dipertahankan). Hasil selalu number finite.
+ */
+export function lerpTo(cur, target, k) {
+  let kk = typeof k === 'number' ? k : Number(k)
+  if (!Number.isFinite(kk)) kk = 0
+  if (kk < 0) kk = 0
+  if (kk > 1) kk = 1
+  const c = typeof cur === 'number' ? cur : Number(cur)
+  const t = typeof target === 'number' ? target : Number(target)
+  if (!Number.isFinite(t)) return Number.isFinite(c) ? c : 0
+  if (!Number.isFinite(c)) return t
+  return c + (t - c) * kk
+}
+
+/**
  * Siklus 362: satu sumber persen penyelesaian — pengganti salinan
  * `Math.round((x/y)*100)` di kanban_spec, team_spec, whiteboard_canvas,
  * whiteboard_spec & ProjectPanel (memakai pctDone dari sini via re-export).

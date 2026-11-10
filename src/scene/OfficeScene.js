@@ -19,7 +19,7 @@ import { nextAgentIndex } from './parts/agent_cycle.js';
 import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js';
 import { fetchWithTimeout } from '../lib/fetch_timeout.js';
 import { dayMinutesNow } from '../lib/format_time.js';
-import { expDamp } from '../lib/math_util.js';
+import { expDamp, lerpTo, clamp } from '../lib/math_util.js';
 import { orbitStep, orbitFocusGoal, ORBIT_KEY_STEP, ORBIT_KEY_STEP_FAST } from './parts/orbit_spec.js';
 import { snapshotDataUrl, snapshotFilename } from './parts/snapshot_spec.js';
 import { dblclickPointGoal, dblclickBlankGoal, tapCandidate, isDoubleTap, dtapRadius, DTAP_ZOOM_STEP } from './parts/dblclick_spec.js';
@@ -2026,10 +2026,10 @@ function animate(){
       if(!p.a||!p.a.label) return;
       const u2=p.a.label.userData;
       const {dy:dy2,dx:dx2}=labelWorldOffset(p,wpp);
-      const cdy2=Math.max(-1.2,Math.min(1.6,dy2));
-      const cdx2=Math.max(-1.5,Math.min(1.5,dx2));
-      const prevY2=(u2.antiY===undefined)?cdy2:u2.antiY+(cdy2-u2.antiY)*LBL_SMOOTH;
-      const prevX2=(u2.antiX===undefined)?cdx2:u2.antiX+(cdx2-u2.antiX)*LBL_SMOOTH;
+      const cdy2=clamp(dy2,-1.2,1.6);
+      const cdx2=clamp(dx2,-1.5,1.5);
+      const prevY2=lerpTo(u2.antiY,cdy2,LBL_SMOOTH);
+      const prevX2=lerpTo(u2.antiX,cdx2,LBL_SMOOTH);
       p.drawnX=(p.x)+(prevX2-(u2.antiX!==undefined?u2.antiX:0))/wpp;
       p.drawnY=(p.y)+(prevY2-(u2.antiY!==undefined?u2.antiY:0))/wpp;
     });
@@ -2060,7 +2060,7 @@ function animate(){
         if(!p.zt) return; // bubble: fade oklusi tak berlaku
         const occT2=(p.occ===undefined||!Number.isFinite(p.occ))?1:p.occ;
         const zu2=p.zt.userData||(p.zt.userData={});
-        const prevO2=(zu2.occO===undefined)?occT2:zu2.occO+(occT2-zu2.occO)*LBL_SMOOTH;
+        const prevO2=lerpTo(zu2.occO,occT2,LBL_SMOOTH);
         zu2.occO=prevO2;
         // zona punya fade sendiri (zoneScreenFade → zp.fade di atas); kalikan —
         // opacity final = fade LOD/viewport × occ, floor 0 supaya tidak negatif.
@@ -2069,18 +2069,18 @@ function animate(){
         return;
       }
       const {dy,dx}=labelWorldOffset(p,wpp);
-      const cdy=Math.max(-1.2,Math.min(1.6,dy));
-      const cdx=Math.max(-1.5,Math.min(1.5,dx));
+      const cdy=clamp(dy,-1.2,1.6);
+      const cdx=clamp(dx,-1.5,1.5);
       const u=p.a.label.userData;
-      const prevY=(u.antiY===undefined)?cdy:u.antiY+(cdy-u.antiY)*LBL_SMOOTH;
-      const prevX=(u.antiX===undefined)?cdx:u.antiX+(cdx-u.antiX)*LBL_SMOOTH;
+      const prevY=lerpTo(u.antiY,cdy,LBL_SMOOTH);
+      const prevX=lerpTo(u.antiX,cdx,LBL_SMOOTH);
       p.a.label.position.y=p.baseY+prevY; p.a.label.position.x=p.baseX+prevX;
       u.antiY=prevY; u.antiX=prevX; // utk base frame berikutnya (nilai ter-damping)
       // Terapkan fade oklusi ke sprite nyata (1 = apa adanya; <1 = tertutup label
       // lebih dekat). Damping eksponensial yang sama dgn antiY/antiX agar tak
       // berkedip saat relayout berkelanjutan; matikan damping utk nilai pertama.
       const occT=(p.occ===undefined||!Number.isFinite(p.occ))?1:p.occ;
-      const prevO=(u.occO===undefined)?occT:u.occO+(occT-u.occO)*LBL_SMOOTH;
+      const prevO=lerpTo(u.occO,occT,LBL_SMOOTH);
       u.occO=prevO;
       p.a.label.material.opacity=OCCL_MIN_OPACITY+prevO*(1-OCCL_MIN_OPACITY);
       p.a.label.userData.occApplied=+prevO.toFixed(3);
