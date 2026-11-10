@@ -2,37 +2,12 @@
 // pollRunning melakukan fetch /wfs-api/agents/status & /wfs-api/tasks lalu
 // menggabungkannya; bagian gabungan data inilah yang murni & diuji unit.
 // Tanpa fetch/DOM/THREE.
+//
+// Siklus 370: pemetaan nama↔id SATU SUMBER dari agent_identity.js —
+// tabel manual 26 entri (drift dgn gateway & OfficeScene/App) dihapus.
+import { SCENE_NAME_TO_ID } from './agent_identity.js';
 
-export const SCENE_NAME_TO_ID = {
-  'BUDI': 'be1',
-  'RIZKY': 'be2',
-  'DEWI': 'fe1',
-  'ANDI': 'fe2',
-  'YOGA': 'mob1',
-  'MAYA': 'ux1',
-  'TONI': 'devops1',
-  'RINA': 'qa1',
-  'BANTUIN AI': 'ai-cs',
-  'TRAINER AI': 'ai-train',
-  'INTEGRATOR BOT': 'integ',
-  'LINA': 'mkt1',
-  'SUPPORT': 'cs-h',
-  'SARI': 'pm1',
-  'WAHYU FS': 'ceo',
-  'CEO': 'ceo',
-  'ARIS': 'arch1',
-  'CLARA': 'ux2',
-  'RIAN': 'prod1',
-  'TARI': 'dsgn1',
-  'FERRY': 'db1',
-  'GILANG': 'be-lead',
-  'HENDRA': 'infra1',
-  'DONI': 'sre1',
-  'SECBOT': 'sec1',
-  'BAGAS': 'secops1',
-  'NINA': 'rel1',
-  'CITRA': 'gov1'
-};
+export { SCENE_NAME_TO_ID };
 
 // Map nama agent → id dari daftar __wfsAgentIdList [{name,id}].
 export function agentIdMap(list) {

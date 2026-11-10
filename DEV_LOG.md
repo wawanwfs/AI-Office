@@ -6862,3 +6862,14 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (uv playwright<1.50, chromium-1243): agents=26, init_failed false, 0 error, shot 681475 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 12:35 WIB — Siklus 370: identitas agen satu sumber — agent_identity.js
+
+- Audit satu sumber: pemetaan id gateway ↔ nama scene tersalin 3x & saling drift — running_tasks SCENE_NAME_TO_ID (26 entri), OfficeScene focusAgent SCENE_BY_ID (15 entri), App.jsx __wfsSceneSelect SCENE_BY_ID (15 entri). Salinan 15-entri tanpa 12 spesialis extended (arch1, sre1, …) → fokus/pilih agen spesialis via id gagal diam-diam.
+- Fix: scene/parts/agent_identity.js baru — AGENT_ID_SCENE_PAIRS (27 pasangan eksplisit, paritas /wfs-api/agents: be1=Budi, db1=Ferry, be-lead=Gilang, rel1=NINA, gov1=Citra) + SCENE_NAME_TO_ID + SCENE_ID_TO_NAME + alias founder (CEO/WAHYU FAJAR S.). Ketiga pemakai kini import satu sumber; tabel manual dihapus.
+- Catatan penting: pasangan TIDAK diturunkan dari urutan TEAMS (members[i]↔agentIds[i] salah vs gateway) — tabel eksplisit = kebenaran.
+- +1 file tes src/__tests__/agent_identity_single_source_370.test.js (6 kasus: 3 salinan hilang, 27 pasangan dua arah, paritas 6 pasangan yang dulu rawan salah, 12 spesialis ter-map, alias founder, tanpa duplikat).
+- Build PWA OK (43 precache); vitest 299 file / 3866 passed + 6 skipped, 0 fail (+6 tes vs 369).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (uv playwright<1.50, chromium-1243): agents=26, init_failed false, 0 error, shot 663486 B. (Run pertama dengan playwright terbaru timeout/tanpa browser — fallback versi <1.50.)
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

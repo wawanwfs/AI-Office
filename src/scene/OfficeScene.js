@@ -67,6 +67,7 @@ import { createTerraces } from './parts/terraces.js';
 import { createPedestal } from './parts/pedestal.js';
 import { chatPhrases, COLLAB_PAIRS, pickCollab, clampBubbleText, LINE_SEC, autoTalkDelay, autoTalkText } from './parts/dialog.js';
 import { agentIdMap, buildRunningByAgent } from './parts/running_tasks.js';
+import { SCENE_ID_TO_NAME } from './parts/agent_identity.js';
 import { BADGE_COLORS, statusPollActions } from './parts/status_poll.js';
 import { updateBubbles as updateBubblesPure, disposeBubble } from './parts/bubbles.js';
 import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canvas.js';
@@ -2372,13 +2373,9 @@ window.addEventListener('keydown',onKey);
         }
         return true;
       }
-      const SCENE_BY_ID = {
-        'be1': 'BUDI', 'be2': 'RIZKY', 'fe1': 'DEWI', 'fe2': 'ANDI',
-        'mob1': 'YOGA', 'ux1': 'MAYA', 'devops1': 'TONI', 'qa1': 'RINA',
-        'ai-cs': 'BANTUIN AI', 'ai-train': 'TRAINER AI', 'integ': 'INTEGRATOR BOT',
-        'mkt1': 'LINA', 'cs-h': 'SUPPORT', 'pm1': 'SARI',
-      };
-      const mapped = SCENE_BY_ID[q] || q;
+      // Siklus 370: satu sumber agent_identity.js (dulu tabel manual 15 entri
+      // tanpa 12 spesialis — fokus via id spesialis gagal diam-diam).
+      const mapped = SCENE_ID_TO_NAME[q] || q;
       const targetName = String(mapped).toUpperCase();
       let root = agentData.find(ad => ad.agent && (
         String(ad.agent.name || '').toUpperCase() === targetName ||

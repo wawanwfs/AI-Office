@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback, Suspense, lazy } from 'react'
 import { clip } from './lib/clip.js'
+import { SCENE_ID_TO_NAME } from './scene/parts/agent_identity.js'
 import { viewModePref, setViewModePref, neonPrefOn, audioMutedPref, loadActivityLog, saveActivityLog, clearActivityLog, takeOpenDashboardFlag } from './lib/storage_prefs.js'
 import { clockNowShortId, clockFromMinutes, dayMinutesNow } from './lib/format_time.js'
 import { useVisibilityPoll, useWindowEvent } from './lib/dialogA11y'
@@ -444,20 +445,16 @@ export default function App() {
         if (sceneRef.current.isAudioMuted) setMuted(!!sceneRef.current.isAudioMuted())
         setCyberpunk(!!sceneRef.current.isCyberpunk())
         // dua arah: pilih agent di panel chat → tampilkan cincin emas di scene
-        // peta id gateway → nama agent di scene (desk 3D). ceo tidak ada di scene (diabaikan).
-        const SCENE_BY_ID = {
-          'be1': 'BUDI', 'be2': 'RIZKY', 'fe1': 'DEWI', 'fe2': 'ANDI',
-          'mob1': 'YOGA', 'ux1': 'MAYA', 'devops1': 'TONI', 'qa1': 'RINA',
-          'ai-cs': 'BANTUIN AI', 'ai-train': 'TRAINER AI', 'integ': 'INTEGRATOR BOT',
-          'mkt1': 'LINA', 'cs-h': 'SUPPORT', 'pm1': 'SARI',
-          'ceo': 'WAHYU FS',
-        }
+        // peta id gateway → nama agent di scene (desk 3D). Siklus 370: SATU
+        // SUMBER agent_identity.js (dulu salinan manual 15 entri tanpa 12
+        // spesialis — pilih agen spesialis di panel chat tidak fokus di scene).
+        // ceo → WAHYU FS diseleksi sebagai figur founder (setSelected(-2)).
         window.__wfsSceneSelect = (name) => {
           const s = sceneRef.current
           if (!s || !s.setSelected || !name) return
           const idMap = {}
           ;(window.__wfsAgentIdList || []).forEach(x => { idMap[x.name] = x.id })
-          const mapped = SCENE_BY_ID[idMap[name]] || SCENE_BY_ID[name] || name
+          const mapped = SCENE_ID_TO_NAME[idMap[name]] || SCENE_ID_TO_NAME[name] || name
           const targetName = String(mapped).toUpperCase()
           if (targetName === 'WAHYU FS' || targetName === 'CEO' || targetName === 'WAHYU FAJAR S.') {
             s.setSelected(-2)
