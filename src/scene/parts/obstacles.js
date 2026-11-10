@@ -1,6 +1,8 @@
 // Footprint rintangan statis (furnitur nyata): tujuan & rute jalan tidak boleh
 // berhenti DI DALAM/ATAS benda ini. Diekstrak murni agar bisa di-unit-test.
 // Format: [x0, x1, z0, z1].
+import { distXZ } from '../../lib/math_util.js';
+
 export const OBSTACLES = [
   [-11.6, -9.5, 2.2, 2.9],    // counter pantry (furniture.js z 2.5, w 1.7)
   [-10.8, -10.2, -0.3, 0.3],  // dispenser air
@@ -22,4 +24,5 @@ export const inObstacle = (x, z) =>
 // Koordinat non-finite → dianggap TERHUNI (true), agen tak mencoba duduk di titik korup.
 export const seatOccupied = (x, z, agents, selfAgent) =>
   !(Number.isFinite(x) && Number.isFinite(z)) ||
-  agents.some((o) => o.agent !== selfAgent && o.state !== 'offsite' && Math.hypot(o.home.x - x, o.home.z - z) < 0.9);
+  agents.some((o) => o.agent !== selfAgent && o.state !== 'offsite' &&
+    distXZ(o.home, { x, z }) !== null && distXZ(o.home, { x, z }) < 0.9);

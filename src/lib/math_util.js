@@ -84,3 +84,23 @@ export function pctDone(done, total) {
   if (!Number.isFinite(d) || !Number.isFinite(t) || t <= 0) return 0
   return Math.min(100, Math.max(0, Math.round((d / t) * 100)))
 }
+
+/**
+ * Siklus 367: satu sumber jarak 2D bidang XZ ( dunia) — pengganti salinan
+ * `Math.hypot(a.x - b.x, a.z - b.z)` di chat_check (nearbyPairs), obstacles
+ * (seatOccupied) dan OfficeScene (createBubble samePos < 1.2).
+ *
+ * ANTI-POISONING: koordinat non-finite (NaN/±Infinity, string) → null,
+ * sehingga pemanggil bisa memutuskan "jauh" (tidak dekat) alih-alih
+ * mewarisi NaN — dulu Math.hypot(NaN, ...) = NaN dan perbandingan `< r`
+ * selalu false secara tidak sadar (chat pernah macet saat posisi korup).
+ */
+export function distXZ(a, b) {
+  if (!a || !b) return null
+  const ax = typeof a.x === 'number' ? a.x : Number(a.x)
+  const az = typeof a.z === 'number' ? a.z : Number(a.z)
+  const bx = typeof b.x === 'number' ? b.x : Number(b.x)
+  const bz = typeof b.z === 'number' ? b.z : Number(b.z)
+  if (![ax, az, bx, bz].every(Number.isFinite)) return null
+  return Math.hypot(ax - bx, az - bz)
+}

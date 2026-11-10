@@ -6833,3 +6833,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (playwright 1.49.0): agents=26, init_failed false, 0 error, shot 691714 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 10/11/2026 11:00 WIB — Siklus 367: jarak XZ satu sumber — distXZ
+
+- Audit lanjutan satu sumber: pola `Math.hypot(a.x - b.x, a.z - b.z)` tersalin 3x — chat_check.nearbyPairs (radius chat 1.5), obstacles.seatOccupied (seat 0.9), OfficeScene.createBubble (samePos < 1.2).
+- Fix: lib/math_util.js ditambah distXZ(a, b) — anti-poisoning: koordinat non-finite/null → null (pemanggil memutuskan "jauh"); string numerik dinormalisasi. Dulu Math.hypot(NaN,...)=NaN dan `< radius` diam-diam false (chat bisa macet saat posisi korup tanpa jejak).
+- +1 file tes src/__tests__/dist_xz_single_source_367.test.js (5 kasus: salinan hypot hilang dari 3 file, import pemakai, paritas 8 kasus vs pola lama, anti-poisoning 6 bentuk, konsistensi nearbyPairs & seatOccupied).
+- Build PWA OK (43 precache); vitest 296 file / 3850 passed + 6 skipped, 0 fail (+5 tes vs 366).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (playwright 1.49.0): agents=26, init_failed false, 0 error, shot 683458 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+

@@ -20,7 +20,7 @@ import { nextAgentIndex } from './parts/agent_cycle.js';
 import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js';
 import { fetchWithTimeout } from '../lib/fetch_timeout.js';
 import { dayMinutesNow } from '../lib/format_time.js';
-import { expDamp, lerpTo, clamp } from '../lib/math_util.js';
+import { expDamp, lerpTo, clamp, distXZ } from '../lib/math_util.js';
 import { orbitStep, orbitFocusGoal, ORBIT_KEY_STEP, ORBIT_KEY_STEP_FAST } from './parts/orbit_spec.js';
 import { snapshotDataUrl, snapshotFilename } from './parts/snapshot_spec.js';
 import { dblclickPointGoal, dblclickBlankGoal, tapCandidate, isDoubleTap, dtapRadius, DTAP_ZOOM_STEP } from './parts/dblclick_spec.js';
@@ -1627,7 +1627,7 @@ function createBubble(x,y,z,text,color,anchor){
   for(let i=chatBubbles.length-1;i>=0;i--){
     const b=chatBubbles[i];
     const sameAgent=anchor&&anchor.agent&&b.anchor&&b.anchor.agent===anchor.agent;
-    const samePos=Math.hypot(b.sprite.position.x-x,b.sprite.position.z-z)<1.2;
+    const samePos=(distXZ(b.sprite.position,{x,z})??Infinity)<1.2;
     if(sameAgent||samePos){
       office.remove(b.sprite);
       // Siklus 122: map tekstur ikut dibuang (dulu hanya material.dispose →

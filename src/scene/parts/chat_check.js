@@ -4,6 +4,8 @@
 // Kontrak: daftar "orang" {x, z, visible, cooldown} → pasangan (a,b) yang
 // saling dekat (jarak < radius) dan KEDUANYA bebas cooldown.
 
+import { distXZ } from '../../lib/math_util.js';
+
 export const CHAT_RADIUS = 1.5;      // jarak maksimum bicara (satuan dunia)
 export const CHAT_COOLDOWN_SEC = 8;  // jeda bicara setelah chat (detik NYATA)
 
@@ -18,7 +20,7 @@ export function nearbyPairs(ppl, radius = CHAT_RADIUS) {
       const b = ppl[j];
       if (!b.visible) continue;
       if ((a.cooldown || 0) > 0 || (b.cooldown || 0) > 0) continue;
-      if (Math.hypot(a.x - b.x, a.z - b.z) < radius) out.push([a, b]);
+      if (distXZ(a, b) !== null && distXZ(a, b) < radius) out.push([a, b]);
     }
   }
   return out;
