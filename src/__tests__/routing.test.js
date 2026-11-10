@@ -87,8 +87,11 @@ describe('routing.routePath', () => {
 });
 
 describe('meeting windows', () => {
-  it('dua jendela rapat 10:00–10:30 dan 14:00–14:30', () => {
-    expect(MEETING_WINDOWS).toEqual([[600, 630], [840, 870]]);
+  it('dua jendela rapat 10:00–10:30 dan 14:00–14:30 (siklus 372: objek satu sumber office_hours)', () => {
+    expect(MEETING_WINDOWS).toEqual([
+      { start: 600, end: 630, label: 'Stand-up pagi' },
+      { start: 840, end: 870, label: 'Sprint review' },
+    ]);
   });
   it('isMeetingTime tepat di tepi jendela', () => {
     expect(isMeetingTime(600)).toBe(true);

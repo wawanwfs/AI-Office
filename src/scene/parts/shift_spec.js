@@ -2,12 +2,18 @@
 // Tanpa THREE, tanpa setTimeout, tanpa mutasi agentData — hanya keputusan fase & event.
 
 // ── Konstanta historis shift ──
+// Siklus 372: jam lunch satu sumber dari office_hours.js (SCHEDULE daycycle &
+// MEETING_WINDOWS menurun dari sana juga) — dulu LUNCH_START/END tersalin di sini
+// DAN label fase 'Istirahat makan siang' terpasang di 720 di daycycle terpisah.
+import { LUNCH_START, LUNCH_END } from './office_hours.js';
+
 export const SHIFT = {
   DOOR: { x: -12, z: 8 },                 // pintu masuk/keluar kantor
   ARRIVE: [0, 2, 4, 1, 5, 3, 6, 7],       // urutan kedatangan agen (indeks)
   DEPART: [7, 6, 3, 5, 1, 4, 2, 0],       // urutan kepergian agen (kebalikan)
   ARRIVE_FROM: 480, ARRIVE_TO: 510,       // 08:00–08:30 → arriving
-  LUNCH_START: 720, LUNCH_END: 780,       // 12:00–13:00 → lunch
+  get LUNCH_START() { return LUNCH_START; }, // delegasi satu sumber (siklus 372)
+  get LUNCH_END() { return LUNCH_END; },
   LEAVE_FROM: 1080, LEAVE_TO: 1110,       // 18:00–18:30 → leaving
   LUNCH_SPOT_X: -9.5, LUNCH_SPOT_Z: 9.0,  // depan bar stools (stools di z 8.5)
   LUNCH_SPOT_JITTER_X: 1.2, LUNCH_SPOT_JITTER_Z: 0.35,

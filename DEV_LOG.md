@@ -6882,3 +6882,12 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (python3.12 + playwright 1.63, chromium-1243): agents=26, init_failed False, errs=[], shot 698612 B. Catatan: python3 venv Hermes tak punya playwright — panggil dengan python3.12.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 10/11/2026 13:58 WIB — Siklus 372: jam kegiatan kantor satu sumber — office_hours.js
+
+- Audit satu sumber: jam stand-up (600), makan siang (720–780) & sprint review (840–870) tersalin di 3 modul saling asing — daycycle.SCHEDULE (label HUD, entri 600/720/780/840/870), meeting.MEETING_WINDOWS ([[600,630],[840,870]]), shift_spec.SHIFT.LUNCH_START/END (720/780). Geser satu tanpa dua lainnya → chip HUD bilang "Stand-up pagi" tapi ruang rapat kosong (drift diam).
+- Fix: scene/parts/office_hours.js baru — MEETING_WINDOWS objek {start,end,label} + LUNCH_START/END/LABEL + BASE_PHASES + officeStatusAt + scheduleTable + isMeetingTime/meetingWindowIndex/inWindow (anti-poisoning: menit non-finite → false/-1/null; jendela start>end ditukar). daycycle SCHEDULE = scheduleTable() turunan (5 entri manual dihapus), statusAt delegasi; meeting.js re-export (pasangan [[a,b]] manual dihapus); shift_spec LUNCH_START/END delegasi getter. Paritas catatan: label di batas akhir jendela (630/870) kini = label rapat (inklusif, konsisten isMeetingTime) — dulu SCHEDULE sudah 'Deep work' saat scene masih rapat (chip salah 1 menit).
+- +1 file tes src/__tests__/office_hours_single_source_372.test.js (7 kasus: 3 salinan manual hilang via readFileSync, paritas label 26 menit kunci × 2 fungsi, konsistensi lintas modul rapat↔fase↔shift, anti-poisoning 8 bentuk, cakupan 1440 menit tanpa label kosong).
+- Build PWA OK (43 precache); vitest 301 file / 3881 passed + 6 skipped, 0 fail (+7 tes vs 371).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 698144 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

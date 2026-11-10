@@ -4,25 +4,20 @@ import { drawSky, drawSkyNight } from './sky_canvas.js';
 import { floorElevationAt } from './floor_elevation.js';
 
 // ── Kurva waktu: menit → status teks & faktor siang (0 malam … 1 siang) ──
-export const SCHEDULE = [
-  [0, 'Shift malam · WFS online'],
-  [360, 'Persiapan pagi'],
-  [480, 'Tim mulai berdatangan'],
-  [540, 'Fokus pagi'],
-  [600, 'Stand-up pagi'],
-  [630, 'Deep work · semua online'],
-  [720, 'Istirahat makan siang'],
-  [780, 'Fokus siang'],
-  [840, 'Sprint review'],
-  [870, 'Fokus sore'],
-  [1020, 'Tim bersiap pulang'],
-  [1140, 'Shift malam · WFS online'],
-];
+// Siklus 372: jam kegiatan satu sumber — label fase TURUNAN dari office_hours.js
+// (officeStatusAt): jendela rapat → label jendela, lunch → label lunch, sisanya
+// fase dasar. Dulu jam stand-up (600), makan siang (720) & sprint review (840)
+// tersalin di 3 modul (SCHEDULE di sini, MEETING_WINDOWS di meeting.js,
+// LUNCH_START/END di shift_spec.js) — menggeser satu tanpa dua lainnya → chip HUD
+// bilang "Stand-up pagi" tapi ruang rapat kosong. Kini satu tabel memutuskan.
+import { officeStatusAt, scheduleTable } from './office_hours.js';
+
+export const SCHEDULE = scheduleTable();
 
 export function statusAt(minutes) {
-  let label = SCHEDULE[0][1];
-  for (const [from, text] of SCHEDULE) if (minutes >= from) label = text;
-  return label;
+  // Non-finite → fallback fase dasar (paritas perilaku lama: loop tak cocok).
+  const label = officeStatusAt(minutes);
+  return label != null ? label : 'Shift malam · WFS online';
 }
 
 // Faktor siang dengan transisi halus (smoothstep) pagi 06:00–08:00 dan sore 17:00–19:00

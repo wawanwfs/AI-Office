@@ -1,8 +1,10 @@
 // Rapat tim WFS Project: peserta duduk di ruang meeting saat jam stand-up dan sprint review.
 // Peserta bergilir per window (hash indeks window), label agent ikut pindah ke ruang meeting.
-export const MEETING_WINDOWS = [[600, 630], [840, 870]]; // menit sejak 00:00 (10:00–10:30, 14:00–14:30)
-export const isMeetingTime = (minutes) => MEETING_WINDOWS.some(([a, b]) => minutes >= a && minutes <= b);
-export const meetingWindowIndex = (minutes) => MEETING_WINDOWS.findIndex(([a, b]) => minutes >= a && minutes <= b);
+// Siklus 372: jam jendela satu sumber dari office_hours.js — pasangan [a,b] lama
+// kini objek {start,end,label} (label = kunci silang dgn SCHEDULE daycycle).
+export { MEETING_WINDOWS, isMeetingTime, meetingWindowIndex } from './office_hours.js';
+import { isMeetingTime, meetingWindowIndex } from './office_hours.js'; // pemakaian internal createMeeting
+
 
 export function createMeeting(ctx) {
   const { THREE, office, rng, agents, agentData, buildChar, seats, roomZ, onChange, LABEL_Y, looksOf, addBlobShadow } = ctx;
