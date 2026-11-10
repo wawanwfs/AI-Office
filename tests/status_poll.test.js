@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { BADGE_COLORS, badgeAssignments, wakeAgentIds, failedAlerts } from '../src/scene/parts/status_poll.js';
 
 describe('status_poll: BADGE_COLORS', () => {
-  it('palette persis kode lama', () => {
+  it('palette delegasi TASK_STATUS_COLORS satu sumber (siklus 389)', () => {
     expect(BADGE_COLORS).toEqual({
-      done: '#10E5A0', running: '#f59e0b', failed: '#f66',
-      review: '#59a5ff', pending: '#8b93a3',
+      done: '#10E5A0', running: '#F59E0B', failed: '#EF4444',
+      review: '#60A5FA', pending: '#9AA7B8',
     });
   });
 });

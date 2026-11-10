@@ -1,13 +1,16 @@
 // Polling badge & alert failed — diekstrak murni dari pollBadges / interval
 // bangun & interval alert (OfficeScene.js). Tanpa fetch/DOM/THREE.
 
-// Warna badge dada per status task (semantik kode lama).
+// Warna badge dada per status task — delegasi satu sumber (Siklus 389).
+// Sebelumnya tersalin dengan drift: failed & review & pending beda nilai dari
+// palet kanonik. Kini semua mengambil TASK_STATUS_COLORS.
+import { TASK_STATUS_COLORS } from '../../lib/task_status_colors.js';
 export const BADGE_COLORS = {
-  done: '#10E5A0',
-  running: '#f59e0b',
-  failed: '#f66',
-  review: '#59a5ff',
-  pending: '#8b93a3',
+  done: TASK_STATUS_COLORS.done,
+  running: TASK_STATUS_COLORS.running,
+  failed: TASK_STATUS_COLORS.failed,
+  review: TASK_STATUS_COLORS.review,
+  pending: TASK_STATUS_COLORS.pending,
 };
 
 // Pemetaan status gateway → {gid → warna badge} untuk semua agent (ad).

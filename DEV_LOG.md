@@ -7036,3 +7036,12 @@
 - Build PWA OK (46 precache); vitest 317 file / 3941 passed + 6 skipped, 0 fail (+3 vs 387). Deploy cp dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (e2e_err.py, DISPLAY=:1, --with playwright): agents=26, init_failed False, errs=[], shot 718207 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 23:05 WIB — Siklus 389: palet badge dada scene satu sumber
+
+- Audit: status_poll.js (badge dada agen di scene 3D) masih punya palet sendiri dengan drift — failed #f66 vs kanonik #EF4444, review #59a5ff vs #60A5FA, pending #8b93a3 vs #9AA7B8. Badge "Gagal" di dada agen bisa tampak lebih terang/pink dari chip failed di UI.
+- Fix: BADGE_COLORS delegasi TASK_STATUS_COLORS (import ditambah); kelima entri kini satu sumber dengan chip UI, kanban, TV, dashboard.
+- +1 file tes src/__tests__/badge_palette_single_source_389.test.js (3 kasus: literal drift hilang, identik palet, badgeAssignments); tes lama tests/status_poll.test.js diperbarui ke nilai kanonik.
+- Build PWA OK; vitest 318 file / 3944 passed + 6 skipped, 0 fail (+3 vs 388). Deploy cp dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (DISPLAY=:1, --with playwright): agents=26, init_failed False, errs=[], shot 716820 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
