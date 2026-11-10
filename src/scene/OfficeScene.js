@@ -1,6 +1,7 @@
 // Siklus 22 — 2026-10-24 — kualitas berkelanjutan; 0 edit perilaku
 import * as THREE from 'three';window.THREE=THREE;
 import { createFurniture } from './parts/furniture.js';
+import { DetRNG, sceneRng } from '../lib/rng.js';
 import { buildRobot } from './parts/robot.js';
 import { createLighting, createNeonMode, createShift } from './parts/daycycle.js';
 import { createZones } from './parts/flooring.js';
@@ -97,8 +98,7 @@ export function createOfficeScene(container, callbacks = {}) {
 // ═══════════════════════════════════════════════════
 // THE AGENCY v3
 // ═══════════════════════════════════════════════════
-class RNG{constructor(s=42){this.s=s}n(){this.s=(this.s*16807)%2147483647;return(this.s-1)/2147483646}r(a,b){return a+this.n()*(b-a)}i(a,b){return Math.floor(this.r(a,b+1))}pick(a){return a[this.i(0,a.length-1)]}}
-const rng=new RNG(2026);
+const rng = sceneRng;
 
 // Legend
 

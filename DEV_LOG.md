@@ -6823,3 +6823,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (playwright 1.49.0): agents=26, init_failed false, 0 error, shot 685103 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 10:15 WIB — Siklus 366: RNG deterministik satu sumber — lib/rng.js
+
+- Audit lanjutan satu sumber: kelas RNG (LCG Lehmer 16807) inline di OfficeScene.js baris 100 dipakai lintas scene via ctx.rng (furniture, bookshelf, effects, daycycle, motion, trip_plan, dll) — satu-satunya sumber acak deterministik scene.
+- Fix: src/lib/rng.js baru (DetRNG + sceneRng seed 2026); OfficeScene import sceneRng — kelas inline dihapus. Anti-poisoning baru: seed non-finite/<=0/non-int → 42; r(a,b) non-finite → 0 & b<a ditukar; pick(array kosong/non-array) → undefined (dulu: indeks NaN/out-of-range dari i() bisa tembus).
+- +1 file tes src/__tests__/rng_single_source_366.test.js (4 kasus: kelas inline hilang dari OfficeScene, paritas urutan 3 seed × n/r/i/pick vs implementasi lama, seed produksi 2026, anti-poisoning 8 bentuk).
+- Build PWA OK (43 precache); vitest 295 file / 3845 passed + 6 skipped, 0 fail (+4 tes vs 365).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (playwright 1.49.0): agents=26, init_failed false, 0 error, shot 691714 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
