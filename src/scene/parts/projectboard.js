@@ -9,6 +9,7 @@ import { fetchWithTimeout } from '../../lib/fetch_timeout.js'
 import { parseTimestampMs } from '../../lib/kanban_date.js'
 import { fmtStampId } from '../../lib/format_time.js'
 import { uiTexture, uiMaterial } from './ui_colorspace.js'
+import { TASK_STATUS_COLORS } from '../../lib/task_status_colors.js'
 
 // Polling adaptif papan 3D: cadence sehat 60 dtk (POLL_SCENE_HEALTHY_MS satu
 // sumber, siklus 375 — dulu konstanta lokal BOARD_POLL_HEALTHY_MS), tapi
@@ -21,6 +22,8 @@ export function createProjectBoard(office, THREE) {
   const cv = document.createElement('canvas'); cv.width = W; cv.height = H
   const g = cv.getContext('2d')
 
+  // Siklus 386: warna status kanvas delegasi TASK_STATUS_COLORS (satu sumber).
+  const C = TASK_STATUS_COLORS
   const tex = uiTexture(new THREE.CanvasTexture(cv))
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(7.4, 4.04), uiMaterial(new THREE.MeshBasicMaterial({ map: tex, fog: false })))
   mesh.position.set(-8.35, 2.6, 13.3)
@@ -60,7 +63,7 @@ export function createProjectBoard(office, THREE) {
     g.strokeStyle = '#2c3e5c'; g.lineWidth = 4; g.strokeRect(6, 6, W - 12, H - 12)
 
     // judul
-    g.fillStyle = '#10E5A0'
+    g.fillStyle = C.done
     g.font = 'bold 52px sans-serif'; g.textAlign = 'left'
     g.fillText('WFS PROJECT: SOFTWARE HOUSE', 36, 66)
     g.fillStyle = '#8fa3bd'; g.font = '30px sans-serif'
@@ -71,7 +74,7 @@ export function createProjectBoard(office, THREE) {
     // progress bar
     g.fillStyle = 'rgba(255,255,255,.08)'; roundRect(36, 132, W - 72, 28, 10); g.fill()
     const grd = g.createLinearGradient(36, 0, W - 36, 0)
-    grd.addColorStop(0, '#10E5A0'); grd.addColorStop(1, '#448AFF')
+    grd.addColorStop(0, C.done); grd.addColorStop(1, C.review)
     g.fillStyle = grd; roundRect(36, 132, Math.max(12, (W - 72) * pct / 100), 28, 10); g.fill()
     g.fillStyle = '#fff'; g.font = 'bold 26px sans-serif'; g.textAlign = 'right'
     g.fillText(pct + '% selesai', W - 40, 154)
@@ -103,8 +106,8 @@ export function createProjectBoard(office, THREE) {
     // tiga kolom: Antri / Jalan / Selesai
     const cols = [
       ['ANTRI', '#9aa7b8', T.pending || 0],
-      ['JALAN', '#F59E0B', T.running || 0],
-      ['SELESAI', '#10E5A0', T.done || 0],
+      ['JALAN', C.running, T.running || 0],
+      ['SELESAI', C.done, T.done || 0],
     ]
     cols.forEach(([t, c, n], i) => {
       const x = 34 + i * 496
@@ -151,7 +154,7 @@ export function createProjectBoard(office, THREE) {
     // Badge koneksi gateway (paritas chip HUD .conn-chip): titik berwarna + label
     // di awal strip, prioritas tertinggi (tak pernah ikut dibuang stripLayout).
     const cb = connectionBadge(conn)
-    const dotCol = cb.tone === 'ok' ? '#10E5A0' : cb.tone === 'warn' ? '#F59E0B' : '#ef4444'
+    const dotCol = cb.tone === 'ok' ? C.done : cb.tone === 'warn' ? C.running : C.failed
     g.fillStyle = dotCol
     g.beginPath(); g.arc(sx + 6, 810, 5, 0, Math.PI * 2); g.fill()
     sx += 18

@@ -7009,3 +7009,12 @@
 - Build PWA OK (45 precache); vitest 314 file / 3932 passed + 6 skipped, 0 fail (+3 vs 384). Deploy cp dist → ~/wfs-hq.
 - e2e probe OK (uv run --with playwright; driver chromium di-install ulang di cache): agents=26, init_failed False, errs=[], shot 713757 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 21:45 WIB — Siklus 386: palet status kanvas projectboard 3D satu sumber
+
+- Audit: kanvas papan proyek 3D (projectboard.js) masih punya 6 literal warna status — judul & gradient bar progres (#10E5A0/#448AFF, drift dari kanonik #60A5FA), header kolom JALAN/SELESAI, titik badge koneksi strip bawah. Status sama bisa beda warna antara papan 3D dan chip UI/TV/strip.
+- Fix: enam titik delegasi TASK_STATUS_COLORS.done/.running/.review/.failed (import ditambah).
+- +1 file tes src/__tests__/projectboard_canvas_palette_386.test.js (3 kasus).
+- Build PWA OK (45 precache); vitest 315 file / 3935 passed + 6 skipped, 0 fail (+3 vs 385). Deploy cp dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK: agents=26, init_failed False, errs=[], shot 715494 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
