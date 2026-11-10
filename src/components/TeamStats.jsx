@@ -1,4 +1,5 @@
 import { clip } from '../lib/clip.js'
+import { NOTE_TEXT, ITEM_TITLE_TEXT } from '../lib/ui_palette.js'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
@@ -102,7 +103,7 @@ export default function TeamStats() {
                 {/* Progres Per Divisi / Tim Kerja & Pod Meja 3D */}
                 {teamStats.length > 0 && (
                   <div style={{ marginTop: 8, marginBottom: 12 }}>
-                    <div className="note" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, fontWeight: 700, color: '#cfd8e3' }}>
+                    <div className="note" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6, fontWeight: 700, color: NOTE_TEXT }}>
                       <span>Progres Divisi & Pod 3D</span>
                       <span style={{ fontSize: 11, fontWeight: 400, color: 'var(--text-tertiary)' }}>klik kartu untuk fokus 3D</span>
                     </div>
@@ -211,7 +212,7 @@ export default function TeamStats() {
                       title={`Buka detail task #${t.id} di papan kanban`}
                       aria-label={`Task #${t.id}: ${t.title}`}
                     >
-                      <div style={{ fontSize: 12.5, fontWeight: 600, color: '#e2e8f0' }}>#{t.id} {clip(t.title, 32)}</div>
+                      <div style={{ fontSize: 12.5, fontWeight: 600, color: ITEM_TITLE_TEXT }}>#{t.id} {clip(t.title, 32)}</div>
                       <div className="note" style={{ fontSize: 11, marginTop: 2 }}>
                         {t.agent_id} · <span style={{ color: dot(t.status), fontWeight: 600 }}>{t.status}</span>
                       </div>

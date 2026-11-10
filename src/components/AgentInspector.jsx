@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { IconClose, IconChat, IconUser } from './Icons'
 import { getAgentCompetency } from '../scene/parts/agent_competencies.js'
 import { TASK_STATUS_COLORS } from '../lib/task_status_colors.js'
-import { ACCENT_BLUE, accentAlpha } from '../lib/ui_palette.js'
+import { ACCENT_BLUE, accentAlpha, AVATAR_TEXT, PANEL_SOFT_TEXT } from '../lib/ui_palette.js'
 import { resolveAgentId } from '../scene/parts/running_tasks.js'
 import { findTeamByAgent } from '../scene/parts/team_spec.js'
 import { agentLiveStatus, findAgentLiveEntry, agentLiveLevel, floorZoneName, floorZonePrefix, FLOOR_ZONE_PREFIX } from '../scene/parts/agent_status.js'
@@ -77,7 +77,7 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              color: '#020713',
+              color: AVATAR_TEXT,
               fontWeight: 800,
               fontSize: 16,
               boxShadow: `0 0 16px ${agent.hex || ACCENT_BLUE}44`,
@@ -223,7 +223,7 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
                   border: '1px solid rgba(255,255,255,0.08)',
                   borderRadius: 6,
                   padding: '2px 7px',
-                  color: '#cbd5e1',
+                  color: PANEL_SOFT_TEXT,
                   fontWeight: 500,
                 }}
               >
@@ -289,7 +289,7 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
             fontWeight: 600,
             background: 'rgba(255,255,255,0.05)',
             border: '1px solid rgba(255,255,255,0.1)',
-            color: '#cbd5e1',
+            color: PANEL_SOFT_TEXT,
           }}
           onClick={() => {
             const team = findTeamByAgent(agent.name)

@@ -14,7 +14,7 @@ import {
   clampAmbienceVolume, formatAmbiencePercent,
 } from '../scene/parts/sound_spec'
 import { namesPrefOn, autoRotatePrefOn } from '../lib/storage_prefs.js'
-import { accentAlpha, failedAlpha, SKY_BUTTON } from '../lib/ui_palette.js'
+import { accentAlpha, failedAlpha, SKY_BUTTON, PANEL_SOFT_TEXT, ITEM_TITLE_TEXT } from '../lib/ui_palette.js'
 
 export default function SettingsModal({
   show,
@@ -312,7 +312,7 @@ export default function SettingsModal({
                       borderRadius: 8,
                       border: isActive ? '1px solid var(--teal)' : '1px solid rgba(255,255,255,0.12)',
                       background: isActive ? accentAlpha(0.15) : 'rgba(255,255,255,0.04)',
-                      color: isActive ? 'var(--teal)' : '#cbd5e1',
+                      color: isActive ? 'var(--teal)' : PANEL_SOFT_TEXT,
                       cursor: 'pointer',
                       transition: 'all .15s'
                     }}
@@ -406,7 +406,7 @@ export default function SettingsModal({
           <div style={{ paddingTop: 12, borderTop: '1px solid rgba(255,255,255,0.06)' }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: ambienceOn ? 8 : 0 }}>
               <div>
-                <div style={{ fontSize: 13, fontWeight: 500, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <div style={{ fontSize: 13, fontWeight: 500, color: ITEM_TITLE_TEXT, display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span>Ambience Ruangan (Hum Kantor)</span>
                   <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: ambienceOn && !muted ? 'rgba(16,229,160,0.15)' : 'rgba(255,255,255,0.06)', color: ambienceOn && !muted ? TASK_STATUS_COLORS.done : 'var(--text-tertiary)', fontFamily: "'DM Mono', monospace" }}>
                     {muted ? 'TERBUNGKAM' : (ambienceOn ? 'AKTIF' : 'NONAKTIF')}
@@ -428,7 +428,7 @@ export default function SettingsModal({
                   height: 'auto',
                   minHeight: 28,
                   borderColor: ambienceOn && !muted ? 'var(--teal)' : 'rgba(255,255,255,0.12)',
-                  color: ambienceOn && !muted ? 'var(--teal)' : '#cbd5e1'
+                  color: ambienceOn && !muted ? 'var(--teal)' : PANEL_SOFT_TEXT
                 }}
               >
                 {ambienceOn ? 'Aktif' : 'Nonaktif'}
@@ -439,7 +439,7 @@ export default function SettingsModal({
               <div style={{ marginTop: 8, padding: '8px 10px', background: 'rgba(255,255,255,0.02)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.04)' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>
                   <span>Level Ambience:</span>
-                  <span style={{ fontFamily: "'DM Mono', monospace", color: '#cbd5e1' }}>{formatAmbiencePercent(ambienceVol)}</span>
+                  <span style={{ fontFamily: "'DM Mono', monospace", color: PANEL_SOFT_TEXT }}>{formatAmbiencePercent(ambienceVol)}</span>
                 </div>
                 <input
                   type="range"

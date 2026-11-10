@@ -8,7 +8,7 @@ import { normalizeTaskStatus, formatTaskId } from '../scene/parts/projectboard_d
 import { pctDone } from '../scene/parts/kanban_spec.js'
 import { POLL_PANEL_MS } from '../lib/connection_spec.js'
 import { taskStatusColor, taskStatusLabel, TASK_STATUS_COLORS } from '../lib/task_status_colors.js'
-import { accentAlpha } from '../lib/ui_palette.js'
+import { accentAlpha, NOTE_TEXT, GOLD_ACCENT } from '../lib/ui_palette.js'
 
 const ST = {
   done: [taskStatusLabel('done'), taskStatusColor('done')],
@@ -126,7 +126,7 @@ export default function ProjectPanel() {
                           display: 'flex',
                           gap: 8,
                           alignItems: 'baseline',
-                          color: '#cfd8e3',
+                          color: NOTE_TEXT,
                           background: 'rgba(255,255,255,0.03)',
                           border: '1px solid rgba(255,255,255,0.06)',
                           borderRadius: 6,
@@ -178,7 +178,7 @@ export default function ProjectPanel() {
                   <div className="note" role="status" style={{
                     margin: '6px 0 14px', padding: '10px 12px',
                     borderRadius: 10, border: '1px solid rgba(216,187,132,.3)',
-                    background: 'rgba(216,187,132,.07)', color: '#d8bb84',
+                    background: 'rgba(216,187,132,.07)', color: GOLD_ACCENT,
                   }}>Status backend SaaS belum diverifikasi — tidak ada bukti health check.</div>
                 )}
 

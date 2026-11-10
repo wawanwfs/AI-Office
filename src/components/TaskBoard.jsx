@@ -64,7 +64,7 @@ import {
 } from '../scene/parts/kanban_spec'
 import { TEAMS, findTeamByRole, findTeamByAgent } from '../scene/parts/team_spec'
 import { taskStatusColor, taskStatusLabel, TASK_STATUS_COLORS } from '../lib/task_status_colors'
-import { SKY_DIVISION } from '../lib/ui_palette'
+import { SKY_DIVISION, NOTE_TEXT, CHIP_TEXT } from '../lib/ui_palette'
 // ST delegasi ke satu sumber warna/label status (siklus 373).
 const ST = {
   done: [taskStatusLabel('done'), taskStatusColor('done')],
@@ -751,7 +751,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
                   </button>
                 )}
               </div>
-              {(() => { const fl = parseFileList(sel.files); return fl.length > 0 && <><label className="note">File dihasilkan</label><pre className="note" style={{ whiteSpace: 'pre-wrap', margin: '4px 0 10px', color: '#cfd8e3' }}>{fl.join('\n')}</pre></> })()}
+              {(() => { const fl = parseFileList(sel.files); return fl.length > 0 && <><label className="note">File dihasilkan</label><pre className="note" style={{ whiteSpace: 'pre-wrap', margin: '4px 0 10px', color: NOTE_TEXT }}>{fl.join('\n')}</pre></> })()}
               {sel.review && <><label className="note">Ulasan QA</label><div className="msg" style={{ maxWidth: '100%', marginTop: 4, fontSize: 13 }}>{sel.review}</div></>}
               {/* Siklus 236 — Brief & Hasil Agen: sumber detail GET /tasks/{id}
                   (prompt/result hanya di sana; list poll ramping tanpa keduanya).
@@ -1235,7 +1235,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
                         key={item.tag}
                         type="button"
                         className={`task-tag-chip${isAct ? ' active' : ''}`}
-                        style={{ '--chip-accent': item.color, '--chip-text-color': item.textColor || '#0b1320' }}
+                        style={{ '--chip-accent': item.color, '--chip-text-color': item.textColor || CHIP_TEXT }}
                         onClick={(e) => handleTagClick(item.tag, e)}
                         aria-pressed={isAct}
                         title={`Filter task #${item.label} (${item.count} task) — Shift+Klik untuk multi-pilih`}
@@ -1627,7 +1627,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
                                           <span
                                             key={tg.tag}
                                             className={`kanban-tag-badge${isTagAct ? ' active' : ''}`}
-                                            style={{ '--tag-color': tg.color, '--tag-text-color': tg.textColor || '#0b1320' }}
+                                            style={{ '--tag-color': tg.color, '--tag-text-color': tg.textColor || CHIP_TEXT }}
                                             title={`Filter berdasarkan tag #${tg.label}`}
                                             role="button"
                                             tabIndex={0}
@@ -1734,7 +1734,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
                                   <span
                                     key={tg.tag}
                                     className={`kanban-tag-badge${isTagAct ? ' active' : ''}`}
-                                    style={{ '--tag-color': tg.color, '--tag-text-color': tg.textColor || '#0b1320' }}
+                                    style={{ '--tag-color': tg.color, '--tag-text-color': tg.textColor || CHIP_TEXT }}
                                     title={`Filter berdasarkan tag #${tg.label}`}
                                     role="button"
                                     tabIndex={0}

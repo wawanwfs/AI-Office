@@ -7208,3 +7208,13 @@
 - Catatan proses: e2e_err.py hilang dari scratch (pruned) — dibuat ulang; probe lama salah baca __agentData (objek vs array) dan timeout 8s terlalu pendek → agents=0 palsu; diperbaiki jadi agents=26, init_failed False, errs=[].
 - Build PWA OK; vitest 336 file / 3997 passed + 6 skipped, 0 fail (+3 vs 406). Deploy cp dist → ~/wfs-hq; 9503 → 200.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 08:05 WIB — Siklus 408: 7 komponen React bebas literal warna
+
+- Audit: 19 hex literal tersisa di 7 komponen React (TaskBoard 4, SettingsModal 4, AgentInspector 3, TeamStats 2, ProjectPanel 2, CsWidget 1, Dashboard 1, +2 non-literal).
+- Fix: 8 konstanta baru di lib/ui_palette.js (PANEL_SOFT_TEXT #cbd5e1, NOTE_TEXT #cfd8e3, ITEM_TITLE_TEXT #e2e8f0, CHIP_TEXT #0b1320, AVATAR_TEXT #020713, CS_HEADER_BG #0d1522, GOLD_ACCENT #d8bb84, IDLE_DOT #9aa3b5); ketujuh komponen delegasi, 0 hex literal.
+- +1 file tes src/__tests__/components_nohex_palette_408.test.js (3 kasus: 7 file bebas hex, konstanta ada, guard anti-duplikat nilai di seluruh palette — lolos berarti 0 duplikasi warna kanonik).
+- Tes siklus 394 dilonggarkan (cek berisi failedAlpha, bukan baris import persis).
+- Build PWA OK; vitest 337 file / 4000 passed + 6 skipped, 0 fail (+3 vs 407). Deploy cp dist → ~/wfs-hq; 9503 → 200.
+- e2e probe (?mode=office, DISPLAY=:1): agents=26, init_failed False, errs=[] (playwright kini via uv --with playwright; chromium headless butuh DISPLAY :1, :0 mati).
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

@@ -6,7 +6,7 @@ import { useModalFlag } from '../lib/modal'
 import { useDialogA11y, useVisibilityPoll, useWindowEvent } from '../lib/dialogA11y'
 import { IconClose, IconStats } from './Icons'
 import { taskStatusColor, TASK_STATUS_COLORS } from '../lib/task_status_colors.js'
-import { ACCENT_BLUE, VIOLET_CARD, PALE_BLUE_CARD } from '../lib/ui_palette.js'
+import { ACCENT_BLUE, VIOLET_CARD, PALE_BLUE_CARD, IDLE_DOT } from '../lib/ui_palette.js'
 
 import { clip } from '../lib/clip.js'
 import { fileCount } from '../lib/files'
@@ -154,7 +154,7 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
                         aria-label={`Proyek ${p.name} status ${p.status}`}
                         title={p.preview_url ? `Preview: ${p.preview_url}` : 'Belum ada sandbox'}>
                         <span className="dash-row-t">
-                          <b style={{ color: p.status === 'running' ? TASK_STATUS_COLORS.done : '#9aa3b5' }}>●</b> {clip(p.name, 26)}
+                          <b style={{ color: p.status === 'running' ? TASK_STATUS_COLORS.done : IDLE_DOT }}>●</b> {clip(p.name, 26)}
                         </span>
                         <span className="dash-row-s">{p.status}{p.preview_port ? ` :${p.preview_port}` : ''}</span>
                       </button>

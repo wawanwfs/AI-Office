@@ -166,3 +166,27 @@ export const STALE_TEXT = '#c2884e';
  * panel konsol.
  */
 export const PANEL_BORDER = '#1e2a44';
+
+/** Teks lembut panel AgentInspector/SettingsModal (#cbd5e1, siklus 408). */
+export const PANEL_SOFT_TEXT = '#cbd5e1';
+
+/** Teks note/nama file TaskBoard-TeamStats-ProjectPanel (#cfd8e3, siklus 408). */
+export const NOTE_TEXT = '#cfd8e3';
+
+/** Teks judul item SettingsModal/TeamStats (#e2e8f0, siklus 408). */
+export const ITEM_TITLE_TEXT = '#e2e8f0';
+
+/** Teks gelap chip/tag beraksen (TaskBoard, #0b1320, siklus 408). */
+export const CHIP_TEXT = '#0b1320';
+
+/** Teks inisial avatar aksen AgentInspector (#020713, siklus 408). */
+export const AVATAR_TEXT = '#020713';
+
+/** Latar header widget CS (#0d1522, siklus 408). */
+export const CS_HEADER_BG = '#0d1522';
+
+/** Aksen emas ProjectPanel (#d8bb84, siklus 408). */
+export const GOLD_ACCENT = '#d8bb84';
+
+/** Titik status proyek idle Dashboard (#9aa3b5, siklus 408). */
+export const IDLE_DOT = '#9aa3b5';
