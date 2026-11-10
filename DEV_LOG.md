@@ -6873,3 +6873,12 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (uv playwright<1.50, chromium-1243): agents=26, init_failed false, 0 error, shot 663486 B. (Run pertama dengan playwright terbaru timeout/tanpa browser — fallback versi <1.50.)
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 10/11/2026 13:12 WIB — Siklus 371: batas lantai & elevasi satu sumber — floorOf
+
+- Audit satu sumber: batas zona lantai (z=-0.8/4.5) & peta lantai tersalin 5x — levelOf (agent_status), deskY+floor penugasan meja 2× (OfficeScene main + EXTENDED_SPECIALISTS), floorElevationAt lokal (furniture), zoneFloorY (flooring), deskLevelOf (team_spec).
+- Fix: floor_elevation.js ditambah ZONE_L1_MAX_Z/ZONE_L2_MAX_Z + floorOf(z) (non-finite → null); levelOf delegasi; OfficeScene deskY pakai floorElevationAt & floor pakai floorOf; furniture salinan lokal dihapus (import); flooring pakai floorOf→elevasi datar lantai (bukan ramp tangga — bug subtle: zona z=-1.2 dulu 0.315, kini 0.015 sesuai tes lama); team_spec deskLevelOf delegasi ke levelOf.
+- +1 file tes src/__tests__/floor_bounds_single_source_371.test.js (8 kasus: salinan hilang dari 5 situs, import pemakai, paritas floorOf 12 kasus, anti-poisoning 8 bentuk, paritas deskY, delegasi levelOf, deskLevelOf TEAMS, konstanta batas).
+- Build PWA OK (43 precache); vitest 300 file / 3874 passed + 6 skipped, 0 fail (+8 tes vs 370).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (python3.12 + playwright 1.63, chromium-1243): agents=26, init_failed False, errs=[], shot 698612 B. Catatan: python3 venv Hermes tak punya playwright — panggil dengan python3.12.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

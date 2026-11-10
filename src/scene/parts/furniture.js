@@ -1,5 +1,6 @@
 // Perabot kantor WFS Project — ditulis ulang dengan pola "builder" berbasis data.
 // Setiap builder menerima konteks { THREE, office, M, MB, rng } dan mengembalikan referensi yang dibutuhkan scene.
+import { floorElevationAt } from './floor_elevation.js';
 import { POSTERS, POSTER_Y, POSTER_W, POSTER_H, CANVAS_W, CANVAS_H, posterOffsetFor, posterFacingFor } from './poster_spec.js';
 import { drawPoster } from './poster_canvas.js';
 import { uiTexture, uiMaterial } from './ui_colorspace.js';
@@ -23,7 +24,7 @@ export function createFurniture(ctx /* hooks disiapkan utk ekstensi */) {
   office.add(dispenser);
 
   // ── Tanaman pot (mengikuti elevasi lantai berundak) ──
-  const floorElevationAt = (z) => (z < -0.8 ? 0 : (z <= 4.5 ? 0.60 : 1.20));
+  
   const addPlant = (px, pz, big = false) => {
     const k = big ? 1.3 : 1;
     const baseElevation = floorElevationAt(pz);

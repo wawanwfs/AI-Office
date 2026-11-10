@@ -1,4 +1,5 @@
 // Lantai zona & label area — ditulis ulang dari data tabel.
+import { L1_Y, L2_Y, L3_Y, floorOf } from './floor_elevation.js';
 import { ZONES, zoneLabelY, zoneLabelScale } from './floor_zones.js';
 import { drawZoneLabel } from './zone_label_canvas.js';
 import { uiTexture, uiMaterial } from './ui_colorspace.js';
@@ -23,7 +24,9 @@ export function fitZoneLabel(ctx, text) {
 export function createZones(ctx){
   const { THREE, office } = ctx;
   ZONES.forEach(z=>{
-    const zoneFloorY = z.z > 4.5 ? 1.20 : (z.z > -0.8 ? 0.60 : 0);
+    // Siklus 371: batas zona satu sumber (floorOf) — tanpa ramp tangga,
+    // patch zona selalu di elevasi datar lantainya.
+    const zoneFloorY = { 1: L1_Y, 2: L2_Y, 3: L3_Y }[floorOf(z.z)];
     const patch=new THREE.Mesh(new THREE.BoxGeometry(z.w,.02,z.d),
       new THREE.MeshLambertMaterial({color:z.color,transparent:true,opacity:z.op||.55}));
     patch.position.set(z.x, zoneFloorY + .015, z.z);patch.receiveShadow=true;office.add(patch);

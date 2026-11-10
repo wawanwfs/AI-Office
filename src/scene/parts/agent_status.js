@@ -4,6 +4,7 @@
 // Satu-satunya dependensi: ROOM_CZ (meeting_room_spec.js, data murni) untuk
 // lantai ruang rapat — tetap bebas THREE/DOM.
 import { ROOM_CZ } from './meeting_room_spec.js';
+import { floorOf } from './floor_elevation.js';
 
 //
 // BUG yang diperbaiki (siklus 140): kartu AgentInspector sebelumnya SELALU
@@ -75,10 +76,7 @@ export function findAgentLiveEntry(agentData, name) {
 // (z < -0.8 → L1, z <= 4.5 → L2, sisanya L3). Guard anti-poisoning: z non-finite
 // → null (pemanggil fallback ke agent.floor, bukan mengarang lantai).
 export function levelOf(z) {
-  if (typeof z !== 'number' || !Number.isFinite(z)) return null;
-  if (z < -0.8) return 1;
-  if (z <= 4.5) return 2;
-  return 3;
+  return floorOf(z);
 }
 
 // Nama zona per lantai — konsisten dgn label eksisting komponen (L1 · Ops & AI,

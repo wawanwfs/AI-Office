@@ -17,6 +17,22 @@ export const isNearStairX = (x) => {
   return Math.abs(Math.abs(x) - 2.6) <= STAIR_WIDTH / 2;
 };
 
+// Batas zona-lantai (satu sumber kebenaran, siklus 371):
+// z < ZONE_L1_MAX_Z(-0.8) → L1; z <= ZONE_L2_MAX_Z(4.5) → L2; sisanya L3.
+// Dipakai levelOf (agent_status), floorOf, deskY/floor penugasan meja
+// (OfficeScene), tanaman (furniture), zona (flooring), deskLevelOf (team_spec).
+export const ZONE_L1_MAX_Z = -0.8;
+export const ZONE_L2_MAX_Z = 4.5;
+
+/** Nomor lantai 1/2/3 dari koordinat-z. z non-finite → null (pemanggil
+ * memutuskan fallback, bukan mengarang lantai). */
+export function floorOf(z) {
+  if (typeof z !== 'number' || !Number.isFinite(z)) return null;
+  if (z < ZONE_L1_MAX_Z) return 1;
+  if (z <= ZONE_L2_MAX_Z) return 2;
+  return 3;
+}
+
 /**
  * Menghitung elevasi lantai vertikal Y (m) berdasarkan koordinat Z dan opsional X di kantor WFS.
  * Termasuk tanjakan tangga arsitektural L1→L2 dan L2→L3 secara presisi dan kontinu.

@@ -4,6 +4,7 @@ import { createFurniture } from './parts/furniture.js';
 import { DetRNG, sceneRng } from '../lib/rng.js';
 import { buildRobot } from './parts/robot.js';
 import { createLighting, createNeonMode, createShift } from './parts/daycycle.js';
+import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
@@ -1211,8 +1212,8 @@ allAgents.forEach((agent,i)=>{
   const dp=allDesks[i];
   if(!dp)return;
   // Posisi Lantai Bertingkat Alami (Lantai 1: Y=0, Lantai 2: Y=0.60, Lantai 3: Y=1.20)
-  const deskY = dp.z < -0.8 ? 0 : (dp.z <= 4.5 ? 0.60 : 1.20);
-  agent.floor = dp.z < -0.8 ? 1 : (dp.z <= 4.5 ? 2 : 3);
+  const deskY = floorElevationAt(dp.z); // siklus 371: satu sumber elevasi/batas lantai
+  agent.floor = floorOf(dp.z);
   const {dGlow,screenLight}=buildDesk(agent,{...dp,y:deskY});
   // Karakter duduk — skala 2.2x proporsional gagah dan terlihat jelas dari kamera
   const sittingChar=buildChar(agent,false);
@@ -1245,8 +1246,8 @@ allAgents.forEach((agent,i)=>{
   // Workstations & Agents Spesialis Tambahan untuk perluasan multi-baris di tiap lantai
   EXTENDED_SPECIALISTS.forEach((agent) => {
   const dp = agent.desk;
-  const deskY = dp.z < -0.8 ? 0 : (dp.z <= 4.5 ? 0.60 : 1.20);
-  agent.floor = dp.z < -0.8 ? 1 : (dp.z <= 4.5 ? 2 : 3);
+  const deskY = floorElevationAt(dp.z); // siklus 371: satu sumber elevasi/batas lantai
+  agent.floor = floorOf(dp.z);
   const { dGlow, screenLight } = buildDesk(agent, { ...dp, y: deskY });
 
   const sittingChar = buildChar(agent, false);

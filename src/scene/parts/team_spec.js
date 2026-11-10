@@ -1,6 +1,6 @@
 // parts/team_spec.js — Spesifikasi Pembagian Divisi / Tim Kerja Kantor WFS PROJECT
 // Modul murni (tanpa dependensi THREE/DOM) agar dapat diuji unit 100% deterministik.
-import { agentLiveTone, agentLiveLevel } from './agent_status.js';
+import { agentLiveTone, agentLiveLevel, levelOf } from './agent_status.js';
 import { pctDone } from './kanban_spec.js';
 
 export const TEAMS = [
@@ -217,14 +217,10 @@ export function teamPresenceSummary(agentData) {
     acc[team.key] = { total: 0, atDesk: 0, awayTone: {} };
   }
   const deskLevelOf = (team) => {
-    // Lantai meja tim dari podCenter.z — batas sama dgn levelOf agent_status
-    // (z < -0.8 → L1, z <= 4.5 → L2, sisanya L3) TANPA import silang: team_spec
-    // murni data, levelOf duplikat di sini dgn komentar peta yang sama.
+    // Siklus 371: satu sumber batas lantai — delegasi ke levelOf (agent_status
+    // → floor_elevation.floorOf). Dulu duplikat manual (risiko drift batas).
     const z = team && team.podCenter ? team.podCenter.z : NaN;
-    if (typeof z !== 'number' || !Number.isFinite(z)) return null;
-    if (z < -0.8) return 1;
-    if (z <= 4.5) return 2;
-    return 3;
+    return levelOf(z);
   };
   const awayLabelOf = (tones) => {
     const parts = [];
