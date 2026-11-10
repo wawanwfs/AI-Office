@@ -7,6 +7,7 @@
 /**
  * Pemetaan antara kunci kolom Kanban UI dan status model Task.
  */
+import { clamp } from './math_util.js';
 export const KANBAN_COL_TO_STATUS = Object.freeze({
   todo: 'pending',
   in_progress: 'in_progress',
@@ -115,13 +116,13 @@ export function calcMobileColumnWidth(containerWidth, columnCount = 4) {
   if (containerWidth < 480) {
     // Layar HP sangat sempit (misal 360px - 414px): kolom lebar 78% viewport agar kartu nyaman dibaca
     const target = Math.round(containerWidth * 0.78)
-    return Math.max(220, Math.min(300, target))
+    return clamp(target, 220, 300)
   }
 
   if (containerWidth < 768) {
     // Layar tablet kecil / phablet: kolom sekitar 45% viewport
     const target = Math.round(containerWidth * 0.45)
-    return Math.max(180, Math.min(260, target))
+    return clamp(target, 180, 260)
   }
 
   // Layar desktop / lebar: bagi merata dengan batas minimal 160px

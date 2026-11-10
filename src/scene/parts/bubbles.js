@@ -6,6 +6,7 @@
 // hanya baseline tinggi (anchor.y+1.35) yang dihaluskan — transisi duduk↔berdiri
 // jadi geser halus, bukan lompat. k=1 saat delta besar → tetap sampai tanpa lag
 // saat frame drop. Diekstrak murni agar bisa di-unit-test.
+import { clamp01 } from '../../lib/math_util.js';
 const BUBBLE_SMOOTH_RATE = 10; // 1/dtk — konvergensi ±0.3 dtk, tanpa snap
 
 // Buang resource GPU/VRAM bubble yang dihapus: map tekstur (CanvasTexture)
@@ -52,7 +53,7 @@ export function updateBubbles(bubbles, delta, { remove }){
       b.sprite.position.y=b.startY+(3-b.life)*.12; // float up
     }
     const age=3.5-b.life;
-    b.sprite.material.opacity=Math.min(1,age/.22)*Math.max(0,Math.min(1,b.life/.5));
+    b.sprite.material.opacity=Math.min(1,age/.22)*clamp01(b.life/.5);
     if(b.life<=0){
       remove(b);
       bubbles.splice(i,1);

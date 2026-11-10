@@ -10,10 +10,11 @@
 // Clamp 12..130 — mirror eksak batas lama handler wheel
 // (Math.max(12, Math.min(130, sph.radius + deltaY * .04)));
 // tombol zoomIn/zoomOut memakai langkah diskrit ±4 via delta.
+import { clamp } from '../../lib/math_util.js';
 export function zoomRadius(current, delta) {
   const cur = (typeof current === 'number' && Number.isFinite(current)) ? current : 42.5;
   const d = (typeof delta === 'number' && Number.isFinite(delta)) ? delta : 0;
-  return Math.max(12, Math.min(130, cur + d));
+  return clamp(cur + d, 12, 130);
 }
 
 // (Siklus 174) Pinch-zoom mobile: langkah radius dari perubahan jarak dua jari.
@@ -53,6 +54,6 @@ export function pinchRadius(current, currentDist, dist, scale = 0.05) {
 export function zoomFocusGoal(goal, delta, clampMin = 12, clampMax = 130) {
   if (!goal || goal.reset) return null;
   const cur = (typeof goal.r === 'number' && Number.isFinite(goal.r)) ? goal.r : 42.5;
-  goal.r = Math.max(clampMin, Math.min(clampMax, cur + delta));
+  goal.r = clamp(cur + delta, clampMin, clampMax);
   return goal;
 }

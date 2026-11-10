@@ -6791,3 +6791,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (playwright 1.49.0): agents=26, init_failed false, 0 error, shot 685951 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 08:45 WIB — Siklus 363: clamp generik lo..hi satu sumber
+
+- Audit lanjutan satu sumber: pola `Math.max(lo, Math.min(hi, x))` tersisa 11 situs di 5 file — label_overlap (5: zona X/Z/Y + dxz 36/dx 16), zoom_spec (zoomRadius + zoomFocusGoal), kamera_focus (ensureHomeRadius), orbit_spec (clamp phi), bubbles.js (pola 0..1 via clamp01).
+- Fix: lib/math_util.js ditambah clamp(x, lo, hi) (anti-poisoning NaN → fallback lo; lo>hi ditukar); 11 situs kini satu sumber; kanban_drag tetap Math.max(160,...) pada cabang tanpa batas atas (clamp tidak dipakai agar semantik Infinity aman).
+- +1 file tes src/__tests__/clamp_generic_363.test.js (5 kasus: salinan hilang di 4 file, import pemakai, paritas pola lama 8 kasus, anti-poisoning 7 bentuk, lo>hi ditukar).
+- Build PWA OK (43 precache); vitest 292 file / 3831 passed + 6 skipped, 0 fail (+5 tes vs 362).
+- Deploy cp -r dist → ~/wfs-hq; 9503 systemd tetap jalan.
+- e2e probe OK (playwright 1.49.0): agents=26, init_failed false, 0 error, shot 686156 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

@@ -31,6 +31,7 @@
 //   SEKELILING target, tidak mengubah target/radius). Fungsi ini eksplisit
 //   no-op (mengembalikan goal sama) supaya wiring produksi & test punya satu
 //   sumber kebenaran kontrak "orbit tidak mengganggu goal".
+import { clamp } from '../../lib/math_util.js';
 export const ORBIT_KEY_STEP = 0.12;   // rad per tekan panah (~7°, terasa halus)
 export const ORBIT_KEY_STEP_FAST = 0.36; // Shift+panah (~21°, 3× cepat)
 export const PHI_MIN = 0.18;          // eksak clamp produksi updCam
@@ -56,7 +57,7 @@ export function orbitStep(sph, key, step = ORBIT_KEY_STEP) {
   else return { theta, phi }; // tombol lain bukan orbit
   // Clamp phi eksak dgn updCam produksi — panah berulang tak pernah
   // menembus lantai (phi maks) atau membalik kamera (phi min).
-  return { theta, phi: Math.max(PHI_MIN, Math.min(PHI_MAX, phi)) };
+  return { theta, phi: clamp(phi, PHI_MIN, PHI_MAX) };
 }
 
 // Orbit TIDAK menyentuh goal (kontrak eksplisit): target/radius/follow utuh —

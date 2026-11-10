@@ -1,6 +1,7 @@
 // Anti-overlap label: pass kolisi berpasangan (diekstrak dari OfficeScene.js).
 // pts: array {x, y, offX, offY, zone?, zt?, sw?, sh?, zw?, zh?} — koordinat & offset dalam piksel layar.
 // Murni: mutasi offX/offY saja, tanpa THREE/canvas — unit-testable.
+import { clamp } from '../../lib/math_util.js';
 
 // PAD = breathing room: box diperluas per sisi supaya label tak "menempel" (<5px gap)
 export const PAD_AGENT = 38;
@@ -126,7 +127,7 @@ export function zoneViewportGuard(zoneLabels, deps) {
       if (zu.baseZ === undefined) zu.baseZ = zt.position.z;
       const MAX_ZONE_DISP_X = 2.0;
       const targetX = zt.position.x + cx * wpp2;
-      const clampedX = Math.max(zu.baseX - MAX_ZONE_DISP_X, Math.min(zu.baseX + MAX_ZONE_DISP_X, targetX));
+      const clampedX = clamp(targetX, zu.baseX - MAX_ZONE_DISP_X, zu.baseX + MAX_ZONE_DISP_X);
       const actDx = clampedX - zt.position.x;
       if (Math.abs(actDx) > 1e-4) {
         zt.position.x = clampedX;
@@ -138,7 +139,7 @@ export function zoneViewportGuard(zoneLabels, deps) {
       if (isTopDown) {
         const MAX_ZONE_DISP_Z = 2.0;
         const targetZ = zt.position.z + corr * wpp2;
-        const clampedZ = Math.max(zu.baseZ - MAX_ZONE_DISP_Z, Math.min(zu.baseZ + MAX_ZONE_DISP_Z, targetZ));
+        const clampedZ = clamp(targetZ, zu.baseZ - MAX_ZONE_DISP_Z, zu.baseZ + MAX_ZONE_DISP_Z);
         const actDz = clampedZ - zt.position.z;
         if (Math.abs(actDz) > 1e-4) {
           zt.position.z = clampedZ;
@@ -148,7 +149,7 @@ export function zoneViewportGuard(zoneLabels, deps) {
       } else {
         const MAX_ZONE_DISP_Y = 2.0;
         const targetY = zt.position.y + corr * wpp2;
-        const clampedY = Math.max(zu.baseY - MAX_ZONE_DISP_Y, Math.min(zu.baseY + MAX_ZONE_DISP_Y, targetY));
+        const clampedY = clamp(targetY, zu.baseY - MAX_ZONE_DISP_Y, zu.baseY + MAX_ZONE_DISP_Y);
         const actDy = clampedY - zt.position.y;
         if (Math.abs(actDy) > 1e-4) {
           zt.position.y = clampedY;
@@ -172,13 +173,13 @@ export function worldPerPx(dist, fovDeg, clientHeight) {
 export function labelWorldOffset(p, wpp) {
   if (p.zone) {
     const dyz = p.offY * wpp * 1.2;
-    const dxz = Math.max(-36, Math.min(36, p.offX * wpp));
+    const dxz = clamp(p.offX * wpp, -36, 36);
     return { dyz, dxz };
   }
   // dy TANPA clamp ke atas: clamp menyebabkan label tetap terpotong bila posisi dasar
   // keluar viewport (dy tak lagi proporsional thd offY). Viewport dijaga clampViewport.
   const dy = p.offY * wpp * 1.2;
-  const dx = Math.max(-16, Math.min(16, p.offX * wpp));
+  const dx = clamp(p.offX * wpp, -16, 16);
   return { dy, dx };
 }
 

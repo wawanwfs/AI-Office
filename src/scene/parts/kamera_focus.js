@@ -1,6 +1,7 @@
 // parts/kamera_focus.js — Kamera fokus: follow agent + lerp ke target + auto-rotate (murni, diuji unit).
 // Diekstrak dari blok inline di OfficeScene.animate() agar logika lerp/follow/
 // reset dapat diuji tanpa renderer.
+import { clamp } from '../../lib/math_util.js';
 import { levelOf, agentLiveLevel } from './agent_status.js';
 
 // Anchor follow goal utk satu agen: peserta RAPAT (figAnchor terisi — kursi
@@ -106,7 +107,7 @@ export function autoRotateStep(sph, dt = 0.016) {
 export function ensureHomeRadius(homeRadius, radius) {
   if (homeRadius !== null && homeRadius !== undefined) return { homeRadius, saved: false };
   const r = (typeof radius === 'number' && isFinite(radius)) ? radius : 42.5;
-  return { homeRadius: Math.max(24, Math.min(70, r)), saved: true };
+  return { homeRadius: clamp(r, 24, 70), saved: true };
 }
 
 // Snapshot pose kamera sekali per sesi fokus (untuk "kembali" via
