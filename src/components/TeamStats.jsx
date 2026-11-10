@@ -9,7 +9,7 @@ import { POLL_PANEL_MS } from '../lib/connection_spec.js'
 import { IconStats, IconClose } from './Icons'
 import { computeTeamStats, teamPresenceSummary } from '../scene/parts/team_spec.js'
 import { computeStatusCounts } from '../scene/parts/kanban_spec.js'
-import { TASK_STATUS_LABELS, taskStatusColor } from '../lib/task_status_colors'
+import { TASK_STATUS_COLORS, TASK_STATUS_LABELS, taskStatusColor } from '../lib/task_status_colors'
 
 /* Statistik Tim — data nyata dari task engine + resource host */
 export default function TeamStats() {
@@ -123,7 +123,7 @@ export default function TeamStats() {
                               <span style={{ display: 'inline-block', width: 8, height: 8, borderRadius: '50%', background: team.color }} />
                               <span>{team.name}</span>
                               <span className="team-card-tag">Lt. {team.floor}</span>
-                              {team.running > 0 && <span style={{ fontSize: 9.5, padding: '1px 5px', borderRadius: 4, background: 'rgba(245,158,11,.2)', color: '#F59E0B', fontWeight: 700 }}>● {team.running} jalan</span>}
+                              {team.running > 0 && <span style={{ fontSize: 9.5, padding: '1px 5px', borderRadius: 4, background: 'rgba(245,158,11,.2)', color: TASK_STATUS_COLORS.running, fontWeight: 700 }}>● {team.running} jalan</span>}
                             </div>
                             <div style={{ display: 'flex', gap: 4, alignItems: 'center' }}>
                               <button
@@ -154,13 +154,13 @@ export default function TeamStats() {
                               className="team-progress-fill"
                               style={{
                                 width: `${team.pct}%`,
-                                background: `linear-gradient(90deg, ${team.color}, #448AFF)`,
+                                background: `linear-gradient(90deg, ${team.color}, ${TASK_STATUS_COLORS.review})`,
                               }}
                             />
                           </div>
                           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11 }}>
                             <span className="team-members-sub">Lead: {team.lead} · {(team.members || []).length} agen</span>
-                            <b style={{ color: team.pct === 100 ? '#10E5A0' : team.color }}>{team.done}/{team.total} ({team.pct}%)</b>
+                            <b style={{ color: team.pct === 100 ? TASK_STATUS_COLORS.done : team.color }}>{team.done}/{team.total} ({team.pct}%)</b>
                           </div>
                           {/* Siklus 150: kehadiran LIVE anggota di pod — paritas
                               Ticker 149 (satu sumber agentLiveStatus). null =
@@ -171,7 +171,7 @@ export default function TeamStats() {
                             return (
                               <div className="team-presence" title={`Kehadiran live pod ${team.name} dari scene 3D`}>
                                 <span className="team-presence-desk" aria-hidden="true">
-                                  <i style={{ background: '#10E5A0' }} />{pr.atDesk}/{pr.total} di pod
+                                  <i style={{ background: TASK_STATUS_COLORS.done }} />{pr.atDesk}/{pr.total} di pod
                                 </span>
                                 {pr.away > 0 && pr.awayLabel && (
                                   <span className="team-presence-away" aria-hidden="true">{pr.awayLabel}</span>
@@ -222,7 +222,7 @@ export default function TeamStats() {
             )}
             {res && (
               <div style={{ marginTop: 10, background: 'rgba(255,255,255,.05)', borderRadius: 8, padding: '8px 10px', fontSize: 12 }}>
-                <div style={{ color: '#10E5A0', fontWeight: 700, marginBottom: 4 }}>🖥 HOST: load {res.load} · RAM {res.ram_mb} MB</div>
+                <div style={{ color: TASK_STATUS_COLORS.done, fontWeight: 700, marginBottom: 4 }}>🖥 HOST: load {res.load} · RAM {res.ram_mb} MB</div>
                 {(res.containers || []).slice(0, 9).map(c => (
                   <div key={c.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '1px 0', color: 'var(--text-tertiary)' }}>
                     <span>{c.name.replace('saas-dibantuin-', '').replace('wfs-sandbox-', '').replace('wfs-agent-', 'sbx-')}</span>

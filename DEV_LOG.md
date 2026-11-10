@@ -7000,3 +7000,12 @@
 - Build PWA OK; vitest 313 file / 3929 passed + 6 skipped, 0 fail (+3 vs 383). Deploy cp dist → ~/wfs-hq.
 - e2e probe OK: agents=26, init_failed False, errs=[], shot 715364 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 21:20 WIB — Siklus 385: palet status TeamStats satu sumber
+
+- Audit: TeamStats.jsx masih punya 5 literal warna status — chip "jalan" #F59E0B, gradient bar progres #448AFF (drift dari kanonik #60A5FA), teks 100% #10E5A0, titik hadir pod #10E5A0, header HOST #10E5A0. Bar progres tim bisa beda warna dari chip review kanban bila palet digeser.
+- Fix: kelima titik delegasi TASK_STATUS_COLORS.running/.review/.done (import ditambah).
+- +1 file tes src/__tests__/teamstats_palette_single_source_385.test.js (3 kasus: literal drift hilang, delegasi, palet kanonik frozen).
+- Build PWA OK (45 precache); vitest 314 file / 3932 passed + 6 skipped, 0 fail (+3 vs 384). Deploy cp dist → ~/wfs-hq.
+- e2e probe OK (uv run --with playwright; driver chromium di-install ulang di cache): agents=26, init_failed False, errs=[], shot 713757 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
