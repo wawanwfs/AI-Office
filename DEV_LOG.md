@@ -6977,3 +6977,11 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 715071 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 10/11/2026 19:55 WIB — Siklus 382: chip status koneksi ProjectPanel satu sumber
+
+- Audit lanjutan 381: sisa literal warna status di UI React — ProjectPanel.jsx '#10E5A0' ×3 (progressbar backend, chip agent Up, teks Backend online) dan '#ef4444' ×2 (chip agent down, OmniRoute offline), plus fallback taskStatusColor done. Chip koneksi panel beda warna potensial dengan chip UI/scene lain bila palet digeser.
+- Fix: kelimanya delegasi ke TASK_STATUS_COLORS.done/.failed (import ditambah); fallback stColor via taskStatusColor('done').
+- +1 file tes src/__tests__/panel_status_colors_single_source_382.test.js (3 kasus: literal drift hilang, delegasi import+usage, palet kanonik frozen).
+- Build PWA OK (45 precache); vitest 311 file / 3923 passed + 6 skipped, 0 fail (+3 tes vs 381).
+- Deploy cp -r dist → ~/wfs-hq; e2e probe OK: agents=26, init_failed False, errs=[], shot 715232 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

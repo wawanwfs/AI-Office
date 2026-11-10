@@ -7,7 +7,7 @@ import { IconRocket, IconClose } from './Icons'
 import { normalizeTaskStatus, formatTaskId } from '../scene/parts/projectboard_data'
 import { pctDone } from '../scene/parts/kanban_spec.js'
 import { POLL_PANEL_MS } from '../lib/connection_spec.js'
-import { taskStatusColor, taskStatusLabel } from '../lib/task_status_colors.js'
+import { taskStatusColor, taskStatusLabel, TASK_STATUS_COLORS } from '../lib/task_status_colors.js'
 
 const ST = {
   done: [taskStatusLabel('done'), taskStatusColor('done')],
@@ -99,7 +99,7 @@ export default function ProjectPanel() {
                   <div className="note" style={{ marginBottom: 4 }}>Progres pengerjaan — {T.done}/{T.total} task selesai ({pct}%)</div>
                   <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={`Progres task: ${pct}% selesai`}
                     style={{ height: 10, background: 'rgba(255,255,255,.08)', borderRadius: 6, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: pct + '%', background: 'linear-gradient(90deg,#10E5A0,#448AFF)', borderRadius: 6, transition: 'width .6s' }} />
+                    <div style={{ height: '100%', width: pct + '%', background: `linear-gradient(90deg,${TASK_STATUS_COLORS.done},#448AFF)`, borderRadius: 6, transition: 'width .6s' }} />
                   </div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                     {Object.entries(ST).map(([k, [l, c]]) => T[k] > 0 && (
@@ -114,7 +114,7 @@ export default function ProjectPanel() {
                   {(T.recent || []).map(x => {
                     const normSt = normalizeTaskStatus(x.status)
                     const isDone = normSt === 'done'
-                    const stColor = ST[normSt]?.[1] || (isDone ? '#10E5A0' : '#888')
+                    const stColor = ST[normSt]?.[1] || (isDone ? taskStatusColor('done') : '#888')
                     const displayId = formatTaskId(x.id)
                     return (
                       <button
@@ -163,7 +163,7 @@ export default function ProjectPanel() {
                 <label className="note">Produk SaaS (live)</label>
                 {S.online === true ? (
                   <div style={{ background: 'rgba(16,229,160,.08)', border: '1px solid rgba(16,229,160,.25)', borderRadius: 10, padding: '8px 12px', margin: '6px 0 14px' }}>
-                    <div className="note" style={{ color: '#10E5A0', fontWeight: 600 }}>● Backend online</div>
+                    <div className="note" style={{ color: TASK_STATUS_COLORS.done, fontWeight: 600 }}>● Backend online</div>
                     <div className="note" style={{ marginTop: 4 }}>
                       {S.stats?.tenants ?? 0} tenant · {S.stats?.conversations ?? 0} percakapan · {S.stats?.messages ?? 0} pesan
                     </div>
@@ -187,7 +187,7 @@ export default function ProjectPanel() {
                   {(d.agents || []).map(a => (
                     <span key={a.name} className="note" style={{
                       background: a.status === 'Up' ? 'rgba(16,229,160,.12)' : 'rgba(239,68,68,.12)',
-                      color: a.status === 'Up' ? '#10E5A0' : '#ef4444',
+                      color: a.status === 'Up' ? TASK_STATUS_COLORS.done : TASK_STATUS_COLORS.failed,
                       border: `1px solid ${a.status === 'Up' ? 'rgba(16,229,160,.3)' : 'rgba(239,68,68,.3)'}`,
                       borderRadius: 8, padding: '3px 10px', fontWeight: 600,
                     }}>{a.status === 'Up' ? '●' : '○'} {a.name}</span>
@@ -204,7 +204,7 @@ export default function ProjectPanel() {
                       border: `1px solid ${d.omniroute.online ? 'rgba(77,159,255,.25)' : 'rgba(239,68,68,.3)'}`,
                       borderRadius: 10, padding: '8px 12px', marginTop: 6,
                     }}>
-                      <div className="note" style={{ color: d.omniroute.online ? 'var(--teal)' : '#ef4444', fontWeight: 600 }}>
+                      <div className="note" style={{ color: d.omniroute.online ? 'var(--teal)' : TASK_STATUS_COLORS.failed, fontWeight: 600 }}>
                         {d.omniroute.online ? '● OmniRoute Online (Port 20128)' : '○ OmniRoute Offline'}
                       </div>
                       <div className="note" style={{ marginTop: 2 }}>
