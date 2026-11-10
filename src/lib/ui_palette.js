@@ -107,6 +107,18 @@ export const BRIGHT_TEXT = '#eaf1ff';
 // Abu-abu redup untuk meta kecil (timestamp, sumber log, badge stream).
 export const FAINT_META = '#5f6f90';
 
+/** Teks sekunder ShConsole (#9fb0d0, siklus 406) — tab non-aktif, logLine. */
+export const SUB_TEXT = '#9fb0d0';
+
+/** Latar tab/refresh ShConsole (#18233c, siklus 406). */
+export const TAB_BG = '#18233c';
+
+/** Latar tombol aktif/pre ShConsole (#23324f, siklus 406). */
+export const BTN_BG = '#23324f';
+
+/** Latar input/select ShConsole (#0d1526, siklus 406). */
+export const INPUT_BG = '#0d1526';
+
 /**
  * Siklus 405 — border panel ShConsole (satu sumber).
  *

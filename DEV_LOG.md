@@ -7190,3 +7190,12 @@
 - Build PWA OK (46 precache); vitest 334 file / 3991 passed + 6 skipped, 0 fail (+3 vs 404). Deploy cp dist → ~/wfs-hq; 9503 → 200.
 - e2e probe (?mode=office, DISPLAY=:1): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 06:35 WIB — Siklus 406: latar/teks sekunder ShConsole satu sumber
+
+- Audit: literal `#9fb0d0` (2×: tab non-aktif, logLine), `#18233c` (2×: tab bg, refresh bg), `#23324f` (5×: tab aktif, btn, border input/select/pre), `#0d1526` (2×: input/select bg) di ShConsole.jsx.
+- Fix: 4 konstanta baru di lib/ui_palette.js — SUB_TEXT, TAB_BG, BTN_BG, INPUT_BG; ShConsole delegasi 11 titik.
+- +1 file tes src/__tests__/subtext_palette_406.test.js (3 kasus); tes 396 disesuaikan ke import baru.
+- Build PWA OK (46 precache); vitest 335 file / 3994 passed + 6 skipped, 0 fail (+3 vs 405). Deploy cp dist → ~/wfs-hq; 9503 → 200.
+- e2e probe (?mode=office, DISPLAY=:1): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

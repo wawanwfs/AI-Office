@@ -6,7 +6,7 @@ import { api } from '../lib/api'
 import { useDialogA11y, useVisibilityPoll } from '../lib/dialogA11y'
 import { useModalFlag } from '../lib/modal'
 import { STATUS_HEX } from '../scene/parts/agent_status'
-import { MUTED_TEXT, BRIGHT_TEXT, FAINT_META, PANEL_BORDER } from '../lib/ui_palette'
+import { MUTED_TEXT, BRIGHT_TEXT, FAINT_META, PANEL_BORDER, SUB_TEXT, TAB_BG, BTN_BG, INPUT_BG } from '../lib/ui_palette'
 
 const STYLE = {
   overlay: { position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,.45)' },
@@ -19,24 +19,24 @@ const STYLE = {
   head: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid '+PANEL_BORDER },
   title: { margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: '.5px', color: '#f2f6ff' },
   tabbar: { display: 'flex', gap: 4, padding: '10px 12px', borderBottom: '1px solid '+PANEL_BORDER, flexWrap: 'wrap' },
-  tab: { padding: '7px 10px', border: 0, borderRadius: 8, background: '#141c30', color: '#9fb0d0', cursor: 'pointer', fontWeight: 600, fontSize: 13 },
-  tabActive: { background: '#23324f', color: '#fff' },
+  tab: { padding: '7px 10px', border: 0, borderRadius: 8, background: '#141c30', color: SUB_TEXT, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
+  tabActive: { background: BTN_BG, color: '#fff' },
   body: { flex: 1, overflowY: 'auto', padding: '14px 16px' },
   card: { background: '#111827', border: '1px solid '+PANEL_BORDER, borderRadius: 12, padding: 14, marginBottom: 10 },
   stat: { display: 'flex', justifyContent: 'space-between', marginBottom: 8 },
   k: { color: MUTED_TEXT, fontSize: 12 },
   v: { fontWeight: 700, fontSize: 16, color: BRIGHT_TEXT },
   row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '10px 0', borderBottom: '1px dashed #1b2944' },
-  btn: { background: '#23324f', border: 0, color: '#fff', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', fontWeight: 600 },
+  btn: { background: BTN_BG, border: 0, color: '#fff', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', fontWeight: 600 },
   btnGhost: { background: '#1a2340', border: 0, color: '#c5d2ec', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', fontSize: 12 },
-  input: { width: '100%', background: '#0d1526', border: '1px solid #23324f', color: BRIGHT_TEXT, borderRadius: 8, padding: '10px 12px', marginBottom: 10, boxSizing: 'border-box' },
-  select: { width: '100%', background: '#0d1526', border: '1px solid #23324f', color: BRIGHT_TEXT, borderRadius: 8, padding: '10px', marginBottom: 10 },
+  input: { width: '100%', background: INPUT_BG, border: `1px solid ${BTN_BG}`, color: BRIGHT_TEXT, borderRadius: 8, padding: '10px 12px', marginBottom: 10, boxSizing: 'border-box' },
+  select: { width: '100%', background: INPUT_BG, border: `1px solid ${BTN_BG}`, color: BRIGHT_TEXT, borderRadius: 8, padding: '10px', marginBottom: 10 },
   tag: { fontSize: 11, padding: '2px 8px', borderRadius: 99, background: PANEL_BORDER, color: '#aebfe0', whiteSpace: 'nowrap' },
   err: { color: '#ff8080', fontSize: 13, padding: 8 },
-  logLine: { fontSize: 12, color: '#9fb0d0', borderBottom: '1px dashed #18233c', padding: '6px 0' },
+  logLine: { fontSize: 12, color: SUB_TEXT, borderBottom: `1px dashed ${TAB_BG}`, padding: '6px 0' },
   // blok output monospace (log container, isi file, git, terminal) — core style
   // bersama; tiap situs menambah maxHeight/fontSize/marginTop sesuai kebutuhan.
-  pre: { background: '#0a101c', border: '1px solid #23324f', borderRadius: 8, padding: 10, overflow: 'auto' },
+  pre: { background: '#0a101c', border: `1px solid ${BTN_BG}`, borderRadius: 8, padding: 10, overflow: 'auto' },
 }
 
 const ROLES = ['backend', 'frontend', 'pm', 'design', 'qa', 'devops', 'research', 'content', 'security']
@@ -677,7 +677,7 @@ function Projects({ projects, onRefresh, onOpenWorkspace }) {
             {(p.preview_url || p.direct_url) && (
               <button style={STYLE.btn} onClick={() => window.open(p.preview_url || p.direct_url, '_blank')}>Buka Preview ↗</button>
             )}
-            <button style={{ ...STYLE.btn, background: '#18233c' }} onClick={onRefresh}>Refresh</button>
+            <button style={{ ...STYLE.btn, background: TAB_BG }} onClick={onRefresh}>Refresh</button>
           </div>
         </div>
       ))}
