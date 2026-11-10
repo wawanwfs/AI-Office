@@ -4,8 +4,16 @@ import { clip } from '../lib/clip.js'
 import { tickerPresenceSummary } from '../scene/parts/agent_status.js'
 import { useVisibilityPoll } from '../lib/dialogA11y'
 
+import { taskStatusColor } from '../lib/task_status_colors.js'
+
 const FALLBACK = [{ text: 'Gateway belum terhubung — menunggu data…', color: '#8b93a3' }]
-const COL = { done: '#10E5A0', running: '#F59E0B', failed: '#FB7185', review: '#60A5FA', pending: '#9aa3b5' }
+const COL = {
+  done: taskStatusColor('done'),
+  running: taskStatusColor('running'),
+  failed: taskStatusColor('failed'),
+  review: taskStatusColor('review'),
+  pending: taskStatusColor('pending'),
+}
 // Titik badge kehadiran — konsisten STATUS_HEX agent_status.js (siklus 140):
 // work hijau, meet biru, lunch amber, walk biru muda, dim abu.
 const STATUS_DOT = { work: '#10E5A0', meet: '#60A5FA', lunch: '#F59E0B', walk: '#4D9FFF', dim: '#8b93a3' }

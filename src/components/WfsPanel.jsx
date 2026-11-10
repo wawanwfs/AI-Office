@@ -3,6 +3,7 @@ import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y, useEscapeClose, useVisibleLoad, useVisibilityPoll } from '../lib/dialogA11y'
 import { IconChat, IconClose, IconGear, IconSave, IconPlay, IconRotate } from './Icons'
+import { taskStatusColor, taskStatusLabel } from '../lib/task_status_colors.js'
 
 // Navigasi panah tablist (pola WAI-ARIA tabs): Left/Right/Home/End memindahkan
 // fokus antar tab; Tab keluar seperti biasa (roving tabindex di render).
@@ -181,7 +182,7 @@ export default function WfsPanel() {
               </select>
             )}
           </div>
-          {sel && (() => { const st = stat[sel.id] || {}; const it = [['done','Selesai','#10E5A0'],['running','Jalan','#f59e0b'],['pending','Antri','#9aa3b5'],['review','Review','#60A5FA'],['failed','Gagal','#f66']]; return (
+          {sel && (() => { const st = stat[sel.id] || {}; const it = [['done'],['running'],['pending'],['review'],['failed']].map(([k]) => [k, taskStatusLabel(k), taskStatusColor(k)]); return (
             <div aria-label="Info agent" style={{ display: 'flex', gap: 10, flexWrap: 'wrap', padding: '8px 14px 0', fontSize: 12.5 }}>
               {it.map(([k, l, c]) => <span key={k}><b style={{ color: c }}>{st[k] || 0}</b> {l}</span>)}
             </div>) })()}

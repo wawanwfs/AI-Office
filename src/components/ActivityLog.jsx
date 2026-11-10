@@ -1,8 +1,16 @@
 import React, { useRef, useCallback, useEffect } from 'react'
 import { useDialogA11y } from '../lib/dialogA11y'
 import { IconClose } from './Icons'
+import { taskStatusColor } from '../lib/task_status_colors.js'
 
-const COL = { done: '#10E5A0', running: '#F59E0B', failed: '#FB7185', review: '#60A5FA', pending: '#9aa3b5' }
+// Warna status delegasi ke satu sumber (siklus 373) — dulu failed/pending drift.
+const COL = {
+  done: taskStatusColor('done'),
+  running: taskStatusColor('running'),
+  failed: taskStatusColor('failed'),
+  review: taskStatusColor('review'),
+  pending: taskStatusColor('pending'),
+}
 
 // Log aktivitas: perubahan status task yang terdeteksi UI (disimpan di localStorage).
 export default function ActivityLog({ show, items, onClose, onClear }) {

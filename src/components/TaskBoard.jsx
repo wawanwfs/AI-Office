@@ -63,8 +63,15 @@ import {
   formatDivisionFilterSummary,
 } from '../scene/parts/kanban_spec'
 import { TEAMS, findTeamByRole, findTeamByAgent } from '../scene/parts/team_spec'
-
-const ST = { done: ['Selesai', '#10E5A0'], running: ['Jalan', '#F59E0B'], review: ['Review', '#448AFF'], failed: ['Gagal', '#ef4444'], pending: ['Antri', '#9aa7b8'] }
+import { taskStatusColor, taskStatusLabel } from '../lib/task_status_colors'
+// ST delegasi ke satu sumber warna/label status (siklus 373).
+const ST = {
+  done: [taskStatusLabel('done'), taskStatusColor('done')],
+  running: [taskStatusLabel('running'), taskStatusColor('running')],
+  review: [taskStatusLabel('review'), taskStatusColor('review')],
+  failed: [taskStatusLabel('failed'), taskStatusColor('failed')],
+  pending: [taskStatusLabel('pending'), taskStatusColor('pending')],
+}
 const FILTERS = [['all', 'Semua'], ['pending', 'Antri'], ['running', 'Jalan'], ['done', 'Selesai'], ['failed', 'Gagal']]
 
 // Papan Task: daftar nyata dari task engine, filter divisi/status, kanban view, detail, jalankan per task.

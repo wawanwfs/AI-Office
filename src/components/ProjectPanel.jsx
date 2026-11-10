@@ -6,10 +6,19 @@ import { fetchWithTimeout } from '../lib/fetch_timeout.js'
 import { IconRocket, IconClose } from './Icons'
 import { normalizeTaskStatus, formatTaskId } from '../scene/parts/projectboard_data'
 import { pctDone } from '../scene/parts/kanban_spec.js'
+import { taskStatusColor, taskStatusLabel } from '../lib/task_status_colors.js'
+
+const ST = {
+  done: [taskStatusLabel('done'), taskStatusColor('done')],
+  running: [taskStatusLabel('running'), taskStatusColor('running')],
+  review: [taskStatusLabel('review'), taskStatusColor('review')],
+  failed: [taskStatusLabel('failed'), taskStatusColor('failed')],
+  pending: [taskStatusLabel('pending'), taskStatusColor('pending')],
+}
 
 // Panel Proyek Nyata: data live dibantuin.com dari endpoint /wfs-project (server 9503).
 // Semua data diambil server-side — tidak ada kredensial di frontend.
-const ST = { done: ['Selesai', '#10E5A0'], running: ['Jalan', '#F59E0B'], review: ['Review', '#448AFF'], failed: ['Gagal', '#ef4444'], pending: ['Antri', '#9aa7b8'] }
+
 
 export default function ProjectPanel() {
   const [open, setOpen] = useState(false)

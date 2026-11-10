@@ -6891,3 +6891,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 698144 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 14:35 WIB — Siklus 373: warna & label status task satu sumber — task_status_colors.js
+
+- Audit satu sumber: palet status task (done/running/review/failed/pending) tersalin 7× dan SUDAH DRIFT diam — failed: #ef4444 (TaskBoard/ProjectPanel) vs #FB7185 (ActivityLog/Ticker) vs #f66 (TeamStats/WfsPanel/Dashboard); review: #448AFF (TaskBoard/ProjectPanel) vs #60A5FA (3 lain); pending: #9aa7b8 vs #9aa3b5. Chip "Gagal" di panel task vs ticker log tampak seperti dua status berbeda.
+- Fix: lib/task_status_colors.js baru — TASK_STATUS_COLORS + TASK_STATUS_LABELS frozen, taskStatusColor/taskStatusLabel (non-string/tak dikenal → null; case-insensitive). Kanonik: done #10E5A0, running #F59E0B, review #60A5FA, failed #EF4444, pending #9AA7B8. 7 komponen delegasi (TaskBoard ST, ProjectPanel ST, ActivityLog COL, Ticker COL, TeamStats dot, WfsPanel tabel, Dashboard borderLeft).
+- +1 file tes src/__tests__/task_status_colors_single_source_373.test.js (5 kasus: palet inline hilang dari 7 situs + import ada, nilai kanonik & frozen, drift lama #448AFF/#f66 tidak ada lagi, anti-poisoning 7 bentuk + case-insensitive, paritas warna/label).
+- Build PWA OK (43 precache); vitest 302 file / 3886 passed + 6 skipped, 0 fail (+5 tes vs 372).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 697452 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

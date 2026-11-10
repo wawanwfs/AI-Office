@@ -8,6 +8,7 @@ import { fileCount } from '../lib/files'
 import { IconStats, IconClose } from './Icons'
 import { computeTeamStats, teamPresenceSummary } from '../scene/parts/team_spec.js'
 import { computeStatusCounts } from '../scene/parts/kanban_spec.js'
+import { taskStatusColor } from '../lib/task_status_colors.js'
 
 /* Statistik Tim — data nyata dari task engine + resource host */
 export default function TeamStats() {
@@ -62,7 +63,7 @@ export default function TeamStats() {
   const byStatus = computeStatusCounts(data)
   const totalFiles = (data || []).reduce((n, t) => n + fileCount(t?.files), 0)
   const teamStats = data && data.length > 0 ? computeTeamStats(data) : []
-  const dot = s => s === 'done' ? '#10E5A0' : s === 'failed' ? '#f66' : s === 'running' ? '#f59e0b' : s === 'review' ? '#60A5FA' : '#9aa3b5'
+  const dot = s => taskStatusColor(s)
   // Hook tween DIPANGGIL tanpa syarat (5 baris tetap) agar urutan hook stabil antar render.
   const nDone = useTween(byStatus.done || 0)
   const nRunning = useTween(byStatus.running || 0)
