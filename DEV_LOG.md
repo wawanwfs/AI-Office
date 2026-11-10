@@ -7118,6 +7118,15 @@
 - e2e probe (?mode=office, DISPLAY=:1, uv --with playwright): agents=26, init_failed False, errs=[], shot 713788 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
 
+## 11/11/2026 04:00 WIB — Siklus 399: amber aksen kanvas scene satu sumber
+
+- Audit: `#F59E0B` (amber) literal di 3 painter kanvas scene — TV lounge (TV_ACCENT header + badge SINKRON stale), border label zona (ZL_BORDER), judul whiteboard sprint (WB_TITLE).
+- Fix: konstanta baru `AMBER_ACCENT` di lib/ui_palette.js; ketiga painter delegasi. Catatan: amber juga warna running kanonik (TASK_STATUS_COLORS.running) — dua peran berbeda yang kebetulan hex sama; delegasi aksen brand di kanvas tetap via ui_palette agar evolusi terpisah bisa dilakukan.
+- +1 file tes src/__tests__/amber_canvas_palette_399.test.js (3 kasus); whiteboard_canvas.test.js disesuaikan ke AMBER_ACCENT.
+- Build PWA OK (46 precache); vitest 328 file / 3973 passed + 6 skipped, 0 fail (+3 vs 398). Deploy cp dist → ~/wfs-hq; 9503 → 200.
+- e2e probe (?mode=office, DISPLAY=:1, uv --with playwright): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
 ## 11/11/2026 03:20 WIB — Siklus 398: warna kartu statistik Dashboard satu sumber
 
 - Audit: 2 literal aksen kartu Dashboard tersisa — `#8B5CF6` (kartu "Task") dan `#ADDBF2` (kartu "File dihasilkan"); sisanya sudah delegasi sejak siklus 393–397.

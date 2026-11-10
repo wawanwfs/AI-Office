@@ -57,3 +57,13 @@ export const SKY_BUTTON = '#38bdf8';
  */
 export const VIOLET_CARD = '#8B5CF6';
 export const PALE_BLUE_CARD = '#ADDBF2';
+
+/**
+ * Siklus 399 — amber aksen kanvas scene (satu sumber).
+ *
+ * `#F59E0B` sebelumnya literal di 3 painter kanvas: TV lounge (header
+ * 'WFS HQ · LIVE' + badge SINKRON/stale), border label zona, dan judul
+ * whiteboard sprint. Bukan warna status task (running kanonik) — aksen
+ * brand amber identitas kantor di kanvas.
+ */
+export const AMBER_ACCENT = '#F59E0B';

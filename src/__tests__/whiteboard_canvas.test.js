@@ -2,6 +2,7 @@
 // ctx recorder: setter & panggilan metode direkam sebagai oper berurutan,
 // sehingga warna/font bisa diasersi tepat sebelum tiap penggunaan.
 import { describe, it, expect } from 'vitest';
+import { AMBER_ACCENT } from '../lib/ui_palette.js';
 import {
   drawSprintBoard, WB_W, WB_H, WB_BG, WB_TITLE, WB_ITEM_COLOR, WB_ITEM_FONT,
   WB_ITEMS, WB_ITEM_X, WB_ITEM_Y0, WB_ITEM_DY,
@@ -35,7 +36,7 @@ describe('whiteboard_canvas — konstanta & painter agenda sprint', () => {
     expect(WB_W).toBe(320);
     expect(WB_H).toBe(128);
     expect(WB_BG).toBe('#fbfbfa');
-    expect(WB_TITLE).toEqual({ text: 'WFS SPRINT', color: '#f59e0b', font: 'bold 22px sans-serif', x: 14, y: 30 });
+    expect(WB_TITLE).toEqual({ text: 'WFS SPRINT', color: AMBER_ACCENT, font: 'bold 22px sans-serif', x: 14, y: 30 });
     expect(WB_ITEM_COLOR).toBe('#334155');
     expect(WB_ITEM_FONT).toBe('15px sans-serif');
     expect(WB_ITEMS).toEqual(['• Review task QA', '• Deploy tenant baru', '• Demo widget AI CS']);
@@ -57,7 +58,7 @@ describe('whiteboard_canvas — konstanta & painter agenda sprint', () => {
     const t = ops.findIndex((o) => o[0] === 'fillText' && o[1] === 'WFS SPRINT');
     expect(t).toBeGreaterThan(-1);
     expect(ops[t]).toEqual(['fillText', 'WFS SPRINT', 14, 30]);
-    expect(styleBefore(ops, 'fillText', 'WFS SPRINT')).toBe('#f59e0b');
+    expect(styleBefore(ops, 'fillText', 'WFS SPRINT')).toBe(AMBER_ACCENT);
   });
 
   it('tiga item agenda di x=14, y=58+i·24, warna #334155, font 15px', () => {

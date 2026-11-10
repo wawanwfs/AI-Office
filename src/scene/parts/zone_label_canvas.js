@@ -2,8 +2,10 @@
 // agar bisa di-unit-test: ctx 2D di-inject (mock recorder), tanpa THREE/DOM.
 // Urutan & parameter perintah gambar identik kode inline lama.
 
+import { AMBER_ACCENT } from '../../lib/ui_palette.js';
+
 export const ZL_BG = 'rgba(5,10,22,0.75)';
-export const ZL_BORDER = '#F59E0B';
+export const ZL_BORDER = AMBER_ACCENT;
 export const ZL_W = 512, ZL_H = 96;
 
 // drawZoneLabel(ctx, label): teks label putih center/middle di (256,50).
