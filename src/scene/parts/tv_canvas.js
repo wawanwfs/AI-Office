@@ -40,10 +40,9 @@ export function tvConnBadge(state,ageSec){
 // Persen progres total task (0 bila total/done non-finite atau total 0 — hindari
 // NaN/Infinity merambat ke lebar bar & teks; konsisten dgn pola anti-poisoning
 // modul lain: clock_canvas/uptime/converse_timing dll).
+import { pctDone } from '../../lib/math_util.js';
 export function tvPct(T){
-  const total = Number.isFinite(T?.total) ? T.total : 0;
-  const done = Number.isFinite(T?.done) ? T.done : 0;
-  return total > 0 ? Math.round(done / total * 100) : 0;
+  return pctDone(T?.done, T?.total);
 }
 
 // Gambar seluruh dasbor TV pada ctx (2D canvas). Semua pengambilan teks

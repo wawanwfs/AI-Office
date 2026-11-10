@@ -6852,3 +6852,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (uv playwright<1.50, chromium-1243): agents=26, init_failed false, 0 error, shot 682279 B. Catatan: playwright terbaru (chromium-1254) tidak ada browsernya di cache — pakai versi <1.50.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 12:10 WIB — Siklus 369: sisa salinan persen selesai → pctDone satu sumber
+
+- Audit lanjutan satu sumber: pola `Math.round(x/y*100)` masih tersalin 3x — tvPct (tv_canvas), computePct (projectboard_data) & calcSearchStats.pct (kanban_search), padahal pctDone (math_util, siklus 362) sudah satu sumber untuk kanban_spec/team_spec/whiteboard.
+- Fix: ketiganya kini delegasi ke pctDone — konsisten clamp 0..100 + anti-poisoning (total<=0/non-finite → 0, done>total → 100, string numerik dinormalisasi). tvPct lama tidak clamp done>total; computePct lama tidak menormalisasi string; kini seragam.
+- +1 file tes src/__tests__/pct_done_single_source_369.test.js (5 kasus: salinan pola hilang di 3 file, pemakaian pctDone, paritas 10 kasus × 3 wrapper, anti-poisoning 9 bentuk + string + clamp, konsistensi calcSearchStats.pct == pctDone).
+- Build PWA OK (43 precache); vitest 298 file / 3860 passed + 6 skipped, 0 fail (+5 tes vs 368).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (uv playwright<1.50, chromium-1243): agents=26, init_failed false, 0 error, shot 681475 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

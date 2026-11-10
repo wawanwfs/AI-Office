@@ -9,6 +9,7 @@ export function cardY(i) { return CARD_TOP + i * CARD_STEP }
 
 // judul dipotong di batas kata, diberi '…' bila terpotong (jangan memotong di tengah kata)
 import { clip } from '../../lib/clip.js'
+import { pctDone } from '../../lib/math_util.js'
 export { clip }
 
 /**
@@ -82,14 +83,12 @@ export function cardMeta(task) {
   }
 }
 
-// persen selesai; 0 bila tak ada task total. Dijepit ke rentang 0–100 dan aman
-// terhadap nilai non-finite (data glitch: done>total atau NaN) agar progress bar
-// di papan tak pernah menggambar lebar/angka yang mustahil.
+// persen selesai via pctDone satu sumber (math_util): 0 bila tak ada task
+// total, dijepit 0–100 dan aman terhadap nilai non-finite (data glitch:
+// done>total atau NaN) agar progress bar di papan tak pernah menggambar
+// lebar/angka yang mustahil.
 export function computePct(T) {
-  if (!T || !T.total) return 0
-  const pct = Math.round((T.done / T.total) * 100)
-  if (!Number.isFinite(pct)) return 0
-  return Math.min(100, Math.max(0, pct))
+  return pctDone(T?.done, T?.total)
 }
 
 // subjudul di bawah judul papan

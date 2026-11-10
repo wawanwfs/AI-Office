@@ -10,6 +10,7 @@ import {
   getKanbanColumnEmptyState,
   matchTaskSearch,
 } from '../scene/parts/kanban_spec';
+import { pctDone } from './math_util.js';
 
 export { matchTaskSearch };
 
@@ -89,7 +90,7 @@ export function calcSearchStats(tasks, query, { division = 'all', tag = 'all', t
     : scoped.length;
 
   const total = scoped.length;
-  const pct = total > 0 ? Math.round((matched / total) * 100) : 0;
+  const pct = pctDone(matched, total);
 
   return {
     total,
