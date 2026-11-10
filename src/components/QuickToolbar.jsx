@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react'
 import { useModalFlag } from '../lib/modal'
 import { useEscapeClose, useOutsideClose } from '../lib/dialogA11y'
 import { TASK_STATUS_COLORS } from '../lib/task_status_colors'
+import { CYAN_NEON } from '../lib/ui_palette.js'
 import {
   IconPlus, IconPlay, IconPause, IconZoomOut, IconZoomIn, IconHome, IconCamera,
   IconIso, IconFront, IconTop, IconNeon, IconMoon, IconSun, IconUserNext, IconUserPrev
@@ -88,7 +89,7 @@ export default function QuickToolbar({ onAddTask, onPauseAll, onResumeAll, onTog
         aria-label="Lampu neon"
       >
         <span className="ic">
-          {!theme ? <IconSun size={19} style={{ color: TASK_STATUS_COLORS.running }} /> : <IconMoon size={19} style={{ color: '#00F0FF' }} />}
+          {!theme ? <IconSun size={19} style={{ color: TASK_STATUS_COLORS.running }} /> : <IconMoon size={19} style={{ color: CYAN_NEON }} />}
           <span className="sr-only">💡</span>
         </span>
         <span className="lb">{!theme ? 'Terang' : 'Gelap'}</span>

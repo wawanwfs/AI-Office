@@ -67,3 +67,15 @@ export const PALE_BLUE_CARD = '#ADDBF2';
  * brand amber identitas kantor di kanvas.
  */
 export const AMBER_ACCENT = '#F59E0B';
+
+/**
+ * Siklus 400 — cyan neon & violet statistik (satu sumber).
+ *
+ * `#00F0FF` (cyan neon) sebelumnya literal di FloorNavigator (warna L2),
+ * ikon moon QuickToolbar, plakat LEVEL 02 terraces, dan LED neon. Bukan
+ * warna status task — aksen neon identitas lantai 2. `#A78BFA` (violet)
+ * sebelumnya literal di Ticker (baris Host RAM) — aksen teks statistik.
+ * Identitas karakter agen (extended_desks/agents_spec) tetap di spec.
+ */
+export const CYAN_NEON = '#00F0FF';
+export const VIOLET_STATS = '#A78BFA';

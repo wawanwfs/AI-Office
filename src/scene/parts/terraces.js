@@ -4,6 +4,7 @@ import { drawTerrazzo } from './floor_canvas.js';
 // tangga arsitektural naik, tekstur prosedural marmer Carrara & parket jati mewah tanpa z-fighting/flicker.
 import { L1_Y, L2_Y, L3_Y, floorElevationAt } from './floor_elevation.js';
 import { uiTexture, uiMaterial } from './ui_colorspace.js';
+import { AMBER_ACCENT, CYAN_NEON } from '../../lib/ui_palette.js';
 export { L1_Y, L2_Y, L3_Y, floorElevationAt };
 
 export function createTerraces({ THREE, office, M, MB }) {
@@ -80,7 +81,7 @@ export function createTerraces({ THREE, office, M, MB }) {
   terraces.add(l1Inlay);
 
   // Plakat Lantai 1 (Paling bawah layar)
-  const badgeL1 = createFloorBadge('DATACENTER, AI LAB & TECH OPS', 'LEVEL 01', '#F59E0B');
+  const badgeL1 = createFloorBadge('DATACENTER, AI LAB & TECH OPS', 'LEVEL 01', AMBER_ACCENT);
   badgeL1.position.set(-8.5, 0.02, -12.0);
   terraces.add(badgeL1);
 
@@ -245,7 +246,7 @@ export function createTerraces({ THREE, office, M, MB }) {
   addRail(10.5, -0.6, L2_Y, 13.0);
 
   // Plakat Lantai 2
-  const badgeL2 = createFloorBadge('CORE ENGINEERING & PRODUCT STUDIO', 'LEVEL 02', '#00F0FF');
+  const badgeL2 = createFloorBadge('CORE ENGINEERING & PRODUCT STUDIO', 'LEVEL 02', CYAN_NEON);
   badgeL2.position.set(-8.5, L2_Y + 0.02, 0.2);
   terraces.add(badgeL2);
 

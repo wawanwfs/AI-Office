@@ -10,6 +10,7 @@ import React, { useState } from 'react'
 import { floorOccupancy, FLOOR_ZONE_PREFIX } from '../scene/parts/agent_status.js'
 import { TASK_STATUS_COLORS } from '../lib/task_status_colors.js'
 import { useVisibilityPoll } from '../lib/dialogA11y'
+import { CYAN_NEON } from '../lib/ui_palette.js'
 
 // Siklus 377: nama zona lantai SATU sumber via floorZonePrefix — dulu string
 // 'L{n} · {zona}' disalin manual (drift diam vs floorZoneName). roleLabel/desc
@@ -31,7 +32,7 @@ const FLOORS = [
     name: FLOOR_ZONE_PREFIX(2),
     shortName: 'L2',
     roleLabel: 'Core Engineering & Cloud Database Pod',
-    color: '#00F0FF',
+    color: CYAN_NEON,
     desc: 'Ferry, Gilang, Hendra, Doni, Rizky, Dewi, Yoga, Lina, Integrator Bot',
     agents: ['Ferry', 'Gilang', 'Hendra', 'Doni', 'Rizky', 'Dewi', 'Yoga', 'Lina', 'Integrator Bot']
   },
