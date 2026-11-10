@@ -119,7 +119,9 @@ describe('Siklus 243: keadaan terbuka tombol accent menang atas accent (umpan ba
     expect(posAccent).toBeGreaterThan(-1)
     expect(posOpen).toBeGreaterThan(posAccent)
     const openBlock = css.slice(posOpen, css.indexOf('}', posOpen))
-    expect(openBlock).toContain('linear-gradient(180deg, rgba(77, 159, 255')
+    // Siklus 395: komposisi biru aksen kini lewat triplet `--c-accent-rgb`
+    // (77,159,255) supaya nilainya tak diketik ulang — makna uji sama.
+    expect(openBlock).toMatch(/linear-gradient\(180deg, rgba\((var\(--c-accent-rgb\)),?\s?0?\.22?\)|77, 159, 255/)
     expect(openBlock).toContain('var(--teal)')
   })
 

@@ -9,13 +9,28 @@
 }
 
 :root {
+  /* Siklus 395 — palet status & aksen kanonik sebagai custom properties.
+     Semua nilai di bawah satu sumber dengan src/lib/task_status_colors.js
+     (TASK_STATUS_COLORS) dan lib/ui_palette.js (ACCENT_BLUE). */
+  --c-done: #10E5A0;
+  --c-running: #F59E0B;
+  --c-review: #60A5FA;
+  --c-failed: #EF4444;
+  --c-pending: #9AA7B8;
+  --c-accent: #4D9FFF;
+  --c-done-rgb: 16,229,160;
+  --c-running-rgb: 245,158,11;
+  --c-review-rgb: 96,165,250;
+  --c-failed-rgb: 239,68,68;
+  --c-pending-rgb: 154,167,184;
+  --c-accent-rgb: 77,159,255;
   --bg: #080c20;
   --surface: #111634;
   --surface-card: rgba(21, 23, 53, 0.9);
   --teal: #bca8ff;
   --amber: #dbc08d;
-  --green: #10E5A0;
-  --rose: #FB7185;
+  --green: var(--c-done);
+  --rose: var(--c-failed);
   --purple: #9f86e9;
   --text-primary: rgba(255, 255, 255, 0.96);
   --text-secondary: rgba(255, 255, 255, 0.78);
@@ -163,18 +178,18 @@ button { font-family: inherit; }
 .ibtn:hover .ic { transform: translateY(-1px) scale(1.08); }
 .ibtn:active { transform: scale(0.95); }
 .ibtn[aria-expanded=true], .ibtn.on {
-  background: linear-gradient(180deg, rgba(77, 159, 255, 0.18) 0%, rgba(77, 159, 255, 0.06) 100%);
-  color: var(--teal); border-color: rgba(77, 159, 255, 0.32);
-  box-shadow: 0 0 16px rgba(77, 159, 255, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: linear-gradient(180deg, rgba(var(--c-accent-rgb),0.18) 0%, rgba(var(--c-accent-rgb),0.06) 100%);
+  color: var(--teal); border-color: rgba(var(--c-accent-rgb),0.32);
+  box-shadow: 0 0 16px rgba(var(--c-accent-rgb),0.2), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 .ibtn:disabled { opacity: .38; cursor: not-allowed; }
 .ibtn.accent {
-  background: linear-gradient(135deg, #F59E0B 0%, #FB7185 100%); color: #09090b; font-weight: 700;
-  box-shadow: 0 4px 16px rgba(245, 158, 11, 0.38), inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  background: linear-gradient(135deg, var(--c-running) 0%, var(--c-failed) 100%); color: #09090b; font-weight: 700;
+  box-shadow: 0 4px 16px rgba(var(--c-running-rgb),0.38), inset 0 1px 0 rgba(255, 255, 255, 0.3);
 }
 .ibtn.accent:hover {
   filter: brightness(1.12); transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.55), inset 0 1px 0 rgba(255, 255, 255, 0.4);
+  box-shadow: 0 6px 20px rgba(var(--c-running-rgb),0.55), inset 0 1px 0 rgba(255, 255, 255, 0.4);
 }
 /* Siklus 244: KOMPAKSI DOCK LAPTOP — akar ilusi "T terbalik" (vision_analyze
    243) terbukti via probe DOM live: konten dock penuh ~1498px > viewport
@@ -194,9 +209,9 @@ button { font-family: inherit; }
    oranye IDENTIK saat terbuka/tertutup, tak ada umpan balik keadaan (terbukti
    probe DOM live: computed backgroundImage sama persis). */
 .ibtn.accent[aria-expanded=true], .ibtn.accent.on {
-  background: linear-gradient(180deg, rgba(77, 159, 255, 0.22) 0%, rgba(77, 159, 255, 0.08) 100%);
-  color: var(--teal); border-color: rgba(77, 159, 255, 0.36);
-  box-shadow: 0 0 16px rgba(77, 159, 255, 0.24), inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  background: linear-gradient(180deg, rgba(var(--c-accent-rgb),0.22) 0%, rgba(var(--c-accent-rgb),0.08) 100%);
+  color: var(--teal); border-color: rgba(var(--c-accent-rgb),0.36);
+  box-shadow: 0 0 16px rgba(var(--c-accent-rgb),0.24), inset 0 1px 0 rgba(255, 255, 255, 0.2);
 }
 .ibtn.accent[aria-expanded=true]:hover, .ibtn.accent.on:hover {
   filter: brightness(1.12); transform: translateY(-2px);
@@ -204,7 +219,7 @@ button { font-family: inherit; }
 .ibtn.good { color: var(--green); }
 .ibtn .dot {
   position: absolute; top: 5px; right: 9px; width: 8px; height: 8px;
-  border-radius: 50%; background: #f59e0b; box-shadow: 0 0 8px #f59e0b;
+  border-radius: 50%; background: var(--c-running); box-shadow: 0 0 8px var(--c-running);
 }
 
 .scene-loading {
@@ -216,7 +231,7 @@ button { font-family: inherit; }
   color: var(--teal); font-size: 13px; font-weight: 600; letter-spacing: .5px;
   animation: pulse 1.6s ease-in-out infinite;
 }
-.scene-loading.err { color: #FB7185; animation: none; border-color: rgba(251, 113, 133, 0.4); }
+.scene-loading.err { color: var(--c-failed); animation: none; border-color: rgba(var(--c-failed-rgb),0.4); }
 
 .error-boundary {
   position: fixed; inset: 0; z-index: 9999; overflow: auto;
@@ -224,7 +239,7 @@ button { font-family: inherit; }
   display: flex; flex-direction: column; align-items: center; justify-content: center;
   gap: 14px; padding: 24px; text-align: center;
 }
-.error-boundary h1 { font-size: 20px; color: #FB7185; margin: 0; font-family: 'Syne', sans-serif; }
+.error-boundary h1 { font-size: 20px; color: var(--c-failed); margin: 0; font-family: 'Syne', sans-serif; }
 .error-boundary p { max-width: 460px; margin: 0; font-size: 14px; line-height: 1.5; color: var(--text-secondary); }
 .error-boundary pre {
   max-width: 90vw; max-height: 120px; overflow: auto; font-size: 11px;
@@ -232,9 +247,9 @@ button { font-family: inherit; }
   padding: 8px 12px; border-radius: 8px; text-align: left; font-family: 'DM Mono', monospace;
 }
 .error-boundary button {
-  background: linear-gradient(135deg, var(--teal), #448AFF); color: #04121F; border: 0;
+  background: linear-gradient(135deg, var(--teal), var(--c-review)); color: #04121F; border: 0;
   border-radius: var(--r-pill); padding: 9px 24px; font-weight: 700; cursor: pointer; font-size: 13px;
-  box-shadow: 0 4px 16px rgba(77,159,255,0.3);
+  box-shadow: 0 4px 16px rgba(var(--c-accent-rgb),0.3);
 }
 
 /* popover di atas bilah */
@@ -271,7 +286,7 @@ button { font-family: inherit; }
   font-family: 'DM Mono', 'Space Mono', 'Orbitron', monospace;
   font-size: 15px; font-weight: 700; color: var(--teal); letter-spacing: 1.5px;
   font-variant-numeric: tabular-nums;
-  text-shadow: 0 0 12px rgba(77, 159, 255, 0.45);
+  text-shadow: 0 0 12px rgba(var(--c-accent-rgb),0.45);
 }
 .hud .stat {
   font-family: 'DM Sans', sans-serif; font-size: 12px; color: var(--text-secondary);
@@ -281,7 +296,7 @@ button { font-family: inherit; }
   width: 8px; height: 8px; border-radius: 50%; background: var(--green);
   box-shadow: 0 0 10px var(--green);
 }
-.hud .stat.off i { background: #ef4444; box-shadow: 0 0 10px #ef4444; }
+.hud .stat.off i { background: var(--c-failed); box-shadow: 0 0 10px var(--c-failed); }
 .hud .stat.busy i { background: var(--amber); box-shadow: 0 0 10px var(--amber); animation: pulse 1.5s infinite; }
 /* Chip fase kantor (daycycle SCHEDULE): tone = fase (work/meet/break/dawn/dusk/night/dim) */
 .hud .phase-chip {
@@ -294,10 +309,10 @@ button { font-family: inherit; }
 }
 .hud .phase-chip i { width: 7px; height: 7px; border-radius: 50%; background: var(--green); box-shadow: 0 0 8px var(--green); flex: none; }
 .hud .phase-chip.work i { background: var(--green); box-shadow: 0 0 8px var(--green); }
-.hud .phase-chip.meet i { background: #60a5fa; box-shadow: 0 0 8px #60a5fa; }
+.hud .phase-chip.meet i { background: var(--c-review); box-shadow: 0 0 8px var(--c-review); }
 .hud .phase-chip.break i { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
 .hud .phase-chip.dawn i, .hud .phase-chip.dusk i { background: #fbbf24; box-shadow: 0 0 8px #fbbf24; }
-.hud .phase-chip.night i, .hud .phase-chip.dim i { background: #8b93a3; box-shadow: 0 0 8px #8b93a3; }
+.hud .phase-chip.night i, .hud .phase-chip.dim i { background: var(--c-pending); box-shadow: 0 0 8px var(--c-pending); }
 /* Siklus 314: chip jam nyata host di HUD — membedakan wall-clock vs waktu simulasi */
 .hud .realtime-chip {
   display: inline-flex; align-items: center; gap: 6px;
@@ -322,14 +337,14 @@ button { font-family: inherit; }
   box-shadow: 0 0 8px var(--green); flex: none;
 }
 .hud .conn-chip.stale {
-  border-color: rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.10);
+  border-color: rgba(var(--c-running-rgb),0.35); background: rgba(var(--c-running-rgb),0.10);
 }
 .hud .conn-chip.stale i { background: var(--amber); box-shadow: 0 0 8px var(--amber); animation: pulse 1.5s infinite; }
 .hud .conn-chip.down {
-  border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(var(--c-failed-rgb),0.4); background: rgba(var(--c-failed-rgb),0.12);
   color: #fca5a5;
 }
-.hud .conn-chip.down i { background: #ef4444; box-shadow: 0 0 8px #ef4444; animation: pulse 1.5s infinite; }
+.hud .conn-chip.down i { background: var(--c-failed); box-shadow: 0 0 8px var(--c-failed); animation: pulse 1.5s infinite; }
 /* Siklus 147: chip kualitas render GPU — ideal (hijau) / degraded stale (amber)
    / recover (biru, pemulihan berjalan) / down (merah, bayangan dimatikan). */
 .hud .perf-chip {
@@ -345,18 +360,18 @@ button { font-family: inherit; }
   box-shadow: 0 0 8px var(--green); flex: none;
 }
 .hud .perf-chip.stale {
-  border-color: rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.10);
+  border-color: rgba(var(--c-running-rgb),0.35); background: rgba(var(--c-running-rgb),0.10);
 }
 .hud .perf-chip.stale i { background: var(--amber); box-shadow: 0 0 8px var(--amber); }
 .hud .perf-chip.recover {
-  border-color: rgba(96, 165, 250, 0.4); background: rgba(96, 165, 250, 0.10);
+  border-color: rgba(var(--c-review-rgb),0.4); background: rgba(var(--c-review-rgb),0.10);
 }
-.hud .perf-chip.recover i { background: #60a5fa; box-shadow: 0 0 8px #60a5fa; animation: pulse 1.5s infinite; }
+.hud .perf-chip.recover i { background: var(--c-review); box-shadow: 0 0 8px var(--c-review); animation: pulse 1.5s infinite; }
 .hud .perf-chip.down {
-  border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.12);
+  border-color: rgba(var(--c-failed-rgb),0.4); background: rgba(var(--c-failed-rgb),0.12);
   color: #fca5a5;
 }
-.hud .perf-chip.down i { background: #ef4444; box-shadow: 0 0 8px #ef4444; animation: pulse 1.5s infinite; }
+.hud .perf-chip.down i { background: var(--c-failed); box-shadow: 0 0 8px var(--c-failed); animation: pulse 1.5s infinite; }
 .hud input[type=range] {
   -webkit-appearance: none; appearance: none;
   width: 130px; height: 22px; background: transparent; cursor: pointer;
@@ -402,14 +417,14 @@ button { font-family: inherit; }
   transform: translateY(-1px);
 }
 .hud-amb-btn:focus-visible {
-  outline: 2px solid var(--teal, #4d9fff);
+  outline: 2px solid var(--teal, var(--c-accent));
   outline-offset: 1px;
 }
 .hud-amb-btn.active {
-  background: rgba(77, 159, 255, 0.12);
-  border-color: rgba(77, 159, 255, 0.4);
-  color: var(--teal, #4d9fff);
-  box-shadow: 0 0 10px rgba(77, 159, 255, 0.25);
+  background: rgba(var(--c-accent-rgb),0.12);
+  border-color: rgba(var(--c-accent-rgb),0.4);
+  color: var(--teal, var(--c-accent));
+  box-shadow: 0 0 10px rgba(var(--c-accent-rgb),0.25);
 }
 .hud-amb-btn.muted {
   opacity: 0.55;
@@ -486,7 +501,7 @@ button { font-family: inherit; }
 }
 .tabs button:hover { background: rgba(255, 255, 255, 0.08); color: #fff; }
 .tabs button[aria-selected=true] {
-  background: rgba(245, 158, 11, 0.18); color: var(--amber);
+  background: rgba(var(--c-running-rgb),0.18); color: var(--amber);
   border-bottom: 2px solid var(--amber);
 }
 .fld, .sel {
@@ -495,7 +510,7 @@ button { font-family: inherit; }
   border-radius: 12px; font-size: 14px; font-family: inherit; transition: border-color .15s, box-shadow .15s;
 }
 .fld:focus, .sel:focus {
-  border-color: var(--teal); outline: none; box-shadow: 0 0 0 3px rgba(77, 159, 255, .22);
+  border-color: var(--teal); outline: none; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb),.22);
 }
 .msg {
   max-width: 88%; padding: 10px 14px; border-radius: 16px; font-size: 14px; line-height: 1.5;
@@ -503,10 +518,10 @@ button { font-family: inherit; }
   color: #f2f2f2; align-self: flex-start; border-bottom-left-radius: 4px;
 }
 .msg.me {
-  background: linear-gradient(135deg, #F59E0B, #D97706); color: #111; font-weight: 600;
+  background: linear-gradient(135deg, var(--c-running), #D97706); color: #111; font-weight: 600;
   align-self: flex-end; border-radius: 16px; border-bottom-right-radius: 4px;
 }
-.msg.err { background: rgba(239, 68, 68, .18); border: 1px solid #ef4444; color: #fecaca; }
+.msg.err { background: rgba(var(--c-failed-rgb),.18); border: 1px solid var(--c-failed); color: #fecaca; }
 .note { font-size: 12px; color: var(--text-tertiary); line-height: 1.5; }
 .skeleton { color: var(--text-tertiary); font-size: 13px; padding: 16px; text-align: center; }
 .stat-grid { display: grid; grid-template-columns: repeat(5,1fr); gap: 6px; margin-bottom: 12px; }
@@ -526,7 +541,7 @@ button { font-family: inherit; }
   padding: 10px 20px; border-radius: 14px; font-size: 13.5px; box-shadow: 0 10px 36px rgba(0,0,0,.6);
   max-width: calc(100vw - 24px); text-align: center; animation: fadeUp .25s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
-.toast.err { background: #ef4444; color: #fff; }
+.toast.err { background: var(--c-failed); color: #fff; }
 
 /* Siklus 192 — banner pembaruan PWA (SW menunggu, mode prompt). Posisi atas-
    tengah agar tidak menabrak toast bawah / dock; tombol aksi jelas. */
@@ -576,7 +591,7 @@ button { font-family: inherit; }
   transition: border-color .15s, box-shadow .15s;
 }
 .modal input:focus, .modal textarea:focus, .modal select:focus {
-  border-color: var(--teal); outline: none; box-shadow: 0 0 0 3px rgba(77, 159, 255, .22);
+  border-color: var(--teal); outline: none; box-shadow: 0 0 0 3px rgba(var(--c-accent-rgb),.22);
 }
 .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 20px; flex-wrap: wrap; }
 .btn {
@@ -586,15 +601,15 @@ button { font-family: inherit; }
 }
 .btn:hover { background: rgba(255, 255, 255, .14); transform: translateY(-1px); }
 .btn.primary {
-  background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: #09090b; font-weight: 700;
-  border-color: transparent; box-shadow: 0 4px 14px rgba(245, 158, 11, 0.35);
+  background: linear-gradient(135deg, var(--c-running) 0%, #D97706 100%); color: #09090b; font-weight: 700;
+  border-color: transparent; box-shadow: 0 4px 14px rgba(var(--c-running-rgb),0.35);
 }
-.btn.primary:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(245, 158, 11, 0.45); }
-.btn.danger { background: #ef4444; border-color: transparent; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35); }
+.btn.primary:hover { filter: brightness(1.1); transform: translateY(-1px); box-shadow: 0 6px 18px rgba(var(--c-running-rgb),0.45); }
+.btn.danger { background: var(--c-failed); border-color: transparent; box-shadow: 0 4px 14px rgba(var(--c-failed-rgb),0.35); }
 .btn:disabled { opacity: .5; cursor: not-allowed; }
 .btn-preset:hover:not(:disabled) {
-  background: rgba(77, 159, 255, 0.1) !important;
-  border-color: rgba(77, 159, 255, 0.4) !important;
+  background: rgba(var(--c-accent-rgb),0.1) !important;
+  border-color: rgba(var(--c-accent-rgb),0.4) !important;
   transform: translateY(-1px);
 }
 .btn-preset:active:not(:disabled) {
@@ -609,9 +624,9 @@ button { font-family: inherit; }
   text-transform: uppercase; color: #fff; text-shadow: 0 2px 20px rgba(0,0,0,.8);
 }
 .hdr h1 span {
-  background: linear-gradient(135deg, #F59E0B 0%, #FB7185 50%, #A78BFA 100%);
+  background: linear-gradient(135deg, var(--c-running) 0%, var(--c-failed) 50%, #A78BFA 100%);
   -webkit-background-clip: text; -webkit-text-fill-color: transparent;
-  filter: drop-shadow(0 2px 10px rgba(245, 158, 11, 0.3));
+  filter: drop-shadow(0 2px 10px rgba(var(--c-running-rgb),0.3));
 }
 .hdr .sub {
   font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 500; letter-spacing: 1.5px;
@@ -629,8 +644,8 @@ button { font-family: inherit; }
 .meeting-badge { position: fixed; top: 134px; left: 0; right: 0; display: flex; justify-content: center; z-index: var(--z-hud); pointer-events: none; }
 .meeting-badge div {
   font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 700; color: #04121f;
-  background: linear-gradient(135deg, #4D9FFF, #448AFF); padding: 7px 16px; border-radius: 20px;
-  display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 20px rgba(77,159,255,0.35);
+  background: linear-gradient(135deg, var(--c-accent), var(--c-review)); padding: 7px 16px; border-radius: 20px;
+  display: flex; align-items: center; gap: 8px; box-shadow: 0 4px 20px rgba(var(--c-accent-rgb),0.35);
 }
 .meeting-badge i { width: 7px; height: 7px; border-radius: 50%; background: #04121f; animation: pulse 1.5s ease infinite; }
 
@@ -704,9 +719,9 @@ button { font-family: inherit; }
   height: 16px;
   padding: 0 4px;
   border-radius: 999px;
-  background: rgba(16, 229, 160, 0.16);
-  border: 1px solid rgba(16, 229, 160, 0.35);
-  color: #10E5A0;
+  background: rgba(var(--c-done-rgb),0.16);
+  border: 1px solid rgba(var(--c-done-rgb),0.35);
+  color: var(--c-done);
   font-family: 'DM Mono', monospace;
   font-size: 9.5px;
   font-weight: 700;
@@ -761,13 +776,13 @@ button { font-family: inherit; }
   box-shadow: 0 0 6px var(--green); flex: none;
 }
 .ticker .ticker-conn-warn {
-  border-color: rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.10);
+  border-color: rgba(var(--c-running-rgb),0.35); background: rgba(var(--c-running-rgb),0.10);
 }
 .ticker .ticker-conn-warn i { background: var(--amber); box-shadow: 0 0 6px var(--amber); animation: pulse 1.5s infinite; }
 .ticker .ticker-conn-err {
-  border-color: rgba(239, 68, 68, 0.4); background: rgba(239, 68, 68, 0.12); color: #fca5a5;
+  border-color: rgba(var(--c-failed-rgb),0.4); background: rgba(var(--c-failed-rgb),0.12); color: #fca5a5;
 }
-.ticker .ticker-conn-err i { background: #ef4444; box-shadow: 0 0 6px #ef4444; animation: pulse 1.5s infinite; }
+.ticker .ticker-conn-err i { background: var(--c-failed); box-shadow: 0 0 6px var(--c-failed); animation: pulse 1.5s infinite; }
 
 /* Siklus 149: badge kehadiran agen LIVE di Ticker — pill kiri pita, sejajar
    .ticker-conn. Satu grup dgn item berwarna per status (titik = STATUS_HEX
@@ -880,7 +895,7 @@ button { font-family: inherit; }
 .skip-link {
   position: fixed; top: -48px; left: 12px; z-index: 9999; padding: 8px 16px;
   background: var(--teal); color: #00121a; font-weight: 700; border-radius: 10px;
-  text-decoration: none; transition: top .15s ease; box-shadow: 0 4px 16px rgba(77,159,255,0.4);
+  text-decoration: none; transition: top .15s ease; box-shadow: 0 4px 16px rgba(var(--c-accent-rgb),0.4);
 }
 .skip-link.vis { top: 10px; }
 .skip-link:focus { outline: 2px solid #fff; outline-offset: 2px; }
@@ -983,10 +998,10 @@ button { font-family: inherit; }
   color: #fff;
 }
 .team-kanban-btn {
-  background: rgba(16, 229, 160, 0.08);
-  border: 1px solid rgba(16, 229, 160, 0.22);
+  background: rgba(var(--c-done-rgb),0.08);
+  border: 1px solid rgba(var(--c-done-rgb),0.22);
   border-radius: 6px;
-  color: #10E5A0;
+  color: var(--c-done);
   font-size: 11px;
   font-weight: 600;
   padding: 2px 8px;
@@ -997,8 +1012,8 @@ button { font-family: inherit; }
   transition: all 0.15s ease;
 }
 .team-kanban-btn:hover {
-  background: rgba(16, 229, 160, 0.18);
-  border-color: rgba(16, 229, 160, 0.45);
+  background: rgba(var(--c-done-rgb),0.18);
+  border-color: rgba(var(--c-done-rgb),0.45);
   color: #fff;
 }
 .team-progress-bar {
@@ -1060,8 +1075,8 @@ button { font-family: inherit; }
 }
 
 .view-switch .v-btn.active {
-  background: rgba(16, 229, 160, 0.18);
-  color: #10E5A0;
+  background: rgba(var(--c-done-rgb),0.18);
+  color: var(--c-done);
 }
 
 /* Grup tombol ekspor task (CSV / JSON) */
@@ -1153,9 +1168,9 @@ button { font-family: inherit; }
 }
 
 .div-chip.active {
-  background: rgba(16, 229, 160, 0.15);
-  border-color: rgba(16, 229, 160, 0.45);
-  color: #10E5A0;
+  background: rgba(var(--c-done-rgb),0.15);
+  border-color: rgba(var(--c-done-rgb),0.45);
+  color: var(--c-done);
 }
 
 .div-chip-dot {
@@ -1242,8 +1257,8 @@ button { font-family: inherit; }
 
 .kanban-col.drag-over {
   background: rgba(255, 255, 255, 0.08);
-  border-color: var(--col-color, #10E5A0);
-  box-shadow: 0 0 0 2px rgba(16, 229, 160, 0.22), inset 0 0 18px rgba(16, 229, 160, 0.15);
+  border-color: var(--col-color, var(--c-done));
+  box-shadow: 0 0 0 2px rgba(var(--c-done-rgb),0.22), inset 0 0 18px rgba(var(--c-done-rgb),0.15);
   transform: translateY(-2px);
 }
 
@@ -1345,15 +1360,15 @@ button { font-family: inherit; }
 .kanban-card[data-dragging="true"] {
   opacity: 0.38;
   transform: scale(0.96);
-  border: 1.5px dashed rgba(16, 229, 160, 0.5);
-  background: rgba(16, 229, 160, 0.05);
+  border: 1.5px dashed rgba(var(--c-done-rgb),0.5);
+  background: rgba(var(--c-done-rgb),0.05);
   box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
 }
 
 .kanban-drop-slot {
-  border: 2px dashed var(--col-color, #10E5A0);
-  background: rgba(16, 229, 160, 0.1);
-  color: var(--col-color, #10E5A0);
+  border: 2px dashed var(--col-color, var(--c-done));
+  background: rgba(var(--c-done-rgb),0.1);
+  color: var(--col-color, var(--c-done));
   border-radius: 8px;
   padding: 10px 8px;
   text-align: center;
@@ -1411,13 +1426,13 @@ button { font-family: inherit; }
 }
 
 .kanban-move-btn:hover:not(:disabled) {
-  border-color: var(--btn-accent, #10E5A0);
+  border-color: var(--btn-accent, var(--c-done));
   background: rgba(255, 255, 255, 0.1);
   transform: translateY(-1px);
 }
 
 .kanban-move-btn.current {
-  border-color: var(--btn-accent, #10E5A0);
+  border-color: var(--btn-accent, var(--c-done));
   background: rgba(255, 255, 255, 0.14);
   font-weight: 700;
   opacity: 0.65;
@@ -1474,9 +1489,9 @@ button { font-family: inherit; }
 }
 
 .kanban-card-agent-btn:hover {
-  background: rgba(16, 229, 160, 0.15);
-  border-color: rgba(16, 229, 160, 0.4);
-  color: #10E5A0;
+  background: rgba(var(--c-done-rgb),0.15);
+  border-color: rgba(var(--c-done-rgb),0.4);
+  color: var(--c-done);
   transform: scale(1.04);
 }
 
@@ -1583,9 +1598,9 @@ button { font-family: inherit; }
 }
 
 .task-date-select.active {
-  background: rgba(77, 159, 255, 0.12);
-  border-color: rgba(77, 159, 255, 0.5);
-  color: #4D9FFF;
+  background: rgba(var(--c-accent-rgb),0.12);
+  border-color: rgba(var(--c-accent-rgb),0.5);
+  color: var(--c-accent);
 }
 
 .task-date-select:hover {
@@ -1594,13 +1609,13 @@ button { font-family: inherit; }
 }
 
 .task-date-select.active:hover {
-  background: rgba(77, 159, 255, 0.18);
-  border-color: #4D9FFF;
+  background: rgba(var(--c-accent-rgb),0.18);
+  border-color: var(--c-accent);
 }
 
 .task-date-select:focus-visible {
-  border-color: #4D9FFF;
-  box-shadow: 0 0 0 2px rgba(77, 159, 255, 0.25);
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 2px rgba(var(--c-accent-rgb),0.25);
 }
 
 .task-date-select option {
@@ -1625,9 +1640,9 @@ button { font-family: inherit; }
 }
 
 .task-date-clear-btn:hover {
-  background: rgba(239, 68, 68, 0.2);
-  border-color: #ef4444;
-  color: #ef4444;
+  background: rgba(var(--c-failed-rgb),0.2);
+  border-color: var(--c-failed);
+  color: var(--c-failed);
 }
 
 /* Panel Rentang Tanggal Kustom */
@@ -1639,7 +1654,7 @@ button { font-family: inherit; }
   padding: 6px 12px;
   margin-top: 8px;
   background: rgba(7, 18, 48, 0.85);
-  border: 1px solid rgba(77, 159, 255, 0.28);
+  border: 1px solid rgba(var(--c-accent-rgb),0.28);
   border-radius: 6px;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
   flex-wrap: wrap;
@@ -1672,12 +1687,12 @@ button { font-family: inherit; }
 }
 
 .task-date-input:focus-visible {
-  border-color: #4D9FFF;
-  box-shadow: 0 0 0 2px rgba(77, 159, 255, 0.25);
+  border-color: var(--c-accent);
+  box-shadow: 0 0 0 2px rgba(var(--c-accent-rgb),0.25);
 }
 
 .task-date-input.invalid {
-  border-color: #ef4444;
+  border-color: var(--c-failed);
   color: #fca5a5;
 }
 
@@ -1696,9 +1711,9 @@ button { font-family: inherit; }
 }
 
 .task-custom-date-reset-btn:hover {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: rgba(239, 68, 68, 0.4);
-  color: #ef4444;
+  background: rgba(var(--c-failed-rgb),0.15);
+  border-color: rgba(var(--c-failed-rgb),0.4);
+  color: var(--c-failed);
 }
 
 .task-custom-date-info {
@@ -1713,7 +1728,7 @@ button { font-family: inherit; }
 }
 
 .task-custom-date-error {
-  color: #ef4444;
+  color: var(--c-failed);
   font-weight: 600;
 }
 
@@ -1754,8 +1769,8 @@ button { font-family: inherit; }
 }
 
 .task-sort-select:focus-visible {
-  border-color: #10E5A0;
-  box-shadow: 0 0 0 2px rgba(16, 229, 160, 0.25);
+  border-color: var(--c-done);
+  box-shadow: 0 0 0 2px rgba(var(--c-done-rgb),0.25);
 }
 
 .task-sort-select option {
@@ -1786,23 +1801,23 @@ button { font-family: inherit; }
   font-size: 11px;
   font-weight: 700;
   cursor: pointer;
-  background: rgba(239, 68, 68, 0.16);
-  color: #EF4444;
-  border: 1px solid rgba(239, 68, 68, 0.4);
+  background: rgba(var(--c-failed-rgb),0.16);
+  color: var(--c-failed);
+  border: 1px solid rgba(var(--c-failed-rgb),0.4);
   transition: all 0.15s ease;
   white-space: nowrap;
 }
 
 .task-priority-quick-btn:hover {
-  background: rgba(239, 68, 68, 0.26);
-  border-color: #EF4444;
+  background: rgba(var(--c-failed-rgb),0.26);
+  border-color: var(--c-failed);
   transform: translateY(-1px);
 }
 
 .task-priority-quick-btn.active {
-  background: #EF4444;
+  background: var(--c-failed);
   color: #FFFFFF;
-  box-shadow: 0 0 12px rgba(239, 68, 68, 0.45);
+  box-shadow: 0 0 12px rgba(var(--c-failed-rgb),0.45);
 }
 
 /* Task Tag Filter Strip & Badges */
@@ -1862,15 +1877,15 @@ button { font-family: inherit; }
 }
 
 .task-tag-chip:focus-visible {
-  outline: 2px solid var(--teal, #4d9fff);
+  outline: 2px solid var(--teal, var(--c-accent));
   outline-offset: 1px;
 }
 
 .task-tag-chip.active {
-  background: rgba(16, 229, 160, 0.16);
-  border-color: var(--chip-accent, #10E5A0);
+  background: rgba(var(--c-done-rgb),0.16);
+  border-color: var(--chip-accent, var(--c-done));
   color: #ffffff;
-  box-shadow: 0 0 10px rgba(16, 229, 160, 0.25);
+  box-shadow: 0 0 10px rgba(var(--c-done-rgb),0.25);
 }
 
 .task-tag-chip-hash {
@@ -1889,14 +1904,14 @@ button { font-family: inherit; }
 }
 
 .task-tag-chip.active .task-tag-chip-count {
-  background: var(--chip-accent, #10E5A0);
+  background: var(--chip-accent, var(--c-done));
   color: var(--chip-text-color, #0b1320);
   font-weight: 700;
 }
 
 .task-tag-clear-btn {
   background: transparent;
-  border: 1px dashed rgba(239, 68, 68, 0.4);
+  border: 1px dashed rgba(var(--c-failed-rgb),0.4);
   color: #fca5a5;
   font-size: 10px;
   font-weight: 600;
@@ -1908,8 +1923,8 @@ button { font-family: inherit; }
 }
 
 .task-tag-clear-btn:hover {
-  background: rgba(239, 68, 68, 0.15);
-  border-color: #ef4444;
+  background: rgba(var(--c-failed-rgb),0.15);
+  border-color: var(--c-failed);
   color: #ffffff;
 }
 
@@ -1922,8 +1937,8 @@ button { font-family: inherit; }
   font-size: 10px;
   font-weight: 700;
   cursor: pointer;
-  background: rgba(245, 158, 11, 0.12);
-  border: 1px solid rgba(245, 158, 11, 0.35);
+  background: rgba(var(--c-running-rgb),0.12);
+  border: 1px solid rgba(var(--c-running-rgb),0.35);
   color: #fbbf24;
   transition: all 0.15s ease;
   flex-shrink: 0;
@@ -1933,14 +1948,14 @@ button { font-family: inherit; }
 }
 
 .task-tag-mode-btn:hover {
-  background: rgba(245, 158, 11, 0.22);
-  border-color: #f59e0b;
+  background: rgba(var(--c-running-rgb),0.22);
+  border-color: var(--c-running);
   color: #ffffff;
   transform: translateY(-1px);
 }
 
 .task-tag-mode-btn:focus-visible {
-  outline: 2px solid var(--teal, #4d9fff);
+  outline: 2px solid var(--teal, var(--c-accent));
   outline-offset: 1px;
 }
 
@@ -2001,7 +2016,7 @@ button { font-family: inherit; }
 }
 
 .task-preset-chip:focus-visible {
-  outline: 2px solid var(--teal, #4d9fff);
+  outline: 2px solid var(--teal, var(--c-accent));
   outline-offset: 1px;
 }
 
@@ -2081,7 +2096,7 @@ button { font-family: inherit; }
 }
 
 .task-preset-del-btn:focus-visible {
-  outline: 2px solid var(--teal, #4d9fff);
+  outline: 2px solid var(--teal, var(--c-accent));
   outline-offset: 1px;
 }
 
@@ -2709,7 +2724,7 @@ button { font-family: inherit; }
 }
 .help-shortcut-card:hover {
   background: rgba(255, 255, 255, 0.06);
-  border-color: rgba(77, 159, 255, 0.3);
+  border-color: rgba(var(--c-accent-rgb),0.3);
 }
 .help-shortcut-kbd {
   display: inline-block;
@@ -2718,8 +2733,8 @@ button { font-family: inherit; }
   font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   font-weight: 700;
   color: var(--teal);
-  background: rgba(77, 159, 255, 0.08);
-  border: 1px solid rgba(77, 159, 255, 0.28);
+  background: rgba(var(--c-accent-rgb),0.08);
+  border: 1px solid rgba(var(--c-accent-rgb),0.28);
   border-radius: 5px;
   flex-shrink: 0;
   white-space: nowrap;
@@ -2771,8 +2786,8 @@ button { font-family: inherit; }
 }
 
 .task-search-input:focus {
-  border-color: #10e5a0 !important;
-  box-shadow: 0 0 0 2px rgba(16, 229, 160, 0.2) !important;
+  border-color: var(--c-done) !important;
+  box-shadow: 0 0 0 2px rgba(var(--c-done-rgb),0.2) !important;
   background: rgba(15, 23, 42, 0.85) !important;
 }
 
@@ -2793,7 +2808,7 @@ button { font-family: inherit; }
 }
 
 .task-search-clear-btn:hover {
-  background: rgba(239, 68, 68, 0.2);
+  background: rgba(var(--c-failed-rgb),0.2);
   color: #f87171;
 }
 
@@ -2810,13 +2825,13 @@ button { font-family: inherit; }
 }
 
 .kanban-search-highlight {
-  background: rgba(16, 229, 160, 0.22);
-  color: #10e5a0;
+  background: rgba(var(--c-done-rgb),0.22);
+  color: var(--c-done);
   font-weight: 700;
   border-radius: 2px;
   padding: 0 2px;
   text-decoration: underline;
-  text-decoration-color: rgba(16, 229, 160, 0.6);
+  text-decoration-color: rgba(var(--c-done-rgb),0.6);
 }
 
 .kanban-empty-board-banner {
@@ -2874,7 +2889,7 @@ button { font-family: inherit; }
 .workspace-dialog button { color: inherit; background: #23334b; border: 1px solid #64748b; border-radius: 6px; cursor: pointer; }
 .workspace-dialog button[aria-selected=true] { background: #12664c; color: white; }
 .workspace-dialog button:disabled { opacity: .5; cursor: not-allowed; }
-.workspace-dialog :focus-visible { outline: 3px solid #60a5fa; outline-offset: 2px; }
+.workspace-dialog :focus-visible { outline: 3px solid var(--c-review); outline-offset: 2px; }
 .workspace-dialog [role=tabpanel] { overflow: auto; }
 .workspace-dialog iframe { width: 100%; height: 55dvh; border: 0; background: white; }
 .workspace-dialog textarea { width: 100%; min-height: 40dvh; background: #0b1220; color: #e2e8f0; padding: 12px; }
@@ -2897,13 +2912,13 @@ button { font-family: inherit; }
 .dash-cols section { min-width: 0; }
 .dash-sec { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; font-weight: 700; font-size: 12px; color: #cfd8e3; text-transform: uppercase; letter-spacing: .5px; }
 .dash-row { display: flex; justify-content: space-between; align-items: center; gap: 8px; width: 100%; padding: 6px 8px; margin-bottom: 4px; background: rgba(255,255,255,.03); border: 1px solid rgba(255,255,255,.06); border-radius: 7px; color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; text-align: left; }
-.dash-row:hover { background: rgba(77,159,255,.1); border-color: rgba(77,159,255,.35); }
+.dash-row:hover { background: rgba(var(--c-accent-rgb),.1); border-color: rgba(var(--c-accent-rgb),.35); }
 .dash-row-t { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .dash-row-s { color: var(--text-tertiary); font-size: 11px; white-space: nowrap; }
 .dash-log { max-height: 130px; overflow-y: auto; display: flex; flex-direction: column; gap: 3px; }
 .dash-log-row { display: flex; gap: 8px; font-size: 11.5px; color: var(--text-secondary); padding: 3px 6px; background: rgba(255,255,255,.02); border-radius: 5px; }
-.dash-log-t { color: #4D9FFF; font-family: 'Orbitron', monospace; font-size: 10px; padding-top: 1px; white-space: nowrap; }
-.dash-host { margin-top: 10px; padding: 7px 10px; background: rgba(16,229,160,.07); border: 1px solid rgba(16,229,160,.18); border-radius: 8px; font-size: 12px; color: #10E5A0; font-weight: 600; }
+.dash-log-t { color: var(--c-accent); font-family: 'Orbitron', monospace; font-size: 10px; padding-top: 1px; white-space: nowrap; }
+.dash-host { margin-top: 10px; padding: 7px 10px; background: rgba(var(--c-done-rgb),.07); border: 1px solid rgba(var(--c-done-rgb),.18); border-radius: 8px; font-size: 12px; color: var(--c-done); font-weight: 600; }
 @media (max-width: 640px) {
   .dash-grid { grid-template-columns: repeat(2, 1fr); }
   .dash-cols { grid-template-columns: 1fr; }

@@ -7090,3 +7090,12 @@
 - Build PWA OK (46 precache); vitest 323 file / 3960 passed + 6 skipped, 0 fail (+3 vs 393). Deploy cp dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (/tmp/e2e_err.py, DISPLAY=:1, --with playwright): agents=26, init_failed False, errs=[], shot 717080 B. Catatan: e2e_err.py kini di /tmp, bukan scratch.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 01:50 WIB — Siklus 395: palet status/aksen index.css satu sumber via CSS custom properties
+
+- Audit: index.css masih menyimpan 70 literal hex + 90 rgba() warna status/aksen (done/running/review/failed/pending + accent biru) — sumber JS sudah delegasi sejak siklus 373–394, tapi CSS belum, jadi perubahan kanonik tetap harus dua tempat (risiko drift tersisa).
+- Fix: blok --c-done/--c-running/--c-review/--c-failed/--c-pending/--c-accent (+ triplet --c-*-rgb) di :root, sinkron TASK_STATUS_COLORS & ACCENT_BLUE; semua aturan & rgba() komposisi memakai var() (var(--green)/--rose ikut didelegasi).
+- +1 file tes src/__tests__/css_palette_single_source_395.test.js (3 kasus: :root identik palet JS, literal drift hilang di body CSS, rgba lewat triplet var); visual_layout_polish.test.jsx disesuaikan ke var(--c-accent-rgb).
+- Build PWA OK (46 precache); vitest 324 file / 3963 passed + 6 skipped, 0 fail (+3 vs 394). Deploy cp dist → ~/wfs-hq; 9503 → 200.
+- e2e probe (?mode=office): agents=26, init_failed False, errs=[], shot 708145 B. Catatan: probe perlu ?mode=office karena root URL kini landing page (scene tidak auto-load).
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
