@@ -10,6 +10,7 @@ export function cardY(i) { return CARD_TOP + i * CARD_STEP }
 // judul dipotong di batas kata, diberi '…' bila terpotong (jangan memotong di tengah kata)
 import { clip } from '../../lib/clip.js'
 import { pctDone } from '../../lib/math_util.js'
+import { taskStatusColor, TASK_STATUS_COLORS } from '../../lib/task_status_colors.js'
 export { clip }
 
 /**
@@ -71,7 +72,7 @@ export function formatCardTitle(task, maxLen = 30) {
 export function cardMeta(task) {
   if (!task) return null
   const statusKey = normalizeTaskStatus(task.status)
-  const colors = { done: '#10E5A0', running: '#F59E0B', review: '#448AFF', failed: '#ef4444', pending: '#9aa7b8' }
+  const colors = TASK_STATUS_COLORS
   return {
     id: task.id,
     formattedId: formatTaskId(task.id),
@@ -79,7 +80,7 @@ export function cardMeta(task) {
     formattedTitle: formatCardTitle(task, 30),
     statusKey,
     statusText: formatCardStatus(task.status),
-    statusColor: colors[statusKey] || '#9aa7b8',
+    statusColor: taskStatusColor(statusKey) || colors.pending,
   }
 }
 
@@ -108,8 +109,8 @@ export function subtitle(T, timeStr) {
 export function bannerParts(T) {
   const parts = []
   if (!T) return parts
-  if (T.failed) parts.push(['GAGAL ' + T.failed, '#ef4444'])
-  if (T.review) parts.push(['REVIEW ' + T.review, '#448AFF'])
+  if (T.failed) parts.push(['GAGAL ' + T.failed, taskStatusColor('failed')])
+  if (T.review) parts.push(['REVIEW ' + T.review, taskStatusColor('review')])
   return parts
 }
 

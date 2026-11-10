@@ -4,6 +4,7 @@
 import { TEAMS, findTeamByRole, findTeamByAgent, computeTeamStats } from './team_spec.js';
 import { parseFileList } from '../../lib/files.js';
 import { isTaskInDateRange, DATE_RANGE_PRESETS } from '../../lib/kanban_date.js';
+import { taskStatusColor } from '../../lib/task_status_colors.js';
 
 export { isTaskInDateRange, DATE_RANGE_PRESETS };
 
@@ -11,7 +12,7 @@ export const KANBAN_COLUMNS = [
   {
     key: 'pending',
     label: 'Antri',
-    color: '#9aa7b8',
+    color: taskStatusColor('pending'),
     bg: 'rgba(154, 167, 184, 0.12)',
     icon: '⏳',
     desc: 'Task dalam antrean',
@@ -19,7 +20,7 @@ export const KANBAN_COLUMNS = [
   {
     key: 'running',
     label: 'Sedang Jalan',
-    color: '#F59E0B',
+    color: taskStatusColor('running'),
     bg: 'rgba(245, 158, 11, 0.12)',
     icon: '⚡',
     desc: 'Sedang aktif dikerjakan AI',
@@ -27,15 +28,15 @@ export const KANBAN_COLUMNS = [
   {
     key: 'review',
     label: 'Review / Isu',
-    color: '#448AFF',
-    bg: 'rgba(68, 138, 255, 0.12)',
+    color: taskStatusColor('review'),
+    bg: 'rgba(96, 165, 250, 0.12)',
     icon: '🔍',
     desc: 'Menunggu QA atau perlu perbaikan',
   },
   {
     key: 'done',
     label: 'Selesai',
-    color: '#10E5A0',
+    color: taskStatusColor('done'),
     bg: 'rgba(16, 229, 160, 0.12)',
     icon: '✅',
     desc: 'Selesai dan terverifikasi',

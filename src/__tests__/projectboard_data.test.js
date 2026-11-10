@@ -84,7 +84,7 @@ describe('bannerParts & bannerNames', () => {
     { id: 9, title: 'task review', status: 'review' },
   ] }
   it('parts: GAGAL merah, REVIEW biru, urut itu', () => {
-    expect(bannerParts(T)).toEqual([['GAGAL 1', '#ef4444'], ['REVIEW 2', '#448AFF']])
+    expect(bannerParts(T)).toEqual([['GAGAL 1', '#EF4444'], ['REVIEW 2', '#60A5FA']])
   })
   it('names: gabung prefix + daftar task terbaru (maks 3)', () => {
     const n = bannerNames(T)
@@ -347,7 +347,7 @@ describe('normalizeTaskStatus & format helper kartu kanban 3D', () => {
     const metaReady = cardMeta({ id: 'task-xyz', title: 'API Gateway', status: 'ready' })
     expect(metaReady.statusKey).toBe('pending')
     expect(metaReady.statusText).toBe('⏳ antri')
-    expect(metaReady.statusColor).toBe('#9aa7b8')
+    expect(metaReady.statusColor).toBe('#9AA7B8')
     expect(cardMeta(null)).toBeNull()
   })
 

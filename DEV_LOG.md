@@ -6940,3 +6940,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 706496 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 18:15 WIB — Siklus 378: palet status kanban 3D ikut satu sumber
+
+- Audit lanjutan siklus 373: dua situs SCENE terlewat dari palet task_status_colors dan masih drift — kanban_spec.KANBAN_COLUMNS review '#448AFF' (bukan #60A5FA), projectboard_data.cardMeta salinan palet manual penuh {review #448AFF, failed #ef4444, pending #9aa7b8}, plus bannerParts GAGAL/REVIEW juga hardcoded. Kartu/banner di papan 3D berwarna berbeda dari chip UI React untuk status sama.
+- Fix: kanban_spec delegasi KANBAN_COLUMNS.color via taskStatusColor (bg review ikut rgba kanonik); projectboard_data cardMeta.statusColor + bannerParts delegasi (sisa #ef4444 di pbd hanya strip status koneksi offline/agent-down, bukan status task).
+- +1 file tes src/__tests__/kanban_palette_single_source_378.test.js (4 kasus: salinan lama hilang, delegasi kolom kanban, cardMeta fallback status liar, bg review kanonik + palet frozen). Adaptasi 2 assertion lama di projectboard_data.test.js ke nilai kanonik.
+- Build PWA OK (43 precache); vitest 307 file / 3907 passed + 6 skipped, 0 fail (+4 tes vs 377).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 703878 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
