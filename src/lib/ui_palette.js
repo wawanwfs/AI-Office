@@ -95,3 +95,11 @@ export const VIOLET_STATS = '#A78BFA';
  * Fallback warna divisi aktif & warna awal form pembuat preset/divisi.
  */
 export const SKY_DIVISION = '#38BDF8';
+
+/**
+ * Siklus 403 — palet teks ShConsole (satu sumber).
+ *
+ * `#eaf1ff` (teks terang, nilai/nama/input) sebelumnya literal 6× di
+ * ShConsole.jsx. Bukan warna status task — teks utama panel konsol.
+ */
+export const BRIGHT_TEXT = '#eaf1ff';

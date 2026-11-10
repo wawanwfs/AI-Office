@@ -6,7 +6,7 @@ import { api } from '../lib/api'
 import { useDialogA11y, useVisibilityPoll } from '../lib/dialogA11y'
 import { useModalFlag } from '../lib/modal'
 import { STATUS_HEX } from '../scene/parts/agent_status'
-import { MUTED_TEXT } from '../lib/ui_palette'
+import { MUTED_TEXT, BRIGHT_TEXT } from '../lib/ui_palette'
 
 const STYLE = {
   overlay: { position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,.45)' },
@@ -25,12 +25,12 @@ const STYLE = {
   card: { background: '#111827', border: '1px solid #1e2a44', borderRadius: 12, padding: 14, marginBottom: 10 },
   stat: { display: 'flex', justifyContent: 'space-between', marginBottom: 8 },
   k: { color: MUTED_TEXT, fontSize: 12 },
-  v: { fontWeight: 700, fontSize: 16, color: '#eaf1ff' },
+  v: { fontWeight: 700, fontSize: 16, color: BRIGHT_TEXT },
   row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '10px 0', borderBottom: '1px dashed #1b2944' },
   btn: { background: '#23324f', border: 0, color: '#fff', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', fontWeight: 600 },
   btnGhost: { background: '#1a2340', border: 0, color: '#c5d2ec', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', fontSize: 12 },
-  input: { width: '100%', background: '#0d1526', border: '1px solid #23324f', color: '#eaf1ff', borderRadius: 8, padding: '10px 12px', marginBottom: 10, boxSizing: 'border-box' },
-  select: { width: '100%', background: '#0d1526', border: '1px solid #23324f', color: '#eaf1ff', borderRadius: 8, padding: '10px', marginBottom: 10 },
+  input: { width: '100%', background: '#0d1526', border: '1px solid #23324f', color: BRIGHT_TEXT, borderRadius: 8, padding: '10px 12px', marginBottom: 10, boxSizing: 'border-box' },
+  select: { width: '100%', background: '#0d1526', border: '1px solid #23324f', color: BRIGHT_TEXT, borderRadius: 8, padding: '10px', marginBottom: 10 },
   tag: { fontSize: 11, padding: '2px 8px', borderRadius: 99, background: '#1e2a44', color: '#aebfe0', whiteSpace: 'nowrap' },
   err: { color: '#ff8080', fontSize: 13, padding: 8 },
   logLine: { fontSize: 12, color: '#9fb0d0', borderBottom: '1px dashed #18233c', padding: '6px 0' },
@@ -432,7 +432,7 @@ export default function ShConsole({ show, onClose }) {
                 {tasks.map((t) => (
                   <div key={t.id} style={STYLE.row}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ color: '#eaf1ff' }}>#{t.id} {t.title}</div>
+                      <div style={{ color: BRIGHT_TEXT }}>#{t.id} {t.title}</div>
                       <div style={{ fontSize: 12, color: MUTED_TEXT }}>role: {t.role || '—'} · agent: {t.agent_id || '—'}</div>
                     </div>
                     <span style={STYLE.tag}>{t.status}</span>
@@ -452,7 +452,7 @@ export default function ShConsole({ show, onClose }) {
                 {agents.map((a) => (
                   <div key={a.id} style={STYLE.row}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ color: '#eaf1ff' }}>{a.name || a.id}</div>
+                      <div style={{ color: BRIGHT_TEXT }}>{a.name || a.id}</div>
                       <div style={{ fontSize: 12, color: MUTED_TEXT }}>{a.role} · Lantai {a.floor || '—'} · {a.model || '—'}</div>
                     </div>
                     <span style={STYLE.tag}>{a.status || 'idle'}</span>
@@ -568,7 +568,7 @@ export default function ShConsole({ show, onClose }) {
                 {approvals.map((a) => (
                   <div key={a.id} style={{ ...STYLE.row, alignItems: 'flex-start' }}>
                     <div style={{ flex: 1 }}>
-                      <div style={{ color: '#eaf1ff' }}>[{a.action_type}] project #{a.project_id || '-'}</div>
+                      <div style={{ color: BRIGHT_TEXT }}>[{a.action_type}] project #{a.project_id || '-'}</div>
                       <div style={{ fontSize: 12, color: MUTED_TEXT }}>{a.description}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 6 }}>
