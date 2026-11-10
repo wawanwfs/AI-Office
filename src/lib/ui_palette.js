@@ -18,6 +18,16 @@ export const ACCENT_BLUE = '#4D9FFF';
 /** rgb triplet ACCENT_BLUE, untuk interpolasi manual bila perlu. */
 export const ACCENT_BLUE_RGB = '77,159,255';
 
+/** rgb triplet failed #EF4444 (TASK_STATUS_COLORS.failed), untuk rgba. */
+export const FAILED_RGB = '239,68,68';
+
+/** rgba(alpha 0..1) di atas warna failed — komposisi satu sumber. */
+export function failedAlpha(a) {
+  const v = Number(a);
+  if (!Number.isFinite(v) || v < 0 || v > 1) return null; // anti-poisoning
+  return `rgba(${FAILED_RGB},${v})`;
+}
+
 /** rgba(alpha 0..1) di atas ACCENT_BLUE — satu titik kebenaran komposisi. */
 export function accentAlpha(a) {
   const v = Number(a);

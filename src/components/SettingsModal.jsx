@@ -14,7 +14,7 @@ import {
   clampAmbienceVolume, formatAmbiencePercent,
 } from '../scene/parts/sound_spec'
 import { namesPrefOn, autoRotatePrefOn } from '../lib/storage_prefs.js'
-import { accentAlpha } from '../lib/ui_palette.js'
+import { accentAlpha, failedAlpha } from '../lib/ui_palette.js'
 
 export default function SettingsModal({
   show,
@@ -238,14 +238,14 @@ export default function SettingsModal({
         <div className="settings-section" style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '12px 14px', background: 'rgba(255,255,255,0.02)', marginBottom: 14 }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              {muted ? <IconVolumeMute size={18} style={{ color: '#fb7185' }} /> : <IconVolume size={18} style={{ color: 'var(--teal)' }} />}
+              {muted ? <IconVolumeMute size={18} style={{ color: TASK_STATUS_COLORS.failed }} /> : <IconVolume size={18} style={{ color: 'var(--teal)' }} />}
               <span style={{ fontWeight: 600, fontSize: 13, color: '#fff' }}>Audio Notifikasi</span>
               <span style={{
                 fontSize: 11,
                 padding: '2px 6px',
                 borderRadius: 6,
-                background: muted ? 'rgba(251,113,133,0.15)' : accentAlpha(0.15),
-                color: muted ? '#fb7185' : 'var(--teal)',
+                background: muted ? failedAlpha(0.15) : accentAlpha(0.15),
+                color: muted ? TASK_STATUS_COLORS.failed : 'var(--teal)',
                 fontFamily: "'DM Mono', monospace"
               }}>
                 {muted ? 'Bisu' : formatVolumePercent(volume)}
@@ -358,7 +358,7 @@ export default function SettingsModal({
                 style={{ fontSize: 12, padding: '4px 10px', height: 'auto', minHeight: 28, display: 'inline-flex', alignItems: 'center', gap: 5 }}
                 title="Dengarkan nada alert peringatan task gagal"
               >
-                <IconPlay size={14} style={{ color: '#fb7185' }} />
+                <IconPlay size={14} style={{ color: TASK_STATUS_COLORS.failed }} />
                 Task Fail
               </button>
               <button
@@ -396,7 +396,7 @@ export default function SettingsModal({
               </button>
             </div>
             {testTip && (
-              <div role="status" aria-live="polite" style={{ fontSize: 11, marginTop: 6, color: muted ? '#fb7185' : 'var(--teal)' }}>
+              <div role="status" aria-live="polite" style={{ fontSize: 11, marginTop: 6, color: muted ? TASK_STATUS_COLORS.failed : 'var(--teal)' }}>
                 {testTip}
               </div>
             )}

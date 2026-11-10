@@ -7081,3 +7081,12 @@
 - Build PWA OK (46 precache); vitest 322 file / 3957 passed + 6 skipped, 0 fail (+4 vs 392). Deploy cp dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK: agents=26, init_failed False, errs=[], shot 717913 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 01:10 WIB — Siklus 394: warna failed SettingsModal satu sumber
+
+- Audit: 4 sisa literal #fb7185 + 1 rgba(251,113,133,0.15) di SettingsModal (ikon mute, badge Bisu, tombol Task Fail, tip audio) — drift dari kanonik failed #EF4444; elemen "muted/gagal" tampil rose-400 berbeda dari chip Gagal di seluruh UI.
+- Fix: delegasi TASK_STATUS_COLORS.failed; helper baru failedAlpha()/FAILED_RGB di lib/ui_palette.js (anti-poisoning null utk alpha invalid) untuk rgba badge.
+- +1 file tes src/__tests__/failed_color_single_source_394.test.js (3 kasus).
+- Build PWA OK (46 precache); vitest 323 file / 3960 passed + 6 skipped, 0 fail (+3 vs 393). Deploy cp dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (/tmp/e2e_err.py, DISPLAY=:1, --with playwright): agents=26, init_failed False, errs=[], shot 717080 B. Catatan: e2e_err.py kini di /tmp, bukan scratch.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
