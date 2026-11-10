@@ -89,6 +89,15 @@ export function floorZoneName(level) {
   return null;
 }
 
+// Siklus 377: prefix zona 'L{n} · {zona}' SATU sumber — dipakai AgentInspector
+// (badge lantai fallback) & FloorNavigator (nama tombol). Lantai tak dikenal →
+// 'L{n}' polos (zona tak dikarang).
+export function floorZonePrefix(level) {
+  const zone = floorZoneName(level);
+  return zone ? `L${level} · ${zone}` : (level === 1 || level === 2 || level === 3) ? `L${level}` : null;
+}
+export const FLOOR_ZONE_PREFIX = floorZonePrefix;
+
 // Lantai live entri agentData: prioritas walker (agen sedang berjalan — sittingChar
 // disembunyikan), fallback sittingChar (duduk), terakhir home (duduk).
 // PESERTA RAPAT: scene memindahkan FIGUR ke ruang meeting (meeting_room_spec —

@@ -3,7 +3,7 @@ import { IconClose, IconChat, IconUser } from './Icons'
 import { getAgentCompetency } from '../scene/parts/agent_competencies.js'
 import { resolveAgentId } from '../scene/parts/running_tasks.js'
 import { findTeamByAgent } from '../scene/parts/team_spec.js'
-import { agentLiveStatus, findAgentLiveEntry, agentLiveLevel, floorZoneName } from '../scene/parts/agent_status.js'
+import { agentLiveStatus, findAgentLiveEntry, agentLiveLevel, floorZoneName, floorZonePrefix, FLOOR_ZONE_PREFIX } from '../scene/parts/agent_status.js'
 import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js'
 import { useModalFlag } from '../lib/modal'
 import { useEscapeClose, useVisibilityPoll } from '../lib/dialogA11y'
@@ -156,7 +156,7 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
             <div style={{ fontSize: 12, color: '#fff', fontWeight: 600 }}>
               {liveFloor
                 ? `L${liveFloor} · ${floorZoneName(liveFloor)}`
-                : (agent.floor ? `L${agent.floor} · ${agent.floor === 1 ? 'Ops & AI' : agent.floor === 2 ? 'Engineering' : 'Executive'}` : (isFounder ? 'L3 · Executive' : 'L3 · Penthouse'))}
+                : (agent.floor ? floorZonePrefix(agent.floor) : (isFounder ? 'L3 · Executive' : 'L3 · Penthouse'))}
             </div>
           </button>
         </div>

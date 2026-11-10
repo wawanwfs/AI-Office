@@ -7,14 +7,17 @@ import React, { useState } from 'react'
 // lantai AgentInspector siklus 142), polling 1 dtk selama komponen terpasang.
 // floorOccupancy murni tinggal di scene/parts/agent_status.js (bisa diuji unit,
 // aturan react-refresh: file komponen tak mengekspor non-komponen).
-import { floorOccupancy } from '../scene/parts/agent_status.js'
+import { floorOccupancy, FLOOR_ZONE_PREFIX } from '../scene/parts/agent_status.js'
 import { useVisibilityPoll } from '../lib/dialogA11y'
 
+// Siklus 377: nama zona lantai SATU sumber via floorZonePrefix — dulu string
+// 'L{n} · {zona}' disalin manual (drift diam vs floorZoneName). roleLabel/desc
+// tetap khas FloorNavigator (bukan duplikat zona).
 const FLOORS = [
   {
     num: 1,
     id: 'l1',
-    name: 'L1 · Ops & AI',
+    name: FLOOR_ZONE_PREFIX(1),
     shortName: 'L1',
     roleLabel: 'Datacenter, AI Lab & Architecture Atrium',
     color: '#F59E0B',
@@ -24,7 +27,7 @@ const FLOORS = [
   {
     num: 2,
     id: 'l2',
-    name: 'L2 · Engineering',
+    name: FLOOR_ZONE_PREFIX(2),
     shortName: 'L2',
     roleLabel: 'Core Engineering & Cloud Database Pod',
     color: '#00F0FF',
@@ -34,7 +37,7 @@ const FLOORS = [
   {
     num: 3,
     id: 'l3',
-    name: 'L3 · Executive',
+    name: FLOOR_ZONE_PREFIX(3),
     shortName: 'L3',
     roleLabel: 'Executive Penthouse, Security & Delivery Suite',
     color: '#10E5A0',

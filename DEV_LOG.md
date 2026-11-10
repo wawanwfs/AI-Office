@@ -6930,3 +6930,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 700309 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 10/11/2026 17:35 WIB — Siklus 377: nama zona lantai satu sumber — floorZonePrefix
+
+- Audit satu sumber: teks zona 'L{n} · {zona}' (Ops & AI / Engineering / Executive) tersalin 3× — floorZoneName (zona saja, sah), ternary fallback AgentInspector (agent.floor===1?'Ops & AI':...), FLOORS[].name FloorNavigator ('L1 · Ops & AI' dst). Geser satu = badge inspektur vs tombol navigasi vs zona scene tak konsisten diam-diam.
+- Fix: agent_status.js +floorZonePrefix(level) ('L{n} · zona'; lantai tak dikenal → null) + re-export FLOOR_ZONE_PREFIX; AgentInspector fallback delegasi; FloorNavigator FLOORS[].name = FLOOR_ZONE_PREFIX(n) ×3.
+- +1 file tes src/__tests__/floor_zone_prefix_single_source_377.test.js (4 kasus: salinan manual hilang, nilai kanonik + paritas alias, anti-poisoning 8 bentuk, konsistensi prefix↔floorZoneName).
+- Catatan: run pertama full suite 30 fail — import floorZonePrefix terpisah tak ikut (ReferenceError); digabung ke satu import → bersih.
+- Build PWA OK (43 precache); vitest 306 file / 3903 passed + 6 skipped, 0 fail (+4 tes vs 376).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 706496 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
