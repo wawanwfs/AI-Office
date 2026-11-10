@@ -6,23 +6,23 @@ import { api } from '../lib/api'
 import { useDialogA11y, useVisibilityPoll } from '../lib/dialogA11y'
 import { useModalFlag } from '../lib/modal'
 import { STATUS_HEX } from '../scene/parts/agent_status'
-import { MUTED_TEXT, BRIGHT_TEXT, FAINT_META } from '../lib/ui_palette'
+import { MUTED_TEXT, BRIGHT_TEXT, FAINT_META, PANEL_BORDER } from '../lib/ui_palette'
 
 const STYLE = {
   overlay: { position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,.45)' },
   drawer: {
     position: 'fixed', top: 0, right: 0, height: '100%', width: 460, maxWidth: '94vw',
     background: 'linear-gradient(180deg,#0c1220 0%,#0a0e18 100%)', color: '#d7e0f0',
-    borderLeft: '1px solid #1e2a44', boxShadow: '-12px 0 40px rgba(0,0,0,.55)',
+    borderLeft: '1px solid '+PANEL_BORDER, boxShadow: '-12px 0 40px rgba(0,0,0,.55)',
     display: 'flex', flexDirection: 'column', zIndex: 2001,
   },
-  head: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid #1e2a44' },
+  head: { display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px', borderBottom: '1px solid '+PANEL_BORDER },
   title: { margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: '.5px', color: '#f2f6ff' },
-  tabbar: { display: 'flex', gap: 4, padding: '10px 12px', borderBottom: '1px solid #1e2a44', flexWrap: 'wrap' },
+  tabbar: { display: 'flex', gap: 4, padding: '10px 12px', borderBottom: '1px solid '+PANEL_BORDER, flexWrap: 'wrap' },
   tab: { padding: '7px 10px', border: 0, borderRadius: 8, background: '#141c30', color: '#9fb0d0', cursor: 'pointer', fontWeight: 600, fontSize: 13 },
   tabActive: { background: '#23324f', color: '#fff' },
   body: { flex: 1, overflowY: 'auto', padding: '14px 16px' },
-  card: { background: '#111827', border: '1px solid #1e2a44', borderRadius: 12, padding: 14, marginBottom: 10 },
+  card: { background: '#111827', border: '1px solid '+PANEL_BORDER, borderRadius: 12, padding: 14, marginBottom: 10 },
   stat: { display: 'flex', justifyContent: 'space-between', marginBottom: 8 },
   k: { color: MUTED_TEXT, fontSize: 12 },
   v: { fontWeight: 700, fontSize: 16, color: BRIGHT_TEXT },
@@ -31,7 +31,7 @@ const STYLE = {
   btnGhost: { background: '#1a2340', border: 0, color: '#c5d2ec', borderRadius: 8, padding: '6px 10px', cursor: 'pointer', fontSize: 12 },
   input: { width: '100%', background: '#0d1526', border: '1px solid #23324f', color: BRIGHT_TEXT, borderRadius: 8, padding: '10px 12px', marginBottom: 10, boxSizing: 'border-box' },
   select: { width: '100%', background: '#0d1526', border: '1px solid #23324f', color: BRIGHT_TEXT, borderRadius: 8, padding: '10px', marginBottom: 10 },
-  tag: { fontSize: 11, padding: '2px 8px', borderRadius: 99, background: '#1e2a44', color: '#aebfe0', whiteSpace: 'nowrap' },
+  tag: { fontSize: 11, padding: '2px 8px', borderRadius: 99, background: PANEL_BORDER, color: '#aebfe0', whiteSpace: 'nowrap' },
   err: { color: '#ff8080', fontSize: 13, padding: 8 },
   logLine: { fontSize: 12, color: '#9fb0d0', borderBottom: '1px dashed #18233c', padding: '6px 0' },
   // blok output monospace (log container, isi file, git, terminal) — core style

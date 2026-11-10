@@ -7181,3 +7181,12 @@
 - Build PWA OK; vitest 333 file / 3988 passed + 6 skipped, 0 fail (+3 vs 403). Deploy cp dist → ~/wfs-hq; 9503 → 200.
 - e2e probe (?mode=office, DISPLAY=:1): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 06:05 WIB — Siklus 405: border panel ShConsole satu sumber
+
+- Audit: `#1e2a44` (biru gelap garis batas) literal 5× di ShConsole.jsx (frame drawer, header, tabbar, card, tag).
+- Fix: konstanta `PANEL_BORDER` baru di lib/ui_palette.js; ShConsole delegasi 5 titik.
+- +1 file tes src/__tests__/panel_border_palette_405.test.js (3 kasus); tes 396 disesuaikan ke import baru.
+- Build PWA OK (46 precache); vitest 334 file / 3991 passed + 6 skipped, 0 fail (+3 vs 404). Deploy cp dist → ~/wfs-hq; 9503 → 200.
+- e2e probe (?mode=office, DISPLAY=:1): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

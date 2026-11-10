@@ -106,3 +106,12 @@ export const BRIGHT_TEXT = '#eaf1ff';
 
 // Abu-abu redup untuk meta kecil (timestamp, sumber log, badge stream).
 export const FAINT_META = '#5f6f90';
+
+/**
+ * Siklus 405 — border panel ShConsole (satu sumber).
+ *
+ * `#1e2a44` (biru gelap garis batas) sebelumnya literal 5× di ShConsole.jsx
+ * (frame, header, tabbar, card, tag). Bukan warna status task — garis batas
+ * panel konsol.
+ */
+export const PANEL_BORDER = '#1e2a44';
