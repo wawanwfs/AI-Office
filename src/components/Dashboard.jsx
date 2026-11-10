@@ -137,7 +137,7 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
                   {card('Selesai', stats.tasks_completed ?? (tasks ? (byStatus.done || byStatus.completed || 0) : '—'), TASK_STATUS_COLORS.done)}
                   {card('Agen task engine', stats.agents_count ?? '—', '#4D9FFF')}
                   {card('File dihasilkan', tasks ? totalFiles : '—', '#ADDBF2')}
-                  {card('Sandbox', res ? (res.containers || []).filter(c => /wfs-sandbox|sbx/.test(c.name)).length : '—', '#60A5FA')}
+                  {card('Sandbox', res ? (res.containers || []).filter(c => /wfs-sandbox|sbx/.test(c.name)).length : '—', TASK_STATUS_COLORS.review)}
                 </div>
 
                 <div className="dash-cols">
@@ -165,7 +165,7 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
                     {tasks === null && <p>Data task tidak tersedia.</p>}
                     {tasks?.length === 0 && <div className="skeleton">Belum ada task. Klik ＋ Task.</div>}
                     {(tasks || []).slice(0, 7).map(t => (
-                      <button key={t.id} className="dash-row" style={{ borderLeft: `3px solid ${taskStatusColor(t.status) || '#60A5FA'}` }}
+                      <button key={t.id} className="dash-row" style={{ borderLeft: `3px solid ${taskStatusColor(t.status) || TASK_STATUS_COLORS.review}` }}
                         onClick={() => { setOpen(false); onOpenBoard && onOpenBoard() }}
                         aria-label={`Task ${t.id}: ${t.title} status ${t.status}`}>
                         <span className="dash-row-t">{clip(t.title, 30)}</span>

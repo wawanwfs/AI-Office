@@ -7054,3 +7054,12 @@
 - Build PWA OK; vitest 319 file / 3947 passed + 6 skipped, 0 fail (+3 vs 389). Deploy cp dist → ~/wfs-hq; 9503 OK.
 - e2e probe OK (DISPLAY=:1, --with playwright): agents=26, init_failed False, errs=[], shot 715833 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 23:56 WIB — Siklus 391: sisa literal palet status UI delegasi
+
+- Audit: dua sisa literal warna status di UI — ikon sun QuickToolbar "#F59E0B" dan dua fallback "#60A5FA" di Dashboard (card Sandbox dan borderLeft dash-row).
+- Fix: ketiganya delegasi TASK_STATUS_COLORS.running/.review (import ditambah di QuickToolbar).
+- +1 file tes src/__tests__/residual_palette_ui_391.test.js (3 kasus).
+- Build PWA OK; vitest 320 file / 3950 passed + 6 skipped, 0 fail (+3 vs 390). Deploy cp dist ke ~/wfs-hq.
+- e2e probe OK (DISPLAY=:1, --with playwright): agents=26, init_failed False, errs=[], shot 718343 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
