@@ -5,7 +5,7 @@ import SecureProjectPanel from './SecureProjectPanel'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y, useVisibilityPoll, useWindowEvent } from '../lib/dialogA11y'
 import { IconClose, IconStats } from './Icons'
-import { taskStatusColor } from '../lib/task_status_colors.js'
+import { taskStatusColor, TASK_STATUS_COLORS } from '../lib/task_status_colors.js'
 
 import { clip } from '../lib/clip.js'
 import { fileCount } from '../lib/files'
@@ -131,10 +131,10 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
               <>
                 <div className="dash-grid">
                   {card('Proyek', stats.projects_total ?? (projects ? projects.length : '—'), '#4D9FFF')}
-                  {card('Proyek jalan', stats.projects_running ?? (projects ? projects.filter(p => p.status === 'running').length : '—'), '#F59E0B')}
+                  {card('Proyek jalan', stats.projects_running ?? (projects ? projects.filter(p => p.status === 'running').length : '—'), TASK_STATUS_COLORS.running)}
                   {card('Task', stats.tasks_total ?? (tasks ? tasks.length : '—'), '#8B5CF6')}
-                  {card('Task jalan', stats.tasks_running ?? (tasks ? running : '—'), '#F59E0B')}
-                  {card('Selesai', stats.tasks_completed ?? (tasks ? (byStatus.done || byStatus.completed || 0) : '—'), '#10E5A0')}
+                  {card('Task jalan', stats.tasks_running ?? (tasks ? running : '—'), TASK_STATUS_COLORS.running)}
+                  {card('Selesai', stats.tasks_completed ?? (tasks ? (byStatus.done || byStatus.completed || 0) : '—'), TASK_STATUS_COLORS.done)}
                   {card('Agen task engine', stats.agents_count ?? '—', '#4D9FFF')}
                   {card('File dihasilkan', tasks ? totalFiles : '—', '#ADDBF2')}
                   {card('Sandbox', res ? (res.containers || []).filter(c => /wfs-sandbox|sbx/.test(c.name)).length : '—', '#60A5FA')}
@@ -153,7 +153,7 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
                         aria-label={`Proyek ${p.name} status ${p.status}`}
                         title={p.preview_url ? `Preview: ${p.preview_url}` : 'Belum ada sandbox'}>
                         <span className="dash-row-t">
-                          <b style={{ color: p.status === 'running' ? '#10E5A0' : '#9aa3b5' }}>●</b> {clip(p.name, 26)}
+                          <b style={{ color: p.status === 'running' ? TASK_STATUS_COLORS.done : '#9aa3b5' }}>●</b> {clip(p.name, 26)}
                         </span>
                         <span className="dash-row-s">{p.status}{p.preview_port ? ` :${p.preview_port}` : ''}</span>
                       </button>
@@ -181,7 +181,7 @@ export default function Dashboard({ onOpenBoard, onOpenProjects }) {
                         null (scene absen) → tak dirender, teks task-engine di atas utuh. */}
                     {presence && (
                       <div className="dash-presence" role="status" title="Simulasi avatar kantor, bukan status eksekusi task">
-                        <i style={{ background: '#10E5A0' }} aria-hidden="true" />
+                        <i style={{ background: TASK_STATUS_COLORS.done }} aria-hidden="true" />
                         <b aria-hidden="true">{presence.total} avatar simulasi:</b> {presence.text}
                         <span className="sr-only">Simulasi: {presence.total} avatar di kantor — {presence.text}</span>
                       </div>

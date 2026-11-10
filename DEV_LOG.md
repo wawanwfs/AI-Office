@@ -7018,3 +7018,12 @@
 - Build PWA OK (45 precache); vitest 315 file / 3935 passed + 6 skipped, 0 fail (+3 vs 385). Deploy cp dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK: agents=26, init_failed False, errs=[], shot 715494 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 22:10 WIB — Siklus 387: palet status Dashboard satu sumber
+
+- Audit: Dashboard.jsx masih punya 5 literal warna status task — card "Proyek jalan"/"Task jalan" #F59E0B, card "Selesai", titik proyek running, dan titik kehadiran avatar #10E5A0. Bila palet digeser, dashboard bisa beda dari chip UI/scene.
+- Fix: kelima titik delegasi TASK_STATUS_COLORS.running/.done (import ditambah).
+- +1 file tes src/__tests__/dashboard_palette_single_source_387.test.js (3 kasus: literal drift hilang, delegasi import+count, palet kanonik frozen).
+- Build PWA OK; vitest 316 file / 3938 passed + 6 skipped, 0 fail (+3 vs 386). Deploy cp dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (e2e_err.py, DISPLAY=:1): agents=26, init_failed False, errs=[], shot 716272 B. Catatan: probe headless tanpa DISPLAY gagal WebGL (BindToCurrentSequence) — pakai :1.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
