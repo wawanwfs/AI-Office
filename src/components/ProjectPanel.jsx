@@ -6,6 +6,7 @@ import { fetchWithTimeout } from '../lib/fetch_timeout.js'
 import { IconRocket, IconClose } from './Icons'
 import { normalizeTaskStatus, formatTaskId } from '../scene/parts/projectboard_data'
 import { pctDone } from '../scene/parts/kanban_spec.js'
+import { POLL_PANEL_MS } from '../lib/connection_spec.js'
 import { taskStatusColor, taskStatusLabel } from '../lib/task_status_colors.js'
 
 const ST = {
@@ -60,7 +61,7 @@ export default function ProjectPanel() {
   useVisibilityPoll(() => {
     const ac = new AbortController()
     load(ac.signal).finally(() => ac.abort())
-  }, 15000, { enabled: open })
+  }, POLL_PANEL_MS, { enabled: open })
   useEffect(() => () => { loadRid.current++ }, [open, load])
   useEscapeClose(open, () => setOpen(false)) // Siklus 333: satu sumber Escape
 

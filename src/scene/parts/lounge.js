@@ -2,7 +2,7 @@
 // coffee table kaca+kayu + majalah & cangkir, 2 kursi santai, lampu berdiri,
 // meja majalah, TV info dgn dashboard live dari /wfs-project.
 // Builder berbasis konteks (THREE, office, M, MB, drawTvDashboard) — pola sama dgn cafe.js.
-import { applyPollResult, nextPollDelay } from '../../lib/connection_spec.js'
+import { applyPollResult, nextPollDelay, POLL_SCENE_HEALTHY_MS, CONN_TICK_MS } from '../../lib/connection_spec.js'
 import { fetchWithTimeout } from '../../lib/fetch_timeout.js'
 import { uiTexture, uiMaterial } from './ui_colorspace.js'
 
@@ -118,16 +118,18 @@ export function createLounge(ctx) {
       window.__tvPullErr = String(e && e.stack || e);
     }
   }
-  // Polling adaptif: rantai setTimeout (60 dtk sehat, backoff 5→80s saat gagal,
-  // pulih → 60 dtk) — TV tak lagi menghantam gateway mati tiap 60 dtk.
+  // Polling adaptif: rantai setTimeout (60 dtk sehat = POLL_SCENE_HEALTHY_MS
+  // satu sumber, siklus 375 — dulu konstanta lokal TV_POLL_HEALTHY_MS, backoff
+  // 5→80s saat gagal, pulih → 60 dtk) — TV tak lagi menghantam gateway mati
+  // tiap 60 dtk.
   // Jadwal pertama menyusul pull awal selesai, agar delay dihitung dari tracker segar.
-  const TV_POLL_HEALTHY_MS = 60000;
+  const TV_POLL_HEALTHY_MS = POLL_SCENE_HEALTHY_MS;
   let tvPollTimer = null;
   let tvStopped = false;
   // Detak umur data: saat state non-live (stale/down), label "SINKRON N dtk/mnt
   // LALU" harus berdetak tiap 30 dtk — paritas papan 3D (connIv). Bila live,
   // drawTv sudah dipanggil tiap pull sukses; tick di-skip agar hemat.
-  const connTick = setInterval(() => { if (tvConn.state !== 'live') drawTv(); }, 30000);
+  const connTick = setInterval(() => { if (tvConn.state !== 'live') drawTv(); }, CONN_TICK_MS);
   function tvSchedule() {
     tvPollTimer = setTimeout(async () => {
       await tvPull();

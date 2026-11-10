@@ -5,6 +5,7 @@ import { useModalFlag } from '../lib/modal'
 import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js'
 import { useDialogA11y, useEscapeClose, useTween, useVisibilityPoll } from '../lib/dialogA11y'
 import { fileCount } from '../lib/files'
+import { POLL_PANEL_MS } from '../lib/connection_spec.js'
 import { IconStats, IconClose } from './Icons'
 import { computeTeamStats, teamPresenceSummary } from '../scene/parts/team_spec.js'
 import { computeStatusCounts } from '../scene/parts/kanban_spec.js'
@@ -44,7 +45,7 @@ export default function TeamStats() {
   useVisibilityPoll(() => {
     const ac = new AbortController()
     load(ac.signal).finally(() => ac.abort())
-  }, 15000, { enabled: open })
+  }, POLL_PANEL_MS, { enabled: open })
   // Invalidate poll in-flight saat panel ditutup / load berganti.
   useEffect(() => () => { loadRid.current++ }, [open, load])
   useEscapeClose(open, () => setOpen(false)) // Siklus 333: satu sumber Escape

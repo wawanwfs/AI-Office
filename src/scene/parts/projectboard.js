@@ -4,16 +4,16 @@
 // Modul murni-canvas; dipasang di OfficeScene dengan satu pemanggilan.
 
 import { computePct, clip, cardY, CARD_H, subtitle as subLine, bannerParts, bannerLayout, columnItems, cardMeta, stripLayout, STRIP_GAP, STRIP_LEFT, STRIP_RIGHT } from './projectboard_data.js'
-import { applyPollResult, connectionBadge, nextPollDelay } from '../../lib/connection_spec.js'
+import { applyPollResult, connectionBadge, nextPollDelay, POLL_SCENE_HEALTHY_MS, CONN_TICK_MS } from '../../lib/connection_spec.js'
 import { fetchWithTimeout } from '../../lib/fetch_timeout.js'
 import { parseTimestampMs } from '../../lib/kanban_date.js'
 import { fmtStampId } from '../../lib/format_time.js'
 import { uiTexture, uiMaterial } from './ui_colorspace.js'
 
-// Polling adaptif papan 3D: cadence sehat tetap 60 dtk (perilaku lama), tapi
+// Polling adaptif papan 3D: cadence sehat 60 dtk (POLL_SCENE_HEALTHY_MS satu
+// sumber, siklus 375 — dulu konstanta lokal BOARD_POLL_HEALTHY_MS), tapi
 // saat fetch gagal jeda mengikuti backoff eksponensial 5→10→20→40→80s (cap 80s)
 // dari connection_spec — browser tak lagi menghantam gateway mati tiap 60 dtk.
-const BOARD_POLL_HEALTHY_MS = 60000
 
 export function createProjectBoard(office, THREE) {
   // --- kanvas papan ---
@@ -180,7 +180,7 @@ export function createProjectBoard(office, THREE) {
     pollTimer = setTimeout(async () => {
       await pull()
       if (!pollStopped) schedulePoll()
-    }, nextPollDelay(conn, BOARD_POLL_HEALTHY_MS))
+    }, nextPollDelay(conn, POLL_SCENE_HEALTHY_MS))
   }
   async function pull() {
     if (document.visibilityState === 'hidden') return
@@ -208,7 +208,7 @@ export function createProjectBoard(office, THREE) {
   // Umur data pada badge koneksi (label "Sinkron N dtk/mnt lalu" saat stale)
   // harus berdetak: segarkan strip tiap 30s. draw() menggambar hanya bila snap ada,
   // jadi aman sebelum fetch pertama berhasil.
-  const connIv = setInterval(() => { if (conn.state !== 'live') draw() }, 30000)
+  const connIv = setInterval(() => { if (conn.state !== 'live') draw() }, CONN_TICK_MS)
   // Tab kembali terlihat → segarkan data segera (jangan tunggu tick 60 detik);
   // tab hidden → interval tick di-skip agar tidak fetch sia-sia.
   let pageHidden = document.visibilityState === 'hidden'

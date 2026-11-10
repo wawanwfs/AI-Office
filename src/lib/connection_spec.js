@@ -17,6 +17,19 @@ export const POLL_BASE_MS = 5000
 export const POLL_MAX_MS = 80000
 export const STALE_AFTER_MS = 30000 // >30s tanpa sukses = data dianggap basi
 
+// Siklus 375 — konstanta cadence satu sumber (dulu literal tersebar & rawan drift):
+//  - POLL_PANEL_MS      : poll panel React (ProjectPanel/TeamStats/WfsPanel) —
+//                         dulu 15000 ditulis manual 3× dgn komentar terpisah.
+//  - POLL_SCENE_HEALTHY_MS : cadence sehat papan 3D & TV lounge — dulu
+//                         BOARD_POLL_HEALTHY_MS / TV_POLL_HEALTHY_MS = 60000
+//                         disalin lokal 2× (ubah satu, lainnya basi diam-diam).
+//  - CONN_TICK_MS       : detak ulang badge koneksi saat state non-live
+//                         (label "Sinkron N dtk lalu" berdetak) — dulu 30000
+//                         ditulis 2× (projectboard connIv & lounge connTick).
+export const POLL_PANEL_MS = 15000
+export const POLL_SCENE_HEALTHY_MS = 60000
+export const CONN_TICK_MS = 30000
+
 // Terapkan satu hasil poll ke state tracker (di-mutasi & dikembalikan).
 // result: { ok: true } | { ok: false, error?: string }
 // now: timestamp ms (injeksi waktu agar testable).

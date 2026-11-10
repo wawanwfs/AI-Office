@@ -4,6 +4,7 @@ import { useModalFlag } from '../lib/modal'
 import { useDialogA11y, useEscapeClose, useVisibleLoad, useVisibilityPoll } from '../lib/dialogA11y'
 import { IconChat, IconClose, IconGear, IconSave, IconPlay, IconRotate } from './Icons'
 import { taskStatusColor, taskStatusLabel } from '../lib/task_status_colors.js'
+import { POLL_PANEL_MS } from '../lib/connection_spec.js'
 
 // Navigasi panah tablist (pola WAI-ARIA tabs): Left/Right/Home/End memindahkan
 // fokus antar tab; Tab keluar seperti biasa (roving tabindex di render).
@@ -104,7 +105,7 @@ export default function WfsPanel() {
   // (dua effect berpasangan 322 digabung ke lib).
   useVisibleLoad(loadAgents, { deps: [loadAgents] })
   // Siklus 337: poll status agents satu sumber via useVisibilityPoll.
-  useVisibilityPoll(() => api('agents/status').then(d => setStat(d.agents || {})).catch(() => {}), 15000, { enabled: open })
+  useVisibilityPoll(() => api('agents/status').then(d => setStat(d.agents || {})).catch(() => {}), POLL_PANEL_MS, { enabled: open })
   useEffect(() => { if (sel) { selectedAgentIdRef.current = sel.id; loadCfg(sel) } }, [sel, loadCfg])   // eslint-disable-line react-hooks/set-state-in-effect
   useEffect(() => { if (logRef.current) logRef.current.scrollTop = logRef.current.scrollHeight }, [logs, chatBusy])
   useEscapeClose(open, () => setOpen(false)) // Siklus 333: satu sumber Escape

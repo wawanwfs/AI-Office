@@ -6911,3 +6911,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 694493 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 10/11/2026 15:58 WIB — Siklus 375: konstanta cadence polling satu sumber — connection_spec
+
+- Audit satu sumber: literal cadence tersebar 7× — 15000 ditulis manual 3× (ProjectPanel/TeamStats/WfsPanel), 60000 disalin lokal 2× (projectboard BOARD_POLL_HEALTHY_MS & lounge TV_POLL_HEALTHY_MS), 30000 ditulis 2× (connIv projectboard & connTick lounge). Geser satu situs tanpa lainnya = cadence panel vs scene tak seragam diam-diam.
+- Fix: connection_spec.js +3 konstanta ekspor — POLL_PANEL_MS (15000), POLL_SCENE_HEALTHY_MS (60000), CONN_TICK_MS (30000). Ketiga panel React & kedua modul scene delegasi (konstanta lokal BOARD/TV_POLL_HEALTHY_MS dihapus; lounge memakai POLL_SCENE_HEALTHY_MS langsung).
+- +1 file tes src/__tests__/poll_cadence_single_source_375.test.js (4 kasus: 7 salinan literal hilang via readFileSync, 5 pemakai mengimpor, nilai kanonik + invarian 15s<60s/30s<60s/stale>15s, anti-poisoning nextPollDelay backoff menang atas cadence sehat).
+- Adaptasi tv_lounge_runtime.test.js: sandbox new Function kini inject POLL_SCENE_HEALTHY_MS/CONN_TICK_MS (import ES modul tak terlihat new Function).
+- Build PWA OK (43 precache); vitest 304 file / 3895 passed + 6 skipped, 0 fail (+4 tes vs 374). Catatan: run pertama 14 fail = path readFileSync tes baru (salah root) + sandbox TV belum inject konstanta — keduanya diperbaiki, full suite bersih.
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 696187 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
