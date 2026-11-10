@@ -78,4 +78,14 @@ export const AMBER_ACCENT = '#F59E0B';
  * Identitas karakter agen (extended_desks/agents_spec) tetap di spec.
  */
 export const CYAN_NEON = '#00F0FF';
+
+/**
+ * Siklus 401 — hijau aksen kanvas scene (satu sumber).
+ *
+ * `#10E5A0` sebelumnya literal di plakat LEVEL 03 terraces. Sama hex dengan
+ * status kananik task done (TASK_STATUS_COLORS.done / agent_status.work) —
+ * delegasi aksen plakat tetap via ui_palette agar evolusi terpisah bisa
+ * dilakukan (pola sama dengan AMBER_ACCENT siklus 399).
+ */
+export const GREEN_ACCENT = '#10E5A0';
 export const VIOLET_STATS = '#A78BFA';

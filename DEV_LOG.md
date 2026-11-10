@@ -7144,3 +7144,12 @@
 - Build PWA OK (46 precache); vitest 329 file / 3977 passed + 6 skipped, 0 fail (+3 vs 399). Deploy cp dist → ~/wfs-hq; 9503 → 200.
 - e2e probe (?mode=office, DISPLAY=:1, playwright): __agentData 26 entri, init_failed False, errs=[], shot 709062 B (scene hidup).
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 04:25 WIB — Siklus 401: plakat LEVEL 03 delegasi GREEN_ACCENT
+
+- Audit: `#10E5A0` literal tersisa di plakat LEVEL 03 terraces (createFloorBadge). Sama hex dengan status done kanonik (TASK_STATUS_COLORS.done / agent_status.work) — delegasi aksen plakat tetap via ui_palette (pola AMBER_ACCENT 399).
+- Fix: konstanta `GREEN_ACCENT` baru di lib/ui_palette.js; terraces.js delegasi.
+- +1 file tes src/__tests__/green_badge_palette_401.test.js (3 kasus: nilai kanonik, drift hilang, satu sumber ada).
+- Build PWA OK (46 precache); vitest 330 file / 3979 passed + 6 skipped, 0 fail (+2 vs 400). Deploy cp dist → ~/wfs-hq; 9503 → 200.
+- e2e probe (?mode=office, DISPLAY=:1, /tmp/e2e_err.py): agents=26, init_failed False, errs=[], shot 710471 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

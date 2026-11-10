@@ -4,7 +4,7 @@ import { drawTerrazzo } from './floor_canvas.js';
 // tangga arsitektural naik, tekstur prosedural marmer Carrara & parket jati mewah tanpa z-fighting/flicker.
 import { L1_Y, L2_Y, L3_Y, floorElevationAt } from './floor_elevation.js';
 import { uiTexture, uiMaterial } from './ui_colorspace.js';
-import { AMBER_ACCENT, CYAN_NEON } from '../../lib/ui_palette.js';
+import { AMBER_ACCENT, CYAN_NEON, GREEN_ACCENT } from '../../lib/ui_palette.js';
 export { L1_Y, L2_Y, L3_Y, floorElevationAt };
 
 export function createTerraces({ THREE, office, M, MB }) {
@@ -295,7 +295,7 @@ export function createTerraces({ THREE, office, M, MB }) {
   addRail(10.5, 5.0, L3_Y, 13.0);
 
   // Plakat Lantai 3 (Paling atas di layar)
-  const badgeL3 = createFloorBadge('EXECUTIVE PENTHOUSE & FOUNDER SUITE', 'LEVEL 03', '#10E5A0');
+  const badgeL3 = createFloorBadge('EXECUTIVE PENTHOUSE & FOUNDER SUITE', 'LEVEL 03', GREEN_ACCENT);
   badgeL3.position.set(-8.5, L3_Y + 0.02, 5.8);
   terraces.add(badgeL3);
 
