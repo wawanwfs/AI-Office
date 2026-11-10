@@ -6985,3 +6985,11 @@
 - Build PWA OK (45 precache); vitest 311 file / 3923 passed + 6 skipped, 0 fail (+3 tes vs 381).
 - Deploy cp -r dist → ~/wfs-hq; e2e probe OK: agents=26, init_failed False, errs=[], shot 715232 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 10/11/2026 20:15 WIB — Siklus 383: titik kehadiran Ticker satu sumber
+
+- Audit: STATUS_DOT di Ticker.jsx salinan literal manual peta STATUS_HEX agent_status.js (5 entri work/meet/lunch/walk/dim) — drift potensial dgn chip HUD & scene.
+- Fix: const STATUS_DOT = STATUS_HEX (delegasi penuh, import STATUS_HEX ditambah).
+- +1 file tes src/__tests__/ticker_status_dot_single_source_383.test.js (3 kasus).
+- Build PWA OK; vitest 312 file / 3926 passed + 6 skipped, 0 fail (+3 vs 382). Deploy cp dist → ~/wfs-hq.
+- e2e probe OK (python3.12 playwright; uv run path tetap gagal tanpa driver): agents=26, init_failed False, errs=[], shot 716194 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
