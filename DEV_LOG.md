@@ -6950,3 +6950,12 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 703878 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 10/11/2026 18:50 WIB — Siklus 379: normalisasi status task satu sumber — normalizeTaskStatus
+
+- Audit: peta alias status task ('completed'/'in_progress'/'active'/'success'/'qa' dst) tersalin 3× dgn cakupan BERBEDA — projectboard_data.normalizeTaskStatus (penuh: 14 alias), kanban_spec.getKanbanColumnKey (tanpa working/success/resolved), team_spec.computeTeamStats (hanya 5 status mentah). Bug nyata: task 'active'/'in_progress' dihitung PENDING di statistik tim tapi tampil di kolom Sedang Jalan kanban.
+- Fix: kanban_spec delegasi normalizeTaskStatus (re-export; getKanbanColumnKey kini via normalisasi + pemetaan historis failed/error/issue→kolom review); 4 situs filter done/running di kanban_spec (computeDivisionPresetStats, opsi Semua, counts) delegasi; team_spec computeTeamStats delegasi (s[st]+=1).
+- +1 file tes src/__tests__/task_status_normalize_single_source_379.test.js (5 kasus: salinan manual hilang, paritas 19 bentuk status, alias tercakup, computeTeamStats active/in_progress/success benar, API kolom kanban utuh).
+- Build PWA OK (45 precache); vitest 308 file / 3912 passed + 6 skipped, 0 fail (+5 tes vs 378).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 715784 B. Catatan: probe via `uv run --with playwright` gagal (driver butuh install browser); path working = python3.12 system playwright.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

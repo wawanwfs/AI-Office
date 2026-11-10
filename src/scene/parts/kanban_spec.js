@@ -740,12 +740,17 @@ export function getTaskRoleLabel(role) {
   return ROLE_LABELS[r] || (r ? r.toUpperCase() : 'General');
 }
 
+// Delegasi satu sumber: normalisasi status task (peta alias tunggal) dari projectboard_data.
+// getKanbanColumnKey dipertahankan sebagai API lama: pemetaan ke kolom kanban
+// (failed/error/issue masuk kolom review, sesuai perilaku historis papan).
+import { normalizeTaskStatus } from './projectboard_data.js';
+export { normalizeTaskStatus };
+
 export function getKanbanColumnKey(status) {
-  const s = String(status || '').toLowerCase().trim();
-  if (s === 'running' || s === 'in_progress' || s === 'active') return 'running';
-  if (s === 'done' || s === 'completed' || s === 'finished') return 'done';
-  if (s === 'review' || s === 'qa' || s === 'failed' || s === 'error' || s === 'issue') return 'review';
-  return 'pending';
+  const st = normalizeTaskStatus(status);
+  if (st === 'failed') return 'review';
+  if (String(status || '').toLowerCase().trim() === 'issue') return 'review';
+  return st;
 }
 
 export const DIVISION_PRESETS = [
@@ -975,8 +980,8 @@ export function computeDivisionPresetStats(tasks, presets = DIVISION_PRESETS, cu
   return all.map((p) => {
     const divList = normalizeDivisionList(p.divisions, customPresets);
     const matchedTasks = tasks.filter((t) => matchTaskDivision(t, divList, customPresets));
-    const done = matchedTasks.filter((t) => t && (t.status === 'done' || t.status === 'completed')).length;
-    const running = matchedTasks.filter((t) => t && (t.status === 'running' || t.status === 'in_progress')).length;
+    const done = matchedTasks.filter((t) => t && normalizeTaskStatus(t.status) === 'done').length;
+    const running = matchedTasks.filter((t) => t && normalizeTaskStatus(t.status) === 'running').length;
     return {
       ...p,
       count: matchedTasks.length,
@@ -1118,8 +1123,8 @@ export function extractTaskDivisions(tasks) {
     fullName: 'Semua Divisi',
     color: '#10E5A0',
     count: total,
-    done: list.filter((t) => t && (t.status === 'done' || t.status === 'completed')).length,
-    running: list.filter((t) => t && (t.status === 'running' || t.status === 'in_progress')).length,
+    done: list.filter((t) => t && normalizeTaskStatus(t.status) === 'done').length,
+    running: list.filter((t) => t && normalizeTaskStatus(t.status) === 'running').length,
   };
 
   const divisions = [allOption];
@@ -1193,13 +1198,9 @@ export function computeStatusCounts(tasks) {
   if (!Array.isArray(tasks)) return counts;
   tasks.forEach((t) => {
     if (!t) return;
-    const st = String(t.status || '').toLowerCase();
+    const st = normalizeTaskStatus(t.status);
     counts.total += 1;
-    if (st === 'done' || st === 'completed') counts.done++;
-    else if (st === 'running' || st === 'in_progress') counts.running++;
-    else if (st === 'failed') counts.failed++;
-    else if (st === 'review' || st === 'qa') counts.review++;
-    else counts.pending++;
+    counts[st]++;
   });
   return counts;
 }

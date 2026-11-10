@@ -2,6 +2,7 @@
 // Modul murni (tanpa dependensi THREE/DOM) agar dapat diuji unit 100% deterministik.
 import { agentLiveTone, agentLiveLevel, levelOf } from './agent_status.js';
 import { pctDone } from './kanban_spec.js';
+import { normalizeTaskStatus } from './projectboard_data.js';
 
 export const TEAMS = [
   {
@@ -163,11 +164,8 @@ export function computeTeamStats(rawTasks) {
 
     s.total += 1;
     const status = String(t.status || '').toLowerCase();
-    if (status === 'done' || status === 'completed') s.done += 1;
-    else if (status === 'running') s.running += 1;
-    else if (status === 'review') s.review += 1;
-    else if (status === 'failed') s.failed += 1;
-    else s.pending += 1;
+    const st = normalizeTaskStatus(status);
+    s[st] += 1;
   });
 
   return TEAMS.map((team) => {
