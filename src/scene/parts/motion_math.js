@@ -1,5 +1,6 @@
 // Matematika gerak karakter — murni (tanpa THREE/performance.now/DOM), bisa di-unit-test.
 // Diekstrak dari motion.js: dist2, hard clamp batas dunia, langkah menuju target.
+import { faceYaw } from '../../lib/math_util.js';
 
 // Lantai: BoxGeometry(26, z 20) → ±13 / ±10. Dinding kiri x=-13, belakang z=-10.
 // Pintu masuk kantor (spawn shift) di x=-12, z=8 → walker spawn 0.6 unit di dalam.
@@ -80,6 +81,6 @@ export function stepMove(pos, target, speed, delta) {
   if (x > BOUNDS.xMax) { x = BOUNDS.xMax; clamped = true; }
   if (z < BOUNDS.zMin) { z = BOUNDS.zMin; clamped = true; }
   if (z > BOUNDS.zMax) { z = BOUNDS.zMax; clamped = true; }
-  const rot = Math.atan2(nx, nz);
+  const rot = faceYaw(pos, target) ?? (pos.rot ?? 0);
   return { x, z, rot, arrived: false, clamped };
 }

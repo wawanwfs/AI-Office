@@ -104,3 +104,22 @@ export function distXZ(a, b) {
   if (![ax, az, bx, bz].every(Number.isFinite)) return null
   return Math.hypot(ax - bx, az - bz)
 }
+
+/**
+ * Siklus 368: satu sumber rotasi menghadap titik di bidang XZ (konvensi THREE
+ * Y-up) — pengganti salinan `Math.atan2(dx, dz)` di motion.js (converse: 2x)
+ * dan motion_math.js (stepMove: rot arah gerak).
+ *
+ * ANTI-POISONING: koordinat non-finite (NaN/±Infinity, string) → null
+ * (pemanggil mempertahankan rotasi lama), alih-alih Math.atan2(NaN,...) = NaN
+ * yang membuat rotasi walker korup dan tak berputar lagi.
+ */
+export function faceYaw(from, to) {
+  if (!from || !to) return null
+  const fx = typeof from.x === 'number' ? from.x : Number(from.x)
+  const fz = typeof from.z === 'number' ? from.z : Number(from.z)
+  const tx = typeof to.x === 'number' ? to.x : Number(to.x)
+  const tz = typeof to.z === 'number' ? to.z : Number(to.z)
+  if (![fx, fz, tx, tz].every(Number.isFinite)) return null
+  return Math.atan2(tx - fx, tz - fz)
+}

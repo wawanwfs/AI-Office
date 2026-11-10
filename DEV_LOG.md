@@ -6843,3 +6843,12 @@
 - e2e probe OK (playwright 1.49.0): agents=26, init_failed false, 0 error, shot 683458 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
 
+## 10/11/2026 11:40 WIB — Siklus 368: rotasi menghadap satu sumber — faceYaw
+
+- Audit lanjutan satu sumber: pola `Math.atan2(dx, dz)` (konvensi THREE Y-up) tersalin 3x — motion.js converse (walker & sittingChar) dan motion_math.js stepMove (rot arah gerak).
+- Fix: lib/math_util.js ditambah faceYaw(from, to) — anti-poisoning: koordinat non-finite/null/string non-numerik → null (pemanggil mempertahankan rotasi lama), alih-alih Math.atan2(NaN,...) = NaN yang membuat rotasi walker korup & tak berputar lagi. String numerik dinormalisasi.
+- +1 file tes src/__tests__/face_yaw_single_source_368.test.js (5 kasus: salinan atan2 hilang dari 2 file, pemakai converse×2 & stepMove, paritas 8 kasus vs pola lama, anti-poisoning 8 bentuk, simetri converse & konsistensi arah gerak).
+- Build PWA OK (43 precache); vitest 297 file / 3855 passed + 6 skipped, 0 fail (+5 tes vs 367).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (uv playwright<1.50, chromium-1243): agents=26, init_failed false, 0 error, shot 682279 B. Catatan: playwright terbaru (chromium-1254) tidak ada browsernya di cache — pakai versi <1.50.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

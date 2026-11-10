@@ -1,6 +1,7 @@
 // Gerak karakter WFS Project: state machine berbasis tabel handler.
 // State: sitting → walking_out → (talking di tujuan) → walking_back → sitting. Ada juga leaving/offsite.
 import { BOUNDS as B, dist2 as dist2Pure, stepMove, angleDelta } from './motion_math.js';
+import { faceYaw } from '../../lib/math_util.js';
 import { routePath as routePathPure } from './routing.js';
 import { collabTarget } from './trip_plan.js';
 import { OBSTACLES, inObstacle, seatOccupied } from './obstacles.js';
@@ -106,8 +107,8 @@ export function createMotion(ctx) {
 
   function converse(ad) {
     const me = ad.walker.position, pr = ad.partner;
-    ad.walker.rotation.y = Math.atan2(pr.home.x - me.x, pr.home.z - me.z);
-    pr.sittingChar.rotation.y = Math.atan2(me.x - pr.home.x, me.z - pr.home.z);
+    ad.walker.rotation.y = faceYaw(me, pr.home) ?? ad.walker.rotation.y;
+    pr.sittingChar.rotation.y = faceYaw(pr.home, me) ?? pr.sittingChar.rotation.y;
     const lines = ad.collab.lines, step = talkStep(ad.walkPause, LINE_SEC);
     if (step !== ad._talk && step < lines.length) {
       ad._talk = step;
