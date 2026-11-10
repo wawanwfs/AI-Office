@@ -58,8 +58,8 @@ describe('tvConnBadge — badge koneksi gateway TV (paritas chip HUD & strip pap
   });
   it('stale → amber + umur data (<60 dtk dalam detik, ≥60 dtk dalam menit)',()=>{
     expect(tvConnBadge('stale',45).color).toBe('#F59E0B');
-    expect(tvConnBadge('stale',45).label).toBe('SINKRON 45 dtk LALU');
-    expect(tvConnBadge('stale',125).label).toBe('SINKRON 2 mnt LALU');
+    expect(tvConnBadge('stale',45).label).toBe('SINKRON 45 DTK LALU');
+    expect(tvConnBadge('stale',125).label).toBe('SINKRON 2 MNT LALU');
   });
   it('down / state tak dikenal / tracker kosong → merah TERPUTUS',()=>{
     expect(tvConnBadge('down')).toEqual({color:TV_RED,label:'TERPUTUS'});
@@ -67,7 +67,7 @@ describe('tvConnBadge — badge koneksi gateway TV (paritas chip HUD & strip pap
     expect(tvConnBadge('weird',10)).toEqual({color:TV_RED,label:'TERPUTUS'});
   });
   it('umur negatif di-clamp ke 0 (jam mesin mundur tidak menghasilkan label aneh)',()=>{
-    expect(tvConnBadge('stale',-5).label).toBe('SINKRON 0 dtk LALU');
+    expect(tvConnBadge('stale',-5).label).toBe('SINKRON 0 DTK LALU');
   });
   it('render: opts.conn live → titik hijau kanan atas + label LIVE; tanpa opts.conn → tidak digambar',()=>{
     const c=mockCtx();
@@ -84,7 +84,7 @@ describe('tvConnBadge — badge koneksi gateway TV (paritas chip HUD & strip pap
   it('render: stale → label amber dgn umur; down → merah TERPUTUS; tetap menggambar dasbor di bawahnya',()=>{
     const c=mockCtx();
     drawTvDashboard(c,{tasks:{total:10,done:3},saas:{online:false},agents:[]},{now:0,conn:{state:'stale',ageSec:75}});
-    expect(find(c,'SINKRON 1 mnt LALU').color).toBe('#F59E0B');
+    expect(find(c,'SINKRON 1 MNT LALU').color).toBe('#F59E0B');
     expect(find(c,'30% · 3/10 task')).toBeTruthy(); // dasbor tetap tergambar
     const c3=mockCtx();
     drawTvDashboard(c3,{tasks:{total:4,done:1,failed:2,review:1},saas:{online:true,stats:{}},agents:[]},{now:0,conn:{state:'down',ageSec:0}});

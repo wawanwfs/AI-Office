@@ -201,7 +201,7 @@ describe('TV lounge — fetch & siklus hidup (tvPull)', () => {
     texts.length = 0
     fetchMock.mockImplementation(async () => { throw new Error('HTTP 500') })
     await r.tvPull()
-    expect(texts.some(t => /^SINKRON \d+ dtk LALU$/.test(t))).toBe(true)
+    expect(texts.some(t => /^SINKRON \d+ DTK LALU$/.test(t))).toBe(true)
     expect(texts.some(t => t === 'LIVE')).toBe(false)
     // drawTv manual juga memakai tracker tvConn (bukan nilai basi)
     r.tvDestroy()

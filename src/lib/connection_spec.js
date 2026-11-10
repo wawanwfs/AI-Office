@@ -44,6 +44,9 @@ export function applyPollResult(tr, result, now = Date.now()) {
   return t
 }
 
+import { durLabel } from './duration_label.js'
+export { durLabel } // satu sumber "X dtk/mnt lalu" (siklus 374)
+
 // Ringkasan chip HUD dari tracker + jam sekarang. Selalu ada label yang aman
 // digambar (tidak pernah undefined) dan teks Indonesia konsisten dgn UI lain.
 export function connectionBadge(tr, now = Date.now()) {
@@ -54,8 +57,7 @@ export function connectionBadge(tr, now = Date.now()) {
     return { state: 'live', label: 'Sinkron', detail: 'Gateway tersinkron', tone: 'ok' }
   }
   if (t.state === 'stale') {
-    const s = age == null ? 0 : Math.floor(age / 1000)
-    const ago = s < 60 ? `${s} dtk lalu` : `${Math.floor(s / 60)} mnt lalu`
+    const ago = durLabel(Math.floor(age / 1000)) ?? '0 dtk lalu'
     return { state: 'stale', label: `Sinkron ${ago}`, detail: `Polling gagal — data terakhir ${ago}`, tone: 'warn' }
   }
   // 'down' atau tracker kosong sebelum sukses pertama

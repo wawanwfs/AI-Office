@@ -6901,3 +6901,13 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 697452 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 10/11/2026 15:25 WIB — Siklus 374: label durasi "X dtk/mnt lalu" satu sumber — duration_label.js
+
+- Audit satu sumber: pola `s<60 ? s+' dtk' : Math.floor(s/60)+' mnt'` tersalin 2× — connection_spec.connectionBadge (chip HUD, dgn "lalu") & tv_canvas.tvConnBadge (TV lounge, tanpa "lalu", disambung manual) — teks berbeda gaya & risiko drift.
+- Fix: lib/duration_label.js baru — durLabel(sec) (non-finite/bukan angka → null; negatif clamp 0; string numerik dinormalisasi; floor). connection_spec re-export + delegasi (fallback aman '0 dtk lalu'); tv_canvas delegasi dengan gaya KAPITAL dipertahankan ("SINKRON 2 MNT LALU").
+- +1 file tes src/__tests__/duration_label_single_source_374.test.js (5 kasus: salinan inline hilang dari 2 file + import ada, paritas 6 nilai, anti-poisoning 9 bentuk, connectionBadge stale, tvConnBadge stale/live/down paritas).
+- Update 3 tes lama yang mengunci gaya TV kapital (tv_canvas ×3, tv_lounge_runtime ×1).
+- Build PWA OK (43 precache); vitest 303 file / 3891 passed + 6 skipped, 0 fail (+5 tes vs 373). Catatan: run pertama 4 fail = 3 tes lama gaya TV + 1 flake esc_chain (3/3 pass saat re-run tunggal, full suite bersih).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 694493 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

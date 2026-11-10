@@ -27,12 +27,13 @@ export function statusRows(T){
 // state tracker ('live'/'stale'/'down'/kosong) → titik warna + label Indonesia.
 // Murni: tanpa canvas — diuji unit. Warna sama dgn strip papan:
 // ok=#10E5A0, warn=#F59E0B (amber), err=TV_RED.
+import { durLabel } from '../../lib/duration_label.js';
 export function tvConnBadge(state,ageSec){
   if(state==='live')return{color:TV_GREEN,label:'LIVE'};
   if(state==='stale'){
-    const s=Math.max(0,ageSec||0);
-    const ago=s<60?s+' dtk':Math.floor(s/60)+' mnt';
-    return{color:'#F59E0B',label:'SINKRON '+ago+' LALU'};
+    // durLabel satu sumber (siklus 374); TV pakai gaya KAPITAL tanpa "lalu".
+    const ago=(durLabel(ageSec)||'0 dtk lalu').replace(/ lalu$/,'');
+    return{color:'#F59E0B',label:'SINKRON '+ago.toUpperCase()+' LALU'};
   }
   return{color:TV_RED,label:'TERPUTUS'};
 }
