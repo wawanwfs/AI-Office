@@ -2,6 +2,7 @@ import { useState, useRef, useCallback, useEffect } from 'react'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
 import { IconHeadset, IconClose } from './Icons'
+import { TASK_STATUS_COLORS } from '../lib/task_status_colors.js'
 
 /* Widget AI CS dibantuin — iframe ke widget container */
 export default function CsWidget() {
@@ -20,7 +21,7 @@ export default function CsWidget() {
       {open && (
         <div ref={box} id="cs-widget" className="panel wide" role="dialog" aria-label="AI CS dibantuin" aria-modal="true" style={{ background: '#fff', zIndex: 'var(--z-widget)', height: 'min(500px, calc(100dvh - 170px))', borderColor: 'rgba(16,229,160,.5)' }}>
           <div style={{ display: 'flex', alignItems: 'center', background: '#0d1522' }}>
-            <div style={{ flex: 1, paddingLeft: 14, fontSize: 12, fontWeight: 700, color: '#10E5A0', letterSpacing: 1.5, display: 'flex', alignItems: 'center', gap: 6 }}>
+            <div style={{ flex: 1, paddingLeft: 14, fontSize: 12, fontWeight: 700, color: TASK_STATUS_COLORS.done, letterSpacing: 1.5, display: 'flex', alignItems: 'center', gap: 6 }}>
               <IconHeadset size={14} />
               <span>AI CS DIBANTUIN</span>
             </div>

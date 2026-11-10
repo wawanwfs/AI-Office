@@ -1,6 +1,7 @@
 import React, { useState } from 'react'
 import { IconClose, IconChat, IconUser } from './Icons'
 import { getAgentCompetency } from '../scene/parts/agent_competencies.js'
+import { TASK_STATUS_COLORS } from '../lib/task_status_colors.js'
 import { resolveAgentId } from '../scene/parts/running_tasks.js'
 import { findTeamByAgent } from '../scene/parts/team_spec.js'
 import { agentLiveStatus, findAgentLiveEntry, agentLiveLevel, floorZoneName, floorZonePrefix, FLOOR_ZONE_PREFIX } from '../scene/parts/agent_status.js'
@@ -261,7 +262,7 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
               fontWeight: 700,
               background: 'rgba(245,158,11,0.12)',
               border: '1px solid rgba(245,158,11,0.3)',
-              color: '#F59E0B',
+              color: TASK_STATUS_COLORS.running,
               borderRadius: 8,
               padding: '8px 12px',
             }}

@@ -5,6 +5,7 @@ import {
   IconClose, IconGear, IconVolume, IconVolumeMute,
   IconTag, IconRotate, IconSun, IconMoon, IconPlay
 } from './Icons'
+import { TASK_STATUS_COLORS } from '../lib/task_status_colors.js'
 import {
   VOLUME_PRESETS, clampVolume, formatVolumePercent,
   loadAudioVolume, saveAudioVolume,
@@ -334,7 +335,7 @@ export default function SettingsModal({
                 style={{ fontSize: 12, padding: '4px 10px', height: 'auto', minHeight: 28, display: 'inline-flex', alignItems: 'center', gap: 5 }}
                 title="Dengarkan arpeggio nada sukses task selesai"
               >
-                <IconPlay size={14} style={{ color: '#10e5a0' }} />
+                <IconPlay size={14} style={{ color: TASK_STATUS_COLORS.done }} />
                 Task Done
               </button>
               <button
@@ -367,7 +368,7 @@ export default function SettingsModal({
                 style={{ fontSize: 12, padding: '4px 10px', height: 'auto', minHeight: 28, display: 'inline-flex', alignItems: 'center', gap: 5 }}
                 title="Dengarkan nada alert prioritas urgent"
               >
-                <IconPlay size={14} style={{ color: '#EF4444' }} />
+                <IconPlay size={14} style={{ color: TASK_STATUS_COLORS.failed }} />
                 Task Urgent
               </button>
               <button
@@ -389,7 +390,7 @@ export default function SettingsModal({
                 style={{ fontSize: 12, padding: '4px 10px', height: 'auto', minHeight: 28, display: 'inline-flex', alignItems: 'center', gap: 5 }}
                 title="Dengarkan efek tactile kartu Kanban (drag & drop)"
               >
-                <IconPlay size={14} style={{ color: '#f59e0b' }} />
+                <IconPlay size={14} style={{ color: TASK_STATUS_COLORS.running }} />
                 Kartu Kanban
               </button>
             </div>
@@ -406,7 +407,7 @@ export default function SettingsModal({
               <div>
                 <div style={{ fontSize: 13, fontWeight: 500, color: '#e2e8f0', display: 'flex', alignItems: 'center', gap: 6 }}>
                   <span>Ambience Ruangan (Hum Kantor)</span>
-                  <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: ambienceOn && !muted ? 'rgba(16,229,160,0.15)' : 'rgba(255,255,255,0.06)', color: ambienceOn && !muted ? '#10e5a0' : 'var(--text-tertiary)', fontFamily: "'DM Mono', monospace" }}>
+                  <span style={{ fontSize: 10, padding: '1px 6px', borderRadius: 4, background: ambienceOn && !muted ? 'rgba(16,229,160,0.15)' : 'rgba(255,255,255,0.06)', color: ambienceOn && !muted ? TASK_STATUS_COLORS.done : 'var(--text-tertiary)', fontFamily: "'DM Mono', monospace" }}>
                     {muted ? 'TERBUNGKAM' : (ambienceOn ? 'AKTIF' : 'NONAKTIF')}
                   </span>
                 </div>
@@ -493,7 +494,7 @@ export default function SettingsModal({
 
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-secondary)' }}>
-                {cyberpunk ? <IconSun size={16} style={{ color: '#F59E0B' }} /> : <IconMoon size={16} style={{ color: 'var(--teal)' }} />}
+                {cyberpunk ? <IconSun size={16} style={{ color: TASK_STATUS_COLORS.running }} /> : <IconMoon size={16} style={{ color: 'var(--teal)' }} />}
                 <span>Pencahayaan Ruang</span>
               </div>
               <button

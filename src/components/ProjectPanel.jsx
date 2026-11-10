@@ -99,7 +99,7 @@ export default function ProjectPanel() {
                   <div className="note" style={{ marginBottom: 4 }}>Progres pengerjaan — {T.done}/{T.total} task selesai ({pct}%)</div>
                   <div role="progressbar" aria-valuemin={0} aria-valuemax={100} aria-valuenow={pct} aria-label={`Progres task: ${pct}% selesai`}
                     style={{ height: 10, background: 'rgba(255,255,255,.08)', borderRadius: 6, overflow: 'hidden' }}>
-                    <div style={{ height: '100%', width: pct + '%', background: `linear-gradient(90deg,${TASK_STATUS_COLORS.done},#448AFF)`, borderRadius: 6, transition: 'width .6s' }} />
+                    <div style={{ height: '100%', width: pct + '%', background: `linear-gradient(90deg,${TASK_STATUS_COLORS.done},${TASK_STATUS_COLORS.review})`, borderRadius: 6, transition: 'width .6s' }} />
                   </div>
                   <div style={{ display: 'flex', gap: 8, marginTop: 8, flexWrap: 'wrap' }}>
                     {Object.entries(ST).map(([k, [l, c]]) => T[k] > 0 && (

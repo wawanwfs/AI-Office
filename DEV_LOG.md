@@ -7027,3 +7027,12 @@
 - Build PWA OK; vitest 316 file / 3938 passed + 6 skipped, 0 fail (+3 vs 386). Deploy cp dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (e2e_err.py, DISPLAY=:1): agents=26, init_failed False, errs=[], shot 716272 B. Catatan: probe headless tanpa DISPLAY gagal WebGL (BindToCurrentSequence) — pakai :1.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 21:45 WIB — Siklus 388: sisa literal palet status UI delegasi satu sumber
+
+- Audit: masih ada 9 literal warna status task di 5 file UI React — ProjectPanel gradient #448AFF, CsWidget header #10E5A0, AgentInspector tombol konsol #F59E0B, FloorNavigator warna L1/L3 (#F59E0B/#10E5A0), ConfirmModal danger #ef4444, SettingsModal 5 titik (IconPlay done/urgent/kanban, ikon sun, badge ambience).
+- Fix: semua delegasi TASK_STATUS_COLORS.done/.running/.review/.failed (import ditambah per file).
+- +1 file tes src/__tests__/residual_palette_ui_388.test.js (3 kasus: literal drift hilang di 5 file, delegasi import+usage, palet kanonik frozen).
+- Build PWA OK (46 precache); vitest 317 file / 3941 passed + 6 skipped, 0 fail (+3 vs 387). Deploy cp dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (e2e_err.py, DISPLAY=:1, --with playwright): agents=26, init_failed False, errs=[], shot 718207 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

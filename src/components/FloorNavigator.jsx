@@ -8,6 +8,7 @@ import React, { useState } from 'react'
 // floorOccupancy murni tinggal di scene/parts/agent_status.js (bisa diuji unit,
 // aturan react-refresh: file komponen tak mengekspor non-komponen).
 import { floorOccupancy, FLOOR_ZONE_PREFIX } from '../scene/parts/agent_status.js'
+import { TASK_STATUS_COLORS } from '../lib/task_status_colors.js'
 import { useVisibilityPoll } from '../lib/dialogA11y'
 
 // Siklus 377: nama zona lantai SATU sumber via floorZonePrefix — dulu string
@@ -20,7 +21,7 @@ const FLOORS = [
     name: FLOOR_ZONE_PREFIX(1),
     shortName: 'L1',
     roleLabel: 'Datacenter, AI Lab & Architecture Atrium',
-    color: '#F59E0B',
+    color: TASK_STATUS_COLORS.running,
     desc: 'Aris, Clara, Rian, Tari, Andi, Budi, Rina, Trainer AI, Bantuin AI',
     agents: ['Aris', 'Clara', 'Rian', 'Tari', 'Bantuin AI', 'Budi', 'Andi', 'Rina', 'Trainer AI']
   },
@@ -40,7 +41,7 @@ const FLOORS = [
     name: FLOOR_ZONE_PREFIX(3),
     shortName: 'L3',
     roleLabel: 'Executive Penthouse, Security & Delivery Suite',
-    color: '#10E5A0',
+    color: TASK_STATUS_COLORS.done,
     desc: 'SecBot, Citra, Bagas, Nina, Wahyu FS, Maya, Toni, Sari, Support',
     agents: ['SecBot', 'Citra', 'Bagas', 'Nina', 'Wahyu FS', 'Maya', 'Toni', 'Sari', 'Support']
   }
