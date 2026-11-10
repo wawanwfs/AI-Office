@@ -7108,3 +7108,12 @@
 - Build PWA OK (46 precache); vitest 325 file / 3966 passed + 6 skipped, 0 fail (+3 vs 395). Deploy cp dist → ~/wfs-hq; 9503 → 200.
 - e2e probe (?mode=office, DISPLAY=:1): agents=26, init_failed False, errs=[], shot 711153 B. Catatan: run tanpa DISPLAY env gagal WebGL (context creation) — probe wajib DISPLAY=:1.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 02:47 WIB — Siklus 397: warna bubble aksen scene delegasi satu sumber
+
+- Audit: OfficeScene masih menyimpan literal warna aksen status di bubble scene — 4× `#F59E0B` (bubble welcome Nexus 2×, whiteboard tooltip, default CEO fallback) dan 5× `#10E5A0` (bubble detail proyek 2×, dot online HUD canvas 2×, fallback bubble halo/pod) — di luar TASK_STATUS_COLORS yang sudah delegasi siklus 373–396.
+- Fix: semua delegasi TASK_STATUS_COLORS.running/.done; literal hex avatar CEO (0xF59E0B identitas karakter Wahyu FS) sengaja dipertahankan — itu identitas visual karakter, bukan warna status.
+- +1 file tes src/__tests__/scene_bubble_palette_397.test.js (2 kasus: literal bubble hilang, delegasi + nilai kanonik cocok).
+- Build PWA OK (46 precache); vitest 326 file / 3968 passed + 6 skipped, 0 fail (+2 vs 396). Deploy cp dist → ~/wfs-hq; 9503 → 200.
+- e2e probe (?mode=office, DISPLAY=:1, uv --with playwright): agents=26, init_failed False, errs=[], shot 713788 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

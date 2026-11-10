@@ -447,7 +447,7 @@ __onCanvas('pointerup',e=>{
     saveCam(sph);
     const bpos=boardMesh?boardMesh.position:new THREE.Vector3(-8.35,3.8,13.3);
     focusGoal={t:new THREE.Vector3(bpos.x,bpos.y,13.2),r:8.5};
-    createBubble(bpos.x,bpos.y+2.15,7.8,'“WFS PROJECT Software House — membuka detail proyek…”','#10E5A0');
+    createBubble(bpos.x,bpos.y+2.15,7.8,'“WFS PROJECT Software House — membuka detail proyek…”',TASK_STATUS_COLORS.done);
     try { window.dispatchEvent(new CustomEvent('wfs-open-project-panel')); } catch { /* panel listener opsional, abaikan error */ }
     selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null);
     return;
@@ -456,7 +456,7 @@ __onCanvas('pointerup',e=>{
     __sound.playSelect();
     focusMeetingRoom();
     const tip=getWhiteboardTooltipText(typeof window !== 'undefined' ? window.__tvData?.tasks : undefined, typeof __meet !== 'undefined' && __meet.active);
-    createBubble(MRX, 2.2 + 0.75, MRZ - 2.52, '“' + tip + '”', '#F59E0B');
+    createBubble(MRX, 2.2 + 0.75, MRZ - 2.52, '“' + tip + '”', TASK_STATUS_COLORS.running);
     try { dispatchTaskBoardEvent('wfs-open-task-board', { view: 'kanban', source: 'whiteboard' }); } catch { /* ignore */ }
     selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null);
     return;
@@ -467,7 +467,7 @@ __onCanvas('pointerup',e=>{
     saveCam(sph);
     const np=new THREE.Vector3(7.6,1.20+0.8,6.1);
     focusGoal={t:np,r:16};
-    createBubble(7.6,1.20+1.3,6.1,'“Halo! Selamat datang di WFS PROJECT Autonomous Software House!”','#F59E0B');
+    createBubble(7.6,1.20+1.3,6.1,'“Halo! Selamat datang di WFS PROJECT Autonomous Software House!”', TASK_STATUS_COLORS.running);
     selectedIdx=-2;
     applySelected();
     if(onSelectAgent){
@@ -518,7 +518,7 @@ __onCanvas('dblclick',e=>{
     saveCam(sph);
     const bpos=bm?bm.position:new THREE.Vector3(-8.35,3.8,13.3);
     focusGoal={t:new THREE.Vector3(bpos.x,bpos.y,13.2),r:8.5};
-    createBubble(bpos.x,bpos.y+2.15,7.8,'“WFS PROJECT Software House — membuka detail proyek…”','#10E5A0');
+    createBubble(bpos.x,bpos.y+2.15,7.8,'“WFS PROJECT Software House — membuka detail proyek…”',TASK_STATUS_COLORS.done);
     try { window.dispatchEvent(new CustomEvent('wfs-open-project-panel')); } catch { /* ignore */ }
     selectedIdx=-1;applySelected(); if(onSelectAgent)onSelectAgent(null);
     return;
@@ -1080,8 +1080,8 @@ function makeLabel(agent){
     c.stroke();
     
     // 4. Status dot online (hijau neon menyala)
-    c.fillStyle = '#10E5A0';
-    c.shadowColor = '#10E5A0';
+    c.fillStyle = TASK_STATUS_COLORS.done;
+    c.shadowColor = TASK_STATUS_COLORS.done;
     c.shadowBlur = 8;
     c.beginPath();
     c.arc(16, full ? 22 : spec.H / 2, 4.5, 0, Math.PI * 2);
@@ -1280,7 +1280,7 @@ allAgents.forEach((agent,i)=>{
   });
 setTimeout(()=>{
   try{
-    createBubble(-8,2.8,-2.5,'“Halo! Semua tim AI WFS PROJECT aktif 24/7!”','#10E5A0');
+    createBubble(-8,2.8,-2.5,'“Halo! Semua tim AI WFS PROJECT aktif 24/7!”',TASK_STATUS_COLORS.done);
   }catch{ /* abaikan: bubble intro opsional */ }
 },1200);
 
@@ -2346,7 +2346,7 @@ window.addEventListener('keydown',onKey);
       const teamObj = findTeamByKey(teamKey);
       if (teamObj) {
         __sound.playSelect();
-        createBubble(ft.x, ft.y + 1.8, ft.z, '“Pod ' + teamObj.name + ' (Lt. ' + teamObj.floor + ')”', teamObj.hex || teamObj.color || '#10E5A0');
+        createBubble(ft.x, ft.y + 1.8, ft.z, '“Pod ' + teamObj.name + ' (Lt. ' + teamObj.floor + ')”', teamObj.hex || teamObj.color || TASK_STATUS_COLORS.done);
       }
       // Siklus 145→146: kamera melompat ke pod tim (L1/L2/L3 sesuai spesifikasi
       // tim) — FloorNavigator harus ikut, dulu nav tetap di lantai lama
@@ -2366,7 +2366,7 @@ window.addEventListener('keydown',onKey);
         saveCam(sph);
         const np=new THREE.Vector3(7.6,1.20+0.8,6.1);
         focusGoal={t:np,r:16};
-        createBubble(7.6,1.20+1.3,6.1,'“Halo! Selamat datang di WFS PROJECT Autonomous Software House!”','#F59E0B');
+        createBubble(7.6,1.20+1.3,6.1,'“Halo! Selamat datang di WFS PROJECT Autonomous Software House!”', TASK_STATUS_COLORS.running);
         selectedIdx=-2;
         applySelected();
         if(onSelectAgent){
@@ -2404,7 +2404,7 @@ window.addEventListener('keydown',onKey);
         const hr2=ensureHomeRadius(homeRadius,sph.radius); homeRadius=hr2.homeRadius;
         focusGoal = g;
         saveCam(sph);
-        createBubble(g.t.x, g.t.y - 0.2, g.t.z, '“Halo! Aku ' + root.agent.name + '”', root.agent.hex || '#10E5A0');
+        createBubble(g.t.x, g.t.y - 0.2, g.t.z, '“Halo! Aku ' + root.agent.name + '”', root.agent.hex || TASK_STATUS_COLORS.done);
         selectedIdx = agentData.indexOf(root);
         applySelected();
         if (onSelectAgent) onSelectAgent(root.agent);
