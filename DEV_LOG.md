@@ -6959,3 +6959,12 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 715784 B. Catatan: probe via `uv run --with playwright` gagal (driver butuh install browser); path working = python3.12 system playwright.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 10/11/2026 19:20 WIB — Siklus 380: palet live whiteboard sprint satu sumber
+
+- Audit: WB_LIVE_COLORS (whiteboard_canvas) salinan manual palet status dgn drift — done #16a34a (kanonik #10E5A0), review #448AFF (kanonik #60A5FA), failed #ef4444. Baris "selesai/review/gagal" di papan tulis ruang meeting 3D beda warna dari chip UI React.
+- Fix: WB_LIVE_COLORS delegasi TASK_STATUS_COLORS (done/review/failed), Object.freeze; ontrack = WB_ITEM_COLOR (bukan status task).
+- +1 file tes src/__tests__/whiteboard_palette_single_source_380.test.js (4 kasus: salinan drift hilang, delegasi, frozen, nilai kanonik).
+- Build PWA OK; vitest 309 file / 3916 passed + 6 skipped, 0 fail (+4 tes vs 379).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 716370 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
