@@ -7063,3 +7063,12 @@
 - Build PWA OK; vitest 320 file / 3950 passed + 6 skipped, 0 fail (+3 vs 390). Deploy cp dist ke ~/wfs-hq.
 - e2e probe OK (DISPLAY=:1, --with playwright): agents=26, init_failed False, errs=[], shot 718343 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 00:19 WIB — Siklus 392: Ticker & ActivityLog delegasi palet status
+
+- Audit: sisa literal warna status di Ticker (fallback offline #FB7185, fallback gateway #8b93a3, summary #4D9FFF) dan ActivityLog (timestamp #8b93a3) — drift dari kanonik TASK_STATUS_COLORS.
+- Fix: semua delegasi TASK_STATUS_COLORS.failed/.pending/taskStatusColor('review'); sisa literal drift di UI kini nol.
+- +1 file tes src/__tests__/residual_palette_ui_392.test.js (3 kasus).
+- Build PWA OK; vitest 321 file / 3953 passed + 6 skipped, 0 fail (+3 vs 391). Deploy cp dist ke ~/wfs-hq; 9503 OK.
+- e2e probe OK (DISPLAY=:1, --with playwright): agents=26, init_failed False, errs=[], shot 718481 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

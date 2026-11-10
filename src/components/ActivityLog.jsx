@@ -1,7 +1,7 @@
 import React, { useRef, useCallback, useEffect } from 'react'
 import { useDialogA11y } from '../lib/dialogA11y'
 import { IconClose } from './Icons'
-import { taskStatusColor } from '../lib/task_status_colors.js'
+import { taskStatusColor, TASK_STATUS_COLORS } from '../lib/task_status_colors.js'
 
 // Warna status delegasi ke satu sumber (siklus 373) — dulu failed/pending drift.
 const COL = {
@@ -33,7 +33,7 @@ export default function ActivityLog({ show, items, onClose, onClear }) {
           : <ul style={{ listStyle: 'none', margin: 0, padding: 0, maxHeight: '55dvh', overflowY: 'auto' }}>
               {items.map((x, i) => (
                 <li key={i} style={{ padding: '6px 0', borderBottom: '1px solid rgba(255,255,255,.08)', fontSize: 13 }}>
-                  <span style={{ color: '#8b93a3', marginRight: 8 }}>{x.t}</span>
+                  <span style={{ color: TASK_STATUS_COLORS.pending, marginRight: 8 }}>{x.t}</span>
                   <span style={{ color: COL[x.status] || '#fff', fontWeight: 600 }}>{x.label}</span>
                   {' '}#{x.id} {x.title}
                 </li>
