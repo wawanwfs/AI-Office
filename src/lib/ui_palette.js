@@ -34,3 +34,15 @@ export function accentAlpha(a) {
   if (!Number.isFinite(v) || v < 0 || v > 1) return null; // anti-poisoning
   return `rgba(${ACCENT_BLUE_RGB},${v})`;
 }
+
+/**
+ * Siklus 396 — warna teks sekunder/muted UI (satu sumber).
+ *
+ * `#8fa2c4` sebelumnya diketik literal 20× di ShConsole (placeholder kosong,
+ * meta task/agent, hint branch, status muat). Bukan warna status task —
+ * teks redup netral kebiruan. Satu titik kebenaran di sini.
+ */
+export const MUTED_TEXT = '#8fa2c4';
+
+/** Ikon/tombol sky terang (tombol uji audio) — sebelumnya literal #38bdf8. */
+export const SKY_BUTTON = '#38bdf8';

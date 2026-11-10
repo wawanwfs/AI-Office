@@ -15,7 +15,7 @@ describe('siklus 394 — warna failed SettingsModal satu sumber', () => {
   it('delegasi TASK_STATUS_COLORS.failed + failedAlpha terpakai', () => {
     expect(sm.match(/TASK_STATUS_COLORS\.failed/g)?.length).toBeGreaterThanOrEqual(3);
     expect(sm).toContain('failedAlpha');
-    expect(sm).toContain("import { accentAlpha, failedAlpha }");
+    expect(sm).toContain("import { accentAlpha, failedAlpha, SKY_BUTTON }");
   });
 
   it('palet kanonik & helper frozen/konsisten', () => {

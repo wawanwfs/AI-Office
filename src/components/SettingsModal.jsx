@@ -14,7 +14,7 @@ import {
   clampAmbienceVolume, formatAmbiencePercent,
 } from '../scene/parts/sound_spec'
 import { namesPrefOn, autoRotatePrefOn } from '../lib/storage_prefs.js'
-import { accentAlpha, failedAlpha } from '../lib/ui_palette.js'
+import { accentAlpha, failedAlpha, SKY_BUTTON } from '../lib/ui_palette.js'
 
 export default function SettingsModal({
   show,
@@ -380,7 +380,7 @@ export default function SettingsModal({
                 style={{ fontSize: 12, padding: '4px 10px', height: 'auto', minHeight: 28, display: 'inline-flex', alignItems: 'center', gap: 5 }}
                 title="Dengarkan sampel desir ruangan kantor 3D (HVAC tone)"
               >
-                <IconPlay size={14} style={{ color: '#38bdf8' }} />
+                <IconPlay size={14} style={{ color: SKY_BUTTON }} />
                 Hum Ruang
               </button>
               <button

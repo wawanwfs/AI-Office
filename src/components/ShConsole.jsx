@@ -6,6 +6,7 @@ import { api } from '../lib/api'
 import { useDialogA11y, useVisibilityPoll } from '../lib/dialogA11y'
 import { useModalFlag } from '../lib/modal'
 import { STATUS_HEX } from '../scene/parts/agent_status'
+import { MUTED_TEXT } from '../lib/ui_palette'
 
 const STYLE = {
   overlay: { position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,.45)' },
@@ -23,7 +24,7 @@ const STYLE = {
   body: { flex: 1, overflowY: 'auto', padding: '14px 16px' },
   card: { background: '#111827', border: '1px solid #1e2a44', borderRadius: 12, padding: 14, marginBottom: 10 },
   stat: { display: 'flex', justifyContent: 'space-between', marginBottom: 8 },
-  k: { color: '#8fa2c4', fontSize: 12 },
+  k: { color: MUTED_TEXT, fontSize: 12 },
   v: { fontWeight: 700, fontSize: 16, color: '#eaf1ff' },
   row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '10px 0', borderBottom: '1px dashed #1b2944' },
   btn: { background: '#23324f', border: 0, color: '#fff', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', fontWeight: 600 },
@@ -427,12 +428,12 @@ export default function ShConsole({ show, onClose }) {
                     {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>
                 </div>
-                {tasks.length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>Belum ada task.</div>}
+                {tasks.length === 0 && <div style={{ color: MUTED_TEXT, fontSize: 13 }}>Belum ada task.</div>}
                 {tasks.map((t) => (
                   <div key={t.id} style={STYLE.row}>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: '#eaf1ff' }}>#{t.id} {t.title}</div>
-                      <div style={{ fontSize: 12, color: '#8fa2c4' }}>role: {t.role || '—'} · agent: {t.agent_id || '—'}</div>
+                      <div style={{ fontSize: 12, color: MUTED_TEXT }}>role: {t.role || '—'} · agent: {t.agent_id || '—'}</div>
                     </div>
                     <span style={STYLE.tag}>{t.status}</span>
                     {(t.status === 'pending' || t.status === 'failed' || t.status === 'review') && (
@@ -447,12 +448,12 @@ export default function ShConsole({ show, onClose }) {
             <div>
               <div style={STYLE.card}>
                 <div style={{ fontWeight: 700, marginBottom: 8 }}>Agents ({agents.length})</div>
-                {agents.length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>Belum ada data agent.</div>}
+                {agents.length === 0 && <div style={{ color: MUTED_TEXT, fontSize: 13 }}>Belum ada data agent.</div>}
                 {agents.map((a) => (
                   <div key={a.id} style={STYLE.row}>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: '#eaf1ff' }}>{a.name || a.id}</div>
-                      <div style={{ fontSize: 12, color: '#8fa2c4' }}>{a.role} · Lantai {a.floor || '—'} · {a.model || '—'}</div>
+                      <div style={{ fontSize: 12, color: MUTED_TEXT }}>{a.role} · Lantai {a.floor || '—'} · {a.model || '—'}</div>
                     </div>
                     <span style={STYLE.tag}>{a.status || 'idle'}</span>
                   </div>
@@ -466,7 +467,7 @@ export default function ShConsole({ show, onClose }) {
                 <option value="">— pilih project —</option>
                 {projects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
               </select>
-              {!wsId && <div style={{ color: '#8fa2c4' }}>Pilih project untuk melihat workspace.</div>}
+              {!wsId && <div style={{ color: MUTED_TEXT }}>Pilih project untuk melihat workspace.</div>}
               {wsId && (
                 <div>
                   <div style={STYLE.card}>
@@ -497,7 +498,7 @@ export default function ShConsole({ show, onClose }) {
                         </div>
                       );
                     })}
-                    {entries.length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>(folder kosong)</div>}
+                    {entries.length === 0 && <div style={{ color: MUTED_TEXT, fontSize: 13 }}>(folder kosong)</div>}
                     {fileView && (
                       <pre role="region" aria-label={`Isi file ${fileView.name}`}
                         style={{ ...STYLE.pre, maxHeight: 220, fontSize: 12, marginTop: 8 }}
@@ -517,7 +518,7 @@ export default function ShConsole({ show, onClose }) {
                     </div>
                     {gitInfo && (gitInfo.repo
                       ? <div>
-                          <div style={{ fontSize: 12, color: '#8fa2c4', marginBottom: 6 }}>branch: {gitInfo.branch || '—'}</div>
+                          <div style={{ fontSize: 12, color: MUTED_TEXT, marginBottom: 6 }}>branch: {gitInfo.branch || '—'}</div>
                           <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                             <input style={{ ...STYLE.input, marginBottom: 0, flex: 1 }} placeholder="pesan commit…" aria-label="Pesan commit"
                               value={gitMsg} onChange={(e) => setGitMsg(e.target.value)}
@@ -528,7 +529,7 @@ export default function ShConsole({ show, onClose }) {
                           <pre role="region" aria-label="Log commit" style={{ ...STYLE.pre, maxHeight: 160, fontSize: 11 }}>{gitInfo.log}</pre>
                         </div>
                       : <div>
-                          <div style={{ color: '#8fa2c4', fontSize: 13, marginBottom: 8 }}>Workspace belum di-inisialisasi git — commit pertama akan init otomatis.</div>
+                          <div style={{ color: MUTED_TEXT, fontSize: 13, marginBottom: 8 }}>Workspace belum di-inisialisasi git — commit pertama akan init otomatis.</div>
                           <div style={{ display: 'flex', gap: 8 }}>
                             <input style={{ ...STYLE.input, marginBottom: 0, flex: 1 }} placeholder="pesan commit…" aria-label="Pesan commit"
                               value={gitMsg} onChange={(e) => setGitMsg(e.target.value)}
@@ -563,12 +564,12 @@ export default function ShConsole({ show, onClose }) {
                   <div style={{ fontWeight: 700 }}>Menunggu persetujuan ({approvals.length})</div>
                   <button style={STYLE.btnGhost} onClick={loadApprovals}>Refresh</button>
                 </div>
-                {approvals.length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>Tidak ada approval pending.</div>}
+                {approvals.length === 0 && <div style={{ color: MUTED_TEXT, fontSize: 13 }}>Tidak ada approval pending.</div>}
                 {approvals.map((a) => (
                   <div key={a.id} style={{ ...STYLE.row, alignItems: 'flex-start' }}>
                     <div style={{ flex: 1 }}>
                       <div style={{ color: '#eaf1ff' }}>[{a.action_type}] project #{a.project_id || '-'}</div>
-                      <div style={{ fontSize: 12, color: '#8fa2c4' }}>{a.description}</div>
+                      <div style={{ fontSize: 12, color: MUTED_TEXT }}>{a.description}</div>
                     </div>
                     <div style={{ display: 'flex', gap: 6 }}>
                       <button style={STYLE.btn} onClick={() => decideApproval(a.id, 'approve')}>Setujui</button>
@@ -593,7 +594,7 @@ export default function ShConsole({ show, onClose }) {
 }
 
 function Overview({ ov, liveLogs, esState }) {
-  if (!ov) return <p style={{ color: '#8fa2c4' }}>Memuat statistik…</p>
+  if (!ov) return <p style={{ color: MUTED_TEXT }}>Memuat statistik…</p>
   const live = (liveLogs && liveLogs.length) || 0
   // Siklus 204 — liveness SSE jujur: badge "realtime" HANYA saat stream
   // benar-benar terbuka (onopen). error = stream mati/putus (log stale),
@@ -618,7 +619,7 @@ function Overview({ ov, liveLogs, esState }) {
       </div>
       <div style={STYLE.card}>
         <div style={{ fontWeight: 700, marginBottom: 8 }}>Task per status</div>
-        {Object.keys(ov.task_by_status || {}).length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>Belum ada task.</div>}
+        {Object.keys(ov.task_by_status || {}).length === 0 && <div style={{ color: MUTED_TEXT, fontSize: 13 }}>Belum ada task.</div>}
         {Object.entries(ov.task_by_status || {}).map(([k, v]) => (
           <div key={k} style={STYLE.row}><span style={STYLE.k}>{k}</span><span style={STYLE.tag}>{v}</span></div>
         ))}
@@ -647,7 +648,7 @@ function Overview({ ov, liveLogs, esState }) {
               ⚠ Stream log terputus — daftar di bawah adalah log terakhir, bukan realtime.
             </div>
           )}
-          {(liveLogs && liveLogs.length) ? null : (ov.recent_logs || []).length === 0 && <div style={{ color: '#8fa2c4', fontSize: 13 }}>Belum ada log.</div>}
+          {(liveLogs && liveLogs.length) ? null : (ov.recent_logs || []).length === 0 && <div style={{ color: MUTED_TEXT, fontSize: 13 }}>Belum ada log.</div>}
           {(liveLogs && liveLogs.length ? liveLogs : (ov.recent_logs || [])).map((l, i) => (
             <div key={i} style={STYLE.logLine}><b>{l.level || 'INFO'}</b> · {l.message} <span style={{ color: '#5f6f90' }}>({l.source || 'system'})</span></div>
           ))}
@@ -658,9 +659,9 @@ function Overview({ ov, liveLogs, esState }) {
 }
 
 function Projects({ projects, onRefresh, onOpenWorkspace }) {
-  if (!projects) return <p style={{ color: '#8fa2c4' }}>Memuat daftar project…</p>
+  if (!projects) return <p style={{ color: MUTED_TEXT }}>Memuat daftar project…</p>
   if (projects.length === 0) {
-    return <div style={STYLE.card}><div style={{ color: '#8fa2c4' }}>Belum ada project. Buat lewat tab "Project Baru".</div></div>
+    return <div style={STYLE.card}><div style={{ color: MUTED_TEXT }}>Belum ada project. Buat lewat tab "Project Baru".</div></div>
   }
   return (
     <div>
@@ -670,7 +671,7 @@ function Projects({ projects, onRefresh, onOpenWorkspace }) {
             <b>{p.name || p.title}</b>
             <span style={STYLE.tag}>{p.status || '—'}</span>
           </div>
-          <div style={{ fontSize: 12, color: '#8fa2c4', margin: '6px 0' }}>{p.description || ''}</div>
+          <div style={{ fontSize: 12, color: MUTED_TEXT, margin: '6px 0' }}>{p.description || ''}</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button style={STYLE.btnGhost} onClick={() => onOpenWorkspace?.(p.id)} title="Buka workspace project ini">Workspace</button>
             {(p.preview_url || p.direct_url) && (

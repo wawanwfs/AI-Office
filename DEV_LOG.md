@@ -7099,3 +7099,12 @@
 - Build PWA OK (46 precache); vitest 324 file / 3963 passed + 6 skipped, 0 fail (+3 vs 394). Deploy cp dist → ~/wfs-hq; 9503 → 200.
 - e2e probe (?mode=office): agents=26, init_failed False, errs=[], shot 708145 B. Catatan: probe perlu ?mode=office karena root URL kini landing page (scene tidak auto-load).
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 02:15 WIB — Siklus 396: warna teks muted & tombol sky satu sumber
+
+- Audit: `#8fa2c4` (teks muted) diketik literal 20× di ShConsole (placeholder kosong, meta task/agent, hint branch, status muat) dan `#38bdf8` (tombol uji audio Hum Ruang) literal di SettingsModal — di luar palet status yang sudah delegasi siklus 373–395.
+- Fix: konstanta baru `MUTED_TEXT` + `SKY_BUTTON` di lib/ui_palette.js; ShConsole delegasi 17 pemakaian color + 3 di style object key k, SettingsModal delegasi ikon play.
+- +1 file tes src/__tests__/muted_sky_single_source_396.test.js (3 kasus); tes 394 disesuaikan ke import baru SettingsModal.
+- Build PWA OK (46 precache); vitest 325 file / 3966 passed + 6 skipped, 0 fail (+3 vs 395). Deploy cp dist → ~/wfs-hq; 9503 → 200.
+- e2e probe (?mode=office, DISPLAY=:1): agents=26, init_failed False, errs=[], shot 711153 B. Catatan: run tanpa DISPLAY env gagal WebGL (context creation) — probe wajib DISPLAY=:1.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
