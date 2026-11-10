@@ -63,7 +63,7 @@ import {
   formatDivisionFilterSummary,
 } from '../scene/parts/kanban_spec'
 import { TEAMS, findTeamByRole, findTeamByAgent } from '../scene/parts/team_spec'
-import { taskStatusColor, taskStatusLabel } from '../lib/task_status_colors'
+import { taskStatusColor, taskStatusLabel, TASK_STATUS_COLORS } from '../lib/task_status_colors'
 // ST delegasi ke satu sumber warna/label status (siklus 373).
 const ST = {
   done: [taskStatusLabel('done'), taskStatusColor('done')],
@@ -688,8 +688,8 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
                 style={{
                   width: `${metrics.pct}%`,
                   background: !isDivAll && (activeDivision?.color || '#38BDF8')
-                    ? `linear-gradient(90deg, ${activeDivision?.color || '#38BDF8'}, #448AFF)`
-                    : 'linear-gradient(90deg, #10E5A0, #448AFF)',
+                    ? `linear-gradient(90deg, ${activeDivision?.color || '#38BDF8'}, ${TASK_STATUS_COLORS.review})`
+                    : `linear-gradient(90deg, ${TASK_STATUS_COLORS.done}, ${TASK_STATUS_COLORS.review})`,
                 }}
               />
             </div>

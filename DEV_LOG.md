@@ -6993,3 +6993,10 @@
 - Build PWA OK; vitest 312 file / 3926 passed + 6 skipped, 0 fail (+3 vs 382). Deploy cp dist → ~/wfs-hq.
 - e2e probe OK (python3.12 playwright; uv run path tetap gagal tanpa driver): agents=26, init_failed False, errs=[], shot 716194 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 10/11/2026 20:55 WIB — Siklus 384: gradient progres sprint TaskBoard satu sumber
+- Audit: gradient bar progres sprint di TaskBoard.jsx pakai literal '#448AFF' (review, drift dari kanonik #60A5FA) dan '#10E5A0' (done) — bar progres bisa beda warna dari chip UI/scene bila palet digeser.
+- Fix: kedua gradient delegasi TASK_STATUS_COLORS.review/.done.
+- +1 file tes src/__tests__/taskboard_gradient_single_source_384.test.js (3 kasus).
+- Build PWA OK; vitest 313 file / 3929 passed + 6 skipped, 0 fail (+3 vs 383). Deploy cp dist → ~/wfs-hq.
+- e2e probe OK: agents=26, init_failed False, errs=[], shot 715364 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
