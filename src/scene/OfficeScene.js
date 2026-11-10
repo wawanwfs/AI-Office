@@ -20,6 +20,7 @@ import { updateFollowGoal, focusStep, autoRotateStep, ensureHomeRadius, saveCam,
 import { nextAgentIndex } from './parts/agent_cycle.js';
 import { dispatchTaskBoardEvent } from '../lib/taskboard_gate.js';
 import { fetchWithTimeout } from '../lib/fetch_timeout.js';
+import { TASK_STATUS_COLORS } from '../lib/task_status_colors.js';
 import { dayMinutesNow } from '../lib/format_time.js';
 import { expDamp, lerpTo, clamp, distXZ } from '../lib/math_util.js';
 import { orbitStep, orbitFocusGoal, ORBIT_KEY_STEP, ORBIT_KEY_STEP_FAST } from './parts/orbit_spec.js';
@@ -1330,7 +1331,7 @@ window.__spawnBubble=(x,y,z,text,color,anchor)=>createBubble(x,y,z,text,color,an
         }else if(act.type==='alert'){
           const bay=(act.ad.walker.visible?act.ad.walker.position.y:act.ad.home.y)||0;
           const wp=act.ad.walker.visible?act.ad.walker.position:{x:act.ad.home.x,y:bay,z:act.ad.home.z};
-          createBubble(wp.x,bay+1.3,wp.z,'Ada task failed! Cek log…','#f66');
+          createBubble(wp.x,bay+1.3,wp.z,'Ada task failed! Cek log…',TASK_STATUS_COLORS.failed);
         }
       });
     }catch{ /* abaikan */ }

@@ -7045,3 +7045,12 @@
 - Build PWA OK; vitest 318 file / 3944 passed + 6 skipped, 0 fail (+3 vs 388). Deploy cp dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (DISPLAY=:1, --with playwright): agents=26, init_failed False, errs=[], shot 716820 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 10/11/2026 23:31 WIB — Siklus 390: bubble alert failed scene delegasi palet
+
+- Audit: sisa literal palet status di scene — createBubble alert 'Ada task failed!' masih '#f66' (drift dari kanonik #EF4444; bubble tampak pink lebih terang dari chip Gagal UI/badge dada yang sudah kanonik sejak siklus 389).
+- Fix: OfficeScene.js delegasi TASK_STATUS_COLORS.failed (import ditambah).
+- +1 file tes src/__tests__/bubble_alert_palette_390.test.js (3 kasus: literal #f66 hilang, delegasi, palet frozen).
+- Build PWA OK; vitest 319 file / 3947 passed + 6 skipped, 0 fail (+3 vs 389). Deploy cp dist → ~/wfs-hq; 9503 OK.
+- e2e probe OK (DISPLAY=:1, --with playwright): agents=26, init_failed False, errs=[], shot 715833 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
