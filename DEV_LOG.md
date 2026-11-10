@@ -6968,3 +6968,12 @@
 - Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
 - e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 716370 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+## 10/11/2026 19:40 WIB — Siklus 381: palet strip papan & TV lounge satu sumber
+
+- Audit lanjutan 380: sisa literal status di SCENE — TV_BLUE/TV_RED (tv_canvas, salinan drift #448AFF/#ef4444) dan stripSegments (projectboard_data, 10 literal ok/err/aksen #10E5A0/#ef4444/#448AFF/#F59E0B). Status sama (offline/gagal) berpotensi beda warna antara TV lounge, strip papan 3D, dan chip UI.
+- Fix: TV_BLUE delegasi TASK_STATUS_COLORS.review, TV_RED delegasi .failed; stripSegments delegasi done/failed/review/running + dim/div lokal (bukan status task).
+- +1 file tes src/__tests__/strip_palette_single_source_381.test.js (4 kasus: literal drift hilang, delegasi TV, stripSegments kanonik online/offline/agents/omni, palet frozen). Adaptasi 3 assertion lama projectboard_data.test.js ke nilai kanonik.
+- Build PWA OK (45 precache); vitest 310 file / 3920 passed + 6 skipped, 0 fail (+4 tes vs 380).
+- Deploy cp -r dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK (python3.12 + playwright): agents=26, init_failed False, errs=[], shot 715071 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

@@ -164,33 +164,41 @@ export function columnItems(T, i) {
 
 // segmen strip bawah [{txt, col}] dari snapshot penuh (saas + agents + omniroute)
 export function stripSegments(snap) {
+  // Siklus 381 — warna delegasi palet kanonik (dulu literal drift):
+  //   aksen label  = review  (biru), ok = done, error = failed,
+  //   teks sekunder = muted, divider = pending gelap kustom.
+  const accent = TASK_STATUS_COLORS.review
+  const ok = TASK_STATUS_COLORS.done
+  const err = TASK_STATUS_COLORS.failed
+  const dim = '#8fa3bd'
+  const div = '#44506a'
   const segs = []
   const s = (snap && snap.saas) || {}
-  segs.push({ txt: 'SaaS', col: '#448AFF' })
+  segs.push({ txt: 'SaaS', col: accent })
   if (s.online) {
     const st = s.stats || {}
-    segs.push({ txt: (st.tenants || (s.tenants || []).length) + ' tenant', col: '#10E5A0' })
-    segs.push({ txt: (st.conversations || 0) + ' chat', col: '#8fa3bd' })
-    segs.push({ txt: (st.messages || 0) + ' pesan', col: '#8fa3bd' })
-    segs.push({ txt: 'online', col: '#10E5A0' })
+    segs.push({ txt: (st.tenants || (s.tenants || []).length) + ' tenant', col: ok })
+    segs.push({ txt: (st.conversations || 0) + ' chat', col: dim })
+    segs.push({ txt: (st.messages || 0) + ' pesan', col: dim })
+    segs.push({ txt: 'online', col: ok })
     const act = (s.tenants || []).slice(-1)[0]
-    if (act && act.name) segs.push({ txt: 'terbaru: ' + clampStripTenant(act.name), col: '#F59E0B' })
+    if (act && act.name) segs.push({ txt: 'terbaru: ' + clampStripTenant(act.name), col: TASK_STATUS_COLORS.running })
   } else {
-    segs.push({ txt: 'offline', col: '#ef4444' })
+    segs.push({ txt: 'offline', col: err })
   }
   const ags = (snap && snap.agents) || []
   if (ags.length) {
-    segs.push({ txt: '·', col: '#44506a' })
-    segs.push({ txt: 'AGENT', col: '#448AFF' })
-    ags.forEach(a => segs.push({ txt: a.name + ' ' + (a.status === 'Up' ? '●' : '○'), col: a.status === 'Up' ? '#10E5A0' : '#ef4444' }))
+    segs.push({ txt: '·', col: div })
+    segs.push({ txt: 'AGENT', col: accent })
+    ags.forEach(a => segs.push({ txt: a.name + ' ' + (a.status === 'Up' ? '●' : '○'), col: a.status === 'Up' ? ok : err }))
   }
   const omni = (snap && snap.omniroute) || null
   if (omni) {
-    segs.push({ txt: '·', col: '#44506a' })
-    segs.push({ txt: 'OMNI', col: '#448AFF' })
+    segs.push({ txt: '·', col: div })
+    segs.push({ txt: 'OMNI', col: accent })
     segs.push({
       txt: omni.online ? (omni.port ? `:${omni.port} ●` : 'online') : 'offline',
-      col: omni.online ? '#10E5A0' : '#ef4444',
+      col: omni.online ? ok : err,
       __isOmni: true,
     })
   }

@@ -166,12 +166,12 @@ describe('stripSegments', () => {
   it('SaaS offline → segmen offline merah; agents tetap tampil', () => {
     const segs = stripSegments({ saas: { online: false }, agents: [{ name: 'fe1', status: 'Up' }] })
     const off = segs.find(s => s.txt === 'offline')
-    expect(off.col).toBe('#ef4444')
+    expect(off.col).toBe('#EF4444')
     expect(segs.map(s => s.txt)).toContain('AGENT')
   })
   it('tanpa snapshot → minimal segmen offline', () => {
     const segs = stripSegments(null)
-    expect(segs[0]).toEqual({ txt: 'SaaS', col: '#448AFF' })
+    expect(segs[0]).toEqual({ txt: 'SaaS', col: '#60A5FA' })
     expect(segs.map(s => s.txt)).toContain('offline')
     expect(segs.some(s => s.txt === 'AGENT')).toBe(false)
   })
@@ -193,7 +193,7 @@ describe('stripSegments', () => {
     })
     expect(segsOffline.map(s => s.txt)).toContain('offline')
     const offOmni = segsOffline.find(s => s.txt === 'offline' && s.__isOmni)
-    expect(offOmni.col).toBe('#ef4444')
+    expect(offOmni.col).toBe('#EF4444')
   })
 })
 

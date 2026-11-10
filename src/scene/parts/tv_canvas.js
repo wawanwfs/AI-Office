@@ -3,6 +3,7 @@
 // tidak ada THREE.
 import { parseTimestampMs, resolveNow } from '../../lib/kanban_date.js'
 import { fmtStampId } from '../../lib/format_time.js'
+import { TASK_STATUS_COLORS } from '../../lib/task_status_colors.js'
 
 // Warna palet & koordinat layout (satu sumber kebenaran untuk render & test).
 export const TV_W = 256;
@@ -11,8 +12,11 @@ export const TV_BG = '#0A1628';
 const TV_ACCENT = '#F59E0B';
 export const TV_MUTED = '#8fa3bd';
 export const TV_GREEN = '#10E5A0';
-export const TV_BLUE = '#448AFF';
-export const TV_RED = '#ef4444';
+// Siklus 381 — TV_BLUE/TV_RED delegasi palet kanonik (dulu salinan drift
+// #448AFF/#ef4444). TV_GREEN sudah sama dgn done, tapi tetap eksplisit
+// karena dipakai sebagai aksen brand TV, bukan status task.
+export const TV_BLUE = TASK_STATUS_COLORS.review;
+export const TV_RED = TASK_STATUS_COLORS.failed;
 const TV_DIM = '#5b6b82';
 
 // Berapa baris status (GAGAL/REVIEW) yang tampil, dan X untuk kolom kedua.
