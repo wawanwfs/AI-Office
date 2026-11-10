@@ -8,6 +8,7 @@ import { normalizeTaskStatus, formatTaskId } from '../scene/parts/projectboard_d
 import { pctDone } from '../scene/parts/kanban_spec.js'
 import { POLL_PANEL_MS } from '../lib/connection_spec.js'
 import { taskStatusColor, taskStatusLabel, TASK_STATUS_COLORS } from '../lib/task_status_colors.js'
+import { accentAlpha } from '../lib/ui_palette.js'
 
 const ST = {
   done: [taskStatusLabel('done'), taskStatusColor('done')],
@@ -200,8 +201,8 @@ export default function ProjectPanel() {
                   <div style={{ marginTop: 14 }}>
                     <label className="note">AI Router (OmniRoute)</label>
                     <div style={{
-                      background: d.omniroute.online ? 'rgba(77,159,255,.08)' : 'rgba(239,68,68,.12)',
-                      border: `1px solid ${d.omniroute.online ? 'rgba(77,159,255,.25)' : 'rgba(239,68,68,.3)'}`,
+                      background: d.omniroute.online ? accentAlpha(0.08) : 'rgba(239,68,68,.12)',
+                      border: `1px solid ${d.omniroute.online ? accentAlpha(0.25) : 'rgba(239,68,68,.3)'}`,
                       borderRadius: 10, padding: '8px 12px', marginTop: 6,
                     }}>
                       <div className="note" style={{ color: d.omniroute.online ? 'var(--teal)' : TASK_STATUS_COLORS.failed, fontWeight: 600 }}>

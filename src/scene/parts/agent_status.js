@@ -25,7 +25,7 @@ export const STATUS_HEX = {
   work: '#10E5A0',   // hijau  — var(--green)
   meet: '#60A5FA',   // biru   — konsisten chip review kanban
   lunch: '#F59E0B',  // oranye — konsisten chip running kanban
-  walk: '#4D9FFF',   // biru muda — warna aksen kantor
+  walk: '#4D9FFF',   // biru muda — ACCENT_BLUE lib/ui_palette.js (aksen kantor)
   dim: '#8b93a3',    // abu — status netral/pasif
 };
 

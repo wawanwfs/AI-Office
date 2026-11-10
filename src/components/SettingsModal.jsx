@@ -14,6 +14,7 @@ import {
   clampAmbienceVolume, formatAmbiencePercent,
 } from '../scene/parts/sound_spec'
 import { namesPrefOn, autoRotatePrefOn } from '../lib/storage_prefs.js'
+import { accentAlpha } from '../lib/ui_palette.js'
 
 export default function SettingsModal({
   show,
@@ -243,7 +244,7 @@ export default function SettingsModal({
                 fontSize: 11,
                 padding: '2px 6px',
                 borderRadius: 6,
-                background: muted ? 'rgba(251,113,133,0.15)' : 'rgba(77,159,255,0.15)',
+                background: muted ? 'rgba(251,113,133,0.15)' : accentAlpha(0.15),
                 color: muted ? '#fb7185' : 'var(--teal)',
                 fontFamily: "'DM Mono', monospace"
               }}>
@@ -310,7 +311,7 @@ export default function SettingsModal({
                       fontWeight: 600,
                       borderRadius: 8,
                       border: isActive ? '1px solid var(--teal)' : '1px solid rgba(255,255,255,0.12)',
-                      background: isActive ? 'rgba(77,159,255,0.15)' : 'rgba(255,255,255,0.04)',
+                      background: isActive ? accentAlpha(0.15) : 'rgba(255,255,255,0.04)',
                       color: isActive ? 'var(--teal)' : '#cbd5e1',
                       cursor: 'pointer',
                       transition: 'all .15s'

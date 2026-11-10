@@ -7072,3 +7072,12 @@
 - Build PWA OK; vitest 321 file / 3953 passed + 6 skipped, 0 fail (+3 vs 391). Deploy cp dist ke ~/wfs-hq; 9503 OK.
 - e2e probe OK (DISPLAY=:1, --with playwright): agents=26, init_failed False, errs=[], shot 718481 B.
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 00:55 WIB — Siklus 393: aksen biru kantor (#4D9FFF) satu sumber
+
+- Audit: warna aksen biru kantor masih literal di 6 titik — fallback avatar AgentInspector (2×), kartu Proyek/Agen Dashboard, rgba(77,159,255) di SettingsModal (2×) & ProjectPanel (omniroute online), plus STATUS_HEX.walk scene.
+- Fix: modul baru src/lib/ui_palette.js (ACCENT_BLUE + accentAlpha, anti-poisoning null utk alpha invalid); kelima file UI delegasi, scene walk dikomentari satu sumber.
+- +1 file tes src/__tests__/accent_blue_single_source_393.test.js (4 kasus: literal hilang, import, helper alpha, STATUS_HEX.walk == ACCENT_BLUE).
+- Build PWA OK (46 precache); vitest 322 file / 3957 passed + 6 skipped, 0 fail (+4 vs 392). Deploy cp dist → ~/wfs-hq; 9503 → 200.
+- e2e probe OK: agents=26, init_failed False, errs=[], shot 717913 B.
+- Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
