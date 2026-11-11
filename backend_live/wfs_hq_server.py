@@ -48,7 +48,7 @@
 #   proxy/HTML/JSON), _reply_json & handle_project tidak lagi menulis ke socket
 #   mati, dan _hq_handle_error (handle_error server class) menjaring sisanya —
 #   disconnect klien TIDAK lagi memuntahkan traceback; kegagalan lain tetap LOUD.
-import http.server, socketserver, os, urllib.request, urllib.error, json, secrets, re
+import http.server, socketserver, os, socket, urllib.request, urllib.error, json, secrets, re
 
 
 class ClientGone(Exception):
@@ -979,7 +979,26 @@ if __name__ == "__main__":
         daemon_threads = True
         allow_reuse_address = True
 
+        # Siklus 447: koneksi keep-alive klien yang pergi mendadak (RST saat
+        # server bind ulang / timeout idle) tidak boleh crash init baru.
+        def server_bind(self):
+            try:
+                self.socket.setsockopt(
+                    socket.SOL_SOCKET, socket.SO_KEEPALIVE, 1)
+            except OSError:
+                pass
+            super().server_bind()
+
     with ThreadingTCPServer(("0.0.0.0", 9503), H) as s:
+        # SIKLUS 447: HTTP/1.1 + keep-alive (perbaikan lama HTTP/1.0+close per
+        # request). send_response secara otomatis mengirim "HTTP/1.1" saat
+        # protocol_version = "HTTP/1.1"; Content-Length sudah eksak di SEMUA
+        # jalur (audit siklus 446) sehingga klien tahu akhir body — prasyarat
+        # keep-alive HTTP/1.1 terpenuhi, tidak ada koneksi menggantung.
+        # SSE tetap aman: stream tanpa Content-Length memakai close_connection
+        # (chunked/TCP-close), dan header "Connection: keep-alive" eksplisit
+        # milik SSE tidak lagi memicu exception duplikat di stdlib ≥3.11.
+        H.protocol_version = "HTTP/1.1"
         # SIKLUS 228: jaring disconnect klien di level server (thread handler
         # mati tanpa traceback); kegagalan lain tetap LOUD (traceback penuh).
         s.handle_error = _hq_handle_error

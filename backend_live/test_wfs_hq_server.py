@@ -109,6 +109,12 @@ class FakeH:
         self.extensions_map = dict(H.extensions_map)
         self.guess_type = lambda p: H.guess_type(self, p)  # type: ignore[arg-type]
         self.translate_path = lambda p: H.translate_path(self, p)
+        # Siklus 447: kontrak keep-alive — do_* yang "selesai tanpa respons"
+        # (exception tengah jalan) tidak boleh menggantung koneksi HTTP/1.1.
+        self.close_connection = False
+        self.finish = lambda: None
+        self.rfile = io.BytesIO(body) if body else io.BytesIO(b"")
+        self.connection = None
         import os as _os
         self.directory = _os.getcwd()  # SimpleHTTPRequestHandler.translate_path
 

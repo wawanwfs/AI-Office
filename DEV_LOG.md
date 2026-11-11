@@ -7580,3 +7580,12 @@
 - e2e probe (?mode=office, playwright+ws): agents=26, init_failed=False, errs=[]. backend_live pytest: 243 passed, 1 skipped; 2 fail PRE-EXISTING (master_worker_cost, wfs_sh_console). Full vitest: 4096 passed, 6 skipped, 0 fail. Build PWA OK; dist → ~/wfs-hq.
 - TTFB lokal /: ~0.5 ms; HTTP/1.0 + Connection close per request (stdlib SimpleHTTPRequestHandler tanpa protocol_version=1.1) — dicatat, tidak diubah siklus ini (risiko keep-alive/SSE, perlu uji terpisah).
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute; (e) opsional: HTTP/1.1 keep-alive di :9503.
+
+## 12/11/2026 03:19 WIB — Siklus 447: HTTP/1.1 + keep-alive di :9503 (backlog e selesai)
+
+- Backlog item (e) dikerjakan: `H.protocol_version = "HTTP/1.1"` di `__main__` wfs_hq_server.py — dulu HTTP/1.0 + Connection: close per request (SimpleHTTPRequestHandler default). Prasyarat keep-alive HTTP/1.1 (Content-Length eksak di SEMUA jalur) sudah terpenuhi oleh audit siklus 446; SSE tanpa Content-Length tetap aman (stdlib menutup koneksi stream).
+- Bonus hardening: `server_bind` override menyetel SO_KEEPALIVE di listen socket (koneksi idle klien tidak mati diam-diam), + `import socket`.
+- Test FakeH disesuaikan (close_connection/finish/rfile) supaya kontrak keep-alive teruji; test_wfs_hq_server.py 44 passed. Smoke server nyata di port ephemeral: 2 request beruntun SATU koneksi, HTTP/1.1, Content-Length cocok.
+- Deploy apply_wfs_hq_server.py --apply: live==sumber 9ea8d7536032, smoke 13/13. Bukti produksi curl: `/`, `/api/agents`, `/sw.js` = HTTP/1.1 200 CL_ok; `/api/events` SSE tetap stream OK. backend_live pytest: 243 passed, 2 fail PRE-EXISTING (master_worker_cost, wfs_sh_console). vitest: 4096 passed, 6 skipped. Build PWA OK; dist → ~/wfs-hq.
+- e2e probe (?mode=office, playwright+ws): agents=26, init_failed=False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
