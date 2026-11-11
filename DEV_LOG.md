@@ -7256,3 +7256,13 @@
 - Build PWA OK (46 precache); deploy cp dist → ~/wfs-hq; 9503 = 200.
 - e2e probe (?mode=office): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 10:20 WIB — Siklus 413: konfirmasi bulk-run ShConsole via ConfirmModal aksesibel
+
+- Audit: window.confirm() native terakhir di UI (ShConsole.jsx "Jalankan Semua Pending") — tidak aksesibel pembaca layar, tak bisa distyle, memblokir jsdom test dengan spy.
+- Fix: ConfirmModal (sudah ada, dipakai App) dipasang di ShConsole — state bulkConfirm menyimpan scope; tombol Ya memanggil runAllPending(scope). window.confirm dihapus; 0 dialog native tersisa di src.
+- Tes lama disesuaikan (2 kasus): konfirmasi kini via role=alertdialog + tombol "Ya, jalankan semua"; +1 file tes src/__tests__/shconsole_confirm_modal_413.test.js (3 kasus guard).
+- Debug: ConfirmModal sempat salah tempat (di dalam Overview, scope tak terlihat) → ReferenceError; dipindah ke root drawer. 1 build OK sebelum deploy.
+- Build PWA OK (46 precache); vitest 340 file / 4009 passed + 6 skipped, 0 fail (+3 tes baru). Deploy cp dist → ~/wfs-hq; 9503 = 200.
+- e2e probe (?mode=office, DISPLAY via uv --with playwright): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

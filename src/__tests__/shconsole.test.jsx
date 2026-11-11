@@ -319,7 +319,6 @@ describe('ShConsole — konsol software house', () => {
   })
 
   it('tab Tasks: filter project memicu ?project dan Jalankan Semua Pending memanggil resume_all', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     const urls = []
     const resumeBodies = []
     const fn = stubFetch({
@@ -335,13 +334,16 @@ describe('ShConsole — konsol software house', () => {
     fireEvent.change(screen.getByLabelText('Filter project'), { target: { value: '1' } })
     await waitFor(() => expect(urls.some((x) => x.includes('project=1'))).toBe(true))
     fireEvent.click(screen.getByText(/Jalankan Semua Pending/))
+    // siklus 413: konfirmasi kini modal DOM, bukan window.confirm
+    const modalBtn = await screen.findByRole('button', { name: /Ya, jalankan semua/ })
+    expect(screen.getByRole('alertdialog').textContent).toMatch(/Demo.*#1.*pending.*review.*failed/)
+    fireEvent.click(modalBtn)
     await waitFor(() => expect(resumeBodies.some((b) => b && JSON.parse(b).project === '1')).toBe(true))
-    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/Demo.*#1.*pending.*review.*failed/))
+    expect(screen.queryByRole('alertdialog')).toBeNull()
     expect(fn.mock.calls.length).toBeGreaterThanOrEqual(2)
   })
 
   it('bulk execution requires global scope confirmation and prevents duplicate submissions', async () => {
-    const confirm = vi.spyOn(window, 'confirm').mockReturnValue(false)
     let rejectRun
     const run = vi.fn(() => new Promise((resolve, reject) => { rejectRun = reject }))
     stubFetch({
@@ -353,10 +355,10 @@ describe('ShConsole — konsol software house', () => {
     await screen.findByText(/#1 Buat Login/)
     const button = screen.getByText(/Jalankan Semua Pending/)
     fireEvent.click(button)
-    expect(confirm).toHaveBeenCalledWith(expect.stringMatching(/SEMUA PROJECT.*pending.*review.*failed/))
+    // siklus 413: konfirmasi kini modal DOM
+    expect(await screen.findByRole('alertdialog').then((m) => m.textContent)).toMatch(/SEMUA PROJECT.*pending.*review.*failed/)
     expect(run).not.toHaveBeenCalled()
-    confirm.mockReturnValue(true)
-    fireEvent.click(button)
+    fireEvent.click(screen.getByRole('button', { name: /Ya, jalankan semua/ }))
     fireEvent.click(button)
     expect(run).toHaveBeenCalledTimes(1)
     expect(button.disabled).toBe(true)

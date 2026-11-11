@@ -5,6 +5,7 @@ import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
 import { useDialogA11y, useVisibilityPoll } from '../lib/dialogA11y'
 import { useModalFlag } from '../lib/modal'
+import ConfirmModal from './ConfirmModal'
 import { STATUS_HEX } from '../scene/parts/agent_status'
 import { MUTED_TEXT, BRIGHT_TEXT, FAINT_META, PANEL_BORDER, SUB_TEXT, TAB_BG, BTN_BG, INPUT_BG, DRAWER_TEXT, DRAWER_GRADIENT, TITLE_TEXT, TAB_IDLE_BG, CARD_BG, ROW_DASH, GHOST_BG, GHOST_TEXT, TAG_TEXT, ERROR_TEXT, PRE_BG, REJECT_BG, STALE_TEXT, PURE_TEXT } from '../lib/ui_palette'
 
@@ -66,6 +67,7 @@ export default function ShConsole({ show, onClose }) {
   const [gitMsg, setGitMsg] = useState('')
   const [tFilter, setTFilter] = useState('')
   const [bulkBusy, setBulkBusy] = useState(false)
+  const [bulkConfirm, setBulkConfirm] = useState(null) // string scope — siklus 413: dialog bawaan browser → ConfirmModal aksesibel
   const bulkInFlight = useRef(false)
   const [liveLogs, setLiveLogs] = useState([])
   const [esState, setEsState] = useState('connecting') // siklus 204: connecting|open|error — liveness SSE jujur
@@ -333,12 +335,12 @@ export default function ShConsole({ show, onClose }) {
       setRunningTask(prev => { const n = new Set(prev); n.delete(tid); return n }) // bersihkan hanya milik sendiri (run task lain mungkin in-flight)
     }
   }
-  const runAllPending = async () => {
+  const runAllPending = async (confirmedScope = null) => {
     if (bulkInFlight.current) return
     const project = tFilter || null
     const selected = projects.find((p) => String(p.id) === project)
-    const scope = project ? `${selected?.name || 'Project'} (#${project})` : 'SEMUA PROJECT'
-    if (!window.confirm(`Jalankan semua task di ${scope} dengan status pending, review, failed? Task dapat memulai agent dan memakai resource.`)) return
+    const scope = confirmedScope || (project ? `${selected?.name || 'Project'} (#${project})` : 'SEMUA PROJECT')
+    if (!confirmedScope) { setBulkConfirm(scope); return } // siklus 413: konfirmasi via ConfirmModal aksesibel (dialog bawaan browser dihapus)
     bulkInFlight.current = true
     setBulkBusy(true)
     setErr('')
@@ -420,7 +422,7 @@ export default function ShConsole({ show, onClose }) {
               <div style={STYLE.card}>
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
                   <div style={{ fontWeight: 700 }}>Daftar task ({tasks.length})</div>
-                  <button style={STYLE.btnGhost} onClick={runAllPending} disabled={bulkBusy} aria-busy={bulkBusy} title="Jalankan semua task pending/review/failed">▶ Jalankan Semua Pending</button>
+                  <button style={STYLE.btnGhost} onClick={(e) => { e?.stopPropagation?.(); runAllPending() }} disabled={bulkBusy} aria-busy={bulkBusy} title="Jalankan semua task pending/review/failed">▶ Jalankan Semua Pending</button>
                 </div>
                 <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
                   <select style={STYLE.select} aria-label="Filter project" disabled={bulkBusy} value={tFilter} onChange={(e) => setTFilter(e.target.value)}>
@@ -589,6 +591,15 @@ export default function ShConsole({ show, onClose }) {
           )}
         </div>
       </div>
+      <ConfirmModal
+        show={!!bulkConfirm}
+        title="Jalankan semua task?"
+        danger
+        confirmLabel="Ya, jalankan semua"
+        onCancel={() => setBulkConfirm(null)}
+        onConfirm={() => { const scope = bulkConfirm; setBulkConfirm(null); runAllPending(scope) }}
+        text={bulkConfirm ? `Jalankan semua task di ${bulkConfirm} dengan status pending, review, failed? Task dapat memulai agent dan memakai resource.` : ''}
+      />
     </div>
   )
 }
