@@ -7465,6 +7465,15 @@
 - e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
 
+## 11/11/2026 22:05 WIB — Siklus 436: X-Frame-Options DENY + Permissions-Policy
+
+- Audit header produksi :9503: hanya nosniff + Referrer-Policy — UI shell bisa di-frame pihak luar (klikjacking) dan API kamera/mic/geolocation tak dibatasi (item Lighthouse best-practices).
+- Fix: `_security_headers()` + `X-Frame-Options: DENY` dan `Permissions-Policy: camera=(), microphone=(), geolocation=()` — mengalir otomatis ke semua jalur via end_headers() (static, landing, admin, proxy, SSE).
+- Bukti curl pasca-deploy: GET / dan /landing.html kirim kedua header. +1 unittest test_security_headers_436.py (3 kasus); test_wfs_hq_server 212 diperbarui (5 header).
+- Deploy apply_wfs_hq_server.py --apply: backup → live==sumber 13893bee0311 → smoke 13/13. backend_live pytest: 217 passed; 2 fail PRE-EXISTING (test_master_worker_cost_integration, test_wfs_sh_console — sudah gagal sebelum siklus ini).
+- e2e probe (?mode=office): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
 ## 11/11/2026 21:35 WIB — Siklus 435: header Server generik (anti fingerprinting)
 
 - Audit produksi :9503: semua respons mengirim "Server: SimpleHTTP/0.6 Python/3.12.3" — versi interpreter produksi bocor ke pemindai otomatis (fingerprinting). Gzip shell 434 terverifikasi hidup (GET / = 1395 B, Content-Encoding: gzip).

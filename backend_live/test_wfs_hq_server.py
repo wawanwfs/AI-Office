@@ -264,6 +264,9 @@ class TestWfsHqServer(unittest.TestCase):
             mock.call("Cache-Control", "no-store"),
             mock.call("X-Content-Type-Options", "nosniff"),
             mock.call("Referrer-Policy", "same-origin"),
+            mock.call("X-Frame-Options", "DENY"),  # siklus 436
+            mock.call("Permissions-Policy",
+                      "camera=(), microphone=(), geolocation=()"),
         ])
 
     # --- SIKLUS 222: hardening CORS proxy admin + HEAD konsisten dgn GET ---

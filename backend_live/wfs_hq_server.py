@@ -210,6 +210,11 @@ def _security_headers():
     return (
         ("X-Content-Type-Options", "nosniff"),
         ("Referrer-Policy", "same-origin"),
+        # Siklus 436: klikjacking — semua UI shell melarang framing pihak luar.
+        ("X-Frame-Options", "DENY"),
+        # Siklus 436: minimalkan permukaan API browser yang tak dipakai UI
+        # (kamera/mic/geolocation) di koneksi lintas origin.
+        ("Permissions-Policy", "camera=(), microphone=(), geolocation=()"),
     )
 
 
