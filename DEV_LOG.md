@@ -7343,3 +7343,12 @@
 - Build PWA OK (47 precache); vitest 348 file / 4037 passed + 6 skipped, 0 fail (+4 tes). Deploy cp dist → ~/wfs-hq; produksi role="img" = 6.
 - e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 14:45 WIB — Siklus 422: OG/Twitter meta absolut + og:locale
+
+- Audit lanjutan social preview (siklus 414): og:image, og:url, twitter:image masih URL relatif ("/og-image.png", "/") — scraper WhatsApp/Telegram/Facebook menolak URL relatif, preview share berisiko tanpa gambar.
+- Fix: ketiga meta → absolut origin produksi http://161.120.180.21:9503; tambah og:locale id_ID dan twitter:image:alt.
+- Guard lama landing_social_meta_414.test.js diupdate (2 kasus) agar menerima absolut & tetap verifikasi aset ada; +1 file tes src/__tests__/landing_og_422.test.js (4 kasus).
+- Build PWA OK (47 precache); vitest 349 file / 4041 passed + 6 skipped, 0 fail (+4 tes). Deploy cp dist → ~/wfs-hq; produksi og:image absolut = 1.
+- e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

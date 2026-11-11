@@ -12,10 +12,10 @@ const REQUIRED = [
   '<meta property="og:type"',
   '<meta property="og:title"',
   '<meta property="og:description"',
-  '<meta property="og:image" content="/og-image.png">',
+  '<meta property="og:image" content="http://161.120.180.21:9503/og-image.png">',
   '<meta property="og:url"',
   '<meta name="twitter:card" content="summary_large_image">',
-  '<meta name="twitter:image" content="/og-image.png">',
+  '<meta name="twitter:image" content="http://161.120.180.21:9503/og-image.png">',
   '<meta name="theme-color"',
 ]
 
@@ -33,6 +33,8 @@ describe('landing.html social preview meta (414)', () => {
 
   test('og:image merujuk aset yang benar-benar ada di public/', () => {
     const m = html.match(/<meta property="og:image" content="([^"]+)"/)
-    expect(() => readFileSync(resolve(here, '../../public', m[1].replace(/^\//, '')))).not.toThrow()
+    const p = m[1].replace(/^https?:\/\/[^/]+/, '').replace(/^\//, '')
+    expect(p).toBe('og-image.png')
+    expect(() => readFileSync(resolve(here, '../../public', p))).not.toThrow()
   })
 })
