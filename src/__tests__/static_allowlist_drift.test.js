@@ -46,14 +46,14 @@ describe('siklus 214 — konstanta allowlist statis', () => {
     for (const f of [
       'index.html', 'landing.html', 'manifest.webmanifest',
       'sw.js', 'registerSW.js', 'workbox-2fbc6a65.js',
-      'favicon.svg', 'wfs-logo.svg', 'robots.txt',
+      'favicon.svg', 'wfs-logo.svg', 'robots.txt', 'sitemap.xml',
       'og-image.png', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png',
     ]) expect(items).toContain(f);
     // Siklus 279: e2e-sw-fake.js = skrip SW dummy utk probe pembaruan PWA (192).
     // File fisik hanya ditulis probe sekali-pakai & dihapus di finally; tanpa
     // fisik → 404. Entri ini memulihkan kontrak 192 tanpa membuka pola luas.
     expect(items).toContain('e2e-sw-fake.js');
-    expect(items.length).toBe(14);
+    expect(items.length).toBe(15);
   });
 
   it('allowlist TIDAK memuat file non-aset (py/db/bak/token/screenshot)', () => {

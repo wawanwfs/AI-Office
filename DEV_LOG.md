@@ -7352,3 +7352,14 @@
 - Build PWA OK (47 precache); vitest 349 file / 4041 passed + 6 skipped, 0 fail (+4 tes). Deploy cp dist → ~/wfs-hq; produksi og:image absolut = 1.
 - e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+
+## 11/11/2026 15:10 WIB — Siklus 423: sitemap.xml untuk crawler
+
+- Audit SEO lanjutan (419-422): robots.txt ada tapi TANPA sitemap.xml — GET /sitemap.xml di :9503 = 404; crawler tak punya peta halaman publik.
+- Fix: public/sitemap.xml baru (urlset sitemap 0.9, 2 URL absolut origin: /landing.html prio 1.0 + / prio 0.8, tanpa /app/ & /api/ privat); dist otomatis ikut build (47 precache).
+- backend_live/wfs_hq_server.py: entri "sitemap.xml" di STATIC_ALLOW_FILES (15 jalur) — tanpa ini allowlist 214 menolak. Deploy via scripts/apply_wfs_hq_server.py --apply (live==sumber, smoke 13/13, backup server.py.bak-1794381045).
+- +1 file tes src/__tests__/sitemap_423.test.js (4 kasus: valid xmlns, URL absolut, tanpa jalur privat, dist identik); drift-gate allowlist diupdate 14→15 jalur.
+- Build PWA OK; vitest 350 file / 4045 passed + 6 skipped, 0 fail (+4 tes). Produksi GET /sitemap.xml = 200 tersaji.
+- e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
