@@ -7228,3 +7228,13 @@
 - Build PWA OK (46 precache); vitest 338 file / 4003 passed + 6 skipped, 0 fail (+3 vs 408). Deploy cp dist ke ~/wfs-hq; 9503 = 200.
 - e2e probe (?mode=office): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 08:35 WIB — Siklus 410: fallback SVG OrbitalSculpture bebas hex + DISPLAY probe diperbaiki
+
+- Audit sisa literal warna non-scene: 9 hex di src/landing/OrbitalSculpture.jsx (gradien pearl #f7fbff/#a7bdce/#56718b, brass #f5dfb6/#ad7d40/#eac99a, ring #728a9e/#426788/#e0e9ef) — satu-satunya file UI tersisa dengan literal (task_status_colors & scene sengaja dikecualikan).
+- Fix: 9 konstanta baru di lib/ui_palette.js (PEARL_LIGHT/MID/DEEP/EDGE, BRASS_LIGHT/DEEP/MID, RING_SHADOW, RING_DEEP); OrbitalSculpture 0 hex literal.
+- +1 file tes src/__tests__/orbital_fallback_palette_410.test.js (nilai kanonik, guard bebas-hex, anti-duplikat palette).
+- Debug probe e2e: akar masalah agents=null — os.environ.setdefault('DISPLAY') terganggu env lama (:1 mati) sehingga ANGLE SwANGLE gagal xcb_connect; fix: DISPLAY=':99' eksplisit → WebGL 2.0 hidup, agents=26 kembali.
+- Build PWA OK; vitest 339 file / 4006 passed + 6 skipped, 0 fail (+3 vs 409). Deploy cp dist → ~/wfs-hq; 9503 = 200.
+- e2e probe (?mode=office, DISPLAY=:99): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

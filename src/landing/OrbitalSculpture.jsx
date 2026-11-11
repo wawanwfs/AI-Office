@@ -1,5 +1,9 @@
 import React, { useEffect, useRef, useState } from 'react'
 import { createRenderLoop } from './renderLoop.js'
+import {
+  PEARL_LIGHT, PEARL_MID, PEARL_DEEP, PEARL_EDGE,
+  BRASS_LIGHT, BRASS_DEEP, BRASS_MID, RING_SHADOW, RING_DEEP,
+} from '../lib/ui_palette.js'
 
 // Self-contained illustration. It is not a preview or import of OfficeScene.
 export default function OrbitalSculpture() {
@@ -127,14 +131,14 @@ export default function OrbitalSculpture() {
     <div ref={host} className={`landing-sculpture${ready ? ' is-webgl' : ''}`} role="img" aria-label="Orbital Commons: interlocking architectural rings around a shared centre">
       <svg className="landing-sculpture-fallback" viewBox="0 0 720 660" aria-hidden="true">
         <defs>
-          <linearGradient id="orbital-pearl" x1="0" y1="0" x2="1" y2="1"><stop stopColor="#f7fbff" /><stop offset=".45" stopColor="#a7bdce" /><stop offset="1" stopColor="#56718b" /></linearGradient>
-          <linearGradient id="orbital-brass"><stop stopColor="#f5dfb6" /><stop offset=".5" stopColor="#ad7d40" /><stop offset="1" stopColor="#eac99a" /></linearGradient>
+          <linearGradient id="orbital-pearl" x1="0" y1="0" x2="1" y2="1"><stop stopColor={PEARL_LIGHT} /><stop offset=".45" stopColor={PEARL_MID} /><stop offset="1" stopColor={PEARL_DEEP} /></linearGradient>
+          <linearGradient id="orbital-brass"><stop stopColor={BRASS_LIGHT} /><stop offset=".5" stopColor={BRASS_DEEP} /><stop offset="1" stopColor={BRASS_MID} /></linearGradient>
         </defs>
         <g transform="translate(360 320) rotate(-24)">
-          <ellipse cy="12" rx="244" ry="161" fill="none" stroke="#728a9e" strokeWidth="43" />
+          <ellipse cy="12" rx="244" ry="161" fill="none" stroke={RING_SHADOW} strokeWidth="43" />
           <ellipse rx="244" ry="161" fill="none" stroke="url(#orbital-pearl)" strokeWidth="38" />
-          <ellipse rx="183" ry="111" transform="rotate(72)" fill="none" stroke="#426788" strokeWidth="42" />
-          <path d="M-66-23 0-79 69-25 47 57-35 68-66-23" fill="url(#orbital-pearl)" /><path d="m0-79 9 88 60-34M9 9l38 48M9 9l-44 59M9 9l-75-32" fill="none" stroke="#e0e9ef" strokeWidth="1" />
+          <ellipse rx="183" ry="111" transform="rotate(72)" fill="none" stroke={RING_DEEP} strokeWidth="42" />
+          <path d="M-66-23 0-79 69-25 47 57-35 68-66-23" fill="url(#orbital-pearl)" /><path d="m0-79 9 88 60-34M9 9l38 48M9 9l-44 59M9 9l-75-32" fill="none" stroke={PEARL_EDGE} strokeWidth="1" />
           <ellipse rx="268" ry="102" transform="rotate(-49)" fill="none" stroke="url(#orbital-brass)" strokeWidth="12" />
           <circle cx="233" cy="-101" r="15" fill="url(#orbital-brass)" />
         </g>

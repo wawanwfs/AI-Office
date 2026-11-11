@@ -196,3 +196,18 @@ export const PURE_TEXT = '#ffffff';
 
 /** Fallback netral garis status tak dikenal (#888888, siklus 409). */
 export const UNKNOWN_STROKE = '#888888';
+
+/** Cincin mutiara fallback OrbitalSculpture (siklus 410). */
+export const PEARL_LIGHT = '#f7fbff';
+export const PEARL_MID = '#a7bdce';
+export const PEARL_DEEP = '#56718b';
+export const PEARL_EDGE = '#e0e9ef';
+
+/** Cincin kuningan fallback OrbitalSculpture (siklus 410). */
+export const BRASS_LIGHT = '#f5dfb6';
+export const BRASS_DEEP = '#ad7d40';
+export const BRASS_MID = '#eac99a';
+
+/** Garis bayangan & cincin dalam fallback OrbitalSculpture (siklus 410). */
+export const RING_SHADOW = '#728a9e';
+export const RING_DEEP = '#426788';
