@@ -270,6 +270,59 @@ class _HeadCaptureWriter:
         return None
 
 
+def _emit_static_response(handler, path, head_only, allow_304=True):
+    """SIKLUS 453: satu titik kirim payload statis (dipakai GET & HEAD).
+
+    Dulu blok ETag/304/gzip/header terduplikasi persis di _serve_static
+    (GET) dan _serve_head_static (HEAD) — risiko drift: perbaikan di satu
+    sisi (mis. revalidasi 448/451) mudah lupa di sisi lain (memang terjadi
+    di 450: HEAD awalnya tanpa revalidasi). Fungsi level-modul agar stub
+    test yang tidak mewarisi H tetap bisa menjalankan jalur yang sama.
+    Kontrak:
+    - GET: 304 tanpa body bila validator cocok; 200 + body.
+    - head_only: header byte-identik 200 GET (CT, CL, ETag, Last-Modified,
+      gzip+Vary) TANPA menulis body; allow_304=False karena revalidasi
+      sudah ditangani pemanggil HEAD sebelum sini.
+    """
+    try:
+        data = open(path, "rb").read()
+        etag = static_serve.etag_for(data)
+        lm_ts = os.path.getmtime(path)
+        last_mod = static_serve.http_date(lm_ts)
+        if allow_304:
+            inm = handler.headers.get("If-None-Match", "")
+            ims = handler.headers.get("If-Modified-Since", "")
+            # Revalidasi ganda — ETag menang bila ada (RFC 7232),
+            # If-Modified-Since fallback klien lama.
+            if (inm and static_serve.not_modified(inm, etag)) or (
+                    not inm and static_serve.not_modified_since(
+                        lm_ts, ims)):
+                handler._wfs_cc = static_serve.cache_control_for(handler.path)
+                handler.send_response(304)
+                handler.send_header("ETag", etag)
+                handler.send_header("Last-Modified", last_mod)
+                handler.end_headers()  # 304 TANPA body (kontrak HTTP/1.1)
+                return True
+        data, gz = static_serve.maybe_gzip(
+            data, handler.path, handler.headers.get("Accept-Encoding", ""))
+        handler._wfs_cc = static_serve.cache_control_for(handler.path)
+        handler.send_response(200)
+        ctype = handler.guess_type(path) or "application/octet-stream"
+        if gz:
+            handler.send_header("Content-Encoding", "gzip")
+            handler.send_header("Vary", "Accept-Encoding")
+        handler.send_header("Content-Type", ctype)
+        handler.send_header("Content-Length", str(len(data)))
+        handler.send_header("ETag", etag)
+        handler.send_header("Last-Modified", last_mod)
+        handler.end_headers()
+        if not head_only:
+            handler.wfile.write(data)
+        return True
+    except Exception:
+        return False
+
+
 class H(http.server.SimpleHTTPRequestHandler):
     # Siklus 435: server_version generik — "Server: SimpleHTTP/0.6 Python/3.x.y"
     # membocorkan versi Python produksi ke pemindai otomatis (fingerprinting).
@@ -312,42 +365,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         if os.path.basename(path) in ("index.html",):
             return False  # index.html lewat jalur khusus (injeksi token)
         if os.path.isfile(path):
-            try:
-                data = open(path, "rb").read()
-                # Siklus 448: ETag + 304 — hemat bandwidth revalidasi.
-                etag = static_serve.etag_for(data)
-                lm_ts = os.path.getmtime(path)
-                last_mod = static_serve.http_date(lm_ts)
-                inm = self.headers.get("If-None-Match", "")
-                ims = self.headers.get("If-Modified-Since", "")
-                # Siklus 451: revalidasi ganda — ETag menang bila ada
-                # (RFC 7232), If-Modified-Since fallback klien lama.
-                if (inm and static_serve.not_modified(inm, etag)) or (
-                        not inm and static_serve.not_modified_since(
-                            lm_ts, ims)):
-                    self._wfs_cc = static_serve.cache_control_for(self.path)
-                    self.send_response(304)
-                    self.send_header("ETag", etag)
-                    self.send_header("Last-Modified", last_mod)
-                    self.end_headers()  # 304 TANPA body (kontrak HTTP/1.1)
-                    return True
-                data, gz = static_serve.maybe_gzip(
-                    data, self.path, self.headers.get("Accept-Encoding", ""))
-                self._wfs_cc = static_serve.cache_control_for(self.path)
-                self.send_response(200)
-                ctype = self.guess_type(path) or "application/octet-stream"
-                if gz:
-                    self.send_header("Content-Encoding", "gzip")
-                    self.send_header("Vary", "Accept-Encoding")
-                self.send_header("Content-Type", ctype)
-                self.send_header("Content-Length", str(len(data)))
-                self.send_header("ETag", etag)
-                self.send_header("Last-Modified", last_mod)
-                self.end_headers()
-                self.wfile.write(data)
-                return True
-            except Exception:
-                pass
+            return _emit_static_response(self, path, head_only=False)
         return False
 
     def log_message(self,*a): pass
@@ -723,22 +741,13 @@ class H(http.server.SimpleHTTPRequestHandler):
                 self.send_header("Last-Modified", last_mod)
                 self.end_headers()
                 return True
-            data, gz = static_serve.maybe_gzip(
-                data, self.path, self.headers.get("Accept-Encoding", ""))
-            self._wfs_cc = static_serve.cache_control_for(self.path)
-            self.send_response(200)
-            ctype = self.guess_type(path) or "application/octet-stream"
-            if gz:
-                self.send_header("Content-Encoding", "gzip")
-                self.send_header("Vary", "Accept-Encoding")
-            self.send_header("Content-Type", ctype)
-            self.send_header("Content-Length", str(len(data)))
-            self.send_header("ETag", etag)
-            self.send_header("Last-Modified", last_mod)
-            self.end_headers()
-            return True
         except Exception:
             return False
+        # Siklus 453: sisa kirim (200 + header) via _emit_static_response —
+        # SATU titik bersama GET (head_only=True → tanpa body, header
+        # byte-identik).
+        return _emit_static_response(self, path, head_only=True,
+                                     allow_304=False)
 
     # SIKLUS 224: HEAD jalur proxy /admin/ & /cs-widget/ kini konsisten dgn
     # GET — dulu do_HEAD tidak mengenal rute proxy sama sekali: HEAD /admin/

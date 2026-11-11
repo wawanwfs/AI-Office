@@ -7632,3 +7632,11 @@
 - Uji reproduce manual: key="" → dulu NO RAISE (FakeClient.calls=1); sesudah fix PermissionError. backend_live pytest penuh: 263 passed + 1 skipped + 4 subtests — NOL fail (dulu 261+2fail).
 - Deploy apply_wfs_tasks.py --apply: live==sumber 2fec829f7dc2, smoke fase-1+fase-2 OK (pause tetap ON). Build PWA OK; dist → ~/wfs-hq. vitest 359 file: 4099 passed, 6 skipped. e2e probe: agents=26, init_failed=False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
+
+## 12/11/2026 06:05 WIB — Siklus 453: kirim statis GET/HEAD disatukan (hapust duplikasi ETag/304/gzip)
+
+- Audit pasca-452: blok ETag/Last-Modified/revalidasi-304/gzip/header 200 terduplikasi persis di _serve_static (GET) dan _serve_head_static (HEAD) — risiko drift antar-sisi (persis pola insiden 450: HEAD awalnya tanpa revalidasi).
+- Refactor: fungsi level-modul `_emit_static_response(handler, path, head_only, allow_304)` di wfs_hq_server.py; GET & HEAD kini memanggil SATU titik (level-modul agar stub test non-turunan H tetap jalan). GET: 304 tanpa body bila validator cocok, 200+body; HEAD: header byte-identik GET tanpa body.
+- Test rapuh terkoreksi: backend/test_gzip_html_shell_434.py assert jumlah `gzip_html(` 4 → 5 (siklus 443 sah menambah cabang /cs-widget; assert lama belum ikut).
+- Bukti: pytest backend+backend_live 604 passed + 4 subtests, 0 fail; vitest 359 file 4099 passed + 6 skipped; build PWA OK; drift-gate live==sumber 7feea302 (server.py & wfs_hq_server.py); apply --apply idempoten, smoke OK. Produksi :9503 — GET sw.js 200, If-None-Match → 304 (GET & HEAD). e2e probe: agents=26, init_failed=False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.

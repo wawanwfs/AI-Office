@@ -39,8 +39,10 @@ class GzipHtmlShell(unittest.TestCase):
     def test_server_handlers_call_gzip_html(self):
         src = open(os.path.join(os.path.dirname(__file__), "..",
                                 "backend_live", "wfs_hq_server.py")).read()
-        # / , /app/, /landing, proxy admin — 4 titik injeksi gzip_html
-        self.assertEqual(src.count("gzip_html("), 4)
+        # / , /app/, /landing, /admin, /cs-widget — 5 titik injeksi gzip_html
+        # (Siklus 443 menambah cs-widget; dulu assert 4 → rapuh terhadap
+        # penambahan cabang gzip baru yang sah).
+        self.assertEqual(src.count("gzip_html("), 5)
         self.assertEqual(src.count('send_header("Content-Encoding", "gzip")'),
                          src.count('send_header("Vary", "Accept-Encoding")'))
 
