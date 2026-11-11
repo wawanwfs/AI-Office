@@ -7640,3 +7640,12 @@
 - Test rapuh terkoreksi: backend/test_gzip_html_shell_434.py assert jumlah `gzip_html(` 4 → 5 (siklus 443 sah menambah cabang /cs-widget; assert lama belum ikut).
 - Bukti: pytest backend+backend_live 604 passed + 4 subtests, 0 fail; vitest 359 file 4099 passed + 6 skipped; build PWA OK; drift-gate live==sumber 7feea302 (server.py & wfs_hq_server.py); apply --apply idempoten, smoke OK. Produksi :9503 — GET sw.js 200, If-None-Match → 304 (GET & HEAD). e2e probe: agents=26, init_failed=False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
+
+## 12/11/2026 06:45 WIB — Siklus 454: fallback /favicon.ico dapat ETag + Last-Modified + 304
+
+- Audit pasca-453: fallback /favicon.ico → favicon.svg (siklus 437/441) selalu 200 penuh TANPA ETag/Last-Modified/revalidasi — inkonsisten dgn jalur statis (448/451/453), cache browser tidak efektif (max-age 86400 tapi revalidasi tak mungkin).
+- Fix: helper `_emit_favicon(handler, head_only)` di backend_live/wfs_hq_server.py; GET & HEAD fallback kini satu titik — 200 + ETag + LM; If-None-Match/If-Modified-Since cocok → 304 tanpa body; file hilang → _reply_404 JSON (GET) / head=True (HEAD).
+- +1 test backend_live/test_favicon_454.py (5 kasus: validator 200, INM 304 tanpa CL, IMS 304, paritas header GET/HEAD, file hilang 404). Koreksi test lama (437, 441, 444) menambah mock getmtime — fallback kini membaca mtime.
+- Bukti: pytest backend+backend_live 609 passed + 4 skipped + 4 subtests, 0 fail; vitest 359 file 4100 passed + 6 skipped (drift-gate hijau setelah deploy); build PWA OK; dist → ~/wfs-hq; apply --apply live==sumber fb0b09e321ec, smoke 13/13.
+- Produksi :9503 — GET /favicon.ico 200 490 B + ETag; If-None-Match cocok → 304 (GET & HEAD). e2e probe: agents=26, init_failed=False, errs=[]. Layanan wfs-hq & wfs-office active.
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.

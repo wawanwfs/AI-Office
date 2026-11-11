@@ -87,8 +87,10 @@ class TestNoDuplicateCacheControl(unittest.TestCase):
 
     def test_favicon_single_cc(self):
         h, sent = _capture("/favicon.ico")
+        # Siklus 454: fallback kini via _emit_favicon — butuh getmtime juga.
         with mock.patch("builtins.open", mock.mock_open(read_data=b"<svg/>")):
-            h.do_GET()
+            with mock.patch("os.path.getmtime", return_value=1700000000.0):
+                h.do_GET()
         self.assertEqual(sent["code"], 200)
         self.assertEqual(_count_cc(h), 1)
         self.assertIn(("Cache-Control", "public, max-age=86400"), h._hdrs)

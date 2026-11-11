@@ -54,7 +54,8 @@ class HeadFavicon441(unittest.TestCase):
         """HEAD /favicon.ico: 200 + CT svg + cache 86400, TANPA body."""
         h, sent = self._run("/favicon.ico")
         with mock.patch("builtins.open", mock.mock_open(read_data=b"<svg/>")):
-            h.do_HEAD()
+            with mock.patch("os.path.getmtime", return_value=1700000000.0):
+                h.do_HEAD()
         self.assertEqual(sent["code"], 200)
         types = dict(h._hdrs)
         self.assertEqual(types.get("Content-Type"), "image/svg+xml")
@@ -75,10 +76,11 @@ class HeadFavicon441(unittest.TestCase):
     def test_head_get_parity(self):
         """Status + Content-Type + CL identik antara GET dan HEAD."""
         with mock.patch("builtins.open", mock.mock_open(read_data=b"<svg/>")):
-            hg, sg = self._run("/favicon.ico")
-            hg.do_GET()
-            hh, sh = self._run("/favicon.ico")
-            hh.do_HEAD()
+            with mock.patch("os.path.getmtime", return_value=1700000000.0):
+                hg, sg = self._run("/favicon.ico")
+                hg.do_GET()
+                hh, sh = self._run("/favicon.ico")
+                hh.do_HEAD()
         self.assertEqual(sg["code"], sh["code"])
         tg, th = dict(hg._hdrs), dict(hh._hdrs)
         self.assertEqual(tg["Content-Type"], th["Content-Type"])

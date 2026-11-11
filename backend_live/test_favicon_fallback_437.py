@@ -53,8 +53,10 @@ class FaviconIcoFallback(unittest.TestCase):
 
     def test_favicon_ico_served_as_svg(self):
         h, sent, buf = self._run("/favicon.ico")
+        # Siklus 454: fallback via _emit_favicon — butuh getmtime juga.
         with mock.patch("builtins.open", mock.mock_open(read_data=b"<svg/>")):
-            h.do_GET()
+            with mock.patch("os.path.getmtime", return_value=1700000000.0):
+                h.do_GET()
         self.assertEqual(sent["code"], 200)
         self.assertEqual(h.wfile.getvalue(), b"<svg/>")
         types = dict(h._hdrs)

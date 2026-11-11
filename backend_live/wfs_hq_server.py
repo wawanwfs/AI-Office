@@ -323,6 +323,42 @@ def _emit_static_response(handler, path, head_only, allow_304=True):
         return False
 
 
+def _emit_favicon(handler, head_only=False):
+    """SIKLUS 454: fallback /favicon.ico → favicon.svg dgn validator cache.
+
+    Dulu (437/441) selalu 200 penuh tanpa ETag/Last-Modified — inkonsisten
+    dgn jalur statis (453) & cache browser tidak efektif. Kini: ETag + LM,
+    If-None-Match/If-Modified-Since cocok → 304 tanpa body. File hilang →
+    False (pemanggil membalas 404 JSON via _reply_404).
+    """
+    try:
+        data = open("favicon.svg", "rb").read()
+    except Exception:
+        return False
+    etag = static_serve.etag_for(data)
+    lm_ts = os.path.getmtime("favicon.svg")
+    inm = handler.headers.get("If-None-Match", "")
+    ims = handler.headers.get("If-Modified-Since", "")
+    if (inm and static_serve.not_modified(inm, etag)) or (
+            not inm and static_serve.not_modified_since(lm_ts, ims)):
+        handler._wfs_cc = "public, max-age=86400"
+        handler.send_response(304)
+        handler.send_header("ETag", etag)
+        handler.send_header("Last-Modified", static_serve.http_date(lm_ts))
+        handler.end_headers()
+        return True
+    handler._wfs_cc = "public, max-age=86400"
+    handler.send_response(200)
+    handler.send_header("Content-Type", "image/svg+xml")
+    handler.send_header("Content-Length", str(len(data)))
+    handler.send_header("ETag", etag)
+    handler.send_header("Last-Modified", static_serve.http_date(lm_ts))
+    handler.end_headers()
+    if not head_only:
+        handler.wfile.write(data)
+    return True
+
+
 class H(http.server.SimpleHTTPRequestHandler):
     # Siklus 435: server_version generik — "Server: SimpleHTTP/0.6 Python/3.x.y"
     # membocorkan versi Python produksi ke pemindai otomatis (fingerprinting).
@@ -639,16 +675,11 @@ class H(http.server.SimpleHTTPRequestHandler):
         # Siklus 437: /favicon.ico 404 — browser lama & beberapa crawler tetap
         # meminta .ico walau HTML mendeklarasikan favicon.svg. Fallback: alirkan
         # ke favicon.svg (200, image/svg+xml) supaya tidak ada error 404 di log.
+        # Siklus 454: kirim via _emit_favicon — ETag + Last-Modified + revalidasi
+        # 304 (sebelumnya selalu 200 penuh tanpa validator, inkonsisten dgn
+        # jalur statis lain; browser cache tidak efektif).
         if path_only == "/favicon.ico":
-            try:
-                data = open("favicon.svg", "rb").read()
-                self.send_response(200)
-                self.send_header("Content-Type", "image/svg+xml")
-                self._wfs_cc = "public, max-age=86400"  # Siklus 444: hindari duplikat
-                self.send_header("Content-Length", str(len(data)))
-                self.end_headers()
-                self.wfile.write(data)
-            except Exception:
+            if not _emit_favicon(self, head_only=False):
                 return _reply_404(self)
             return
         if project_api and self.path.split("?")[0] == "/wfs-project":
@@ -973,17 +1004,11 @@ class H(http.server.SimpleHTTPRequestHandler):
         # Siklus 441: mirror fallback favicon 437 — dulu HEAD /favicon.ico
         # 404 stdlib padahal GET 200 image/svg+xml; monitor uptime berbasis
         # HEAD membaca "asset hilang" palsu. Header identik GET, tanpa body.
+        # Siklus 454: via _emit_favicon (ETag/LM/304 sama GET, tanpa body).
         if path_only == "/favicon.ico":
-            try:
-                data = open("favicon.svg", "rb").read()
-                self.send_response(200)
-                self.send_header("Content-Type", "image/svg+xml")
-                self._wfs_cc = "public, max-age=86400"  # Siklus 444: hindari duplikat
-                self.send_header("Content-Length", str(len(data)))
-                self.end_headers()
-            except Exception:
-                return _reply_404(self, head=True)
-            return
+            if _emit_favicon(self, head_only=True):
+                return
+            return _reply_404(self, head=True)
         if self._serve_head_api_service():
             return
         if self._serve_head_gateway():
