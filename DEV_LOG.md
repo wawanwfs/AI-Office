@@ -7614,3 +7614,12 @@
 - Deploy apply_wfs_hq_server.py --apply: live==sumber f28cad68df9d, smoke 13/13. Bukti produksi: HEAD /assets/index-CLHNCJk-.js dgn If-None-Match cocok → 304; tanpa → 200 CL 16823 + ETag. GET 304 tetap OK. SSE /api/events tak tersentuh.
 - vitest: 359 file, 4098 passed, 6 skipped. Build PWA OK; dist → ~/wfs-hq. e2e probe (?mode=office): agents=26, init_failed=False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
+
+## 12/11/2026 05:20 WIB — Siklus 451: Last-Modified + If-Modified-Since di jalur statis :9503
+
+- Audit pasca-450: server statis hanya punya ETag — klien/proksi lama & validator tanpa ETag (revalidasi HTTP klasik RFC 7232) tidak punya mekanisme 304.
+- Fix: `http_date()` + `not_modified_since()` di backend/static_serve.py; `_serve_static` & `_serve_head_static` kini mengirim Last-Modified dan membalas 304 saat If-Modified-Since cocok (fallback — ETag menang bila keduanya ada, preemsi RFC 7232; mtime truncate ke detik).
+- +1 unittest backend_live/test_ims_451.py (12 kasus: format/round-trip http_date, 5 kasus not_modified_since, GET 200+LM, GET IMS match 304 tanpa CL, IMS lama 200, ETag menang atas IMS basi, HEAD IMS 304). backend_live pytest: 261 passed + 2 fail PRE-EXISTING (master_worker_cost, wfs_sh_console).
+- Deploy apply_wfs_hq_server.py --apply: live==sumber 40ae462a75dd, smoke 13/13 (static_serve.py ikut disinkron — backlog (f) terbukti jalan). Bukti produksi: GET /sw.js dgn IMS cocok → 304 size=0; IMS lama → 200 4190 B; HEAD IMS → 304; GET ETag 304 tetap OK.
+- vitest: 359 file, 4099 passed, 6 skipped. Build PWA OK; dist → ~/wfs-hq. e2e probe (?mode=office): agents=26, init_failed=False, errs=[] (perlu --with playwright, env uv dulu tanpa itu).
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.

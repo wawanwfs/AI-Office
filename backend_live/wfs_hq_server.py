@@ -316,11 +316,19 @@ class H(http.server.SimpleHTTPRequestHandler):
                 data = open(path, "rb").read()
                 # Siklus 448: ETag + 304 — hemat bandwidth revalidasi.
                 etag = static_serve.etag_for(data)
-                if static_serve.not_modified(
-                        self.headers.get("If-None-Match", ""), etag):
+                lm_ts = os.path.getmtime(path)
+                last_mod = static_serve.http_date(lm_ts)
+                inm = self.headers.get("If-None-Match", "")
+                ims = self.headers.get("If-Modified-Since", "")
+                # Siklus 451: revalidasi ganda — ETag menang bila ada
+                # (RFC 7232), If-Modified-Since fallback klien lama.
+                if (inm and static_serve.not_modified(inm, etag)) or (
+                        not inm and static_serve.not_modified_since(
+                            lm_ts, ims)):
                     self._wfs_cc = static_serve.cache_control_for(self.path)
                     self.send_response(304)
                     self.send_header("ETag", etag)
+                    self.send_header("Last-Modified", last_mod)
                     self.end_headers()  # 304 TANPA body (kontrak HTTP/1.1)
                     return True
                 data, gz = static_serve.maybe_gzip(
@@ -334,6 +342,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 self.send_header("Content-Type", ctype)
                 self.send_header("Content-Length", str(len(data)))
                 self.send_header("ETag", etag)
+                self.send_header("Last-Modified", last_mod)
                 self.end_headers()
                 self.wfile.write(data)
                 return True
@@ -699,13 +708,19 @@ class H(http.server.SimpleHTTPRequestHandler):
         try:
             data = open(path, "rb").read()
             etag = static_serve.etag_for(data)
-            # Siklus 450: HEAD juga revalidasi — If-None-Match cocok → 304
-            # TANPA body/CL, metadata identik GET (kontrak HEAD siklus 222).
-            if static_serve.not_modified(
-                    self.headers.get("If-None-Match", ""), etag):
+            lm_ts = os.path.getmtime(path)
+            last_mod = static_serve.http_date(lm_ts)
+            # Siklus 450+451: HEAD juga revalidasi — If-None-Match cocok →
+            # 304 TANPA body/CL; If-Modified-Since fallback (ETag menang bila
+            # keduanya ada). Metadata identik GET (kontrak HEAD siklus 222).
+            inm = self.headers.get("If-None-Match", "")
+            ims = self.headers.get("If-Modified-Since", "")
+            if (inm and static_serve.not_modified(inm, etag)) or (
+                    not inm and static_serve.not_modified_since(lm_ts, ims)):
                 self._wfs_cc = static_serve.cache_control_for(self.path)
                 self.send_response(304)
                 self.send_header("ETag", etag)
+                self.send_header("Last-Modified", last_mod)
                 self.end_headers()
                 return True
             data, gz = static_serve.maybe_gzip(
@@ -719,6 +734,7 @@ class H(http.server.SimpleHTTPRequestHandler):
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(data)))
             self.send_header("ETag", etag)
+            self.send_header("Last-Modified", last_mod)
             self.end_headers()
             return True
         except Exception:

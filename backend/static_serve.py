@@ -13,6 +13,7 @@ Dipakai server 9503 (server.py produksi / superset backend_live/wfs_hq_server.py
   dikirim uncompressed (Lighthouse document-latency-insight: "No compression
   applied", wasted 3 KB/request). Helper gzip_html() di static_serve.py.
 """
+import email.utils
 import gzip
 import hashlib
 import io
@@ -52,6 +53,28 @@ def not_modified(if_none_match, etag):
     if inm == "*":
         return True
     return etag.strip().lstrip("W/") in (v.strip().lstrip("W/") for v in inm.split(","))
+
+
+def http_date(ts):
+    """Format timestamp → Last-Modified HTTP (RFC 7231 IMF-fixdate, GMT)."""
+    return email.utils.formatdate(ts, usegmt=True)
+
+
+def not_modified_since(last_modified, if_modified_since):
+    """True bila If-Modified-Since klien >= Last-Modified file.
+
+    Siklus 451: revalidasi HTTP klasik — klien/proksi lama & validator
+    tanpa ETag pakai If-Modified-Since; cocok → 304 tanpa body.
+    """
+    if not if_modified_since:
+        return False
+    try:
+        since = email.utils.parsedate_to_datetime(
+            if_modified_since.strip()).timestamp()
+    except (TypeError, ValueError):
+        return False
+    # Truncate ke detik: Last-Modified juga resolusi detik (HTTP-date).
+    return int(last_modified) <= int(since)
 
 
 def maybe_gzip(data, path, accept_encoding):
