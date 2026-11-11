@@ -7286,3 +7286,12 @@
 - Build PWA OK (47 precache); vitest 342 file / 4017 passed + 6 skipped, 0 fail. Deploy cp dist ke ~/wfs-hq; 9503 = 200.
 - e2e probe (?mode=office, uv --with playwright): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 11:50 WIB — Siklus 416: meta antar halaman konsisten — og/twitter "15 agent" usang diperbaiki
+
+- Audit meta kedua halaman HTML: index.html og:description dan twitter:description masih "15 agent AI" — usang; scene kampus nyatanya 26 agen (AGENTS 14 + EXTENDED_SPECIALISTS 12, terverifikasi via import modul); landing.html (siklus 414) sudah benar 26, jadi preview WhatsApp/Telegram tampil angka berbeda tergantung halaman.
+- Fix: 2 meta index.html diganti "26 agen AI"; +1 link apple-touch-icon di public/landing.html (sebelumnya hanya index.html yang punya).
+- +1 file tes src/__tests__/head_meta_consistency_416.test.js (3 kasus: tanpa "15 agen", 26 agen di og: kedua halaman, apple-touch-icon + og:image + aset ada). Guard langsung menangkap apple-touch-icon landing hilang sebelum fix.
+- Build PWA OK (47 precache); vitest 343 file / 4018 passed + 6 skipped, 0 fail (+1 tes). Deploy cp dist ke ~/wfs-hq; 9503 = 200; index produksi berisi "26 agen".
+- e2e probe (?mode=office, uv --with playwright): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
