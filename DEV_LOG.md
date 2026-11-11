@@ -7247,3 +7247,12 @@
 - e2e probe (?mode=office): agents=26, init_failed False, errs=[] (perlu uv --with playwright).
 - Catatan: dua percobaan regex pertama merusak CSS (Unclosed block) — dipulihkan dari backup /tmp dan ditulis ulang sekali jalan; build gagal tertangkap sebelum deploy.
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 09:35 WIB — Siklus 412: index.css satu sumber warna via CSS variables
+
+- Audit: 187 hex literal di src/index.css (file CSS utama UI, ~3089 baris) — literal warna terbesar tersisa setelah siklus 411.
+- Fix: 50 CSS custom property --ix-* baru di blok :root; semua pemakaian literal jadi var(--ix-*). Dua pengecualian sadar: deklarasi di dalam :root & mask-image ticker (regex guard tes siklus 241 menuntut '#000' literal) tetap hex.
+- Debug: 1 tes gagal saat pertama (mask-image ticker dikonversi) — dikembalikan ke #000 literal; tes 339 file / 4006 passed + 6 skipped, 0 fail.
+- Build PWA OK (46 precache); deploy cp dist → ~/wfs-hq; 9503 = 200.
+- e2e probe (?mode=office): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
