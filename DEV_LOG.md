@@ -7606,3 +7606,11 @@
 - Uji: --apply idempoten (live==sumber 4cf4a36819c9, smoke 13/13); do_check IDENTIK; sha static_serve.py repo == live 861290171d4f. backend pytest 11 passed (test_static_serve); backend_live 247 passed, 2 fail PRE-EXISTING; vitest 359 file / 4097 passed + 6 skipped.
 - e2e probe (?mode=office): agents=26, init_failed=False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
+
+## 12/11/2026 04:40 WIB — Siklus 450: HEAD statis ikut 304 pada If-None-Match (kontrak HEAD konsisten GET)
+
+- Lanjutan siklus 448: HEAD aset statis masih selalu 200 penuh — ETag dikirim tapi revalidasi 304 hanya di GET. `_serve_head_static` kini juga cek If-None-Match → 304 TANPA Content-Length/body, ETag tetap ada; tanpa match → 200 metadata identik GET (CC immutable, gzip/Vary, CL, ETag).
+- +1 unittest backend_live/test_head_304_450.py (304 tanpa CL, 200 metadata=GET). backend_live pytest: 248 passed + 3 fail di luar perubahan (2 PRE-EXISTING + test_wfs_events gagal hanya karena env uv tanpa uvicorn — bukan regresi).
+- Deploy apply_wfs_hq_server.py --apply: live==sumber f28cad68df9d, smoke 13/13. Bukti produksi: HEAD /assets/index-CLHNCJk-.js dgn If-None-Match cocok → 304; tanpa → 200 CL 16823 + ETag. GET 304 tetap OK. SSE /api/events tak tersentuh.
+- vitest: 359 file, 4098 passed, 6 skipped. Build PWA OK; dist → ~/wfs-hq. e2e probe (?mode=office): agents=26, init_failed=False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.

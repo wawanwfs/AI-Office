@@ -698,6 +698,16 @@ class H(http.server.SimpleHTTPRequestHandler):
             return False
         try:
             data = open(path, "rb").read()
+            etag = static_serve.etag_for(data)
+            # Siklus 450: HEAD juga revalidasi — If-None-Match cocok → 304
+            # TANPA body/CL, metadata identik GET (kontrak HEAD siklus 222).
+            if static_serve.not_modified(
+                    self.headers.get("If-None-Match", ""), etag):
+                self._wfs_cc = static_serve.cache_control_for(self.path)
+                self.send_response(304)
+                self.send_header("ETag", etag)
+                self.end_headers()
+                return True
             data, gz = static_serve.maybe_gzip(
                 data, self.path, self.headers.get("Accept-Encoding", ""))
             self._wfs_cc = static_serve.cache_control_for(self.path)
@@ -708,8 +718,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 self.send_header("Vary", "Accept-Encoding")
             self.send_header("Content-Type", ctype)
             self.send_header("Content-Length", str(len(data)))
-            # Siklus 448: ETag ikut di-HEAD — GET/HEAD metadata konsisten.
-            self.send_header("ETag", static_serve.etag_for(data))
+            self.send_header("ETag", etag)
             self.end_headers()
             return True
         except Exception:
