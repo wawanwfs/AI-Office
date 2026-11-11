@@ -7363,3 +7363,12 @@
 - Build PWA OK; vitest 350 file / 4045 passed + 6 skipped, 0 fail (+4 tes). Produksi GET /sitemap.xml = 200 tersaji.
 - e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 15:40 WIB — Siklus 424: directive Sitemap: di robots.txt
+
+- Audit lanjutan (423): sitemap.xml sudah tersaji tapi robots.txt belum menunjuknya — Google/Bing menemukan sitemap terutama lewat directive `Sitemap:` absolut di robots.txt.
+- Fix: public/robots.txt + directive `Sitemap: http://161.120.180.21:9503/sitemap.xml`; Disallow privat (/app/, /api/, /cs-widget/) tetap utuh.
+- +1 file tes src/__tests__/robots_sitemap_424.test.js (4 kasus: directive absolut, konsistensi dengan sitemap.xml, disallow utuh, dist ter-deploy).
+- Build PWA OK (47 precache); vitest 351 file / 4049 passed + 6 skipped, 0 fail (+4 tes). Deploy cp dist → ~/wfs-hq; produksi GET /robots.txt menyajikan directive.
+- e2e probe: agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

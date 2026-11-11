@@ -3,3 +3,5 @@ Allow: /
 Disallow: /app/
 Disallow: /api/
 Disallow: /cs-widget/
+
+Sitemap: http://161.120.180.21:9503/sitemap.xml
