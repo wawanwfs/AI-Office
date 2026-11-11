@@ -7623,3 +7623,12 @@
 - Deploy apply_wfs_hq_server.py --apply: live==sumber 40ae462a75dd, smoke 13/13 (static_serve.py ikut disinkron — backlog (f) terbukti jalan). Bukti produksi: GET /sw.js dgn IMS cocok → 304 size=0; IMS lama → 200 4190 B; HEAD IMS → 304; GET ETag 304 tetap OK.
 - vitest: 359 file, 4099 passed, 6 skipped. Build PWA OK; dist → ~/wfs-hq. e2e probe (?mode=office): agents=26, init_failed=False, errs=[] (perlu --with playwright, env uv dulu tanpa itu).
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
+
+## 12/11/2026 05:30 WIB — Siklus 452: 2 fail pre-existing BEKERJA — bug billing-key fallback & artefak test
+
+- Investigasi 2 fail lama (master_worker_cost, wfs_sh_console), bukan sekadar dicatat pre-existing:
+- (1) wfs_sh_console: test_missing_db_fails_loud gagal karena ARTEFAK — /tmp/wfs-no-such-db-siklus153.db (16 KB, tasks+projects real) tertinggal di /tmp sejak 8/11 (jalur test lain atau run manual pernah mengisi DB itu). Test sekarang hijau; tidak ada perubahan kode.
+- (2) master_worker_cost: BUG SECURITY NYATA di wfs_tasks.call_llm mode billing — key cfg kosong/None di-fallback ke DEFAULT_AI["key"] (~/.hermes/.env kredensial operator) SEBELUM validasi, sehingga worker billing tanpa kunci tetap DIJALANKAN memakai kunci pribadi (proxy hasil reproduce: NO RAISE + bill tercatat). Fix: validasi kunci MENTAH cfg.get("key") sebelum fallback — key kosong/None/kontrol-char → PermissionError "credential".
+- Uji reproduce manual: key="" → dulu NO RAISE (FakeClient.calls=1); sesudah fix PermissionError. backend_live pytest penuh: 263 passed + 1 skipped + 4 subtests — NOL fail (dulu 261+2fail).
+- Deploy apply_wfs_tasks.py --apply: live==sumber 2fec829f7dc2, smoke fase-1+fase-2 OK (pause tetap ON). Build PWA OK; dist → ~/wfs-hq. vitest 359 file: 4099 passed, 6 skipped. e2e probe: agents=26, init_failed=False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.

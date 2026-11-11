@@ -339,8 +339,12 @@ async def call_llm(agent_id, sys_prompt, user_prompt):
         allow = {x.strip().lower() for x in
                  os.environ.get("WFS_AI_ALLOWED_HOSTS", "").split(",") if x.strip()}
         _, provider_endpoint = _approve_origin(base, allow)
-        if (not isinstance(key,str) or not key or
-                "\n" in key or "\r" in key):
+        # Siklus 452: validasi kunci MENTAH cfg, bukan setelah fallback
+        # DEFAULT_AI — dulu key cfg kosong/None jatuh ke kredensial default
+        # operator (fitur live ~/.hermes/.env) sehingga worker billing tanpa
+        # kunci tetap DIJALANKAN memakai kunci pribadi, bukan ditolak.
+        if (not isinstance(cfg.get("key"), str) or not cfg.get("key") or
+                "\n" in cfg.get("key") or "\r" in cfg.get("key")):
             raise PermissionError("valid approved provider credential required")
     async with httpx.AsyncClient(timeout=300, follow_redirects=False,
                                  trust_env=(billing is None)) as cl:
