@@ -7398,3 +7398,12 @@
 - Build PWA OK (47 precache); vitest 353 file / 4058 passed + 6 skipped, 0 fail. Deploy cp dist → ~/wfs-hq; GET / menyaji 3 preload baru, 2 file woff2 terverifikasi 200.
 - e2e probe (?mode=office): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 17:40 WIB — Siklus 428: +preload DM Mono di landing
+
+- Lanjutan 425/427: landing sudah preload Orbitron+DM Sans, tapi DM Mono (varian aFTU7PB1...yM, dipakai fonts.css weight 400/500) belum — font mono baru diambil setelah CSS parse.
+- Fix: public/landing.html +1 preload DM Mono (aFTU7PB1QTsUX8KYthSQBLyM.woff2); total 3 preload, semua URL terverifikasi ada di @font-face fonts.css & 200 OK di produksi.
+- +1 file tes src/__tests__/landing_font_preload_428.test.js (5 kasus: 3 preload, URL ⊆ @font-face, as=font+crossorigin, file fisik ada, dist identik).
+- Build PWA OK (47 precache); vitest 354 file / 4063 passed + 6 skipped, 0 fail (+5 tes). Deploy cp dist → ~/wfs-hq; produksi landing = 3 preload.
+- e2e probe (?mode=office): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
