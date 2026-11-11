@@ -7540,3 +7540,14 @@
 - backend_live pytest: 232 passed, 2 fail PRE-EXISTING (master_worker_cost, wfs_sh_console). vitest drift-gate static_allowlist diperbarui (16 entri, dua hash workbox): full suite 4093 passed, 6 skipped, 0 fail. Build PWA OK; dist → ~/wfs-hq.
 - Catatan: sw.js.map & workbox-2178cfdb.js.map ada di dist tapi 404 via HTTP (bukan allowlist file eksak; .map hanya dirujuk devtools via sourceMappingURL hidden — dibiarkan, low-risk).
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 12/11/2026 01:21 WIB — Siklus 443: gzip proxy /cs-widget/ (14KB→4.8KB)
+
+- Audit header produksi :9503: cabang GET /cs-widget/* (widget AI CS :3001) meneruskan HTML upstream ~14 KB TANPA kompresi — Lighthouse "No compression applied"; /admin & API JSON sudah gzip (434/438), widget terlewat.
+- Fix: gzip_html on-the-fly di cabang proxy (Content-Encoding + Vary bila client mendukung, Content-Length = payload balikan). HEAD helper tak berubah (tanpa AE → CL mentah tetap konsisten).
+- +1 unittest backend_live/test_cs_widget_gzip_443.py (3 kasus). backend_live pytest: 235 passed; 2 fail PRE-EXISTING (master_worker_cost, wfs_sh_console).
+- Deploy apply_wfs_hq_server.py --apply: live==sumber 5ade04723491, smoke 13/13.
+- Bukti curl: GET /cs-widget/ dgn AE gzip → 13803 B → 4768 B (-65%); tanpa AE tetap 13803 B utuh.
+- e2e probe (?mode=office, playwright+ws): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+

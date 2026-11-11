@@ -574,10 +574,18 @@ class H(http.server.SimpleHTTPRequestHandler):
                 conn.request("GET", url_path)
                 r = conn.getresponse()
                 data = r.read()
+                # Siklus 443: HTML widget ~14 KB dikirim uncompressed (Lighthouse
+                # "No compression applied") — gzip on-the-fly seperti cabang
+                # /admin (434/438). Content-Length wajib panjang payload balikan.
+                data, gz = static_serve.gzip_html(
+                    data, self.headers.get("Accept-Encoding", ""))
                 self.send_response(r.status)
                 ctype = r.getheader("Content-Type", "text/html")
                 self.send_header("Content-Type", ctype)
                 self.send_header("Cache-Control", "no-store")
+                if gz:
+                    self.send_header("Content-Encoding", "gzip")
+                    self.send_header("Vary", "Accept-Encoding")
                 self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)
