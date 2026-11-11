@@ -7491,3 +7491,12 @@
 - +1 unittest backend_live/test_favicon_fallback_437.py (3 kasus: 200+svg, file hilang → 404, path lain tak terpengaruh). backend_live pytest: 220 passed; 2 fail PRE-EXISTING (test_master_worker_cost_integration, test_wfs_sh_console).
 - Deploy apply_wfs_hq_server.py --apply: live==sumber, smoke OK. e2e probe: agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 23:05 WIB — Siklus 438: gzip respons JSON API (send_json)
+
+- Audit produksi :9503: /api/agents (4 KB) dikirim uncompressed — siklus 434 hanya meng-gzip shell HTML & file statis; payload API boros bandwidth.
+- Fix: wfs_api_service.py send_json — gzip on-the-fly via static_serve.gzip_html bila Accept-Encoding gzip & hasil lebih kecil; header Content-Encoding + Vary. Content-Length ikut panjang payload balikan.
+- Bukti curl pasca-deploy: GET /api/agents dgn AE gzip → Content-Encoding: gzip, 4044 B → 1016 B (-75%); tanpa AE tetap 4044 B utuh.
+- +1 unittest backend_live/test_gzip_api_json_438.py; backend_live pytest: 223 passed, 1 skipped; 2 fail PRE-EXISTING (test_master_worker_cost_integration, test_wfs_sh_console).
+- Deploy apply_wfs_api_service.py --apply: live==sumber, smoke OK (restart wfs-hq). e2e probe (?mode=office): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

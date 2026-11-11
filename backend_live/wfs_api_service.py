@@ -148,10 +148,23 @@ def handle_api_request(handler, method, path):
 
     def send_json(data, status=200):
         payload = json.dumps(data).encode("utf-8")
+        # Siklus 438: API JSON (mis. /api/agents ~4 KB) dikirim uncompressed —
+        # Lighthouse menandai "No compression applied" untuk dokumen, tapi
+        # payload API juga boros bandwidth. Gzip on-the-fly bila client
+        # mendukung & hasil lebih kecil (pola gzip_html 434).
+        try:
+            import static_serve
+            payload, gz = static_serve.gzip_html(
+                payload, handler.headers.get("Accept-Encoding", ""))
+        except Exception:
+            gz = False
         handler.send_response(status)
         handler.send_header("Content-Type", "application/json")
         handler.send_header("Cache-Control", "no-store")
         handler.send_header("Access-Control-Allow-Origin", "*")
+        if gz:
+            handler.send_header("Content-Encoding", "gzip")
+            handler.send_header("Vary", "Accept-Encoding")
         handler.send_header("Content-Length", str(len(payload)))
         handler.end_headers()
         handler.wfile.write(payload)
