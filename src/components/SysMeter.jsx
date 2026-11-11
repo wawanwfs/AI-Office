@@ -52,14 +52,14 @@ export default function SysMeter() {
     <div className="sysmeter" role="status" aria-label="Status host">
       {err && <span className="sm-item" role="alert" title="Poll terakhir gagal; data mungkin usang">⚠ data usang · {updatedAt}</span>}
       {!err && (
-        <span className="sm-item sm-hl" title="Gateway terhubung, data live"><i aria-hidden="true" /> host live</span>
+        <span className="sm-item sm-hl" title="Gateway terhubung, data live" aria-label="Gateway terhubung, data live"><i aria-hidden="true" /> host live</span>
       )}
-      <span className="sm-item" title="Agen dari status backend">{d.agents ?? '—'} agen task engine</span>
-      {sceneAgents && <span className="sm-item" title="Avatar ambient, bukan status pekerjaan">{sceneAgents} avatar simulasi</span>}
-      <span className="sm-item" title="Load average host">⚡ {d.load}</span>
-      <span className="sm-item" title="RAM terpakai / total">🧠 {d.ram}</span>
-      <span className="sm-item" title="Disk terpakai / total">💾 {d.disk_used_gb}/{d.disk_total_gb} GB</span>
-      <span className="sm-item" title="Uptime host">⏱ {fmtUptime(d.uptime_s)}</span>
+      <span className="sm-item" title="Agen dari status backend" aria-label={`Agen task engine: ${d.agents ?? 'tidak tersedia'}`}>{d.agents ?? '—'} agen task engine</span>
+      {sceneAgents && <span className="sm-item" title="Avatar ambient, bukan status pekerjaan" aria-label={`${sceneAgents} avatar simulasi di scene (bukan status pekerjaan)`}>{sceneAgents} avatar simulasi</span>}
+      <span className="sm-item" title="Load average host" aria-label={`Load average host: ${d.load}`}>⚡ {d.load}</span>
+      <span className="sm-item" title="RAM terpakai / total" aria-label={`RAM terpakai per total: ${d.ram} MB`}>🧠 {d.ram}</span>
+      <span className="sm-item" title="Disk terpakai / total" aria-label={`Disk terpakai per total: ${d.disk_used_gb} dari ${d.disk_total_gb} GB`}>💾 {d.disk_used_gb}/{d.disk_total_gb} GB</span>
+      <span className="sm-item" title="Uptime host" aria-label={`Uptime host: ${fmtUptime(d.uptime_s)}`}>⏱ {fmtUptime(d.uptime_s)}</span>
     </div>
   )
 }
