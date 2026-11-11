@@ -69,6 +69,11 @@
   .how li b { color:#fff; display:block; margin-bottom:3px; font-size:13px; }
   footer { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; color:var(--ice); opacity:.55; font-size:12px; border-top:1px solid rgba(77,159,255,.12); padding-top:18px; }
   footer a { color:var(--ice); }
+  /* A11y: fokus keyboard jelas di semua link interaktif */
+  a:focus-visible { outline:3px solid #4D9FFF; outline-offset:3px; border-radius:6px; }
+  /* Skip link: tersembunyi sampai Tab pertama */
+  .skip-link { position:fixed; top:-48px; left:12px; z-index:9999; padding:8px 16px; background:#4D9FFF; color:#001030; font-weight:700; border-radius:10px; text-decoration:none; transition:top .15s ease; }
+  .skip-link.vis { top:10px; }
   @media (max-width:720px) {
     .stats { grid-template-columns:repeat(2,1fr); }
     .features { grid-template-columns:1fr; }
@@ -80,12 +85,14 @@
 </head>
 <body>
 <div class="glow g1"></div><div class="glow g2"></div>
+<a class="skip-link" href="#main" onFocus="this.classList.add('vis')" onBlur="this.classList.remove('vis')">Lewati ke konten utama</a>
 <div class="wrap">
-  <nav>
+  <nav aria-label="Navigasi utama">
     <div class="logo"><span class="dot"></span> WFS PROJECT</div>
     <a class="enter" href="/app/">Kantor 3D →</a>
   </nav>
 
+  <main id="main">
   <h1>Software House yang Dikerjakan <span class="accent">26 Agen AI</span><br>di Kantor Virtual 3D</h1>
   <p class="sub">Beri instruksi — agen AI kami merencanakan, membangun, menguji, dan menyerahkan software nyata di Docker sandbox. Pantau semuanya live: kanban papan task, progres per divisi, preview aplikasi jadi, sampai obrolan antar agen di kantor 3D.</p>
 
@@ -119,6 +126,7 @@
       <li><b>Hasil nyata</b>Source code + live preview siap diperiksa, diunduh, atau dilanjutkan.</li>
     </ol>
   </div>
+  </main>
 
   <footer>
     <span>© 2026 WFS PROJECT — Autonomous AI Software House</span>

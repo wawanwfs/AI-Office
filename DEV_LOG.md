@@ -7304,3 +7304,12 @@
 - Build PWA OK (47 precache); vitest 344 file / 4021 passed + 6 skipped, 0 fail (+1 tes). Deploy cp dist ke ~/wfs-hq; 9503 = 200; manifest produksi kini "26 agen".
 - e2e probe (?mode=office, uv --with playwright): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 12:44 WIB — Siklus 418: a11y landing page — skip link, landmark main/nav, focus-visible
+
+- Audit a11y landing.html (halaman publik pertama yang dilihat pengunjung): tidak ada `<main>`, nav tanpa aria-label, tanpa skip link, dan tanpa gaya fokus keyboard — navigasi Tab tidak terlihat. Aplikasi utama (index) sudah lengkap (skip-link, dialogA11y, Escape satu sumber sejak siklus 333+).
+- Fix: skip-link "Lewati ke konten utama" → #main; landmark `<main id="main">` membungkus konten; `<nav aria-label>`; gaya `a:focus-visible` outline biru royal.
+- +1 file tes src/__tests__/landing_a11y_418.test.js (4 kasus: skip link, landmark, focus-visible, dist ter-deploy juga). Debug: import { describe } dari vitest hilang di percobaan pertama.
+- Build PWA OK (47 precache); vitest 345 file / 4025 passed + 6 skipped, 0 fail (+4 tes). Deploy cp dist ke ~/wfs-hq; 9503 = 200, landing produksi memuat ketiga fitur.
+- e2e probe (?mode=office, uv --with playwright): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
