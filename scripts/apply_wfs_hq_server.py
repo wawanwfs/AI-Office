@@ -37,6 +37,8 @@ import urllib.request
 
 SRC = pathlib.Path(__file__).resolve().parent.parent / "backend_live" / "wfs_hq_server.py"
 DST = pathlib.Path("/home/agentuser/wfs-hq/server.py")
+SS_SRC = pathlib.Path(__file__).resolve().parent.parent / "backend" / "static_serve.py"
+SS_DST = pathlib.Path("/home/agentuser/wfs-hq/static_serve.py")
 BACKUPS = pathlib.Path("/home/agentuser/wfs-hq/backups")
 TMP = pathlib.Path("/home/agentuser/wfs-hq/.server.py.compiledcheck")
 TOKEN_FILE = pathlib.Path("/home/agentuser/wfs-hq/.wfs_ui_token")
@@ -298,6 +300,11 @@ def do_apply():
     if not SRC.is_file():
         print(f"SUMBER TIDAK ADA: {SRC}")
         return 2
+    # SIKLUS 449: sinkronkan static_serve.py juga (dulu hanya server.py —
+    # modul pendamping live basi → AttributeError etag_for saat smoke 448).
+    if SS_SRC.is_file() and sha(SS_SRC) != sha(SS_DST):
+        shutil.copy2(SS_SRC, SS_DST)
+        print("static_serve.py disinkron:", sha(SS_SRC)[:12])
     if sha(SRC) == sha(DST):
         ok, why = smoke()
         print("live == sumber (idempoten); smoke:", "OK" if ok else f"GAGAL {why}")

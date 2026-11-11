@@ -7599,3 +7599,10 @@
 - Deploy: apply_wfs_hq_server.py --apply live==sumber 4cf4a36819c9, smoke 13/13. Kendala siklus: apply hanya menyalin wfs_hq_server.py, static_serve.py live lama tanpa etag_for → AttributeError → smoke auto-rollback; fix = cp static_serve.py ke ~/wfs-hq lalu apply ulang. apply script kini butuh sinkronisasi static_serve.py (backlog kecil).
 - dist → ~/wfs-hq. e2e probe (?mode=office): agents=26, init_failed=False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute; (f) apply script: ikut deploy static_serve.py.
+
+## 12/11/2026 04:15 WIB — Siklus 449: apply script kini ikut deploy static_serve.py (backlog (f))
+
+- Fix backlog (f): scripts/apply_wfs_hq_server.py --apply kini menyinkronkan backend/static_serve.py → ~/wfs-hq/static_serve.py (sha-cek, copy bila beda) SEBELUM gate idempoten — dulu hanya server.py, sehingga perubahan modul pendamping butuh cp manual (insiden AttributeError etag_for siklus 448).
+- Uji: --apply idempoten (live==sumber 4cf4a36819c9, smoke 13/13); do_check IDENTIK; sha static_serve.py repo == live 861290171d4f. backend pytest 11 passed (test_static_serve); backend_live 247 passed, 2 fail PRE-EXISTING; vitest 359 file / 4097 passed + 6 skipped.
+- e2e probe (?mode=office): agents=26, init_failed=False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
