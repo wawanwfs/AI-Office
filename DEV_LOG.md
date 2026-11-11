@@ -7417,7 +7417,14 @@
 - e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
 
-## 11/11/2026 19:05 WIB — Siklus 430: manifest link di landing + paritas meta OG
+## 11/11/2026 19:20 WIB — Siklus 431: twitter:image:alt di index + tes PWA parity
+
+- Audit paritas 430: index.html belum punya twitter:image:alt (landing sudah) — preview X/Twitter tampil tanpa teks alternatif gambar.
+- Fix: index.html + twitter:image:alt (konten identik landing). Catatan: <link rel="manifest"> di index TIDAK ditambah manual karena vite-plugin-pwa sudah menyuntik sendiri saat build (tanpa itu jadi duplikat).
+- +1 file tes src/__tests__/index_pwa_parity_431.test.js (5 kasus: manifest link hasil injeksi plugin, twitter:image:alt sejajar landing, start_url '/', icons manifest ⊆ dist, tanpa duplikat).
+- Build PWA OK (47 precache); vitest 357 file / 4077 passed + 6 skipped, 0 fail (+5 tes). Deploy cp dist → ~/wfs-hq; produksi index menyaji twitter:image:alt + rel="manifest".
+- e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
 
 - Audit lanjutan 429: landing tidak punya <link rel="manifest"> — PWA tak bisa di-install saat user mendarat di landing; index.html juga belum punya og:locale (ada di landing) dan landing belum punya twitter:image:alt (ada og:image:alt).
 - Fix: public/landing.html + <link rel="manifest" href="/manifest.webmanifest"> + twitter:image:alt; index.html + og:locale id_ID (tanpa duplikat).
