@@ -7407,3 +7407,12 @@
 - Build PWA OK (47 precache); vitest 354 file / 4063 passed + 6 skipped, 0 fail (+5 tes). Deploy cp dist → ~/wfs-hq; produksi landing = 3 preload.
 - e2e probe (?mode=office): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 18:15 WIB — Siklus 429: OG absolut + canonical di index.html
+
+- Lanjutan 422: landing sudah absolut, tapi index.html masih og:image/og:url/twitter:image relatif ("/og-image.png", "/") — crawler sosial yang butuh URL absolut gagal resolve preview.
+- Fix: index.html → og:image, og:url, twitter:image absolut origin http://161.120.180.21:9503 + <link rel="canonical"> + og:image:alt (paritas 422); twitter:title diselaraskan dengan og:title.
+- +1 file tes src/__tests__/index_og_absolute_429.test.js (4 kasus: absolut tanpa versi relatif, og:url+canonical, og:image:alt, dist ter-deploy).
+- Build PWA OK (47 precache); vitest 355 file / 4067 passed + 6 skipped, 0 fail (+4 tes). Deploy cp dist → ~/wfs-hq.
+- e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
