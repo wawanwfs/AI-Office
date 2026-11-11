@@ -14,7 +14,7 @@ import {
   clampAmbienceVolume, formatAmbiencePercent,
 } from '../scene/parts/sound_spec'
 import { namesPrefOn, autoRotatePrefOn } from '../lib/storage_prefs.js'
-import { accentAlpha, failedAlpha, SKY_BUTTON, PANEL_SOFT_TEXT, ITEM_TITLE_TEXT } from '../lib/ui_palette.js'
+import { accentAlpha, failedAlpha, SKY_BUTTON, PANEL_SOFT_TEXT, ITEM_TITLE_TEXT , PURE_TEXT} from '../lib/ui_palette.js'
 
 export default function SettingsModal({
   show,
@@ -239,7 +239,7 @@ export default function SettingsModal({
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
               {muted ? <IconVolumeMute size={18} style={{ color: TASK_STATUS_COLORS.failed }} /> : <IconVolume size={18} style={{ color: 'var(--teal)' }} />}
-              <span style={{ fontWeight: 600, fontSize: 13, color: '#fff' }}>Audio Notifikasi</span>
+              <span style={{ fontWeight: 600, fontSize: 13, color: PURE_TEXT }}>Audio Notifikasi</span>
               <span style={{
                 fontSize: 11,
                 padding: '2px 6px',
@@ -459,7 +459,7 @@ export default function SettingsModal({
 
         {/* ── BAGIAN VISUAL & KONTROL ── */}
         <div className="settings-section" style={{ border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: '12px 14px', background: 'rgba(255,255,255,0.02)', marginBottom: 16 }}>
-          <div style={{ fontWeight: 600, fontSize: 13, color: '#fff', marginBottom: 10 }}>Visual Ruangan 3D</div>
+          <div style={{ fontWeight: 600, fontSize: 13, color: PURE_TEXT, marginBottom: 10 }}>Visual Ruangan 3D</div>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, color: 'var(--text-secondary)' }}>

@@ -6,7 +6,7 @@ import { api } from '../lib/api'
 import { useDialogA11y, useVisibilityPoll } from '../lib/dialogA11y'
 import { useModalFlag } from '../lib/modal'
 import { STATUS_HEX } from '../scene/parts/agent_status'
-import { MUTED_TEXT, BRIGHT_TEXT, FAINT_META, PANEL_BORDER, SUB_TEXT, TAB_BG, BTN_BG, INPUT_BG, DRAWER_TEXT, DRAWER_GRADIENT, TITLE_TEXT, TAB_IDLE_BG, CARD_BG, ROW_DASH, GHOST_BG, GHOST_TEXT, TAG_TEXT, ERROR_TEXT, PRE_BG, REJECT_BG, STALE_TEXT } from '../lib/ui_palette'
+import { MUTED_TEXT, BRIGHT_TEXT, FAINT_META, PANEL_BORDER, SUB_TEXT, TAB_BG, BTN_BG, INPUT_BG, DRAWER_TEXT, DRAWER_GRADIENT, TITLE_TEXT, TAB_IDLE_BG, CARD_BG, ROW_DASH, GHOST_BG, GHOST_TEXT, TAG_TEXT, ERROR_TEXT, PRE_BG, REJECT_BG, STALE_TEXT, PURE_TEXT } from '../lib/ui_palette'
 
 const STYLE = {
   overlay: { position: 'fixed', inset: 0, zIndex: 2000, background: 'rgba(0,0,0,.45)' },
@@ -20,14 +20,14 @@ const STYLE = {
   title: { margin: 0, fontSize: 15, fontWeight: 700, letterSpacing: '.5px', color: TITLE_TEXT },
   tabbar: { display: 'flex', gap: 4, padding: '10px 12px', borderBottom: '1px solid '+PANEL_BORDER, flexWrap: 'wrap' },
   tab: { padding: '7px 10px', border: 0, borderRadius: 8, background: TAB_IDLE_BG, color: SUB_TEXT, cursor: 'pointer', fontWeight: 600, fontSize: 13 },
-  tabActive: { background: BTN_BG, color: '#fff' },
+  tabActive: { background: BTN_BG, color: PURE_TEXT },
   body: { flex: 1, overflowY: 'auto', padding: '14px 16px' },
   card: { background: CARD_BG, border: '1px solid '+PANEL_BORDER, borderRadius: 12, padding: 14, marginBottom: 10 },
   stat: { display: 'flex', justifyContent: 'space-between', marginBottom: 8 },
   k: { color: MUTED_TEXT, fontSize: 12 },
   v: { fontWeight: 700, fontSize: 16, color: BRIGHT_TEXT },
   row: { display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 8, padding: '10px 0', borderBottom: `1px dashed ${ROW_DASH}` },
-  btn: { background: BTN_BG, border: 0, color: '#fff', borderRadius: 8, padding: '8px 12px', cursor: 'pointer', fontWeight: 600 },
+  btn: { background: BTN_BG, border: 0, color: PURE_TEXT, borderRadius: 8, padding: '8px 12px', cursor: 'pointer', fontWeight: 600 },
   btnGhost: { background: GHOST_BG, border: 0, color: GHOST_TEXT, borderRadius: 8, padding: '6px 10px', cursor: 'pointer', fontSize: 12 },
   input: { width: '100%', background: INPUT_BG, border: `1px solid ${BTN_BG}`, color: BRIGHT_TEXT, borderRadius: 8, padding: '10px 12px', marginBottom: 10, boxSizing: 'border-box' },
   select: { width: '100%', background: INPUT_BG, border: `1px solid ${BTN_BG}`, color: BRIGHT_TEXT, borderRadius: 8, padding: '10px', marginBottom: 10 },

@@ -64,7 +64,7 @@ import {
 } from '../scene/parts/kanban_spec'
 import { TEAMS, findTeamByRole, findTeamByAgent } from '../scene/parts/team_spec'
 import { taskStatusColor, taskStatusLabel, TASK_STATUS_COLORS } from '../lib/task_status_colors'
-import { SKY_DIVISION, NOTE_TEXT, CHIP_TEXT } from '../lib/ui_palette'
+import { SKY_DIVISION, NOTE_TEXT, CHIP_TEXT, UNKNOWN_STROKE } from '../lib/ui_palette'
 // ST delegasi ke satu sumber warna/label status (siklus 373).
 const ST = {
   done: [taskStatusLabel('done'), taskStatusColor('done')],
@@ -1698,7 +1698,7 @@ export default function TaskBoard({ onFlash, onAsk, onChunkReady }) {
                           else sfx.playSelect()
                           setSel(t)
                         }}
-                        style={{ borderLeft: `4px solid ${ST[t.status]?.[1] || '#888'}` }}
+                        style={{ borderLeft: `4px solid ${ST[t.status]?.[1] || UNKNOWN_STROKE}` }}
                       >
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 6 }}>
                           <div style={{ fontSize: 13, fontWeight: 600, lineHeight: 1.35 }}>

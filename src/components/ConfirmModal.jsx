@@ -3,6 +3,7 @@ import { useDialogA11y } from '../lib/dialogA11y'
 import { useModalFlag } from '../lib/modal'
 import { IconClose } from './Icons'
 import { TASK_STATUS_COLORS } from '../lib/task_status_colors.js'
+import { PURE_TEXT } from '../lib/ui_palette.js';
 
 export default function ConfirmModal({ show, title, text, confirmLabel = 'Ya, lanjut', danger, busy, onConfirm, onCancel }) {
   const box = useRef(null)
@@ -23,7 +24,7 @@ export default function ConfirmModal({ show, title, text, confirmLabel = 'Ya, la
         <p>{text}</p>
         <div className="modal-actions">
           <button className="btn" onClick={onCancel}>Batal</button>
-          <button className="btn primary" style={danger ? { background: TASK_STATUS_COLORS.failed, color: '#fff' } : null} disabled={busy} onClick={onConfirm} autoFocus>{busy ? 'Memproses…' : confirmLabel}</button>
+          <button className="btn primary" style={danger ? { background: TASK_STATUS_COLORS.failed, color: PURE_TEXT } : null} disabled={busy} onClick={onConfirm} autoFocus>{busy ? 'Memproses…' : confirmLabel}</button>
         </div>
       </div>
     </div>

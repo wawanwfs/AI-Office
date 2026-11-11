@@ -1,4 +1,4 @@
-import { CS_HEADER_BG } from '../lib/ui_palette.js'
+import { CS_HEADER_BG , PURE_TEXT} from '../lib/ui_palette.js'
 import { useState, useRef, useCallback, useEffect } from 'react'
 import { useModalFlag } from '../lib/modal'
 import { useDialogA11y } from '../lib/dialogA11y'
@@ -20,7 +20,7 @@ export default function CsWidget() {
   return (
     <>
       {open && (
-        <div ref={box} id="cs-widget" className="panel wide" role="dialog" aria-label="AI CS dibantuin" aria-modal="true" style={{ background: '#fff', zIndex: 'var(--z-widget)', height: 'min(500px, calc(100dvh - 170px))', borderColor: 'rgba(16,229,160,.5)' }}>
+        <div ref={box} id="cs-widget" className="panel wide" role="dialog" aria-label="AI CS dibantuin" aria-modal="true" style={{ background: PURE_TEXT, zIndex: 'var(--z-widget)', height: 'min(500px, calc(100dvh - 170px))', borderColor: 'rgba(16,229,160,.5)' }}>
           <div style={{ display: 'flex', alignItems: 'center', background: CS_HEADER_BG }}>
             <div style={{ flex: 1, paddingLeft: 14, fontSize: 12, fontWeight: 700, color: TASK_STATUS_COLORS.done, letterSpacing: 1.5, display: 'flex', alignItems: 'center', gap: 6 }}>
               <IconHeadset size={14} />

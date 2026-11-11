@@ -190,3 +190,9 @@ export const GOLD_ACCENT = '#d8bb84';
 
 /** Titik status proyek idle Dashboard (#9aa3b5, siklus 408). */
 export const IDLE_DOT = '#9aa3b5';
+
+/** Teks putih murni di atas panel gelap / tombol aksen (siklus 409). */
+export const PURE_TEXT = '#ffffff';
+
+/** Fallback netral garis status tak dikenal (#888888, siklus 409). */
+export const UNKNOWN_STROKE = '#888888';

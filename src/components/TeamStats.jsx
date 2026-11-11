@@ -1,5 +1,5 @@
 import { clip } from '../lib/clip.js'
-import { NOTE_TEXT, ITEM_TITLE_TEXT } from '../lib/ui_palette.js'
+import { NOTE_TEXT, ITEM_TITLE_TEXT , PURE_TEXT} from '../lib/ui_palette.js'
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../lib/api'
 import { useModalFlag } from '../lib/modal'
@@ -99,7 +99,7 @@ export default function TeamStats() {
                     </div>
                   ))}
                 </div>
-                <div className="note" style={{ marginBottom: 6 }}>Total file dihasilkan: <b style={{ color: '#fff' }}>{totalFiles}</b></div>
+                <div className="note" style={{ marginBottom: 6 }}>Total file dihasilkan: <b style={{ color: PURE_TEXT }}>{totalFiles}</b></div>
                 {/* Progres Per Divisi / Tim Kerja & Pod Meja 3D */}
                 {teamStats.length > 0 && (
                   <div style={{ marginTop: 8, marginBottom: 12 }}>
@@ -203,7 +203,7 @@ export default function TeamStats() {
                         background: 'rgba(255,255,255,0.03)',
                         border: '1px solid rgba(255,255,255,0.06)',
                         borderRadius: 6,
-                        color: '#fff',
+                        color: PURE_TEXT,
                         fontFamily: 'inherit',
                       }}
                       onClick={() => {
@@ -227,7 +227,7 @@ export default function TeamStats() {
                 {(res.containers || []).slice(0, 9).map(c => (
                   <div key={c.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '1px 0', color: 'var(--text-tertiary)' }}>
                     <span>{c.name.replace('saas-dibantuin-', '').replace('wfs-sandbox-', '').replace('wfs-agent-', 'sbx-')}</span>
-                    <span style={{ color: '#fff' }}>{c.cpu} · {c.mem}</span>
+                    <span style={{ color: PURE_TEXT }}>{c.cpu} · {c.mem}</span>
                   </div>
                 ))}
               </div>

@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { IconClose, IconChat, IconUser } from './Icons'
 import { getAgentCompetency } from '../scene/parts/agent_competencies.js'
 import { TASK_STATUS_COLORS } from '../lib/task_status_colors.js'
-import { ACCENT_BLUE, accentAlpha, AVATAR_TEXT, PANEL_SOFT_TEXT } from '../lib/ui_palette.js'
+import { ACCENT_BLUE, accentAlpha, AVATAR_TEXT, PANEL_SOFT_TEXT , PURE_TEXT} from '../lib/ui_palette.js'
 import { resolveAgentId } from '../scene/parts/running_tasks.js'
 import { findTeamByAgent } from '../scene/parts/team_spec.js'
 import { agentLiveStatus, findAgentLiveEntry, agentLiveLevel, floorZoneName, floorZonePrefix, FLOOR_ZONE_PREFIX } from '../scene/parts/agent_status.js'
@@ -86,7 +86,7 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
             {agent.name ? agent.name.slice(0, 2).toUpperCase() : <IconUser size={18} />}
           </div>
           <div>
-            <div style={{ fontSize: 15, fontWeight: 700, color: '#fff', letterSpacing: 0.3 }}>
+            <div style={{ fontSize: 15, fontWeight: 700, color: PURE_TEXT, letterSpacing: 0.3 }}>
               {agent.name}
             </div>
             <div style={{ fontSize: 11, color: 'var(--text-tertiary)', fontWeight: 500, marginTop: 1 }}>
@@ -155,7 +155,7 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
               <span>Lokasi Lantai</span>
               {onFocusFloor && <span style={{ fontSize: 9, color: 'var(--teal)', fontWeight: 700 }}>FOKUS ↗</span>}
             </span>
-            <div style={{ fontSize: 12, color: '#fff', fontWeight: 600 }}>
+            <div style={{ fontSize: 12, color: PURE_TEXT, fontWeight: 600 }}>
               {liveFloor
                 ? `L${liveFloor} · ${floorZoneName(liveFloor)}`
                 : (agent.floor ? floorZonePrefix(agent.floor) : (isFounder ? 'L3 · Executive' : 'L3 · Penthouse'))}
@@ -196,7 +196,7 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
               </div>
               <span style={{ fontSize: 9.5, color: 'var(--teal)', fontWeight: 700 }}>KANBAN ↗</span>
             </div>
-            <div style={{ fontSize: 12, color: '#fff', fontWeight: 600, lineHeight: 1.35 }}>
+            <div style={{ fontSize: 12, color: PURE_TEXT, fontWeight: 600, lineHeight: 1.35 }}>
               {activeTask.title}
             </div>
           </button>
@@ -207,7 +207,7 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
           <div style={{ fontSize: 10, color: 'var(--text-tertiary)', textTransform: 'uppercase', letterSpacing: 0.5, marginBottom: 4 }}>
             Kompetensi & Spesialisasi
           </div>
-          <div style={{ fontSize: 12, color: '#fff', fontWeight: 600, marginBottom: 4 }}>
+          <div style={{ fontSize: 12, color: PURE_TEXT, fontWeight: 600, marginBottom: 4 }}>
             {comp.domain}
           </div>
           <div style={{ fontSize: 11, color: 'var(--text-secondary)', lineHeight: 1.4, marginBottom: 8 }}>
@@ -237,7 +237,7 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
         <div style={{ background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 12, padding: '10px 12px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>
             <span>Proyek</span>
-            <span style={{ color: '#fff', fontWeight: 600 }}>WFS PROJECT</span>
+            <span style={{ color: PURE_TEXT, fontWeight: 600 }}>WFS PROJECT</span>
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-tertiary)', marginBottom: 4 }}>
             <span>Model AI</span>
@@ -245,7 +245,7 @@ export default function AgentInspector({ agent, onClose, onChatWith, onFocusFloo
           </div>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-tertiary)' }}>
             <span>Runtime</span>
-            <span style={{ color: '#fff', fontWeight: 500 }}>Docker Sandbox</span>
+            <span style={{ color: PURE_TEXT, fontWeight: 500 }}>Docker Sandbox</span>
           </div>
         </div>
 

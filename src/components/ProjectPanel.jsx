@@ -8,7 +8,7 @@ import { normalizeTaskStatus, formatTaskId } from '../scene/parts/projectboard_d
 import { pctDone } from '../scene/parts/kanban_spec.js'
 import { POLL_PANEL_MS } from '../lib/connection_spec.js'
 import { taskStatusColor, taskStatusLabel, TASK_STATUS_COLORS } from '../lib/task_status_colors.js'
-import { accentAlpha, NOTE_TEXT, GOLD_ACCENT } from '../lib/ui_palette.js'
+import { accentAlpha, NOTE_TEXT, GOLD_ACCENT , UNKNOWN_STROKE} from '../lib/ui_palette.js'
 
 const ST = {
   done: [taskStatusLabel('done'), taskStatusColor('done')],
@@ -115,7 +115,7 @@ export default function ProjectPanel() {
                   {(T.recent || []).map(x => {
                     const normSt = normalizeTaskStatus(x.status)
                     const isDone = normSt === 'done'
-                    const stColor = ST[normSt]?.[1] || (isDone ? taskStatusColor('done') : '#888')
+                    const stColor = ST[normSt]?.[1] || (isDone ? taskStatusColor('done') : UNKNOWN_STROKE)
                     const displayId = formatTaskId(x.id)
                     return (
                       <button

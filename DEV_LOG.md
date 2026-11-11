@@ -7218,3 +7218,13 @@
 - Build PWA OK; vitest 337 file / 4000 passed + 6 skipped, 0 fail (+3 vs 407). Deploy cp dist → ~/wfs-hq; 9503 → 200.
 - e2e probe (?mode=office, DISPLAY=:1): agents=26, init_failed False, errs=[] (playwright kini via uv --with playwright; chromium headless butuh DISPLAY :1, :0 mati).
 - Sisa backlog: (a) cutover :8787->Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 08:05 WIB — Siklus 409: komponen React bebas #fff/#888 + probe e2e pulih
+
+- Audit: 20 literal sisa di 10 komponen — 16 '#fff' (ActivityLog, AgentInspector 6, ConfirmModal, CsWidget, SettingsModal 2, ShConsole 2, TeamStats 3, Ticker 2) dan 4 '#888' (TaskBoard, ProjectPanel, ActivityLog fallback, Ticker fallback).
+- Fix: 2 konstanta baru di lib/ui_palette.js — PURE_TEXT #ffffff, UNKNOWN_STROKE #888888; 10 komponen delegasi, 0 literal tersisa di src/components dan src/App.jsx.
+- +1 file tes src/__tests__/puretext_fallback_palette_409.test.js (3 kasus: nilai kanonik, guard bebas hex, pemakaian konstanta).
+- Debug e2e: probe melaporkan agents=null palsu — WebGL context gagal dibuat di headless Chromium (UI-only mode). Perbaikan: LIBGL_ALWAYS_SOFTWARE=1 + GALLIUM_DRIVER=llvmpipe di e2e_err.py; WebGL 2.0 hidup kembali.
+- Build PWA OK (46 precache); vitest 338 file / 4003 passed + 6 skipped, 0 fail (+3 vs 408). Deploy cp dist ke ~/wfs-hq; 9503 = 200.
+- e2e probe (?mode=office): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

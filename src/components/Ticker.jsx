@@ -5,7 +5,7 @@ import { tickerPresenceSummary, STATUS_HEX } from '../scene/parts/agent_status.j
 import { useVisibilityPoll } from '../lib/dialogA11y'
 
 import { taskStatusColor, TASK_STATUS_COLORS } from '../lib/task_status_colors.js'
-import { VIOLET_STATS } from '../lib/ui_palette.js'
+import { VIOLET_STATS , PURE_TEXT} from '../lib/ui_palette.js'
 
 const FALLBACK = [{ text: 'Gateway belum terhubung — menunggu data…', color: TASK_STATUS_COLORS.pending }]
 const COL = {
@@ -54,10 +54,10 @@ export default function Ticker({ conn }) {
         const out = []
         const cnt = {}
         tasks.forEach(x => { cnt[x.status] = (cnt[x.status] || 0) + 1 })
-        out.push({ text: `${tasks.length} task · ${cnt.done || 0} done · ${cnt.running || 0} running · ${cnt.pending || 0} pending · ${cnt.failed || 0} failed`, color: taskStatusColor('review') || '#fff' })
+        out.push({ text: `${tasks.length} task · ${cnt.done || 0} done · ${cnt.running || 0} running · ${cnt.pending || 0} pending · ${cnt.failed || 0} failed`, color: taskStatusColor('review') || PURE_TEXT })
         tasks.slice(-8).reverse().forEach(x => out.push({
           text: `${x.agent_id ? (name[x.agent_id] || x.agent_id) : 'Tanpa agen'} — ${clip(x.title, 48)} [${x.status}]`,
-          color: COL[x.status] || '#fff',
+          color: COL[x.status] || PURE_TEXT,
         }))
         if (s && s.mem_total_mb) out.push({ text: `Host RAM tersedia ${s.mem_available_mb}/${s.mem_total_mb} MB · disk ${s.disk_used_gb}/${s.disk_total_gb} GB`, color: VIOLET_STATS })
       if (!apiStop.current && my === apiRid.current) setMsgs(out)
