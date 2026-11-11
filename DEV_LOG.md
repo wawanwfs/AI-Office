@@ -7530,3 +7530,13 @@
 - Bukti curl: HEAD /favicon.ico → 200 image/svg+xml CL 490, identik GET. e2e probe (?mode=office, --with playwright): agents=26, init_failed False, errs=[].
 - vitest drift gate static_allowlist_drift diperbarui (404 kini via _reply_404 JSON, bukan send_response telanjang): 11 passed. Full vitest: 4093 passed, 6 skipped, 0 fail. Build PWA OK; dist → ~/wfs-hq.
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 12/11/2026 01:00 WIB — Siklus 442: prune 494 chunk orphan produksi (38MB→7MB) + allowlist workbox hash kini
+
+- Audit produksi :9503: ~/wfs-hq/assets menumpuk 520 file (38MB) — hanya 12 chunk JS + 5 lazy + 2 css + 14 .map LIVE dari graph import index-CLHNCJk-.js; sisanya 494 chunk orphan era build lama (tak dirujuk index.html/landing/sw.js, tidak masuk precache). Dampak: precache SW membengkak, deploy copy lambat, permukaan 404 palsu.
+- Prune: 494 orphan diarsipkan ke ~/wfs-hq/.pruned-assets (retensi, bukan hapus) → assets 31 file / 7MB. 5 file live (index-fVxvKtNY.css, src-QYQB8bhD.css, TaskBoard/SettingsModal/ShConsole chunk lazy) sempat ikut tertukar jaring orphan — dikembalikan dari dist, semua 200.
+- Bug terkait ditemukan & diperbaiki: GET /workbox-2178cfdb.js (workbox bundle SW AKTIF) = 404 karena STATIC_ALLOW_FILES hanya memuat hash lama 2fbc6a65 (era build sebelumnya). Fix: hash kini + lama keduanya allowlisted (SW tab terbuka lama masih butuh yang lama). Deploy apply_wfs_hq_server.py --apply: live==sumber 8697d8a2f1bb, smoke 13/13.
+- Bukti pasca-deploy: /workbox-2178cfdb.js 200 (sebelumnya 404), /workbox-2fbc6a65.js tetap 200, / 200, /api/agents 200, /server.py 404 (anti-disclosure utuh). e2e (?mode=office, playwright): agents=26, init_failed False, errs=[].
+- backend_live pytest: 232 passed, 2 fail PRE-EXISTING (master_worker_cost, wfs_sh_console). vitest drift-gate static_allowlist diperbarui (16 entri, dua hash workbox): full suite 4093 passed, 6 skipped, 0 fail. Build PWA OK; dist → ~/wfs-hq.
+- Catatan: sw.js.map & workbox-2178cfdb.js.map ada di dist tapi 404 via HTTP (bukan allowlist file eksak; .map hanya dirujuk devtools via sourceMappingURL hidden — dibiarkan, low-risk).
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

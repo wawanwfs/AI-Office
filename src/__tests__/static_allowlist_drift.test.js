@@ -45,7 +45,7 @@ describe('siklus 214 — konstanta allowlist statis', () => {
     const items = ALLOW_FILES_BLOCK[1].split(',').map(s => s.trim().replace(/['"]/g, '')).filter(Boolean);
     for (const f of [
       'index.html', 'landing.html', 'manifest.webmanifest',
-      'sw.js', 'registerSW.js', 'workbox-2fbc6a65.js',
+      'sw.js', 'registerSW.js', 'workbox-2178cfdb.js', 'workbox-2fbc6a65.js',
       'favicon.svg', 'wfs-logo.svg', 'robots.txt', 'sitemap.xml',
       'og-image.png', 'apple-touch-icon.png', 'icon-192.png', 'icon-512.png',
     ]) expect(items).toContain(f);
@@ -53,7 +53,7 @@ describe('siklus 214 — konstanta allowlist statis', () => {
     // File fisik hanya ditulis probe sekali-pakai & dihapus di finally; tanpa
     // fisik → 404. Entri ini memulihkan kontrak 192 tanpa membuka pola luas.
     expect(items).toContain('e2e-sw-fake.js');
-    expect(items.length).toBe(15);
+    expect(items.length).toBe(16);
   });
 
   it('allowlist TIDAK memuat file non-aset (py/db/bak/token/screenshot)', () => {

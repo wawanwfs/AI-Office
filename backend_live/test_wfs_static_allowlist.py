@@ -25,7 +25,7 @@ class TestStaticAllowlist(unittest.TestCase):
     def test_allow_dist_files_exact(self):
         for f in (
             "index.html", "landing.html", "manifest.webmanifest",
-            "sw.js", "registerSW.js", "workbox-2fbc6a65.js",
+            "sw.js", "registerSW.js", "workbox-2178cfdb.js", "workbox-2fbc6a65.js",
             "favicon.svg", "wfs-logo.svg",
             "og-image.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png",
             # Siklus 279: fake-SW eksak utk probe pembaruan PWA 192 — file fisik
