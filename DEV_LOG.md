@@ -7500,3 +7500,13 @@
 - +1 unittest backend_live/test_gzip_api_json_438.py; backend_live pytest: 223 passed, 1 skipped; 2 fail PRE-EXISTING (test_master_worker_cost_integration, test_wfs_sh_console).
 - Deploy apply_wfs_api_service.py --apply: live==sumber, smoke OK (restart wfs-hq). e2e probe (?mode=office): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 23:10 WIB — Siklus 439: 404 konsisten JSON (Content-Type eksplisit)
+
+- Audit produksi :9503: semua 404 (do_GET/do_POST/do_DELETE/favicon fallback/HEAD — 5 titik) dikirim `send_response(404)` telanjang → stdlib default Content-Type text/html + body kosong; uptime monitor/crawler menerima HTML palsu.
+- Fix: helper `_reply_404(handler, head=False)` — status 404, body `{"error": "not found"}` (22 B), Content-Type application/json, Content-Length eksak; head=True tanpa body (kontrak HEAD siklus 222); header keamanan tetap mengalir via end_headers().
+- +1 unittest backend_live/test_reply_404_json_439.py (6 kasus: GET/HEAD/POST/DELETE JSON, end_headers flow security header, guard tanpa 404 telanjang). test_wfs_hq_server kontrak 404-tanpa-body HEAD diperbarui (kini JSON CT, tetap tanpa body).
+- backend pytest: 229 passed, 1 skipped; 2 fail PRE-EXISTING (test_master_worker_cost_integration, test_wfs_sh_console). Deploy apply_wfs_hq_server.py --apply: live==sumber 6a04d509201f, smoke 13/13.
+- Bukti curl: GET /nope404 → 404 application/json body {"error": "not found"} + X-Frame-Options DENY; GET / tetap 200; /api/agents utuh.
+- vitest drift gate 9 passed. e2e probe (?mode=office): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

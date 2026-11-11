@@ -218,6 +218,26 @@ def _security_headers():
     )
 
 
+def _reply_404(handler, head=False):
+    """SIKLUS 439: 404 dengan body JSON + Content-Type eksplisit.
+
+    Dulu send_response(404) telanjang di 5 titik (do_GET/do_POST/do_DELETE/
+    favicon fallback/HEAD) → stdlib default Content-Type text/html + body
+    kosong. Uptime monitor & crawler menerima HTML palsu; audit konsistensi
+    API menuntut JSON. Satu titik: status 404, body {"error":"not found"},
+    Content-Type application/json (header keamanan via end_headers()).
+    head=True: header identik (incl. Content-Length body) TANPA menulis body
+    — kontrak HEAD siklus 222.
+    """
+    msg = json.dumps({"error": "not found"}).encode()
+    handler.send_response(404)
+    handler.send_header("Content-Type", "application/json")
+    handler.send_header("Content-Length", str(len(msg)))
+    handler.end_headers()
+    if not head:
+        _wfs_write_or_client_gone(handler, msg)
+
+
 def _api_token_ok(handler):
     """SIKLUS 218: gerbang token UI untuk jalur legacy /api/* (api_service).
 
@@ -466,7 +486,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 return
         if self.path.startswith("/wfs-api/"):
             return self._proxy()
-        self.send_response(404); self.end_headers()
+        return _reply_404(self)
 
     def do_GET(self):
         path_only = self.path.split("?")[0]
@@ -581,7 +601,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
                 self.wfile.write(data)
             except Exception:
-                self.send_response(404); self.send_header("Content-Length", "0"); self.end_headers()
+                return _reply_404(self)
             return
         if project_api and self.path.split("?")[0] == "/wfs-project":
             return project_api.handle_project(self)
@@ -616,9 +636,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         if self._allowed_rel() is not None:
             super().do_GET()
         else:
-            self.send_response(404)
-            self.send_header("Content-Length", "0")
-            self.end_headers()
+            return _reply_404(self)
 
     # SIKLUS 222: HEAD /app/, /landing, / kini 200 — konsisten dgn GET.
     # Dulu 404 (semua halaman HTML hanya di do_GET) padahal HEAD /index.html
@@ -914,9 +932,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         if self._allowed_rel() is not None:
             super().do_HEAD()
         else:
-            self.send_response(404)
-            self.send_header("Content-Length", "0")
-            self.end_headers()
+            return _reply_404(self, head=True)
 
     def do_DELETE(self):
         # SIKLUS 161: DELETE /api/admin/* (knowledge base admin panel) → backend.
@@ -927,7 +943,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 return _reply_json(self, 401, {"error": "unauthorized"})
             if api_service.handle_api_request(self, "DELETE", self.path):
                 return
-        self.send_response(404); self.end_headers()
+        return _reply_404(self)
 
 if __name__ == "__main__":
     # Siklus 212: satu server class untuk SEMUA mode (hq_proxy lama pakai
