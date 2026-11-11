@@ -7571,3 +7571,12 @@
 - Deploy apply_wfs_api_service.py --apply: live==sumber f181469c7ac6, smoke 6/6. Bukti curl: /api/agents, /api/projects, /api/tasks masing-masing TEPAT SATU Cache-Control: no-store.
 - e2e probe (?mode=office): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 12/11/2026 02:50 WIB — Siklus 446: audit penuh pasca-445, tanpa regresi — /sw.js ikut gzip on-the-fly (4190→1833 B)
+
+- Audit header/rute menyeluruh :9503 pasca-siklus 445: semua endpoint GET dicek (/, /app, /landing, /admin, /cs-widget/, /api/agents, /api/events, /api/admin/*, robots, sitemap, manifest, ikon, font, sw, workbox, seluruh 47 entri precache SW). Hasil: nol 404 palsu, nol Cache-Control ganda, nol payload HTML/JS besar tanpa kompresi, HEAD konsisten GET.
+- Koreksi klaim awal: /sw.js TIDAK diubah — gzip on-the-fly sudah aktif di jalur _serve_static sejak siklus 434; probe dengan Accept-Encoding: gzip memang mengembalikan 1833 B (-56%). Tanpa AE tetap 4190 B (benar, plain). Tidak ada perubahan kode siklus ini (komite hanya DEV_LOG audit).
+- Bukti header: /api/agents 4044→1016 B gzip; / 3842→1395 B; /admin 13283→4504 B; /cs-widget/ 13803→4768 B (AE br → tanpa kompresi, hanya gzip didukung server — klien modern tetap dapat gzip). Semua 47 URL precache SW + aset index.html + font preload = 200.
+- e2e probe (?mode=office, playwright+ws): agents=26, init_failed=False, errs=[]. backend_live pytest: 243 passed, 1 skipped; 2 fail PRE-EXISTING (master_worker_cost, wfs_sh_console). Full vitest: 4096 passed, 6 skipped, 0 fail. Build PWA OK; dist → ~/wfs-hq.
+- TTFB lokal /: ~0.5 ms; HTTP/1.0 + Connection close per request (stdlib SimpleHTTPRequestHandler tanpa protocol_version=1.1) — dicatat, tidak diubah siklus ini (risiko keep-alive/SSE, perlu uji terpisah).
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute; (e) opsional: HTTP/1.1 keep-alive di :9503.
