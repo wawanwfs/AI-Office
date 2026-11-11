@@ -7295,3 +7295,12 @@
 - Build PWA OK (47 precache); vitest 343 file / 4018 passed + 6 skipped, 0 fail (+1 tes). Deploy cp dist ke ~/wfs-hq; 9503 = 200; index produksi berisi "26 agen".
 - e2e probe (?mode=office, uv --with playwright): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 12:20 WIB — Siklus 417: deskripsi manifest PWA "15 agent" usang diperbaiki
+
+- Audit lanjutan siklus 416: manifest PWA (vite.config.js → dist/manifest.webmanifest) masih memuat description "15 agent AI" — terbaca browser saat install app, di luar halaman HTML.
+- Fix: description manifest → "26 agen AI bekerja dan mengerjakan task nyata." (konsisten og:/twitter: kedua halaman).
+- +1 file tes src/__tests__/manifest_description_417.test.js (3 kasus: tanpa "15 agent", manifest 26 agen, dist ter-deploy juga 26 agen).
+- Build PWA OK (47 precache); vitest 344 file / 4021 passed + 6 skipped, 0 fail (+1 tes). Deploy cp dist ke ~/wfs-hq; 9503 = 200; manifest produksi kini "26 agen".
+- e2e probe (?mode=office, uv --with playwright): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
