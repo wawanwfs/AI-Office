@@ -7305,6 +7305,17 @@
 - e2e probe (?mode=office, uv --with playwright): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
 
+## 11/11/2026 13:25 WIB — Siklus 419: SEO landing — heading order, canonical, robots.txt
+
+- Audit SEO landing.html: 6 kartu fitur pakai <h3> padahal tidak ada <h2> sebelumnya (heading order h1→h3 tidak valid); tidak ada canonical link; /robots.txt 404 — crawler tak tahu area privat.
+- Fix: <h3> kartu fitur → <h2> (h1 → 7 h2, tanpa h3-h6); canonical → http://161.120.180.21:9503/ (origin produksi terverifikasi via api.ipify.org, bukan domain fiktif); robots.txt baru: Allow /, Disallow /app/ /api/ /cs-widget/.
+- Kendala: server.py (web root) punya STATIC_ALLOW_FILES frozenset — robots.txt tidak tersaji tanpa entri; ditambahkan "robots.txt" di ~/wfs-hq/server.py lalu service wfs-hq di-restart (systemctl restart sempat timeout berkali-kali; solusi: kill --signal=TERM lalu start).
+- +1 file tes src/__tests__/landing_seo_419.test.js (4 kasus: heading order, canonical, robots.txt public+dist, guard tanpa h3-h6).
+- Build PWA OK (47 precache); vitest 346 file / 4029 passed + 6 skipped, 0 fail (+4 tes). Deploy cp dist → ~/wfs-hq + landing.html eksplisit; 9503 = 200; robots.txt produksi = 200, canonical tersaji di /landing.html.
+- e2e probe (?mode=office, uv --with playwright): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+➡️ Berikutnya: backlog tetap menunggu keputusan user — cutover Docker :8787, push saas-dibantuin, omniroute.
+
 ## 11/11/2026 12:44 WIB — Siklus 418: a11y landing page — skip link, landmark main/nav, focus-visible
 
 - Audit a11y landing.html (halaman publik pertama yang dilihat pengunjung): tidak ada `<main>`, nav tanpa aria-label, tanpa skip link, dan tanpa gaya fokus keyboard — navigasi Tab tidak terlihat. Aplikasi utama (index) sudah lengkap (skip-link, dialogA11y, Escape satu sumber sejak siklus 333+).
