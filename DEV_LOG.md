@@ -7483,3 +7483,11 @@
 - Deploy apply_wfs_hq_server.py --apply: backup → live==sumber b0be1d56 → smoke 13/13. backend pytest: 214 passed; 2 fail PRE-EXISTING (test_master_worker_cost_integration, test_wfs_sh_console — gagal juga pada stash tanpa perubahan).
 - e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 22:50 WIB — Siklus 437: /favicon.ico fallback → favicon.svg
+
+- Audit produksi :9503: GET /favicon.ico → 404 — browser lama & sebagian crawler tetap minta .ico walau HTML mendeklarasikan favicon.svg (error 404 di log).
+- Fix: wfs_hq_server.py do_GET + fallback eksak /favicon.ico → serve favicon.svg (Content-Type image/svg+xml, Cache-Control max-age=86400). Bukti curl pasca-deploy: 200 image/svg+xml 490 B.
+- +1 unittest backend_live/test_favicon_fallback_437.py (3 kasus: 200+svg, file hilang → 404, path lain tak terpengaruh). backend_live pytest: 220 passed; 2 fail PRE-EXISTING (test_master_worker_cost_integration, test_wfs_sh_console).
+- Deploy apply_wfs_hq_server.py --apply: live==sumber, smoke OK. e2e probe: agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

@@ -568,6 +568,21 @@ class H(http.server.SimpleHTTPRequestHandler):
         if api_service and (self.path.startswith("/api/") or self.path.startswith("/preview/")):
             if api_service.handle_api_request(self, "GET", self.path):
                 return
+        # Siklus 437: /favicon.ico 404 — browser lama & beberapa crawler tetap
+        # meminta .ico walau HTML mendeklarasikan favicon.svg. Fallback: alirkan
+        # ke favicon.svg (200, image/svg+xml) supaya tidak ada error 404 di log.
+        if path_only == "/favicon.ico":
+            try:
+                data = open("favicon.svg", "rb").read()
+                self.send_response(200)
+                self.send_header("Content-Type", "image/svg+xml")
+                self.send_header("Cache-Control", "public, max-age=86400")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+                self.wfile.write(data)
+            except Exception:
+                self.send_response(404); self.send_header("Content-Length", "0"); self.end_headers()
+            return
         if project_api and self.path.split("?")[0] == "/wfs-project":
             return project_api.handle_project(self)
         if self.path == "/wfs-api/events":
