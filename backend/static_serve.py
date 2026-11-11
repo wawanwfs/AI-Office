@@ -14,6 +14,7 @@ Dipakai server 9503 (server.py produksi / superset backend_live/wfs_hq_server.py
   applied", wasted 3 KB/request). Helper gzip_html() di static_serve.py.
 """
 import gzip
+import hashlib
 import io
 import re
 
@@ -31,6 +32,26 @@ def cache_control_for(path):
     if base == "server.py" or p.endswith("/server.py"):
         return "no-store"
     return "public, max-age=86400"
+
+
+def etag_for(data):
+    """ETag konten (sha1, kuot) — address berbasis isi, bukan path/mtime.
+
+    Siklus 448: browser kirim If-None-Match pada revalidasi; cocok → 304
+    tanpa body (aset immutable /assets/ + ikon 24 jam tidak pernah diulang
+    kirim penuhnya).
+    """
+    return '"%s"' % hashlib.sha1(data).hexdigest()[:20]
+
+
+def not_modified(if_none_match, etag):
+    """True bila If-None-Match klien cocok dgn ETag server (weak compare)."""
+    if not if_none_match:
+        return False
+    inm = if_none_match.strip()
+    if inm == "*":
+        return True
+    return etag.strip().lstrip("W/") in (v.strip().lstrip("W/") for v in inm.split(","))
 
 
 def maybe_gzip(data, path, accept_encoding):

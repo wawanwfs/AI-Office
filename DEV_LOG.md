@@ -7589,3 +7589,13 @@
 - Deploy apply_wfs_hq_server.py --apply: live==sumber 9ea8d7536032, smoke 13/13. Bukti produksi curl: `/`, `/api/agents`, `/sw.js` = HTTP/1.1 200 CL_ok; `/api/events` SSE tetap stream OK. backend_live pytest: 243 passed, 2 fail PRE-EXISTING (master_worker_cost, wfs_sh_console). vitest: 4096 passed, 6 skipped. Build PWA OK; dist → ~/wfs-hq.
 - e2e probe (?mode=office, playwright+ws): agents=26, init_failed=False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 12/11/2026 04:00 WIB — Siklus 448: ETag + If-None-Match 304 di jalur statis :9503
+
+- Audit pasca-447: semua respons statis selalu 200 full-body — nol mekanisme revalidasi (tanpa ETag/Last-Modified). Browser dengan cache max-age kedaluwarsa / hard-reload mengulang unduh aset immutable penuh.
+- Fix: `etag_for(data)` (sha1 kuot, address berbasis konten) + `not_modified()` (weak compare, daftar koma, "*") di backend/static_serve.py; `_serve_static` mengirim ETag di 200 dan membalas 304 TANPA body/Content-Length saat If-None-Match cocok (aman kontrak HTTP/1.1 keep-alive 447). HEAD statis ikut kirim ETag — metadata GET/HEAD konsisten.
+- Bukti produksi: GET /assets/index-CLHNCJk-.js dgn If-None-Match cocok → **304, size=0**; tanpa → 200 16823 B; ETag `"31ad927f04ec4fe305fc"`; SSE /api/events tetap stream 200.
+- +1 unittest backend_live/test_etag_304_448.py (4 kasus: ETag stabil/kuot, 5 kasus not_modified, 200+ETag, 304 tanpa body/CL). backend_live pytest: 247 passed, 1 skipped; 2 fail PRE-EXISTING (master_worker_cost, wfs_sh_console). Vitest full: 359 file, 4097 passed, 6 skipped.
+- Deploy: apply_wfs_hq_server.py --apply live==sumber 4cf4a36819c9, smoke 13/13. Kendala siklus: apply hanya menyalin wfs_hq_server.py, static_serve.py live lama tanpa etag_for → AttributeError → smoke auto-rollback; fix = cp static_serve.py ke ~/wfs-hq lalu apply ulang. apply script kini butuh sinkronisasi static_serve.py (backlog kecil).
+- dist → ~/wfs-hq. e2e probe (?mode=office): agents=26, init_failed=False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute; (f) apply script: ikut deploy static_serve.py.
