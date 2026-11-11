@@ -7266,3 +7266,13 @@
 - Build PWA OK (46 precache); vitest 340 file / 4009 passed + 6 skipped, 0 fail (+3 tes baru). Deploy cp dist → ~/wfs-hq; 9503 = 200.
 - e2e probe (?mode=office, DISPLAY via uv --with playwright): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+
+## 11/11/2026 10:46 WIB — Siklus 414: social preview meta lengkap di landing.html
+
+- Audit: public/landing.html (halaman share utama) punya 0 tag og:/twitter:/theme-color — preview link WhatsApp/Telegram tampil polos tanpa judul/gambar; index.html sudah lengkap sejak lama.
+- Fix: 14 meta ditambah — og:type/title/description/site_name/image(+dim/alt)/url, twitter:card summary_large_image/title/description/image, theme-color #010722 (navy landing). Konsisten dengan <title> & /og-image.png.
+- +1 file tes src/__tests__/landing_social_meta_414.test.js (3 kasus: tag wajib ada, title konsisten, og:image ada di public/).
+- Build PWA OK (47 precache); vitest 341 file / 4012 passed + 6 skipped, 0 fail (+3). Deploy cp dist → ~/wfs-hq; 9503 = 200; landing.html produksi kini 9 tag og:.
+- e2e probe (?mode=office, uv --with playwright): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
