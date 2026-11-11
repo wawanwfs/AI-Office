@@ -7372,3 +7372,12 @@
 - Build PWA OK (47 precache); vitest 351 file / 4049 passed + 6 skipped, 0 fail (+4 tes). Deploy cp dist → ~/wfs-hq; produksi GET /robots.txt menyajikan directive.
 - e2e probe: agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 16:10 WIB — Siklus 425: preload font kritis landing
+
+- Audit performa landing (lanjutan 418-424): fonts.css diload via @font-face — font heading Orbitron & body DM Sans baru diambil SETELAH CSS parse; FOUT/FOIT di first paint.
+- Fix: 2 <link rel="preload" as="font" crossorigin> di <head> landing.html — Orbitron latin (yMJRMIl..., dipakai weight 400-700) + DM Sans latin (rP2Yp2y..., weight 300-700).
+- +1 file tes src/__tests__/landing_font_preload_425.test.js (4 kasus: orbitron preload, dm sans preload, stylesheet tetap ada, dist ter-deploy).
+- Build PWA OK (47 precache); vitest 352 file / 4053 passed + 6 skipped, 0 fail (+4 tes). Deploy cp dist → ~/wfs-hq; produksi landing memuat 2 preload.
+- e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
