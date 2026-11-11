@@ -7443,3 +7443,12 @@
 - e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
 - Lighthouse residual index: errors-in-console (WebGL context gagal di headless swiftshader — tidak relevan produksi GPU user), valid-source-maps (chunk vendor tanpa sourcemap).
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 20:30 WIB — Siklus 433: sourcemap hidden di build produksi
+
+- Lanjutan audit Lighthouse 432: best-practices index 96 tersisa valid-source-maps (chunk vendor tanpa sourcemap). Fix: vite.config.js build.sourcemap='hidden' — semua chunk (14 assets + sw + workbox) kini punya .map, tanpa komentar `//# sourceMappingURL` (tidak mengekspos source via devtools publik, tetap debuggable bila .map diunggah ke error tracker).
+- Catatan: rolldown-runtime inline kecil (~726 B) tidak punya .map (generator tidak menghasilkan); dikecualikan di tes. sw.js/workbox tetap berisi sourceMappingURL (karya plugin PWA) tapi .map-nya kini ada di dist.
+- +1 file tes src/__tests__/sourcemap_hidden_433.test.js (5 kasus: pasangan .map, tanpa sourceMappingURL di assets, .map sw/workbox ada, vite.config mengunci hidden, regresi shell dist).
+- Build PWA OK (47 precache); vitest 359 file / 4086 passed + 6 skipped, 0 fail (+5 tes). Deploy cp dist → ~/wfs-hq.
+- e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

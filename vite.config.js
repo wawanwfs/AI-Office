@@ -40,6 +40,11 @@ export default defineConfig({
     }),
   ],
   build: {
+    // Siklus 433: sourcemap produksi. Lighthouse best-practices 432 menandai
+    // valid-source-maps (chunk vendor tanpa sourcemap) — hidden sourcemap
+    // (.map tanpa // # sourceMappingURL) memulihkan debuggability tanpa
+    // mengekspos source asli lewat devtools publik (URL .map tidak disebut).
+    sourcemap: 'hidden',
     chunkSizeWarningLimit: 800,
     // Siklus 189-190: TaskBoard, ShConsole & SettingsModal lazy (lazy() di App)
     // HARUS benar-benar ditunda — dulu Vite menyuntik <link rel=modulepreload>
