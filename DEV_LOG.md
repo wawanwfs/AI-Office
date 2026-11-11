@@ -7334,3 +7334,12 @@
 - Build PWA OK (47 precache); vitest 347 file / 4033 passed + 6 skipped, 0 fail (+4 tes). Deploy cp dist → ~/wfs-hq; 127.0.0.1:9503/landing.html = 200, ld+json tersaji.
 - e2e probe (?mode=office): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 14:20 WIB — Siklus 421: a11y ikon landing — role=img + aria-label
+
+- Audit a11y lanjutan (siklus 418): 6 emoji ikon kartu fitur & 2 emoji CTA terbaca screen reader sebagai teks aneh ("office building", "rocket") — ikon dekoratif/fungsional tanpa semantik.
+- Fix: 6 ikon kartu → role="img" + aria-label Indonesia (Kantor/Sandbox/Kanban/Chat CS/Preview/Malam); 2 emoji CTA dibungkus span aria-hidden="true" agar link dibaca teks saja.
+- +1 file tes src/__tests__/landing_icon_a11y_421.test.js (4 kasus: 6 label, CTA aria-hidden, dist ter-deploy, struktur 7 h2 + ld+json tak rusak).
+- Build PWA OK (47 precache); vitest 348 file / 4037 passed + 6 skipped, 0 fail (+4 tes). Deploy cp dist → ~/wfs-hq; produksi role="img" = 6.
+- e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
