@@ -83,14 +83,16 @@ describe('siklus 214 — guard default-tolak (satu gerbang _allowed_rel)', () =>
     const body = src.slice(src.indexOf('def do_GET'), src.indexOf('def do_HEAD'));
     expect(body).toContain('if self._allowed_rel() is not None:');
     expect(body).toContain('super().do_GET()');
-    expect(body).toContain('send_response(404)');
+    // Siklus 439: 404 via helper _reply_404 (JSON), bukan send_response telanjang.
+    expect(body).toContain('_reply_404(self)');
   });
 
   it('do_HEAD override — metadata file non-allowlist tidak tersaji', () => {
     const body = src.slice(src.indexOf('def do_HEAD'), src.indexOf('def do_DELETE'));
     expect(body).toContain('if self._allowed_rel() is not None:');
     expect(body).toContain('super().do_HEAD()');
-    expect(body).toContain('send_response(404)');
+    // Siklus 439: 404 via helper _reply_404 (JSON), bukan send_response telanjang.
+    expect(body).toContain('_reply_404(self');
   });
 
   it('fallback return False tetap utk file tak-ada (jalur super().do_GET utuh)', () => {

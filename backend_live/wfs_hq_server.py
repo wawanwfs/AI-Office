@@ -913,6 +913,20 @@ class H(http.server.SimpleHTTPRequestHandler):
         # SSE (/api/events, /wfs-api/events) sengaja tetap 404 (streaming).
         if self._serve_head_admin_api():
             return
+        # Siklus 441: mirror fallback favicon 437 — dulu HEAD /favicon.ico
+        # 404 stdlib padahal GET 200 image/svg+xml; monitor uptime berbasis
+        # HEAD membaca "asset hilang" palsu. Header identik GET, tanpa body.
+        if path_only == "/favicon.ico":
+            try:
+                data = open("favicon.svg", "rb").read()
+                self.send_response(200)
+                self.send_header("Content-Type", "image/svg+xml")
+                self.send_header("Cache-Control", "public, max-age=86400")
+                self.send_header("Content-Length", str(len(data)))
+                self.end_headers()
+            except Exception:
+                return _reply_404(self, head=True)
+            return
         if self._serve_head_api_service():
             return
         if self._serve_head_gateway():
