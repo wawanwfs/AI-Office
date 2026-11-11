@@ -7390,3 +7390,11 @@
 - Build PWA OK (47 precache); vitest 353 file / 4059 passed + 6 skipped, 0 fail (+6 tes). Deploy cp dist ke ~/wfs-hq.
 - e2e probe (?mode=office): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 17:10 WIB — Siklus 427: preload font app dikoreksi ke URL yang benar
+
+- Audit lanjutan 426: 2 dari 3 preload font di index.html BASI — yMJRMIl (dipakai landing/fonts.css, bukan app) & aFTR7PB1 (varian lain) tidak pernah direferensikan bundle app; Orbitron app justru diload dari /fonts/orbitron-latin.woff2 via @font-face src/index.css. Browser preloading file tak terpakai = bandwidth + console warning "preloaded but not used".
+- Fix: index.html preload diganti — DM Mono (aFTU7PB1...QBA), DM Sans (rP2Yp2yw...-K4), Orbitron (/fonts/orbitron-latin.woff2), semua 200 OK di produksi. Tes lama 426 yang mengunci URL salah dihapus, diganti src/__tests__/app_font_accuracy_427.test.js (5 kasus: preload dist ⊆ URL @font-face produksi, Orbitron cocok src/index.css, tak ada URL basi, crossorigin + file fisik ada, stylesheet fonts.css utuh).
+- Build PWA OK (47 precache); vitest 353 file / 4058 passed + 6 skipped, 0 fail. Deploy cp dist → ~/wfs-hq; GET / menyaji 3 preload baru, 2 file woff2 terverifikasi 200.
+- e2e probe (?mode=office): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

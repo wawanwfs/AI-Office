@@ -36,9 +36,12 @@
     <!-- Font: preload via <link> (bukan CSS @import — di headless/import blokir render &
          font web datang terlambat sehingga digit jam HUD tampil tofu). fallback monospace. -->
     <link rel="preload" href="/fonts/fonts.css" as="style" />
-    <link rel="preload" href="/fonts/aFTR7PB1QTsUX8KYvrGyEYOtbQ.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/aFTU7PB1QTsUX8KYthqQBA.woff2" as="font" type="font/woff2" crossorigin>
     <link rel="preload" href="/fonts/rP2Yp2ywxg089UriI5-g4vlH9VoD8Cmcqbu0-K4.woff2" as="font" type="font/woff2" crossorigin>
-    <link rel="preload" href="/fonts/yMJRMIlzdpvBhQQL_Qq7dy0.woff2" as="font" type="font/woff2" crossorigin>
+    <link rel="preload" href="/fonts/orbitron-latin.woff2" as="font" type="font/woff2" crossorigin>
+    <!-- Siklus 427: URL preload kini diambil dari @font-face yang benar-benar dipakai
+         bundle produksi (dist/assets/index-*.css + src/index.css), bukan fonts.css.
+         Sebelumnya 2 dari 3 preload basi (yMJRMIl & aFTR7PB1 tak pernah dipakai app). -->
     <link rel="stylesheet" href="/fonts/fonts.css" />
   </head>
   <body>
