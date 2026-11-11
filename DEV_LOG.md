@@ -7324,3 +7324,13 @@
 - Build PWA OK (47 precache); vitest 345 file / 4025 passed + 6 skipped, 0 fail (+4 tes). Deploy cp dist ke ~/wfs-hq; 9503 = 200, landing produksi memuat ketiga fitur.
 - e2e probe (?mode=office, uv --with playwright): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 14:05 WIB — Siklus 420: JSON-LD structured data di landing + drift-gate server disinkronkan
+
+- Audit lanjutan SEO (siklus 419): landing.html punya meta lengkap tapi TANPA structured data (schema.org JSON-LD) — mesin pencari tidak bisa membaca identitas situs secara mesin-terbaca.
+- Fix: blok `application/ld+json` WebSite ditambahkan (name WFS Project HQ, url origin produksi, description 26 agen, inLanguage id, potentialAction SearchAction → dashboard).
+- Kendala penting: perubahan server.py siklus 419 (entri robots.txt) hanya di produksi ~/wfs-hq, tidak di sumber ter-track — 2 tes drift-gate (siklus 206/212) merah. Disinkronkan: entri "robots.txt" ditambahkan ke backend_live/wfs_hq_server.py, deploy via scripts/apply_wfs_hq_server.py (sha IDENTIK cf5f30434cc4, smoke 13/13 OK). static_allowlist_drift (214) diupdate: allowlist kini 14 jalur.
+- +1 file tes src/__tests__/landing_jsonld_420.test.js (4 kasus: JSON valid @type WebSite, SearchAction lengkap, tanpa angka usang, dist ter-deploy memuat blok).
+- Build PWA OK (47 precache); vitest 347 file / 4033 passed + 6 skipped, 0 fail (+4 tes). Deploy cp dist → ~/wfs-hq; 127.0.0.1:9503/landing.html = 200, ld+json tersaji.
+- e2e probe (?mode=office): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

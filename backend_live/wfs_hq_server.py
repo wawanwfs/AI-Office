@@ -147,7 +147,7 @@ STATIC_ALLOW_DIRS = frozenset(("assets", "fonts"))
 STATIC_ALLOW_FILES = frozenset((
     "index.html", "landing.html", "manifest.webmanifest",
     "sw.js", "registerSW.js", "workbox-2fbc6a65.js",
-    "favicon.svg", "wfs-logo.svg",
+    "favicon.svg", "wfs-logo.svg", "robots.txt",
     "og-image.png", "apple-touch-icon.png", "icon-192.png", "icon-512.png",
     "e2e-sw-fake.js",
 ))
