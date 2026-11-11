@@ -246,6 +246,11 @@ class _HeadCaptureWriter:
 
 
 class H(http.server.SimpleHTTPRequestHandler):
+    # Siklus 435: server_version generik — "Server: SimpleHTTP/0.6 Python/3.x.y"
+    # membocorkan versi Python produksi ke pemindai otomatis (fingerprinting).
+    server_version = "wfs"
+    sys_version = ""
+
     def end_headers(self):
         if not hasattr(self, "_wfs_cc"):
             self._wfs_cc = "no-store"

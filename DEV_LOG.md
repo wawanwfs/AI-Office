@@ -7464,3 +7464,13 @@
 - vitest 359 file / 4087 passed + 6 skipped, 0 fail (+5 kasus python di luar vitest). Build PWA OK (47 precache). Deploy cp dist → ~/wfs-hq.
 - e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 21:35 WIB — Siklus 435: header Server generik (anti fingerprinting)
+
+- Audit produksi :9503: semua respons mengirim "Server: SimpleHTTP/0.6 Python/3.12.3" — versi interpreter produksi bocor ke pemindai otomatis (fingerprinting). Gzip shell 434 terverifikasi hidup (GET / = 1395 B, Content-Encoding: gzip).
+- Fix: backend_live/wfs_hq_server.py — H.server_version="wfs", sys_version="" di class handler (berlaku semua mode, bukan hanya __main__). Bukti curl: `Server: wfs ` di GET /.
+- +1 unittest backend_live/test_server_header_435.py (2 kasus: version_string == "wfs ", tanpa "Python"/"SimpleHTTP").
+- Catatan audit Lighthouse 435 (best-practices 96): valid-source-maps menandai vendor-three karena sourcemap 'hidden' (sengaja, siklus 433 — tanpa komentar sourceMappingURL); .map hadir & tersaji gzip 625 KB. Tidak dibalik.
+- Deploy apply_wfs_hq_server.py --apply: backup → live==sumber b0be1d56 → smoke 13/13. backend pytest: 214 passed; 2 fail PRE-EXISTING (test_master_worker_cost_integration, test_wfs_sh_console — gagal juga pada stash tanpa perubahan).
+- e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
