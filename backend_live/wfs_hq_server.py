@@ -361,7 +361,10 @@ class H(http.server.SimpleHTTPRequestHandler):
             r = _ur.urlopen(_ur.Request("http://127.0.0.1:8787/api/events"), timeout=90)
             self.send_response(r.status)
             self.send_header("Content-Type", r.headers.get("Content-Type") or "text/event-stream")
-            self.send_header("Cache-Control", "no-cache")
+            # Siklus 444: jangan send_header eksplisit — end_headers menambah
+            # Cache-Control kedua (no-store) → header duplikat ambigu. Set
+            # self._wfs_cc agar TEPAT SATU Cache-Control terkirim (no-cache).
+            self._wfs_cc = "no-cache"
             self.end_headers()
             while True:
                 chunk = r.read1(4096)
@@ -553,7 +556,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                     data, self.headers.get("Accept-Encoding", ""))
                 self.send_response(r.status)
                 self.send_header("Content-Type", r.getheader("Content-Type", "text/html"))
-                self.send_header("Cache-Control", "no-store")
+                self._wfs_cc = "no-store"  # Siklus 444: hindari Cache-Control ganda
                 if gz:
                     self.send_header("Content-Encoding", "gzip")
                     self.send_header("Vary", "Accept-Encoding")
@@ -582,7 +585,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 self.send_response(r.status)
                 ctype = r.getheader("Content-Type", "text/html")
                 self.send_header("Content-Type", ctype)
-                self.send_header("Cache-Control", "no-store")
+                self._wfs_cc = "no-store"  # Siklus 444: hindari Cache-Control ganda
                 if gz:
                     self.send_header("Content-Encoding", "gzip")
                     self.send_header("Vary", "Accept-Encoding")
@@ -604,7 +607,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 data = open("favicon.svg", "rb").read()
                 self.send_response(200)
                 self.send_header("Content-Type", "image/svg+xml")
-                self.send_header("Cache-Control", "public, max-age=86400")
+                self._wfs_cc = "public, max-age=86400"  # Siklus 444: hindari duplikat
                 self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)
@@ -929,7 +932,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 data = open("favicon.svg", "rb").read()
                 self.send_response(200)
                 self.send_header("Content-Type", "image/svg+xml")
-                self.send_header("Cache-Control", "public, max-age=86400")
+                self._wfs_cc = "public, max-age=86400"  # Siklus 444: hindari duplikat
                 self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
             except Exception:

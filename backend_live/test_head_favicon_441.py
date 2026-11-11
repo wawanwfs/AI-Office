@@ -37,7 +37,16 @@ class HeadFavicon441(unittest.TestCase):
         h.send_response = lambda code: sent.__setitem__("code", code)
         h._hdrs = []
         h.send_header = lambda k, v: h._hdrs.append((k, v))
-        h.end_headers = lambda: None
+
+        # Siklus 444: replika override produksi — Cache-Control kini HANYA
+        # dikirim via _wfs_cc di end_headers (tidak ada lagi send_header
+        # eksplisit yang menduplikasi).
+        def end_headers():
+            h.send_header("Cache-Control", getattr(h, "_wfs_cc", "no-store"))
+            for k, v in srv._security_headers():
+                h.send_header(k, v)
+
+        h.end_headers = end_headers
         h.wfile = io.BytesIO()
         return h, sent
 

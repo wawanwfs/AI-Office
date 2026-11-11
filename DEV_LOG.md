@@ -1,3 +1,14 @@
+## 12/11/2026 02:10 WIB — Siklus 444: Cache-Control ganda dihapus (admin/cs-widget/favicon/SSE)
+
+- Audit header produksi :9503: 5 titik mengirim Cache-Control DUPLIKAT — cabang proxy /admin, /cs-widget/, fallback GET/HEAD /favicon.ico, dan SSE /wfs-api/events memakai send_header("Cache-Control", ...) eksplisit, lalu override end_headers() menambah Cache-Control kedua (no-store default) → header ganda ambigu bagi cache/shared proxy (RFC 7234: duplikat invalid). Contoh live: /admin & /favicon.ico = "no-store" + "no-store/public, max-age=86400" sekaligus.
+- Fix: semua 5 titik kini set self._wfs_cc (SATU jalur Cache-Control via end_headers); SSE = no-cache via _wfs_cc. grep memastikan 0 send_header("Cache-Control") tersisa di server.
+- +1 unittest backend_live/test_no_dup_cache_control_444.py (4 kasus: admin, cs-widget, favicon, SSE — hitung Cache-Control tepat 1 dgn nilai benar); stub end_headers test_head_favicon_441 disesuaikan (replika override produksi).
+- backend_live pytest: 239 passed, 1 skipped; 2 fail PRE-EXISTING (master_worker_cost, wfs_sh_console).
+- Deploy apply_wfs_hq_server.py --apply: live==sumber 879b82c65d79, smoke 13/13.
+- Bukti curl pasca-deploy: /admin, /cs-widget/, /favicon.ico, / → masing-masing TEPAT 1 header Cache-Control.
+- e2e probe (?mode=office, playwright+ws): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
 ## 2026-11-06 16:45 WIB — Siklus 278: CENSUS EXIT-TAK-JUJUR DISELESAIKAN — 3 probe presence SISA (dashboard_presence, team_presence, inspector_status) masih `main()` telanjang = FAIL dicetak tapi exit 0; fix paritas 276/277 (`return 0 if ok else 1` + `sys.exit(main())`) + guard vitest +1 (3601); live OK 3× beruntun exit 0; uji negatif pra-fix MERAH eksak
 
 - **Temuan (census lanjutan 276/277, sensus `sys.exit(main())` atas 66 probe `scripts/e2e_*.py`):** kelas bug exit-tak-jujur 276/277 masih hidup di TIGA probe keluarga presence — `e2e_dashboard_presence` (siklus 151), `e2e_team_presence` (150), `e2e_inspector_status` (141): ketiganya `if __name__ == "__main__": main()` tanpa return → FAIL dicetak tapi `sys.exit(None) == 0` → cron membaca FAIL sebagai sukses. Ini MENJELASKAN mengapa FAIL-by-jam 276 tak pernah tercatat merah berminggu-minggu: dashboard/team presence dijadwalkan cron dan "hijau" palsu saat dijalankan di window lunch pra-fix-276 (bacaan baseline "26 makan siang" → ok_initial mustahil → FAIL → exit 0). Sensus penuh: sisanya (zombie `main()` telanjang tanpa verdict ok eksplisit, mis. probe night/audit yang print FAIL via raise/sys.exit(1) langsung) TIDAK membawa pola `print FAIL + exit 0` — 3 probe presence ini satu-satunya yang membawa verdict `ok` eksplisit namun tak dipropagasi.
