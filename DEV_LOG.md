@@ -7416,3 +7416,12 @@
 - Build PWA OK (47 precache); vitest 355 file / 4067 passed + 6 skipped, 0 fail (+4 tes). Deploy cp dist → ~/wfs-hq.
 - e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 19:05 WIB — Siklus 430: manifest link di landing + paritas meta OG
+
+- Audit lanjutan 429: landing tidak punya <link rel="manifest"> — PWA tak bisa di-install saat user mendarat di landing; index.html juga belum punya og:locale (ada di landing) dan landing belum punya twitter:image:alt (ada og:image:alt).
+- Fix: public/landing.html + <link rel="manifest" href="/manifest.webmanifest"> + twitter:image:alt; index.html + og:locale id_ID (tanpa duplikat).
+- +1 file tes src/__tests__/landing_manifest_parity_430.test.js (5 kasus: manifest link di dist landing, twitter:image:alt sejajar og:image:alt, og:locale unik di index, icons manifest ⊆ file dist, tanpa duplikat).
+- Build PWA OK (47 precache); vitest 356 file / 4072 passed + 6 skipped, 0 fail (+5 tes). Deploy cp dist → ~/wfs-hq; produksi /landing.html menyaji rel="manifest".
+- e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
