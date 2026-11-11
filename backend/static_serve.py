@@ -7,6 +7,11 @@ Dipakai server 9503 (server.py produksi / superset backend_live/wfs_hq_server.py
 - Teks besar (js/css/svg/json/html/map/txt/webmanifest) >= 1KB -> gzip bila client mendukung.
 - landing.html ikut no-store (Siklus 432): shell PWA berikutnya pun harus selalu fresh —
   sebelumnya landing bisa stuck 24 jam di cache browser setelah deploy.
+
+- Siklus 434: shell HTML (/, /app/, /landing, /index.html) + respons proxy admin/cs
+  kini di-gzip on-the-fly juga — sebelumnya index.html (~3.8 KB) & landing
+  dikirim uncompressed (Lighthouse document-latency-insight: "No compression
+  applied", wasted 3 KB/request). Helper gzip_html() di static_serve.py.
 """
 import gzip
 import io
@@ -35,6 +40,27 @@ def maybe_gzip(data, path, accept_encoding):
     if len(data) < MIN_GZ:
         return data, False
     if "gzip" not in (accept_encoding or "").lower():
+        return data, False
+    buf = io.BytesIO()
+    with gzip.GzipFile(fileobj=buf, mode="wb", compresslevel=6, mtime=0) as g:
+        g.write(data)
+    comp = buf.getvalue()
+    if len(comp) >= len(data):
+        return data, False
+    return comp, True
+
+
+def gzip_html(data, accept_encoding):
+    """Gzip payload HTML shell (/, /app/, /landing, proxy admin/cs).
+
+    Beda dgn maybe_gzip: tak terikat ekstensi file (path bisa '/'), tetap
+    hormati Accept-Encoding & threshold ukuran, dan jangan kompres bila
+    hasilnya tidak lebih kecil. Content-Length penelepon wajib pakai
+    panjang payload BALIKAN (data atau comp).
+    """
+    if "gzip" not in (accept_encoding or "").lower():
+        return data, False
+    if len(data) < MIN_GZ:
         return data, False
     buf = io.BytesIO()
     with gzip.GzipFile(fileobj=buf, mode="wb", compresslevel=6, mtime=0) as g:

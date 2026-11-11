@@ -7452,3 +7452,15 @@
 - Build PWA OK (47 precache); vitest 359 file / 4086 passed + 6 skipped, 0 fail (+5 tes). Deploy cp dist → ~/wfs-hq.
 - e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 21:10 WIB — Siklus 434: shell HTML di-gzip (compression applied)
+
+- Re-audit Lighthouse 13.6 produksi :9503 (run 434): index performance 99, a11y/SEO 100, best-practices 96. document-latency-insight: "No compression applied" — dokumen shell (/, /app/, /landing, proxy admin) dikirim UNCOMPRESSED; hanya file ber-ekstensi teks via _serve_static yang di-gzip (maybe_gzip). wasted ~2.6 KB/request dokumen.
+- Fix: static_serve.py + helper gzip_html() (gzip level 6, threshold 1KB, skip bila tak mengecil); backend_live/wfs_hq_server.py — 4 titik injeksi: GET / & /index.html, /app/, /landing, proxy /admin. Bukti curl: GET / dgn Accept-Encoding: gzip → Content-Encoding: gzip, Vary, Content-Length 1395 (vs 3842 mentah, -64%).
+- +1 unittest backend/test_gzip_html_shell_434.py (5 kasus: kompres bila AE gzip, no-AE/br utuh, payload kecil utuh, shell no-store, 4 titik injeksi seimbang dgn Vary). backend pytest 16 passed (434+static_serve), backend_live 54 passed (wfs_hq_server + allowlist).
+- Deploy via scripts/apply_wfs_hq_server.py --apply: backup → compile-check → restart wfs-hq → smoke 13/13; static_serve.py disalin sinkron ke ~/wfs-hq (drift-gate hijau kembali).
+- Lighthouse pasca-deploy: performance 100 (TTB tersisa 130 ms variasi headless), document-latency-insight "Applies text compression: true", wastedBytes 0.
+- Catatan valid-source-maps Lighthouse: tetap menandai vendor-three (2.9 MB) "missing a source map" — .map hadir & tersaji 200, tapi >1 MB; batas Lighthouse, bukan defek.
+- vitest 359 file / 4087 passed + 6 skipped, 0 fail (+5 kasus python di luar vitest). Build PWA OK (47 precache). Deploy cp dist → ~/wfs-hq.
+- e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

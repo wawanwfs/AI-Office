@@ -473,9 +473,14 @@ class H(http.server.SimpleHTTPRequestHandler):
         if path_only in ("/landing", "/landing/"):
             try:
                 data = open("landing.html", "rb").read()
+                data, gz = static_serve.gzip_html(
+                    data, self.headers.get("Accept-Encoding", ""))
                 self._wfs_cc = "no-store"
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
+                if gz:
+                    self.send_header("Content-Encoding", "gzip")
+                    self.send_header("Vary", "Accept-Encoding")
                 self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)
@@ -488,9 +493,14 @@ class H(http.server.SimpleHTTPRequestHandler):
             try:
                 data = open("index.html", "rb").read()
                 data = self._inject_token(data)
+                data, gz = static_serve.gzip_html(
+                    data, self.headers.get("Accept-Encoding", ""))
                 self._wfs_cc = "no-store"
                 self.send_response(200)
                 self.send_header("Content-Type", "text/html; charset=utf-8")
+                if gz:
+                    self.send_header("Content-Encoding", "gzip")
+                    self.send_header("Vary", "Accept-Encoding")
                 self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)
@@ -509,9 +519,14 @@ class H(http.server.SimpleHTTPRequestHandler):
                 conn.request("GET", "/")
                 r = conn.getresponse()
                 data = r.read()
+                data, gz = static_serve.gzip_html(
+                    data, self.headers.get("Accept-Encoding", ""))
                 self.send_response(r.status)
                 self.send_header("Content-Type", r.getheader("Content-Type", "text/html"))
                 self.send_header("Cache-Control", "no-store")
+                if gz:
+                    self.send_header("Content-Encoding", "gzip")
+                    self.send_header("Vary", "Accept-Encoding")
                 self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)
@@ -555,9 +570,14 @@ class H(http.server.SimpleHTTPRequestHandler):
             try:
                 data = open("index.html","rb").read()
                 data = self._inject_token(data)
+                data, gz = static_serve.gzip_html(
+                    data, self.headers.get("Accept-Encoding", ""))
                 self._wfs_cc = "no-store"
                 self.send_response(200)
                 self.send_header("Content-Type","text/html; charset=utf-8")
+                if gz:
+                    self.send_header("Content-Encoding", "gzip")
+                    self.send_header("Vary", "Accept-Encoding")
                 self.send_header("Content-Length", str(len(data)))
                 self.end_headers()
                 self.wfile.write(data)
