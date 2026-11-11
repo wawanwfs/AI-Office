@@ -160,7 +160,9 @@ def handle_api_request(handler, method, path):
             gz = False
         handler.send_response(status)
         handler.send_header("Content-Type", "application/json")
-        handler.send_header("Cache-Control", "no-store")
+        # Siklus 445: hindari Cache-Control ganda — end_headers() default sudah
+        # mengirim no-store; set _wfs_cc (pola 444), bukan send_header eksplisit.
+        handler._wfs_cc = "no-store"
         handler.send_header("Access-Control-Allow-Origin", "*")
         if gz:
             handler.send_header("Content-Encoding", "gzip")
@@ -173,7 +175,7 @@ def handle_api_request(handler, method, path):
     if api_path == "events" and method == "GET":
         handler.send_response(200)
         handler.send_header("Content-Type", "text/event-stream")
-        handler.send_header("Cache-Control", "no-cache")
+        handler._wfs_cc = "no-cache"  # Siklus 445: satu Cache-Control saja
         handler.send_header("Connection", "keep-alive")
         handler.send_header("Access-Control-Allow-Origin", "*")
         handler.end_headers()

@@ -7562,3 +7562,12 @@
 - e2e probe (?mode=office, playwright+ws): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
 
+
+## 12/11/2026 02:10 WIB — Siklus 445: Cache-Control ganda di wfs_api_service (sisanya siklus 444)
+
+- Audit header produksi :9503 pasca-444 menemukan sisa titik duplikat: wfs_api_service.py send_json (SEMUA respons /api/*, mis. /api/agents) masih send_header("Cache-Control","no-store") eksplisit → dua header no-store; SSE /api/events → no-cache + no-store default bertentangan.
+- Fix: pola 444 diterapkan — handler._wfs_cc ("no-store" utk send_json, "no-cache" utk SSE); kini nol send_header("Cache-Control") eksplisit di backend_live (grep bersih).
+- +1 unittest test_no_dup_cache_control_445.py (4 kasus kontrak sumber). backend_live pytest: 243 passed, 1 skipped; 2 fail PRE-EXISTING. Full vitest: 4096 passed, 6 skipped.
+- Deploy apply_wfs_api_service.py --apply: live==sumber f181469c7ac6, smoke 6/6. Bukti curl: /api/agents, /api/projects, /api/tasks masing-masing TEPAT SATU Cache-Control: no-store.
+- e2e probe (?mode=office): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
