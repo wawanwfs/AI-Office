@@ -7381,3 +7381,12 @@
 - Build PWA OK (47 precache); vitest 352 file / 4053 passed + 6 skipped, 0 fail (+4 tes). Deploy cp dist → ~/wfs-hq; produksi landing memuat 2 preload.
 - e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 16:32 WIB — Siklus 426: preload font kritis index.html (app)
+
+- Lanjutan 425: landing sudah preload Orbitron+DM Sans, tapi index.html (app) hanya preload fonts.css — font DM Mono (HUD/jam/mono), DM Sans dan Orbitron baru diambil setelah CSS parse.
+- Fix: index.html + 3 <link rel="preload" as="font" crossorigin> — DM Mono latin (aFTR7PB1...YOtbQ), DM Sans latin (rP2Yp2yw...0-K4), Orbitron latin (yMJRMIlz...Qq7dy0); stylesheet fonts.css tetap.
+- +1 file tes src/__tests__/app_font_preload_426.test.js (6 kasus: 3 preload, crossorigin, dist ter-deploy, URL cocok @font-face fonts.css).
+- Build PWA OK (47 precache); vitest 353 file / 4059 passed + 6 skipped, 0 fail (+6 tes). Deploy cp dist ke ~/wfs-hq.
+- e2e probe (?mode=office): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
