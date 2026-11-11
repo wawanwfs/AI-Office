@@ -7520,3 +7520,13 @@
 - backend pytest dari root: 341 passed, 3 skipped (test_secret_scan butuh PYTHONPATH=.. saat dijalankan dari backend/). backend_live: 229 passed, 1 skipped; 2 fail PRE-EXISTING. vitest robots/sitemap 8 passed.
 - e2e probe (?mode=office, --with playwright): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 12/11/2026 00:10 WIB — Siklus 441: HEAD /favicon.ico konsisten GET
+
+- Audit produksi :9503: GET /favicon.ico = 200 image/svg+xml (fallback 437) tapi HEAD /favicon.ico = 404 stdlib — monitor uptime berbasis HEAD membaca "asset hilang" palsu.
+- Fix: do_HEAD + cabang mirror fallback (favicon.svg → 200, CT image/svg+xml, CC 86400, CL eksak, tanpa body; file hilang → 404 JSON _reply_404 head=True).
+- +1 unittest backend_live/test_head_favicon_441.py (3 kasus: HEAD 200 svg tanpa body, missing → 404 JSON, paritas header GET vs HEAD). Backend_live: 232 passed; 2 fail PRE-EXISTING (master_worker_cost, wfs_sh_console).
+- Deploy scripts/apply_wfs_hq_server.py --apply: backup → live==sumber 747c0e0352d2 → smoke 13/13. (Catatan: cp langsung server.py TIDAK cukup — ExecStart pakai server.py; apply script yang sinkron.)
+- Bukti curl: HEAD /favicon.ico → 200 image/svg+xml CL 490, identik GET. e2e probe (?mode=office, --with playwright): agents=26, init_failed False, errs=[].
+- vitest drift gate static_allowlist_drift diperbarui (404 kini via _reply_404 JSON, bukan send_response telanjang): 11 passed. Full vitest: 4093 passed, 6 skipped, 0 fail. Build PWA OK; dist → ~/wfs-hq.
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
