@@ -17,7 +17,7 @@ class TestCacheControl(unittest.TestCase):
             "public, max-age=31536000, immutable")
 
     def test_shell_no_store(self):
-        for p in ("/", "/index.html", "/sw.js", "/registerSW.js"):
+        for p in ("/", "/index.html", "/landing.html", "/sw.js", "/registerSW.js"):
             self.assertEqual(cache_control_for(p), "no-store", p)
 
     def test_other_static_daily(self):

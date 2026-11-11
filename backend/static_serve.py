@@ -5,6 +5,8 @@ Dipakai server 9503 (server.py produksi / superset backend_live/wfs_hq_server.py
 - index.html, sw.js, registerSW.js -> no-store (service worker & shell harus fresh).
 - Statis lainnya (font, ikon, manifest) -> max-age 1 hari.
 - Teks besar (js/css/svg/json/html/map/txt/webmanifest) >= 1KB -> gzip bila client mendukung.
+- landing.html ikut no-store (Siklus 432): shell PWA berikutnya pun harus selalu fresh —
+  sebelumnya landing bisa stuck 24 jam di cache browser setelah deploy.
 """
 import gzip
 import io
@@ -19,7 +21,9 @@ def cache_control_for(path):
     base = p.rsplit("/", 1)[-1]
     if "/assets/" in p or base.startswith("workbox-"):
         return "public, max-age=31536000, immutable"
-    if p in ("/", "/index.html") or base in ("sw.js", "registerSW.js"):
+    if p in ("/", "/index.html", "/landing.html") or base in ("sw.js", "registerSW.js"):
+        return "no-store"
+    if base == "server.py" or p.endswith("/server.py"):
         return "no-store"
     return "public, max-age=86400"
 

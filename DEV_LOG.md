@@ -7432,3 +7432,14 @@
 - Build PWA OK (47 precache); vitest 356 file / 4072 passed + 6 skipped, 0 fail (+5 tes). Deploy cp dist → ~/wfs-hq; produksi /landing.html menyaji rel="manifest".
 - e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 19:55 WIB — Siklus 432: landing.html no-store (cache shell paritas)
+
+- Audit Lighthouse penuh pertama (Lighthouse 13.6, produksi :9503): landing.html skor 100/100/100/100; index (root) performance 100, a11y 100, SEO 100 — tapi best-practices 96 karena `cache-insight`: landing.html dilayani `public, max-age=86400` → pasca deploy pengunjung bisa dapat landing lama sampai 24 jam (index.html sudah no-store, landing belum — defek paritas shell riil).
+- Fix: backend/static_serve.py — landing.html masuk daftar no-store bersama /, /index.html, sw.js, registerSW.js. Setelah deploy + restart wfs-hq: `GET /landing.html` → `Cache-Control: no-store` (terverifikasi curl).
+- +1 file tes src/__tests__/landing_cache_headers_432.test.js (4 kasus: policy landing no-store, komentar dokumen, dist canonical+manifest, tes python mengunci kasus). backend/test_static_serve.py test_shell_no_store +"/landing.html" (11 unittest OK).
+- Bonus audit: cache-insight 1-hari untuk font/manifest tidak diubah (sengaja — sw precache & file stabil); TTB index turun 410→15 ms, FCP/LCP 757 ms, CLS 0 (run ke-2, variasi headless).
+- Build PWA OK (47 precache); vitest 358 file / 4081 passed + 6 skipped, 0 fail (+4 tes). Deploy cp dist → ~/wfs-hq + static_serve.py; systemd wfs-hq restart.
+- e2e probe (?mode=office, uv --with playwright --with websocket-client): agents=26, init_failed False, errs=[].
+- Lighthouse residual index: errors-in-console (WebGL context gagal di headless swiftshader — tidak relevan produksi GPU user), valid-source-maps (chunk vendor tanpa sourcemap).
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
