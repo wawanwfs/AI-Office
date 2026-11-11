@@ -21,7 +21,7 @@ class TestCacheControl(unittest.TestCase):
             self.assertEqual(cache_control_for(p), "no-store", p)
 
     def test_other_static_daily(self):
-        self.assertEqual(cache_control_for("/fonts/x.woff2"), "public, max-age=86400")
+        self.assertEqual(cache_control_for("/fonts/x.woff2"), "public, max-age=31536000, immutable")
         self.assertEqual(cache_control_for("/icon-512.png"), "public, max-age=86400")
         self.assertEqual(cache_control_for("/manifest.webmanifest"), "public, max-age=86400")
 

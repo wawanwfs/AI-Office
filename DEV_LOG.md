@@ -7510,3 +7510,13 @@
 - Bukti curl: GET /nope404 → 404 application/json body {"error": "not found"} + X-Frame-Options DENY; GET / tetap 200; /api/agents utuh.
 - vitest drift gate 9 passed. e2e probe (?mode=office): agents=26, init_failed False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.
+
+## 11/11/2026 23:40 WIB — Siklus 440: cache font immutable (Lighthouse cache-insight hijau)
+
+- Audit Lighthouse 440 produksi :9503: cache-insight 0.5 — 4 file /fonts/* (woff2 + fonts.css) hanya max-age=86400; font berubah hampir tak pernah → 86400 boros revalidasi.
+- Fix: backend/static_serve.py cache_control_for — "/fonts/" masuk jalur immutable (public, max-age=31536000). test_static_serve.py kasus font diperbarui.
+- Deploy: static_serve.py disalin ke ~/wfs-hq + restart wfs-hq (sudo; systemctl tanpa sudo timeout). Bukti curl: /fonts/orbitron-latin.woff2 → immutable; /icon-512.png tetap 86400 (kontras).
+- Lighthouse pasca-deploy: cache-insight score 1 (items []), performance 0.7 / best-practices 1 / seo 1 (perf dibatasi TTI/TBT laboratorium headless, unchanged).
+- backend pytest dari root: 341 passed, 3 skipped (test_secret_scan butuh PYTHONPATH=.. saat dijalankan dari backend/). backend_live: 229 passed, 1 skipped; 2 fail PRE-EXISTING. vitest robots/sitemap 8 passed.
+- e2e probe (?mode=office, --with playwright): agents=26, init_failed False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker (menunggu persetujuan user); (b) saas-dibantuin push (repo+key user); (d) keputusan omniroute.

@@ -24,7 +24,7 @@ MIN_GZ = 1024
 def cache_control_for(path):
     p = path.split("?")[0]
     base = p.rsplit("/", 1)[-1]
-    if "/assets/" in p or base.startswith("workbox-"):
+    if "/assets/" in p or "/fonts/" in p or base.startswith("workbox-"):
         return "public, max-age=31536000, immutable"
     if p in ("/", "/index.html", "/landing.html") or base in ("sw.js", "registerSW.js"):
         return "no-store"
