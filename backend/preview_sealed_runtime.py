@@ -11,15 +11,17 @@ independent builder/daemon principal. Windows fails closed.
 """
 import hashlib
 import hmac
+import io
 import os
 import re
 import secrets
 import subprocess
+import tarfile
 
 from preview_admission_v2 import AdmissionDenied
 from preview_sealed_build import (
     _FULL_SEALS, _reviewed_bytes, fcntl, linux_sealing_supported,
-    seal_reviewed_preview_context,
+    SealedPreviewBuild, seal_reviewed_preview_context,
 )
 
 _LOCAL_ID = re.compile(r"sha256:[0-9a-f]{64}\Z")
@@ -36,7 +38,7 @@ def is_local_image_id(value):
     return isinstance(value, str) and _LOCAL_ID.fullmatch(value) is not None
 
 
-def derive_image_only_compose(snapshots, project_id, image_id):
+def derive_image_only_compose(snapshots, project_id, image_id, ingress_image_id=None):
     """Exactly one transformation of signed and hashed Compose template."""
     if not is_local_image_id(image_id):
         raise AdmissionDenied("only a local content-addressed image ID is allowed")
@@ -61,6 +63,21 @@ def derive_image_only_compose(snapshots, project_id, image_id):
         "\n    pull_policy: never\n",
         1,
     )
+    if ingress_image_id is not None:
+        # Phase 21 bounded improvement: ingress is now copied into its OWN
+        # kernel-sealed built image instead of mounted from mutable host staging.
+        if not is_local_image_id(ingress_image_id):
+            raise AdmissionDenied("pinned ingress local image ID required")
+        approved_base = snapshots.reviewed["images"]["ingress"]
+        original_ingress = "  ingress:\n    image: " + approved_base + "\n"
+        original_mount = "    volumes:\n      - ./ingress.py:/app/ingress.py:ro\n"
+        if derived.count(original_ingress) != 1 or derived.count(original_mount) != 1:
+            raise AdmissionDenied("reviewed ingress image or mount stanza changed")
+        derived = derived.replace(
+            original_ingress,
+            "  ingress:\n    image: " + ingress_image_id +
+            "\n    pull_policy: never\n", 1)
+        derived = derived.replace(original_mount, "", 1)
     if re.search(r"(?m)^\s+build:\s*(?:$|#)", derived):
         raise AdmissionDenied("runtime Compose may not request source builds")
     return derived.encode("utf-8")
@@ -200,3 +217,83 @@ def ensure_approved_runtime_images(snapshots):
                     raise AdmissionDenied("approved immutable runtime image unavailable")
         except (OSError, subprocess.TimeoutExpired) as exc:
             raise AdmissionDenied("approved runtime image fetch unavailable") from exc
+
+
+def seal_reviewed_ingress_context(snapshots, project_id):
+    """Seal a FIXED ingress Dockerfile and exact approved ingress.py as a tar.
+
+    The Dockerfile is operator-owned constant logic with an independently
+    approved, digest-pinned Python base. It is NOT submitted by an AI agent.
+    The file is read using the same signed-digest-checked descriptor.
+    """
+    if not linux_sealing_supported():
+        raise AdmissionDenied("ingress build requires Linux kernel sealing")
+    compose_path = snapshots.verify(project_id)
+    reviewed = snapshots.reviewed
+    base = reviewed["images"]["ingress"]
+    if not isinstance(base, str) or not re.fullmatch(
+            r"python:3\\.11-alpine@sha256:[0-9a-f]{64}", base):
+        raise AdmissionDenied("ingress base outside approved fixed image family")
+    ingress = _reviewed_bytes(
+        compose_path.parent / "ingress.py",
+        reviewed["sources"]["ingress.py"])
+    dockerfile = (
+        "FROM " + base + "\n"
+        "WORKDIR /app\n"
+        "COPY ingress.py /app/ingress.py\n"
+        "USER 65534:65534\n"
+    ).encode("ascii")
+    out = io.BytesIO()
+    with tarfile.open(fileobj=out, mode="w", format=tarfile.USTAR_FORMAT) as tar:
+        for filename, data in (("Dockerfile.api", dockerfile), ("ingress.py", ingress)):
+            entry = tarfile.TarInfo(filename)
+            entry.size = len(data)
+            entry.mode = 0o444
+            entry.uid = entry.gid = 65534
+            entry.mtime = 0
+            tar.addfile(entry, io.BytesIO(data))
+    raw = out.getvalue()
+    if len(raw) > 2 * 1024 * 1024:
+        raise AdmissionDenied("sealed ingress tar exceeds fixed size limit")
+    fd = -1
+    try:
+        fd = os.memfd_create(
+            "wfs-reviewed-ingress-build",
+            os.MFD_ALLOW_SEALING | getattr(os, "MFD_CLOEXEC", 0))
+        offset = 0
+        while offset < len(raw):
+            wrote = os.write(fd, raw[offset:])
+            if wrote <= 0:
+                raise AdmissionDenied("ingress sealed tar write incomplete")
+            offset += wrote
+        fcntl.fcntl(fd, fcntl.F_ADD_SEALS, _FULL_SEALS)
+        sealed = SealedPreviewBuild(
+            fd=fd, tar_sha256=hashlib.sha256(raw).hexdigest(),
+            size=len(raw), reviewed_api_sha256=reviewed["sources"]["ingress.py"])
+        sealed.verify()
+        return sealed
+    except BaseException:
+        if fd >= 0:
+            os.close(fd)
+        raise
+
+
+def build_local_reviewed_ingress_image(snapshots, project_id):
+    """Build the signed ingress with immutable tar stdin, pin engine image ID."""
+    tag = "wfs-phase19-ci-" + secrets.token_hex(8)
+    with seal_reviewed_ingress_context(snapshots, project_id) as sealed:
+        built = sealed.build_disposable_image(tag, timeout=240)
+        if not built.get("kernel_seals_checked"):
+            raise AdmissionDenied("ingress build did not check kernel seals")
+    try:
+        result = subprocess.run(
+            ["docker", "image", "inspect", "--format", "{{.Id}}", tag],
+            capture_output=True, text=True, env=_docker_env(),
+            timeout=20, check=False)
+    except (OSError, subprocess.TimeoutExpired) as exc:
+        raise AdmissionDenied("reviewed ingress Docker image inspection failed") from exc
+    if result.returncode or not is_local_image_id(result.stdout.strip()):
+        raise AdmissionDenied("reviewed ingress local image ID unavailable")
+    return {"image_id": result.stdout.strip(),
+            "tar_sha256": built["tar_sha256"],
+            "reviewed_ingress_sha256": built["source_sha256"]}
