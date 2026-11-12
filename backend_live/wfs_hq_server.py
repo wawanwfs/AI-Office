@@ -218,6 +218,35 @@ def _security_headers():
     )
 
 
+def _reply_405(handler, head=False):
+    """SIKLUS 456: method tak didukung → 405 JSON + Allow, bukan stdlib 501.
+
+    Dulu PATCH/PUT/OPTIONS jatuh ke SimpleHTTPRequestHandler.send_error(501)
+    "Unsupported method" HTML polos — inkonsisten dgn kontrak JSON (siklus
+    439) dan status salah: 501 berarti server TIDAK mengenal method, padahal
+    method itu dikenal HTTP, hanya jalur ini tidak mendukungnya. Kini 405
+    Method Not Allowed + header Allow. OPTIONS → 204 + Allow (preflight
+    browser) tanpa ACAO — siklus 222 melarang konsumen lintas origin.
+    """
+    allow = "GET, HEAD, POST, DELETE, OPTIONS"
+    if handler.command == "OPTIONS":
+        handler._wfs_cc = "no-store"
+        handler.send_response(204)
+        handler.send_header("Allow", allow)
+        handler.send_header("Content-Length", "0")
+        handler.end_headers()
+        return
+    msg = json.dumps({"error": "method not allowed"}).encode()
+    handler._wfs_cc = "no-store"
+    handler.send_response(405)
+    handler.send_header("Content-Type", "application/json")
+    handler.send_header("Allow", allow)
+    handler.send_header("Content-Length", str(len(msg)))
+    handler.end_headers()
+    if not head:
+        _wfs_write_or_client_gone(handler, msg)
+
+
 def _reply_404(handler, head=False):
     """SIKLUS 439: 404 dengan body JSON + Content-Type eksplisit.
 
@@ -548,6 +577,18 @@ class H(http.server.SimpleHTTPRequestHandler):
                 self.end_headers()
             except Exception:
                 pass
+
+    def do_PATCH(self):
+        return _reply_405(self)
+
+    def do_PUT(self):
+        return _reply_405(self)
+
+    def do_OPTIONS(self):
+        return _reply_405(self)
+
+    def do_TRACE(self):
+        return _reply_405(self)
 
     def do_POST(self):
         if self.path.startswith("/api/admin/"):

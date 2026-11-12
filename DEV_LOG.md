@@ -7659,3 +7659,12 @@
 - Bukti: pytest backend_live 274 passed 0 fail; backend 339 passed (test_secret_scan diskip collection — env uv tanpa pytest, pre-existing); vitest 359 file 4101 passed + 6 skipped; build PWA OK; dist → ~/wfs-hq; apply --apply idempoten smoke OK.
 - Produksi :9503 — GET /app/tidak-ada → 404 HTML manusiawi; /assets/hilang.js → 404 JSON; HEAD paritas OK. e2e probe: agents=26, init_failed=False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
+
+## 12/11/2026 10:20 WIB — Siklus 456: method tak didukung → 405 JSON + Allow (bukan stdlib 501)
+
+- Audit pasca-455: PATCH/PUT/OPTIONS di :9503 jatuh ke stdlib send_error(501) "Unsupported method" HTML polos — inkonsisten dgn kontrak JSON (439) dan status salah (501 = method tak dikenal; di sini method dikenal, jalurnya saja tak mendukung).
+- Fix: `_reply_405(handler, head)` — PATCH/PUT/TRACE → 405 JSON `{"error":"method not allowed"}` + `Allow: GET, HEAD, POST, DELETE, OPTIONS`; OPTIONS → 204 + Allow tanpa ACAO (siklus 222 melarang konsumen lintas origin). do_PATCH/do_PUT/do_OPTIONS/do_TRACE ditambahkan; security headers tetap mengalir via end_headers().
+- +1 test backend_live/test_405_method_456.py (5 kasus: PATCH 405 JSON+Allow, PUT 405, OPTIONS 204 di 3 jalur tanpa ACAO, TRACE 405, security header ada).
+- Bukti: pytest backend_live 279 passed + 1 skipped + 4 subtests, 0 fail; backend 339 passed (test_secret_scan diskip collection, env uv tanpa pytest — pre-existing); vitest penuh 359 file: 4101 passed + 6 skipped (drift-gate hijau setelah apply --apply live==sumber 20cedfce50fb, smoke 13/13); build PWA OK; dist → ~/wfs-hq.
+- Produksi :9503 — PATCH /api/tasks → 405 JSON + Allow; OPTIONS / → 204 + Allow. e2e probe (?mode=office): agents=26, cam=True, wall=True, init_failed=False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
