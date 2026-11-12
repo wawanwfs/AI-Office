@@ -528,6 +528,13 @@ class H(http.server.SimpleHTTPRequestHandler):
                 # ClientGone (senyap via handle_error), bukan traceback.
                 _wfs_write_or_client_gone(self, chunk)
                 self.wfile.flush()
+        except (ClientGone, BrokenPipeError, ConnectionResetError):
+            # SIKLUS 464: klien EventSource pergi (mid-stream, send_response/
+            # end_headers/flush) → kontrak 228: di-re-raise, senyap level
+            # server (_hq_handle_error), TANPA 502 palsu ke socket mati —
+            # dulu except Exception generik menangkap disconnect dan mencoba
+            # _reply_json(502) ke klien yang sudah tiada (traceback kedua).
+            raise
         except Exception:
             try:
                 _reply_json(self, 502, {"error": "stream failed"})

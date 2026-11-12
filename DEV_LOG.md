@@ -7731,3 +7731,12 @@
 - Bukti: pytest backend+backend_live 629 passed + 4 skipped + 4 subtests, 0 fail (venv ~/pytest-venv; uv env pre-existing miss cryptography/scripts); vitest 359 file 4105 passed + 6 skipped (drift-gate hijau setelah apply --apply live==sumber 23adba6556a3, smoke 13/13); build PWA exit 0; dist → ~/wfs-hq.
 - Produksi :9503 — GET /admin/ 200, GET /cs-widget/ 200. e2e probe (?mode=office): agents=26, cam=True, wall=True, init_failed=False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
+
+## 12/11/2026 14:43 WIB — Siklus 464: _proxy_stream_events (SSE) di-hardening — paritas kontrak 228
+
+- Audit pasca-463: SSE proxy /wfs-api/events → :8787/api/events masih satu-satunya jalur respons yang menelan disconnect klien di except Exception generik — klien EventSource pergi mid-stream (send_response/end_headers/flush/wfile) → _reply_json(502) dicoba ke socket mati → traceback kedua di journald.
+- Refactor: except (ClientGone, BrokenPipeError, ConnectionResetError): raise SEBELUM except Exception — disconnect di-re-raise, senyap via _hq_handle_error (228); kegagalan upstream sungguhan tetap 502 {"error": "stream failed"}. Perilaku streaming tak berubah (timeout=90 > keepalive 15 dtk, _wfs_cc no-cache, tulis chunk via _wfs_write_or_client_gone).
+- +1 test backend_live/test_sse_stream_hardening_464.py (3 gate: disconnect re-raise, 502 satu titik, kontrak streaming tak berubah).
+- Bukti: pytest backend+backend_live 632 passed + 4 skipped + 4 subtests, 0 fail (~/pytest-venv); vitest 359 file 4106 passed + 6 skipped (drift-gate hijau setelah apply --apply live==sumber 2cb89f41c3a2, smoke 13/13); build PWA exit 0; dist → ~/wfs-hq.
+- Produksi :9503 — deploy ulang via apply (backup server.py.bak-1794465621). e2e probe (?mode=office): agents=26, cam=True, wall=True, init_failed=False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
