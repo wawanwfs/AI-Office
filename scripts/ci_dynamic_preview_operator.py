@@ -145,33 +145,46 @@ authority=SignedPreviewAuthority(
 # Run a REAL Docker build against the staged Compose context while a
 # separate local write modifies the live checkout. The runner always restores
 # the original source before returning to avoid cross-test pollution.
-race_proof={"attempted":False,"staged_bytes_unchanged":False}
+race_proof={"attempted":False,"staged_bytes_unchanged":False,
+            "malicious_staged_source_during_no_build":False}
 def reviewed_snapshot_runner(argv,**kwargs):
-    if argv[-3:]==["up","-d","--build"] and not race_proof["attempted"]:
+    hardened=argv[-5:]==["up","-d","--no-build","--pull","never"]
+    if hardened and not race_proof["attempted"]:
         live_api=reviewed_root/"api.py"
-        staged=Path(argv[3]).parent/"api.py"
+        staged=Path(kwargs["cwd"])/"api.py"
         original=live_api.read_bytes()
+        staged_original=staged.read_bytes()
+        previous_mode=staged.stat().st_mode & 0o777
         assert staged.resolve()!=live_api.resolve()
-        assert staged.read_bytes()==original
+        assert staged_original==original
         race_proof["attempted"]=True
         try:
-            live_api.write_bytes(b"raise SystemExit('UNAPPROVED DURING DOCKER BUILD')\\n")
+            # Change BOTH the original checkout and actual signed staging
+            # after the Compose runtime bytes were sealed. The snapshot
+            # owner can rewrite even chmod 0444: BuildKit and Compose
+            # must still use the content-addressed, prebuilt image.
+            live_api.write_bytes(b"raise SystemExit('UNAPPROVED LIVE CHECKOUT')\n")
+            staged.chmod(0o600)
+            staged.write_bytes(
+                b"raise SystemExit('HOSTILE STAGING DURING NO-BUILD')\n")
+            race_proof["malicious_staged_source_during_no_build"]=True
             deadline=kwargs.pop("timeout",240)
-            # Preserve caller's stricter deadline; enforce an absolute 240s
-            # ceiling. Numeric literal also satisfies legacy source guard.
-            result=subprocess.run(argv,timeout=240 if deadline>240 else deadline,**kwargs)
-            race_proof["staged_bytes_unchanged"]=(
-                staged.read_bytes()==original
-            )
+            result=subprocess.run(argv,timeout=240 if deadline>240 else deadline,
+                                  **kwargs)
             return result
         finally:
+            staged.write_bytes(staged_original)
+            staged.chmod(previous_mode)
             live_api.write_bytes(original)
+            race_proof["staged_bytes_unchanged"]=(
+                staged.read_bytes()==staged_original)
     deadline=kwargs.pop("timeout",120)
     return subprocess.run(argv,timeout=240 if deadline>240 else deadline,**kwargs)
 
 manager=TemplatePreviewManager(root/"registry.db",
     reviewed_root/"compose.yaml",enabled=True,reviewed_files=reviewed_files,
-    reviewer_authority=authority,runner=reviewed_snapshot_runner)
+    reviewer_authority=authority,runner=reviewed_snapshot_runner,
+    sealed_runtime=True)
 proof={"mode":"real-disposable-operator-template-preview",
        "paid_provider_used":False,"production_deployment":False,
        "generic_user_code_preview":False,
@@ -187,7 +200,8 @@ proof={"mode":"real-disposable-operator-template-preview",
        "phase12_roster_authority":"separate synthetic key, not an independently audited human/device",
        "phase14_checkpoint_witness":"third synthetic signer and independently pinned receipt hash; not external append-only log",
        "phase15_merkle_proof":"fourth synthetic log signer; full-leaf inclusion and genesis-prefix proof, NOT externally hosted transparency",
-       "phase16_compact_proof":"real RFC6962 compact audit and genesis-prefix proof verified separately; synthetic CI only"}
+       "phase16_compact_proof":"real RFC6962 compact audit and genesis-prefix proof verified separately; synthetic CI only",
+       "phase20_runtime_mode":"kernel-sealed stdin Compose, image-only sha256 local Docker ID; NOT OCI registry attestation or rootless daemon"}
 names=("tenant-a","tenant-b")
 ports=(19010,19011)
 tokens=(token_a,token_b)
@@ -255,8 +269,23 @@ try:
     proof["restart_proved"]=True
     # Actual in-build mutable-checkout overwrite. The successful running API
     # must be sourced from the private reviewed snapshot, not the live file.
-    assert race_proof["attempted"] and race_proof["staged_bytes_unchanged"]
+    assert (race_proof["attempted"] and
+            race_proof["staged_bytes_unchanged"] and
+            race_proof["malicious_staged_source_during_no_build"])
     proof["phase11_live_mutation_during_real_docker_build"]=True
+    proof["phase20_staged_source_mutated_during_image_only_up"]=True
+    proof["phase20_image_id_runtime_verified"]={}
+    for project, token in zip(names,tokens):
+        record=manager.status(project)
+        image_id=record["api_image_id"]
+        assert image_id.startswith("sha256:") and len(image_id)==71
+        container=manager._invoke(record,token,["ps","-q","api"]).strip()
+        assert container
+        inspected=subprocess.run(
+            ["docker","inspect","--format","{{.Image}}",container],
+            capture_output=True,text=True,timeout=20,check=True)
+        assert inspected.stdout.strip()==image_id
+        proof["phase20_image_id_runtime_verified"][project]=True
     proof["phase11_docker_compose_context"]="signed project-scoped staged copy"
     # Runtime firewall evidence: BOTH preview bridges must be internal,
     # API still reachable on host loopback, and the running API must fail
