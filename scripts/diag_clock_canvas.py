@@ -25,7 +25,7 @@ OUT = os.environ.get("DIAG_OUT", "/tmp/clock_dump.json")
 def main():
     p = subprocess.Popen([CHROME, "--no-sandbox", f"--remote-debugging-port={PORT}",
                           "--enable-unsafe-swiftshader", "--window-size=1366,768",
-                          "--disable-dev-shm-usage", "http://127.0.0.1:9503/app/"],
+                          "--disable-dev-shm-usage", "http://127.0.0.1:9503/app/?mode=office"],  # siklus 470: office langsung (rute landing→assign memicu bundle basi)
                          env=dict(os.environ, DISPLAY=":99"),
                          stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     try:

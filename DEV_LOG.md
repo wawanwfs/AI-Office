@@ -7781,3 +7781,10 @@
 - Refactor otomatis (script sekali-jalan + py_compile gate): pola `CHROME = os.path.expanduser("~/.../chromium_headless_shell-1248/...")` → `CHROME = __wfs_pick_chrome()`; helper resolver revision-agnostik (headless-shell terbaru dulu, full chrome fallback) disisipkan top-level di tiap file. 76 file terganti (sisanya cocok via docstring/pycache).
 - Bukti: e2e_err_probe OK (agents=26, hooks cam/renderer/controls/wall=True, zone=5, shot 710KB, colors=11258 nonbg=0.992, console/pageerror kosong, hygiene 41 refs 0 missing); build PWA exit 0; pytest backend+backend_live 635 passed + 4 skipped; vitest 359 file 4107 passed + 6 skipped; dist → ~/wfs-hq.
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.
+
+## 12/11/2026 20:05 WIB — Siklus 470: diag_clock_canvas hidup kembali — URL office langsung
+
+- Audit pasca-469: skrip tersisa dengan URL rute landing `http://127.0.0.1:9503/app/` memicu bundle basi → `window.__scene` undefined (TypeError traverse, frames=[0,0]). Perbaikan pola 467-468: URL diganti `/app/?mode=office` — dump piksel kanvas jam 96×96 sukses (dump JSON 181KB, ASCII art jam tercetak).
+- Verifikasi lintas diag: `e2e_err_probe.py` OK (hooks_ok/pixels_ok/hygiene_ok=true, shot 710KB); `diag_clock_canvas.py` exit 0. Perbaikan terbatas scripts/ — nol perubahan src, build PWA exit 0, dist → ~/wfs-hq.
+- Bukti: pytest backend+backend_live 635 passed + 4 skipped; vitest 359 file 4107 passed + 6 skipped; dist → ~/wfs-hq.
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.
