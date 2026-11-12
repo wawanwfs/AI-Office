@@ -14,8 +14,20 @@ import base64, json, os, socket, struct, subprocess, sys, time, urllib.request
 import importlib.util as _ilu
 from urllib.parse import urlparse
 
-CHROME = os.path.expanduser(
-    "~/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell")
+
+def __wfs_pick_chrome():
+    """Siklus 469: resolver browser revision-agnostik (dulu hardcode 1248)."""
+    import glob as _g, os as _o, re as _re
+    def _rev(p):
+        m = _re.search(r"-(\d+)/", p)
+        return int(m.group(1)) if m else 0
+    base = _o.path.expanduser("~/.cache/ms-playwright")
+    cand = sorted(_g.glob(base + "/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell"), key=_rev)
+    if not cand:
+        cand = sorted(_g.glob(base + "/chromium-*/chrome-linux*/chrome"), key=_rev)
+    return cand[-1] if cand else ""
+
+CHROME = __wfs_pick_chrome()
 PORT = 9461
 OUT_DAY = os.path.expanduser("~/.hermes/cache/scratch/ck165_day.png")
 OUT_NIGHT = os.path.expanduser("~/.hermes/cache/scratch/ck165_night.png")

@@ -34,8 +34,20 @@ Pemakaian: uv run --with websocket-client python scripts/e2e_scene_dispose.py
 """
 import subprocess, os, time, urllib.request, json, socket, struct, base64, sys
 
-CHROME = os.path.expanduser(
-    "~/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell")
+
+def __wfs_pick_chrome():
+    """Siklus 469: resolver browser revision-agnostik (dulu hardcode 1248)."""
+    import glob as _g, os as _o, re as _re
+    def _rev(p):
+        m = _re.search(r"-(\d+)/", p)
+        return int(m.group(1)) if m else 0
+    base = _o.path.expanduser("~/.cache/ms-playwright")
+    cand = sorted(_g.glob(base + "/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell"), key=_rev)
+    if not cand:
+        cand = sorted(_g.glob(base + "/chromium-*/chrome-linux*/chrome"), key=_rev)
+    return cand[-1] if cand else ""
+
+CHROME = __wfs_pick_chrome()
 PORT = 9469
 URL = "http://127.0.0.1:9503/"
 ROUNDS = 3

@@ -7774,3 +7774,10 @@
 - Bukti: audit 6/6 preset PASS (26 agen, 5 zona op [0..1], shot 1.0MB, errs=0 excs=0); e2e probe (pytest-venv) agents=26 errs=[]; build PWA exit 0; lint exit 0; pytest 635 passed + 4 skipped; dist → ~/wfs-hq.
 - Catatan: e2e_err.py via `uv run --with websocket-client` gagal (playwright tak ada di env uv) — jalankan via ~/pytest-venv/bin/python.
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.
+
+## 12/11/2026 19:50 WIB — Siklus 469: 76 skrip e2e/diag bebas hardcode revision browser
+
+- Audit pasca-468: resolver `_rev()` (467-468) hanya menyentuh 3 skrip; grep menemukan **100 file** di scripts/ masih hardcode `chromium_headless_shell-1248` (tidak terpasang) — siap mati keras bila dipanggil.
+- Refactor otomatis (script sekali-jalan + py_compile gate): pola `CHROME = os.path.expanduser("~/.../chromium_headless_shell-1248/...")` → `CHROME = __wfs_pick_chrome()`; helper resolver revision-agnostik (headless-shell terbaru dulu, full chrome fallback) disisipkan top-level di tiap file. 76 file terganti (sisanya cocok via docstring/pycache).
+- Bukti: e2e_err_probe OK (agents=26, hooks cam/renderer/controls/wall=True, zone=5, shot 710KB, colors=11258 nonbg=0.992, console/pageerror kosong, hygiene 41 refs 0 missing); build PWA exit 0; pytest backend+backend_live 635 passed + 4 skipped; vitest 359 file 4107 passed + 6 skipped; dist → ~/wfs-hq.
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.

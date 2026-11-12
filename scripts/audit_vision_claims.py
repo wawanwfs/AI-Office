@@ -238,8 +238,20 @@ def pair_overlap_fires(a, b, pad=OCCL_PX, frac=OCCL_TIE_FRAC):
     return amin > 0 and ix * iy >= amin * frac
 
 # ── Transport CDP (pola probe_focus_261.py; semua subprocess.run ber-timeout) ──
-CHROME = os.path.expanduser(
-    "~/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell")
+
+def __wfs_pick_chrome():
+    """Siklus 469: resolver browser revision-agnostik (dulu hardcode 1248)."""
+    import glob as _g, os as _o, re as _re
+    def _rev(p):
+        m = _re.search(r"-(\d+)/", p)
+        return int(m.group(1)) if m else 0
+    base = _o.path.expanduser("~/.cache/ms-playwright")
+    cand = sorted(_g.glob(base + "/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell"), key=_rev)
+    if not cand:
+        cand = sorted(_g.glob(base + "/chromium-*/chrome-linux*/chrome"), key=_rev)
+    return cand[-1] if cand else ""
+
+CHROME = __wfs_pick_chrome()
 PORT = 9498
 # Siklus 331: landing kini default route (paritas e2e_err_probe siklus 282) —
 # buka dengan ?mode=office eksplisit agar scene 3D selalu init; /app/ polos
