@@ -143,7 +143,7 @@ try:
           " return { w: avg(150,450), p: avg(580,880) }; })()")
 
     fails = []
-    cmd("Page.navigate", url="http://127.0.0.1:9503/app/")
+    cmd("Page.navigate", url="http://127.0.0.1:9503/app/?mode=office")
     time.sleep(20)  # scene init + frame pertama
     has_hook = ev("typeof window.__titleNight === 'function' && typeof window.__titleCv === 'function'")
     if not has_hook:

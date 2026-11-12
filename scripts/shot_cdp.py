@@ -90,7 +90,7 @@ try:
         open(out, "wb").write(base64.b64decode(r["result"]["data"]))
         print(out, os.path.getsize(out), "bytes")
 
-    shot("http://127.0.0.1:9503/app/", OUT_APP, 20)
+    shot("http://127.0.0.1:9503/app/?mode=office", OUT_APP, 20)
     # Scene beranimasi — ambil frame kedua, pertahankan yang lebih besar.
     r2 = cmd("Page.captureScreenshot", format="png")
     out2 = OUT_APP.replace(".png", ".2.png")

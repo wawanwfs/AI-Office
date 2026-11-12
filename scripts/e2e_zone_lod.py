@@ -39,7 +39,7 @@ def __wfs_pick_chrome():
 
 CHROME = __wfs_pick_chrome()
 PORT = 9481
-URL = "http://127.0.0.1:9503/app/"
+URL = "http://127.0.0.1:9503/app/?mode=office"
 
 ZONES_EXPR = """
 (function(){

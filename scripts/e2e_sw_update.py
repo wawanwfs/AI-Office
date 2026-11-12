@@ -46,7 +46,7 @@ def __wfs_pick_chrome():
 
 CHROME = __wfs_pick_chrome()
 PORT = 9495
-URL = "http://127.0.0.1:9503/app/"
+URL = "http://127.0.0.1:9503/app/?mode=office"
 PROFILE = "/tmp/wfs-e2e-swu-profile"
 FAKE_SRC = os.path.expanduser("~/wfs-hq/e2e-sw-fake.js")
 FAKE_URL = "/e2e-sw-fake.js"

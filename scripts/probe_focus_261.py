@@ -30,7 +30,7 @@ def __wfs_pick_chrome():
 
 CHROME = __wfs_pick_chrome()
 PORT = 9497
-APP = "http://127.0.0.1:9503/app/"
+APP = "http://127.0.0.1:9503/app/?mode=office"
 WS_TIMEOUT_S = 60
 
 

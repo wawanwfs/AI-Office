@@ -127,7 +127,7 @@ try:
         return os.path.getsize(out)
 
     fails = []
-    cmd("Page.navigate", url="http://127.0.0.1:9503/app/")
+    cmd("Page.navigate", url="http://127.0.0.1:9503/app/?mode=office")
     time.sleep(20)  # scene init + frame pertama
     has_hook = ev("typeof window.__skyNight === 'function'")
     if not has_hook:

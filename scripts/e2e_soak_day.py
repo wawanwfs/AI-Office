@@ -30,7 +30,7 @@ def __wfs_pick_chrome():
 
 CHROME = __wfs_pick_chrome()
 PORT = 9475
-APP = "http://127.0.0.1:9503/app/"
+APP = "http://127.0.0.1:9503/app/?mode=office"
 SCRATCH = os.path.expanduser("~/.hermes/cache/scratch")
 
 # Jebakan error dari document-start — menangkap SEMUA error sejak baris pertama.

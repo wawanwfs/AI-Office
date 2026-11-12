@@ -112,7 +112,7 @@ try:
         return os.path.getsize(out)
 
     fails = []
-    cmd("Page.navigate", url="http://127.0.0.1:9503/app/")
+    cmd("Page.navigate", url="http://127.0.0.1:9503/app/?mode=office")
     time.sleep(15)
     ev("window.__errs=[]; window.addEventListener('error',e=>window.__errs.push((e.error&&e.error.stack?String(e.error.stack):String(e.message||e)).slice(0,200)));")
     ev("window.__setTime(718)")  # 2 menit sebelum lunch — biarkan AUTO-cross 720

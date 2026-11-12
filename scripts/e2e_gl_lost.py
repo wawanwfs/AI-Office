@@ -150,7 +150,7 @@ try:
         return False
 
     fails = []
-    cmd("Page.navigate", url="http://127.0.0.1:9503/app/")
+    cmd("Page.navigate", url="http://127.0.0.1:9503/app/?mode=office")
     time.sleep(20)  # scene init + frame pertama + sampel perf pertama
     has_hook = ev("typeof window.__glLost === 'function' && !!window.__perf && typeof window.__renderer !== 'undefined'")
     if not has_hook:

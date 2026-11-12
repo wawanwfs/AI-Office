@@ -32,7 +32,7 @@ def __wfs_pick_chrome():
 
 CHROME = __wfs_pick_chrome()
 PORT = 9474
-APP = "http://127.0.0.1:9503/app/"
+APP = "http://127.0.0.1:9503/app/?mode=office"
 
 env = dict(os.environ, DISPLAY=":99")
 if subprocess.run(["xdpyinfo", "-display", ":99"], timeout=10, stdout=subprocess.DEVNULL,

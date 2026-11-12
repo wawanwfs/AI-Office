@@ -101,7 +101,7 @@ try:
             raise RuntimeError(f"eval gagal: {json.dumps(r['result']['exceptionDetails'])[:400]}")
         return res.get("value")
 
-    cmd("Page.navigate", url="http://127.0.0.1:9503/app/")
+    cmd("Page.navigate", url="http://127.0.0.1:9503/app/?mode=office")
     time.sleep(20)  # scene init
     if not ev("typeof window.__scene === 'object' && typeof window.__setTime === 'function'"):
         print("FAIL: __scene/__setTime tidak ada")

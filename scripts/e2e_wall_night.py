@@ -138,7 +138,7 @@ try:
           " const i = (24*c.width+288)*4; return [d[i], d[i+1], d[i+2]]; })()")
 
     fails = []
-    cmd("Page.navigate", url="http://127.0.0.1:9503/app/")
+    cmd("Page.navigate", url="http://127.0.0.1:9503/app/?mode=office")
     time.sleep(20)  # scene init + frame pertama
     has_hook = ev("typeof window.__wallNight === 'function' && typeof window.__wallTexCv === 'function'")
     if not has_hook:

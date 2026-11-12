@@ -7788,3 +7788,9 @@
 - Verifikasi lintas diag: `e2e_err_probe.py` OK (hooks_ok/pixels_ok/hygiene_ok=true, shot 710KB); `diag_clock_canvas.py` exit 0. Perbaikan terbatas scripts/ — nol perubahan src, build PWA exit 0, dist → ~/wfs-hq.
 - Bukti: pytest backend+backend_live 635 passed + 4 skipped; vitest 359 file 4107 passed + 6 skipped; dist → ~/wfs-hq.
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.
+
+## 12/11/2026 20:40 WIB — Siklus 471: 31 skrip diag/e2e migrasi URL office langsung
+
+- Audit pasca-470: masih 31 kemunculan URL rute landing `:9503/app/` tanpa `?mode=office` di 26 file scripts/ (pemicu bundle basi/SW → `window.__scene` undefined). Migrasi massal via sed ke `?mode=office`; sisanya hanya komentar docstring. py_compile 124 file OK.
+- Bukti sampel: e2e_err_probe OK (agents=26, hooks_ok, shot 709KB, hygiene 41 refs 0 missing); e2e_sky_night OK (flip siang/malam 5x, piksel kanvas siang (104,183,240) vs malam (6,15,41)); e2e_snapshot_key 6/6; e2e_agent_back_button 6/6; e2e_dtap 6/6 ERRS=0.
+- Nol perubahan src/. Backup scripts/ ke /tmp.
