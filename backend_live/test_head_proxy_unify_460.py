@@ -28,9 +28,8 @@ class TestHeadProxyUnification460(unittest.TestCase):
         self.assertIn("cc=None", helper)
         self.assertIn("fwd_headers=None", helper)
         # 502 eksak tetap satu titik (komentar docstring juga menyebut 502 →
-        # hitung hanya di blok kode, bukan string docstring).
-        body = helper.split('"""', 2)[2]
-        self.assertEqual(body.count("502"), 1)
+        # hitung hanya `send_response(502)`, bukan string docstring/komentar).
+        self.assertEqual(helper.count("send_response(502)"), 1)
         # 443: helper tidak mengirim Content-Encoding (HEAD probe tanpa AE).
         self.assertNotIn("Content-Encoding", helper)
 

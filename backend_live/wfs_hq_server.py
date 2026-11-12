@@ -108,6 +108,13 @@ def _loopback_json_proxy(handler, port, path, method=None, body=b""):
         handler.send_header("Content-Length", str(len(data)))
         handler.end_headers()
         _wfs_write_or_client_gone(handler, data)  # SIKLUS 228
+    except (ClientGone, BrokenPipeError, ConnectionResetError):
+        # SIKLUS 465: disconnect klien mid-respons (tulisan body/header ke
+        # socket mati) di-re-raise SEBELUM except Exception — dulu generik
+        # menangkapnya dan mencoba send_response(502) ke socket mati
+        # (traceback kedua "During handling" di journald, pola 228/463/464).
+        # Senyap via _hq_handle_error level server.
+        raise
     except Exception:
         try:
             handler.send_response(502)
@@ -837,6 +844,12 @@ class H(http.server.SimpleHTTPRequestHandler):
                 self._wfs_cc = cc
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
+        except (ClientGone, BrokenPipeError, ConnectionResetError):
+            # SIKLUS 465: disconnect klien saat send_response/end_headers
+            # (socket mati) di-re-raise — dulu except Exception generik
+            # menangkapnya lalu mencoba 502 ke socket mati (traceback kedua
+            # di journald, pola 228/463/464). Senyap via _hq_handle_error.
+            raise
         except Exception:
             try:
                 self.send_response(502)

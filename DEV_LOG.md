@@ -7740,3 +7740,12 @@
 - Bukti: pytest backend+backend_live 632 passed + 4 skipped + 4 subtests, 0 fail (~/pytest-venv); vitest 359 file 4106 passed + 6 skipped (drift-gate hijau setelah apply --apply live==sumber 2cb89f41c3a2, smoke 13/13); build PWA exit 0; dist → ~/wfs-hq.
 - Produksi :9503 — deploy ulang via apply (backup server.py.bak-1794465621). e2e probe (?mode=office): agents=26, cam=True, wall=True, init_failed=False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
+
+## 12/11/2026 15:14 WIB — Siklus 465: dua helper loopback tersisa di-hardening — paritas kontrak 228 penuh
+
+- Audit pasca-464: pola disconnect (patah 228/463/464) masih tersisa di DUA jalur — _loopback_json_proxy (461, proxy JSON gateway+bantuin) dan _head_proxy_helper (460, HEAD proxy 4 cabang): except Exception generik menangkap disconnect klien lalu mencoba send_response(502) ke socket mati → traceback kedua "During handling" di journald.
+- Refactor: except (ClientGone, BrokenPipeError, ConnectionResetError): raise SEBELUM except Exception di kedua helper — disconnect di-re-raise, senyap via _hq_handle_error; kegagalan upstream sungguhan tetap 502 tanpa body (json) / 502 (HEAD). Kontrak lain tak berubah (cap 5MB 413, CT json, Authorization, no-store 444).
+- +1 test backend_live/test_disconnect_hardening_465.py (3 gate: re-raise di kedua helper, 502 satu jalur tersisa, kontrak 228). Koreksi gate test_head_proxy_unify_460 (count 502 kini hanya send_response(502) eksak — komentar 465 menyebut 502; tanpa variabel body mati).
+- Bukti: pytest backend+backend_live 633 passed + 4 skipped + 4 subtests, 0 fail (~/pytest-venv; test_secret_scan di-ignore, pre-existing); vitest 359 file 4107 passed + 6 skipped (drift-gate hijau setelah apply --apply live==sumber 80a0d931d08e, smoke 13/13); build PWA exit 0; dist → ~/wfs-hq.
+- Produksi :9503 — deploy ulang via apply (backup server.py.bak-1794467503). e2e probe (?mode=office): agents=26, cam=True, wall=True, init_failed=False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
