@@ -286,6 +286,47 @@ try:
             capture_output=True,text=True,timeout=20,check=True)
         assert inspected.stdout.strip()==image_id
         proof["phase20_image_id_runtime_verified"][project]=True
+    # Phase21: actual ingress runs from a sealed locally pinned Docker image,
+    # not from a writable host bind mount. Mutate staged and live ingress.py
+    # while HTTP traffic is live, then restore signed source for lifecycle tests.
+    proof["phase21_mount_free_ingress"] = {}
+    for project, port, token, other in zip(names, ports, tokens,
+                                             (token_b, token_a)):
+        record = manager.status(project)
+        expected = record["ingress_image_id"]
+        assert expected.startswith("sha256:") and len(expected) == 71
+        container = manager._invoke(record, token, ["ps", "-q", "ingress"]).strip()
+        assert container
+        inspect = subprocess.run(
+            ["docker", "inspect", "--format", "{{json .}}", container],
+            capture_output=True, text=True, timeout=20, check=True)
+        actual = json.loads(inspect.stdout)
+        assert actual["Image"] == expected, "ingress image ID substitution"
+        assert not any(
+            mount.get("Destination") == "/app/ingress.py"
+            for mount in actual["Mounts"]
+        ), "reviewed ingress still host-bound"
+        staged_ingress = manager.snapshots.path(project).parent / "ingress.py"
+        live_ingress = reviewed_root / "ingress.py"
+        staged_original = staged_ingress.read_bytes()
+        live_original = live_ingress.read_bytes()
+        old_mode = staged_ingress.stat().st_mode & 0o777
+        try:
+            staged_ingress.chmod(0o600)
+            staged_ingress.write_bytes(
+                b"raise SystemExit('HOSTILE HOST STAGING INGRESS')\\n")
+            live_ingress.write_bytes(
+                b"raise SystemExit('HOSTILE LIVE INGRESS')\\n")
+            assert health(port, token, other)
+        finally:
+            staged_ingress.write_bytes(staged_original)
+            staged_ingress.chmod(old_mode)
+            live_ingress.write_bytes(live_original)
+        proof["phase21_mount_free_ingress"][project] = {
+            "actual_image_id_pinned": True,
+            "no_ingress_bind_mount": True,
+            "served_while_host_source_mutated": True,
+        }
     proof["phase11_docker_compose_context"]="signed project-scoped staged copy"
     # Runtime firewall evidence: BOTH preview bridges must be internal,
     # API still reachable on host loopback, and the running API must fail
