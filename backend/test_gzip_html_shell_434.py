@@ -42,7 +42,7 @@ class GzipHtmlShell(unittest.TestCase):
         # /admin, /cs-widget, _serve_head_html, _serve_html_file, wfs_api_service
         # (Siklus 458: 3 duplikasi do_GET /,/app,/landing disatukan ke
         # _serve_html_file — count turun 6→4, siklus 457 sempat naikkan 5→6).
-        self.assertEqual(src.count("gzip_html("), 4)
+        self.assertEqual(src.count("gzip_html("), 3)
         self.assertEqual(src.count('send_header("Content-Encoding", "gzip")'),
                          src.count('send_header("Vary", "Accept-Encoding")'))
 

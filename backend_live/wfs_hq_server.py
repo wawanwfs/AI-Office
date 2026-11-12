@@ -723,8 +723,8 @@ class H(http.server.SimpleHTTPRequestHandler):
             return self._reply_404_html()
         return _reply_404(self)
 
-    def _serve_html_file(self, fname, inject=False):
-        """SIKLUS 458: SATU titik kirim halaman HTML shell (GET).
+    def _serve_html_file(self, fname, inject=False, head_only=False):
+        """SIKLUS 458/459: SATU titik kirim halaman HTML shell (GET & HEAD).
 
         Dulu do_GET menduplikasi blok gzip/no-store/500 persis di TIGA cabang
         (/landing, /app, /) — pola insiden 453 (drift GET vs HEAD). Kini GET
@@ -745,7 +745,8 @@ class H(http.server.SimpleHTTPRequestHandler):
                 self.send_header("Vary", "Accept-Encoding")
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
-            _wfs_write_or_client_gone(self, data)
+            if not head_only:
+                _wfs_write_or_client_gone(self, data)
         except Exception:
             # Siklus 212: 500 eksak — dulu exception kosong tanpa respons
             # (koneksi menggantung, pola hq_proxy sama-sama cacat).
@@ -789,31 +790,11 @@ class H(http.server.SimpleHTTPRequestHandler):
     # menerima jawaban palsu "page down" untuk halaman yang sebenarnya hidup.
     # Kontrak: jawab status sama dgn GET, headers identik, TANPA body.
     def _serve_head_html(self, fname, inject=False):
-        try:
-            data = open(fname, "rb").read()
-        except Exception:
-            self.send_response(500)
-            self.send_header("Content-Length", "0")
-            self.end_headers()
-            return
-        if inject:
-            data = self._inject_token(data)
-        # SIKLUS 457: HEAD kini meniru gzip GET — dulu Content-Length = ukuran
-        # mentah file padahal GET /app/ & /landing (do_GET) mengirim versi gzip
-        # (kecuali klien tanpa Accept-Encoding). Melanggar kontrak paritas HEAD
-        # siklus 222/223: monitor/cache-probe membaca metadata palsu. Kini CL =
-        # panjang payload GET yang setara (terkompres bila klien mendukung) +
-        # Content-Encoding/Vary yang sama.
-        data, gz = static_serve.gzip_html(
-            data, self.headers.get("Accept-Encoding", ""))
-        self._wfs_cc = "no-store"
-        self.send_response(200)
-        self.send_header("Content-Type", "text/html; charset=utf-8")
-        if gz:
-            self.send_header("Content-Encoding", "gzip")
-            self.send_header("Vary", "Accept-Encoding")
-        self.send_header("Content-Length", str(len(data)))
-        self.end_headers()
+        # SIKLUS 459: SATU titik kirim HTML shell dgn GET (_serve_html_file
+        # head_only=True) — dulu duplikasi gzip/CL/header di sini, pola drift
+        # 453/458. Perilaku identik: 200 + gzip_html + no-store, tanpa body;
+        # file hilang → 500 eksak (siklus 212).
+        return self._serve_html_file(fname, inject=inject, head_only=True)
 
     # SIKLUS 223: HEAD aset statis kini konsisten dgn GET — dulu via
     # super().do_HEAD() stdlib yang TIDAK tahu cache policy & kompresi:

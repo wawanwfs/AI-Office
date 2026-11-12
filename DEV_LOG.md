@@ -7678,6 +7678,15 @@
 - Produksi :9503 — PATCH /api/tasks → 405 JSON + Allow; OPTIONS / → 204 + Allow. e2e probe (?mode=office): agents=26, cam=True, wall=True, init_failed=False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
 
+## 12/11/2026 11:48 WIB — Siklus 459: kirim HTML shell GET & HEAD disatukan penuh ke _serve_html_file
+
+- Audit pasca-458: _serve_head_html (457) masih menduplikasi blok gzip_html/no-store/CL/header 200 dgn _serve_html_file (458) — pola drift 453/458 tersisa.
+- Refactor: _serve_head_html kini delegasi satu baris ke _serve_html_file(head_only=True); body GET-only via _wfs_write_or_client_gone; 500 file-hilang eksak tetap.
+- Koreksi test: count gzip_html (434) 4→3; FakeH +_serve_html_file stub (457).
+- Bukti: pytest backend+backend_live 621 passed + 4 skipped + 4 subtests, 0 fail; vitest 359 file 4103 passed + 6 skipped (drift-gate hijau setelah apply --apply live==sumber cf1f9ca3ae71, smoke 13/13); build PWA OK; dist → ~/wfs-hq.
+- Produksi :9503 — GET /app/ gzip CL 1395; HEAD /app/ gzip-paritas (CE gzip, Vary, CL 1395); /app/tidak-ada 404. e2e probe (?mode=office): agents=26, cam=True, wall=True, init_failed=False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
+
 ## 12/11/2026 11:15 WIB — Siklus 458: 3 duplikasi kirim HTML shell do_GET disatukan ke _serve_html_file
 
 - Audit pasca-457: do_GET menduplikasi blok gzip_html/no-store/Content-Encoding/CL/500 persis di TIGA cabang (/, /app/, /landing) — pola drift yang sama dengan insiden 453 (GET vs HEAD). Test rapuh test_gzip_html_shell_434 sempat MERAH (count gzip_html 6 vs assert 5) — bukti duplikasi memang mengganggu.

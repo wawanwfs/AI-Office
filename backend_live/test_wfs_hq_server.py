@@ -91,6 +91,9 @@ class FakeH:
         self._allowed_rel = lambda: H._allowed_rel(self)
         self._inject_token = lambda data: H._inject_token(self, data)
         self._serve_head_html = lambda fname, inject=False: H._serve_head_html(self, fname, inject=inject)
+        # SIKLUS 459: _serve_head_html mendelegasi ke _serve_html_file
+        self._serve_html_file = lambda fname, inject=False, head_only=False: H._serve_html_file(
+            self, fname, inject=inject, head_only=head_only)
         # SIKLUS 223: do_HEAD memanggil _serve_head_static pada instance.
         self._serve_head_static = lambda: H._serve_head_static(self)  # type: ignore[arg-type]
         # SIKLUS 224: do_HEAD memanggil helper proxy HEAD pada instance.
