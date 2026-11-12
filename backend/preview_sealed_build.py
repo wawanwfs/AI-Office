@@ -56,7 +56,10 @@ def _reviewed_bytes(path, expected_sha):
         raise AdmissionDenied("independently reviewed source SHA256 required")
     if path.is_symlink() or path.parent.is_symlink():
         raise AdmissionDenied("sealed context source symlink denied")
-    flags = os.O_RDONLY | getattr(os, "O_NOFOLLOW", 0)
+    # Windows os.read must be byte-for-byte; without O_BINARY, the CRT
+    # may translate CRLF and truncate reads relative to fstat size.
+    flags = (os.O_RDONLY | getattr(os, "O_BINARY", 0) |
+             getattr(os, "O_NOFOLLOW", 0))
     try:
         fd = os.open(path, flags)
         try:
