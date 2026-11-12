@@ -528,3 +528,26 @@ authorization remain unfinished.
 - [Phase 20 scoped REA](docs/REA_PHASE20.md)
 - [Phase 20 Windows/Linux runtime runbook](docs/PHASE20_RUNTIME_RUNBOOK.md)
 - [Next Phase 21 execution prompt](docs/NEXT_PHASE21_PROMPT.md)
+
+
+## Phase 21 — ingress image sealed and no host ingress bind (bounded)
+
+The hardened operator now generates a **fixed** Dockerfile from the
+previously reviewed digest-pinned Python base and the SHA256-reviewed
+`ingress.py`, freezes both inside a Linux kernel-sealed BuildKit tar,
+and resolves the built ingress to its exact local engine image ID.
+Runtime Compose is derived from signed bytes, pins both API **and**
+ingress local image IDs with `pull_policy: never`, and removes the
+ingress source host bind. Two-tenant CI inspects real ingress image IDs,
+confirms no `/app/ingress.py` bind mount, and requests authenticated
+HTTP during hostile changes to live and staged ingress.py.
+
+**Security boundary still open:** the frontend dist remains host-bound,
+the Docker daemon and SQLite are trusted, local engine IDs are **not**
+signed OCI registry manifest digests, and true rootless separate-UID
+host / external WORM / Windows Docker Desktop tests are missing. No
+public preview, production approval or paid AI is introduced.
+
+- [Phase 21 scoped gate](docs/REA_PHASE21.md)
+- [Phase 21 operator runbook](docs/PHASE21_RUNTIME_RUNBOOK.md)
+- [Next Phase 22 implementation prompt](docs/NEXT_PHASE22_PROMPT.md)
