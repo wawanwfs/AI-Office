@@ -7660,6 +7660,15 @@
 - Produksi :9503 — GET /app/tidak-ada → 404 HTML manusiawi; /assets/hilang.js → 404 JSON; HEAD paritas OK. e2e probe: agents=26, init_failed=False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
 
+## 12/11/2026 09:37 WIB — Siklus 457: HEAD halaman HTML kini gzip-paritas dgn GET
+
+- Audit pasca-456: HEAD /app/, /landing, / (_serve_head_html) TIDAK gzip padahal GET do_GET mengirim gzip saat klien mendukung — Content-Length HEAD = ukuran mentah (3842) vs GET terkompresi (1395), melanggar kontrak paritas HEAD 222/223 (metadata palsu utk monitor/probe).
+- Fix: _serve_head_html kini gzip_html(Accept-Encoding) + Content-Encoding/Vary bila gzip; CL = panjang payload GET yang setara.
+- +1 test backend_live/test_head_gzip_457.py (3 kasus: CL gzip == gzip_html payload injeksi, CL mentah tanpa gzip, roundtrip helper).
+- Bukti: pytest backend_live 282 passed + 1 skipped + 4 subtests, 0 fail (env uv perlu --with uvicorn utk test_wfs_events); build PWA OK; dist → ~/wfs-hq; apply --apply live==sumber f53880aa07eb, smoke 13/13; vitest 359 file 4101 passed + 6 skipped (drift-gate hijau setelah apply).
+- Produksi :9503 — HEAD /app/ + gzip → 200 CE gzip CL 1395; tanpa → 200 CL 3842 (= payload GET). e2e probe (?mode=office): agents=26, cam=True, wall=True, init_failed=False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
+
 ## 12/11/2026 10:20 WIB — Siklus 456: method tak didukung → 405 JSON + Allow (bukan stdlib 501)
 
 - Audit pasca-455: PATCH/PUT/OPTIONS di :9503 jatuh ke stdlib send_error(501) "Unsupported method" HTML polos — inkonsisten dgn kontrak JSON (439) dan status salah (501 = method tak dikenal; di sini method dikenal, jalurnya saja tak mendukung).

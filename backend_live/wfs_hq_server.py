@@ -816,9 +816,20 @@ class H(http.server.SimpleHTTPRequestHandler):
             return
         if inject:
             data = self._inject_token(data)
+        # SIKLUS 457: HEAD kini meniru gzip GET — dulu Content-Length = ukuran
+        # mentah file padahal GET /app/ & /landing (do_GET) mengirim versi gzip
+        # (kecuali klien tanpa Accept-Encoding). Melanggar kontrak paritas HEAD
+        # siklus 222/223: monitor/cache-probe membaca metadata palsu. Kini CL =
+        # panjang payload GET yang setara (terkompres bila klien mendukung) +
+        # Content-Encoding/Vary yang sama.
+        data, gz = static_serve.gzip_html(
+            data, self.headers.get("Accept-Encoding", ""))
         self._wfs_cc = "no-store"
         self.send_response(200)
         self.send_header("Content-Type", "text/html; charset=utf-8")
+        if gz:
+            self.send_header("Content-Encoding", "gzip")
+            self.send_header("Vary", "Accept-Encoding")
         self.send_header("Content-Length", str(len(data)))
         self.end_headers()
 
