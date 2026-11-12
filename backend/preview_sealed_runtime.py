@@ -47,6 +47,12 @@ def derive_image_only_compose(snapshots, project_id, image_id):
         text = original.decode("utf-8")
     except UnicodeError as exc:
         raise AdmissionDenied("reviewed Compose document is not UTF-8") from exc
+    # CRLF is typical on Windows Git checkouts. The signed file digest
+    # was verified against ORIGINAL bytes first. Only the derived
+    # in-memory YAML gets a deterministic LF representation.
+    if "\r" in text.replace("\r\n", ""):
+        raise AdmissionDenied("mixed or unsafe Compose newline encoding")
+    text = text.replace("\r\n", "\n")
     if text.count(_BUILD_STANZA) != 1:
         raise AdmissionDenied("reviewed Compose build stanza changed")
     derived = text.replace(
