@@ -134,3 +134,29 @@ def test_sealed_runtime_image_only_requires_kernel_and_never_falls_back():
         pytest.skip("Linux kernel sealing available")
     with pytest.raises(AdmissionDenied,match="requires Linux memfd"):
         SealedRuntimeCompose(b"services: {}\n")
+
+
+
+def test_signed_original_CRLF_is_verified_then_only_derived_YAML_normalized(signed_template):
+    approved,folder,original=signed_template
+    converted=original.replace(b"\r\n",b"\n").replace(b"\n",b"\r\n")
+    (folder/"compose.yaml").write_bytes(converted)
+    approved.reviewed["sources"]["compose.yaml"]=hashlib.sha256(converted).hexdigest()
+    result=derive_image_only_compose(approved,"alpha","sha256:"+"c"*64)
+    assert b"\r" not in result
+    assert b"api:\n    image: sha256:" in result
+    assert (folder/"compose.yaml").read_bytes()==converted
+    # Independent owner pin must still reflect exact original bytes.
+    approved.reviewed["sources"]["compose.yaml"]=hashlib.sha256(original).hexdigest()
+    if converted != original:
+        with pytest.raises(AdmissionDenied,match="reviewed digest"):
+            derive_image_only_compose(approved,"alpha","sha256:"+"c"*64)
+
+
+def test_mixed_newlines_denied_even_with_matching_reviewed_digest(signed_template):
+    approved,folder,original=signed_template
+    tampered=original+b"\r"
+    (folder/"compose.yaml").write_bytes(tampered)
+    approved.reviewed["sources"]["compose.yaml"]=hashlib.sha256(tampered).hexdigest()
+    with pytest.raises(AdmissionDenied,match="unsafe Compose newline"):
+        derive_image_only_compose(approved,"alpha","sha256:"+"c"*64)
