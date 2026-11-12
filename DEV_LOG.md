@@ -7649,3 +7649,13 @@
 - Bukti: pytest backend+backend_live 609 passed + 4 skipped + 4 subtests, 0 fail; vitest 359 file 4100 passed + 6 skipped (drift-gate hijau setelah deploy); build PWA OK; dist → ~/wfs-hq; apply --apply live==sumber fb0b09e321ec, smoke 13/13.
 - Produksi :9503 — GET /favicon.ico 200 490 B + ETag; If-None-Match cocok → 304 (GET & HEAD). e2e probe: agents=26, init_failed=False, errs=[]. Layanan wfs-hq & wfs-office active.
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
+
+## 12/11/2026 08:45 WIB — Siklus 455: 404 halaman HTML manusiawi utk deep-link tak dikenal
+
+- Audit pasca-454: deep-link HTML tak dikenal (/app/foo, /landing/foo) jatuh ke super().do_GET() stdlib → 'Error response' polos tanpa navigasi; file allowlist hilang / direktori juga lewat stdlib (listing?) — kontras dgn kontrak 404 JSON siklus 439.
+- Fix: do_GET — file allowlist hilang/direktori kini _reply_404 JSON (bukan stdlib); deep-link /app/* & /landing/* tak dikenal → _reply_404_html() 404 tampilan (Bahasa Indonesia, taut / dan /app/, security headers default handler). do_HEAD di-mirror persis (header identik, tanpa body); super().do_HEAD dihapus total.
+- Aset (/assets/*, /fonts/*) tetap 404 JSON — kontrak uptime-monitor & API client tidak berubah.
+- +1 test backend_live/test_404_page_455.py; koreksi drift-gate test JS (hq_server_drift, static_allowlist_drift).
+- Bukti: pytest backend_live 274 passed 0 fail; backend 339 passed (test_secret_scan diskip collection — env uv tanpa pytest, pre-existing); vitest 359 file 4101 passed + 6 skipped; build PWA OK; dist → ~/wfs-hq; apply --apply idempoten smoke OK.
+- Produksi :9503 — GET /app/tidak-ada → 404 HTML manusiawi; /assets/hilang.js → 404 JSON; HEAD paritas OK. e2e probe: agents=26, init_failed=False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.

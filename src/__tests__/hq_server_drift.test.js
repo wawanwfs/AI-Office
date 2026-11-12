@@ -97,8 +97,10 @@ describe('drift-gate server produksi wfs-hq (siklus 206)', () => {
       'return self._serve_head_html("index.html", inject=True)',
       'return self._serve_head_html("landing.html")',
     ]) expect(s).toContain(anchor)
-    // do_HEAD tetap kena allowlist utk jalur statis (kontrak 214 utuh).
-    expect(s).toContain('if self._allowed_rel() is not None:\n            super().do_HEAD()')
+    // do_HEAD tetap kena gerbang allowlist utk jalur statis (kontrak 214 utuh).
+    // Siklus 455: file allowlist tak ada → 404 JSON; super().do_HEAD() stdlib
+    // dihapus (metadata file hilang tak tersaji + konsisten dgn do_GET 455).
+    expect(s).toContain('if self._allowed_rel() is not None:\n            return _reply_404(self, head=True)')
   })
 
   it('SIKLUS 223: HEAD aset statis = metadata GET (cache policy + gzip), bukan stdlib no-store/raw CL', () => {

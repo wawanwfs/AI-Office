@@ -90,7 +90,9 @@ describe('siklus 214 — guard default-tolak (satu gerbang _allowed_rel)', () =>
   it('do_HEAD override — metadata file non-allowlist tidak tersaji', () => {
     const body = src.slice(src.indexOf('def do_HEAD'), src.indexOf('def do_DELETE'));
     expect(body).toContain('if self._allowed_rel() is not None:');
-    expect(body).toContain('super().do_HEAD()');
+    // Siklus 455: file allowlist tak ada → 404 JSON eksak; stdlib do_HEAD
+    // ('Error response' / metadata file apa pun) dihapus total.
+    expect(body).toContain('return _reply_404(self, head=True)');
     // Siklus 439: 404 via helper _reply_404 (JSON), bukan send_response telanjang.
     expect(body).toContain('_reply_404(self');
   });

@@ -858,7 +858,7 @@ class TestWfsHqServer(unittest.TestCase):
         # 228 (regresi = traceback jurnald kembali).
         s = open(wfs_hq_server.__file__, encoding="utf-8").read()
         # 4 situs proxy/stream: SSE chunk + _proxy GET + HTTPError + bantuin.
-        self.assertEqual(s.count("_wfs_write_or_client_gone(self,"), 4)
+        self.assertEqual(s.count("_wfs_write_or_client_gone(self,"), 5)
         self.assertIn("_wfs_write_or_client_gone(handler, msg)", s)     # _reply_json
         self.assertIn("s.handle_error = _hq_handle_error", s)           # jaring server
         # handle_project re-raise disconnect (tidak lagi balas 500 ke socket mati)

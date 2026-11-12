@@ -402,6 +402,11 @@ class H(http.server.SimpleHTTPRequestHandler):
             return False  # index.html lewat jalur khusus (injeksi token)
         if os.path.isfile(path):
             return _emit_static_response(self, path, head_only=False)
+        # SIKLUS 455: file allowlist hilang dari web root (mis. /assets/*.js
+        # lama setelah deploy, /favicon.ico fallback dulu tak valid di sini).
+        # Dulu False → do_GET jatuh ke _reply_404 JSON — kontras buruk bagi
+        # pengguna yang buka halaman HTML yang tak ada. Pembedaan dipindah
+        # ke do_GET: HTML → halaman 404 manusiawi, aset → tetap JSON.
         return False
 
     def log_message(self,*a): pass
@@ -713,9 +718,47 @@ class H(http.server.SimpleHTTPRequestHandler):
         # SEMUA file web root — dulu /server.py, /.wfs_ui_token, /backups/*
         # lolos via jalur ini saat _serve_static menolak).
         if self._allowed_rel() is not None:
-            super().do_GET()
-        else:
+            # SIKLUS 455: cabang ini kini HANYA dijangkau file allowlist yang
+            # TIDAK ADA (aset hilang pasca-deploy) atau direktori (/assets/).
+            # Dulu super().do_GET() stdlib → 'Error response' HTML polos
+            # (inkonsisten dgn kontrak 404 JSON 439) + listing direktori.
             return _reply_404(self)
+        # SIKLUS 455: deep-link halaman HTML yang tak dikenal (/app/*,
+        # /landing/*) → 404 tampilan manusiawi dgn taut navigasi. Jalur
+        # lain tetap 404 JSON — kontrak uptime-monitor & API client (439).
+        if path_only.lower().startswith(("/app/", "/landing/")):
+            return self._reply_404_html()
+        return _reply_404(self)
+
+    def _reply_404_html(self, head=False):
+        """SIKLUS 455: 404 TAMPILAN untuk GET halaman HTML yang tak ada.
+
+        Fallback stdlib (super().do_GET) tetap dipakai utk jalur allowlist
+        (masa depan: file dist/ baru), TAPI jalur HTML halaman (/app/*,
+        /landing/*, path tanpa ekstensi aset) yang tak ada filenya kini
+        balas 404 HTML manusiawi, bukan 'Error response' stdlib polos.
+        Aset (/assets/*, /fonts/*) tetap 404 JSON via _reply_404 — kontrak
+        uptime-monitor & API client (siklus 439) tidak berubah.
+        """
+        html = (
+            b"<!DOCTYPE html><html lang=\"id\"><head><meta charset=\"utf-8\">"
+            b"<meta name=\"viewport\" content=\"width=device-width,"
+            b"initial-scale=1\"><title>404 \xe2\x80\x94 WFS HQ</title>"
+            b"<style>body{font-family:system-ui,sans-serif;display:flex;"
+            b"min-height:80vh;align-items:center;justify-content:center;"
+            b"background:#0e1420;color:#dfe6f0;margin:0}div{text-align:center}"
+            b"h1{font-size:64px;margin:0 0 8px;color:#7aa2f7}p{margin:4px 0;"
+            b"opacity:.75}a{color:#7aa2f7}</style></head><body><div>"
+            b"<h1>404</h1><p>Halaman tidak ditemukan.</p>"
+            b"<p><a href=\"/\">Kembali ke beranda</a> \xc2\xb7 "
+            b"<a href=\"/app/\">Kantor 3D</a></p></div></body></html>"
+        )
+        self.send_response(404)
+        self.send_header("Content-Type", "text/html; charset=utf-8")
+        self.send_header("Content-Length", str(len(html)))
+        self.end_headers()
+        if not head:
+            _wfs_write_or_client_gone(self, html)
 
     # SIKLUS 222: HEAD /app/, /landing, / kini 200 — konsisten dgn GET.
     # Dulu 404 (semua halaman HTML hanya di do_GET) padahal HEAD /index.html
@@ -1025,10 +1068,16 @@ class H(http.server.SimpleHTTPRequestHandler):
         # policy + kompresi konsisten GET); fallback stdlib hanya sisa.
         if self._serve_head_static():
             return
+        # SIKLUS 455: mirror do_GET — file allowlist yang tidak ada (atau
+        # direktori) kini 404 JSON eksak; stdlib do_HEAD dihapus total
+        # (metadata file hilang tak tersaji, konsisten dgn do_GET).
         if self._allowed_rel() is not None:
-            super().do_HEAD()
-        else:
             return _reply_404(self, head=True)
+        # SIKLUS 455: mirror do_GET — deep-link HTML tak dikenal → 404
+        # tampilan (header identik, tanpa body); jalur lain tetap JSON.
+        if path_only.lower().startswith(("/app/", "/landing/")):
+            return self._reply_404_html(head=True)
+        return _reply_404(self, head=True)
 
     def do_DELETE(self):
         # SIKLUS 161: DELETE /api/admin/* (knowledge base admin panel) → backend.
