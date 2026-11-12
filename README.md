@@ -499,3 +499,32 @@ fallback rather than claiming equivalent Linux protection.
 
 No production deployment, private organizational keys, generic
 generated Dockerfiles or billable AI execution are activated.
+
+
+## Phase 20 — image-only sealed Docker Compose operator
+
+The real operator CLI now prepares the fixed, **signed and reviewed**
+disposable API image using the Linux kernel-sealed BuildKit tar from
+Phase19, records its exact **local engine image ID** (sha256:...), and
+derives a fixed image-only runtime Compose config from the signed source.
+A second kernel-sealed memfd streams the runtime YAML to docker compose
+stdin. The operator starts only with **--no-build --pull never**, never
+by asking Compose to rebuild API from a writable staging directory.
+
+Real CI deliberately modifies both original and staged API source
+during startup and inspects the **actual launched Docker container**
+image ID across two tenants. Windows refuses Linux-sealing fallback.
+Legacy injected unit-test runners preserve historical mock behavior;
+they are not a production security mode.
+
+Critical: local Docker image ID is NOT an independently signed OCI
+registry digest; Docker daemon and SQLite remain trusted. Existing
+ingress.py and frontend dist host bind mounts are still writable
+by a hostile same-UID host actor. Rootless/UID-separated builder,
+Windows Docker Desktop/WSL2 validation, registry provenance,
+full offline transitive locks, external log independence and production
+authorization remain unfinished.
+
+- [Phase 20 scoped REA](docs/REA_PHASE20.md)
+- [Phase 20 Windows/Linux runtime runbook](docs/PHASE20_RUNTIME_RUNBOOK.md)
+- [Next Phase 21 execution prompt](docs/NEXT_PHASE21_PROMPT.md)
