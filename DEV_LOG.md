@@ -7677,3 +7677,12 @@
 - Bukti: pytest backend_live 279 passed + 1 skipped + 4 subtests, 0 fail; backend 339 passed (test_secret_scan diskip collection, env uv tanpa pytest — pre-existing); vitest penuh 359 file: 4101 passed + 6 skipped (drift-gate hijau setelah apply --apply live==sumber 20cedfce50fb, smoke 13/13); build PWA OK; dist → ~/wfs-hq.
 - Produksi :9503 — PATCH /api/tasks → 405 JSON + Allow; OPTIONS / → 204 + Allow. e2e probe (?mode=office): agents=26, cam=True, wall=True, init_failed=False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
+
+## 12/11/2026 11:15 WIB — Siklus 458: 3 duplikasi kirim HTML shell do_GET disatukan ke _serve_html_file
+
+- Audit pasca-457: do_GET menduplikasi blok gzip_html/no-store/Content-Encoding/CL/500 persis di TIGA cabang (/, /app/, /landing) — pola drift yang sama dengan insiden 453 (GET vs HEAD). Test rapuh test_gzip_html_shell_434 sempat MERAH (count gzip_html 6 vs assert 5) — bukti duplikasi memang mengganggu.
+- Refactor: helper _serve_html_file(fname, inject) — SATU titik kirim halaman shell (GET); cabang /app & /landing digabung satu if; cabang / memanggil helper juga; body ditulis via _wfs_write_or_client_gone (kontrak 228 kini juga mencakup halaman shell). _serve_head_html (457) tetap penerima manfaat paritas.
+- Koreksi test: count gzip_html 5→4, _wfs_write_or_client_gone(self, 5→6.
+- Bukti: pytest backend 339 passed + 3 skipped 0 fail (--ignore test_secret_scan: env uv tanpa modul scripts, pre-existing); backend_live 282 passed + 1 skipped + 4 subtests, 0 fail; vitest 359 file 4103 passed + 6 skipped (drift-gate hijau setelah apply --apply live==sumber 0308da96dacd, smoke 13/13); build PWA OK; dist → ~/wfs-hq.
+- Produksi :9503 — GET /app/ gzip 1395 B & raw 3842 B, /landing 200, token meta terinjeksi, /app/tidak-ada → 404. e2e probe: agents=26, cam=True, wall=True, init_failed=False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.

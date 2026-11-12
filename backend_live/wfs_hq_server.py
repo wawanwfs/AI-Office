@@ -622,42 +622,9 @@ class H(http.server.SimpleHTTPRequestHandler):
         # /app/ yang balik ke landing, tak pernah sampai kantor). Sekarang:
         # /app(/) = index.html + injeksi token (SATU app, hash #dashboard utk deep-link)
         # /landing(/) = landing.html (tetap).
-        if path_only in ("/landing", "/landing/"):
-            try:
-                data = open("landing.html", "rb").read()
-                data, gz = static_serve.gzip_html(
-                    data, self.headers.get("Accept-Encoding", ""))
-                self._wfs_cc = "no-store"
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                if gz:
-                    self.send_header("Content-Encoding", "gzip")
-                    self.send_header("Vary", "Accept-Encoding")
-                self.send_header("Content-Length", str(len(data)))
-                self.end_headers()
-                self.wfile.write(data)
-            except Exception:
-                # Siklus 212: 500 eksak — dulu exception kosong tanpa respons
-                # (koneksi menggantung, pola hq_proxy sama-sama cacat).
-                self.send_response(500); self.send_header("Content-Length", "0"); self.end_headers()
-            return
-        if path_only in ("/app", "/app/"):
-            try:
-                data = open("index.html", "rb").read()
-                data = self._inject_token(data)
-                data, gz = static_serve.gzip_html(
-                    data, self.headers.get("Accept-Encoding", ""))
-                self._wfs_cc = "no-store"
-                self.send_response(200)
-                self.send_header("Content-Type", "text/html; charset=utf-8")
-                if gz:
-                    self.send_header("Content-Encoding", "gzip")
-                    self.send_header("Vary", "Accept-Encoding")
-                self.send_header("Content-Length", str(len(data)))
-                self.end_headers()
-                self.wfile.write(data)
-            except Exception:
-                self.send_response(500); self.send_header("Content-Length", "0"); self.end_headers()
+        if path_only in ("/landing", "/landing/", "/app", "/app/"):
+            fname = "index.html" if path_only.startswith("/app") else "landing.html"
+            self._serve_html_file(fname, inject=(fname == "index.html"))
             return
         # SIKLUS 161: /admin(/) → panel admin saas-dibantuin (Docker :3000) via
         # proxy HTML same-origin. Dulu 404 — hanya widget (:3001) yang diproxy,
@@ -737,23 +704,8 @@ class H(http.server.SimpleHTTPRequestHandler):
         if self._serve_static():
             return
         if self.path.split("?")[0] in ("/", "/index.html"):
-            try:
-                data = open("index.html","rb").read()
-                data = self._inject_token(data)
-                data, gz = static_serve.gzip_html(
-                    data, self.headers.get("Accept-Encoding", ""))
-                self._wfs_cc = "no-store"
-                self.send_response(200)
-                self.send_header("Content-Type","text/html; charset=utf-8")
-                if gz:
-                    self.send_header("Content-Encoding", "gzip")
-                    self.send_header("Vary", "Accept-Encoding")
-                self.send_header("Content-Length", str(len(data)))
-                self.end_headers()
-                self.wfile.write(data)
-                return
-            except Exception:
-                pass
+            self._serve_html_file("index.html", inject=True)
+            return
         # Siklus 214: fallback super().do_GET() HANYA untuk allowlist (sumber
         # disclosure sebenarnya: SimpleHTTPRequestHandler.send_head menyaji
         # SEMUA file web root — dulu /server.py, /.wfs_ui_token, /backups/*
@@ -770,6 +722,36 @@ class H(http.server.SimpleHTTPRequestHandler):
         if path_only.lower().startswith(("/app/", "/landing/")):
             return self._reply_404_html()
         return _reply_404(self)
+
+    def _serve_html_file(self, fname, inject=False):
+        """SIKLUS 458: SATU titik kirim halaman HTML shell (GET).
+
+        Dulu do_GET menduplikasi blok gzip/no-store/500 persis di TIGA cabang
+        (/landing, /app, /) — pola insiden 453 (drift GET vs HEAD). Kini GET
+        & HEAD (_serve_head_html) berbagi logika kirim yang sama: gzip_html +
+        Content-Encoding/Vary + CL payload + 500 eksak (siklus 212).
+        """
+        try:
+            data = open(fname, "rb").read()
+            if inject:
+                data = self._inject_token(data)
+            data, gz = static_serve.gzip_html(
+                data, self.headers.get("Accept-Encoding", ""))
+            self._wfs_cc = "no-store"
+            self.send_response(200)
+            self.send_header("Content-Type", "text/html; charset=utf-8")
+            if gz:
+                self.send_header("Content-Encoding", "gzip")
+                self.send_header("Vary", "Accept-Encoding")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            _wfs_write_or_client_gone(self, data)
+        except Exception:
+            # Siklus 212: 500 eksak — dulu exception kosong tanpa respons
+            # (koneksi menggantung, pola hq_proxy sama-sama cacat).
+            self.send_response(500)
+            self.send_header("Content-Length", "0")
+            self.end_headers()
 
     def _reply_404_html(self, head=False):
         """SIKLUS 455: 404 TAMPILAN untuk GET halaman HTML yang tak ada.
