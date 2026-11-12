@@ -629,55 +629,14 @@ class H(http.server.SimpleHTTPRequestHandler):
         # TIDAK diekspos publik. /api/admin/* (GET/POST/DELETE) sudah diproxy
         # _proxy_bantuin → /api/ di dalam kontainer diteruskan nginx ke backend.
         if path_only in ("/admin", "/admin/"):
-            import http.client
-            try:
-                conn = http.client.HTTPConnection("127.0.0.1", 3000, timeout=30)
-                conn.request("GET", "/")
-                r = conn.getresponse()
-                data = r.read()
-                data, gz = static_serve.gzip_html(
-                    data, self.headers.get("Accept-Encoding", ""))
-                self.send_response(r.status)
-                self.send_header("Content-Type", r.getheader("Content-Type", "text/html"))
-                self._wfs_cc = "no-store"  # Siklus 444: hindari Cache-Control ganda
-                if gz:
-                    self.send_header("Content-Encoding", "gzip")
-                    self.send_header("Vary", "Accept-Encoding")
-                self.send_header("Content-Length", str(len(data)))
-                self.end_headers()
-                self.wfile.write(data)
-                conn.close()
-            except Exception:
-                self.send_response(502); self.send_header("Content-Length", "0"); self.end_headers()
+            # SIKLUS 462: kirim via _loopback_html_proxy — satu titik proxy
+            # HTML GET loopback (gzip + kontrak 228 + 502), paritas dgn /cs-widget.
+            self._loopback_html_proxy(3000, "/")
             return
         # Proxy widget chat AI CS dibantuin (Docker :3001) → same-origin /cs-widget/
         if self.path.startswith("/cs-widget/"):
-            import http.client
-            try:
-                sub = self.path[len("/cs-widget/"):] or ""
-                url_path = "/" + sub
-                conn = http.client.HTTPConnection("127.0.0.1", 3001, timeout=30)
-                conn.request("GET", url_path)
-                r = conn.getresponse()
-                data = r.read()
-                # Siklus 443: HTML widget ~14 KB dikirim uncompressed (Lighthouse
-                # "No compression applied") — gzip on-the-fly seperti cabang
-                # /admin (434/438). Content-Length wajib panjang payload balikan.
-                data, gz = static_serve.gzip_html(
-                    data, self.headers.get("Accept-Encoding", ""))
-                self.send_response(r.status)
-                ctype = r.getheader("Content-Type", "text/html")
-                self.send_header("Content-Type", ctype)
-                self._wfs_cc = "no-store"  # Siklus 444: hindari Cache-Control ganda
-                if gz:
-                    self.send_header("Content-Encoding", "gzip")
-                    self.send_header("Vary", "Accept-Encoding")
-                self.send_header("Content-Length", str(len(data)))
-                self.end_headers()
-                self.wfile.write(data)
-                conn.close()
-            except Exception:
-                self.send_response(502); self.send_header("Content-Length","0"); self.end_headers()
+            sub = self.path[len("/cs-widget/"):] or ""
+            self._loopback_html_proxy(3001, "/" + sub)
             return
         if api_service and (self.path.startswith("/api/") or self.path.startswith("/preview/")):
             if api_service.handle_api_request(self, "GET", self.path):
@@ -871,6 +830,43 @@ class H(http.server.SimpleHTTPRequestHandler):
                 self._wfs_cc = cc
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
+        except Exception:
+            try:
+                self.send_response(502)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+            except Exception:
+                pass
+
+    def _loopback_html_proxy(self, port, url_path, timeout=30):
+        """SIKLUS 462: SATU titik proxy HTML GET loopback (gzip + kontrak 228 + 502).
+
+        Dulu cabang GET /admin(/) (panel :3000) dan /cs-widget/* (widget :3001)
+        masing-masing menduplikasi pola http.client + gzip_html + no-store +
+        Content-Encoding/Vary/CL + body + 502 — sisa pola drift 453/458/460/461.
+        Header hasil identik: status & CT upstream, gzip bila klien terima,
+        Cache-Control no-store via _wfs_cc (siklus 444), CL = payload; upstream
+        mati → 502 tanpa body. Body via _wfs_write_or_client_gone (siklus 228).
+        """
+        import http.client
+        try:
+            conn = http.client.HTTPConnection("127.0.0.1", port, timeout=timeout)
+            conn.request("GET", url_path)
+            r = conn.getresponse()
+            data = r.read()
+            conn.close()
+            data, gz = static_serve.gzip_html(
+                data, self.headers.get("Accept-Encoding", ""))
+            self.send_response(r.status)
+            self.send_header("Content-Type",
+                             r.getheader("Content-Type", "text/html"))
+            self._wfs_cc = "no-store"  # Siklus 444: hindari Cache-Control ganda
+            if gz:
+                self.send_header("Content-Encoding", "gzip")
+                self.send_header("Vary", "Accept-Encoding")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            _wfs_write_or_client_gone(self, data)  # SIKLUS 228
         except Exception:
             try:
                 self.send_response(502)

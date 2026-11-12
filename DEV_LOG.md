@@ -7713,3 +7713,12 @@
 - Bukti: pytest backend+backend_live 623 passed + 4 skipped + 4 subtests, 0 fail; vitest 359 file 4104 passed + 6 skipped; build PWA OK; dist → ~/wfs-hq; apply --apply live==sumber 964d1b9e32fc, smoke 13/13.
 - Produksi :9503 — GET /wfs-api/tasks 200, POST tanpa token 401, /admin/ 200, /api/admin/stats 401 (tanpa JWT). e2e probe (?mode=office): agents=26, cam=True, wall=True, init_failed=False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
+
+## 12/11/2026 13:50 WIB — Siklus 462: dua cabang proxy HTML GET disatukan ke _loopback_html_proxy
+
+- Audit pasca-461: cabang GET /admin(/) (panel :3000) dan /cs-widget/* (widget :3001) masih menduplikasi pola http.client + gzip_html + no-store + Content-Encoding/Vary/CL + 502 — sisa terakhir pola drift 453/458/460/461.
+- Refactor: helper _loopback_html_proxy(port, url_path, timeout) — SATU titik: gzip on-the-fly, CT upstream, Cache-Control no-store via _wfs_cc (444), CL payload, body via _wfs_write_or_client_gone (228), upstream mati → 502 tanpa body. Kedua cabang kini delegasi (do_GET: _loopback_html_proxy(3000,"/") dan (3001, "/"+sub)).
+- Koreksi test: slice gate 460/443 kini berakhir sebelum _loopback_html_proxy (helper baru di tengah range lama); count gzip_html (434) 3→2; count _wfs_write_or_client_gone(self, 3→4; +1 gate test_loopback_html_proxy_gates_462 (gzip, 502 satu titik, kontrak 228, 2 delegasi).
+- Bukti: pytest backend+backend_live 624 passed + 4 skipped + 4 subtests, 0 fail (test_secret_scan di-skip: env uv tanpa modul scripts, pre-existing); vitest 359 file 4104 passed + 6 skipped (drift-gate hijau setelah apply --apply live==sumber 8387ffd10574, smoke 13/13); build PWA exit 0; dist → ~/wfs-hq.
+- Produksi :9503 — deploy ulang via apply (backup server.py.bak-1794461691). e2e probe (?mode=office): agents=26, cam=True, wall=True, init_failed=False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.

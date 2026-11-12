@@ -13,9 +13,10 @@ import unittest
 class TestCsWidgetGzip443(unittest.TestCase):
     def _branch_source(self):
         src = open("wfs_hq_server.py", encoding="utf-8").read()
-        # Ambil blok cabang GET /cs-widget/ di do_GET
-        i = src.index('if self.path.startswith("/cs-widget/"):\n            import http.client')
-        return src[i:i + 1600]
+        # Siklus 462: cabang GET /cs-widget/ kini delegasi ke _loopback_html_proxy;
+        # gate gzip ditujukan ke helper HTML (mencakup /admin & /cs-widget).
+        i = src.index("def _loopback_html_proxy")
+        return src[i:i + 1800]
 
     def test_get_branch_gzips_upstream_payload(self):
         branch = self._branch_source()
@@ -35,7 +36,7 @@ class TestCsWidgetGzip443(unittest.TestCase):
         # uncompressed, jadi _head_proxy_helper (CL = payload GET mentah)
         # tetap konsisten; helper tidak boleh mengirim Content-Encoding.
         src = open("wfs_hq_server.py", encoding="utf-8").read()
-        helper = src[src.index("def _head_proxy_helper"):src.index("def _serve_head_admin")]
+        helper = src[src.index("def _head_proxy_helper"):src.index("def _loopback_html_proxy")]
         self.assertNotIn("Content-Encoding", helper)
 
 
