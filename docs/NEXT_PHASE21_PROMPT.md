@@ -1,0 +1,15 @@
+# WFS AI Office — Phase 21 accelerated execution prompt
+
+Continue from the latest verified green main. Read docs/REA_PHASE20.md, docs/PHASE20_RUNTIME_RUNBOOK.md, docs/REA_PHASE19.md, backend/preview_sealed_runtime.py, backend/preview_manager.py, Docker Compose template, actual GitHub Actions artifacts and all Phase 1–20 accepted tests. Preserve all existing working flows and no force pushes or production changes.
+
+**P0 A — Close ALL running-runtime mutable host mounts.** Phase20 strengthens the operator API lifecycle with immutable local image ID and sealed Compose stdin, but frontend dist and ingress.py remain bind mounts from host staging; no same-UID OS principal separation exists. Package approved ingress and frontend dist into immutable digest-pinned images or OS-verified readonly/verity sealed mounts, inspect actual running container mounts/images and run hostile same-UID races while traffic is live. Require separately owned builder/writer/agent identities, rootless Docker and explicit Windows Docker Desktop/WSL2 evidence; reject privileges and source build bypasses, test rootful daemon adversaries. Integrate only after signed owner reviews and independent verifiable exact OCI image provenance.
+
+**P0 B — True image provenance and offline supply chain.** A Docker local image ID is NOT an OCI registry manifest digest. Produce reviewed OCI digests and separately signed provenance/attestations, complete hash-verified Python/npm/base-image transitive closure, genuine offline cache and repeatable rebuild tests; scan license and CVEs. Detect retag/registry substitution, stale signed manifests and unauthorized image changes.
+
+**P0 C — External log independence.** Existing Phase18 gossip endpoints are two processes on one host. Use genuinely separate administrators/hosts, off-host WORM receipts and signed heads, independent TLS/mTLS, non-equivocation gossip, freshness, revocation and rollback after disaster recovery. Promote only authenticated owner-approved external pins to admission; never synthesize organizational trust.
+
+**P0 D — External DNS + tenant preview.** Real authoritative external A/AAAA/DoH/DoT probes, metadata IPv4/IPv6 and proxy routes, rootless Linux + Windows host firewall and resource quotas; then approved HTTPS tenant HTTP/WS/SSE with expiring tickets, strict Origin/CSP/cookies/RBAC revocation and two-tenant Chromium.
+
+**P0 E — Recovery and real agents.** Encrypted coherent multi-database WAL restore with interrupted/corrupt rollback proof native Windows/Linux, real three-floor telemetry/accessibility and mobile/GPU, exact provider usage invoice reconciliation and hard CostLedger cap.
+
+Billable AI executions remain BLOCKED until the owner explicitly approves provider/model, credentials, prices and hard spending cap. Deliver at least one meaningful bounded code change with exact-SHA PR branch and PR CI, post-merge final main CI (13 jobs), accurate scoped acceptance numerator/denominator, limitations and next prompt. No root-key reset, production changes, public deployment, force push or 100%-ready claims.
