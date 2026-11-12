@@ -14,8 +14,25 @@ from urllib.parse import urlparse
 CHROME = os.path.expanduser(
     "~/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell"
 )
+if not os.path.exists(CHROME):  # siklus 468: revision 1248 tak terpasang — resolver headless-shell terbaru
+    import glob as _g, re as _re
+
+    def _rev(_p):
+        _m = _re.search(r"-(\d+)/", _p)
+        return int(_m.group(1)) if _m else 0
+    # utamakan chrome-headless-shell (bukan chrome penuh: full chrome dengan
+    # profil default memicu singleton "existing browser session" + tab hantu)
+    _cand = sorted(
+        _g.glob(os.path.expanduser(
+            "~/.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell")),
+        key=_rev)
+    if not _cand:
+        _cand = sorted(_g.glob(os.path.expanduser(
+            "~/.cache/ms-playwright/chromium-*/chrome-linux*/chrome")), key=_rev)
+    if _cand:
+        CHROME = _cand[-1]
 PORT = 9492
-APP = "http://127.0.0.1:9503/app/"
+APP = "http://127.0.0.1:9503/app/?mode=office"
 WS_TIMEOUT_S = 60
 
 PRESETS = ["iso", "front", "top", "l1", "l2", "l3"]

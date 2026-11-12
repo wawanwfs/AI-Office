@@ -7766,3 +7766,11 @@
 - Sisa penyelidikan (terdokumentasi): profil chromium segar (`--user-data-dir` baru) menggantung SEMUA fetch jaringan (REQ tanpa RESP, bahkan ke `python http.server` sendiri) — WORKAROUND: tetap pakai profil default yang sehat. Rediscovery: SW `workbox-precache` di profil default kadang menyajikan chunk basi; clear+reload di konteks halaman terbukti memulihkan (a=26, canvas=True) — tidak dijadikan jalur default probe karena reload memicu desync sesi CDP.
 - Bukti: `E2E_ERR_PROBE: OK` (agents=26, cam/renderer/controls=True, zone=5, wall=True, shot 698KB, piksel colors=10735 nonbg=0.992, console/pageerror kosong, hygiene 41 refs 0 missing); `SHOT .../shot3.png 709KB ALIVE`; build PWA exit 0; pytest 635 passed + 4 skipped; vitest 359 file 4107 passed + 6 skipped; dist → ~/wfs-hq; playwright probe: agents=26, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.
+
+## 12/11/2026 19:05 WIB — Siklus 468: audit_cam_presets kembali hidup — resolver browser + URL office
+
+- Audit pasca-467: `scripts/audit_cam_presets.py` FAIL keras — FileNotFoundError `chromium_headless_shell-1248` (revision tak terpasang; perbaikan resolver 467 hanya menyentuh e2e_err_probe/shot, skrip ini terlewat).
+- Refactor: resolver `_rev()` sama diterapkan di audit_cam_presets (headless-shell 1254 prioritas, full chrome fallback terakhir) + APP URL langsung `/app/?mode=office` (hindari bundle basi rute landing).
+- Bukti: audit 6/6 preset PASS (26 agen, 5 zona op [0..1], shot 1.0MB, errs=0 excs=0); e2e probe (pytest-venv) agents=26 errs=[]; build PWA exit 0; lint exit 0; pytest 635 passed + 4 skipped; dist → ~/wfs-hq.
+- Catatan: e2e_err.py via `uv run --with websocket-client` gagal (playwright tak ada di env uv) — jalankan via ~/pytest-venv/bin/python.
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.
