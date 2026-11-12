@@ -7695,3 +7695,12 @@
 - Bukti: pytest backend 339 passed + 3 skipped 0 fail (--ignore test_secret_scan: env uv tanpa modul scripts, pre-existing); backend_live 282 passed + 1 skipped + 4 subtests, 0 fail; vitest 359 file 4103 passed + 6 skipped (drift-gate hijau setelah apply --apply live==sumber 0308da96dacd, smoke 13/13); build PWA OK; dist → ~/wfs-hq.
 - Produksi :9503 — GET /app/ gzip 1395 B & raw 3842 B, /landing 200, token meta terinjeksi, /app/tidak-ada → 404. e2e probe: agents=26, cam=True, wall=True, init_failed=False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
+
+## 12/11/2026 12:40 WIB — Siklus 460: 4 helper proxy HEAD disatukan ke _head_proxy_helper
+
+- Audit pasca-459: pola loopback HEAD (http.client GET + send_response + CT/CL + 502) terduplikasi di EMPAT helper — _serve_head_admin (:3000), _serve_head_cs_widget (:3001), _serve_head_admin_api (:8000), _serve_head_gateway (:8787) — sisa terakhir pola drift 453/458.
+- Refactor: _head_proxy_helper(port, path, timeout, default_ct, cc, fwd_headers) = satu titik kirim; keempat cabang kini delegasi. Peningkatan kecil: 502 saat upstream mati kini dilindungi try (client-gone tak memicu traceback kedua) — paritas dgn cabang lain.
+- +1 test backend_live/test_head_proxy_unify_460.py (2 gate: nol HTTPConnection duplikat di zona helper, 4 delegasi; signature + 502 satu titik + tanpa Content-Encoding kontrak 443). Koreksi drift-gate JS (hq_server_drift: signature baru + gateway delegasi).
+- Bukti: pytest backend+backend_live 623 passed + 4 skipped + 4 subtests, 0 fail; vitest 359 file 4104 passed + 6 skipped (drift-gate hijau setelah apply --apply live==sumber f8ce4573b47d, smoke 13/13); build PWA OK; dist → ~/wfs-hq.
+- Produksi :9503 — HEAD /admin/ 200, /cs-widget/ 200, /wfs-api/tasks 200, /api/admin/* 404 (tanpa token, konsisten GET). e2e probe (?mode=office): agents=26, cam=True, wall=True, init_failed=False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.

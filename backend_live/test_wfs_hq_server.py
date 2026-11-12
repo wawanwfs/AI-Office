@@ -97,7 +97,7 @@ class FakeH:
         # SIKLUS 223: do_HEAD memanggil _serve_head_static pada instance.
         self._serve_head_static = lambda: H._serve_head_static(self)  # type: ignore[arg-type]
         # SIKLUS 224: do_HEAD memanggil helper proxy HEAD pada instance.
-        self._head_proxy_helper = lambda port, path, timeout=30: H._head_proxy_helper(self, port, path, timeout)  # type: ignore[arg-type]
+        self._head_proxy_helper = lambda port, path, timeout=30, default_ct="text/html", cc=None, fwd_headers=None: H._head_proxy_helper(self, port, path, timeout=timeout, default_ct=default_ct, cc=cc, fwd_headers=fwd_headers)  # type: ignore[arg-type]
         self._serve_head_admin = lambda: H._serve_head_admin(self)  # type: ignore[arg-type]
         self._serve_head_cs_widget = lambda: H._serve_head_cs_widget(self)  # type: ignore[arg-type]
         self._serve_head_admin_api = lambda: H._serve_head_admin_api(self)  # type: ignore[arg-type]

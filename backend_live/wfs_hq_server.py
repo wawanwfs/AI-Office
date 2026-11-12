@@ -846,30 +846,46 @@ class H(http.server.SimpleHTTPRequestHandler):
     # Strategi: rewrite HEAD → GET pada koneksi loopback upstream, lalu
     # buang body — konsisten dengan GET apa pun perilaku upstream (upstream
     # boleh saja tidak mendukung HEAD; :8000 bahkan menjawab 405 untuk HEAD).
-    def _head_proxy_helper(self, port, path, timeout=30):
-        """HEAD proxy loopback: GET ke upstream, kirim status+headers, tanpa body."""
+    def _head_proxy_helper(self, port, path, timeout=30, default_ct="text/html",
+                           cc=None, fwd_headers=None):
+        """SIKLUS 460: SATU titik HEAD proxy loopback (GET upstream, buang body).
+
+        Dulu empat helper (_serve_head_admin, _serve_head_cs_widget,
+        _serve_head_admin_api, _serve_head_gateway) masing-masing menduplikasi
+        pola http.client + send_response + CT/CL + 502 — pola drift 453/458.
+        Header hasil identik: status upstream, CT (default per cabang),
+        Cache-Control bila cc diisi, CL = payload GET (HEAD probe tanpa
+        Accept-Encoding → upstream tak menggzip, siklus 443); upstream mati →
+        502 tanpa body.
+        """
         import http.client
         try:
             conn = http.client.HTTPConnection("127.0.0.1", port, timeout=timeout)
-            conn.request("GET", path)
+            conn.request("GET", path, headers=fwd_headers or {})
             r = conn.getresponse()
             data = r.read()  # dibaca lalu dibuang — koneksi rapi ditutup
             conn.close()
             self.send_response(r.status)
             self.send_header("Content-Type",
-                             r.getheader("Content-Type", "text/html"))
-            self._wfs_cc = "no-store"  # GET proxy: tanpa CC eksplisit → no-store
+                             r.getheader("Content-Type", default_ct))
+            if cc:
+                # GET proxy mengirim Cache-Control: no-store via default
+                # end_headers — HEAD menegaskan eksplisit agar identik.
+                self._wfs_cc = cc
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
         except Exception:
-            self.send_response(502)
-            self.send_header("Content-Length", "0")
-            self.end_headers()
+            try:
+                self.send_response(502)
+                self.send_header("Content-Length", "0")
+                self.end_headers()
+            except Exception:
+                pass
 
     def _serve_head_admin(self):
         # Cerminkan cabang GET /admin(/) eksak (panel admin :3000, timeout=30).
         if self.path.split("?")[0] in ("/admin", "/admin/"):
-            self._head_proxy_helper(3000, "/")
+            self._head_proxy_helper(3000, "/", cc="no-store")
             return True
         return False
 
@@ -877,7 +893,7 @@ class H(http.server.SimpleHTTPRequestHandler):
         # Cerminkan cabang GET /cs-widget/* (widget :3001, timeout=30).
         if self.path.startswith("/cs-widget/"):
             sub = self.path[len("/cs-widget/"):] or ""
-            self._head_proxy_helper(3001, "/" + sub)
+            self._head_proxy_helper(3001, "/" + sub, cc="no-store")
             return True
         return False
 
@@ -888,35 +904,13 @@ class H(http.server.SimpleHTTPRequestHandler):
         # HEAD; status 401/403/200 konsisten dengan GET tetap tersampaikan.
         if not self.path.startswith("/api/admin/"):
             return False
-        import http.client
-        try:
-            fwd_headers = {"Content-Type": "application/json"}
-            auth = self.headers.get("Authorization")
-            if auth:
-                fwd_headers["Authorization"] = auth
-            conn = http.client.HTTPConnection("127.0.0.1", 8000, timeout=120)
-            conn.request("GET", self.path, headers=fwd_headers)
-            r = conn.getresponse()
-            data = r.read()
-            conn.close()
-            self.send_response(r.status)
-            self.send_header("Content-Type",
-                             r.getheader("Content-Type", "application/json"))
-            # GET _proxy_bantuin mengirim Cache-Control: no-store via default
-            # end_headers — HEAD menegaskan eksplisit agar identik.
-            self._wfs_cc = "no-store"
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-        except Exception:
-            try:
-                self.send_response(502)
-            except Exception:
-                pass
-            try:
-                self.send_header("Content-Length", "0")
-                self.end_headers()
-            except Exception:
-                pass
+        fwd_headers = {"Content-Type": "application/json"}
+        auth = self.headers.get("Authorization")
+        if auth:
+            fwd_headers["Authorization"] = auth
+        self._head_proxy_helper(8000, self.path, timeout=120,
+                                default_ct="application/json",
+                                cc="no-store", fwd_headers=fwd_headers)
         return True
 
     # SIKLUS 225: HEAD /api/* + /preview/* (api_service), /wfs-api/* (gateway
@@ -1004,25 +998,9 @@ class H(http.server.SimpleHTTPRequestHandler):
         if self.path.split("?")[0] == "/wfs-api/events":
             return False
         sub = self.path[len("/wfs-api/"):]
-        import http.client
-        try:
-            conn = http.client.HTTPConnection("127.0.0.1", 8787, timeout=120)
-            conn.request("GET", "/api/" + sub)
-            r = conn.getresponse()
-            data = r.read()  # dibaca lalu dibuang — koneksi rapi ditutup
-            conn.close()
-            self.send_response(r.status)
-            self.send_header("Content-Type",
-                             r.getheader("Content-Type", "application/json"))
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-        except Exception:
-            try:
-                self.send_response(502)
-                self.send_header("Content-Length", "0")
-                self.end_headers()
-            except Exception:
-                pass
+        # Siklus 460: kirim via _head_proxy_helper — satu titik loopback HEAD.
+        self._head_proxy_helper(8787, "/api/" + sub, timeout=120,
+                                default_ct="application/json")
         return True
 
     def _serve_head_project(self):

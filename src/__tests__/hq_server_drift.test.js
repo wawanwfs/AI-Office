@@ -125,8 +125,9 @@ describe('drift-gate server produksi wfs-hq (siklus 206)', () => {
       expect(head.indexOf(`self.${fn}()`)).toBeLessThan(head.indexOf('self._allowed_rel() is not None'))
     }
     // HEAD→GET rewrite loopback (upstream :8000 menjawab 405 untuk HEAD).
-    expect(s).toContain('def _head_proxy_helper(self, port, path, timeout=30)')
-    expect(s).toContain('conn.request("GET", path)')
+    // Siklus 460: empat cabang mendelegasi ke SATU titik _head_proxy_helper.
+    expect(s).toContain('def _head_proxy_helper(self, port, path, timeout=30,')
+    expect(s).toContain('conn.request("GET", path, headers=fwd_headers or {})')
   })
 
   it('SIKLUS 225: HEAD sisa jalur proxy (/api/*, /preview/*, /wfs-api/*, /wfs-project) mirror GET via replay; SSE dikecualikan', () => {
@@ -140,8 +141,9 @@ describe('drift-gate server produksi wfs-hq (siklus 206)', () => {
     // replay memanggil cabang GET asli (bukan duplikasi logika).
     expect(s).toContain('api_service.handle_api_request(self, "GET", self.path)')
     expect(s).toContain('project_api.handle_project(self)')
-    // HEAD→GET rewrite loopback untuk gateway (persis pola 224).
-    expect(s).toContain('conn.request("GET", "/api/" + sub)')
+    // HEAD→GET rewrite loopback untuk gateway — kini via _head_proxy_helper
+    // (satu titik, siklus 460); tidak ada lagi HTTPConnection duplikat di sini.
+    expect(s).toContain('self._head_proxy_helper(8787, "/api/" + sub, timeout=120,')
     // SSE streaming dikecualikan dari replay (GET tak berujung → kontrak 404).
     expect(s).toContain('if p == "/api/events":')
     expect(s).toContain('if self.path.split("?")[0] == "/wfs-api/events":')
