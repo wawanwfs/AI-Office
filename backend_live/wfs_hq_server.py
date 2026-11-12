@@ -839,7 +839,7 @@ class H(http.server.SimpleHTTPRequestHandler):
                 pass
 
     def _loopback_html_proxy(self, port, url_path, timeout=30):
-        """SIKLUS 462: SATU titik proxy HTML GET loopback (gzip + kontrak 228 + 502).
+        """SIKLUS 462 (disempurnakan 463): SATU titik proxy HTML GET loopback.
 
         Dulu cabang GET /admin(/) (panel :3000) dan /cs-widget/* (widget :3001)
         masing-masing menduplikasi pola http.client + gzip_html + no-store +
@@ -847,6 +847,14 @@ class H(http.server.SimpleHTTPRequestHandler):
         Header hasil identik: status & CT upstream, gzip bila klien terima,
         Cache-Control no-store via _wfs_cc (siklus 444), CL = payload; upstream
         mati → 502 tanpa body. Body via _wfs_write_or_client_gone (siklus 228).
+
+        SIKLUS 463 (paritas hardening dgn _loopback_json_proxy 461):
+        - Kontrak 228 menutup SELURUH proses (termasuk 502 & end_headers),
+          bukan hanya tulis body — satu blok try/except ClientGone.
+        - ETag & Last-Modified upstream diteruskan bila ada (dulu dibuang —
+          revalidasi browser untuk /admin & /cs-widget tak pernah efektif).
+        - Set-Cookie upstream diteruskan (dulu dibuang — sesi panel admin
+          yang menempel via cookie loopback hilang).
         """
         import http.client
         try:
@@ -864,14 +872,23 @@ class H(http.server.SimpleHTTPRequestHandler):
             if gz:
                 self.send_header("Content-Encoding", "gzip")
                 self.send_header("Vary", "Accept-Encoding")
+            for _hn in ("ETag", "Last-Modified", "Set-Cookie"):
+                _hv = r.getheader(_hn)
+                if _hv:
+                    self.send_header(_hn, _hv)
             self.send_header("Content-Length", str(len(data)))
             self.end_headers()
             _wfs_write_or_client_gone(self, data)  # SIKLUS 228
+        except (BrokenPipeError, ConnectionResetError):
+            raise  # SIKLUS 463: klien pergi → kontrak 228 (senyap, level server)
         except Exception:
             try:
                 self.send_response(502)
                 self.send_header("Content-Length", "0")
                 self.end_headers()
+                _wfs_write_or_client_gone(self, b"")
+            except (BrokenPipeError, ConnectionResetError):
+                raise
             except Exception:
                 pass
 

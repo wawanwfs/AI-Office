@@ -16,7 +16,7 @@ class TestCsWidgetGzip443(unittest.TestCase):
         # Siklus 462: cabang GET /cs-widget/ kini delegasi ke _loopback_html_proxy;
         # gate gzip ditujukan ke helper HTML (mencakup /admin & /cs-widget).
         i = src.index("def _loopback_html_proxy")
-        return src[i:i + 1800]
+        return src[i:i + 2400]
 
     def test_get_branch_gzips_upstream_payload(self):
         branch = self._branch_source()

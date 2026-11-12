@@ -7722,3 +7722,12 @@
 - Bukti: pytest backend+backend_live 624 passed + 4 skipped + 4 subtests, 0 fail (test_secret_scan di-skip: env uv tanpa modul scripts, pre-existing); vitest 359 file 4104 passed + 6 skipped (drift-gate hijau setelah apply --apply live==sumber 8387ffd10574, smoke 13/13); build PWA exit 0; dist → ~/wfs-hq.
 - Produksi :9503 — deploy ulang via apply (backup server.py.bak-1794461691). e2e probe (?mode=office): agents=26, cam=True, wall=True, init_failed=False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
+
+## 12/11/2026 14:16 WIB — Siklus 463: _loopback_html_proxy diparalelkan dgn hardening _loopback_json_proxy
+
+- Audit pasca-462: helper HTML baru masih lebih lemah dari padanan JSON 461 dalam 3 hal — (a) kontrak 228 hanya menutup tulis body (BrokenPipe saat send_response/end_headers/502 masih bisa jadi traceback kedua), (b) ETag/Last-Modified upstream dibuang (revalidasi browser /admin & /cs-widget tak pernah efektif), (c) Set-Cookie upstream dibuang (sesi panel admin berbasis cookie loopback hilang).
+- Refactor: except (BrokenPipeError, ConnectionResetError): raise di DUA titik (alur utama + jalur 502); tulis body & body 502 tetap via _wfs_write_or_client_gone (228); forward ETag/Last-Modified/Set-Cookie bila upstream mengirim (getheader guard).
+- +1 test backend_live/test_loopback_html_hardening_463.py (3 gate: kontrak 228 dua titik + tanpa wfile.write telanjang; forward validator/cookie; gzip + no-store tak berubah). Koreksi: gate 443 slice 1800→2400 (helper memanjang); gate 228 count self 4→5 (502 kini lewat helper).
+- Bukti: pytest backend+backend_live 629 passed + 4 skipped + 4 subtests, 0 fail (venv ~/pytest-venv; uv env pre-existing miss cryptography/scripts); vitest 359 file 4105 passed + 6 skipped (drift-gate hijau setelah apply --apply live==sumber 23adba6556a3, smoke 13/13); build PWA exit 0; dist → ~/wfs-hq.
+- Produksi :9503 — GET /admin/ 200, GET /cs-widget/ 200. e2e probe (?mode=office): agents=26, cam=True, wall=True, init_failed=False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
