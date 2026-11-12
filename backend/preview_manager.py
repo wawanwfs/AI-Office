@@ -19,7 +19,8 @@ from preview_authority import SignedPreviewAuthority
 from preview_snapshot import ReviewedPreviewSnapshot
 from preview_sealed_runtime import (
     SealedRuntimeCompose, build_local_reviewed_image,
-    derive_image_only_compose, verify_local_image_exists,
+    derive_image_only_compose, ensure_approved_runtime_images,
+    verify_local_image_exists,
 )
 
 
@@ -283,6 +284,7 @@ class TemplatePreviewManager:
         # abort if ANY source changed during the copy.
         self.snapshots.stage(project_id)
         if self.sealed_runtime:
+            ensure_approved_runtime_images(self.snapshots)
             # BuildKit sees ONLY kernel-sealed, pre-reviewed tar stdin.
             # The engine local sha256 image ID is persisted in the
             # operator-owned registry before any Compose startup attempt.
