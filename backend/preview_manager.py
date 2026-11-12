@@ -17,6 +17,10 @@ from project_rbac import ident
 from preview_admission import ReviewedPreviewAdmission, AdmissionDenied
 from preview_authority import SignedPreviewAuthority
 from preview_snapshot import ReviewedPreviewSnapshot
+from preview_sealed_runtime import (
+    SealedRuntimeCompose, build_local_reviewed_image,
+    derive_image_only_compose, verify_local_image_exists,
+)
 
 
 class PreviewDenied(PermissionError):
@@ -26,7 +30,7 @@ class PreviewDenied(PermissionError):
 class TemplatePreviewManager:
     def __init__(self, registry_path, template_path, *, enabled=False,
                  runner=None, docker="docker", reviewed_files=None,
-                 reviewer_authority=None):
+                 reviewer_authority=None, sealed_runtime=None):
         if not enabled:
             raise PreviewDenied("operator approval required for Docker preview")
         template=Path(template_path).absolute()
@@ -49,6 +53,14 @@ class TemplatePreviewManager:
         if not self.registry.parent.is_dir() or self.registry.is_symlink():
             raise PreviewDenied("private registry parent is not provisioned")
         self.docker=docker
+        # A real operator (default subprocess runner) MUST use the Linux
+        # kernel-sealed image-only lifecycle. Injected test runners keep
+        # legacy fixture behavior unless they explicitly enable the
+        # hardened real Docker pathway (as the operator CI does).
+        if sealed_runtime is False and runner is None:
+            raise AdmissionDenied("real Docker operator cannot disable sealed runtime")
+        self.sealed_runtime = (runner is None if sealed_runtime is None
+                               else sealed_runtime is True)
         self.runner=runner or subprocess.run
         self.snapshots=ReviewedPreviewSnapshot(
             template.parent, self.registry.parent, self.reviewed_manifest)
@@ -67,6 +79,13 @@ class TemplatePreviewManager:
                   policy_sha256 TEXT NOT NULL
                 );
             """)
+            # Append-only additive migration for legacy disposable registry:
+            # prior rows have no pinned image and cannot be run in sealed
+            # mode until an authorized fresh start builds one.
+            columns = {row["name"] for row in
+                       db.execute("PRAGMA table_info(wfs_preview_instances)")}
+            if "api_image_id" not in columns:
+                db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN api_image_id TEXT")
         self._enforce_epoch(self.authority.verify(self.reviewed_manifest))
 
     def _enforce_epoch(self, decision):
@@ -140,7 +159,8 @@ class TemplatePreviewManager:
             else:
                 name=self._compose_name(project_id)
                 try:
-                    db.execute("""INSERT INTO wfs_preview_instances VALUES(?,?,?,?)""",
+                    db.execute("""INSERT INTO wfs_preview_instances
+                               (project_id,port,phase,compose_name) VALUES(?,?,?,?)""",
                                (project_id,port,"reserved",name))
                 except sqlite3.IntegrityError as exc:
                     raise PreviewDenied("port already allocated to another project") from exc
@@ -209,16 +229,46 @@ class TemplatePreviewManager:
         env.update({"WFS_PREVIEW_PROJECT_NAME":record["compose_name"],
                     "WFS_PREVIEW_HOST_PORT":str(record["port"]),
                     "WFS_PREVIEW_TEST_TOKEN":token})
-        # Compose's relative build context and bind mounts resolve under the
-        # private, reviewed snapshot. Never point Docker at mutable checkout.
+        # Signed original snapshot always checked BEFORE derivation.
         staged_compose=self.snapshots.verify(record["project_id"])
-        argv=[self.docker,"compose","-f",str(staged_compose),*args]
-        try:
-            result=self.runner(argv,env=env,capture_output=True,text=True,
-                               timeout=timeout,check=False)
-        except (subprocess.TimeoutExpired,OSError) as exc:
-            self._phase(record["project_id"],"uncertain")
-            raise PreviewDenied("Docker outcome uncertain; inspect before retry") from exc
+        if self.sealed_runtime:
+            image_id=record.get("api_image_id")
+            verify_local_image_exists(image_id)
+            # Never permit rebuilding from a mutable Compose path. The only
+            # supported start action uses a pinned, prebuilt local image ID.
+            if args and args[0]=="up" and args!=[
+                    "up","-d","--no-build","--pull","never"]:
+                raise AdmissionDenied("sealed runtime forbids Compose source builds")
+            if any(part in ("--build","build","--pull=always","--force-recreate")
+                   for part in args):
+                raise AdmissionDenied("sealed runtime forbids source build flags")
+            raw=derive_image_only_compose(
+                self.snapshots,record["project_id"],image_id)
+            with SealedRuntimeCompose(raw) as compose:
+                # Compose -f - reads its complete config from kernel-sealed
+                # stdin, not a same-UID mutable source path. Relative bind
+                # mounts are resolved from the reviewed snapshot's cwd.
+                argv=[self.docker,"compose","-f","-",*args]
+                try:
+                    with compose.open_reader() as reader:
+                        result=self.runner(
+                            argv,stdin=reader,cwd=str(staged_compose.parent),
+                            env=env,capture_output=True,text=True,
+                            timeout=timeout,check=False)
+                    compose.verify()
+                except (subprocess.TimeoutExpired,OSError) as exc:
+                    self._phase(record["project_id"],"uncertain")
+                    raise PreviewDenied("sealed Compose outcome uncertain") from exc
+        else:
+            # LEGACY injected unit-test runner only. No ordinary operator
+            # running the real subprocess can select this fallback.
+            argv=[self.docker,"compose","-f",str(staged_compose),*args]
+            try:
+                result=self.runner(argv,env=env,capture_output=True,text=True,
+                                   timeout=timeout,check=False)
+            except (subprocess.TimeoutExpired,OSError) as exc:
+                self._phase(record["project_id"],"uncertain")
+                raise PreviewDenied("Docker outcome uncertain; inspect before retry") from exc
         if result.returncode!=0:
             self._phase(record["project_id"],"uncertain")
             raise PreviewDenied("Docker command failed; reconciliation required")
@@ -232,7 +282,20 @@ class TemplatePreviewManager:
         # Copies only previously approved bytes into a project-scoped directory;
         # abort if ANY source changed during the copy.
         self.snapshots.stage(project_id)
-        self._invoke(record,token,["up","-d","--build"],timeout=240)
+        if self.sealed_runtime:
+            # BuildKit sees ONLY kernel-sealed, pre-reviewed tar stdin.
+            # The engine local sha256 image ID is persisted in the
+            # operator-owned registry before any Compose startup attempt.
+            image=build_local_reviewed_image(self.snapshots,project_id)
+            with closing(self._db()) as db:
+                db.execute("UPDATE wfs_preview_instances SET api_image_id=? "
+                           "WHERE project_id=? AND phase='uncertain'",
+                           (image["image_id"],project_id))
+            record=self.status(project_id)
+            self._invoke(record,token,
+                         ["up","-d","--no-build","--pull","never"],timeout=240)
+        else:
+            self._invoke(record,token,["up","-d","--build"],timeout=240)
         self._phase(project_id,"running")
         return self.status(project_id)
 
