@@ -73,6 +73,53 @@ def _wfs_write_or_client_gone(handler, data):
         raise ClientGone() from None
 
 
+def _loopback_json_proxy(handler, port, path, method=None, body=b""):
+    """SIKLUS 461: SATU titik proxy JSON loopback (GET/POST/DELETE).
+
+    Dua cabang proxy (_proxy → gateway :8787, _proxy_bantuin →
+    :8000) menduplikasi pola kirim respons + kontrak 228 +
+    502 — sisa pola drift 453/458/459/460. Kini keduanya delegasi ke sini.
+
+    Kontrak: header hardening 2026-10-28 (parse toleran + cap 5MB → 413,
+    dulu int() telanjang + read(ln) tanpa batas), Content-Type json,
+    Authorization diteruskan bila ada, respons via _wfs_write_or_client_gone
+    (228), upstream mati → 502 tanpa body.
+    """
+    import http.client
+    try:
+        ln = _parse_content_length(handler.headers.get("Content-Length", 0))
+        if ln > MAX_PROXY_BODY:
+            _reject_oversize(handler)
+            return
+        body = handler.rfile.read(ln) if ln else b""
+        fwd_headers = {"Content-Type": "application/json"}
+        auth = handler.headers.get("Authorization")
+        if auth:
+            fwd_headers["Authorization"] = auth
+        conn = http.client.HTTPConnection("127.0.0.1", port, timeout=120)
+        conn.request(method or handler.command, path,
+                     body=body if body else None, headers=fwd_headers)
+        r = conn.getresponse()
+        data = r.read()
+        conn.close()
+        handler.send_response(r.status)
+        handler.send_header("Content-Type",
+                            r.getheader("Content-Type", "application/json"))
+        handler.send_header("Content-Length", str(len(data)))
+        handler.end_headers()
+        _wfs_write_or_client_gone(handler, data)  # SIKLUS 228
+    except Exception:
+        try:
+            handler.send_response(502)
+        except Exception:
+            pass
+        try:
+            handler.send_header("Content-Length", "0")
+            handler.end_headers()
+        except Exception:
+            pass
+
+
 def _hq_handle_error(request, client_address, exc_info=None):
     """socketserver.handle_error: benteng terakhir thread handler.
 
@@ -494,42 +541,21 @@ class H(http.server.SimpleHTTPRequestHandler):
         # sbg POST + override ini → gateway :8787 tetap menerima PATCH eksak
         # (mis. persist pindah kolom kanban /api/tasks/{id}/status).
         override = (self.headers.get("X-HTTP-Method-Override") or "").strip().upper()
-        url = GATEWAY + path
-        body = None
-        if self.command == "POST":
-            # Semua POST ke gateway wajib token UI (same-origin, diinject ke index.html)
-            if self.headers.get("X-WFS-Token") != UI_TOKEN:
-                _reply_json(self, 401, {"error": "unauthorized"})
-                return
-            # Hardening 2026-10-28: parse toleran (malformed → 0) + cap 5MB → 413
-            # tanpa membaca body ke RAM (dulu int() telanjang + read(ln) bebas).
-            ln = _parse_content_length(self.headers.get("Content-Length", 0))
-            if ln > MAX_PROXY_BODY:
-                _reject_oversize(self)
-                return
-            body = self.rfile.read(ln) if ln else b"{}"
-        req = urllib.request.Request(url, data=body, method=override or self.command)
-        req.add_header("Content-Type", "application/json")
-        try:
-            with urllib.request.urlopen(req, timeout=120) as r:
-                data = r.read()
-                self.send_response(r.status)
-                self.send_header("Content-Type", "application/json")
-                self.send_header("Content-Length", str(len(data)))
-                self.end_headers()
-                _wfs_write_or_client_gone(self, data)  # SIKLUS 228
-        except urllib.error.HTTPError as e:
-            data = e.read()
-            self.send_response(e.code)
-            self.send_header("Content-Type", "application/json")
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-            _wfs_write_or_client_gone(self, data)  # SIKLUS 228
-        except Exception as e:
-            _reply_json(self, 502, {"error": str(e)})
+        # Semua POST ke gateway wajib token UI (same-origin, diinject ke index.html)
+        if self.command == "POST" and self.headers.get("X-WFS-Token") != UI_TOKEN:
+            return _reply_json(self, 401, {"error": "unauthorized"})
+        # SIKLUS 461: kirim via _loopback_json_proxy — satu titik loopback
+        # JSON bersama _proxy_bantuin (hardening cap 5MB + kontrak 228 pindah
+        # ke situ). Override dipertahankan: method eksak diteruskan. Port &
+        # prefiks path diambil dari GATEWAY (test menyuntikkan stub-nya).
+        from urllib.parse import urlsplit
+        u = urlsplit(GATEWAY)
+        return _loopback_json_proxy(
+            self, u.port or 80, (u.path or "/api/") + path,
+            method=override or self.command)
 
     def _proxy_bantuin(self):
-        """Proxy /api/admin/* → backend saas-dibantuin :8000.
+        """Proxy /api/admin/* + /api/auth/login → backend saas-dibantuin :8000.
 
         SIKLUS 161: GET & DELETE ikut diproxy (dulu hanya POST — admin panel
         memanggil GET /api/admin/stats, tenants, conversations, knowledge via
@@ -542,41 +568,12 @@ class H(http.server.SimpleHTTPRequestHandler):
         sehingga tidak ada klien lintas origin yang bergantung pada ACAO dari
         proxy ini. ACAO * pada respons auth/admin hanya memperluas permukaan
         baca lintas-origin bagi halaman arbitrer — tanpa manfaat apa pun.
+
+        SIKLUS 461: kirim via _loopback_json_proxy — satu titik loopback JSON
+        (header hardening 2026-10-28 + kontrak 228 pindah ke situ).
         """
-        import http.client
-        try:
-            # Hardening 2026-10-28: parse toleran + cap 5MB (sama dgn _proxy) —
-            # dulu int() telanjang + read(ln) tanpa batas juga di jalur ini.
-            ln = _parse_content_length(self.headers.get("Content-Length", 0))
-            if ln > MAX_PROXY_BODY:
-                _reject_oversize(self)
-                return
-            body = self.rfile.read(ln) if ln else None
-            fwd_headers = {"Content-Type": "application/json"}
-            auth = self.headers.get("Authorization")
-            if auth:
-                fwd_headers["Authorization"] = auth
-            conn = http.client.HTTPConnection("127.0.0.1", 8000, timeout=120)
-            conn.request(self.command, self.path, body=body,
-                         headers=fwd_headers)
-            r = conn.getresponse()
-            data = r.read()
-            self.send_response(r.status)
-            self.send_header("Content-Type", r.getheader("Content-Type", "application/json"))
-            self.send_header("Content-Length", str(len(data)))
-            self.end_headers()
-            _wfs_write_or_client_gone(self, data)  # SIKLUS 228
-            conn.close()
-        except Exception:
-            try:
-                self.send_response(502)
-            except Exception:
-                pass
-            try:
-                self.send_header("Content-Length", "0")
-                self.end_headers()
-            except Exception:
-                pass
+        return _loopback_json_proxy(self, 8000, self.path,
+                                    method=self.command)
 
     def do_PATCH(self):
         return _reply_405(self)

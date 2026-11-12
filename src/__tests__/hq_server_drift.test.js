@@ -52,12 +52,14 @@ describe('drift-gate server produksi wfs-hq (siklus 206)', () => {
     const s = readFileSync(SRC, 'utf-8')
     expect(s).toContain('_parse_content_length')
     expect(s).toContain('MAX_PROXY_BODY = 5 * 1024 * 1024')
-    // kedua jalur POST (gateway + bantuin) wajib lewat guard yang sama
-    const proxy = s.slice(s.indexOf('def _proxy('), s.indexOf('def _proxy_bantuin('))
-    const bantuin = s.slice(s.indexOf('def _proxy_bantuin('), s.indexOf('def do_POST('))
-    for (const seg of [proxy, bantuin]) {
-      expect(seg).toContain('_parse_content_length(self.headers.get("Content-Length", 0))')
-      expect(seg).toContain('if ln > MAX_PROXY_BODY:')
+    // kedua jalur POST (gateway + bantuin) kini lewat _loopback_json_proxy
+    // (SIKLUS 461) yang memuat guard yang sama — satu titik, tanpa duplikasi.
+    const helper = s.slice(s.indexOf('def _loopback_json_proxy('), s.indexOf('def _hq_handle_error('))
+    expect(helper).toContain('_parse_content_length(handler.headers.get("Content-Length", 0))')
+    expect(helper).toContain('if ln > MAX_PROXY_BODY:')
+    for (const fn of ['_proxy(', '_proxy_bantuin(']) {
+      expect(s.slice(s.indexOf('def ' + fn), s.indexOf('def ' + fn) + 1200))
+        .toContain('_loopback_json_proxy(')
     }
     // tidak ada lagi int() telanjang pada Content-Length di file server
     expect(s.replace(/\n#.*/g, '')).not.toMatch(/int\(self\.headers\.get\("Content-Length"/)

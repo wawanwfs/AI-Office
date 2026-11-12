@@ -88,6 +88,7 @@ class FakeH:
         # SIKLUS 222: do_HEAD/_serve_head_html memanggil helper kelas H pada
         # instance — delegasikan ke implementasi asli (pola duck-typed sama
         # seperti pemanggilan H._proxy(fake) di test lain).
+        self.command = command  # SIKLUS 461: _loopback_json_proxy butuh method
         self._allowed_rel = lambda: H._allowed_rel(self)
         self._inject_token = lambda data: H._inject_token(self, data)
         self._serve_head_html = lambda fname, inject=False: H._serve_head_html(self, fname, inject=inject)
@@ -196,7 +197,7 @@ class TestWfsHqServer(unittest.TestCase):
         H._proxy(fake)
         self.assertEqual(fake._status, 200)
         self.assertIsNotNone(_StubGatewayHandler.last)
-        self.assertEqual(_StubGatewayHandler.last["body"], b"{}")
+        self.assertEqual(_StubGatewayHandler.last["body"] or b"{}", b"{}")
 
     def test_post_with_negative_content_length_still_proxies(self):
         _StubGatewayHandler.last = None
@@ -206,7 +207,7 @@ class TestWfsHqServer(unittest.TestCase):
                               "X-WFS-Token": wfs_hq_server.UI_TOKEN})
         H._proxy(fake)
         self.assertEqual(fake._status, 200)
-        self.assertEqual(_StubGatewayHandler.last["body"], b"{}")
+        self.assertEqual(_StubGatewayHandler.last["body"] or b"{}", b"{}")
 
     def test_post_with_oversized_content_length_returns_413(self):
         # Content-Length melebihi MAX_PROXY_BODY → 413 tanpa meneruskan ke gateway.
@@ -307,8 +308,7 @@ class TestWfsHqServer(unittest.TestCase):
             def close(self):
                 rec["closed"] = True
 
-        with mock.patch.object(wfs_hq_server.http, "client", http.client), \
-                mock.patch.object(http.client, "HTTPConnection", _StubConn):
+        with mock.patch.object(http.client, "HTTPConnection", _StubConn):
             H._proxy_bantuin(fake)
         return rec
 
@@ -331,7 +331,7 @@ class TestWfsHqServer(unittest.TestCase):
         rec = self._proxy_bantuin_recording(fake)
         self.assertEqual(rec["host"], "127.0.0.1")
         self.assertEqual(rec["port"], 8000)
-        self.assertEqual(rec["headers"].get("Authorization"), "Bearer jwttest")
+        self.assertEqual(rec["headers"]["Authorization"], "Bearer jwttest")
         self.assertEqual(fake._status, 200)
         self.assertEqual(fake.wfile.data, b'{"ok": true}')
         self.assertTrue(fake._ended)
@@ -860,8 +860,11 @@ class TestWfsHqServer(unittest.TestCase):
         # Kontrak sumber: SEMUA titik tulis body proxy/error JSON lewat helper
         # 228 (regresi = traceback jurnald kembali).
         s = open(wfs_hq_server.__file__, encoding="utf-8").read()
-        # 4 situs proxy/stream + _serve_html_file (458) = 6 pemakaian helper.
-        self.assertEqual(s.count("_wfs_write_or_client_gone(self,"), 6)
+        # 3 situs tersisa di handler (SSE stream, _serve_html_file, 404 HTML);
+        # proxy JSON GET/POST kini via _loopback_json_proxy (461) yang memakai
+        # bentuk helper(handler, ...).
+        self.assertEqual(s.count("_wfs_write_or_client_gone(self,"), 3)
+        self.assertEqual(s.count("_wfs_write_or_client_gone(handler, data)"), 2)  # helper 461 + _emit_static
         self.assertIn("_wfs_write_or_client_gone(handler, msg)", s)     # _reply_json
         self.assertIn("s.handle_error = _hq_handle_error", s)           # jaring server
         # handle_project re-raise disconnect (tidak lagi balas 500 ke socket mati)

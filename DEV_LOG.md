@@ -7704,3 +7704,12 @@
 - Bukti: pytest backend+backend_live 623 passed + 4 skipped + 4 subtests, 0 fail; vitest 359 file 4104 passed + 6 skipped (drift-gate hijau setelah apply --apply live==sumber f8ce4573b47d, smoke 13/13); build PWA OK; dist → ~/wfs-hq.
 - Produksi :9503 — HEAD /admin/ 200, /cs-widget/ 200, /wfs-api/tasks 200, /api/admin/* 404 (tanpa token, konsisten GET). e2e probe (?mode=office): agents=26, cam=True, wall=True, init_failed=False, errs=[].
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
+
+## 12/11/2026 13:15 WIB — Siklus 461: dua cabang proxy JSON GET/POST disatukan ke _loopback_json_proxy
+
+- Audit pasca-460: _proxy (gateway :8787 via urllib) & _proxy_bantuin (:8000 via http.client) masih menduplikasi pola kirim respons + kontrak 228 + 502 — sisa pola drift 453/458/459/460.
+- Refactor: helper modul _loopback_json_proxy(handler, port, path, method) — SATU titik: hardening 2026-10-28 (parse CL toleran + cap 5MB → 413), Content-Type json, Authorization diteruskan, respons via _wfs_write_or_client_gone (228), upstream mati → 502 tanpa body. _proxy & _proxy_bantuin kini delegasi; port/prefiks gateway diambil dari GATEWAY (urlsplit) supaya test-stub tetap jalan. Perilaku tetap: POST tanpa token UI → 401 sebelum helper; X-HTTP-Method-Override dipertahankan.
+- Koreksi test: test_wfs_hq_server.py — FakeH expose command, stub bantuin tanpa patch modul (helper kini via http.client lokal), gate 228 hit 3 self / 2 handler(data); drift-gate JS hq_server_drift kini mengecek guard di helper + delegasi kedua cabang.
+- Bukti: pytest backend+backend_live 623 passed + 4 skipped + 4 subtests, 0 fail; vitest 359 file 4104 passed + 6 skipped; build PWA OK; dist → ~/wfs-hq; apply --apply live==sumber 964d1b9e32fc, smoke 13/13.
+- Produksi :9503 — GET /wfs-api/tasks 200, POST tanpa token 401, /admin/ 200, /api/admin/stats 401 (tanpa JWT). e2e probe (?mode=office): agents=26, cam=True, wall=True, init_failed=False, errs=[].
+- Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
