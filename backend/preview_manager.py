@@ -19,6 +19,7 @@ from preview_authority import SignedPreviewAuthority
 from preview_snapshot import ReviewedPreviewSnapshot
 from preview_sealed_runtime import (
     SealedRuntimeCompose, build_local_reviewed_image,
+    build_local_reviewed_ingress_image,
     derive_image_only_compose, ensure_approved_runtime_images,
     verify_local_image_exists,
 )
@@ -87,6 +88,8 @@ class TemplatePreviewManager:
                        db.execute("PRAGMA table_info(wfs_preview_instances)")}
             if "api_image_id" not in columns:
                 db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN api_image_id TEXT")
+            if "ingress_image_id" not in columns:
+                db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN ingress_image_id TEXT")
         self._enforce_epoch(self.authority.verify(self.reviewed_manifest))
 
     def _enforce_epoch(self, decision):
@@ -235,6 +238,8 @@ class TemplatePreviewManager:
         if self.sealed_runtime:
             image_id=record.get("api_image_id")
             verify_local_image_exists(image_id)
+            ingress_image_id = record.get("ingress_image_id")
+            verify_local_image_exists(ingress_image_id)
             # Never permit rebuilding from a mutable Compose path. The only
             # supported start action uses a pinned, prebuilt local image ID.
             if args and args[0]=="up" and args!=[
@@ -244,7 +249,8 @@ class TemplatePreviewManager:
                    for part in args):
                 raise AdmissionDenied("sealed runtime forbids source build flags")
             raw=derive_image_only_compose(
-                self.snapshots,record["project_id"],image_id)
+                self.snapshots,record["project_id"],image_id,
+                ingress_image_id=ingress_image_id)
             with SealedRuntimeCompose(raw) as compose:
                 # Compose -f - reads its complete config from kernel-sealed
                 # stdin, not a same-UID mutable source path. Relative bind
@@ -289,10 +295,13 @@ class TemplatePreviewManager:
             # The engine local sha256 image ID is persisted in the
             # operator-owned registry before any Compose startup attempt.
             image=build_local_reviewed_image(self.snapshots,project_id)
+            ingress=build_local_reviewed_ingress_image(self.snapshots,project_id)
             with closing(self._db()) as db:
-                db.execute("UPDATE wfs_preview_instances SET api_image_id=? "
-                           "WHERE project_id=? AND phase='uncertain'",
-                           (image["image_id"],project_id))
+                db.execute(
+                    "UPDATE wfs_preview_instances "
+                    "SET api_image_id=?,ingress_image_id=? "
+                    "WHERE project_id=? AND phase='uncertain'",
+                    (image["image_id"],ingress["image_id"],project_id))
             record=self.status(project_id)
             self._invoke(record,token,
                          ["up","-d","--no-build","--pull","never"],timeout=240)
