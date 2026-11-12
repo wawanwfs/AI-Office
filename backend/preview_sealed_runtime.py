@@ -165,3 +165,32 @@ def verify_local_image_exists(image_id):
     if result.returncode or result.stdout.strip() != image_id:
         raise AdmissionDenied("pinned image has disappeared or changed")
     return True
+
+
+
+def ensure_approved_runtime_images(snapshots):
+    """Fetch ONLY immutable sha256 digest-pinned db/ingress references.
+
+    This explicitly exposes the CI's remaining registry/network dependency;
+    it is NOT a fully offline dependency cache or independent OCI signature.
+    Pull never occurs during the operator's Compose up command itself.
+    """
+    approved = snapshots.reviewed["images"]
+    for service in ("db", "ingress"):
+        ref = approved[service]
+        if not isinstance(ref, str) or "@sha256:" not in ref:
+            raise AdmissionDenied("approved runtime image digest required")
+        try:
+            found = subprocess.run(
+                ["docker", "image", "inspect", ref],
+                capture_output=True, env=_docker_env(),
+                timeout=20, check=False)
+            if found.returncode:
+                pulled = subprocess.run(
+                    ["docker", "pull", ref],
+                    capture_output=True, env=_docker_env(),
+                    timeout=180, check=False)
+                if pulled.returncode:
+                    raise AdmissionDenied("approved immutable runtime image unavailable")
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            raise AdmissionDenied("approved runtime image fetch unavailable") from exc
