@@ -30,8 +30,22 @@ _spec_png.loader.exec_module(png_stats_mod)
 
 CHROME = os.path.expanduser(
     "~/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell")
+if not os.path.exists(CHROME):  # siklus 467: revision 1248 tak terpasang
+    import glob as _g, re as _re
+    def _rev(_p):
+        _m = _re.search(r"-(\d+)/", _p)
+        return int(_m.group(1)) if _m else 0
+    # utamakan chrome-headless-shell (full chrome + profil default memicu
+    # singleton "existing browser session" — remote-debugging-port diabaikan)
+    _c = sorted(_g.glob(os.path.expanduser(
+        "~/.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell")),
+        key=_rev)
+    if not _c:
+        _c = sorted(_g.glob(os.path.expanduser(
+            "~/.cache/ms-playwright/chromium-*/chrome-linux*/chrome")), key=_rev)
+    if _c: CHROME = _c[-1]
 PORT = 9462
-URL = "http://127.0.0.1:9503/"
+URL = "http://127.0.0.1:9503/app/?mode=office"  # siklus 467: office langsung
 # Mode mobile (siklus 187, paritas e2e_err_probe.py): viewport HP 390x844 dsf=2
 # diterapkan SEBELUM init scene via Emulation.setDeviceMetricsOverride + reload.
 MOBILE_W, MOBILE_H, MOBILE_DSF = 390, 844, 2

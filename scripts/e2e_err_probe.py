@@ -42,8 +42,25 @@ _spec_deploy.loader.exec_module(deploy_mod)
 
 CHROME = os.path.expanduser(
     "~/.cache/ms-playwright/chromium_headless_shell-1248/chrome-headless-shell-linux64/chrome-headless-shell")
+if not os.path.exists(CHROME):  # siklus 467: revision 1248 tak terpasang
+    import glob as _g, re as _re
+
+    def _rev(_p):
+        _m = _re.search(r"-(\d+)/", _p)
+        return int(_m.group(1)) if _m else 0
+    # utamakan chrome-headless-shell (bukan chrome penuh: full chrome dengan
+    # profil default memicu singleton "existing browser session" + tab hantu)
+    _cand = sorted(
+        _g.glob(os.path.expanduser(
+            "~/.cache/ms-playwright/chromium_headless_shell-*/chrome-headless-shell-linux64/chrome-headless-shell")),
+        key=_rev)
+    if not _cand:
+        _cand = sorted(_g.glob(os.path.expanduser(
+            "~/.cache/ms-playwright/chromium-*/chrome-linux*/chrome")), key=_rev)
+    if _cand:
+        CHROME = _cand[-1]
 PORT = 9461
-URL = "http://127.0.0.1:9503/"
+URL = "http://127.0.0.1:9503/app/?mode=office"  # siklus 467: office langsung via argv — rute landing→assign memicu bundle basi
 
 # Ambang "scene hidup": PNG > ambang. Desktop 1366x768 terukur 640-690 KB
 # saat sehat; mobile 390x844@2x (780x1688) diukur siklus 186 — dilihat
@@ -173,16 +190,25 @@ def main():
         xv = subprocess.Popen(["Xvfb", ":99", "-screen", "0", "1366x768x24"],
                               stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         time.sleep(1)
-    p = subprocess.Popen([CHROME, "--no-sandbox", f"--remote-debugging-port={PORT}",
+    # Siklus 467: tanpa --user-data-dir segar — profil segar menggantung semua
+    # fetch (REQ tanpa RESP); profil default sehat. Chunk scene basi dari
+    # cache/SW lama ditangani blok "clear + reload" di bawah (terbukti:
+    # sesudahnya a=26, canvas=True, pageerror kosong).
+    p = subprocess.Popen([CHROME, "--no-sandbox",
+                          f"--remote-debugging-port={PORT}",
                           "--enable-unsafe-swiftshader", f"--window-size={w},{h}",
                           "--disable-dev-shm-usage", URL],
-                         env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                         env=env, stdout=open("/tmp/eep_chrome.log","w"), stderr=subprocess.STDOUT)
     res = {"mode": "mobile" if mobile else "desktop",
            "console_errors": [], "page_errors": [], "init_failed": False}
     try:
         time.sleep(2)
         tabs = json.loads(urllib.request.urlopen(f"http://127.0.0.1:{PORT}/json/list", timeout=5).read())
-        ws = WS([t["webSocketDebuggerUrl"] for t in tabs if t.get("type") == "page"][0])
+        # siklus 467: pilih tab app yang benar (bukan about:blank sisa) —
+        # target salah membuat semua evaluate mengenai halaman kosong.
+        _pages = [t for t in tabs if t.get("type") == "page"
+                  and "127.0.0.1:9503" in t.get("url", "")]
+        ws = WS((_pages or [t for t in tabs if t.get("type") == "page"])[0]["webSocketDebuggerUrl"])
         mid = [0]
 
         def cmd(method, **params):
@@ -247,7 +273,7 @@ def main():
           controls: !!window.__wfsSceneControls,
           zone: window.__zoneLabels ? window.__zoneLabels.length : -1,
           wall: !!window.__wallFade })""", returnByValue=True)
-        st = json.loads(((r.get("result") or {}).get("result") or {}).get("value", "{}"))
+        st = json.loads((((r or {}).get("result") or {}).get("result") or {}).get("value", "{}"))
         res["hooks"] = st
         res["hooks_ok"] = bool(st.get("agents", -1) > 0 and st.get("cam") and st.get("renderer")
                                and st.get("controls") and st.get("zone", -1) == 5 and st.get("wall"))
@@ -256,7 +282,7 @@ def main():
         #    byte-size hanya proksi: jebakan "langit-saja" (gradien 378 KB,
         #    616 warna) lolos byte tapi DEAD piksel. Keduanya wajib lolos.
         shot = cmd("Page.captureScreenshot", format="png")
-        data = base64.b64decode((shot.get("result") or {}).get("data", ""))
+        data = base64.b64decode(((shot or {}).get("result") or {}).get("data", ""))
         open(out, "wb").write(data)
         res["shot_bytes"] = len(data)
         res["shot_ok"] = res["shot_bytes"] > (MOBILE_MIN_SHOT_BYTES if mobile else MIN_SHOT_BYTES)
