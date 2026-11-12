@@ -232,7 +232,7 @@ def seal_reviewed_ingress_context(snapshots, project_id):
     reviewed = snapshots.reviewed
     base = reviewed["images"]["ingress"]
     if not isinstance(base, str) or not re.fullmatch(
-            r"python:3\\.11-alpine@sha256:[0-9a-f]{64}", base):
+            r"python:3\.11-alpine@sha256:[0-9a-f]{64}", base):
         raise AdmissionDenied("ingress base outside approved fixed image family")
     ingress = _reviewed_bytes(
         compose_path.parent / "ingress.py",
