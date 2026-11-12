@@ -1029,3 +1029,26 @@ def test_phase16_compact_proof_symlink_is_rejected_even_with_valid_inventory(pre
         assert calls==[]
     finally:
         proof.compact_proof_path=old
+
+
+
+def test_phase20_real_operator_cannot_select_legacy_source_build(preview):
+    manager,calls=preview
+    with pytest.raises(AdmissionDenied,match="cannot disable sealed runtime"):
+        TemplatePreviewManager(
+            manager.registry,manager.template,enabled=True,
+            reviewed_files=manager.reviewed_manifest,
+            reviewer_authority=manager.authority,
+            sealed_runtime=False)
+    assert calls == []
+
+
+def test_phase20_fixture_runner_does_not_claim_production_sealing(preview):
+    manager,calls=preview
+    # Previous Phase 1-19 synthetic unit runner still tests the historical
+    # lifecycle contract. Real operator CLI (runner=None) is mandatory
+    # sealed, and Phase 20 Docker CI opts into sealed_runtime=True.
+    assert manager.sealed_runtime is False
+    manager.start("alpha",19010,"X"*43)
+    assert calls[0][0][-3:] == ["up","-d","--build"]
+    assert manager.status("alpha")["api_image_id"] is None
