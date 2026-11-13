@@ -344,6 +344,27 @@ export function printerCycle(elapsed, parts) {
   return n;
 }
 
+// ── Gelembung air water cooler (siklus 490) ──
+// Gelembung kecil naik dari dasar jug ke permukaan air lalu hilang, stagger
+// fase per gelembung; kontrak waktu-nyata (pola coffeeSteam 488).
+export function coolerBubbles(elapsed, bubbles, topY, bottomY, cycle) {
+  if (!Number.isFinite(elapsed) || !Array.isArray(bubbles)) return 0;
+  const T = Number.isFinite(topY) ? topY : 1.42;
+  const B = Number.isFinite(bottomY) ? bottomY : 1.14;
+  const CY = Number.isFinite(cycle) && cycle > 0 ? cycle : 1.8;
+  let n = 0;
+  bubbles.forEach((b) => {
+    if (!b || !b.position || !b.material) return;
+    const ph = Number.isFinite(b.userData && b.userData.phase) ? b.userData.phase : 0;
+    const t = (((elapsed + ph) % CY) + CY) % CY / CY;
+    if (!Number.isFinite(t)) return;
+    b.position.y = B + t * (T - B);
+    b.material.opacity = 0.7 * (1 - t) * Math.min(1, t * 6); // muncul cepat, memudar di permukaan
+    n++;
+  });
+  return n;
+}
+
 // ── Kinematika animasi karakter duduk / rapat / resepsi ──
 export function charMotion(elapsed, i = 0, mode = 'desk') {
   if (!Number.isFinite(elapsed)) elapsed = 0;

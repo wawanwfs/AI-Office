@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -1394,6 +1394,8 @@ if(__loungeObj&&__loungeObj.lounge)__loungeObj.lounge.position.y=1.20;
 // LEDs server room (fase & laju acak per LED) dikumpulkan utk animasi blink.
 const __server=createServerRoom({ THREE, office, M, MB, blobMat: __blobMat });
 const __leds=__server.leds;
+// Siklus 490: gelembung air water cooler — di-tick di gate ambient (kontrak waktu-nyata).
+const __bubbles=Array.isArray(__server.bubbles)?__server.bubbles:[];
 
 // --- RAK BUKU (dinding kiri belakang) ---
 // Builder murni di parts/bookshelf.js (diuji unit); di sini tinggal injek konteks.
@@ -1874,6 +1876,7 @@ function animate(){
     plantSway(elapsed,__plants); // siklus 487: daun tanaman bersway (base di-latch panggilan pertama)
     coffeeSteam(elapsed,__steam); // siklus 488: uap mesin espresso kafe
     printerCycle(elapsed,__printerFx); // siklus 489: LED & kertas printer L2
+    coolerBubbles(elapsed,__bubbles,__server.BUBBLE_TOP,__server.BUBBLE_BOTTOM,__server.BUBBLE_CYCLE_SEC); // siklus 490
     ringMat.opacity=fx.ring;
     helmetVisor.material.opacity=fx.visor;
     agentData.forEach((a,i)=>{

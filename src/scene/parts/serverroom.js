@@ -68,5 +68,19 @@ export function createServerRoom(ctx) {
   tap.position.set(0, .85, .22); cooler.add(tap);
   cooler.position.set(-11.6, 0, 0); office.add(cooler);
 
-  return { leds, racks, light, bulb, cable, cooler, wcBody, jug, tap };
+  // ── Siklus 490: gelembung air di dalam jug — cooler jadi hidup ──
+  // 3 sphere kecil biru terang transparan naik ke permukaan air (y≈1.42)
+  // bergantian (siklus 1.8 dtk per gelembung, stagger fase); refs.bubbles.
+  const bubbles = [];
+  const BUBBLE_TOP = 1.42, BUBBLE_BOTTOM = 1.14, BUBBLE_CYCLE_SEC = 1.8;
+  for (let i = 0; i < 3; i++) {
+    const b = new THREE.Mesh(new THREE.SphereGeometry(.025 + i * .004, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0x81D4FA, transparent: true, opacity: 0 }));
+    b.position.set(0, BUBBLE_BOTTOM, 0);
+    b.userData = { phase: i * (BUBBLE_CYCLE_SEC / 3) };
+    cooler.add(b);
+    bubbles.push(b);
+  }
+
+  return { leds, racks, light, bulb, cable, cooler, wcBody, jug, tap, bubbles, BUBBLE_TOP, BUBBLE_BOTTOM, BUBBLE_CYCLE_SEC };
 }

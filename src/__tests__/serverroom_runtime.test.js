@@ -22,7 +22,7 @@ class PointLight extends Obj {
   constructor(c, i, d, dec) { super(); this.color = c; this.intensity = i; this.distance = d; this.decay = dec; this.isPointLight = true }
 }
 const THREE = {
-  Mesh, Group: Obj, BoxGeometry: Geom, CylinderGeometry: Geom,
+  Mesh, Group: Obj, BoxGeometry: Geom, CylinderGeometry: Geom, SphereGeometry: Geom,
   MeshBasicMaterial: Mat, MeshLambertMaterial: Mat, PointLight,
 }
 
@@ -48,6 +48,7 @@ describe('createServerRoom — server room + water cooler kantor 3D', () => {
     expect(refs.bulb).toBeInstanceOf(Mesh)
     expect(refs.cable).toBeInstanceOf(Mesh)
     expect(refs.cooler).toBeInstanceOf(Obj)
+    expect(refs.bubbles).toHaveLength(3) // siklus 490
   })
 
   it('office menerima tepat 7 objek (3 rack + light + bulb + cable + cooler)', async () => {
@@ -129,7 +130,7 @@ describe('createServerRoom — server room + water cooler kantor 3D', () => {
   it('water cooler: body 0xE0E0E0 0.4×1.1×0.4 y=0.55, jug biru transparan y=1.28, tap 0x607D8B, grup di (−11.6, 0, 0)', async () => {
     const { refs } = await build(makeCtx())
     const c = refs.cooler
-    expect(c.children.length).toBe(3)
+    expect(c.children.length).toBe(6) // body + jug + tap + 3 gelembung (siklus 490)
     const [body, jug, tap] = c.children
     expect(refs.wcBody).toBe(body)
     expect(body.geometry.args).toEqual([0.4, 1.1, 0.4])

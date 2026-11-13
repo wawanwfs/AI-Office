@@ -7896,3 +7896,10 @@
 - Test baru effects_printer_cycle.test.js (7): guard, rentang LED+lawan fase, fase idle/eject kertas, latch baseY, deterministik, seam siklus, struktur rusak. Adaptasi furniture_runtime.test.js (printer 7 bagian + sheet, refs +printerFx).
 - Verifikasi: vitest 369 file, 4158 passed + 6 skipped (+7); build PWA exit 0; dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 705KB, colors=11058 nonbg=0.992, hygiene 41 refs 0 missing); screenshot ck489d.png 686KB scene L1 normal 26 agen.
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
+## 13/11/2026 22:35 WIB — Siklus 490: gelembung air water cooler (coolerBubbles)
+- Gap visual: water cooler (L1, x=-11.6) mati total — jug biru statis tanpa tanda air hidup; peralatan besar tersisa tanpa animasi (setelah tanaman 487, espresso 488, printer 489).
+- Fix: coolerBubbles(elapsed, bubbles, topY, bottomY, cycle) di parts/effects.js (murni, diuji unit): 3 sphere biru terang naik dari dasar jug (y=1.14) ke permukaan air (y=1.42) dalam siklus 1.8 dtk, stagger fase i*CYCLE/3, fade in cepat + fade out linier di permukaan; kontrak waktu-nyata, di-tick di gate ambient (siklus 485).
+- serverroom.js: 3 sphere SphereGeometry r .025–.033 MeshBasic 0x81D4FA transparan; refs +bubbles/BUBBLE_TOP/BUBBLE_BOTTOM/BUBBLE_CYCLE_SEC.
+- Test baru effects_cooler_bubbles.test.js (6); adaptasi serverroom_runtime.test.js (cooler 6 anak, SphereGeometry stub, refs.bubbles).
+- Verifikasi: vitest 370 file, 4164 passed + 6 skipped (+6); build PWA exit 0; rsync dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 704KB, colors=11084 nonbg=0.992, hygiene 41 refs 0 missing).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
