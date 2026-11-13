@@ -56,7 +56,12 @@ export function createFurniture(ctx /* hooks disiapkan utk ekstensi */) {
   box(0.74, 0.05, 0.54, M(0xc7ccd1), 3, 0.98, -8, printer);
   box(0.5, 0.03, 0.34, M(0xfafafa), 3, 0.62, -7.7, printer);
   box(0.22, 0.12, 0.02, M(0x2f3338), 3, 0.78, -7.73, printer);
-  box(0.04, 0.04, 0.02, MB(0x00e676), 3.26, 0.78, -7.73, printer);
+  const led1 = box(0.04, 0.04, 0.02, MB(0x00e676), 3.26, 0.78, -7.73, printer);
+  if (led1.material && typeof led1.material.clone === 'function') { // siklus 489: LED berkedip via printerCycle
+    led1.material = led1.material.clone(); led1.material.transparent = true;
+  }
+  // Kertas keluar (siklus 489): sheet tipis di tray atas, di-naikkan printerCycle
+  const sheet = box(0.5, 0.012, 0.34, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0 }), 3, 1.0, -7.7, printer);
   office.add(printer);
 
   // ── Sofa lounge ──
@@ -105,5 +110,5 @@ export function createFurniture(ctx /* hooks disiapkan utk ekstensi */) {
     office.add(plane);
   });
 
-  return { addPlant, dispenser, printer, sofa, pantry };
+  return { addPlant, dispenser, printer, printerFx: { leds: [led1], sheet }, sofa, pantry };
 }

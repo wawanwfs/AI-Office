@@ -124,13 +124,15 @@ describe('createFurniture — perabot kantor 3D', () => {
     expect(spines.length).toBe(15) // 3 baris × 5 buku
   })
 
-  it('printer: group 6 bagian di (3, *, -8), LED hijau 0x00e676 dari MB', async () => {
+  it('printer: group 7 bagian di (3, *, -8), LED hijau 0x00e676 dari MB + sheet kertas (siklus 489)', async () => {
     const { added } = await build()
-    const printer = added.find((o) => o instanceof Group && o.children.length === 6)
+    const printer = added.find((o) => o instanceof Group && o.children.length === 7)
     expect(printer).toBeTruthy()
     expect(printer.children[0].geometry.args).toEqual([0.62, 0.5, 0.45])
     const led = printer.children.find((c) => c.material?.color === 0x00e676)
     expect(led).toBeTruthy()
+    const sheet = printer.children.find((c) => c.material?.color === 0xffffff && c.material?.transparent === true)
+    expect(sheet).toBeTruthy()
   })
 
   it('sofa: group 12 bagian di (10.5, *, 6) + 2 bantal warna 0xff5252/0x448aff berotasi', async () => {
@@ -182,7 +184,7 @@ describe('createFurniture — perabot kantor 3D', () => {
 
   it('return refs berisi semua bagian yang bisa dipakai scene', async () => {
     const { refs } = await build()
-    expect(Object.keys(refs).sort()).toEqual(['addPlant', 'dispenser', 'pantry', 'printer', 'sofa'])
+    expect(Object.keys(refs).sort()).toEqual(['addPlant', 'dispenser', 'pantry', 'printer', 'printerFx', 'sofa'])
     expect(typeof refs.addPlant).toBe('function')
     expect(refs.dispenser).toBeTruthy()
   })

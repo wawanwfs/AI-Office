@@ -300,6 +300,50 @@ export function coffeeSteam(elapsed, puffs) {
   return n;
 }
 
+// ── Siklus cetak printer kantor (siklus 489) ──
+// Dulu printer (L2) mati total: LED hijau MB statis & baki kertas tidak pernah
+// bergerak — satu-satunya peralatan besar tersisa tanpa animasi hidup (setelah
+// tanaman 487 & uap espresso 488).
+// Kontrak waktu-nyata elapsed (pola 487/488): LED siap/aktif berkedip perlahan,
+// kertas keluar naik bertahap dalam siklus 6 dtk (tahap idle→feed→eject).
+export const PRINTER_CYCLE_SEC = 6;
+export function printerCycle(elapsed, parts) {
+  if (!Number.isFinite(elapsed) || !parts) return 0;
+  let n = 0;
+  const CYCLE = PRINTER_CYCLE_SEC;
+  // LED siap (opacity 0.4..1 sin 0.8 Hz) — jika ada 2 LED, kedua berkedip lawan fase
+  if (Array.isArray(parts.leds)) {
+    parts.leds.forEach((led, i) => {
+      if (!led || !led.material) return;
+      const o = 0.7 + Math.sin(elapsed * (Math.PI * 2 / 5) + i * Math.PI) * 0.3;
+      if (!Number.isFinite(o)) return;
+      led.material.opacity = o;
+      n++;
+    });
+  }
+  // Kertas keluar: slot t = fase dalam siklus 6 dtk; 0-30% diam (memproses),
+  // 30-100% kertas naik dari tray bawah ke atas (0 → 0.28 unit) lalu reset.
+  const sheet = parts.sheet;
+  if (sheet && sheet.position) {
+    const u = sheet.userData || (sheet.userData = {});
+    if (!Number.isFinite(u.baseY)) {
+      u.baseY = Number.isFinite(sheet.position.y) ? sheet.position.y : 0;
+    }
+    const t = ((elapsed % CYCLE) + CYCLE) % CYCLE / CYCLE;
+    if (!Number.isFinite(t)) return n;
+    if (t < 0.3) {
+      sheet.position.y = u.baseY;
+      sheet.material && sheet.material.opacity !== undefined && (sheet.material.opacity = 0); // belum keluar
+    } else {
+      const k = (t - 0.3) / 0.7; // 0..1 progres eject
+      sheet.position.y = u.baseY + k * 0.28;
+      sheet.material && sheet.material.opacity !== undefined && (sheet.material.opacity = Math.min(1, k * 4));
+    }
+    n++;
+  }
+  return n;
+}
+
 // ── Kinematika animasi karakter duduk / rapat / resepsi ──
 export function charMotion(elapsed, i = 0, mode = 'desk') {
   if (!Number.isFinite(elapsed)) elapsed = 0;
