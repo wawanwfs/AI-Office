@@ -616,3 +616,16 @@ after revocation, with the existing signed source checks.
 - [Phase 25 scoped gate](docs/REA_PHASE25.md)
 - [Phase 25 release-policy runbook](docs/PHASE25_RELEASE_POLICY_RUNBOOK.md)
 - [Next Phase 26 implementation prompt](docs/NEXT_PHASE26_PROMPT.md)
+
+## Phase 26 — mTLS release journal for the preview operator
+
+The Linux preview operator can fetch the current OCI release decision
+from an mTLS endpoint. It checks both TLS identities, signed hash-linked
+history, a separately provisioned anchor, and the current decision's
+expiry and release binding. When configured for remote mode, an outage
+blocks new operations without fallback. An already running preview is
+left alone, and data deletion still requires explicit authorization.
+
+- [Phase 26 scoped gate](docs/REA_PHASE26.md)
+- [Phase 26 mTLS journal runbook](docs/PHASE26_RELEASE_JOURNAL_RUNBOOK.md)
+- [Next Phase 27 implementation prompt](docs/NEXT_PHASE27_PROMPT.md)

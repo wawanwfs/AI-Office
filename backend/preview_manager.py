@@ -18,6 +18,7 @@ from preview_admission import ReviewedPreviewAdmission, AdmissionDenied
 from preview_authority import SignedPreviewAuthority
 from preview_snapshot import ReviewedPreviewSnapshot
 from preview_release_policy import SignedReleasePolicy
+from preview_release_journal import RemoteReleasePolicy
 from preview_oci_promotion import (
     ApprovedOCIRelease, load_verified_image, verify_api_container, verify_engine_image,
 )
@@ -72,7 +73,7 @@ class TemplatePreviewManager:
         if oci_release is not None and not isinstance(oci_release, ApprovedOCIRelease):
             raise AdmissionDenied("invalid approved OCI release configuration")
         self.oci_release = oci_release
-        if release_policy is not None and not isinstance(release_policy, SignedReleasePolicy):
+        if release_policy is not None and not isinstance(release_policy, (SignedReleasePolicy, RemoteReleasePolicy)):
             raise AdmissionDenied("invalid signed release policy configuration")
         self.release_policy = release_policy
         self.runner=runner or subprocess.run

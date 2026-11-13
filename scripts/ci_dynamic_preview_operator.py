@@ -28,6 +28,7 @@ from ci_phase13_real_dns_rebind import prove_real_docker_dns_rebinding
 from ci_phase19_sealed_build import prove_sealed_build
 from ci_phase23_oci_release import prepare_oci_release
 from ci_phase25_release_policy import DisposableReleasePolicySigner
+from ci_phase26_release_journal import JournalFixture
 from preview_authority import SignedPreviewAuthority
 from preview_signature import canonical_review_bytes
 from preview_root_authority import canonical_roster_bytes
@@ -535,6 +536,52 @@ try:
     verify_frontend_http(port, reviewed_files["frontend"])
     release_proof["tenants"][project]["recreated_api_container_id"] = recovered["api_container_id"]
     release_proof["cleanup_without_release_then_repromotion"] = True
+    journal = JournalFixture(root / "remote-release-journal",
+                             release_proof["manifest_digest"], release.approval_sha256)
+    journal.append()
+    old_entries = list(journal.entries)
+    with closing(sqlite3.connect(registry)) as db, closing(sqlite3.connect(backup)) as saved:
+        db.backup(saved)
+    with journal.server() as journal_port:
+        remote = journal.policy(journal_port, 1)
+        remote_manager = open_manager(release, remote)
+        for tenant, tenant_port, tenant_token, other in zip(names, ports, tokens, (token_b, token_a)):
+            assert remote_manager.restart(tenant, tenant_token)["phase"] == "running"
+            assert health(tenant_port, tenant_token, other)
+            verify_frontend_http(tenant_port, reviewed_files["frontend"])
+        journal.append("revoke")
+        with closing(sqlite3.connect(backup)) as saved, closing(sqlite3.connect(registry)) as db:
+            saved.backup(db)
+        try:
+            remote_manager.restart(project, token)
+            raise AssertionError("remote revocation lost during SQLite restore")
+        except AdmissionDenied as exc:
+            assert "explicitly revoked" in str(exc)
+        journal.publish(old_entries)
+        try:
+            remote_manager.restart(project, token)
+            raise AssertionError("remote journal served shortened history")
+        except AdmissionDenied as exc:
+            assert "HTTPS response rejected" in str(exc)
+        journal.publish(journal.entries)
+        journal.append()
+        # Reopened operator with the newly provisioned anchor and verified
+        # extension resumes the already running preview without data loss.
+        assert open_manager(release, journal.policy(journal_port, 3)).restart(
+            project, token)["phase"] == "running"
+    try:
+        remote_manager.restart(project, token)
+        raise AssertionError("unavailable journal did not block restart")
+    except AdmissionDenied as exc:
+        assert "HTTPS source unavailable" in str(exc)
+    assert health(port, token, tokens[0])
+    proof["phase26_release_journal"] = {
+        "mtls_reference_process": True, "both_tenants_restart_and_signed_http": True,
+        "revocation_after_sqlite_restore": True, "truncated_history_denied": True,
+        "new_anchored_allow_recovers": True, "unavailable_source_denied": True,
+        "running_service_left_intact_on_outage": True,
+        "independent_host_or_custody_proved": False,
+    }
     proof["phase11_docker_compose_context"]="signed project-scoped staged copy"
     # Runtime firewall evidence: BOTH preview bridges must be internal,
     # API still reachable on host loopback, and the running API must fail
