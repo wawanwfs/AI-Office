@@ -663,3 +663,20 @@ export function robotIdle(elapsed) {
   const antenna = 0.14 + 0.2 * (0.5 + 0.5 * Math.sin(t * ROBOT_BEACON_HZ * Math.PI * 2));
   return { eyeScaleY, chest, status, antenna };
 }
+
+// ── Siklus 494: glow strip resepsionis & layar monitor reception bernapas ──
+// Gap visual terakhir di reception: strip teal di bawah meja (rcGlow) & glow
+// layar monitor (rcScreenGlow) konstan penuh — elemen Brand WFS terlihat di
+// zoom depan tapi mati tanpa napas (setelah robot 491 & lampu lounge 493).
+export const RC_GLOW_SEC = 3.1;      // napas strip teal (tak sinkron dgn lampu 5.2)
+export const RC_SCREEN_SEC = 2.3;    // flicker layar monitor
+
+export function receptionGlow(elapsed) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0;
+  const w = (hz) => 0.5 + 0.5 * Math.sin(t * hz * Math.PI * 2);
+  // Strip teal: napas 0.55…1.0 — tak pernah padam total (identitas).
+  const glow = 0.55 + 0.45 * w(1 / RC_GLOW_SEC);
+  // Layar monitor: flicker tipis 0.82…1.0 (nuansa konten berubah, bukan mati).
+  const screen = 0.82 + 0.18 * w(1 / RC_SCREEN_SEC);
+  return { glow, screen };
+}
