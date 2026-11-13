@@ -228,6 +228,7 @@ def test_phase21_ingress_base_must_match_fixed_signed_family(signed_template):
     with pytest.raises(AdmissionDenied, match="outside approved fixed image family|requires Linux kernel sealing"):
         seal_reviewed_ingress_context(approved, "alpha")
 
+@pytest.mark.parametrize("newline", [b"\n", b"\r\n"])
 @pytest.mark.parametrize("change, message", [
     (lambda raw: raw.replace(b"dist:/app/dist:ro", b"dist:/app/dist:rw"),
      "frontend bind stanza changed"),
@@ -236,9 +237,12 @@ def test_phase21_ingress_base_must_match_fixed_signed_family(signed_template):
      "may not request source builds or volumes"),
 ])
 def test_frontend_bind_derivation_fails_closed_on_template_changes(
-        signed_template, change, message):
+        signed_template, change, message, newline):
     approved, folder, original = signed_template
-    changed = change(original)
+    normalized = original.replace(b"\r\n", b"\n")
+    changed = change(normalized)
+    assert changed != normalized
+    changed = changed.replace(b"\n", newline)
     (folder / "compose.yaml").write_bytes(changed)
     approved.reviewed["sources"]["compose.yaml"] = hashlib.sha256(changed).hexdigest()
     with pytest.raises(AdmissionDenied, match=message):
