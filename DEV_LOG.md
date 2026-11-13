@@ -1,3 +1,8 @@
+## 13/11/2026 18:05 WIB — Siklus 483: refresh shadow map kontrak WAKTU-NYATA (pola 481/482)
+- Gap: gate refresh shadow map masih frame-count (tiap 10 frame ≈ 6×/dtk @60FPS). Di GPU lambat frame ke-10 butuh 3–30 dtk → bayangan agen beku lama sebelum refresh.
+- Fix: shadowTimeGate (SHADOW_REFRESH_SEC=1/6) di parts/effects.js; OfficeScene __shadowGate persist antar frame, di-OR dgn gate frame-count lama (kedua jalur tetap diuji). Test baru effects_shadow_time_gate.test.js (4: paritas @60FPS, refresh @1FPS tiap frame, guard non-numerik, kontrak lama).
+- Verifikasi: vitest 363 file, 4126 passed + 6 skipped; build PWA exit 0; rsync --delete dist → ~/wfs-hq (9503 /app/ = 200); e2e_err_probe OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 701KB, colors=11082 nonbg=0.992, hygiene 41 refs 0 missing).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.
 ## 12/11/2026 02:10 WIB — Siklus 444: Cache-Control ganda dihapus (admin/cs-widget/favicon/SSE)
 
 - Audit header produksi :9503: 5 titik mengirim Cache-Control DUPLIKAT — cabang proxy /admin, /cs-widget/, fallback GET/HEAD /favicon.ico, dan SSE /wfs-api/events memakai send_header("Cache-Control", ...) eksplisit, lalu override end_headers() menambah Cache-Control kedua (no-store default) → header ganda ambigu bagi cache/shared proxy (RFC 7234: duplikat invalid). Contoh live: /admin & /favicon.ico = "no-store" + "no-store/public, max-age=86400" sekaligus.

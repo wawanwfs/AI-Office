@@ -437,3 +437,10 @@ export const LED_UPDATE_SEC = 0.05;     // = LED_UPDATE_EVERY(3)/60 s @60FPS
 export const CLOCK_REDRAW_SEC = 1 / 3;  // = CLOCK_REDRAW_EVERY(20)/60 s @60FPS
 export function ledTimeGate() { return makeTimeGate(LED_UPDATE_SEC); }
 export function clockTimeGate() { return makeTimeGate(CLOCK_REDRAW_SEC); }
+
+// ── Siklus 483: refresh shadow map ikut kontrak WAKTU-NYATA ─────────────────
+// Gate lama frame-count (tiap 10 frame ≈ 6×/dtk @60FPS). Di GPU lambat frame
+// ke-10 butuh 3–30 dtk → bayangan agen beku lama sebelum refresh. Kini gate
+// waktu SHADOW_REFRESH_SEC=1/6 — paritas laju @60FPS identik dgn gate lama.
+export const SHADOW_REFRESH_SEC = 1 / 6;
+export function shadowTimeGate() { return makeTimeGate(SHADOW_REFRESH_SEC); }
