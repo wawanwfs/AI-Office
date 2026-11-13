@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -1705,6 +1705,7 @@ let __labelGate=labelRelayoutTimeGate(); // siklus 484: relayout label berbasis 
 let __ambientGate=ambientTimeGate(); // siklus 485: efek ambient berbasis waktu
 let __bubbleGate=bubbleTimeGate();   // siklus 485: tick bubble berbasis waktu
 let __dustAcc=0; // akumulasi waktu NYATA antar tick dust (siklus 264 — pola relayoutDelta)
+let __dustGate=dustTimeGate(); // siklus 486: tick dust berbasis waktu
 function checkConversations(){
   // Logika pasangan terdekat di parts/chat_check.js (murni + unit test).
   // Cooldown dihitung dgn delta detik NYATA (dulu 0.016 per frame — di GPU
@@ -1897,7 +1898,7 @@ function animate(){
   // __dustAcc mengakumulasi delta antar tick (dulu Y + .0003 KONSTAN per tick →
   // laju drift bergantung FPS penuh; offset X juga kini kontrak DUST_RATE_X
   // .036 unit/dtk = .0006×3 per tick @60FPS lama eksak).
-  if(shouldUpdateDust(frame)){
+  if(shouldUpdateDust(frame) || __dustGate(elapsed)){
     const dustDt=__dustAcc; __dustAcc=0;
     for(let i=0;i<pN;i++){
       pP[i*3]+=Math.sin(elapsed+i)*DUST_RATE_X*dustDt; // kontrak .036 unit/dtk × sin fase (lama: .0006×3 per tick — @60FPS eksak)

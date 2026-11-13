@@ -195,6 +195,13 @@ export const DUST_UPDATE_EVERY = 3;
 export function shouldUpdateDust(frame, every = DUST_UPDATE_EVERY) {
   return Number.isFinite(frame) && frame % every === 0;
 }
+// ── Siklus 486: tick dust ikut kontrak WAKTU-NYATA (pola 481–485) ───────────
+// Gate lama frame-count (tiap 3 frame ≈ 20×/dtk @60FPS). Di GPU lambat
+// (SwiftShader 0.3–1.5 FPS) frame ke-3 butuh 2–10 dtk → drift debu beku walau
+// laju per-tick sudah kontrak dt nyata (siklus 264). Kini gate waktu
+// DUST_SEC=3/60 s — paritas laju @60FPS identik dgn gate lama.
+export const DUST_SEC = 3 / 60; // = DUST_UPDATE_EVERY(3)/60 s @60FPS
+export function dustTimeGate() { return makeTimeGate(DUST_SEC); }
 // Murni: geser satu partikel debu — kontrak laju WAKTU-NYATA (siklus 264, bug
 // kelas 251/259/260/261 keenam): dulu `y + cos(...)*.0003` KONSTAN per TICK —
 // laju efektif bergantung penuh FPS (60 FPS = .006/dtk; SwiftShader 0.4 FPS dgn
