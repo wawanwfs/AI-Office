@@ -7826,3 +7826,10 @@
 - Fix: sinkron penuh `rsync -a --delete --exclude=api_service.py dist/ ~/wfs-hq/` (api_service.py server lokal dijaga); sekarang /assets hanya berisi 15 bundle hash aktif, nol file yatim; index.html terkini terkonfirmasi (size+hash sama dengan dist).
 - Verifikasi: vitest 359 file, 4111 passed + 6 skipped; build PWA exit 0 (968ms, precache 47); e2e_err_probe OK (agents=26, hooks cam/renderer/controls/wall=true, shot 687KB, pixels nonbg=0.992, hygiene 41 refs 0 missing, errs=[]); GET /app/?mode=office = 200.
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.
+## 13/11/2026 15:12 WIB — Siklus 478: bersihkan 24 file lock task yatim di ~/wfs-office + skrip cleanup permanen
+
+- Audit preflight cutover :8787 (dugaan bug `agents:15` hard-code): TIDAK bug — /api/agents gateway memang 15 (roster gateway), berbeda dari 26 agen scene 3D. Preflight APPLY, smoke Phase 3 (smoke_go_live_phase3.sh 7 cek, fails=0), dan gate WFS_PHASE3_CUTOVER_REHEARSED semuanya konsisten; jalur cutover siap, tinggal keputusan user.
+- Temuan nyata: 24 file `tasks.db.<tid>.lock` yatim menumpuk di ~/wfs-office (claim_task() tidak pernah menghapus file-nya; sebagian task id sudah MISSING/done; flock bebas = tidak ada proses memegang).
+- Fix: 24 file yatim dihapus (terverifikasi flock bebas, 0 di-hold proses hidup) + skrip permanen `scripts/cleanup_task_locks.py` (idempoten, KEEP utk lock di-hold proses & task running/assigned; diuji: recreate lock → RM lagi, removed=2).
+- Verifikasi: vitest 359 file, 4111 passed + 6 skipped; build PWA exit 0; dist → ~/wfs-hq; smoke-go-live-phase3 :8787 fails=0 (WARN hardened-flag di baseline systemd sesuai desain); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[]).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker (jalur siap, APPLY butuh persetujuan eksplisit); (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.
