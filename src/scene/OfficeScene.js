@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -1898,6 +1898,12 @@ function animate(){
       const rg=receptionGlow(elapsed);
       if(__rc.rcGlow.material){ __rc.rcGlow.material.transparent=true; __rc.rcGlow.material.opacity=rg.glow; }
       if(__rc.rcScreenGlow.material){ __rc.rcScreenGlow.material.transparent=true; __rc.rcScreenGlow.material.opacity=rg.screen; }
+    }
+    // siklus 495: LED neon deck & strip tangga bernapas (deckNeonBreath)
+    if(__terraces&&Array.isArray(__terraces.ledLines)&&__terraces.ledLines.length){
+      const dn=deckNeonBreath(elapsed);
+      __terraces.ledLines.forEach((l)=>{ if(l&&l.material){ l.material.transparent=true; l.material.opacity=0.45+0.55*dn.led; } });
+      if(Array.isArray(__terraces.stepStrips)) __terraces.stepStrips.forEach((s)=>{ if(s&&s.material){ s.material.transparent=true; s.material.opacity=0.45+0.55*dn.step; } });
     }
     // siklus 493: lampu berstandi lounge berkedip hangat (PointLight + shade)
     if(__loungeObj&&__loungeObj.lampBulb&&__loungeObj.lampShade){

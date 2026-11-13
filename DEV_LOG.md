@@ -7932,3 +7932,10 @@
 - Test baru effects_lamp_flicker.test.js (6): guard non-finite netral, rentang + tak padam, deterministik, seam LCM 19T (shade), bounded jitter, input aneh.
 - Verifikasi: vitest 373 file, 4181 passed + 6 skipped (+6, +1 file); build PWA exit 0; rsync dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 709KB, colors=11313 nonbg=0.992, hygiene 41 refs 0 missing).
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
+## 14/11/2026 01:25 WIB — Siklus 495: LED neon deck & strip tangga bernapas (deckNeonBreath)
+- Gap visual: ledLines (tepi L2/L3 cyan + riser vertikal, 0x00F0FF) & stepStrips (hidung anak tangga tangga kembar, 0x00E5FF) konstan penuh — elemen brand neon terakhir yang statis (setelah reception 494, lampu 493, pedestal 492).
+- Fix: deckNeonBreath(elapsed) di parts/effects.js (murni, diuji unit): ledLines napas siklus 2.9 dtk, stepStrips 2.1 dtk (rasio tak sinkron), keduanya dipetakan opacity 0.45…1.0 — tak pernah padam total (identitas neon kampus). Kontrak waktu-nyata, di-tick di gate ambient (485) → hidup di GPU lambat.
+- terraces.js: ekspor refs stepStrips/ledLines (setMode tak berubah — warna tetap, hanya opacity). OfficeScene: tick deckNeonBreath di gate ambient (guard array).
+- Test baru effects_deck_neon_breath.test.js (5): guard non-finite netral (sin 0 → 0.5), rentang 0…1 + peta caller ≥0.45, deterministik + seam periodik 19T, puncak/lembah eksak konstanta, rasio siklus tak sinkron.
+- Verifikasi: vitest 375 file, 4192 passed + 6 skipped (+5, +1 file); build PWA exit 0; dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 708KB, colors=11388 nonbg=0.992, hygiene 41 refs 0 missing).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.

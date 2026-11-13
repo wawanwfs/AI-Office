@@ -376,6 +376,8 @@ export function createTerraces({ THREE, office, M, MB }) {
     l1Deck,
     l2Deck,
     l3Deck,
+    stepStrips,
+    ledLines,
     setMode,
   };
 }

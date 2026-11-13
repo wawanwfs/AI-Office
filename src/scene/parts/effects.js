@@ -680,3 +680,19 @@ export function receptionGlow(elapsed) {
   const screen = 0.82 + 0.18 * w(1 / RC_SCREEN_SEC);
   return { glow, screen };
 }
+
+// ── Siklus 495: LED neon deck & strip tangga bernapas (deckNeonBreath) ──
+// Elemen brand terakhir yang statis: ledLines (tepi L2/L3 + riser vertikal,
+// 0x00F0FF) & stepStrips (hidung anak tangga, 0x00E5FF). Keduanya diberi
+// napas opacity berbeda fase — tak pernah padam total (identitas neon kampus).
+export const DECK_LED_SEC = 2.9;    // gelombang ledLines (tepi deck)
+export const STEP_STRIP_SEC = 2.1;  // gelombang stepStrips (tangga) — rasio tak sinkron
+
+export function deckNeonBreath(elapsed) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0; // netral (sin 0 → 0.5)
+  const w = (sec) => 0.5 + 0.5 * Math.sin((t / sec) * Math.PI * 2);
+  return {
+    led: w(DECK_LED_SEC),   // 0…1 — dipetakan 0.45…1.0 di caller
+    step: w(STEP_STRIP_SEC),
+  };
+}
