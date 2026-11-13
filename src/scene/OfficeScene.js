@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles, charMotion, applyCharMotion } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, clockTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles, charMotion, applyCharMotion } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -1696,6 +1696,10 @@ function autoTalk(){
 // Sinkron task running: tidak ada interval sendiri — data status + tasks diambil di pollStatus (SATU fetch /agents/status)
 let deltaFrame=0; // delta dtk frame terakhir (utk cooldown chat berbasis waktu nyata)
 let relayoutDelta=0; // akumulasi waktu NYATA sejak tick relayout terakhir (damping 251)
+// Siklus 482: gate WAKTU LED & jam dinding (state persist antar frame) —
+// pengganti frame-count agar tetap hidup di FPS sangat rendah (pola 481).
+let __ledGate=ledTimeGate();
+let __clockGate=clockTimeGate();
 let __dustAcc=0; // akumulasi waktu NYATA antar tick dust (siklus 264 — pola relayoutDelta)
 function checkConversations(){
   // Logika pasangan terdekat di parts/chat_check.js (murni + unit test).
@@ -2106,7 +2110,7 @@ function animate(){
   __pages.update(delta,elapsed);
   // LED server room: kedip lambat → cukup ~20×/dtk (throttle), opacity dari ledOpacity
   // (dulu 70+ LED di-update tiap frame).
-  if(shouldUpdateLeds(frame)){
+  if(shouldUpdateLeds(frame) || __ledGate(elapsed)){
     for(let i=0;i<__leds.length;i++)__leds[i].m.material.opacity=ledOpacity(__leds[i],elapsed);
   }
   // jam dinding di-throttle: canvas 96×96 + upload tekstur cukup ~3×/dtk
@@ -2114,7 +2118,7 @@ function animate(){
   // timeOfDay = MENIT simulasi (0-1440) → drawClockFace mengharapkan DETIK
   // sejak tengah malam (minutes = nowSeconds/60). Tanpa konversi, jarum selalu
   // menunjuk ~00:xx (bug lama: 14:30 ditampilkan sebagai 00:14).
-  if(shouldRedrawClock(frame)){
+  if(shouldRedrawClock(frame) || __clockGate(elapsed)){
     // Siklus 265: SATU sumber waktu — jarum DETIK kini dari waktu SIMULASI
     // (menit-sim × 60 + sisa detik nyata dalam menit-sim berjalan __sim.acc),
     // bukan Date.now() default drawClock (dulu dua sumber: laju detik nyata vs

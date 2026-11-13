@@ -416,3 +416,24 @@ export function shouldRedrawScreenTime(elapsed, index, st, every = SCREEN_REDRAW
   }
   return false;
 }
+
+// ── Siklus 482: LED & jam dinding ikut kontrak WAKTU-NYATA ──────────────────
+// Kedua gate lama berbasis frame-count (LED tiap 3, jam tiap 20 frame). Di GPU
+// lambat (SwiftShader 0.3–1.5 FPS) frame ke-3/ke-20 butuh 2–60 detik → LED
+// kedip beku & jarum jam tidak bergerak walau waktu berjalan. Kini gate WAKTU:
+// LED paritas ~20×/dtk (LED_UPDATE_SEC=0.05), jam paritas ~3×/dtk
+// (CLOCK_REDRAW_SEC=1/3). Paritas laju @60FPS identik dgn gate lama.
+const makeTimeGate = (sec) => {
+  let t0 = null;
+  return (elapsed) => {
+    if (!Number.isFinite(elapsed)) return false;
+    if (t0 === null) { t0 = elapsed; return false; }
+    if (elapsed - t0 >= sec) { t0 += sec; return true; }
+    return false;
+  };
+};
+
+export const LED_UPDATE_SEC = 0.05;     // = LED_UPDATE_EVERY(3)/60 s @60FPS
+export const CLOCK_REDRAW_SEC = 1 / 3;  // = CLOCK_REDRAW_EVERY(20)/60 s @60FPS
+export function ledTimeGate() { return makeTimeGate(LED_UPDATE_SEC); }
+export function clockTimeGate() { return makeTimeGate(CLOCK_REDRAW_SEC); }

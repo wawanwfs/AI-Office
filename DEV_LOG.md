@@ -7849,3 +7849,9 @@
 - Test baru effects_screen_time_gate.test.js (3): slot rotasi penuh, laju @5FPS 30 draws/6 dtk (vs gate lama ~5), stagger+fase sama digambar bersama. render_startup.test.js adaptasi ke gate waktu (26 layar ≥1× di warm-up, freeze tetap).
 - Verifikasi: vitest 361 file, 4117 passed + 6 skipped; build PWA exit 0 (precache 47); rsync --delete dist → ~/wfs-hq (9503 /app/ = 200); e2e_err_probe OK (agents=26, errs=[], shot 695KB, pixels colors=10813 nonbg=0.992, hygiene 41 refs 0 missing).
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.
+## 13/11/2026 17:20 WIB — Siklus 482: LED server room & jam dinding kontrak WAKTU-NYATA (pola 481)
+- Gap: dua gate tersisa berbasis frame-count — LED tiap 3 frame (LED_UPDATE_EVERY), jam dinding tiap 20 frame (CLOCK_REDRAW_EVERY). Di GPU lambat (SwiftShader 0.3–1.5 FPS) LED beku 2–6 dtk & jarum jam diam sampai 20 dtk.
+- Fix: gate waktu makeTimeGate di parts/effects.js — ledTimeGate (LED_UPDATE_SEC=0.05 = paritas 3/60 s) & clockTimeGate (CLOCK_REDRAW_SEC=1/3 = paritas 20/60 s); t0 maju eksak +sec (tanpa drift laju). OfficeScene: __ledGate/__clockGate persist antar frame, di-OR dengan gate frame-count lama (kedua jalur tetap diuji).
+- Test baru effects_led_clock_time_gate.test.js (5): paritas @60FPS, LED @5FPS tetap ON tiap frame, jam @1FPS tetap digambar tiap frame yang ada, guard non-numerik.
+- Verifikasi: vitest 362 file, 4122 passed + 6 skipped; build PWA exit 0; rsync --delete dist → ~/wfs-hq (9503 /app/ = 200); e2e_err_probe OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 692KB, colors=10548 nonbg=0.992, hygiene 41 refs 0 missing).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.
