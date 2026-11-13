@@ -7838,3 +7838,8 @@
 - Run pertama terverifikasi: exit 0/SUCCESS, removed=0 held=0, 0 file tasks.db.*.lock tersisa di ~/wfs-office.
 - Catatan: CLI `systemctl start` kadang balas "Connection timed out" walau service sukses (status menunjukkan inactive-dead status=0); only-noise, timer berjalan.
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.
+## 13/11/2026 16:05 WIB — Siklus 480: verify_desks masuk CI + npm script
+- Gap: scripts/verify_desks.mjs (guard numerik layout meja: dinding 34x27, obstacle/reception/server-room, elevasi, collision <1.8m) hanya pernah dijalankan manual — tidak ada di package.json scripts dan tidak ada di CI; layout rusak lolos CI hijau.
+- Fix: script baru `npm run verify:desks` + step `.github/workflows/ci.yml` job build (setelah build, sebelum npm test) + guard `src/__tests__/verify_desks_ci.test.js` (3 test: kontrak script, kontrak CI, skrip dieksekusi nyata lulus 26 meja ALL_DESKS_OK).
+- Verifikasi: vitest 360 file, 4114 passed + 6 skipped (+3 test baru); build PWA exit 0 (precache 47); dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[]); node verify_desks.mjs → TOTAL DESKS 26, OUT_OF_ROOM NONE, COLLISIONS NONE, PER_FLOOR {L1:9,L2:9,L3:8}.
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.

@@ -8,7 +8,8 @@
     "build": "vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test": "vitest run"
+    "test": "vitest run",
+    "verify:desks": "node scripts/verify_desks.mjs"
   },
   "dependencies": {
     "react": "^19.2.4",
@@ -35,7 +36,7 @@
       "glob": "^14.0.4"
     }
   },
-  "description": "WFS Project HQ — kantor virtual 3D isometrik tempat tim agent AI bekerja, ngobrol, rapat, dan mengerjakan task nyata. React + Three.js.",
+  "description": "WFS Project HQ \u2014 kantor virtual 3D isometrik tempat tim agent AI bekerja, ngobrol, rapat, dan mengerjakan task nyata. React + Three.js.",
   "author": "Wahyu Fajar Setiawan <https://github.com/wawanwfs>",
   "license": "MIT",
   "repository": {

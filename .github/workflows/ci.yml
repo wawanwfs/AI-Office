@@ -25,6 +25,8 @@ jobs:
       # Recent landing/PWA tests assert generated dist/*.html and assets.
       # Build first; otherwise main fails ENOENT before assertions run.
       - run: npm run build
+      # Siklus 480: verifikasi numerik layout meja (dinding/obstacle/collision)
+      - run: npm run verify:desks
       - run: npm test
 
   pytest:
