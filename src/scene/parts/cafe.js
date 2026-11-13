@@ -39,6 +39,15 @@ export function createCafe(ctx) {
   em.position.set(CFX - .8, 1.17, CFZ - .05); cafe.add(em);
   const emG = new THREE.Mesh(new THREE.BoxGeometry(.1, .08, .02), MB(0x10E5A0));
   emG.position.set(CFX - .8, 1.1, CFZ + .13); cafe.add(emG);
+  // Uap kopi (siklus 488): 4 kepala uap semi-transparan keluar dari mesin espresso;
+  // dianimasikan coffeeSteam() di gate ambient OfficeScene (kontrak waktu-nyata).
+  const steam = [];
+  for (let i = 0; i < 4; i++) {
+    const sp = new THREE.Mesh(new THREE.SphereGeometry(.045 + i * .006, 8, 8),
+      new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0, depthWrite: false }));
+    sp.position.set(CFX - .8, 1.4 + i * .02, CFZ - .05);
+    cafe.add(sp); steam.push(sp);
+  }
   // Kettle + cups
   const kt = new THREE.Mesh(new THREE.CylinderGeometry(.09, .12, .18, 10), M(0x90A4AE));
   kt.position.set(CFX - .1, 1.09, CFZ); cafe.add(kt);
@@ -80,5 +89,5 @@ export function createCafe(ctx) {
   const frG = new THREE.Mesh(new THREE.BoxGeometry(.4, .5, .02), MB(0x4FC3F7));
   frG.position.set(CFX + 2.5, .72, CFZ + .06); cafe.add(frG);
   office.add(cafe);
-  return { cafe, CFX, CFZ, c1, c2, ct1, ct2, em, emG, kt, cups, menuBoard: mb, menuBoardBack: mbB, stools, fridge: fr, fridgeGlow: frG };
+  return { cafe, CFX, CFZ, c1, c2, ct1, ct2, em, emG, steam, kt, cups, menuBoard: mb, menuBoardBack: mbB, stools, fridge: fr, fridgeGlow: frG };
 }

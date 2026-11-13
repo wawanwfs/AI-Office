@@ -7883,3 +7883,9 @@
 - Test baru effects_plant_sway.test.js (5): latch base, deterministik (elapsed sama = hasil sama), amplitudo ≤0.02, osilasi berpusat di base (rata-rata <0.01), guard non-finite/struktur rusak.
 - Verifikasi: vitest 367 file, 4145 passed + 6 skipped (+5); build PWA exit 0; dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 713KB, colors=11531 nonbg=0.992, hygiene 41 refs 0 missing).
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
+## 13/11/2026 21:05 WIB — Siklus 488: uap kopi mesin espresso kafe (coffeeSteam)
+- Gap visual terakhir: mesin espresso kafe (L3) mati total — satu-satunya peralatan besar tanpa animasi hidup (setelah tanaman 487).
+- Fix: coffeeSteam(elapsed, puffs) di parts/effects.js (murni, diuji unit): 4 kepala uap sphere dari mesin espresso naik 0.35 unit per siklus 2.4 dtk, fade in cepat/fade out linier, sway tipis ≤0.015, stagger fase per puff; base posisi di-latch (pola plantSway 487). Di-tick di gate ambient (siklus 485) → tetap hidup di GPU lambat. cafe.js: 4 sphere MeshBasicMaterial putih transparan; return refs bertambah `steam`.
+- Test baru effects_coffee_steam.test.js (6): guard, latch base, deterministik, batas rise/sway/opacity, kontinu di seam siklus, stagger. Adaptasi cafe_runtime/cafe_bookshelf_runtime (jumlah objek +4 uap: 22/25).
+- Verifikasi: vitest 368 file, 4151 passed + 6 skipped (+6); build PWA exit 0; rsync --delete dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 707KB, colors=11157 nonbg=0.992, hygiene 41 refs 0 missing).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.

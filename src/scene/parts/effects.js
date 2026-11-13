@@ -273,6 +273,33 @@ export function plantSway(elapsed, plants) {
   return n;
 }
 
+// ── Uap kopi espresso machine (siklus 488) ──
+// Kepala uap naik + memudar secara berurutan (kolom uap), kontrak waktu-nyata.
+// Murni & diuji unit; di-tick di dalam gate ambient (siklus 485).
+export function coffeeSteam(elapsed, puffs) {
+  if (!Number.isFinite(elapsed) || !Array.isArray(puffs)) return 0;
+  let n = 0;
+  const CYCLE = 2.4; // dtk per puff naik-dan-musnah
+  puffs.forEach((p, i) => {
+    if (!p || !p.position || !p.material) return;
+    const ph = (i / puffs.length) * CYCLE;
+    const t = ((elapsed + ph) % CYCLE) / CYCLE; // 0..1 dalam siklus
+    if (!Number.isFinite(t)) return;
+    // Latch posisi dasar panggilan pertama (pola plantSway 487)
+    const u = p.userData || (p.userData = {});
+    if (!Number.isFinite(u.baseY)) {
+      u.baseX = Number.isFinite(p.position.x) ? p.position.x : 0;
+      u.baseY = Number.isFinite(p.position.y) ? p.position.y : 0;
+      u.baseZ = Number.isFinite(p.position.z) ? p.position.z : 0;
+    }
+    p.position.x = u.baseX + Math.sin(t * Math.PI * 2 + i) * 0.015; // goyangan tipis
+    p.position.y = u.baseY + t * 0.35;                              // naik 0.35 unit
+    p.material.opacity = 0.55 * (1 - t) * Math.min(1, t * 6);       // fade in cepat, fade out linier
+    n++;
+  });
+  return n;
+}
+
 // ── Kinematika animasi karakter duduk / rapat / resepsi ──
 export function charMotion(elapsed, i = 0, mode = 'desk') {
   if (!Number.isFinite(elapsed)) elapsed = 0;

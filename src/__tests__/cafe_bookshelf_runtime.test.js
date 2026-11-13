@@ -87,14 +87,14 @@ describe('createCafe — kafe / coffee bar kantor 3D', () => {
     expect(refs.fridge).toBeInstanceOf(Mesh)
   })
 
-  it('grup cafe memuat 21 objek puncak dgn blob shadow (4 counter + 4 aksen + 1 ketel + 3 cangkir + 2 menu + 4 stool + 2 kulkas + 3 shadow)', async () => {
+  it('grup cafe memuat 25 objek puncak dgn blob shadow (4 counter + 4 aksen + 4 uap + 1 ketel + 3 cangkir + 2 menu + 4 stool + 2 kulkas + 3 shadow)', async () => {
     const { refs } = await buildCafe(true)
-    expect(refs.cafe.children).toHaveLength(21)
+    expect(refs.cafe.children).toHaveLength(25)
   })
 
   it('tanpa blobMat (mode hemat) grup cafe memuat 18 objek puncak', async () => {
     const { refs } = await buildCafe(false)
-    expect(refs.cafe.children).toHaveLength(18)
+    expect(refs.cafe.children).toHaveLength(22)
   })
 
   it('setiap bar stool adalah grup berisi 3 bagian (dudukan, tiang, alas) di depan counter z=CFZ+1', async () => {

@@ -37,7 +37,7 @@ class Mesh extends Obj {
   constructor(g, m) { super(); this.geometry = g; this.material = m; this.castShadow = false }
 }
 const THREE = {
-  Mesh, Group: Obj, CanvasTexture: Tex, BoxGeometry: Geom, PlaneGeometry: Geom, CylinderGeometry: Geom,
+  Mesh, Group: Obj, CanvasTexture: Tex, BoxGeometry: Geom, PlaneGeometry: Geom, CylinderGeometry: Geom, SphereGeometry: Geom,
   MeshBasicMaterial: Mat, MeshLambertMaterial: Mat,
 }
 
@@ -79,9 +79,9 @@ describe('createCafe — kafe / coffee bar kantor 3D', () => {
     expect(refs.fridgeGlow).toBeInstanceOf(Mesh)
   })
 
-  it('semua objek kafe di-add ke cafe (2 counter + 2 countertop + 2 espresso + kettle + 3 cup + 2 menuboard + 4 stool + 2 fridge = 18)', async () => {
+  it('semua objek kafe di-add ke cafe (2 counter + 2 countertop + 2 espresso + kettle + 3 cup + 2 menuboard + 4 stool + 2 fridge = 22)', async () => {
     const { refs } = await build()
-    expect(refs.cafe.children.length).toBe(2 + 2 + 2 + 1 + 3 + 2 + 4 + 2)
+    expect(refs.cafe.children.length).toBe(2 + 2 + 2 + 4 + 1 + 3 + 2 + 4 + 2)
   })
   it('grup kafe di-add ke office tepat 1 grup', async () => {
     const { added } = await build()
@@ -184,7 +184,7 @@ describe('createCafe — kafe / coffee bar kantor 3D', () => {
     const b = createCafe(makeSceneCtx())
     expect(a.cafe).not.toBe(b.cafe)
     expect(a.c1).not.toBe(b.c1)
-    expect(b.cafe.children.length).toBe(18)
+    expect(b.cafe.children.length).toBe(22)
     expect(canvases).toHaveLength(2)
   })
 })

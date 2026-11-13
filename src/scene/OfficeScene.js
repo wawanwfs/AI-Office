@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -1379,6 +1379,8 @@ createZones({THREE,office,namesVisible});
 // Builder murni di parts/cafe.js (diuji unit); di sini tinggal injek konteks.
 const __cafe=createCafe({ THREE, office, M, MB, blobMat: __blobMat });
 if(__cafe&&__cafe.cafe)__cafe.cafe.position.y=1.20;
+// Siklus 488: kepala uap mesin espresso kafe — di-tick di gate ambient (kontrak waktu-nyata).
+const __steam=__cafe&&Array.isArray(__cafe.steam)?__cafe.steam:[];
 
 // --- WELCOME & LOUNGE (kanan depan): set sofa lengkap, bukan lantai kosong ---
 // Sofa besar sudah ada di (10.5, 6) menghadap -X. Dilengkapi: karpet lounge,
@@ -1869,6 +1871,7 @@ function animate(){
   if(shouldUpdateAmbient(frame) || __ambientGate(elapsed)){
     const fx=ambientFx(elapsed);
     plantSway(elapsed,__plants); // siklus 487: daun tanaman bersway (base di-latch panggilan pertama)
+    coffeeSteam(elapsed,__steam); // siklus 488: uap mesin espresso kafe
     ringMat.opacity=fx.ring;
     helmetVisor.material.opacity=fx.visor;
     agentData.forEach((a,i)=>{
