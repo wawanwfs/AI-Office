@@ -570,3 +570,21 @@ OCI manifest, or compatibility with Docker Desktop/WSL2.
 - [Phase 22 scoped gate](docs/REA_PHASE22.md)
 - [Phase 22 operator runbook](docs/PHASE22_RUNTIME_RUNBOOK.md)
 - [Next Phase 23 implementation prompt](docs/NEXT_PHASE23_PROMPT.md)
+
+## Phase 23 — offline OCI release verification
+
+Disposable CI exports the same sealed preview API build context as a
+single-platform OCI archive. A separate Python process hashes the
+manifest, config, and layers, checks the uncompressed DiffIDs, and
+compares the packaged API and frontend to the reviewed hashes. A
+separately pinned Ed25519 release witness binds the manifest digest,
+platform, and reviewed inventory to an expiring approval. The proof
+records the OCI manifest digest separately from the config digest.
+
+This verifies a release archive. It does not load the archive, enforce
+OCI admission on the running containers, or prove off-host witness
+custody. The two-tenant mount-free runtime remains unchanged.
+
+- [Phase 23 scoped gate](docs/REA_PHASE23.md)
+- [Phase 23 verifier runbook](docs/PHASE23_OCI_RUNBOOK.md)
+- [Next Phase 24 implementation prompt](docs/NEXT_PHASE24_PROMPT.md)
