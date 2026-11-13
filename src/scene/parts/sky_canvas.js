@@ -21,7 +21,22 @@ export function drawSky(x) {
 // jam malam (daylight 0.3, latar NAVY) jendela memancarkan biru terang + awan
 // putih = kontras salah. drawSkyNight dipakai createLighting utk swap tekstur
 // jendela saat daylight turun (lihat daycycle.js skyWins).
-export function drawSkyNight(x) {
+export const STAR_TWINKLE_SEC = 1.7; // satu kedipan bintang (rasio tak sinkron dgn lampu 5.2/3.9/3.6)
+export const STAR_TWINKLE_MIN = 0.55; // kedipan terendah — bintang tak pernah padam total
+
+// Kedipan tiap bintang: fase dari index (deterministik), amplitudo bervariasi
+// (bintang besar berkedip lebih jelas). Diuji unit murni — tanpa kanvas.
+export function starTwinkle(i, elapsed) {
+  const n = Number.isFinite(elapsed) ? elapsed : 0;
+  const idx = Number.isFinite(i) ? i : 0;
+  const phase = idx * 0.618;                        // distribusi fase (rasio emas)
+  const sec = STAR_TWINKLE_SEC * (1 + (idx % 3) * 0.23); // 3 kelompok laju tak sinkron
+  const w = 0.5 + 0.5 * Math.sin((n / sec + phase) * Math.PI * 2);
+  const amp = 0.32 + (idx % 4) * 0.06;              // 0.32…0.50
+  return (1 - amp) + amp * w;                       // 1-amp … 1, puncak eksak 1
+}
+
+export function drawSkyNight(x, step = 0) {
   const g = x.createLinearGradient(0, 0, 0, 128);
   g.addColorStop(0, '#050B22');g.addColorStop(.65, '#0A1636');g.addColorStop(1, '#16264E');
   x.fillStyle = g;x.fillRect(0, 0, 256, 128);
@@ -29,10 +44,16 @@ export function drawSkyNight(x) {
   const moon = x.createRadialGradient(210, 22, 2, 210, 22, 46);
   moon.addColorStop(0, 'rgba(215,228,255,0.85)');moon.addColorStop(1, 'rgba(215,228,255,0)');
   x.fillStyle = moon;x.fillRect(0, 0, 256, 128);
-  // bintang: 15 titik deterministik (tanpa RNG → hasil render stabil antar rebuild)
-  x.fillStyle = 'rgba(255,255,255,0.9)';
+  // bintang: 15 titik deterministik — kedipan via starTwinkle(i, step detik) (siklus 501):
+  // alpha dimodulasi fase per-index → repaint tiap 2 dtk menghasilkan langit hidup.
+  const T0 = step; // step = detik malam (dari daycycle.paintStars)
   [[24,12,1.2],[58,30,1],[95,18,.8],[132,42,1.3],[168,14,.9],[205,55,1],[228,30,.8],[42,58,.9],[88,66,1.1],[150,74,.8],[186,88,1],[118,96,.8],[64,104,.9],[200,110,.8],[28,84,.7]]
-    .forEach(([sx, sy, sr]) => { x.beginPath();x.arc(sx, sy, sr, 0, 7);x.fill(); });
+    .forEach(([sx, sy, sr], i) => {
+      const tw = starTwinkle(i, T0);
+      x.globalAlpha = STAR_TWINKLE_MIN + (1 - STAR_TWINKLE_MIN) * tw;
+      x.beginPath();x.arc(sx, sy, sr, 0, 7);x.fill();
+    });
+  x.globalAlpha = 1;
   // glow kota hangat di horizon bawah (lampu gedung) — kaki langit malam
   const city = x.createLinearGradient(0, 84, 0, 128);
   city.addColorStop(0, 'rgba(255,190,110,0)');city.addColorStop(1, 'rgba(255,190,110,0.22)');

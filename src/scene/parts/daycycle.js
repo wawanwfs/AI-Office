@@ -59,6 +59,23 @@ export function createLighting(ctx) {
     if (skyCanvas.__needsUpdate) skyCanvas.__needsUpdate();
   }
 
+  // ── Siklus 501: kedipan bintang langit malam jendela (starTwinkle) ──
+  // Bintang (15 titik) digambar statis — langit malam beku. paintStars repaint
+  // HANYA layer bintang di atas gradien malam, tiap STAR_REDRAW_SEC (2 dtk —
+  // tak perlu 60FPS; kedipan halus tetap terlihat) → biaya kecil, hemat GPU.
+  const STAR_REDRAW_SEC = 2;
+  let starAcc = 0;         // akumulasi detik sejak repaint bintang terakhir
+  let starTime = 0;        // total detik malam → fase kedipan kontinu (bukan step diskret)
+  function paintStars(dt) {
+    if (!skyCanvas || !skyNight) return;
+    starAcc += dt; starTime += dt;
+    if (starAcc < STAR_REDRAW_SEC) return;
+    starAcc = 0;
+    const c2 = skyCanvas.getContext('2d');
+    drawSkyNight(c2, starTime);
+    if (skyCanvas.__needsUpdate) skyCanvas.__needsUpdate();
+  }
+
   // ── Siklus 165: dinding kantor ikut siang↔malam ──
   // Dinding atas & wainscot = MeshBasicMaterial (tidak bergantung pencahayaan)
   // dgn tekstur palet siang — tanpa ini dinding tetap terang penuh saat malam
@@ -192,7 +209,7 @@ export function createLighting(ctx) {
     // lama. Callback opsional (tanpa mode manual — slider React punya jalurnya).
     onTime && onTime(min);
   }
-  return { apply, resync, get minutes() { return current; }, get skyNight() { return skyNight; }, get wallNight() { return wallNight; }, get trimNight() { return trimNight; }, get boardNight() { return boardNight; }, get titleNight() { return titleNight; }, get ceilNight() { return ceilNight; } };
+  return { apply, resync, paintStars, get minutes() { return current; }, get skyNight() { return skyNight; }, get wallNight() { return wallNight; }, get trimNight() { return trimNight; }, get boardNight() { return boardNight; }, get titleNight() { return titleNight; }, get ceilNight() { return ceilNight; } };
 }
 
 // ── Mode neon: kumpulan "saklar" yang didaftarkan, bukan pemindaian seluruh scene ──

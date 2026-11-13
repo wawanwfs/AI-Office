@@ -1801,6 +1801,7 @@ function animate(){
   deltaFrame=delta;
   relayoutDelta += delta;
   __dustAcc += delta; // siklus 264: akumulasi waktu nyata antar tick dust (pola relayoutDelta 251/263)
+  if(__light&&__light.paintStars)__light.paintStars(delta); // siklus 501: kedipan bintang malam (throttle 2 dtk internal)
   const elapsed=timer.getElapsed();
   frame++;
   window.__animFrames=frame;
