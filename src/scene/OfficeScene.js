@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -1405,7 +1405,10 @@ if(window.__projectBoard&&window.__projectBoard.mesh){
 }
 // --- DEKORASI TAMBAHAN: poster, tanaman besar, partisi kaca, rug, lampu lounge ---
 // Builder murni di parts/decor.js (diuji unit); di sini tinggal injek konteks.
-createDecor({ THREE, office, M });
+const __decorObj=createDecor({ THREE, office, M });
+// Siklus 487: daun tanaman besar ikut bersway (angin) — di-tick di dalam gate
+// ambient (kontrak waktu-nyata siklus 485) bersama efek ambient lainnya.
+const __plants=__decorObj&&Array.isArray(__decorObj.plants)?__decorObj.plants:[];
 
 // --- TANAMAN BESI tambahan di sudut ---
 addPlant(11.6,-8.5,true);
@@ -1865,6 +1868,7 @@ function animate(){
   // ring, visor, label duduk, label NX, dan animasi hidup karakter duduk (napas, ketik, lirik layar)
   if(shouldUpdateAmbient(frame) || __ambientGate(elapsed)){
     const fx=ambientFx(elapsed);
+    plantSway(elapsed,__plants); // siklus 487: daun tanaman bersway (base di-latch panggilan pertama)
     ringMat.opacity=fx.ring;
     helmetVisor.material.opacity=fx.visor;
     agentData.forEach((a,i)=>{

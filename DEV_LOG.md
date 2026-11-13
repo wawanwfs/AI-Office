@@ -7876,3 +7876,10 @@
 - Fix pola 481-485: parts/effects.js tambah DUST_SEC=3/60 s & dustTimeGate; OfficeScene state __dustGate persist antar frame, di-OR dgn gate frame-count lama (kedua jalur tetap diuji).
 - Test baru effects_dust_time_gate.test.js (5): paritas laju @60FPS (199 tick/10 dtk, rata-rata jeda 3 frame), @5FPS tetap ON tiap frame, catch-up eksak, guard non-finite. Verifikasi: vitest 366 file, 4140 passed + 6 skipped; build PWA exit 0; dist -> ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 708KB, colors=11109 nonbg=0.992, hygiene 41 refs 0 missing).
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
+## 13/11/2026 20:20 WIB — Siklus 487: daun tanaman dekorasi bersway angin (plantSway)
+- Gap visual: 8+ tanaman (3 besar decor.js + addPlant furniture.js + trinket meja) SEPENUHNYA STATIS — satu-satunya elemen scene tanpa animasi hidup; pose identik setiap frame.
+- Fix: plantSway(elapsed, plants) di parts/effects.js (murni, diuji unit): base posisi daun di-latch panggilan pertama + fase per (tanaman,daun); osilasi amplitudo kecil ≤0.02 unit + rot.z ≤0.06 rad, kontrak waktu-nyata elapsed — dipanggil di dalam gate ambient (siklus 485) sehingga tetap hidup di GPU lambat.
+- OfficeScene: createDecor kini menangkap refs → __plants; tick plantSway di blok ambient.
+- Test baru effects_plant_sway.test.js (5): latch base, deterministik (elapsed sama = hasil sama), amplitudo ≤0.02, osilasi berpusat di base (rata-rata <0.01), guard non-finite/struktur rusak.
+- Verifikasi: vitest 367 file, 4145 passed + 6 skipped (+5); build PWA exit 0; dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 713KB, colors=11531 nonbg=0.992, hygiene 41 refs 0 missing).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.

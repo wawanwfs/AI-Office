@@ -243,6 +243,36 @@ export function ambientFx(elapsed, i = 0) {
   };
 }
 
+// ── Siklus 487: daun tanaman dekorasi ikut hidup (sway angin) ───────────────
+// Murni & diuji unit: posisi dasar daun di-latch saat panggilan pertama
+// (baseX/baseZ/baseY + fase per daun), lalu di-OSILASI kecil dgn elapsed waktu
+// nyata — dipanggil di dalam gate ambient (siklus 485, kontrak waktu) sehingga
+// di GPU lambat tetap hidup. Return jumlah daun yang di-update (0 = guard).
+export function plantSway(elapsed, plants) {
+  if (!Number.isFinite(elapsed) || !Array.isArray(plants)) return 0;
+  let n = 0;
+  plants.forEach((pl, pi) => {
+    if (!pl || !Array.isArray(pl.leaves)) return;
+    pl.leaves.forEach((lf, li) => {
+      if (!lf || !lf.position) return;
+      const u = lf.userData || (lf.userData = {});
+      if (!Number.isFinite(u.baseY)) {
+        u.baseX = Number.isFinite(lf.position.x) ? lf.position.x : 0;
+        u.baseY = Number.isFinite(lf.position.y) ? lf.position.y : 0;
+        u.baseZ = Number.isFinite(lf.position.z) ? lf.position.z : 0;
+        u.ph = pi * 1.7 + li * 0.9;
+      }
+      const s = Math.sin(elapsed * 0.8 + u.ph);
+      if (!Number.isFinite(s)) return;
+      lf.position.x = u.baseX + s * 0.012;
+      lf.position.z = u.baseZ + Math.cos(elapsed * 0.6 + u.ph) * 0.01;
+      if (lf.rotation) lf.rotation.z = s * 0.06;
+      n++;
+    });
+  });
+  return n;
+}
+
 // ── Kinematika animasi karakter duduk / rapat / resepsi ──
 export function charMotion(elapsed, i = 0, mode = 'desk') {
   if (!Number.isFinite(elapsed)) elapsed = 0;
