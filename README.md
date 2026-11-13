@@ -603,3 +603,16 @@ and lack of bind or volume mounts.
 - [Phase 24 scoped gate](docs/REA_PHASE24.md)
 - [Phase 24 operator runbook](docs/PHASE24_OCI_RUNTIME_RUNBOOK.md)
 - [Next Phase 25 implementation prompt](docs/NEXT_PHASE25_PROMPT.md)
+
+## Phase 25 — signed release policy outside preview state
+
+The Linux operator requires a separate signed release-policy checkpoint
+for start, logs and restart. An independently provisioned head hash,
+signer fingerprint and sequence floor bind a fresh allow/revoke decision
+to the exact OCI manifest and release approval. Restoring preview SQLite
+does not restore those inputs. Explicit, authorized cleanup still works
+after revocation, with the existing signed source checks.
+
+- [Phase 25 scoped gate](docs/REA_PHASE25.md)
+- [Phase 25 release-policy runbook](docs/PHASE25_RELEASE_POLICY_RUNBOOK.md)
+- [Next Phase 26 implementation prompt](docs/NEXT_PHASE26_PROMPT.md)

@@ -5,7 +5,7 @@ source builder or public authenticated reverse proxy. It must run on a
 separate operator/worker host with Docker rights; the HTTP gateway NEVER
 imports or exposes this module. No client/LLM controls flags/images/volumes.
 """
-from contextlib import closing
+from contextlib import closing, contextmanager
 import copy
 import hashlib
 import os
@@ -17,6 +17,7 @@ from project_rbac import ident
 from preview_admission import ReviewedPreviewAdmission, AdmissionDenied
 from preview_authority import SignedPreviewAuthority
 from preview_snapshot import ReviewedPreviewSnapshot
+from preview_release_policy import SignedReleasePolicy
 from preview_oci_promotion import (
     ApprovedOCIRelease, load_verified_image, verify_api_container, verify_engine_image,
 )
@@ -36,7 +37,8 @@ class PreviewDenied(PermissionError):
 class TemplatePreviewManager:
     def __init__(self, registry_path, template_path, *, enabled=False,
                  runner=None, docker="docker", reviewed_files=None,
-                 reviewer_authority=None, sealed_runtime=None, oci_release=None):
+                 reviewer_authority=None, sealed_runtime=None, oci_release=None,
+                 release_policy=None):
         if not enabled:
             raise PreviewDenied("operator approval required for Docker preview")
         template=Path(template_path).absolute()
@@ -70,6 +72,9 @@ class TemplatePreviewManager:
         if oci_release is not None and not isinstance(oci_release, ApprovedOCIRelease):
             raise AdmissionDenied("invalid approved OCI release configuration")
         self.oci_release = oci_release
+        if release_policy is not None and not isinstance(release_policy, SignedReleasePolicy):
+            raise AdmissionDenied("invalid signed release policy configuration")
+        self.release_policy = release_policy
         self.runner=runner or subprocess.run
         self.snapshots=ReviewedPreviewSnapshot(
             template.parent, self.registry.parent, self.reviewed_manifest)
@@ -155,13 +160,28 @@ class TemplatePreviewManager:
         self._enforce_epoch(decision)
         return decision
 
+    @contextmanager
     def _approved_release(self):
         if not linux_sealing_supported():
             raise AdmissionDenied("sealed preview operator requires Linux memfd")
         if self.oci_release is None:
             raise AdmissionDenied("current pinned OCI release approval required")
+        if self.release_policy is None:
+            raise AdmissionDenied("current signed release policy checkpoint required")
         decision = self._verify()
-        return self.oci_release.open_verified(self.reviewed_manifest, decision["fingerprint"])
+        with self.oci_release.open_verified(self.reviewed_manifest, decision["fingerprint"]) as material:
+            self._check_release_policy(material[1], decision["fingerprint"])
+            yield material
+
+    def _check_release_policy(self, checked, reviewer_fingerprint=None):
+        if reviewer_fingerprint is None:
+            reviewer_fingerprint = self._verify()["fingerprint"]
+        self.release_policy.verify(
+            manifest_digest=checked.manifest_digest,
+            approval_sha256=self.oci_release.approval_sha256,
+            reviewer_fingerprint=reviewer_fingerprint,
+            release_witness_fingerprint=self.oci_release.witness_fingerprint,
+        )
 
     def _check_running_release(self, record, checked):
         if (record.get("oci_manifest_digest") != checked.manifest_digest
@@ -356,6 +376,8 @@ class TemplatePreviewManager:
                         (image_id, ingress["image_id"], checked.manifest_digest,
                          checked.config_digest, self.oci_release.approval_sha256, project_id))
                 record=self.status(project_id)
+                # Preparation can take time. Recheck before activating containers.
+                self._check_release_policy(checked)
                 self._invoke(record,token,
                              ["up","-d","--no-build","--pull","never"],timeout=240)
                 runtime_id = self._runtime_id(record, token)
@@ -399,6 +421,7 @@ class TemplatePreviewManager:
                 self._check_running_release(record, checked)
                 if self._runtime_id(record, token) != record["api_container_id"]:
                     raise AdmissionDenied("registered preview API container changed")
+                self._check_release_policy(checked)
                 self._claim_transition(project_id,("running",))
                 self._invoke(record,token,["restart"])
                 if self._runtime_id(record, token) != record["api_container_id"]:
