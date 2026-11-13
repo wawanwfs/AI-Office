@@ -6,6 +6,7 @@ dist
 *.log
 *.tgz
 .wfs_ui_token
+artifacts/
 *.png.tmp
 
 backend/.env
