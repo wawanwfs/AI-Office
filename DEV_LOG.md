@@ -7820,3 +7820,9 @@
 - Bukti: sealed-test sekarang 64 passed, 2 skipped (dulu 57p/9s — 7 test memfd yang tadinya skip kini jalan & hijau di Linux asli); pytest penuh backend+backend_live 661 passed + 3 skipped + 4 subtests; ci_dynamic_preview_operator.py EXIT=0 — proof lengkap: phase19 kernel_seals_checked=true, phase22_mount_free_frontend dua tenant (no bind/volume, read-only rootfs, asset in-image = signed hash, HTTP asset match saat host dimutasi), cleanup_confirmed=true; vitest 359 file 4109 passed + 6 skipped; build PWA exit 0; dist → ~/wfs-hq; e2e_err.py agents=26 errs=[]; eslint exit 0 setelah globalIgnores +artifacts (dist minified preview bikin 99 error false-positive).
 - Catatan: ~/pytest-venv (3.11) masih ada untuk e2e skrip lama; jangan dihapus tanpa migrasi. artifacts/ kini ignored — buat ulang lokal bila perlu jalankan CI operator lagi.
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.
+## 13/11/2026 23:05 WIB — Siklus 477: deploy ~/wfs-hq disinkronkan penuh (hapus bundle basi)
+
+- Audit pasca-476: rsync `dist → ~/wfs-hq` sebelumnya menumpuk (accumulate) — /assets memuat bundle hash lama (App-BXWlHZwj, CsWidget-O8lApP2O, index-CLHNCJk- dsb.) berdampingan file baru; risko SW/HTTP menyajikan chunk basi.
+- Fix: sinkron penuh `rsync -a --delete --exclude=api_service.py dist/ ~/wfs-hq/` (api_service.py server lokal dijaga); sekarang /assets hanya berisi 15 bundle hash aktif, nol file yatim; index.html terkini terkonfirmasi (size+hash sama dengan dist).
+- Verifikasi: vitest 359 file, 4111 passed + 6 skipped; build PWA exit 0 (968ms, precache 47); e2e_err_probe OK (agents=26, hooks cam/renderer/controls/wall=true, shot 687KB, pixels nonbg=0.992, hygiene 41 refs 0 missing, errs=[]); GET /app/?mode=office = 200.
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.
