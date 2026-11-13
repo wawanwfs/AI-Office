@@ -7918,6 +7918,13 @@
 - Test baru effects_pedestal_breath.test.js (5): guard non-finite netral, rentang glow/lip, seam periodik glow T & lip 1.7T, deterministik.
 - Verifikasi: vitest 372 file, 4174 passed + 6 skipped (+5); build PWA exit 0; rsync dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 706KB, colors=11150 nonbg=0.992, hygiene 41 refs 0 missing).
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
+## 14/11/2026 00:55 WIB — Siklus 494: glow strip resepsionis & layar monitor bernapas (receptionGlow)
+- Gap visual: strip teal bawah meja resepsionis (rcGlow, brand WFS terlihat di zoom depan) & glow layar monitor reception KONSTAN penuh — satu-satunya elemen brand depan tanpa napas (setelah robot 491, pedestal 492, lampu lounge 493).
+- Fix: receptionGlow(elapsed) di parts/effects.js (murni, diuji unit): strip teal bernapas 0.55–1.0 siklus 3.1 dtk (tak sinkron dgn lampu 5.2, tak padam total), layar monitor flicker tipis 0.82–1.0 siklus 2.3 dtk. Kontrak waktu-nyata, di-tick di gate ambient (485) → hidup di GPU lambat.
+- reception.js: rcGlow/rcScreenGlow material transparent, refs +rcGlow/rcScreenGlow; OfficeScene: tick receptionGlow di gate ambient (guard __rc.rcGlow/rcScreenGlow).
+- Test baru effects_reception_glow.test.js (5): guard non-finite netral, rentang + tak padam, deterministik, seam periodik, konstanta kontrak (puncak/lembah eksak).
+- Verifikasi: vitest 374 file, 4187 passed + 6 skipped (+5, +1 file); build PWA exit 0; dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 702KB, colors=11056 nonbg=0.992, hygiene 41 refs 0 missing).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
 ## 14/11/2026 00:05 WIB — Siklus 493: lampu berdiri lounge berkedip hangat (lampFlicker)
 - Gap visual: PointLight + shade lampu berdiri lounge (L2, sudut 11.2/8.6) konstan — cahaya mati tanpa nuansa filamen; satu-satunya sumber cahaya statis tersisa (setelah pedestal 492).
 - Fix: lampFlicker(elapsed) di parts/effects.js (murni, diuji unit): gelombang utama 5.2 dtk + mikro-flicker ~1.73 dtk (rasio 30:19, tak sinkron) + jitter halus ±0.03 → intensity 0.5×(0.72…1.09) & shade opacity 0.9×(0.55…0.95), tak mati total. Kontrak waktu-nyata, di-tick di gate ambient (485) → hidup di GPU lambat.

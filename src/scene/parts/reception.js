@@ -42,6 +42,7 @@ export function createReception({ THREE, office, M, MB, drawResepsiLogo, makeLab
 
   // Teal glow strip under desk front
   const rcGlow = new THREE.Mesh(new THREE.BoxGeometry(2.2, .02, .02), MB(0x4D9FFF));
+  rcGlow.material.transparent = true; rcGlow.material.opacity = 1; // siklus 494: bernapas via receptionGlow
   rcGlow.position.set(RCX, .05, RCZ + .3); reception.add(rcGlow);
   const rcLight = new THREE.PointLight(0x4D9FFF, 0.4, 3.5, 2);
   rcLight.position.set(RCX, .1, RCZ + .5); reception.add(rcLight);
@@ -93,5 +94,5 @@ export function createReception({ THREE, office, M, MB, drawResepsiLogo, makeLab
 
   office.add(reception);
 
-  return { reception, rcLight, nexusChar, nxLabel, nexusAgent };
+  return { reception, rcLight, nexusChar, nxLabel, nexusAgent, rcGlow, rcScreenGlow };
 }

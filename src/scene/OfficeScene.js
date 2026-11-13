@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -1892,6 +1892,12 @@ function animate(){
       const pb=pedestalBreath(elapsed);
       __pedestal.glow.material.opacity=pb.glow;
       if(__pedestal.lip.material){ __pedestal.lip.material.transparent=true; __pedestal.lip.material.opacity=pb.lip; }
+    }
+    // siklus 494: glow strip & layar monitor resepsionis bernapas (receptionGlow)
+    if(__rc&&__rc.rcGlow&&__rc.rcScreenGlow){
+      const rg=receptionGlow(elapsed);
+      if(__rc.rcGlow.material){ __rc.rcGlow.material.transparent=true; __rc.rcGlow.material.opacity=rg.glow; }
+      if(__rc.rcScreenGlow.material){ __rc.rcScreenGlow.material.transparent=true; __rc.rcScreenGlow.material.opacity=rg.screen; }
     }
     // siklus 493: lampu berstandi lounge berkedip hangat (PointLight + shade)
     if(__loungeObj&&__loungeObj.lampBulb&&__loungeObj.lampShade){
