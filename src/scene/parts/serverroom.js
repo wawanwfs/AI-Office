@@ -5,6 +5,7 @@
 export function createServerRoom(ctx) {
   const { THREE, office, M, MB } = ctx;
   const leds = [];
+  const edges = []; // siklus 506: strip cahaya tepi rak (breath)
   const serverRack = (x, z) => {
     const g = new THREE.Group();
     // body cukup terang dgn garis tepi cyan supaya tidak melebur ke latar gelap
@@ -14,6 +15,7 @@ export function createServerRoom(ctx) {
     [-.46, .46].forEach(sx => {
       const edge = new THREE.Mesh(new THREE.BoxGeometry(.05, 2.06, .03), MB(0x00E5FF));
       edge.position.set(sx, 1.05, .365); g.add(edge);
+      edges.push(edge); // siklus 506: strip tepi ikut bernapas (rackEdgeBreath)
     });
     for (let u = 0; u < 8; u++) {
       const unit = new THREE.Mesh(new THREE.BoxGeometry(.8, .18, .6), M(0x3A3F55));
@@ -82,5 +84,5 @@ export function createServerRoom(ctx) {
     bubbles.push(b);
   }
 
-  return { leds, racks, light, bulb, cable, cooler, wcBody, jug, tap, bubbles, BUBBLE_TOP, BUBBLE_BOTTOM, BUBBLE_CYCLE_SEC };
+  return { leds, edges, racks, light, bulb, cable, cooler, wcBody, jug, tap, bubbles, BUBBLE_TOP, BUBBLE_BOTTOM, BUBBLE_CYCLE_SEC };
 }

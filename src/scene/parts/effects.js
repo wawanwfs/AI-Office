@@ -846,3 +846,18 @@ export function cafeGlowBreath(elapsed) {
     led: 0.55 + 0.38 * w(ESPRESSO_LED_SEC) + 0.07 * micro, // 0.55…1.0
   };
 }
+
+// ── Siklus 506: strip cahaya tepi rak server bernapas (rackEdgeBreath) ──
+// Enam strip vertikal cyan (0x00E5FF, MB konstan) di muka 3 rak server masih
+// statis (setelah lampu ruang server 498 & LED unit yang sudah berkedip acak).
+// Napas 0.50…1.0 gelombang utama 3.1 dtk + mikro 1.29 dtk (rasio 2.41× tak
+// sinkron vs 9 siklus lain) — tak pernah padam total (identitas rak hidup).
+export const RACK_EDGE_SEC = 3.1; // gelombang utama napas strip tepi
+
+export function rackEdgeBreath(elapsed) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0; // netral (sin 0 → 0.5)
+  const w = (sec) => 0.5 + 0.5 * Math.sin((t / sec) * Math.PI * 2);
+  const main = w(RACK_EDGE_SEC);
+  const micro = w(RACK_EDGE_SEC * 2.41); // ≈1.7 dtk — rasio tak sinkron
+  return 0.50 + 0.42 * main + 0.08 * micro; // 0.50…1.0, tak padam
+}
