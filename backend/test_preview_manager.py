@@ -1104,6 +1104,7 @@ def test_phase22_legacy_running_preview_only_allows_authorized_cleanup(
     monkeypatch.setattr(manager, "_approved_release",
                         lambda: nullcontext((None, checked, "d" * 64)))
     manager.oci_release = SimpleNamespace(approval_sha256="e" * 64)
+    monkeypatch.setattr(manager, "_check_release_policy", lambda *args: None)
     monkeypatch.setattr(preview_manager, "load_verified_image", lambda *args: api)
     monkeypatch.setattr(manager, "_runtime_id", lambda *args: "1" * 64)
     monkeypatch.setattr(preview_manager, "build_local_reviewed_ingress_image",
@@ -1136,6 +1137,22 @@ def test_phase24_missing_oci_approval_denies_before_reservation(preview, monkeyp
     manager.sealed_runtime = True
     monkeypatch.setattr("preview_manager.linux_sealing_supported", lambda: True)
     with pytest.raises(AdmissionDenied, match="current pinned OCI release"):
+        manager.start("alpha", 19010, "X" * 43)
+    with pytest.raises(PreviewDenied, match="not registered"):
+        manager.status("alpha")
+    assert calls == []
+
+
+def test_phase25_missing_checkpoint_denies_before_opening_release(preview, monkeypatch):
+    from preview_oci_promotion import ApprovedOCIRelease
+
+    manager, calls = preview
+    manager.sealed_runtime = True
+    manager.oci_release = ApprovedOCIRelease(
+        manager.registry, manager.registry, manager.registry, manager.registry,
+        "a" * 64, "b" * 64)
+    monkeypatch.setattr("preview_manager.linux_sealing_supported", lambda: True)
+    with pytest.raises(AdmissionDenied, match="signed release policy checkpoint required"):
         manager.start("alpha", 19010, "X" * 43)
     with pytest.raises(PreviewDenied, match="not registered"):
         manager.status("alpha")

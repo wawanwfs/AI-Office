@@ -4,7 +4,9 @@
 Disposable CI Docker host ONLY. No public gateway, arbitrary untrusted
 source builds, provider credentials, or production deployment.
 """
+from dataclasses import replace
 import hashlib
+import sqlite3
 import base64
 import json
 import os
@@ -14,7 +16,7 @@ import subprocess
 import sys
 import tempfile
 import time
-from contextlib import ExitStack, contextmanager
+from contextlib import ExitStack, closing, contextmanager
 
 import httpx
 
@@ -25,6 +27,7 @@ from ci_preview_network_probe import prove_disposable_container_egress
 from ci_phase13_real_dns_rebind import prove_real_docker_dns_rebinding
 from ci_phase19_sealed_build import prove_sealed_build
 from ci_phase23_oci_release import prepare_oci_release
+from ci_phase25_release_policy import DisposableReleasePolicySigner
 from preview_authority import SignedPreviewAuthority
 from preview_signature import canonical_review_bytes
 from preview_root_authority import canonical_roster_bytes
@@ -183,11 +186,11 @@ def reviewed_snapshot_runner(argv,**kwargs):
     deadline=kwargs.pop("timeout",120)
     return subprocess.run(argv,timeout=240 if deadline>240 else deadline,**kwargs)
 
-def open_manager(oci_release=None):
+def open_manager(oci_release=None, release_policy=None):
     return TemplatePreviewManager(root/"registry.db",
         reviewed_root/"compose.yaml",enabled=True,reviewed_files=reviewed_files,
         reviewer_authority=authority,runner=reviewed_snapshot_runner,
-        sealed_runtime=True,oci_release=oci_release)
+        sealed_runtime=True,oci_release=oci_release,release_policy=release_policy)
 
 
 manager = open_manager()
@@ -350,7 +353,16 @@ try:
     release_root.mkdir(mode=0o700)
     release, proof["phase23_oci_release"] = prepare_oci_release(
         manager.snapshots, names[0], fingerprint, release_root)
-    manager = open_manager(release)
+    try:
+        open_manager(release).start(names[0], ports[0], tokens[0])
+        raise AssertionError("missing release policy accepted")
+    except AdmissionDenied as exc:
+        assert "current signed release policy checkpoint required" in str(exc)
+    signer = DisposableReleasePolicySigner(
+        root / "release-policy", proof["phase23_oci_release"]["manifest_digest"],
+        release.approval_sha256)
+    policy = signer.issue(1)
+    manager = open_manager(release, policy)
     release_proof = {"manifest_digest": proof["phase23_oci_release"]["manifest_digest"],
                      "config_digest": proof["phase23_oci_release"]["config_digest"],
                      "missing_approval_denied": True, "tenants": {}}
@@ -381,7 +393,7 @@ try:
                                 "other_tenant_token_rejected":True,
                                 "lifecycle":"started"})
     # Reopen the operator state as a fresh CLI invocation would.
-    manager = open_manager(release)
+    manager = open_manager(release, policy)
     for project,port,token,other in zip(names,ports,tokens,
                                          (token_b,token_a)):
         restarted = manager.restart(project, token)
@@ -459,8 +471,62 @@ try:
     # operator must re-verify and re-promote before recreating the tenant.
     project, port, token = names[1], ports[1], tokens[1]
     old_id = release_proof["tenants"][project]["api_container_id"]
+    # Save a real older operator registry, then advance the separately
+    # pinned policy to revoke this release. A registry restore cannot
+    # change the current policy inputs that the operator receives.
+    backup = root / "operator-before-policy-change.db"
+    registry = root / "registry.db"
+    with closing(sqlite3.connect(registry)) as db, closing(sqlite3.connect(backup)) as saved:
+        db.backup(saved)
+        db.execute("UPDATE wfs_preview_instances SET oci_approval_sha256=NULL WHERE project_id=?",
+                   (project,))
+        db.commit()
+    revoked = signer.issue(2, decision="revoke")
+    assert manager.status(project)["oci_approval_sha256"] is None
+    with closing(sqlite3.connect(backup)) as saved, closing(sqlite3.connect(registry)) as db:
+        saved.backup(db)
+    current = open_manager(release, revoked)
+    assert current.status(project)["oci_approval_sha256"] == release.approval_sha256
+    for candidate, reason in (
+        (replace(revoked, checkpoint_path=policy.checkpoint_path, signature_path=policy.signature_path),
+         "differs from externally pinned"),
+        (replace(policy, minimum_sequence=revoked.minimum_sequence), "sequence rollback"),
+        (revoked, "explicitly revoked"),
+    ):
+        try:
+            open_manager(release, candidate).restart(project, token)
+            raise AssertionError("release policy denial did not prevent restart")
+        except AdmissionDenied as exc:
+            assert reason in str(exc), str(exc)
+        assert current.status(project)["phase"] == "running"
+    # Cleanup is deliberate and available under revocation. The next allow
+    # decision is synthetic and explicitly signed at a higher sequence.
+    try:
+        current.stop(project, token)
+        raise AssertionError("revocation authorized data loss")
+    except PreviewDenied as exc:
+        assert "explicit disposable volume deletion approval required" in str(exc)
+    assert current.stop(project, token, allow_data_loss=True)["phase"] == "stopped"
+    try:
+        current.start(project, port, token)
+        raise AssertionError("revoked OCI release accepted after cleanup")
+    except AdmissionDenied as exc:
+        assert "explicitly revoked" in str(exc)
+    # Also exercise cleanup without loading policy or release material.
     assert open_manager().stop(project, token, allow_data_loss=True)["phase"] == "stopped"
-    recovered = open_manager(release).start(project, port, token)
+    policy = signer.issue(3)
+    manager = open_manager(release, policy)
+    recovered = manager.start(project, port, token)
+    proof["phase25_release_policy"] = {
+        "missing_policy_denied": True,
+        "sqlite_backup_and_restore_exercised": True,
+        "older_signed_head_denied": True, "sequence_rollback_denied": True,
+        "revoked_restart_and_start_denied": True,
+        "authorized_cleanup_with_revocation": True,
+        "higher_sequence_reauthorization_proved": True,
+        "synthetic_signer_same_runner": True, "continuous_enforcement": False,
+        "restored_registry_does_not_provision_pins": True,
+    }
     assert recovered["api_container_id"] != old_id
     assert recovered["oci_config_digest"] == release_proof["config_digest"]
     assert recovered["api_image_id"] == release_proof["tenants"][project]["engine_image_id"]

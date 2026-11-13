@@ -15,6 +15,7 @@ import sys
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"backend"))
 from preview_manager import TemplatePreviewManager, PreviewDenied
 from preview_oci_promotion import ApprovedOCIRelease
+from preview_release_policy import SignedReleasePolicy
 from preview_signature import verify_review_signature
 from preview_authority import SignedPreviewAuthority
 from preview_witness import SignedReviewerCheckpoint
@@ -80,6 +81,12 @@ def main():
     parser.add_argument("--oci-witness-key",help="release witness Ed25519 public PEM")
     parser.add_argument("--trusted-oci-approval-sha256",help="out-of-band current approval pin")
     parser.add_argument("--trusted-oci-witness-fingerprint",help="out-of-band release witness pin")
+    parser.add_argument("--release-policy",help="signed current release checkpoint JSON")
+    parser.add_argument("--release-policy-signature",help="detached checkpoint signature")
+    parser.add_argument("--release-policy-public-key",help="separate release policy Ed25519 PEM")
+    parser.add_argument("--trusted-release-policy-sha256",help="out-of-band current head hash")
+    parser.add_argument("--trusted-release-policy-fingerprint",help="out-of-band signer pin")
+    parser.add_argument("--minimum-release-policy-sequence",type=int,help="out-of-band sequence floor")
     parser.add_argument("--discard-data",action="store_true",
                         help="required to remove disposable PostgreSQL volumes")
     args=parser.parse_args()
@@ -94,6 +101,13 @@ def main():
     if not all(oci_inputs) and (any(oci_inputs) or args.action in ("start","logs","restart")):
         parser.error("all six OCI release and independent pin flags are required")
     oci_release=ApprovedOCIRelease(*oci_inputs) if all(oci_inputs) else None
+    policy_inputs=(args.release_policy,args.release_policy_signature,args.release_policy_public_key,
+                   args.trusted_release_policy_sha256,args.trusted_release_policy_fingerprint,
+                   args.minimum_release_policy_sequence)
+    if not all(policy_inputs) and (any(value is not None for value in policy_inputs)
+                                  or args.action in ("start","logs","restart")):
+        parser.error("all six release policy checkpoint and independent pin flags are required")
+    release_policy=SignedReleasePolicy(*policy_inputs) if all(policy_inputs) else None
     state=Path(args.state_root).absolute()
     if state.is_symlink():
         parser.error("symlinked state directory denied")
@@ -149,7 +163,7 @@ def main():
     )
     manager=TemplatePreviewManager(state/"registry.db",template,
         enabled=True,reviewed_files=approved_hashes,
-        reviewer_authority=authority,oci_release=oci_release)
+        reviewer_authority=authority,oci_release=oci_release,release_policy=release_policy)
     if args.action=="status":
         result=manager.status(args.project)
     else:

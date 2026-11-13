@@ -126,7 +126,7 @@ jobs:
             backend/preview_admission_v2.py backend/preview_signature.py \
             backend/preview_authority.py backend/preview_snapshot.py \
             backend/preview_sealed_build.py backend/preview_sealed_runtime.py \
-            backend/preview_oci_layout.py backend/preview_oci_approval.py backend/preview_oci_promotion.py \
+            backend/preview_oci_layout.py backend/preview_oci_approval.py backend/preview_oci_promotion.py backend/preview_release_policy.py \
             backend/preview_root_authority.py backend/preview_witness.py \
             backend/preview_transparency.py backend/preview_compact_merkle.py \
             backend/reference_transparency_log.py backend/reference_log_gossip.py \
@@ -383,7 +383,7 @@ jobs:
           PYTHONPATH: backend
         run: |
           New-Item -ItemType Directory -Force artifacts/windows-native | Out-Null
-          python -m pytest backend/test_recovery_snapshot.py backend/test_preview_proxy.py backend/test_billing_reconcile.py backend/test_secure_control_api.py backend/test_brief_reconciliation.py backend/test_reconcile_cli.py backend/test_preview_signature.py backend/test_preview_root_authority.py backend/test_preview_witness.py backend/test_preview_transparency.py backend/test_preview_compact_merkle.py backend/test_preview_manager.py backend/test_reference_transparency_log.py backend/test_reference_log_gossip.py backend/test_preview_sealed_build.py backend/test_preview_sealed_runtime.py backend/test_preview_oci_release.py -q --junitxml=artifacts/windows-native/pytest.xml
+          python -m pytest backend/test_recovery_snapshot.py backend/test_preview_proxy.py backend/test_billing_reconcile.py backend/test_secure_control_api.py backend/test_brief_reconciliation.py backend/test_reconcile_cli.py backend/test_preview_signature.py backend/test_preview_root_authority.py backend/test_preview_witness.py backend/test_preview_transparency.py backend/test_preview_compact_merkle.py backend/test_preview_manager.py backend/test_reference_transparency_log.py backend/test_reference_log_gossip.py backend/test_preview_sealed_build.py backend/test_preview_sealed_runtime.py backend/test_preview_oci_release.py backend/test_preview_release_policy.py -q --junitxml=artifacts/windows-native/pytest.xml
       - name: Upload independent Windows Python evidence
         if: always()
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
