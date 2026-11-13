@@ -624,6 +624,26 @@ export function pedestalBreath(elapsed) {
   return { glow, lip };
 }
 
+// ── Siklus 493: lampu berdiri lounge berkedip hangat (lampFlicker) ─────────
+// PointLight & shade lampu berdiri lounge (L2, sudut 11.2/8.6) konstan — cahaya
+// mati seperti umum lampu tanpa filamen hidup. Nilai murni waktu-nyata
+// (elapsed), tanpa state → diuji unit; penerapan di gate ambient OfficeScene.
+export const LAMP_FLICKER_SEC = 5.2; // satu gelombang napas utama
+
+export function lampFlicker(elapsed) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0;
+  // Gelombang utama 5.2 dtk + mikro-flicker 1.9 dtk (lebih lambat 1.7× dari
+  // gelombang utama tidak sinkron — pola pedestal 492) + jitter halus sinus
+  // tinggi-frekuensi agar terasa seperti filamen, bukan metronom.
+  const w = (hz) => 0.5 + 0.5 * Math.sin(t * hz * Math.PI * 2);
+  const main = w(1 / LAMP_FLICKER_SEC);
+  const micro = w(1 / (LAMP_FLICKER_SEC * 1.9 / 3)); // ≈1.73 dtk
+  const jitter = Math.sin(t * 7.3 + Math.sin(t * 1.1) * 0.6) * 0.03;
+  const intensity = 0.78 + 0.22 * main + 0.06 * (micro - 0.5) + jitter; // ~0.72…1.0
+  const shade = 0.62 + 0.28 * main + 0.05 * (micro - 0.5); // 0.55…0.95, tak mati total
+  return { intensity, shade };
+}
+
 export function robotIdle(elapsed) {
   const t = Number.isFinite(elapsed) ? elapsed : 0;
   // Mata: terbuka penuh, menutup cepat di ujung tiap siklus (ease in-out).
