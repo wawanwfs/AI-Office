@@ -642,3 +642,15 @@ does not make an already observed older decision valid again.
 - [Phase 27 scoped gate](docs/REA_PHASE27.md)
 - [Phase 27 Linux custody runbook](docs/PHASE27_LINUX_CUSTODY_RUNBOOK.md)
 - [Next Phase 28 implementation prompt](docs/NEXT_PHASE28_PROMPT.md)
+
+## Phase 28 — signed release journal rotation
+
+At the 64-record limit, operators can prepare a new journal window linked
+to the last verified checkpoint. A separate offline signature authenticates
+the bridge. Rotation preserves the last decision and its expiry. The
+operator still requires independently retained anchors and rejects old
+windows after it has durably observed the new one.
+
+- [Phase 28 scoped gate](docs/REA_PHASE28.md)
+- [Phase 28 rotation runbook](docs/PHASE28_JOURNAL_ROTATION_RUNBOOK.md)
+- [Next Phase 29 implementation prompt](docs/NEXT_PHASE29_PROMPT.md)

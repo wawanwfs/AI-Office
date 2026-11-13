@@ -22,10 +22,11 @@ _MAX_LIFETIME = 600
 _MAX_FUTURE_SKEW = 30
 
 
-def checkpoint_message(raw, *, chained=False):
+def checkpoint_message(raw, *, chained=False, rotation=False):
     if not isinstance(raw, bytes) or not 1 <= len(raw) <= 4096:
         raise AdmissionDenied("release policy checkpoint size invalid")
-    context = _CONTEXT.replace(b":V1", b":V2") if chained else _CONTEXT
+    version = b":V3" if rotation else b":V2" if chained else b":V1"
+    context = _CONTEXT.replace(b":V1", version)
     return context + raw
 
 
@@ -62,11 +63,12 @@ class SignedReleasePolicy:
             minimum_sequence=self.minimum_sequence, now=now)
 
 
-def verify_signed_checkpoint(raw, signature, public_key, fingerprint, *, chained=False):
+def verify_signed_checkpoint(raw, signature, public_key, fingerprint, *, chained=False,
+                             rotation=False):
     """Authenticate a checkpoint without treating historical records as current."""
     policy = json_object(raw)
     fields = _FIELDS | {"previous_sha256"} if chained else _FIELDS
-    version = 2 if chained else 1
+    version = 3 if rotation else 2 if chained else 1
     if (set(policy) != fields or type(policy["version"]) is not int
             or policy["version"] != version or policy["platform"] != PLATFORM
             or policy["decision"] not in ("allow", "revoke")
@@ -88,7 +90,7 @@ def verify_signed_checkpoint(raw, signature, public_key, fingerprint, *, chained
     if not is_sha256(fingerprint) or not hmac.compare_digest(actual, fingerprint):
         raise AdmissionDenied("release policy signing key differs from pinned key")
     try:
-        key.verify(signature, checkpoint_message(raw, chained=chained))
+        key.verify(signature, checkpoint_message(raw, chained=chained, rotation=rotation))
     except InvalidSignature as exc:
         raise AdmissionDenied("release policy signature mismatch") from exc
     return policy
