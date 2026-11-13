@@ -17,6 +17,7 @@ from project_rbac import ident
 from preview_admission import ReviewedPreviewAdmission, AdmissionDenied
 from preview_authority import SignedPreviewAuthority
 from preview_snapshot import ReviewedPreviewSnapshot
+from preview_sealed_build import linux_sealing_supported
 from preview_sealed_runtime import (
     SealedRuntimeCompose, build_local_reviewed_image,
     build_local_reviewed_ingress_image,
@@ -90,6 +91,10 @@ class TemplatePreviewManager:
                 db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN api_image_id TEXT")
             if "ingress_image_id" not in columns:
                 db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN ingress_image_id TEXT")
+            if "api_frontend_sealed" not in columns:
+                db.execute(
+                    "ALTER TABLE wfs_preview_instances ADD COLUMN "
+                    "api_frontend_sealed INTEGER NOT NULL DEFAULT 0")
         self._enforce_epoch(self.authority.verify(self.reviewed_manifest))
 
     def _enforce_epoch(self, decision):
@@ -233,9 +238,20 @@ class TemplatePreviewManager:
         env.update({"WFS_PREVIEW_PROJECT_NAME":record["compose_name"],
                     "WFS_PREVIEW_HOST_PORT":str(record["port"]),
                     "WFS_PREVIEW_TEST_TOKEN":token})
+        if self.sealed_runtime:
+            # Compose must not import settings from the mutable staging cwd.
+            env["COMPOSE_DISABLE_ENV_FILE"] = "1"
         # Signed original snapshot always checked BEFORE derivation.
         staged_compose=self.snapshots.verify(record["project_id"])
         if self.sealed_runtime:
+            if not linux_sealing_supported():
+                raise AdmissionDenied("sealed preview operator requires Linux memfd")
+            # A Phase 21 container remains host-bound after Compose restart.
+            # Allow authorized cleanup, but require a fresh reviewed build
+            # before resuming any ordinary operation on that stack.
+            if record.get("api_frontend_sealed") != 1 and args != [
+                    "down", "--volumes", "--remove-orphans"]:
+                raise AdmissionDenied("legacy preview must be stopped and rebuilt")
             image_id=record.get("api_image_id")
             verify_local_image_exists(image_id)
             ingress_image_id = record.get("ingress_image_id")
@@ -253,8 +269,7 @@ class TemplatePreviewManager:
                 ingress_image_id=ingress_image_id)
             with SealedRuntimeCompose(raw) as compose:
                 # Compose -f - reads its complete config from kernel-sealed
-                # stdin, not a same-UID mutable source path. Relative bind
-                # mounts are resolved from the reviewed snapshot's cwd.
+                # stdin. Neither the frontend nor ingress is host-mounted.
                 argv=[self.docker,"compose","-f","-",*args]
                 try:
                     with compose.open_reader() as reader:
@@ -282,6 +297,8 @@ class TemplatePreviewManager:
         return str(result.stdout or "")[-16384:]
 
     def start(self,project_id,port,token):
+        if self.sealed_runtime and not linux_sealing_supported():
+            raise AdmissionDenied("sealed preview operator requires Linux memfd")
         record=self.reserve(project_id,port)
         if record["phase"] in ("running","uncertain"):
             raise PreviewDenied("preview is active or uncertain; reconcile before retry")
@@ -299,7 +316,7 @@ class TemplatePreviewManager:
             with closing(self._db()) as db:
                 db.execute(
                     "UPDATE wfs_preview_instances "
-                    "SET api_image_id=?,ingress_image_id=? "
+                    "SET api_image_id=?,ingress_image_id=?,api_frontend_sealed=1 "
                     "WHERE project_id=? AND phase='uncertain'",
                     (image["image_id"],ingress["image_id"],project_id))
             record=self.status(project_id)
@@ -320,6 +337,8 @@ class TemplatePreviewManager:
         record=self.status(project_id)
         if record["phase"]!="running":
             raise PreviewDenied("cannot restart a stopped/uncertain preview")
+        if self.sealed_runtime and record["api_frontend_sealed"] != 1:
+            raise AdmissionDenied("legacy preview must be stopped and rebuilt")
         self._claim_transition(project_id,("running",))
         self._invoke(record,token,["restart"])
         self._phase(project_id,"running")

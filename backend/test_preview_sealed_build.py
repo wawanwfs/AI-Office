@@ -7,11 +7,9 @@ import hashlib
 import io
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tarfile
-from types import SimpleNamespace
 
 import pytest
 
@@ -34,8 +32,18 @@ def approved(tmp_path):
         "api.py": hashlib.sha256(api).hexdigest(),
     }
 
+    dist = tmp_path / "artifacts/fullstack-preview/dist"
+    nested = "assets/" + "a" * 110 + ".js"
+    files = {nested: b"export default 42;\n", "index.html": b"<!doctype html>\n"}
+    for name, data in files.items():
+        asset = dist / name
+        asset.parent.mkdir(parents=True, exist_ok=True)
+        asset.write_bytes(data)
+
     class Snapshot:
-        reviewed = {"sources": hashes}
+        reviewed = {"sources": hashes, "frontend": {
+            name: hashlib.sha256(data).hexdigest() for name, data in files.items()
+        }}
 
         def verify(self, project_id):
             if project_id != "alpha":
@@ -56,10 +64,19 @@ def test_kernel_seals_freeze_bytes_under_same_uid_attacker(approved):
             context = handle.read()
         assert hashlib.sha256(context).hexdigest() == bundle.tar_sha256
         with tarfile.open(fileobj=io.BytesIO(context), mode="r:") as tar:
-            assert sorted(tar.getnames()) == ["Dockerfile.api", "api.py"]
+            dist = stage.parents[1] / "artifacts/fullstack-preview/dist"
+            assets = snapshots.reviewed["frontend"]
+            assert tar.getnames() == ["Dockerfile.api", "api.py"] + [
+                "dist/" + name for name in sorted(assets)
+            ]
+            assert all(member.isfile() and member.mtime == 0 for member in tar)
             assert tar.extractfile("api.py").read() == (stage / "api.py").read_bytes()
             assert tar.extractfile("Dockerfile.api").read() == (
-                stage / "Dockerfile.api").read_bytes()
+                (stage / "Dockerfile.api").read_bytes() + b"COPY dist/ /app/dist/\n")
+            for name, digest in assets.items():
+                packed = tar.extractfile("dist/" + name).read()
+                assert packed == (dist / name).read_bytes()
+                assert hashlib.sha256(packed).hexdigest() == digest
         # Real separate SAME-UID process inherits the sealed fd.
         attacker = """
 import json,os,sys
@@ -85,6 +102,9 @@ print(json.dumps(out))
             "write": "DENIED", "truncate": "DENIED",
             "reopened-write": "DENIED",
         }
+        with seal_reviewed_preview_context(snapshots, "alpha") as second:
+            assert second.tar_sha256 == bundle.tar_sha256
+        (dist / "index.html").write_bytes(b"changed post seal")
         (stage / "api.py").write_bytes(b"print('MALICIOUS POST SEAL')\n")
         assert bundle.verify()
         with pytest.raises(AdmissionDenied, match="differs from reviewed digest"):
@@ -107,7 +127,7 @@ def test_snapshot_validation_and_manifest_rejection(approved):
     link = stage / "api.py"
     link.unlink()
     try:
-        link.symlink_to(tmp_path := stage / "Dockerfile.api")
+        link.symlink_to(stage / "Dockerfile.api")
     except OSError:
         pytest.skip("host does not permit symlinks")
     with pytest.raises(AdmissionDenied, match="symlink"):
@@ -131,4 +151,39 @@ def test_windows_no_unsealed_file_fallback(approved):
         pytest.skip("Linux sealed path supported")
     snapshots, stage, hashes = approved
     with pytest.raises(AdmissionDenied, match="kernel memfd seals unavailable"):
+        seal_reviewed_preview_context(snapshots, "alpha")
+
+@pytest.mark.parametrize("change, message", [
+    ("replace", "differs from reviewed digest"),
+    ("remove", "index.html missing"),
+    ("add", "inventory differs"),
+    ("symlink", "contains symlink"),
+])
+def test_frontend_must_match_signed_inventory_at_seal_time(approved, change, message):
+    if not linux_sealing_supported():
+        pytest.skip("kernel memfd seals only on Linux")
+    snapshots, stage, _ = approved
+    dist = stage.parents[1] / "artifacts/fullstack-preview/dist"
+    index = dist / "index.html"
+    if change == "replace":
+        index.write_bytes(b"changed after snapshot verification")
+    elif change == "remove":
+        index.unlink()
+    elif change == "add":
+        (dist / "unreviewed.txt").write_bytes(b"never copy me")
+    else:
+        index.unlink()
+        index.symlink_to(stage / "api.py")
+    with pytest.raises(AdmissionDenied, match=message):
+        seal_reviewed_preview_context(snapshots, "alpha")
+
+
+def test_rejects_changed_copy_instruction_even_with_matching_digest(approved):
+    if not linux_sealing_supported():
+        pytest.skip("kernel memfd seals only on Linux")
+    snapshots, stage, hashes = approved
+    dockerfile = b"FROM scratch\nCOPY api.py /unapproved/path.py\n"
+    (stage / "Dockerfile.api").write_bytes(dockerfile)
+    hashes["Dockerfile.api"] = hashlib.sha256(dockerfile).hexdigest()
+    with pytest.raises(AdmissionDenied, match="reviewed Dockerfile API COPY stanza changed"):
         seal_reviewed_preview_context(snapshots, "alpha")

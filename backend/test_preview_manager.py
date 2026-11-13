@@ -1052,3 +1052,71 @@ def test_phase20_fixture_runner_does_not_claim_production_sealing(preview):
     manager.start("alpha",19010,"X"*43)
     assert calls[0][0][-3:] == ["up","-d","--build"]
     assert manager.status("alpha")["api_image_id"] is None
+
+
+def test_phase22_legacy_running_preview_only_allows_authorized_cleanup(
+        preview, monkeypatch):
+    import preview_manager
+    from preview_sealed_build import linux_sealing_supported
+    if not linux_sealing_supported():
+        pytest.skip("kernel memfd seals only on Linux")
+    fixture, calls = preview
+    # The generic fixture has a deliberately minimal Compose document.
+    # This migration must run the real signed-template derivation.
+    source = Path(__file__).resolve().parents[1] / "examples/fullstack-preview"
+    for filename in ("compose.yaml", "Dockerfile.api"):
+        (fixture.template.parent / filename).write_bytes((source / filename).read_bytes())
+    reviewed = candidate_manifest_for_ci_only(fixture.template.parent)
+    manager = TemplatePreviewManager(
+        fixture.registry.with_name("phase22.db"), fixture.template,
+        enabled=True, runner=fixture.runner,
+        reviewed_files=reviewed, reviewer_authority=ci_authority(fixture.registry.parent, reviewed))
+    token = "X" * 43
+    manager.start("alpha", 19010, token)
+    calls.clear()
+    api = "sha256:" + "a" * 64
+    ingress = "sha256:" + "b" * 64
+    with sqlite3.connect(manager.registry) as db:
+        db.execute("UPDATE wfs_preview_instances SET api_image_id=?, ingress_image_id=?",
+                   (api, ingress))
+    manager.sealed_runtime = True
+    monkeypatch.setattr(preview_manager, "verify_local_image_exists", lambda _: True)
+    for operation in (manager.logs, manager.restart):
+        with pytest.raises(AdmissionDenied, match="legacy preview must be stopped"):
+            operation("alpha", token)
+    assert manager.status("alpha")["phase"] == "running"
+    assert calls == []
+
+    commands = []
+
+    def capture(argv, *, stdin, env, **kwargs):
+        assert env["COMPOSE_DISABLE_ENV_FILE"] == "1"
+        commands.append((argv, stdin.read()))
+        return SimpleNamespace(returncode=0, stdout="")
+
+    manager.runner = capture
+    assert manager.stop("alpha", token, allow_data_loss=True)["phase"] == "stopped"
+    assert commands[0][0][-3:] == ["down", "--volumes", "--remove-orphans"]
+    assert b"/app/dist" not in commands[0][1]
+    monkeypatch.setattr(preview_manager, "ensure_approved_runtime_images", lambda _: None)
+    monkeypatch.setattr(preview_manager, "build_local_reviewed_image",
+                        lambda *args: {"image_id": api})
+    monkeypatch.setattr(preview_manager, "build_local_reviewed_ingress_image",
+                        lambda *args: {"image_id": ingress})
+    restarted = manager.start("alpha", 19010, token)
+    assert restarted["api_frontend_sealed"] == 1
+    assert restarted["phase"] == "running"
+    assert commands[1][0][-5:] == ["up", "-d", "--no-build", "--pull", "never"]
+    assert b"/app/dist" not in commands[1][1]
+
+
+def test_phase22_unsupported_host_denies_operator_start_before_docker_or_reservation(
+        preview, monkeypatch):
+    manager, calls = preview
+    manager.sealed_runtime = True
+    monkeypatch.setattr("preview_manager.linux_sealing_supported", lambda: False)
+    with pytest.raises(AdmissionDenied, match="requires Linux memfd"):
+        manager.start("alpha", 19010, "X" * 43)
+    with pytest.raises(PreviewDenied, match="not registered"):
+        manager.status("alpha")
+    assert calls == []

@@ -1,4 +1,4 @@
-"""Phase 20: operator-only immutable local image-ID Compose runtime.
+"""Operator-only sealed API/frontend and ingress image-ID Compose runtime.
 
 A trusted reviewer signed the fixed preview source. BuildKit receives a
 kernel-sealed tar. The manager derives an image-only Compose document
@@ -31,6 +31,10 @@ _BUILD_STANZA = (
     "      context: .\n"
     "      dockerfile: Dockerfile.api\n"
 )
+_FRONTEND_BIND = (
+    "    volumes:\n"
+    "      - ../../artifacts/fullstack-preview/dist:/app/dist:ro\n"
+)
 _COMPOSE_LIMIT = 512 * 1024
 
 
@@ -38,10 +42,12 @@ def is_local_image_id(value):
     return isinstance(value, str) and _LOCAL_ID.fullmatch(value) is not None
 
 
-def derive_image_only_compose(snapshots, project_id, image_id, ingress_image_id=None):
+def derive_image_only_compose(snapshots, project_id, image_id, ingress_image_id):
     """Exactly one transformation of signed and hashed Compose template."""
     if not is_local_image_id(image_id):
         raise AdmissionDenied("only a local content-addressed image ID is allowed")
+    if not is_local_image_id(ingress_image_id):
+        raise AdmissionDenied("pinned ingress local image ID required")
     path = snapshots.verify(project_id)
     original = _reviewed_bytes(
         path, snapshots.reviewed["sources"]["compose.yaml"])
@@ -63,23 +69,21 @@ def derive_image_only_compose(snapshots, project_id, image_id, ingress_image_id=
         "\n    pull_policy: never\n",
         1,
     )
-    if ingress_image_id is not None:
-        # Phase 21 bounded improvement: ingress is now copied into its OWN
-        # kernel-sealed built image instead of mounted from mutable host staging.
-        if not is_local_image_id(ingress_image_id):
-            raise AdmissionDenied("pinned ingress local image ID required")
-        approved_base = snapshots.reviewed["images"]["ingress"]
-        original_ingress = "  ingress:\n    image: " + approved_base + "\n"
-        original_mount = "    volumes:\n      - ./ingress.py:/app/ingress.py:ro\n"
-        if derived.count(original_ingress) != 1 or derived.count(original_mount) != 1:
-            raise AdmissionDenied("reviewed ingress image or mount stanza changed")
-        derived = derived.replace(
-            original_ingress,
-            "  ingress:\n    image: " + ingress_image_id +
-            "\n    pull_policy: never\n", 1)
-        derived = derived.replace(original_mount, "", 1)
-    if re.search(r"(?m)^\s+build:\s*(?:$|#)", derived):
-        raise AdmissionDenied("runtime Compose may not request source builds")
+    if derived.count(_FRONTEND_BIND) != 1:
+        raise AdmissionDenied("reviewed frontend bind stanza changed")
+    derived = derived.replace(_FRONTEND_BIND, "", 1)
+    approved_base = snapshots.reviewed["images"]["ingress"]
+    original_ingress = "  ingress:\n    image: " + approved_base + "\n"
+    original_mount = "    volumes:\n      - ./ingress.py:/app/ingress.py:ro\n"
+    if derived.count(original_ingress) != 1 or derived.count(original_mount) != 1:
+        raise AdmissionDenied("reviewed ingress image or mount stanza changed")
+    derived = derived.replace(
+        original_ingress,
+        "  ingress:\n    image: " + ingress_image_id +
+        "\n    pull_policy: never\n", 1)
+    derived = derived.replace(original_mount, "", 1)
+    if re.search(r"(?m)^\s+(?:build|volumes|volumes_from)\s*:", derived):
+        raise AdmissionDenied("runtime Compose may not request source builds or volumes")
     return derived.encode("utf-8")
 
 
@@ -159,18 +163,9 @@ def build_local_reviewed_image(snapshots, project_id):
         built = sealed.build_disposable_image(tag, timeout=240)
         if not built.get("kernel_seals_checked"):
             raise AdmissionDenied("reviewed build input was not sealed")
-    try:
-        result = subprocess.run(
-            ["docker", "image", "inspect", "--format", "{{.Id}}", tag],
-            capture_output=True, text=True, env=_docker_env(),
-            timeout=20, check=False)
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        raise AdmissionDenied("cannot inspect local reviewed Docker image") from exc
-    if result.returncode:
-        raise AdmissionDenied("reviewed Docker image not found after sealed build")
-    image_id = result.stdout.strip()
-    if not is_local_image_id(image_id):
-        raise AdmissionDenied("Docker returned invalid local image ID")
+    # Take BuildKit's result, not a mutable tag lookup after the build.
+    image_id = built["image_id"]
+    verify_local_image_exists(image_id)
     return {"image_id": image_id, "tar_sha256": built["tar_sha256"],
             "reviewed_api_sha256": built["source_sha256"]}
 
@@ -285,15 +280,8 @@ def build_local_reviewed_ingress_image(snapshots, project_id):
         built = sealed.build_disposable_image(tag, timeout=240)
         if not built.get("kernel_seals_checked"):
             raise AdmissionDenied("ingress build did not check kernel seals")
-    try:
-        result = subprocess.run(
-            ["docker", "image", "inspect", "--format", "{{.Id}}", tag],
-            capture_output=True, text=True, env=_docker_env(),
-            timeout=20, check=False)
-    except (OSError, subprocess.TimeoutExpired) as exc:
-        raise AdmissionDenied("reviewed ingress Docker image inspection failed") from exc
-    if result.returncode or not is_local_image_id(result.stdout.strip()):
-        raise AdmissionDenied("reviewed ingress local image ID unavailable")
-    return {"image_id": result.stdout.strip(),
+    image_id = built["image_id"]
+    verify_local_image_exists(image_id)
+    return {"image_id": image_id,
             "tar_sha256": built["tar_sha256"],
             "reviewed_ingress_sha256": built["source_sha256"]}

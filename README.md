@@ -551,3 +551,22 @@ public preview, production approval or paid AI is introduced.
 - [Phase 21 scoped gate](docs/REA_PHASE21.md)
 - [Phase 21 operator runbook](docs/PHASE21_RUNTIME_RUNBOOK.md)
 - [Next Phase 22 implementation prompt](docs/NEXT_PHASE22_PROMPT.md)
+
+## Phase 22 — frontend assets in the sealed API image
+
+The disposable Linux operator seals the signed frontend inventory together
+with the reviewed API source, then builds from that tar on stdin. It uses
+the build-result local image ID, not a post-build tag lookup. Derived
+Compose removes both source binds, and the API serves `/app/dist` from its
+read-only image filesystem. The two-tenant Docker check compares the real
+in-image inventory and live HTTP response hashes to the signed inventory
+while both staged trees and the original build output are modified.
+
+Existing Phase 21 stacks require an authorized disposable stop and fresh
+start. Standalone Phase 5 demo Compose remains unchanged. Linux CI does
+not establish trust in a hostile Docker daemon, an independently signed
+OCI manifest, or compatibility with Docker Desktop/WSL2.
+
+- [Phase 22 scoped gate](docs/REA_PHASE22.md)
+- [Phase 22 operator runbook](docs/PHASE22_RUNTIME_RUNBOOK.md)
+- [Next Phase 23 implementation prompt](docs/NEXT_PHASE23_PROMPT.md)
