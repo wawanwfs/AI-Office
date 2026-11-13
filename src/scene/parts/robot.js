@@ -7,7 +7,8 @@ export function buildRobot(THREE, agent, standing, M, MB) {
   const metal = ROBOT_COLORS.metal, dark = ROBOT_COLORS.dark, mid = ROBOT_COLORS.mid;
   const { hipY, tz, fz, ty, hy } = pose(standing); // koordinat kunci per pose
   const shiny = (c) => new THREE.MeshStandardMaterial({ color: c, metalness: 0.75, roughness: 0.28 });
-  const halo = (r, c, x, y, z) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 12), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.28, depthWrite: false })); m.position.set(x, y, z); g.add(m); };
+  const halo = (r, c, x, y, z) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 12), new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0.28, depthWrite: false })); m.position.set(x, y, z); g.add(m); return m; };
+  const MBT = (c) => new THREE.MeshBasicMaterial({ color: c, transparent: true }); // siklus 491: MB transparan utk efek opacity
   const box = (w, h, d, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
   const cyl = (rt, rb, h, mat, x, y, z, seg = 14) => { const m = new THREE.Mesh(new THREE.CylinderGeometry(rt, rb, h, seg), mat); m.position.set(x, y, z); g.add(m); return m; };
   const sph = (r, mat, x, y, z) => { const m = new THREE.Mesh(new THREE.SphereGeometry(r, 14, 12), mat); m.position.set(x, y, z); g.add(m); return m; };
@@ -36,8 +37,10 @@ export function buildRobot(THREE, agent, standing, M, MB) {
   box(0.36, 0.05, 0.22, M(mid), 0, ty + 0.19, tz);           // bahu
   box(0.2, 0.14, 0.012, MB(0x07141a), 0, ty + 0.02, tz + fz * 0.106);
   const bars = [0.04, 0.08, 0.06];
-  bars.forEach((h, i) => box(0.035, h, 0.014, MB(glow), -0.055 + i * 0.055, ty + 0.02 - 0.03 + h / 2, tz + fz * 0.112));
-  box(0.05, 0.05, 0.014, MB(0xffffff), 0.1, ty + 0.12, tz + fz * 0.108);     // lampu status
+  const chestBars = [];
+  bars.forEach((h, i) => { const b = box(0.035, h, 0.014, MBT(glow), -0.055 + i * 0.055, ty + 0.02 - 0.03 + h / 2, tz + fz * 0.112); b.userData.isRobotChest = true; b.userData.i = i; chestBars.push(b); });
+  const statLight = box(0.05, 0.05, 0.014, MBT(0xffffff), 0.1, ty + 0.12, tz + fz * 0.108);     // lampu status
+  statLight.userData.isRobotStatus = true;
 
   // ── Lengan segmen + sendi bulat ──
   const armY = ty + 0.04;
@@ -61,15 +64,21 @@ export function buildRobot(THREE, agent, standing, M, MB) {
     [-1, 1].forEach((sd) => cyl(0.05, 0.05, 0.05, M(dark), sd * 0.17, hy, tz).rotation.z = Math.PI / 2); // telinga/speaker
   // Layar wajah gelap + 2 mata LED + senyum
   box(0.23, 0.15, 0.012, MB(0x050d12), 0, hy + 0.0, tz + fz * 0.134);
-  [-1, 1].forEach((sd) => { box(0.055, 0.065, 0.014, MB(glow), sd * 0.058, hy + 0.025, tz + fz * 0.143); halo(0.05, glow, sd * 0.058, hy + 0.025, tz + fz * 0.15); });
+  const eyeMeshes = [];
+  [-1, 1].forEach((sd) => { const eye = box(0.055, 0.065, 0.014, MB(glow), sd * 0.058, hy + 0.025, tz + fz * 0.143); eye.userData.isRobotEye = true; eye.userData.side = sd; eyeMeshes.push(eye); halo(0.05, glow, sd * 0.058, hy + 0.025, tz + fz * 0.15); });
   box(0.1, 0.014, 0.014, MB(glow), 0, hy - 0.045, tz + fz * 0.143);
   box(0.03, 0.014, 0.014, MB(glow), -0.06, hy - 0.035, tz + fz * 0.143);
   box(0.03, 0.014, 0.014, MB(glow), 0.06, hy - 0.035, tz + fz * 0.143);
 
   // ── Antena dengan bola menyala ──
   cyl(0.012, 0.012, 0.16, shiny(0x556070), 0, hy + 0.25, tz);
-  sph(0.035, MB(0xffffff), 0, hy + 0.34, tz); halo(0.075, glow, 0, hy + 0.34, tz);
+  sph(0.035, MB(0xffffff), 0, hy + 0.34, tz);
+  const antHalo = halo(0.075, glow, 0, hy + 0.34, tz);
+  antHalo.userData.isRobotAntenna = true;
 
   g.userData.isRobot = true;
+  // Siklus 491: refs efek idle — mata LED berkedip, panel dada scan, lampu status,
+  // halo antena beacon. Dianimasikan robotIdle() di gate ambient OfficeScene.
+  g.userData.robotFx = { eyes: eyeMeshes, chest: chestBars, status: statLight, antenna: antHalo };
   return g;
 }

@@ -595,3 +595,37 @@ export function clockTimeGate() { return makeTimeGate(CLOCK_REDRAW_SEC); }
 // waktu SHADOW_REFRESH_SEC=1/6 — paritas laju @60FPS identik dgn gate lama.
 export const SHADOW_REFRESH_SEC = 1 / 6;
 export function shadowTimeGate() { return makeTimeGate(SHADOW_REFRESH_SEC); }
+
+// ── Siklus 491: idle hidup robot BANTUIN AI ────────────────────────────────
+// Robot asisten (agen 'BANTUIN AI') satu-satunya aktor yang benar-benar STATIS:
+// mata LED menyala konstan, panel dada beku, lampu status & halo antena
+// konstan — dibanding agen manusia yang sudah punya charMotion (napas/ketik/
+// lirik). Di sini semua nilai murni waktu-nyata (elapsed), tanpa state → bisa
+// diuji unit; penerapan ke mesh di gate ambient OfficeScene.
+export const ROBOT_BLINK_SEC = 4.2;   // jeda antar kedip mata
+export const ROBOT_BLINK_DUR = 0.14;  // lama mata tertutup
+export const ROBOT_SCAN_SEC = 1.6;    // satu sapuan panel dada
+export const ROBOT_STATUS_HZ = 1.1;   // kedip lampu status
+export const ROBOT_BEACON_HZ = 0.8;   // napas halo antena
+
+const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
+
+export function robotIdle(elapsed) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0;
+  // Mata: terbuka penuh, menutup cepat di ujung tiap siklus (ease in-out).
+  const bp = ((t % ROBOT_BLINK_SEC) + ROBOT_BLINK_SEC) % ROBOT_BLINK_SEC;
+  const closed = bp > ROBOT_BLINK_SEC - ROBOT_BLINK_DUR
+    ? Math.sin(((bp - (ROBOT_BLINK_SEC - ROBOT_BLINK_DUR)) / ROBOT_BLINK_DUR) * Math.PI)
+    : 0;
+  const eyeScaleY = 1 - 0.88 * clamp01(closed);
+  // Panel dada: satu titik terang menyapu bar 0→1→2 lalu jeda; tiap bar
+  // menerima intensitas menurut jarak dari posisi sapuan.
+  const sp = ((t % ROBOT_SCAN_SEC) + ROBOT_SCAN_SEC) % ROBOT_SCAN_SEC;
+  const head = (sp / ROBOT_SCAN_SEC) * 3.6 - 0.3; // -0.3 … 3.3 (jeda di ujung)
+  const chest = [0, 1, 2].map((i) => 0.38 + 0.62 * clamp01(1 - Math.abs(head - i) * 1.15));
+  // Lampu status: kotak halus 1.1 Hz.
+  const status = 0.35 + 0.65 * (0.5 + 0.5 * Math.sin(t * ROBOT_STATUS_HZ * Math.PI * 2));
+  // Halo antena: napas pelan, tak pernah mati total.
+  const antenna = 0.14 + 0.2 * (0.5 + 0.5 * Math.sin(t * ROBOT_BEACON_HZ * Math.PI * 2));
+  return { eyeScaleY, chest, status, antenna };
+}

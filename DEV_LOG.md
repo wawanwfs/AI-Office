@@ -7903,3 +7903,11 @@
 - Test baru effects_cooler_bubbles.test.js (6); adaptasi serverroom_runtime.test.js (cooler 6 anak, SphereGeometry stub, refs.bubbles).
 - Verifikasi: vitest 370 file, 4164 passed + 6 skipped (+6); build PWA exit 0; rsync dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 704KB, colors=11084 nonbg=0.992, hygiene 41 refs 0 missing).
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
+## 13/11/2026 23:10 WIB — Siklus 491: robot BANTUIN AI hidup (robotIdle)
+- Gap visual: robot asisten BANTUIN AI satu-satunya AKTOR statis — mata LED menyala konstan, panel dada beku, lampu status & halo antena konstan (agen manusia sudah hidup via charMotion 485; peralatan via 487-490).
+- Fix: robotIdle(elapsed) di parts/effects.js (murni, diuji unit): mata LED berkedip (siklus 4.2 dtk, jendela tutup 0.14 dtk via scale.y), panel dada 3 bar disapu titik terang (siklus 1.6 dtk via opacity), lampu status kotak 1.1 Hz, halo antena napas 0.8 Hz (0.14–0.34, tak mati total). Kontrak waktu-nyata, di-tick di gate ambient (siklus 485) → hidup di GPU lambat.
+- robot.js: refs g.userData.robotFx {eyes, chest, status, antenna}; MBT helper (MB transparan) untuk chest/status agar opacity ber-efek; halo kini return mesh.
+- OfficeScene: applyRobotFx di gate ambient — reception (nxChar) + sittingChar/walker agen BANTUIN AI.
+- Test baru effects_robot_idle.test.js (5): guard non-finite, jendela kedip, sapuan dada, osilasi status/antena, deterministik + kontinuitas seam.
+- Verifikasi: vitest 371 file, 4169 passed + 6 skipped (+5); build PWA exit 0; dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 709KB, colors=11167 nonbg=0.992, hygiene 41 refs 0 missing).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
