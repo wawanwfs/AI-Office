@@ -7954,3 +7954,10 @@
 - Test baru effects_downlight_breath.test.js (5): guard non-finite netral 0.89, rentang + tak padam ketiga lantai, fase tak sinkron, deterministik + seam periodik, konstanta kontrak puncak/lembah eksak. Bug stub test (PointLight tanpa userData) tertangkap & diguard.
 - Verifikasi: vitest 377 file, 4203 passed + 6 skipped (+5, +1 file); build PWA exit 0; dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 708KB, colors=11255 nonbg=0.992, hygiene 41 refs 0 missing).
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
+## 14/11/2026 02:55 WIB — Siklus 498: lampu ruang server berdenyut AC (serverHum)
+- Gap visual: PointLight cyan ruang server (0x00BCD4, .55) & bulb-nya konstan penuh — satu-satunya sumber cahaya interior statis tersisa (setelah downlight dek 497).
+- Fix: serverHum(elapsed) di parts/effects.js (murni, diuji unit): denyut kompresor AC 0.78…1.0, gelombang utama 3.9 dtk + mikro 1.43 dtk (rasio 2.73× tak sinkron, pola lampFlicker 493) — tak pernah padam. PointLight = .55×f, bulb opacity = f.
+- OfficeScene: tick serverHum di gate ambient (guard __server.light/bulb).
+- Test baru effects_server_hum.test.js (5): guard non-finite netral 0.89, rentang + tak padam, deterministik + seam periodik LCM 273T, kontrak puncak main eksak + valley, tekstur mikro. Kesalahan awal test (asumsi puncak main=micro sejajar) tertangkap & dikoreksi.
+- Verifikasi: vitest 378 file, 4208 passed + 6 skipped (+5, +1 file); build PWA exit 0; dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 709KB, colors=11262 nonbg=0.992, hygiene 41 refs 0 missing).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.

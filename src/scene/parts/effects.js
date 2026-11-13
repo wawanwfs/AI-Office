@@ -731,3 +731,19 @@ export function wallLogoBreath(elapsed) {
     glow: 0.6 + 0.4 * w(LOGO_GLOW_SEC),          // 0.6…1.0 — tak padam
   };
 }
+
+// ── Siklus 498: lampu ruang server berdenyut AC (serverHum) ─────────────────
+// PointLight cyan ruang server (0x00BCD4, intensitas .55 konstan) & bulb-nya
+// mati rata — nuansa ruang server = denyut lembut seperti kompresor AC berhum.
+// Nilai murni waktu-nyata (elapsed) → diuji unit; penerapan di gate ambient.
+// Rentang 0.78…1.0 — tak pernah padam (ruang harus tetap terbaca), gelombang
+// utama 3.9 dtk + mikro 1.43 dtk (rasio tak sinkron, pola lampFlicker 493).
+export const SERVER_HUM_SEC = 3.9; // gelombang utama denyut AC
+
+export function serverHum(elapsed) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0; // netral (sin 0 → 0.5)
+  const w = (sec) => 0.5 + 0.5 * Math.sin((t / sec) * Math.PI * 2);
+  const main = w(SERVER_HUM_SEC);
+  const micro = w(SERVER_HUM_SEC * 2.73); // ≈1.43 dtk — rasio tak sinkron
+  return 0.78 + 0.18 * main + 0.04 * micro; // 0.78…1.0, tak padam
+}
