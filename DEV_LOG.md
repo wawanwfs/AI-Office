@@ -7833,3 +7833,8 @@
 - Fix: 24 file yatim dihapus (terverifikasi flock bebas, 0 di-hold proses hidup) + skrip permanen `scripts/cleanup_task_locks.py` (idempoten, KEEP utk lock di-hold proses & task running/assigned; diuji: recreate lock → RM lagi, removed=2).
 - Verifikasi: vitest 359 file, 4111 passed + 6 skipped; build PWA exit 0; dist → ~/wfs-hq; smoke-go-live-phase3 :8787 fails=0 (WARN hardened-flag di baseline systemd sesuai desain); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[]).
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker (jalur siap, APPLY butuh persetujuan eksplisit); (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.
+## 13/11/2026 15:35 WIB — Siklus 479: otomasi cleanup lock via systemd timer
+- wfs-task-locks.timer aktif (OnBootSec=10min, tiap 1 jam, Persistent) menjalankan scripts/cleanup_task_locks.py sebagai oneshot service User=agentuser.
+- Run pertama terverifikasi: exit 0/SUCCESS, removed=0 held=0, 0 file tasks.db.*.lock tersisa di ~/wfs-office.
+- Catatan: CLI `systemctl start` kadang balas "Connection timed out" walau service sukses (status menunjukkan inactive-dead status=0); only-noise, timer berjalan.
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.
