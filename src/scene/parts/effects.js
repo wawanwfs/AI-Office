@@ -810,3 +810,19 @@ export function receptionLightBreath(elapsed) {
   const micro = w(RECEPTION_LIGHT_SEC * 2.2); // ≈1.64 dtk — rasio tak sinkron
   return 0.74 + 0.22 * main + 0.04 * micro; // 0.74…1.0, tak padam
 }
+
+// ── Siklus 504: panel plafon recessed bernapas (panelBreath) ────────────────
+// Lima PointLight putih jalur tengah plafon (0xFFFFFF, 0.35, y=3.8) konstan —
+// elemen pencahayaan plafon terakhir yang beku (setelah pendant 503). Napas
+// halus 0.80…1.0, gelombang utama 6.1 dtk + mikro 2.2 dtk (rasio ≈2.77× tak
+// sinkron vs 5.2/4.3/3.9/3.6/5.6/4.7/2.9) — tak pernah padam. Dipakai HANYA
+// mode siang (mode neon set 0.03 via NEON.panelLight — jangan ditimpa).
+export const PANEL_BREATH_SEC = 6.1; // gelombang utama napas panel
+
+export function panelBreath(elapsed) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0; // netral (sin 0 → 0.5)
+  const w = (sec) => 0.5 + 0.5 * Math.sin((t / sec) * Math.PI * 2);
+  const main = w(PANEL_BREATH_SEC);
+  const micro = w(PANEL_BREATH_SEC * 2.77); // ≈2.2 dtk — rasio tak sinkron
+  return 0.80 + 0.17 * main + 0.03 * micro; // 0.80…1.0, tak padam
+}

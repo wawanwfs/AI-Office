@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath, downlightBreath, serverHum, floorLampBreath, receptionLightBreath, tubeLightBreath, pendantBreath } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath, downlightBreath, serverHum, floorLampBreath, receptionLightBreath, tubeLightBreath, pendantBreath, panelBreath } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -741,6 +741,7 @@ for(let i=-3;i<=3;i++){for(let j=-2;j<=2;j++){
   p.userData.__ceil=__ceilRt.ceilDay;
   if(j===0){ // hanya 5 point light di jalur tengah — sisanya emissive saja
     const pl=new THREE.PointLight(0xFFFFFF,0.35,12,1.6);
+    pl.userData.__panelLight=true; // siklus 504: ikut bernapas (panelBreath)
     pl.position.set(i*4.5,3.8,j*5);office.add(pl);
   }
 }}
@@ -1953,6 +1954,12 @@ function animate(){
       const pf=pendantBreath(elapsed);
       __ceilRt.pendBulbs.forEach((b)=>{ if(b&&b.material){ b.material.transparent=true; b.material.opacity=pf; } });
       if(Array.isArray(__ceilRt.pendLights)) __ceilRt.pendLights.forEach((l)=>{ if(l) l.intensity=0.15*pf; });
+    }
+    // siklus 504: panel plafon recessed bernapas (panelBreath) — HANYA siang;
+    // mode neon set intensitas 0.03 sendiri via NEON.panelLight (jangan ditimpa).
+    if(!cyberpunkMode){
+      const pbf=panelBreath(elapsed);
+      office.children.forEach((c)=>{ if(c.isPointLight&&c.userData&&c.userData.__panelLight) c.intensity=0.35*pbf; });
     }
     ringMat.opacity=fx.ring;
     helmetVisor.material.opacity=fx.visor;

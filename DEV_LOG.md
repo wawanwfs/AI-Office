@@ -7992,3 +7992,9 @@
 - Test baru effects_pendant_breath.test.js (7): guard non-finite netral 0.85, rentang + tak padam, deterministik + seam LCM 247T, kontrak puncak main eksak + lembah, fase tak sinkron vs 6 lampu, tekstur mikro, integrasi refs stub THREE.
 - Verifikasi: vitest 383 file, 4247 passed + 6 skipped (+7, +1 file); build PWA exit 0; dist → ~/wfs-hq; e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 710KB, colors=11408 nonbg=0.992, hygiene 41 refs 0 missing).
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
+## 14/11/2026 05:20 WIB — Siklus 504: panel plafon recessed bernapas (panelBreath)
+- Gap visual: 5 PointLight putih jalur tengah plafon (0xFFFFFF, 0.35, y=3.8) konstan — elemen pencahayaan plafon terakhir yang beku (setelah pendant 503).
+- Fix: panelBreath(elapsed) murni di parts/effects.js: napas 0.80…1.0, gelombang utama 6.1 dtk + mikro 2.2 dtk (rasio 2.77× tak sinkron vs 7 siklus lampu lain) — tak pernah padam. OfficeScene: tick di gate ambient, HANYA mode siang (guard !cyberpunkMode — mode neon set 0.03 via NEON.panelLight); light ditandai userData.__panelLight.
+- Test baru effects_panel_breath.test.js (6): guard non-finite netral 0.90, rentang + tak padam, deterministik + seam LCM 277T (2.77=277/100, 277 prima), kontrak puncak main eksak + lembah via rumus w, fase tak sinkron vs 7 lampu, tekstur mikro dua komponen. Kekeliruan awal asumsi seam 100T tertangkap test & dikoreksi.
+- Verifikasi: vitest 384 file, 4253 passed + 6 skipped (+6, +1 file); build PWA exit 0; dist → ~/wfs-hq; e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 708KB, colors=11328 nonbg=0.992, hygiene 41 refs 0 missing).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
