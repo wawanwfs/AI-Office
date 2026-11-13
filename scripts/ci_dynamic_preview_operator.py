@@ -24,7 +24,7 @@ from preview_admission import REVIEWED_FILES, candidate_manifest_for_ci_only
 from ci_preview_network_probe import prove_disposable_container_egress
 from ci_phase13_real_dns_rebind import prove_real_docker_dns_rebinding
 from ci_phase19_sealed_build import prove_sealed_build
-from ci_phase23_oci_release import prove_oci_release
+from ci_phase23_oci_release import prepare_oci_release
 from preview_authority import SignedPreviewAuthority
 from preview_signature import canonical_review_bytes
 from preview_root_authority import canonical_roster_bytes
@@ -183,10 +183,14 @@ def reviewed_snapshot_runner(argv,**kwargs):
     deadline=kwargs.pop("timeout",120)
     return subprocess.run(argv,timeout=240 if deadline>240 else deadline,**kwargs)
 
-manager=TemplatePreviewManager(root/"registry.db",
-    reviewed_root/"compose.yaml",enabled=True,reviewed_files=reviewed_files,
-    reviewer_authority=authority,runner=reviewed_snapshot_runner,
-    sealed_runtime=True)
+def open_manager(oci_release=None):
+    return TemplatePreviewManager(root/"registry.db",
+        reviewed_root/"compose.yaml",enabled=True,reviewed_files=reviewed_files,
+        reviewer_authority=authority,runner=reviewed_snapshot_runner,
+        sealed_runtime=True,oci_release=oci_release)
+
+
+manager = open_manager()
 proof={"mode":"real-disposable-operator-template-preview",
        "paid_provider_used":False,"production_deployment":False,
        "generic_user_code_preview":False,
@@ -334,9 +338,30 @@ try:
     except PreviewDenied:
         pass
 
+    # Prove missing approval is rejected before any local runtime setup.
+    try:
+        manager.start(names[0], ports[0], tokens[0])
+        raise AssertionError("missing release approval was accepted")
+    except AdmissionDenied as exc:
+        assert "current pinned OCI release approval required" in str(exc)
+    assert not manager.snapshots.path(names[0]).exists()
+    manager.snapshots.stage(names[0])
+    release_root = root / "oci-release"
+    release_root.mkdir(mode=0o700)
+    release, proof["phase23_oci_release"] = prepare_oci_release(
+        manager.snapshots, names[0], fingerprint, release_root)
+    manager = open_manager(release)
+    release_proof = {"manifest_digest": proof["phase23_oci_release"]["manifest_digest"],
+                     "config_digest": proof["phase23_oci_release"]["config_digest"],
+                     "missing_approval_denied": True, "tenants": {}}
+
     for project,port,token,other in zip(names,ports,tokens,
                                          (token_b,token_a)):
         start=manager.start(project,port,token)
+        assert start["oci_manifest_digest"] == release_proof["manifest_digest"]
+        assert start["api_image_id"] == release_proof["config_digest"]
+        assert start["api_container_id"]
+        release_proof["tenants"][project] = {"api_container_id": start["api_container_id"]}
         live.add(project)
         assert start["phase"]=="running"
         assert start["url"]==f"http://127.0.0.1:{port}"
@@ -353,10 +378,15 @@ try:
                                 "port":port,"postgresql_live":True,
                                 "other_tenant_token_rejected":True,
                                 "lifecycle":"started"})
+    # Reopen the operator state as a fresh CLI invocation would.
+    manager = open_manager(release)
     for project,port,token,other in zip(names,ports,tokens,
                                          (token_b,token_a)):
-        assert manager.restart(project,token)["phase"]=="running"
+        restarted = manager.restart(project, token)
+        assert restarted["phase"] == "running"
+        assert restarted["api_container_id"] == release_proof["tenants"][project]["api_container_id"]
         assert health(port,token,other)
+        release_proof["tenants"][project]["restart_after_registry_reopen"] = True
     proof["restart_proved"]=True
     # Actual in-build mutable-checkout overwrite. The successful running API
     # must be sourced from the private reviewed snapshot, not the live file.
@@ -419,7 +449,23 @@ try:
             "served_while_host_source_mutated": True,
         }
     proof["phase22_mount_free_frontend"] = prove_frontend_runtime()
-    proof["phase23_oci_release"] = prove_oci_release(manager.snapshots, names[0], fingerprint)
+    proof["phase24_oci_runtime"] = release_proof
+    for project in names:
+        release_proof["tenants"][project]["signed_http_asset_count"] = (
+            proof["phase22_mount_free_frontend"][project]["http_assets_match_during_host_changes"])
+    # Cleanup remains possible without release material, then a fresh
+    # operator must re-verify and re-promote before recreating the tenant.
+    project, port, token = names[1], ports[1], tokens[1]
+    old_id = release_proof["tenants"][project]["api_container_id"]
+    assert open_manager().stop(project, token, allow_data_loss=True)["phase"] == "stopped"
+    recovered = open_manager(release).start(project, port, token)
+    assert recovered["api_container_id"] != old_id
+    assert recovered["api_image_id"] == release_proof["config_digest"]
+    assert recovered["oci_manifest_digest"] == release_proof["manifest_digest"]
+    assert health(port, token, tokens[0])
+    verify_frontend_http(port, reviewed_files["frontend"])
+    release_proof["tenants"][project]["recreated_api_container_id"] = recovered["api_container_id"]
+    release_proof["cleanup_without_release_then_repromotion"] = True
     proof["phase11_docker_compose_context"]="signed project-scoped staged copy"
     # Runtime firewall evidence: BOTH preview bridges must be internal,
     # API still reachable on host loopback, and the running API must fail

@@ -217,6 +217,16 @@ class VerifiedLayout:
     platform: str
     layer_count: int
     asset_count: int
+    layer_digests: tuple[str, ...]
+    diff_ids: tuple[str, ...]
+
+
+def _verify_stream(source, frontend, api_sha256, approved_manifest):
+    meta = os.fstat(source.fileno())
+    if not stat.S_ISREG(meta.st_mode) or not 1 <= meta.st_size <= _ARCHIVE_LIMIT:
+        raise AdmissionDenied("OCI archive type or size invalid")
+    with tarfile.open(fileobj=source, mode="r:") as tar:
+        return _verify(_Layout(tar), frontend, api_sha256, approved_manifest)
 
 
 def verify_layout(path, *, frontend, api_sha256, approved_manifest=None):
@@ -230,15 +240,14 @@ def verify_layout(path, *, frontend, api_sha256, approved_manifest=None):
     flags = (os.O_RDONLY | getattr(os, "O_BINARY", 0)
              | getattr(os, "O_NONBLOCK", 0) | getattr(os, "O_NOFOLLOW", 0))
     try:
+        if isinstance(path, io.BufferedReader):
+            path.seek(0)
+            return _verify_stream(path, frontend, api_sha256, approved_manifest)
         path = Path(path).absolute()
         if path.is_symlink() or path.resolve() != path:
             raise AdmissionDenied("unsafe OCI archive path")
         with os.fdopen(os.open(path, flags), "rb") as source:
-            meta = os.fstat(source.fileno())
-            if not stat.S_ISREG(meta.st_mode) or not 1 <= meta.st_size <= _ARCHIVE_LIMIT:
-                raise AdmissionDenied("OCI archive type or size invalid")
-            with tarfile.open(fileobj=source, mode="r:") as tar:
-                return _verify(_Layout(tar), frontend, api_sha256, approved_manifest)
+            return _verify_stream(source, frontend, api_sha256, approved_manifest)
     except AdmissionDenied:
         raise
     except (OSError, EOFError, tarfile.TarError, ValueError, RuntimeError) as exc:
@@ -292,4 +301,7 @@ def _verify(layout, frontend, api_sha256, approved_manifest):
             raise AdmissionDenied("OCI frontend differs from reviewed final COPY inventory")
     if api_seen != api_sha256:
         raise AdmissionDenied("OCI API source differs from reviewed digest")
-    return VerifiedLayout(manifest_digest, config_digest, PLATFORM, len(layers), len(frontend))
+    return VerifiedLayout(
+        manifest_digest, config_digest, PLATFORM, len(layers), len(frontend),
+        tuple(layer["digest"] for layer in layers), tuple(rootfs["diff_ids"]),
+    )

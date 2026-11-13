@@ -32,10 +32,11 @@ def frontend_sha256(frontend):
                              separators=(",", ":"), allow_nan=False).encode("ascii"))
 
 
-def verify_release(archive, *, review_path, approval_path, signature_path,
+def verify_release(archive, *, approval_path, signature_path,
                    witness_key_path, trusted_approval_sha256,
                    trusted_witness_fingerprint, trusted_reviewer_fingerprint,
-                   trusted_review_sha256, now=None):
+                   trusted_review_sha256, review_path=None, review_manifest=None,
+                   now=None):
     """Require operator-provisioned pins and a current, distinct witness."""
     pins = (trusted_approval_sha256, trusted_witness_fingerprint,
             trusted_reviewer_fingerprint, trusted_review_sha256)
@@ -76,7 +77,10 @@ def verify_release(archive, *, review_path, approval_path, signature_path,
     except InvalidSignature as exc:
         raise AdmissionDenied("OCI release witness signature mismatch") from exc
 
-    review = json_object(_read_trusted(review_path, 132 * 1024))
+    if (review_path is None) == (review_manifest is None):
+        raise AdmissionDenied("exactly one reviewed source manifest required")
+    review = (review_manifest if review_path is None else
+              json_object(_read_trusted(review_path, 132 * 1024)))
     canonical_sha = sha256(canonical_review_bytes(review))
     if not (hmac.compare_digest(canonical_sha, trusted_review_sha256)
             and hmac.compare_digest(canonical_sha, approval["review_sha256"])):

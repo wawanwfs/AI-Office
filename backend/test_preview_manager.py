@@ -1099,13 +1099,21 @@ def test_phase22_legacy_running_preview_only_allows_authorized_cleanup(
     assert commands[0][0][-3:] == ["down", "--volumes", "--remove-orphans"]
     assert b"/app/dist" not in commands[0][1]
     monkeypatch.setattr(preview_manager, "ensure_approved_runtime_images", lambda _: None)
-    monkeypatch.setattr(preview_manager, "build_local_reviewed_image",
-                        lambda *args: {"image_id": api})
+    from contextlib import nullcontext
+    checked = SimpleNamespace(config_digest=api, manifest_digest="sha256:" + "c" * 64)
+    monkeypatch.setattr(manager, "_approved_release",
+                        lambda: nullcontext((None, checked, "d" * 64)))
+    manager.oci_release = SimpleNamespace(approval_sha256="e" * 64)
+    monkeypatch.setattr(preview_manager, "load_verified_image", lambda *args: None)
+    monkeypatch.setattr(manager, "_runtime_id", lambda *args: "1" * 64)
     monkeypatch.setattr(preview_manager, "build_local_reviewed_ingress_image",
                         lambda *args: {"image_id": ingress})
     restarted = manager.start("alpha", 19010, token)
     assert restarted["api_frontend_sealed"] == 1
     assert restarted["phase"] == "running"
+    assert restarted["oci_manifest_digest"] == checked.manifest_digest
+    assert restarted["api_image_id"] == checked.config_digest
+    assert restarted["api_container_id"] == "1" * 64
     assert commands[1][0][-5:] == ["up", "-d", "--no-build", "--pull", "never"]
     assert b"/app/dist" not in commands[1][1]
 
@@ -1116,6 +1124,17 @@ def test_phase22_unsupported_host_denies_operator_start_before_docker_or_reserva
     manager.sealed_runtime = True
     monkeypatch.setattr("preview_manager.linux_sealing_supported", lambda: False)
     with pytest.raises(AdmissionDenied, match="requires Linux memfd"):
+        manager.start("alpha", 19010, "X" * 43)
+    with pytest.raises(PreviewDenied, match="not registered"):
+        manager.status("alpha")
+    assert calls == []
+
+
+def test_phase24_missing_oci_approval_denies_before_reservation(preview, monkeypatch):
+    manager, calls = preview
+    manager.sealed_runtime = True
+    monkeypatch.setattr("preview_manager.linux_sealing_supported", lambda: True)
+    with pytest.raises(AdmissionDenied, match="current pinned OCI release"):
         manager.start("alpha", 19010, "X" * 43)
     with pytest.raises(PreviewDenied, match="not registered"):
         manager.status("alpha")

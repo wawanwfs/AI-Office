@@ -17,9 +17,12 @@ from project_rbac import ident
 from preview_admission import ReviewedPreviewAdmission, AdmissionDenied
 from preview_authority import SignedPreviewAuthority
 from preview_snapshot import ReviewedPreviewSnapshot
+from preview_oci_promotion import (
+    ApprovedOCIRelease, load_verified_image, verify_api_container, verify_engine_image,
+)
 from preview_sealed_build import linux_sealing_supported
 from preview_sealed_runtime import (
-    SealedRuntimeCompose, build_local_reviewed_image,
+    SealedRuntimeCompose,
     build_local_reviewed_ingress_image,
     derive_image_only_compose, ensure_approved_runtime_images,
     verify_local_image_exists,
@@ -33,7 +36,7 @@ class PreviewDenied(PermissionError):
 class TemplatePreviewManager:
     def __init__(self, registry_path, template_path, *, enabled=False,
                  runner=None, docker="docker", reviewed_files=None,
-                 reviewer_authority=None, sealed_runtime=None):
+                 reviewer_authority=None, sealed_runtime=None, oci_release=None):
         if not enabled:
             raise PreviewDenied("operator approval required for Docker preview")
         template=Path(template_path).absolute()
@@ -64,6 +67,9 @@ class TemplatePreviewManager:
             raise AdmissionDenied("real Docker operator cannot disable sealed runtime")
         self.sealed_runtime = (runner is None if sealed_runtime is None
                                else sealed_runtime is True)
+        if oci_release is not None and not isinstance(oci_release, ApprovedOCIRelease):
+            raise AdmissionDenied("invalid approved OCI release configuration")
+        self.oci_release = oci_release
         self.runner=runner or subprocess.run
         self.snapshots=ReviewedPreviewSnapshot(
             template.parent, self.registry.parent, self.reviewed_manifest)
@@ -95,6 +101,12 @@ class TemplatePreviewManager:
                 db.execute(
                     "ALTER TABLE wfs_preview_instances ADD COLUMN "
                     "api_frontend_sealed INTEGER NOT NULL DEFAULT 0")
+            if "oci_manifest_digest" not in columns:
+                db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN oci_manifest_digest TEXT")
+            if "oci_approval_sha256" not in columns:
+                db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN oci_approval_sha256 TEXT")
+            if "api_container_id" not in columns:
+                db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN api_container_id TEXT")
         self._enforce_epoch(self.authority.verify(self.reviewed_manifest))
 
     def _enforce_epoch(self, decision):
@@ -139,7 +151,25 @@ class TemplatePreviewManager:
         decision=self.authority.verify(self.reviewed_manifest)
         self.admission.verify()
         self._enforce_epoch(decision)
-        return True
+        return decision
+
+    def _approved_release(self):
+        if not linux_sealing_supported():
+            raise AdmissionDenied("sealed preview operator requires Linux memfd")
+        if self.oci_release is None:
+            raise AdmissionDenied("current pinned OCI release approval required")
+        decision = self._verify()
+        return self.oci_release.open_verified(self.reviewed_manifest, decision["fingerprint"])
+
+    def _check_running_release(self, record, checked):
+        if (record.get("oci_manifest_digest") != checked.manifest_digest
+                or record.get("api_image_id") != checked.config_digest):
+            raise AdmissionDenied("registered preview differs from current approved OCI release")
+        verify_engine_image(self.docker, checked)
+
+    def _runtime_id(self, record, token, checked):
+        candidate = self._invoke(record, token, ["ps", "-q", "api"]).strip()
+        return verify_api_container(self.docker, candidate, record["compose_name"], checked)
 
     def _db(self):
         db=sqlite3.connect(str(self.registry),timeout=15,isolation_level=None)
@@ -246,16 +276,21 @@ class TemplatePreviewManager:
         if self.sealed_runtime:
             if not linux_sealing_supported():
                 raise AdmissionDenied("sealed preview operator requires Linux memfd")
-            # A Phase 21 container remains host-bound after Compose restart.
-            # Allow authorized cleanup, but require a fresh reviewed build
-            # before resuming any ordinary operation on that stack.
-            if record.get("api_frontend_sealed") != 1 and args != [
-                    "down", "--volumes", "--remove-orphans"]:
-                raise AdmissionDenied("legacy preview must be stopped and rebuilt")
-            image_id=record.get("api_image_id")
-            verify_local_image_exists(image_id)
+            cleanup = args == ["down", "--volumes", "--remove-orphans"]
+            image_id = record.get("api_image_id")
             ingress_image_id = record.get("ingress_image_id")
-            verify_local_image_exists(ingress_image_id)
+            if cleanup:
+                # Compose down uses project/service labels, not image contents.
+                # It must remain available after expiry or interrupted startup.
+                image_id = image_id or "sha256:" + "0" * 64
+                ingress_image_id = ingress_image_id or "sha256:" + "0" * 64
+            else:
+                if record.get("api_frontend_sealed") != 1:
+                    raise AdmissionDenied("legacy preview must be stopped and rebuilt")
+                if not record.get("oci_manifest_digest"):
+                    raise AdmissionDenied("legacy preview must be stopped and promoted from OCI")
+                verify_local_image_exists(image_id)
+                verify_local_image_exists(ingress_image_id)
             # Never permit rebuilding from a mutable Compose path. The only
             # supported start action uses a pinned, prebuilt local image ID.
             if args and args[0]=="up" and args!=[
@@ -297,51 +332,83 @@ class TemplatePreviewManager:
         return str(result.stdout or "")[-16384:]
 
     def start(self,project_id,port,token):
-        if self.sealed_runtime and not linux_sealing_supported():
-            raise AdmissionDenied("sealed preview operator requires Linux memfd")
-        record=self.reserve(project_id,port)
-        if record["phase"] in ("running","uncertain"):
-            raise PreviewDenied("preview is active or uncertain; reconcile before retry")
-        self._claim_transition(project_id,("reserved","stopped"))
-        # Copies only previously approved bytes into a project-scoped directory;
-        # abort if ANY source changed during the copy.
-        self.snapshots.stage(project_id)
+        if not isinstance(token,str) or len(token)<32 or not token.isascii():
+            raise PreviewDenied("operator-supplied ephemeral token required")
         if self.sealed_runtime:
-            ensure_approved_runtime_images(self.snapshots)
-            # BuildKit sees ONLY kernel-sealed, pre-reviewed tar stdin.
-            # The engine local sha256 image ID is persisted in the
-            # operator-owned registry before any Compose startup attempt.
-            image=build_local_reviewed_image(self.snapshots,project_id)
-            ingress=build_local_reviewed_ingress_image(self.snapshots,project_id)
-            with closing(self._db()) as db:
-                db.execute(
-                    "UPDATE wfs_preview_instances "
-                    "SET api_image_id=?,ingress_image_id=?,api_frontend_sealed=1 "
-                    "WHERE project_id=? AND phase='uncertain'",
-                    (image["image_id"],ingress["image_id"],project_id))
-            record=self.status(project_id)
-            self._invoke(record,token,
-                         ["up","-d","--no-build","--pull","never"],timeout=240)
+            # Deny invalid release evidence before reserving or contacting Docker.
+            with self._approved_release() as (snapshot, checked, _):
+                record = self.reserve(project_id,port)
+                if record["phase"] in ("running","uncertain"):
+                    raise PreviewDenied("preview is active or uncertain; reconcile before retry")
+                self._claim_transition(project_id,("reserved","stopped"))
+                self.snapshots.stage(project_id)
+                load_verified_image(self.docker, snapshot, checked)
+                ensure_approved_runtime_images(self.snapshots)
+                ingress = build_local_reviewed_ingress_image(self.snapshots,project_id)
+                with closing(self._db()) as db:
+                    db.execute(
+                        "UPDATE wfs_preview_instances SET api_image_id=?,ingress_image_id=?, "
+                        "api_frontend_sealed=1,oci_manifest_digest=?,oci_approval_sha256=?, "
+                        "api_container_id=NULL WHERE project_id=? AND phase='uncertain'",
+                        (checked.config_digest, ingress["image_id"], checked.manifest_digest,
+                         self.oci_release.approval_sha256, project_id))
+                record=self.status(project_id)
+                self._invoke(record,token,
+                             ["up","-d","--no-build","--pull","never"],timeout=240)
+                runtime_id = self._runtime_id(record, token, checked)
+                with closing(self._db()) as db:
+                    db.execute(
+                        "UPDATE wfs_preview_instances SET phase='running',api_container_id=? "
+                        "WHERE project_id=? AND phase='uncertain'", (runtime_id, project_id))
         else:
+            # Synthetic unit-test runner only.
+            record=self.reserve(project_id,port)
+            if record["phase"] in ("running","uncertain"):
+                raise PreviewDenied("preview is active or uncertain; reconcile before retry")
+            self._claim_transition(project_id,("reserved","stopped"))
+            self.snapshots.stage(project_id)
             self._invoke(record,token,["up","-d","--build"],timeout=240)
-        self._phase(project_id,"running")
+            self._phase(project_id,"running")
         return self.status(project_id)
 
     def logs(self,project_id,token):
         record=self.status(project_id)
         if record["phase"]!="running":
             raise PreviewDenied("preview is not running")
+        if self.sealed_runtime:
+            if not record.get("api_container_id"):
+                raise AdmissionDenied("legacy preview must be stopped and promoted from OCI")
+            with self._approved_release() as (_, checked, _digest):
+                self._check_running_release(record, checked)
+                if self._runtime_id(record, token, checked) != record["api_container_id"]:
+                    raise AdmissionDenied("registered preview API container changed")
+                return self._invoke(record,token,["logs","--no-color","--tail","100"])
         return self._invoke(record,token,["logs","--no-color","--tail","100"])
 
     def restart(self,project_id,token):
         record=self.status(project_id)
         if record["phase"]!="running":
             raise PreviewDenied("cannot restart a stopped/uncertain preview")
-        if self.sealed_runtime and record["api_frontend_sealed"] != 1:
-            raise AdmissionDenied("legacy preview must be stopped and rebuilt")
-        self._claim_transition(project_id,("running",))
-        self._invoke(record,token,["restart"])
-        self._phase(project_id,"running")
+        if self.sealed_runtime:
+            if not record.get("api_container_id"):
+                raise AdmissionDenied("legacy preview must be stopped and promoted from OCI")
+            with self._approved_release() as (_, checked, _digest):
+                self._check_running_release(record, checked)
+                if self._runtime_id(record, token, checked) != record["api_container_id"]:
+                    raise AdmissionDenied("registered preview API container changed")
+                self._claim_transition(project_id,("running",))
+                self._invoke(record,token,["restart"])
+                if self._runtime_id(record, token, checked) != record["api_container_id"]:
+                    raise AdmissionDenied("restarted preview API container changed")
+                with closing(self._db()) as db:
+                    db.execute(
+                        "UPDATE wfs_preview_instances SET phase='running',oci_approval_sha256=? "
+                        "WHERE project_id=? AND phase='uncertain'",
+                        (self.oci_release.approval_sha256, project_id))
+        else:
+            self._claim_transition(project_id,("running",))
+            self._invoke(record,token,["restart"])
+            self._phase(project_id,"running")
         return self.status(project_id)
 
     def stop(self,project_id,token,*,allow_data_loss=False):
@@ -354,8 +421,15 @@ class TemplatePreviewManager:
             # Never started, so there is no Docker volume to delete.
             self._phase(project_id,"stopped")
             return self.status(project_id)
+        if self.sealed_runtime and not linux_sealing_supported():
+            raise AdmissionDenied("sealed preview operator requires Linux memfd")
+        if not isinstance(token,str) or len(token)<32 or not token.isascii():
+            raise PreviewDenied("operator-supplied ephemeral token required")
         self._claim_transition(project_id,("running","uncertain"))
         self._invoke(record,token,["down","--volumes","--remove-orphans"])
-        self._phase(project_id,"stopped")
         self.snapshots.discard_after_authorized_stop(project_id)
+        with closing(self._db()) as db:
+            db.execute(
+                "UPDATE wfs_preview_instances SET phase='stopped',api_container_id=NULL "
+                "WHERE project_id=? AND phase='uncertain'", (project_id,))
         return self.status(project_id)

@@ -588,3 +588,18 @@ custody. The two-tenant mount-free runtime remains unchanged.
 - [Phase 23 scoped gate](docs/REA_PHASE23.md)
 - [Phase 23 verifier runbook](docs/PHASE23_OCI_RUNBOOK.md)
 - [Next Phase 24 implementation prompt](docs/NEXT_PHASE24_PROMPT.md)
+
+## Phase 24 — approved OCI release promotion
+
+The disposable Linux operator requires current, pinned OCI approval before
+starting or restarting the preview API. It seals one snapshot of the
+release archive, verifies its signed manifest and exact blobs, then passes
+only those unchanged config/layer bytes to Docker via a second sealed,
+tagless load transport. Compose uses the verified config ID with no pull
+or build. Before marking the preview running, the operator checks the
+actual API container and its image identity, read-only root filesystem,
+and lack of bind or volume mounts.
+
+- [Phase 24 scoped gate](docs/REA_PHASE24.md)
+- [Phase 24 operator runbook](docs/PHASE24_OCI_RUNTIME_RUNBOOK.md)
+- [Next Phase 25 implementation prompt](docs/NEXT_PHASE25_PROMPT.md)
