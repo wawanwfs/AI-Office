@@ -382,6 +382,7 @@ export function createTerraces({ THREE, office, M, MB }) {
     stepStrips,
     ledLines,
     downlights: [l1Downlight, l2Downlight, l3Downlight], // siklus 497
+    badges: [badgeL1, badgeL2, badgeL3], // siklus 507: refs napas plakat
     setMode,
   };
 }

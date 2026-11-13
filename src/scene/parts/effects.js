@@ -847,6 +847,24 @@ export function cafeGlowBreath(elapsed) {
   };
 }
 
+// ── Siklus 507: plakat lantai L1/L2/L3 bernapas (badgeBreath) ──────────────
+// Tiga plakat arsitektural (LEVEL 01/02/03, canvas 640×112 + stroke aksen)
+// ditampilkan opasitas konstan — plat brand terakhir yang beku. Napas halus
+// 0.82…1.0 gelombang utama 2.7 dtk + mikro 6.83 dtk (rasio 2.53× tak sinkron
+// vs 10 siklus lain), stagger fase 0.9 dtk per plakat agar bergantian hidup.
+export const BADGE_BREATH_SEC = 2.7;   // gelombang utama napas plakat
+export const BADGE_STAGGER_SEC = 0.9;  // jeda fase antar plakat
+
+export function badgeBreath(elapsed, i = 0) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0; // netral (sin 0 → 0.5)
+  const idx = Number.isFinite(i) ? i : 0;
+  const tt = t + idx * BADGE_STAGGER_SEC;
+  const w = (sec) => 0.5 + 0.5 * Math.sin((tt / sec) * Math.PI * 2);
+  const main = w(BADGE_BREATH_SEC);
+  const micro = w(BADGE_BREATH_SEC * 2.53); // ≈6.83 dtk — rasio tak sinkron
+  return 0.82 + 0.15 * main + 0.03 * micro; // 0.82…1.0, tak padam
+}
+
 // ── Siklus 506: strip cahaya tepi rak server bernapas (rackEdgeBreath) ──
 // Enam strip vertikal cyan (0x00E5FF, MB konstan) di muka 3 rak server masih
 // statis (setelah lampu ruang server 498 & LED unit yang sudah berkedip acak).
