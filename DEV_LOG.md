@@ -7800,3 +7800,10 @@
 - Commit `5d33006` (siklus 472: fix daycycle lunch + harness e2e) akhirnya di-push; push pertama ditolak (remote maju ke cd5d562 phase20/21) → `git pull --rebase` lalu push sukses (`876e858`).
 - Verifikasi pasca-rebase: vitest 359 file, 4109 passed + 6 skipped; build PWA exit 0; dist → ~/wfs-hq; e2e_err_probe OK (agents=26, hooks cam/wall=True, errs=[]).
 - Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute; stabilkan sisa flake badge inspektur.
+
+## 13/11/2026 13:40 WIB — Siklus 474: audit flake badge inspektur — tak ditemukan, state green
+
+- Backlog "stabilkan flake badge inspektur (timing tangga + setSelected)" diaudit: grep setSelected di src/ hanya 1 definisi scene (applySelected sinkron) + 1 test asersi string; tidak ada path async yang menyentuh badge AgentInspector. AgentInspector.jsx membaca liveFloor via prop/agent.floor, tanpa timer.
+- Stres uji 5x beruntun agent_inspector.test.jsx + stair_routing.test.js: 5/5 lari hijau, 23 test per run, 0 flake teramati.
+- Verifikasi: vitest penuh 359 file, 4109 passed + 6 skipped; build PWA exit 0, dist → ~/wfs-hq; e2e_err_probe OK (agents=26, hooks cam/wall=True, shot 690KB, hygiene 41 refs 0 missing, errs=[]).
+- Kesimpulan: flake badge tidak tereproduksi; item backlog ditandai selesai lewat audit (bukan fix kode). Sisa backlog: (a) cutover :8787-Docker; (b) saas-dibantuin push; (d) keputusan omniroute.
