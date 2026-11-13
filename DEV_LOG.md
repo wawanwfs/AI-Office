@@ -7860,3 +7860,9 @@
 - Test baru effects_led_clock_time_gate.test.js (5): paritas @60FPS, LED @5FPS tetap ON tiap frame, jam @1FPS tetap digambar tiap frame yang ada, guard non-numerik.
 - Verifikasi: vitest 362 file, 4122 passed + 6 skipped; build PWA exit 0; rsync --delete dist → ~/wfs-hq (9503 /app/ = 200); e2e_err_probe OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 692KB, colors=10548 nonbg=0.992, hygiene 41 refs 0 missing).
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.
+## 13/11/2026 18:15 WIB — Siklus 484: relayout label anti-overlap kontrak WAKTU-NYATA (labelRelayoutTimeGate)
+- Gate terakhir yang frame-count: pass relayout label tiap 4 frame (LABEL_RELAYOUT_EVERY). Di GPU lambat (SwiftShader 0.3–1.5 FPS) tick butuh 4–13 dtk → pasangan label bertumpuk tak di-relayout lama (damping sudah kontrak waktu sejak 251/263, tapi TICK-nya belum).
+- Fix pola 481–483: parts/effects.js tambah labelRelayoutTimeGate (LABEL_RELAYOUT_SEC=4/60 s, paritas @60FPS identik); OfficeScene state __labelGate persist antar frame, di-OR dengan gate frame-count lama (kedua jalur tetap diuji).
+- Test baru effects_label_relayout_time_gate.test.js (4); adaptasi guard string label_occlusion.test.js (kondisi OR baru) — 30/30.
+- Verifikasi: vitest 364 file, 4133 passed + 6 skipped; build PWA exit 0; rsync --delete dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, hooks cam/wall=True, init_failed=False, errs=[], shot 705KB, colors=11116 nonbg=0.992, hygiene 41 refs 0 missing).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.

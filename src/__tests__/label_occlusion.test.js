@@ -187,7 +187,7 @@ describe('drift-gate sumber OfficeScene.js — oklusi terpasang di jalur relayou
     // Guard: relayoutDelta += delta harus berada di animate() sebelum blok throttle.
     const iAnimate = src.indexOf('function animate()');
     const iAcc = src.indexOf('relayoutDelta += delta;', iAnimate);
-    const iThrot = src.indexOf('if(namesVisible&&shouldRelayoutLabels(frame))', iAnimate);
+    const iThrot = src.indexOf('if(namesVisible&&(shouldRelayoutLabels(frame)||__labelGate(elapsed)))', iAnimate);
     expect(iAnimate).toBeGreaterThan(-1);
     expect(iAcc).toBeGreaterThan(iAnimate);
     expect(iThrot).toBeGreaterThan(iAcc);

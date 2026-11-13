@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles, charMotion, applyCharMotion } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles, charMotion, applyCharMotion } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -1701,6 +1701,7 @@ let relayoutDelta=0; // akumulasi waktu NYATA sejak tick relayout terakhir (damp
 let __ledGate=ledTimeGate();
 let __clockGate=clockTimeGate();
 let __shadowGate=shadowTimeGate(); // siklus 483: refresh shadow berbasis waktu
+let __labelGate=labelRelayoutTimeGate(); // siklus 484: relayout label berbasis waktu
 let __dustAcc=0; // akumulasi waktu NYATA antar tick dust (siklus 264 — pola relayoutDelta)
 function checkConversations(){
   // Logika pasangan terdekat di parts/chat_check.js (murni + unit test).
@@ -1953,7 +1954,7 @@ function animate(){
     camera, clientWidth: container.clientWidth, clientHeight: container.clientHeight,
     PX_PER_TAN, worldPerPx, accumulate: accumulateZoneAnti,
   });
-  if(namesVisible&&shouldRelayoutLabels(frame)){
+  if(namesVisible&&(shouldRelayoutLabels(frame)||__labelGate(elapsed))){
     let zpFadeMap=new Map(); // Siklus 256: fade viewport zona → dikalikan occ di bawah (scope blok relayout)
     sizeLabels();
     const vis=agentData.filter(a=>a.label.visible && a.state !== 'offsite');

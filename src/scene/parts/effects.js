@@ -147,6 +147,13 @@ export function shouldRelayoutLabels(frame, every = LABEL_RELAYOUT_EVERY) {
   return Number.isFinite(frame) && frame % every === 0;
 }
 
+// ── Siklus 484: pass anti-overlap label ikut kontrak WAKTU-NYATA ────────────
+// Gate lama frame-count (tiap 4 frame ≈ 15×/dtk @60FPS). Di GPU lambat frame
+// ke-4 butuh 4–13 dtk → pasangan label bertumpuk tak di-relayout lama (damping
+// sudah kontrak waktu sejak 251/263, tapi TICK relayout-nya masih frame-count).
+export const LABEL_RELAYOUT_SEC = 4 / 60; // = LABEL_RELAYOUT_EVERY(4)/60 s @60FPS
+export function labelRelayoutTimeGate() { return makeTimeGate(LABEL_RELAYOUT_SEC); }
+
 // Throttle redraw jam dinding: drawClock menggambar ulang canvas 96×96 + upload
 // tekstur SETIAP frame (~60×/dtk), padahal hanya jarum detik yang berubah dan
 // itu cukup ~3×/dtk (jarum detik bergerak dalam diskrit per detik pada render).
