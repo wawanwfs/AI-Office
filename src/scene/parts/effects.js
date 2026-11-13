@@ -748,6 +748,21 @@ export function serverHum(elapsed) {
   return 0.78 + 0.18 * main + 0.04 * micro; // 0.78…1.0, tak padam
 }
 
+// ── Siklus 502: lampu tabung plafon bernapas (tubeLightBreath) ───────────────
+// Lima tube mesh plafon (0x334466, opacity .3) konstan — elemen langit-langit
+// terakhir yang beku (setelah 13 efek cahaya 492–501). Napas halus 0.55…1.0
+// siklus 5.6 dtk (tak sinkron dgn lampu 5.2/4.3/3.9). Dipakai HANYA mode siang
+// (guard !cyberpunkMode — mode neon set opacity 0.95 sendiri via NEON).
+export const TUBE_LIGHT_SEC = 5.6;
+
+export function tubeLightBreath(elapsed) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0; // netral (sin 0 → 0.5)
+  const w = (sec) => 0.5 + 0.5 * Math.sin((t / sec) * Math.PI * 2);
+  const main = w(TUBE_LIGHT_SEC);
+  const micro = w(TUBE_LIGHT_SEC * 2.33); // ≈2.4 dtk — rasio tak sinkron
+  return 0.55 + 0.38 * main + 0.07 * micro; // 0.55…1.0, tak padam
+}
+
 // ── Siklus 499: lampu ambience lantai dasar bernapas (floorLampBreath) ──────
 // PointLight hangat area kerja L1 (decor.loungeLight, 0xFFC97A, .9 konstan) —
 // satu-satunya sumber cahaya area kerja yang masih statis (setelah lampu
