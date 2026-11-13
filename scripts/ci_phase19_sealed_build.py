@@ -43,12 +43,13 @@ def prove_sealed_build(manager, project_id):
             assert sealed.verify(), "sealed FD affected by a mutable checkout"
             built = sealed.build_disposable_image(image, timeout=240)
             assert built["source_sha256"] == expected
+            assert built["image_id"].startswith("sha256:") and len(built["image_id"]) == 71
             # The image is actually built from the SEALED tar even
             # though the ordinary staged api.py is hostile RIGHT NOW.
             command = [
                 "docker", "run", "--rm", "--pull=never", "--network=none",
                 "--read-only", "--user=65534:65534", "--cap-drop=ALL",
-                "--security-opt=no-new-privileges:true", image,
+                "--security-opt=no-new-privileges:true", built["image_id"],
                 "python", "-c",
                 "import hashlib,pathlib; "
                 "print(hashlib.sha256(pathlib.Path('/app/api.py').read_bytes()).hexdigest())",

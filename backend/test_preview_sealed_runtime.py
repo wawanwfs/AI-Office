@@ -18,8 +18,12 @@ from preview_admission_v2 import AdmissionDenied
 from preview_sealed_build import linux_sealing_supported
 from preview_sealed_runtime import (
     SealedRuntimeCompose, derive_image_only_compose,
-    is_local_image_id, verify_local_image_exists, seal_reviewed_ingress_context,
+    build_local_reviewed_image, is_local_image_id, verify_local_image_exists,
+    seal_reviewed_ingress_context,
 )
+
+
+_INGRESS_ID = "sha256:" + "c" * 64
 
 
 @pytest.fixture
@@ -46,7 +50,7 @@ def signed_template(tmp_path):
 def test_derived_compose_is_image_only_and_preserves_approved_template(signed_template):
     approved,folder,original=signed_template
     image_id="sha256:" + "a"*64
-    altered=derive_image_only_compose(approved,"alpha",image_id)
+    altered=derive_image_only_compose(approved,"alpha",image_id,_INGRESS_ID)
     assert image_id.encode() in altered
     assert b"    build:" not in altered
     assert b"    pull_policy: never\n" in altered
@@ -59,9 +63,9 @@ def test_derived_compose_is_image_only_and_preserves_approved_template(signed_te
     for bad in ("python:latest", "sha256:"+("f"*63), "SHA256:"+("a"*64),
                 "sha256:"+("A"*64), "", None):
         with pytest.raises(AdmissionDenied,match="local content-addressed"):
-            derive_image_only_compose(approved,"alpha",bad)
+            derive_image_only_compose(approved,"alpha",bad,_INGRESS_ID)
     with pytest.raises(AdmissionDenied,match="not a reviewed tenant"):
-        derive_image_only_compose(approved,"other",image_id)
+        derive_image_only_compose(approved,"other",image_id,_INGRESS_ID)
 
 
 def test_derived_compose_rejects_original_template_change_and_source_build(signed_template):
@@ -69,17 +73,17 @@ def test_derived_compose_rejects_original_template_change_and_source_build(signe
     image_id="sha256:"+"f"*64
     (folder/"compose.yaml").write_bytes(original+b"\n  injected:\n    build:\n      context: .\n")
     with pytest.raises(AdmissionDenied,match="reviewed digest"):
-        derive_image_only_compose(approved,"alpha",image_id)
+        derive_image_only_compose(approved,"alpha",image_id,_INGRESS_ID)
     (folder/"compose.yaml").write_bytes(
         original.replace(b"dockerfile: Dockerfile.api",
                          b"dockerfile: unreviewed.Dockerfile"))
     with pytest.raises(AdmissionDenied,match="reviewed digest"):
-        derive_image_only_compose(approved,"alpha",image_id)
+        derive_image_only_compose(approved,"alpha",image_id,_INGRESS_ID)
 
 
 def test_sealed_runtime_bytes_are_kernel_immutable_to_same_uid(signed_template):
     approved,folder,_=signed_template
-    raw=derive_image_only_compose(approved,"alpha","sha256:"+"b"*64)
+    raw=derive_image_only_compose(approved,"alpha","sha256:"+"b"*64,_INGRESS_ID)
     if not linux_sealing_supported():
         with pytest.raises(AdmissionDenied,match="requires Linux memfd"):
             SealedRuntimeCompose(raw)
@@ -113,7 +117,7 @@ print(json.dumps(out))
         with document.open_reader() as stream:
             assert stream.read()==raw
         with pytest.raises(AdmissionDenied,match="reviewed digest"):
-            derive_image_only_compose(approved,"alpha","sha256:"+"b"*64)
+            derive_image_only_compose(approved,"alpha","sha256:"+"b"*64,_INGRESS_ID)
     with pytest.raises(AdmissionDenied,match="descriptor closed"):
         document.verify()
 
@@ -146,7 +150,7 @@ def test_signed_original_CRLF_is_verified_then_only_derived_YAML_normalized(sign
     converted=original.replace(b"\r\n",b"\n").replace(b"\n",b"\r\n")
     (folder/"compose.yaml").write_bytes(converted)
     approved.reviewed["sources"]["compose.yaml"]=hashlib.sha256(converted).hexdigest()
-    result=derive_image_only_compose(approved,"alpha","sha256:"+"c"*64)
+    result=derive_image_only_compose(approved,"alpha","sha256:"+"c"*64,_INGRESS_ID)
     assert b"\r" not in result
     assert b"api:\n    image: sha256:" in result
     assert (folder/"compose.yaml").read_bytes()==converted
@@ -154,7 +158,7 @@ def test_signed_original_CRLF_is_verified_then_only_derived_YAML_normalized(sign
     approved.reviewed["sources"]["compose.yaml"]=hashlib.sha256(original).hexdigest()
     if converted != original:
         with pytest.raises(AdmissionDenied,match="reviewed digest"):
-            derive_image_only_compose(approved,"alpha","sha256:"+"c"*64)
+            derive_image_only_compose(approved,"alpha","sha256:"+"c"*64,_INGRESS_ID)
 
 
 def test_mixed_newlines_denied_even_with_matching_reviewed_digest(signed_template):
@@ -163,7 +167,7 @@ def test_mixed_newlines_denied_even_with_matching_reviewed_digest(signed_templat
     (folder/"compose.yaml").write_bytes(tampered)
     approved.reviewed["sources"]["compose.yaml"]=hashlib.sha256(tampered).hexdigest()
     with pytest.raises(AdmissionDenied,match="unsafe Compose newline"):
-        derive_image_only_compose(approved,"alpha","sha256:"+"c"*64)
+        derive_image_only_compose(approved,"alpha","sha256:"+"c"*64,_INGRESS_ID)
 
 
 def test_phase21_ingress_image_only_mount_is_absent_from_sealed_runtime(signed_template):
@@ -176,9 +180,10 @@ def test_phase21_ingress_image_only_mount_is_absent_from_sealed_runtime(signed_t
     assert ("  ingress:\n    image: " + ingress_id +
             "\n    pull_policy: never\n").encode() in raw
     assert b"    image: python:3.11-alpine@" not in raw
-    assert b"../../artifacts/fullstack-preview/dist:/app/dist:ro" in raw
+    assert b"/app/dist" not in raw
+    assert b"volumes:" not in raw
     assert raw.count(b"pull_policy: never") == 2
-    for bad in ("ingress:latest", "sha256:" + "f"*63, "SHA256:" + "c"*64):
+    for bad in (None, "ingress:latest", "sha256:" + "f"*63, "SHA256:" + "c"*64):
         with pytest.raises(AdmissionDenied, match="pinned ingress"):
             derive_image_only_compose(approved, "alpha", api_id,
                                       ingress_image_id=bad)
@@ -222,3 +227,49 @@ def test_phase21_ingress_base_must_match_fixed_signed_family(signed_template):
     approved.reviewed["images"]["ingress"] = "attacker:latest@sha256:" + "a"*64
     with pytest.raises(AdmissionDenied, match="outside approved fixed image family|requires Linux kernel sealing"):
         seal_reviewed_ingress_context(approved, "alpha")
+
+@pytest.mark.parametrize("newline", [b"\n", b"\r\n"])
+@pytest.mark.parametrize("change, message", [
+    (lambda raw: raw.replace(b"dist:/app/dist:ro", b"dist:/app/dist:rw"),
+     "frontend bind stanza changed"),
+    (lambda raw: raw.replace(b"    depends_on:\n",
+                             b"    volumes: [./extra:/app]\n    depends_on:\n", 1),
+     "may not request source builds or volumes"),
+])
+def test_frontend_bind_derivation_fails_closed_on_template_changes(
+        signed_template, change, message, newline):
+    approved, folder, original = signed_template
+    normalized = original.replace(b"\r\n", b"\n")
+    changed = change(normalized)
+    assert changed != normalized
+    changed = changed.replace(b"\n", newline)
+    (folder / "compose.yaml").write_bytes(changed)
+    approved.reviewed["sources"]["compose.yaml"] = hashlib.sha256(changed).hexdigest()
+    with pytest.raises(AdmissionDenied, match=message):
+        derive_image_only_compose(approved, "alpha", "sha256:" + "a" * 64, _INGRESS_ID)
+
+
+@pytest.mark.parametrize("build_id", ["sha256:" + "b" * 64, "mutable:tag"])
+def test_operator_verifies_build_result_id_without_resolving_tag(monkeypatch, build_id):
+    from contextlib import nullcontext
+    monkeypatch.setattr("preview_sealed_runtime.linux_sealing_supported", lambda: True)
+    bundle = SimpleNamespace(build_disposable_image=lambda *args, **kwargs: {
+        "image_id": build_id, "kernel_seals_checked": True,
+        "tar_sha256": "b" * 64, "source_sha256": "c" * 64,
+    })
+    monkeypatch.setattr("preview_sealed_runtime.seal_reviewed_preview_context",
+                        lambda *args: nullcontext(bundle))
+    calls = []
+
+    def inspect(argv, **kwargs):
+        calls.append(argv)
+        return SimpleNamespace(returncode=0, stdout=build_id + "\n")
+
+    monkeypatch.setattr("preview_sealed_runtime.subprocess.run", inspect)
+    if not is_local_image_id(build_id):
+        with pytest.raises(AdmissionDenied, match="missing or malformed"):
+            build_local_reviewed_image(None, "alpha")
+        assert not calls
+    else:
+        assert build_local_reviewed_image(None, "alpha")["image_id"] == build_id
+        assert calls == [["docker", "image", "inspect", "--format", "{{.Id}}", build_id]]

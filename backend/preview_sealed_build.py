@@ -1,8 +1,8 @@
-"""Phase 19 Linux-only, kernel-sealed Docker build-context evidence.
+"""Linux-only, kernel-sealed build context for the reviewed preview API.
 
 Only the previously signed/reviewed disposable API template is supported.
-This is a reference BUILD PROOF, NOT the default Compose build and NOT an
-independently privileged worker: rootful Docker and a compromised daemon
+This is the hardened operator input, NOT the standalone Compose build
+and NOT an independently privileged worker: rootful Docker and a compromised daemon
 can still act as host root. No arbitrary model-generated Dockerfile or
 user-controlled build arguments are accepted.
 
@@ -22,16 +22,19 @@ import subprocess
 import sys
 import tarfile
 
-from preview_admission_v2 import AdmissionDenied
+from preview_admission_v2 import AdmissionDenied, _frontend_inventory
 
 try:
     import fcntl
 except ImportError:  # Windows is intentionally unsupported
     fcntl = None
 
-_ONLY_FILES = ("Dockerfile.api", "api.py")
 _LIMIT = 512 * 1024
-_MAX_TAR = 2 * 1024 * 1024
+_MAX_ASSET = 32 * 1024 * 1024
+_MAX_ASSETS_TOTAL = 64 * 1024 * 1024
+_MAX_TAR = _MAX_ASSETS_TOTAL + 4 * 1024 * 1024  # source and tar header allowance
+_COPY_API = b"COPY api.py /app/api.py\n"
+_COPY_DIST = b"COPY dist/ /app/dist/\n"
 _FULL_SEALS = (
     getattr(fcntl, "F_SEAL_WRITE", 0) |
     getattr(fcntl, "F_SEAL_SHRINK", 0) |
@@ -49,37 +52,33 @@ def linux_sealing_supported():
                 and _FULL_SEALS)
 
 
-def _reviewed_bytes(path, expected_sha):
+def _reviewed_bytes(path, expected_sha, maximum=_LIMIT):
     path = Path(path).absolute()
     if (not isinstance(expected_sha, str) or len(expected_sha) != 64 or
             any(ch not in "0123456789abcdef" for ch in expected_sha)):
         raise AdmissionDenied("independently reviewed source SHA256 required")
-    if path.is_symlink() or path.parent.is_symlink():
-        raise AdmissionDenied("sealed context source symlink denied")
-    # Windows os.read must be byte-for-byte; without O_BINARY, the CRT
-    # may translate CRLF and truncate reads relative to fstat size.
+    # Open in binary mode and never block on a substituted FIFO.
     flags = (os.O_RDONLY | getattr(os, "O_BINARY", 0) |
-             getattr(os, "O_NOFOLLOW", 0))
+             getattr(os, "O_NOFOLLOW", 0) | getattr(os, "O_NONBLOCK", 0))
     try:
-        fd = os.open(path, flags)
-        try:
-            meta = os.fstat(fd)
-            if not stat.S_ISREG(meta.st_mode) or not 1 <= meta.st_size <= _LIMIT:
+        if path.is_symlink() or path.resolve() != path:
+            raise AdmissionDenied("sealed context source symlink denied")
+        with os.fdopen(os.open(path, flags), "rb") as source:
+            meta = os.fstat(source.fileno())
+            if not stat.S_ISREG(meta.st_mode) or not 1 <= meta.st_size <= maximum:
                 raise AdmissionDenied("sealed source type or size invalid")
-            data = os.read(fd, _LIMIT + 1)
+            data = source.read(meta.st_size + 1)
             if len(data) != meta.st_size:
                 raise AdmissionDenied("sealed source changed while reading")
             if not hmac.compare_digest(
                     hashlib.sha256(data).hexdigest(), expected_sha):
                 raise AdmissionDenied("sealed source differs from reviewed digest")
             return data
-        finally:
-            os.close(fd)
     except AdmissionDenied:
         # AdmissionDenied derives from PermissionError/OSError; keep
         # explicit manifest-hash and source-type denials distinguishable.
         raise
-    except OSError as exc:
+    except (OSError, RuntimeError) as exc:
         raise AdmissionDenied("sealed context source read unavailable") from exc
 
 
@@ -97,15 +96,8 @@ class SealedPreviewBuild:
             raise AdmissionDenied("Docker input lacks mandatory kernel seals")
         if os.fstat(self.fd).st_size != self.size:
             raise AdmissionDenied("sealed Docker input size changed")
-        digest = hashlib.sha256()
-        index = 0
-        while index < self.size:
-            data = os.pread(self.fd, min(65536, self.size - index), index)
-            if not data:
-                raise AdmissionDenied("sealed Docker input truncated")
-            digest.update(data)
-            index += len(data)
-        if not hmac.compare_digest(digest.hexdigest(), self.tar_sha256):
+        if not hmac.compare_digest(
+                _descriptor_sha256(self.fd, self.size), self.tar_sha256):
             raise AdmissionDenied("sealed Docker input hash mismatch")
         return True
 
@@ -130,8 +122,8 @@ class SealedPreviewBuild:
                     for c in image_tag)):
             raise AdmissionDenied("sealed build image tag outside CI namespace")
         # No client-supplied Docker flags, context paths, or Dockerfiles.
-        args = ["docker", "build", "--pull=false",
-                "--progress=plain", "--file", "Dockerfile.api",
+        args = ["docker", "build", "--pull=false", "--quiet",
+                "--file", "Dockerfile.api",
                 "--tag", image_tag, "-"]
         allowed_env = {
             k: v for k, v in os.environ.items()
@@ -153,58 +145,91 @@ class SealedPreviewBuild:
         if result.returncode != 0:
             raise AdmissionDenied("sealed Docker image build failed")
         self.verify()
-        return {"image_tag": image_tag, "tar_sha256": self.tar_sha256,
+        return {"image_tag": image_tag,
+                "image_id": result.stdout.decode("ascii", errors="replace").strip(),
+                "tar_sha256": self.tar_sha256,
                 "source_sha256": self.reviewed_api_sha256,
                 "kernel_seals_checked": True}
 
 
-def seal_reviewed_preview_context(snapshots, project_id):
-    """Use only the existing REVIEWED signed operator snapshot.
+def _add_tar_file(tar, name, data):
+    info = tarfile.TarInfo(name)
+    info.size = len(data)
+    info.mode = 0o444
+    info.uid = info.gid = 65534
+    info.mtime = 0
+    tar.addfile(info, io.BytesIO(data))
 
-    The caller must already have passed SignedPreviewAuthority and
-    source admission; the snapshot's verify() checks every admitted
-    file against its manifest. Recheck Dockerfile/api bytes AGAIN from
-    securely opened fds as an additional last-mile TOCTOU guard.
+
+def _descriptor_sha256(fd, size):
+    digest = hashlib.sha256()
+    for offset in range(0, size, 65536):
+        block = os.pread(fd, min(65536, size - offset), offset)
+        if not block:
+            raise AdmissionDenied("sealed Docker input truncated")
+        digest.update(block)
+    return digest.hexdigest()
+
+
+def seal_reviewed_preview_context(snapshots, project_id):
+    """Seal the signed API and every signed frontend asset before Docker reads.
+
+    Check the original Dockerfile bytes, then add a single operator-owned
+    COPY instruction. The signed template stays unchanged for standalone CI.
+    BuildKit sees neither mutable staging paths nor unreviewed extra files.
     """
     if not linux_sealing_supported():
         raise AdmissionDenied("kernel memfd seals unavailable; fail closed")
     compose_path = snapshots.verify(project_id)
     expected = snapshots.reviewed.get("sources")
-    if not isinstance(expected, dict):
-        raise AdmissionDenied("reviewed manifest sources required")
-    stream = io.BytesIO()
-    with tarfile.open(fileobj=stream, mode="w", format=tarfile.USTAR_FORMAT) as tar:
-        for name in _ONLY_FILES:
-            data = _reviewed_bytes(compose_path.parent / name, expected.get(name))
-            info = tarfile.TarInfo(name)
-            info.size = len(data)
-            info.mode = 0o444
-            info.uid = 65534
-            info.gid = 65534
-            info.uname = ""
-            info.gname = ""
-            info.mtime = 0
-            tar.addfile(info, io.BytesIO(data))
-    tar_bytes = stream.getvalue()
-    if not 1 <= len(tar_bytes) <= _MAX_TAR:
-        raise AdmissionDenied("sealed Docker tar size outside reviewed bounds")
+    frontend = snapshots.reviewed.get("frontend")
+    if not isinstance(expected, dict) or not isinstance(frontend, dict):
+        raise AdmissionDenied("reviewed source and frontend hashes required")
+    dist = compose_path.parents[2] / "artifacts/fullstack-preview/dist"
+    assets = _frontend_inventory(dist)
+    if assets.keys() != frontend.keys():
+        raise AdmissionDenied("sealed frontend inventory differs from reviewed assets")
+
+    dockerfile = _reviewed_bytes(compose_path.parent / "Dockerfile.api",
+                                 expected.get("Dockerfile.api"))
+    # Preserve the original signed byte check before normalizing Windows
+    # checkout newlines for the deterministic operator transformation.
+    dockerfile = dockerfile.replace(b"\r\n", b"\n")
+    lines = dockerfile.splitlines(keepends=True)
+    if b"\r" in dockerfile or lines.count(_COPY_API) != 1 or _COPY_DIST in lines:
+        raise AdmissionDenied("reviewed Dockerfile API COPY stanza changed")
+    lines.insert(lines.index(_COPY_API) + 1, _COPY_DIST)
+    dockerfile = b"".join(lines)
+    api = _reviewed_bytes(compose_path.parent / "api.py",
+                          expected.get("api.py"))
+
     flags = os.MFD_ALLOW_SEALING | getattr(os, "MFD_CLOEXEC", 0)
-    fd = -1
+    fd = os.memfd_create("wfs-reviewed-api-build", flags)
     try:
-        fd = os.memfd_create("wfs-reviewed-api-build", flags)
-        view = memoryview(tar_bytes)
-        offset = 0
-        while offset < len(view):
-            offset += os.write(fd, view[offset:])
-        if os.fstat(fd).st_size != len(tar_bytes):
-            raise AdmissionDenied("kernel memfd write truncated")
+        # Stream to memfd with a fixed ordering and timestamps. PAX supports
+        # nested/long names admitted by the existing signed asset schema.
+        with os.fdopen(os.dup(fd), "wb") as output:
+            with tarfile.open(fileobj=output, mode="w", format=tarfile.PAX_FORMAT) as tar:
+                _add_tar_file(tar, "Dockerfile.api", dockerfile)
+                _add_tar_file(tar, "api.py", api)
+                total = 0
+                for name in sorted(frontend):
+                    # Recheck the hash of the exact FD bytes being archived,
+                    # even when snapshot verification ran a moment earlier.
+                    data = _reviewed_bytes(assets[name], frontend[name], _MAX_ASSET)
+                    total += len(data)
+                    if total > _MAX_ASSETS_TOTAL:
+                        raise AdmissionDenied("sealed frontend exceeds total size limit")
+                    _add_tar_file(tar, "dist/" + name, data)
+        size = os.fstat(fd).st_size
+        if not 1 <= size <= _MAX_TAR:
+            raise AdmissionDenied("sealed Docker tar size outside reviewed bounds")
         fcntl.fcntl(fd, fcntl.F_ADD_SEALS, _FULL_SEALS)
         result = SealedPreviewBuild(
-            fd=fd, tar_sha256=hashlib.sha256(tar_bytes).hexdigest(),
-            size=len(tar_bytes), reviewed_api_sha256=expected["api.py"])
+            fd=fd, tar_sha256=_descriptor_sha256(fd, size),
+            size=size, reviewed_api_sha256=expected["api.py"])
         result.verify()
         return result
     except BaseException:
-        if fd >= 0:
-            os.close(fd)
+        os.close(fd)
         raise

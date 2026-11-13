@@ -14,6 +14,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from contextlib import ExitStack, contextmanager
 
 import httpx
 
@@ -233,6 +234,95 @@ def health(port,token,other):
         assert stream.status_code==200 and "event: database" in stream.text
         return True
 
+def verify_frontend_http(port, expected):
+    """Verify response bodies against signed hashes outside the daemon."""
+    with httpx.Client(base_url=f"http://127.0.0.1:{port}",
+                      timeout=5, trust_env=False) as client:
+        for name, digest in sorted(expected.items()):
+            response = client.get("/" + name)
+            assert response.status_code == 200, f"frontend asset unavailable: {name}"
+            assert hashlib.sha256(response.content).hexdigest() == digest, (
+                f"served frontend differs from signed asset: {name}")
+        index = client.get("/")
+        assert index.status_code == 200
+        assert hashlib.sha256(index.content).hexdigest() == expected["index.html"]
+
+
+@contextmanager
+def temporarily_change_assets(dist, names):
+    """Modify disposable host fixtures and restore their bytes/modes on exit."""
+    originals = {}
+    try:
+        for name in names:
+            asset = dist / name
+            originals[asset] = (asset.read_bytes(), asset.stat().st_mode & 0o777)
+            asset.chmod(0o600)
+            asset.write_bytes(b"Disposable CI fixture change (not the reviewed asset)\n")
+            assert asset.read_bytes() != originals[asset][0]
+        yield
+    finally:
+        for asset, (data, mode) in originals.items():
+            asset.write_bytes(data)
+            asset.chmod(mode)
+
+
+def prove_frontend_runtime():
+    expected = reviewed_files["frontend"]
+    assert "index.html" in expected and any(name.endswith(".js") for name in expected)
+    observed = {}
+    # Check both tenants' actual containers before changing verified staging.
+    for project, port, token in zip(names, ports, tokens):
+        record = manager.status(project)
+        image_id = record["api_image_id"]
+        assert record["api_frontend_sealed"] == 1
+        container = manager._invoke(record, token, ["ps", "-q", "api"]).strip()
+        assert container
+        result = subprocess.run(
+            ["docker", "inspect", "--format", "{{json .}}", container],
+            capture_output=True, text=True, timeout=20, check=True)
+        actual = json.loads(result.stdout)
+        assert actual["Image"] == image_id, "running API differs from BuildKit image ID"
+        assert not any(mount.get("Type") in ("bind", "volume")
+                       for mount in actual["Mounts"]), "API unexpectedly host-mounted"
+        assert actual["HostConfig"]["ReadonlyRootfs"], "API rootfs unexpectedly writable"
+        # The actual in-container inventory catches omitted or unexpected
+        # files. The separate HTTP check below does not rely on docker exec.
+        command = (
+            "import hashlib,json; from pathlib import Path; "
+            "root=Path('/app/dist'); "
+            "print(json.dumps({p.relative_to(root).as_posix(): "
+            "hashlib.sha256(p.read_bytes()).hexdigest() "
+            "for p in root.rglob('*') if p.is_file()}))"
+        )
+        inventory = subprocess.run(
+            ["docker", "exec", container, "python", "-c", command],
+            capture_output=True, text=True, timeout=20, check=True)
+        assert json.loads(inventory.stdout) == expected
+        verify_frontend_http(port, expected)
+        observed[project] = {
+            "local_image_id": image_id,
+            "api_read_only_rootfs": True,
+            "api_no_bind_or_volume_mount": True,
+            "in_image_inventory_matches_signed_assets": True,
+        }
+    # Keep the live checkout and BOTH staged dist trees changed for all
+    # requests. Probe index, JS and all remaining assets by content hash.
+    with ExitStack() as changes:
+        changes.enter_context(temporarily_change_assets(
+            repo / "artifacts/fullstack-preview/dist", expected))
+        for project in names:
+            staged_dist = (manager.snapshots.path(project).parents[2] /
+                           "artifacts/fullstack-preview/dist")
+            changes.enter_context(temporarily_change_assets(staged_dist, expected))
+        for project, port, token, other in zip(names, ports, tokens, (token_b, token_a)):
+            verify_frontend_http(port, expected)
+            assert health(port, token, other)
+            observed[project]["http_assets_match_during_host_changes"] = len(expected)
+    for project in names:
+        manager.snapshots.verify(project)
+    return observed
+
+
 try:
     a=manager.reserve(names[0],ports[0])
     b=manager.reserve(names[1],ports[1])
@@ -327,6 +417,7 @@ try:
             "no_ingress_bind_mount": True,
             "served_while_host_source_mutated": True,
         }
+    proof["phase22_mount_free_frontend"] = prove_frontend_runtime()
     proof["phase11_docker_compose_context"]="signed project-scoped staged copy"
     # Runtime firewall evidence: BOTH preview bridges must be internal,
     # API still reachable on host loopback, and the running API must fail
