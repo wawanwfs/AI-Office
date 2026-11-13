@@ -7961,3 +7961,8 @@
 - Test baru effects_server_hum.test.js (5): guard non-finite netral 0.89, rentang + tak padam, deterministik + seam periodik LCM 273T, kontrak puncak main eksak + valley, tekstur mikro. Kesalahan awal test (asumsi puncak main=micro sejajar) tertangkap & dikoreksi.
 - Verifikasi: vitest 378 file, 4208 passed + 6 skipped (+5, +1 file); build PWA exit 0; dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 709KB, colors=11262 nonbg=0.992, hygiene 41 refs 0 missing).
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
+## 14/11/2026 03:15 WIB — Siklus 499: lampu ambience lantai dasar bernapas (floorLampBreath)
+- Gap visual: PointLight hangat area kerja L1 (decor.loungeLight, 0xFFC97A, .9 konstan) statis — satu-satunya sumber cahaya area kerja yang masih mati rata (setelah lampu lounge L2 493, downlight dek 497, ruang server 498).
+- Fix: floorLampBreath(elapsed) di parts/effects.js (murni, diuji unit): napas 0.76…1.0, gelombang utama 4.3 dtk + mikro 1.5 dtk (rasio 2.87× tak sinkron, pola lampFlicker/serverHum) — tak pernah padam. OfficeScene: tick di gate ambient (guard __decorObj.loungeLight), intensitas .9×f.
+- Test baru effects_floor_lamp_breath.test.js (6): guard non-finite netral 0.88, rentang + tak padam, deterministik + seam LCM 287T, kontrak puncak main eksak + lembah, tekstur mikro, fase tak sinkron vs 5.2/3.9.
+- Verifikasi: vitest 379 file, 4214 passed + 6 skipped (+6, +1 file); build PWA exit 0; dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 708KB, colors=11192 nonbg=0.992, hygiene 41 refs 0 missing).

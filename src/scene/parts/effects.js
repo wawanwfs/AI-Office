@@ -747,3 +747,20 @@ export function serverHum(elapsed) {
   const micro = w(SERVER_HUM_SEC * 2.73); // ≈1.43 dtk — rasio tak sinkron
   return 0.78 + 0.18 * main + 0.04 * micro; // 0.78…1.0, tak padam
 }
+
+// ── Siklus 499: lampu ambience lantai dasar bernapas (floorLampBreath) ──────
+// PointLight hangat area kerja L1 (decor.loungeLight, 0xFFC97A, .9 konstan) —
+// satu-satunya sumber cahaya area kerja yang masih statis (setelah lampu
+// berdiri lounge L2 493, downlight dek 497, ruang server 498). Nilai murni
+// waktu-nyata (elapsed) → diuji unit; penerapan di gate ambient OfficeScene.
+// Rentang 0.76…1.0 — tak pernah padam, gelombang utama 4.3 dtk + mikro 1.5 dtk
+// (rasio 2.87× tak sinkron, pola lampFlicker 493 / serverHum 498).
+export const FLOOR_LAMP_SEC = 4.3; // gelombang utama napas lampu L1
+
+export function floorLampBreath(elapsed) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0; // netral (sin 0 → 0.5)
+  const w = (sec) => 0.5 + 0.5 * Math.sin((t / sec) * Math.PI * 2);
+  const main = w(FLOOR_LAMP_SEC);
+  const micro = w(FLOOR_LAMP_SEC * 2.87); // ≈1.5 dtk — rasio tak sinkron
+  return 0.76 + 0.20 * main + 0.04 * micro; // 0.76…1.0, tak padam
+}
