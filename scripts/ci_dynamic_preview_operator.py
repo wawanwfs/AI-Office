@@ -612,6 +612,7 @@ try:
         assert json.loads(custody.read_text())["sequence"] == MAX_RECORDS + 1
         journal.append()
         assert open_manager(release, rotated).restart(project, token)["phase"] == "running"
+        assert health(port, token, tokens[0])
         verify_frontend_http(port, reviewed_files["frontend"])
     rotated_window = list(journal.entries)
     journal.publish(archived_window)
