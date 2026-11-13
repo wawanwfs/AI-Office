@@ -364,3 +364,55 @@ export function shouldRedrawScreenAt(frame, index, every = SCREEN_REDRAW_EVERY) 
   return Number.isFinite(frame) && Number.isFinite(index) &&
     ((frame + ((index % every) + every)) % every) === 0;
 }
+
+// Siklus 481 — kontrak refresh layar = WAKTU-NYATA, bukan frame count.
+// Dulu pemilik loop (OfficeScene.animate) memanggil shouldRedrawScreenAt berbasis
+// `frame`: di 60 FPS SCREEN_REDRAW_EVERY=6 → tiap layar refresh 10×/dtk, TAPI di
+// GPU lambat (SwiftShader headless/kiosk 0.3–1.5 FPS) frame 6 butuh 4–20 DETIK —
+// animasi monitor (chat, chart, log) terlihat BEKU padahal scene hidup.
+// Kini gate waktu: tick layar ke-i hanya bila elapsed ≥ (i+1)×SCREEN_REDRAW_SEC/
+// every sejak tick sebelumnya — kontrak laju (~10 refresh layar/dtk @SCREEN_
+// REDRAW_EVERY=6) terjaga di FPS APA PUN, stagger antar-layar tetap menyebar
+// beban (satu sub-slot layar per gate, bukan semua sekaligus).
+// State per-pemanggil: {t0, idx} — dipanggil dgn state lama utk lanjut, atau
+// tanpa state utk mulai. Pola identik jendela sampling perf_quality (waktu nyata).
+export const SCREEN_REDRAW_SEC = 0.1; // interval refresh per layar @60FPS (= 6 frame, paritas gate lama)
+export function screenTickGate(elapsed, index, st, every = SCREEN_REDRAW_EVERY,
+  period = SCREEN_REDRAW_SEC) {
+  if (!Number.isFinite(elapsed) || !Number.isFinite(index)) return st || null;
+  const s = st || { t0: null, idx: null, adv: 0 };
+  const slot = ((index % every) + every) % every; // fase layar dlm siklus
+  if (s.t0 === null) { // mulai: fase ini menunggu giliran pertamanya
+    s.t0 = elapsed; s.idx = slot; s.adv = 0; s.lastEl = elapsed;
+    return s;
+  }
+  // Siklus 481: gate di-advance SEKALI per nilai elapsed (satu frame) —
+  // pemanggil loop forEach layar memanggil fungsi ini per layar dgn elapsed
+  // sama; tanpa memo, panggilan ke-2..N mengosongkan adv (dobel-advance).
+  if (s.lastEl === elapsed) return s;
+  const win = period / every; // sub-slot waktu satu layar
+  // Catch-up — di FPS sangat rendah satu frame bisa melewati beberapa sub-slot
+  // (dt 0.2 s @5 FPS vs win 0.1 s); SEMUA slot yang dilewati dihitung lewat
+  // (s.adv) agar tidak ada fase yang bolong (layar tak pernah digambar ulang).
+  // Cap every agar frame beku lama tidak loop raksasa.
+  const adv = Math.min(Math.floor((elapsed - s.t0) / win), every);
+  if (adv > 0) { s.t0 += adv * win; s.idx = (s.idx + adv) % every; s.adv = adv; }
+  else s.adv = 0;
+  s.lastEl = elapsed;
+  return s;
+}
+// Layar ke-i digambar bila fase-nya LEWAT pada tick ini (slot aktif atau slot
+// yang di-skip saat catch-up). Kontrak stagger: fase aktif = SATU per sub-slot
+// waktu → beban menyebar; layar dgn fase sama (i dan i+every) tetap digambar
+// bersama — paritas perilaku gate frame-count lama.
+export function shouldRedrawScreenTime(elapsed, index, st, every = SCREEN_REDRAW_EVERY,
+  period = SCREEN_REDRAW_SEC) {
+  if (!Number.isFinite(elapsed) || !Number.isFinite(index)) return false;
+  const s = screenTickGate(elapsed, index, st, every, period);
+  if (!s || s.idx === null || !(s.adv > 0)) return false;
+  const phase = ((index % every) + every) % every;
+  for (let k = 0; k < s.adv; k++) {
+    if (((s.idx - k) % every + every) % every === phase) return true;
+  }
+  return false;
+}

@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles, charMotion, applyCharMotion } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, shouldRedrawClock, shouldUpdateLeds, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles, charMotion, applyCharMotion } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -1480,7 +1480,18 @@ let frame=0;
 // 0.4 FPS animasi layar ~150× lebih lambat, monitor praktis beku di kiosk).
 // __screenT di-update di animate() SEBELUM forEach (urutan aman: frame 0 → 0).
 let __screenT=0;
-const drawScreen=(s,i)=>{ if(shouldRedrawScreenAt(frame,i)) drawScreenFrame(s,frame,__screenT); };
+// Siklus 481: gate refresh per-layar kini WAKTU-NYATA (screenTickGate, state
+// __screenGate per layar) — dulu frame-count (shouldRedrawScreenAt) membuat
+// refresh layar 4–20 DETIK sekali di GPU lambat (frame 6 @0.4 FPS) meski waktu
+// animasi kontennya sendiri (__screenT) sudah waktu-nyata sejak siklus 264.
+// Kontrak laju tetap ~10 refresh layar/dtk @60FPS (period .6/6 = .1 s sub-slot),
+// stagger antar-layar tetap menyebar beban; guard `!__quality.low` pemanggil
+// forEach tidak berubah (low-quality tetap beku setelah frame 6, sesuai desain).
+let __screenGate=null;
+const drawScreen=(s,i)=>{
+  __screenGate=screenTickGate(__screenT,i,__screenGate);
+  if(shouldRedrawScreenTime(__screenT,i,__screenGate)) drawScreenFrame(s,frame,__screenT);
+};
 
 // ═══════════════════════════════════════════════════
 // TIME SYSTEM

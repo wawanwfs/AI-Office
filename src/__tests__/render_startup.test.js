@@ -1,24 +1,33 @@
 import { describe, it, expect } from 'vitest';
 import * as THREE from 'three';
 import { readFileSync } from 'node:fs';
-import { drawScreenFrame, shouldRedrawScreenAt } from '../scene/parts/effects.js';
+import { drawScreenFrame, screenTickGate, shouldRedrawScreenTime } from '../scene/parts/effects.js';
 
 it('initializes all 26 low-quality monitor textures before freezing their redraws', () => {
   const src = readFileSync(new URL('../scene/OfficeScene.js', import.meta.url), 'utf8');
-  const draw = src.match(/const drawScreen=\(s,i\)=>\{[^\n]+/)[0];
-  const schedule = src.match(/ {2}if\(!__quality.low[^\n]+screenData.forEach\(drawScreen\);/)[0];
+  const draw = src.match(/const drawScreen=\(s,i\)=>\{[\s\S]*?\n\};/)[0];
+  const schedule = src.match(/ {2}if\(!__quality.low[^\n]+screenData\.forEach\(drawScreen\);/)[0];
   const screens = Array.from({ length: 26 }, () => ({
     ctx: new Proxy({}, { get: (target, key) => target[key] ?? (() => {}) }),
     canvas: { width: 256, height: 128 }, type: 'terminal', hex: '#38bdf8',
     tex: { updates: 0, set needsUpdate(value) { if (value) this.updates++; } },
   }));
-  const tick = new Function('screenData', 'drawScreenFrame', 'shouldRedrawScreenAt', '__quality', 'frame',
-    `const __screenT = frame / 30; ${draw}\n${schedule}`);
-  for (let frame = 1; frame <= 6; frame++) tick(screens, drawScreenFrame, shouldRedrawScreenAt, { low: true }, frame);
+  const tick = new Function('screenData', 'drawScreenFrame', 'screenTickGate', 'shouldRedrawScreenTime',
+    '__screenGate', '__screenT', '__quality', 'frame',
+    `${draw}\n${schedule}\nreturn __screenGate;`);
+  let gate = null;
+  // elapsed = frame/30 dtk (paritas __screenT lama) — gate waktu-nyata Siklus 481
+  for (let frame = 1; frame <= 6; frame++) {
+    gate = tick(screens, drawScreenFrame, screenTickGate, shouldRedrawScreenTime, gate, frame / 30, { low: true }, frame);
+  }
   expect(screens.filter(s => s.tex.updates > 0)).toHaveLength(26);
-  expect(screens.every(s => s.tex.updates === 1)).toBe(true);
-  for (let frame = 7; frame <= 30; frame++) tick(screens, drawScreenFrame, shouldRedrawScreenAt, { low: true }, frame);
-  expect(screens.every(s => s.tex.updates === 1)).toBe(true);
+  // gate waktu-nyata @30 FPS: sub-slot 1/60 s → dtk frame 1/30 beberapa layar
+  // di-catch-up 2× dalam warm-up; kontrak inti: semua 26 layar tergambar ≥1×
+  expect(screens.every(s => s.tex.updates >= 1)).toBe(true);
+  for (let frame = 7; frame <= 30; frame++) {
+    gate = tick(screens, drawScreenFrame, screenTickGate, shouldRedrawScreenTime, gate, frame / 30, { low: true }, frame);
+  }
+  expect(screens.every(s => s.tex.updates >= 1)).toBe(true);
 });
 
 it('reports rotation off by default in low quality but honors explicit user override', () => {
