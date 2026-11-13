@@ -7947,3 +7947,10 @@
 - Test baru effects_wall_logo_breath.test.js (5): guard non-finite netral, rentang + tak padam, deterministik, seam periodik, konstanta kontrak puncak/lembah eksak.
 - Verifikasi: vitest 376 file, 4198 passed + 6 skipped (+5, +1 file); build PWA exit 0; dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 705KB, colors=11116 nonbg=0.992, hygiene 41 refs 0 missing).
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
+## 14/11/2026 02:20 WIB — Siklus 497: downlight arsitektural dek L1/L2/L3 bernapas (downlightBreath)
+- Gap visual: tiga PointLight downlight dek (L1 hangat, L2 cyan, L3 emerald) konstan — intensitas hanya di-set setMode, tanpa napas antar pergantian mode (elemen pencahayaan arsitektural utama terakhir yang statis, setelah logo/sorot 496).
+- Fix: downlightBreath(elapsed) di parts/effects.js (murni, diuji unit): faktor 0.78…1.0 per lantai, siklus dasar 4.6 dtk dgn rasio tak sinkron L2 1.35× / L3 0.62× — tak pernah padam. Caller mengalikan dgn base mode (userData.base di-latch oleh setMode) → kalibrasi day/night tak berubah.
+- terraces.js: userData.base di 3 downlight (initial + dark/light setMode, guard stub tanpa userData); refs +downlights[3]. OfficeScene: tick downlightBreath di gate ambient (485).
+- Test baru effects_downlight_breath.test.js (5): guard non-finite netral 0.89, rentang + tak padam ketiga lantai, fase tak sinkron, deterministik + seam periodik, konstanta kontrak puncak/lembah eksak. Bug stub test (PointLight tanpa userData) tertangkap & diguard.
+- Verifikasi: vitest 377 file, 4203 passed + 6 skipped (+5, +1 file); build PWA exit 0; dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 708KB, colors=11255 nonbg=0.992, hygiene 41 refs 0 missing).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.

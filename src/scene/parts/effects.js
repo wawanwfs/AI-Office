@@ -697,6 +697,23 @@ export function deckNeonBreath(elapsed) {
   };
 }
 
+// ── Siklus 497: downlight arsitektural dek bernapas (downlightBreath) ──
+// Tiga PointLight downlight L1/L2/L3 (terraces) konstan — intensitas hanya
+// di-set setMode, tanpa napas antar pergantian mode. Faktor murni waktu-nyata
+// (elapsed), per lantai dgn rasio tak sinkron; caller mengalikan dgn base
+// mode (userData.base dari setMode) → tidak mengubah kalibrasi day/night.
+// Rentang 0.78…1.0 — tak pernah padam (pencahayaan arsitektural).
+export const DOWNLIGHT_SEC = 4.6; // gelombang dasar L1; L2/L3 rasio tak sinkron
+
+export function downlightBreath(elapsed) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0; // netral (sin 0 → 0.5)
+  const w = (sec) => 0.5 + 0.5 * Math.sin((t / sec) * Math.PI * 2);
+  return {
+    l1: 0.78 + 0.22 * w(DOWNLIGHT_SEC),
+    l2: 0.78 + 0.22 * w(DOWNLIGHT_SEC * 1.35),
+    l3: 0.78 + 0.22 * w(DOWNLIGHT_SEC * 0.62),
+  };
+}
 // ── Siklus 496: logo WFS & sorot dinding belakang bernapas (wallLogoBreath) ──
 // Logo besar (identitas utama dinding belakang, terlihat di zoom home) & tiga
 // bulb lampu sorotnya konstan penuh — elemen brand terakhir yang statis (setelah

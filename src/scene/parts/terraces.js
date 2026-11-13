@@ -88,6 +88,7 @@ export function createTerraces({ THREE, office, M, MB }) {
   // Downlight arsitektural Lantai 1
   const l1Downlight = THREE.PointLight ? new THREE.PointLight(0xFFE8CC, 0.40, 14, 1.8) : new THREE.Group();
   l1Downlight.position.set(0, 3.8, -7.4);
+  if (l1Downlight.userData) l1Downlight.userData.base = 0.40; // siklus 497: base mode utk faktor napas (stub tanpa userData di-skip)
   terraces.add(l1Downlight);
 
   // ── AREA INDOOR ZEN GARDEN LANTAI 1 (Bonsai & River Pebbles Halus di Sudut Atrium) ──
@@ -231,6 +232,7 @@ export function createTerraces({ THREE, office, M, MB }) {
   // Lampu downlight arsitektural Lantai 2
   const l2Downlight = THREE.PointLight ? new THREE.PointLight(0x00E5FF, 0.45, 12, 1.8) : new THREE.Group();
   l2Downlight.position.set(0, L2_Y + 3.8, 1.95);
+  if (l2Downlight.userData) l2Downlight.userData.base = 0.45; // siklus 497
   terraces.add(l2Downlight);
 
   // Railing kaca pengaman Lantai 2 (membentang di tepi Z = -0.6 kecuali celah tangga)
@@ -288,6 +290,7 @@ export function createTerraces({ THREE, office, M, MB }) {
   // Lampu downlight arsitektural Lantai 3
   const l3Downlight = THREE.PointLight ? new THREE.PointLight(0x10E5A0, 0.55, 14, 1.8) : new THREE.Group();
   l3Downlight.position.set(0, L3_Y + 3.8, 10.5);
+  if (l3Downlight.userData) l3Downlight.userData.base = 0.55; // siklus 497
   terraces.add(l3Downlight);
 
   // Railing kaca pengaman Lantai 3
@@ -347,9 +350,9 @@ export function createTerraces({ THREE, office, M, MB }) {
       l3Led.material.color.set(0x10E5A0);
       stepStrips.forEach(s => s.material.color.set(0x00E5FF));
       ledLines.forEach(l => l.material.color.set(0x00F0FF));
-      if (l1Downlight && l1Downlight.intensity !== undefined) l1Downlight.intensity = 0.65;
-      if (l2Downlight && l2Downlight.intensity !== undefined) l2Downlight.intensity = 0.65;
-      if (l3Downlight && l3Downlight.intensity !== undefined) l3Downlight.intensity = 0.75;
+      if (l1Downlight && l1Downlight.intensity !== undefined) { l1Downlight.intensity = 0.65; if (l1Downlight.userData) l1Downlight.userData.base = 0.65; }
+      if (l2Downlight && l2Downlight.intensity !== undefined) { l2Downlight.intensity = 0.65; if (l2Downlight.userData) l2Downlight.userData.base = 0.65; }
+      if (l3Downlight && l3Downlight.intensity !== undefined) { l3Downlight.intensity = 0.75; if (l3Downlight.userData) l3Downlight.userData.base = 0.75; }
     } else {
       // MODE TERANG (Daylight Architectural Studio)
       l1Deck.material.color.set(0xF1F5F9); // Marmer putih bersih berkelas
@@ -361,9 +364,9 @@ export function createTerraces({ THREE, office, M, MB }) {
       l3Led.material.color.set(0x10E5A0);
       stepStrips.forEach(s => s.material.color.set(0x00E5FF));
       ledLines.forEach(l => l.material.color.set(0x00F0FF));
-      if (l1Downlight && l1Downlight.intensity !== undefined) l1Downlight.intensity = 0.45;
-      if (l2Downlight && l2Downlight.intensity !== undefined) l2Downlight.intensity = 0.45;
-      if (l3Downlight && l3Downlight.intensity !== undefined) l3Downlight.intensity = 0.45;
+      if (l1Downlight && l1Downlight.intensity !== undefined) { l1Downlight.intensity = 0.45; if (l1Downlight.userData) l1Downlight.userData.base = 0.45; }
+      if (l2Downlight && l2Downlight.intensity !== undefined) { l2Downlight.intensity = 0.45; if (l2Downlight.userData) l2Downlight.userData.base = 0.45; }
+      if (l3Downlight && l3Downlight.intensity !== undefined) { l3Downlight.intensity = 0.45; if (l3Downlight.userData) l3Downlight.userData.base = 0.45; }
     }
   }
 
@@ -378,6 +381,7 @@ export function createTerraces({ THREE, office, M, MB }) {
     l3Deck,
     stepStrips,
     ledLines,
+    downlights: [l1Downlight, l2Downlight, l3Downlight], // siklus 497
     setMode,
   };
 }

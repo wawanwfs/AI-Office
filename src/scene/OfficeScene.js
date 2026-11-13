@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath, downlightBreath } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -1913,6 +1913,12 @@ function animate(){
       const sp=__wallsRt.logoFx.spot;
       if(sp) sp.intensity=0.9*lg.bulb;
       if(Array.isArray(__wallsRt.logoFx.bulbs)) __wallsRt.logoFx.bulbs.forEach((b)=>{ if(b&&b.material){ b.material.opacity=lg.bulb; } });
+    }
+    // siklus 497: downlight arsitektural dek L1/L2/L3 bernapas (downlightBreath)
+    if(__terraces&&Array.isArray(__terraces.downlights)&&__terraces.downlights.length){
+      const db=downlightBreath(elapsed);
+      const dFac=[db.l1,db.l2,db.l3];
+      __terraces.downlights.forEach((d,i)=>{ if(d&&d.intensity!==undefined&&d.userData&&Number.isFinite(d.userData.base)){ d.intensity=d.userData.base*dFac[i]; } });
     }
     // siklus 493: lampu berstandi lounge berkedip hangat (PointLight + shade)
     if(__loungeObj&&__loungeObj.lampBulb&&__loungeObj.lampShade){
