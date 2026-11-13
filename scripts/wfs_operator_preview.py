@@ -16,6 +16,7 @@ sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"backend"))
 from preview_manager import TemplatePreviewManager, PreviewDenied
 from preview_oci_promotion import ApprovedOCIRelease
 from preview_release_policy import SignedReleasePolicy
+from preview_release_journal import JournalTLS, RemoteReleasePolicy
 from preview_signature import verify_review_signature
 from preview_authority import SignedPreviewAuthority
 from preview_witness import SignedReviewerCheckpoint
@@ -87,6 +88,11 @@ def main():
     parser.add_argument("--trusted-release-policy-sha256",help="out-of-band current head hash")
     parser.add_argument("--trusted-release-policy-fingerprint",help="out-of-band signer pin")
     parser.add_argument("--minimum-release-policy-sequence",type=int,help="out-of-band sequence floor")
+    parser.add_argument("--release-journal-url",help="operator-approved mTLS journal endpoint")
+    parser.add_argument("--release-journal-ca",help="trusted TLS CA PEM")
+    parser.add_argument("--release-journal-client-cert",help="operator TLS client certificate PEM")
+    parser.add_argument("--release-journal-client-key",help="operator TLS client key PEM")
+    parser.add_argument("--release-journal-server-sha256",help="pinned server leaf DER SHA-256")
     parser.add_argument("--discard-data",action="store_true",
                         help="required to remove disposable PostgreSQL volumes")
     args=parser.parse_args()
@@ -101,13 +107,21 @@ def main():
     if not all(oci_inputs) and (any(oci_inputs) or args.action in ("start","logs","restart")):
         parser.error("all six OCI release and independent pin flags are required")
     oci_release=ApprovedOCIRelease(*oci_inputs) if all(oci_inputs) else None
-    policy_inputs=(args.release_policy,args.release_policy_signature,args.release_policy_public_key,
-                   args.trusted_release_policy_sha256,args.trusted_release_policy_fingerprint,
-                   args.minimum_release_policy_sequence)
-    if not all(policy_inputs) and (any(value is not None for value in policy_inputs)
-                                  or args.action in ("start","logs","restart")):
-        parser.error("all six release policy checkpoint and independent pin flags are required")
-    release_policy=SignedReleasePolicy(*policy_inputs) if all(policy_inputs) else None
+    shared=(args.release_policy_public_key,args.trusted_release_policy_fingerprint,
+            args.minimum_release_policy_sequence,args.trusted_release_policy_sha256)
+    files=(args.release_policy,args.release_policy_signature)
+    remote=(args.release_journal_url,args.release_journal_ca,args.release_journal_client_cert,
+            args.release_journal_client_key,args.release_journal_server_sha256)
+    release_policy=None
+    if any(remote):
+        if any(files) or not all(remote+shared):
+            parser.error("remote journal requires mTLS, pins and no offline checkpoint files")
+        release_policy=RemoteReleasePolicy(JournalTLS(*remote),*shared)
+    elif any(value is not None for value in files+shared) or args.action in ("start","logs","restart"):
+        if not all(files+shared):
+            parser.error("all six release policy checkpoint and independent pin flags are required")
+        pub,fingerprint,floor,head=shared
+        release_policy=SignedReleasePolicy(*files,pub,head,fingerprint,floor)
     state=Path(args.state_root).absolute()
     if state.is_symlink():
         parser.error("symlinked state directory denied")
