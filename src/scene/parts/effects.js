@@ -788,6 +788,21 @@ export function floorLampBreath(elapsed) {
 // utama 3.6 dtk + mikro 1.64 dtk (rasio 2.2× tak sinkron, pola 493/498/499).
 export const RECEPTION_LIGHT_SEC = 3.6; // gelombang utama napas lampu resepsi
 
+// ── Siklus 503: lampu gantung meja bernapas (pendantBreath) ────────────────
+// 26 lampu gantung industri di atas meja (bulb 0xFFF3D6 + PointLight 0.15)
+// konstan — elemen pencahayaan meja terakhir yang beku (setelah tube 502).
+// Rentang 0.70…1.0 — tak pernah padam, gelombang utama 4.7 dtk + mikro 1.9 dtk
+// (rasio ≈2.47× tak sinkron vs 5.2/4.3/3.9/3.6/5.6/2.9).
+export const PENDANT_SEC = 4.7; // gelombang utama napas lampu gantung
+
+export function pendantBreath(elapsed) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0; // netral (sin 0 → 0.5)
+  const w = (sec) => 0.5 + 0.5 * Math.sin((t / sec) * Math.PI * 2);
+  const main = w(PENDANT_SEC);
+  const micro = w(PENDANT_SEC * 2.47); // ≈1.9 dtk — rasio tak sinkron
+  return 0.70 + 0.24 * main + 0.06 * micro; // 0.70…1.0, tak padam
+}
+
 export function receptionLightBreath(elapsed) {
   const t = Number.isFinite(elapsed) ? elapsed : 0; // netral (sin 0 → 0.5)
   const w = (sec) => 0.5 + 0.5 * Math.sin((t / sec) * Math.PI * 2);

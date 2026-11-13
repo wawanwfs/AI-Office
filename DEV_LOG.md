@@ -7985,3 +7985,10 @@
 - Test baru effects_tube_light_breath.test.js (6): guard non-finite netral 0.775, rentang + tak padam, deterministik + seam LCM 233T, kontrak puncak main eksak + lembah, fase tak sinkron vs 4 lampu, tekstur mikro. Kekeliruan awal ekspektasi guard (0.89 vs 0.775) tertangkap test & dikoreksi.
 - Verifikasi: vitest 382 file, 4240 passed + 6 skipped (+6, +1 file); build PWA exit 0; dist → ~/wfs-hq; e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 710KB, colors=11394 nonbg=0.992, hygiene 41 refs 0 missing).
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
+## 14/11/2026 04:55 WIB — Siklus 503: lampu gantung meja bernapas (pendantBreath)
+- Gap visual: 26 lampu gantung industri di atas meja (bulb 0xFFF3D6 + PointLight 0xffe8cc .15) konstan — elemen pencahayaan meja terakhir yang beku (setelah tube 502).
+- Fix: pendantBreath(elapsed) murni di parts/effects.js: napas 0.70…1.0, gelombang utama 4.7 dtk + mikro 1.9 dtk (rasio 2.47× tak sinkron vs 5.2/4.3/3.9/3.6/5.6/2.9) — tak pernah padam. OfficeScene: tick di gate ambient; bulb opacity=pf (transparent), PointLight=.15×pf.
+- room.js: createCeilingFixtures ekspor refs pendBulbs/pendLights (tag userData __pendBulb/__pendLight); paintCeilNight tak berubah — warna malam tetap berlaku, hanya opacity+intensity.
+- Test baru effects_pendant_breath.test.js (7): guard non-finite netral 0.85, rentang + tak padam, deterministik + seam LCM 247T, kontrak puncak main eksak + lembah, fase tak sinkron vs 6 lampu, tekstur mikro, integrasi refs stub THREE.
+- Verifikasi: vitest 383 file, 4247 passed + 6 skipped (+7, +1 file); build PWA exit 0; dist → ~/wfs-hq; e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 710KB, colors=11408 nonbg=0.992, hygiene 41 refs 0 missing).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.

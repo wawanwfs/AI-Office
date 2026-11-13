@@ -136,6 +136,7 @@ export function createWallClock(ctx, x, y, z, faceRotY = Math.PI) {
 
 export function createCeilingFixtures(ctx, deskList) {
   const { THREE, office, M, MB } = ctx;
+  const pendBulbs = []; const pendLights = [];
   const B = (w, h, d) => new THREE.BoxGeometry(w, h, d);
   const put = (geo, mat, x, y, z) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); office.add(m); return m; };
   // ── Siklus 169: panel plafon recessed & bohlam lampu gantung ikut siang↔malam ──
@@ -156,10 +157,14 @@ export function createCeilingFixtures(ctx, deskList) {
     put(B(0.4, 0.14, 0.4), M(0x22262b), d.x, 3.2, d.z);
     const bulb = put(B(0.12, 0.06, 0.12), MB(BULB_DAY), d.x, 3.11, d.z);
     bulb.userData.__ceil = BULB_DAY; // tag pasangan siang → malam
+    bulb.userData.__pendBulb = true; // siklus 503: tag napas lampu gantung
     const pl = new THREE.PointLight(0xffe8cc, 0.15, 4, 2); pl.position.set(d.x, 3.1, d.z); office.add(pl);
+    pl.userData.__pendLight = true; // siklus 503: PointLight ikut bernapas
+    pendBulbs.push(bulb); pendLights.push(pl);
   });
   return {
     ceilDay: CEIL_DAY, ceilNight: CEIL_NIGHT, bulbDay: BULB_DAY, bulbNight: BULB_NIGHT,
+    pendBulbs, pendLights, // siklus 503: refs napas lampu gantung
     nightOf, dayOf,
     // paintCeilNight — set warna semua mesh ter-tag (panel plafon diregistrasi
     // OfficeScene via registerCeilPanels). Idempoten di sisi pemanggil (daycycle).
