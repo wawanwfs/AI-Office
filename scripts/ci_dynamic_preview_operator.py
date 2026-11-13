@@ -24,6 +24,7 @@ from preview_admission import REVIEWED_FILES, candidate_manifest_for_ci_only
 from ci_preview_network_probe import prove_disposable_container_egress
 from ci_phase13_real_dns_rebind import prove_real_docker_dns_rebinding
 from ci_phase19_sealed_build import prove_sealed_build
+from ci_phase23_oci_release import prove_oci_release
 from preview_authority import SignedPreviewAuthority
 from preview_signature import canonical_review_bytes
 from preview_root_authority import canonical_roster_bytes
@@ -418,6 +419,7 @@ try:
             "served_while_host_source_mutated": True,
         }
     proof["phase22_mount_free_frontend"] = prove_frontend_runtime()
+    proof["phase23_oci_release"] = prove_oci_release(manager.snapshots, names[0], fingerprint)
     proof["phase11_docker_compose_context"]="signed project-scoped staged copy"
     # Runtime firewall evidence: BOTH preview bridges must be internal,
     # API still reachable on host loopback, and the running API must fail
