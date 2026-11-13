@@ -283,12 +283,17 @@ def test_promotion_reads_verified_sealed_bytes_not_mutable_archive(signed, monke
             with tarfile.open(fileobj=stdin, mode="r:") as transport:
                 manifest = json.loads(transport.extractfile("manifest.json").read())
                 assert manifest[0]["RepoTags"] == []
-                assert [manifest[0]["Config"], *manifest[0]["Layers"]] == [
-                    "config.json", "layer-0.tar", "layer-1.tar"]
+                index = json.loads(transport.extractfile("index.json").read())
+                assert index["manifests"][0]["digest"] == checked.manifest_digest
                 names = [manifest[0]["Config"], *manifest[0]["Layers"]]
                 hashes = [checked.config_digest, *checked.layer_digests]
+                assert names == ["blobs/sha256/" + digest[7:] for digest in hashes]
                 for name, expected in zip(names, hashes):
                     assert "sha256:" + sha256(transport.extractfile(name).read()) == expected
+                exact = transport.extractfile("blobs/sha256/" + checked.manifest_digest[7:]).read()
+                assert "sha256:" + sha256(exact) == checked.manifest_digest
+            from types import SimpleNamespace
+            return SimpleNamespace(stdout=f"Loaded image ID: {checked.config_digest}\n".encode())
         else:
             from types import SimpleNamespace
             assert argv[-1] == checked.config_digest
@@ -350,8 +355,8 @@ def test_rejects_mismatched_docker_image(wrong, candidate, monkeypatch):
     else:
         details["RootFS"]["Layers"].reverse()
     monkeypatch.setattr("preview_oci_promotion._inspect", lambda *args: details)
-    with pytest.raises(AdmissionDenied, match="config and DiffIDs"):
-        verify_engine_image("docker", checked)
+    with pytest.raises(AdmissionDenied, match="platform and DiffIDs"):
+        verify_engine_image("docker", checked, checked.config_digest)
 
 
 @pytest.mark.parametrize("wrong", ["image", "project", "mount", "runtime_id", "stopped"])
@@ -375,4 +380,17 @@ def test_rejects_mismatched_running_container(wrong, candidate, monkeypatch):
         details["State"]["Running"] = False
     monkeypatch.setattr("preview_oci_promotion._inspect", lambda *args: details)
     with pytest.raises(AdmissionDenied, match="does not match approved OCI release"):
-        verify_api_container("docker", runtime_id, "alpha", checked)
+        verify_api_container("docker", runtime_id, "alpha", checked.config_digest)
+
+
+def test_containerd_engine_id_requires_approved_manifest_descriptor(candidate, monkeypatch):
+    from preview_oci_promotion import verify_engine_image
+    checked = verify_layout(candidate[0], frontend=review()["frontend"], api_sha256=sha256(API))
+    details = {"Id": checked.manifest_digest, "Os": "linux", "Architecture": "amd64",
+               "Descriptor": {"digest": checked.manifest_digest, "mediaType": MANIFEST},
+               "RootFS": {"Type": "layers", "Layers": list(checked.diff_ids)}}
+    monkeypatch.setattr("preview_oci_promotion._inspect", lambda *args: details)
+    assert verify_engine_image("docker", checked, checked.manifest_digest) == checked.manifest_digest
+    details["Descriptor"]["digest"] = checked.config_digest
+    with pytest.raises(AdmissionDenied, match="descriptor differs"):
+        verify_engine_image("docker", checked, checked.manifest_digest)

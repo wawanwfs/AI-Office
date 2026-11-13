@@ -359,9 +359,11 @@ try:
                                          (token_b,token_a)):
         start=manager.start(project,port,token)
         assert start["oci_manifest_digest"] == release_proof["manifest_digest"]
-        assert start["api_image_id"] == release_proof["config_digest"]
+        assert start["oci_config_digest"] == release_proof["config_digest"]
+        assert start["api_image_id"] in (release_proof["config_digest"], release_proof["manifest_digest"])
         assert start["api_container_id"]
-        release_proof["tenants"][project] = {"api_container_id": start["api_container_id"]}
+        release_proof["tenants"][project] = {"api_container_id": start["api_container_id"],
+                                             "engine_image_id": start["api_image_id"]}
         live.add(project)
         assert start["phase"]=="running"
         assert start["url"]==f"http://127.0.0.1:{port}"
@@ -460,7 +462,8 @@ try:
     assert open_manager().stop(project, token, allow_data_loss=True)["phase"] == "stopped"
     recovered = open_manager(release).start(project, port, token)
     assert recovered["api_container_id"] != old_id
-    assert recovered["api_image_id"] == release_proof["config_digest"]
+    assert recovered["oci_config_digest"] == release_proof["config_digest"]
+    assert recovered["api_image_id"] == release_proof["tenants"][project]["engine_image_id"]
     assert recovered["oci_manifest_digest"] == release_proof["manifest_digest"]
     assert health(port, token, tokens[0])
     verify_frontend_http(port, reviewed_files["frontend"])

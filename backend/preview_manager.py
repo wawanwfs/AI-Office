@@ -103,6 +103,8 @@ class TemplatePreviewManager:
                     "api_frontend_sealed INTEGER NOT NULL DEFAULT 0")
             if "oci_manifest_digest" not in columns:
                 db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN oci_manifest_digest TEXT")
+            if "oci_config_digest" not in columns:
+                db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN oci_config_digest TEXT")
             if "oci_approval_sha256" not in columns:
                 db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN oci_approval_sha256 TEXT")
             if "api_container_id" not in columns:
@@ -163,13 +165,14 @@ class TemplatePreviewManager:
 
     def _check_running_release(self, record, checked):
         if (record.get("oci_manifest_digest") != checked.manifest_digest
-                or record.get("api_image_id") != checked.config_digest):
+                or record.get("oci_config_digest") != checked.config_digest):
             raise AdmissionDenied("registered preview differs from current approved OCI release")
-        verify_engine_image(self.docker, checked)
+        verify_engine_image(self.docker, checked, record.get("api_image_id"))
 
-    def _runtime_id(self, record, token, checked):
+    def _runtime_id(self, record, token):
         candidate = self._invoke(record, token, ["ps", "-q", "api"]).strip()
-        return verify_api_container(self.docker, candidate, record["compose_name"], checked)
+        return verify_api_container(self.docker, candidate, record["compose_name"],
+                                    record["api_image_id"])
 
     def _db(self):
         db=sqlite3.connect(str(self.registry),timeout=15,isolation_level=None)
@@ -342,20 +345,20 @@ class TemplatePreviewManager:
                     raise PreviewDenied("preview is active or uncertain; reconcile before retry")
                 self._claim_transition(project_id,("reserved","stopped"))
                 self.snapshots.stage(project_id)
-                load_verified_image(self.docker, snapshot, checked)
+                image_id = load_verified_image(self.docker, snapshot, checked)
                 ensure_approved_runtime_images(self.snapshots)
                 ingress = build_local_reviewed_ingress_image(self.snapshots,project_id)
                 with closing(self._db()) as db:
                     db.execute(
                         "UPDATE wfs_preview_instances SET api_image_id=?,ingress_image_id=?, "
-                        "api_frontend_sealed=1,oci_manifest_digest=?,oci_approval_sha256=?, "
+                        "api_frontend_sealed=1,oci_manifest_digest=?,oci_config_digest=?,oci_approval_sha256=?, "
                         "api_container_id=NULL WHERE project_id=? AND phase='uncertain'",
-                        (checked.config_digest, ingress["image_id"], checked.manifest_digest,
-                         self.oci_release.approval_sha256, project_id))
+                        (image_id, ingress["image_id"], checked.manifest_digest,
+                         checked.config_digest, self.oci_release.approval_sha256, project_id))
                 record=self.status(project_id)
                 self._invoke(record,token,
                              ["up","-d","--no-build","--pull","never"],timeout=240)
-                runtime_id = self._runtime_id(record, token, checked)
+                runtime_id = self._runtime_id(record, token)
                 with closing(self._db()) as db:
                     db.execute(
                         "UPDATE wfs_preview_instances SET phase='running',api_container_id=? "
@@ -380,7 +383,7 @@ class TemplatePreviewManager:
                 raise AdmissionDenied("legacy preview must be stopped and promoted from OCI")
             with self._approved_release() as (_, checked, _digest):
                 self._check_running_release(record, checked)
-                if self._runtime_id(record, token, checked) != record["api_container_id"]:
+                if self._runtime_id(record, token) != record["api_container_id"]:
                     raise AdmissionDenied("registered preview API container changed")
                 return self._invoke(record,token,["logs","--no-color","--tail","100"])
         return self._invoke(record,token,["logs","--no-color","--tail","100"])
@@ -394,11 +397,11 @@ class TemplatePreviewManager:
                 raise AdmissionDenied("legacy preview must be stopped and promoted from OCI")
             with self._approved_release() as (_, checked, _digest):
                 self._check_running_release(record, checked)
-                if self._runtime_id(record, token, checked) != record["api_container_id"]:
+                if self._runtime_id(record, token) != record["api_container_id"]:
                     raise AdmissionDenied("registered preview API container changed")
                 self._claim_transition(project_id,("running",))
                 self._invoke(record,token,["restart"])
-                if self._runtime_id(record, token, checked) != record["api_container_id"]:
+                if self._runtime_id(record, token) != record["api_container_id"]:
                     raise AdmissionDenied("restarted preview API container changed")
                 with closing(self._db()) as db:
                     db.execute(

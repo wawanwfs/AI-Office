@@ -14,7 +14,10 @@ import tarfile
 
 from preview_admission_v2 import AdmissionDenied
 from preview_oci_approval import verify_release
-from preview_oci_layout import _ARCHIVE_LIMIT, _BLOB_LIMIT, _JSON_LIMIT, _Layout, is_digest, sha256
+from preview_oci_layout import (
+    _ARCHIVE_LIMIT, _BLOB_LIMIT, _INDEX, _JSON_LIMIT, _MANIFEST, _Layout,
+    is_digest, sha256,
+)
 from preview_sealed_build import _FULL_SEALS, fcntl, linux_sealing_supported
 from preview_sealed_runtime import _docker_env
 from preview_signature import canonical_review_bytes
@@ -78,30 +81,42 @@ def _add(tar, name, data):
 
 
 def _write_load_transport(verified_archive, checked, target):
-    """Build a tagless Docker loader envelope from the exact checked blobs.
+    """Regenerate loader metadata without forwarding tags or unrelated blobs.
 
-    Docker's classic image store expects manifest.json. No untrusted tags,
-    Docker manifest, OCI annotations, or unrelated blobs are passed through.
-    Config and compressed layer payload bytes are not transcoded.
+    Containerd uses the OCI index and original manifest, while Docker's
+    classic image store uses manifest.json and the same config/layer bytes.
     """
     verified_archive.seek(0)
-    config = "config.json"
-    layers = [f"layer-{i}.tar" for i in range(len(checked.layer_digests))]
-    blobs = [(config, checked.config_digest, _JSON_LIMIT), *(
-        (name, digest, _BLOB_LIMIT)
-        for name, digest in zip(layers, checked.layer_digests)
-    )]
+    paths = ["blobs/sha256/" + d[7:] for d in (
+        checked.config_digest, *checked.layer_digests)]
     with tarfile.open(fileobj=verified_archive, mode="r:") as archive:
         layout = _Layout(archive)
         with tarfile.open(fileobj=target, mode="w", format=tarfile.USTAR_FORMAT) as tar:
+            manifest_name = "blobs/sha256/" + checked.manifest_digest[7:]
+            manifest = layout.read(manifest_name, _JSON_LIMIT)
+            if "sha256:" + sha256(manifest) != checked.manifest_digest:
+                raise AdmissionDenied("verified OCI manifest differs in load transport")
+            _add(tar, "oci-layout", b'{"imageLayoutVersion":"1.0.0"}')
+            _add(tar, "index.json", json.dumps({
+                "schemaVersion": 2, "mediaType": _INDEX,
+                "manifests": [{"mediaType": _MANIFEST, "digest": checked.manifest_digest,
+                               "size": len(manifest),
+                               "platform": {"os": "linux", "architecture": "amd64"}}],
+            }, separators=(",", ":")).encode("ascii"))
+            _add(tar, manifest_name, manifest)
             _add(tar, "manifest.json", json.dumps([{
-                "Config": config, "RepoTags": [], "Layers": layers,
+                "Config": paths[0], "RepoTags": [], "Layers": paths[1:],
             }], separators=(",", ":")).encode("ascii"))
-            for name, digest, limit in blobs:
-                data = layout.read("blobs/sha256/" + digest[7:], limit)
+            emitted = {manifest_name}
+            for i, (name, digest) in enumerate(zip(
+                    paths, (checked.config_digest, *checked.layer_digests))):
+                if name in emitted:
+                    continue
+                data = layout.read(name, _JSON_LIMIT if i == 0 else _BLOB_LIMIT)
                 if not hmac.compare_digest("sha256:" + sha256(data), digest):
                     raise AdmissionDenied("verified OCI blob differs in load transport")
                 _add(tar, name, data)
+                emitted.add(name)
     _seal(target)
 
 
@@ -151,26 +166,39 @@ def _inspect(docker, kind, value):
     return data
 
 
-def verify_engine_image(docker, checked):
-    if not is_digest(checked.config_digest):
-        raise AdmissionDenied("approved OCI config digest invalid")
-    details = _inspect(docker, "image", checked.config_digest)
+def verify_engine_image(docker, checked, image_id):
+    # Containerd reports the OCI manifest ID; classic Docker uses the config ID.
+    if not is_digest(image_id) or image_id not in (
+            checked.config_digest, checked.manifest_digest):
+        raise AdmissionDenied("unapproved Docker image ID")
+    details = _inspect(docker, "image", image_id)
     rootfs = details.get("RootFS")
-    if (details.get("Id") != checked.config_digest or details.get("Os") != "linux"
+    descriptor = details.get("Descriptor")
+    if (details.get("Id") != image_id or details.get("Os") != "linux"
             or details.get("Architecture") != "amd64" or not isinstance(rootfs, dict)
             or rootfs.get("Type") != "layers"
             or rootfs.get("Layers") != list(checked.diff_ids)):
-        raise AdmissionDenied("Docker image does not match approved OCI config and DiffIDs")
+        raise AdmissionDenied("Docker image does not match approved OCI platform and DiffIDs")
+    if image_id == checked.manifest_digest and (
+            not isinstance(descriptor, dict) or descriptor.get("digest") != image_id
+            or descriptor.get("mediaType") != _MANIFEST):
+        raise AdmissionDenied("Docker OCI image descriptor differs from approved manifest")
+    return image_id
 
 
 def load_verified_image(docker, snapshot, checked):
     with _memfd("wfs-oci-docker-load") as load:
         _write_load_transport(snapshot, checked, load)
-        _docker(docker, ["image", "load", "--quiet"], stdin=load, timeout=180)
-    verify_engine_image(docker, checked)
+        result = _docker(docker, ["image", "load", "--quiet"], stdin=load, timeout=180)
+    # The tagless transport should produce exactly one content-addressed ID.
+    # Never resolve a tag or trust the output without checking the image store.
+    match = re.fullmatch(rb"Loaded image ID: (sha256:[a-f0-9]{64})\s*", result.stdout)
+    if not match:
+        raise AdmissionDenied("Docker load did not return exactly one content-addressed ID")
+    return verify_engine_image(docker, checked, match.group(1).decode("ascii"))
 
 
-def verify_api_container(docker, container, project, checked):
+def verify_api_container(docker, container, project, image_id):
     if not _CONTAINER_ID.fullmatch(container):
         raise AdmissionDenied("exactly one valid preview API container required")
     details = _inspect(docker, "container", container)
@@ -183,7 +211,7 @@ def verify_api_container(docker, container, project, checked):
     if (not isinstance(runtime_id, str) or len(runtime_id) != 64
             or not _CONTAINER_ID.fullmatch(runtime_id)
             or not runtime_id.startswith(container)
-            or details.get("Image") != checked.config_digest
+            or details.get("Image") != image_id
             or not isinstance(labels, dict)
             or labels.get("com.docker.compose.project") != project
             or labels.get("com.docker.compose.service") != "api"

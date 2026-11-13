@@ -16,7 +16,7 @@ Add these six flags for `start`, `logs`, and `restart`:
 The operator verifies the signed source and reviewer authority, then seals
 a bounded copy of the OCI archive before reading it. Docker receives a
 new sealed loader envelope, not the original untrusted tar metadata.
-Its config and layer payloads are byte-for-byte the ones verified against
+Its OCI manifest, config and layer payloads are byte-for-byte the ones verified against
 the approved OCI manifest. No local image tag is part of admission.
 
 Use a trusted Linux/amd64 Docker engine. Native Windows cannot start or
@@ -35,6 +35,6 @@ current evidence before it can be recreated.
 
 The CI artifact `phase6-operator-preview-manager/operator-preview-proof.json`
 records `phase24_oci_runtime`, including the manifest digest, config
-digest and distinct runtime instance IDs. `phase23_oci_release` is
+digest, engine image ID, and distinct runtime instance IDs. `phase23_oci_release` is
 still the separate offline verification step. The two-tenant HTTP proof
 does not attest to a compromised daemon or off-host key custody.

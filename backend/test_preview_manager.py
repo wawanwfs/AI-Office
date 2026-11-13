@@ -1104,7 +1104,7 @@ def test_phase22_legacy_running_preview_only_allows_authorized_cleanup(
     monkeypatch.setattr(manager, "_approved_release",
                         lambda: nullcontext((None, checked, "d" * 64)))
     manager.oci_release = SimpleNamespace(approval_sha256="e" * 64)
-    monkeypatch.setattr(preview_manager, "load_verified_image", lambda *args: None)
+    monkeypatch.setattr(preview_manager, "load_verified_image", lambda *args: api)
     monkeypatch.setattr(manager, "_runtime_id", lambda *args: "1" * 64)
     monkeypatch.setattr(preview_manager, "build_local_reviewed_ingress_image",
                         lambda *args: {"image_id": ingress})
@@ -1112,6 +1112,7 @@ def test_phase22_legacy_running_preview_only_allows_authorized_cleanup(
     assert restarted["api_frontend_sealed"] == 1
     assert restarted["phase"] == "running"
     assert restarted["oci_manifest_digest"] == checked.manifest_digest
+    assert restarted["oci_config_digest"] == checked.config_digest
     assert restarted["api_image_id"] == checked.config_digest
     assert restarted["api_container_id"] == "1" * 64
     assert commands[1][0][-5:] == ["up", "-d", "--no-build", "--pull", "never"]
