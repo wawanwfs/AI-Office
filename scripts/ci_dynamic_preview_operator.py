@@ -588,6 +588,48 @@ try:
         journal.append()
         assert open_manager(release, reopened).restart(project, token)["phase"] == "running"
         assert json.loads(custody.read_text())["sequence"] == 3
+        # Reach the actual transport window limit, observing a revoked tip.
+        from preview_release_journal import MAX_RECORDS
+        for _ in range(4, MAX_RECORDS):
+            journal.append()
+        journal.append("revoke")
+        boundary = journal.hashes[-1]
+        try:
+            open_manager(release, reopened).restart(project, token)
+            raise AssertionError("full-window revocation did not block restart")
+        except AdmissionDenied as exc:
+            assert "explicitly revoked" in str(exc)
+        archived_window = list(journal.entries)
+        assert journal.rotate() == MAX_RECORDS + 1
+        rotated = RemoteReleasePolicy(journal.endpoint(restarted_port), journal.policy_key,
+                                      journal.fingerprint, MAX_RECORDS, boundary,
+                                      custody_path=custody)
+        try:
+            open_manager(release, rotated).restart(project, token)
+            raise AssertionError("rotation cleared revocation")
+        except AdmissionDenied as exc:
+            assert "explicitly revoked" in str(exc)
+        assert json.loads(custody.read_text())["sequence"] == MAX_RECORDS + 1
+        journal.append()
+        assert open_manager(release, rotated).restart(project, token)["phase"] == "running"
+        verify_frontend_http(port, reviewed_files["frontend"])
+    rotated_window = list(journal.entries)
+    journal.publish(archived_window)
+    with journal.server() as replay_port:
+        replay = RemoteReleasePolicy(journal.endpoint(replay_port), journal.policy_key,
+                                     journal.fingerprint, MAX_RECORDS, boundary,
+                                     custody_path=custody)
+        try:
+            open_manager(release, replay).restart(project, token)
+            raise AssertionError("pre-rotation replay succeeded after publisher restart")
+        except AdmissionDenied as exc:
+            assert "rollback or fork" in str(exc)
+    journal.publish(rotated_window)
+    proof["phase28_journal_rotation"] = {
+        "full_window_size": MAX_RECORDS, "revocation_survived_rotation": True,
+        "separate_allow_recovers": True, "archived_window_replay_denied": True,
+        "durable_sequence": json.loads(custody.read_text())["sequence"],
+    }
     try:
         remote_manager.restart(project, token)
         raise AssertionError("unavailable journal did not block restart")

@@ -1,6 +1,7 @@
 """Authenticated read-only transport for a bounded signed release journal."""
 import base64
 import binascii
+import json
 from contextlib import nullcontext
 from dataclasses import dataclass
 from http.client import HTTPException, HTTPSConnection
@@ -12,7 +13,9 @@ from urllib.parse import urlsplit
 
 from preview_admission_v2 import AdmissionDenied
 from preview_oci_layout import is_sha256, json_object, sha256
-from preview_release_policy import check_release_decision, verify_signed_checkpoint
+from preview_release_policy import (
+    _MAX_SEQUENCE, check_release_decision, verify_signed_checkpoint,
+)
 from preview_release_anchor import DurableReleaseAnchor
 from preview_signature import _read_trusted
 
@@ -32,7 +35,8 @@ def verify_journal(entries, public_key, fingerprint):
         raise AdmissionDenied("release journal is empty or exceeds record limit")
     chain = []
     previous = GENESIS
-    for index, entry in enumerate(entries, 1):
+    start = 1
+    for offset, entry in enumerate(entries):
         if (not isinstance(entry, dict) or set(entry) != {"checkpoint", "signature"}
                 or not isinstance(entry["checkpoint"], str)
                 or not 1 <= len(entry["checkpoint"]) <= 5464
@@ -44,12 +48,52 @@ def verify_journal(entries, public_key, fingerprint):
             signature = entry["signature"].encode("ascii")
         except (binascii.Error, ValueError) as exc:
             raise AdmissionDenied("invalid release journal encoding") from exc
-        policy = verify_signed_checkpoint(raw, signature, public_key, fingerprint, chained=True)
-        if policy["sequence"] != index or policy["previous_sha256"] != previous:
+        rotation = json_object(raw).get("version") == 3
+        policy = verify_signed_checkpoint(raw, signature, public_key, fingerprint,
+                                          chained=True, rotation=rotation)
+        if offset == 0:
+            start = policy["sequence"]
+            if start != 1:
+                if start < MAX_RECORDS or (start - 1) % (MAX_RECORDS - 1):
+                    raise AdmissionDenied("invalid retained journal generation boundary")
+                previous = policy["previous_sha256"]
+        if policy["sequence"] != start + offset or policy["previous_sha256"] != previous:
             raise AdmissionDenied("release journal chain is not contiguous")
+        required_rotation = start != 1 and offset == 1
+        if rotation != required_rotation:
+            raise AdmissionDenied("missing or misplaced signed journal rotation")
+        if rotation:
+            prior = chain[-1][1]
+            unchanged = ("manifest_digest", "approval_sha256", "platform",
+                         "decision", "issued_at", "expires_at")
+            if any(policy[field] != prior[field] for field in unchanged):
+                raise AdmissionDenied("journal rotation cannot change release decision or lifetime")
         previous = sha256(raw)
         chain.append((previous, policy))
+    if start != 1 and len(chain) < 2:
+        raise AdmissionDenied("rotated journal requires predecessor and signed bridge")
     return chain
+
+
+def journal_index(chain):
+    return {policy["sequence"]: digest for digest, policy in chain}
+
+
+def contains_anchor(index, sequence, digest):
+    return index.get(sequence) == digest
+
+
+def rotation_checkpoint(entries, public_key, fingerprint):
+    """Return exact unsigned bridge bytes for the existing offline signer."""
+    chain = verify_journal(entries, public_key, fingerprint)
+    if len(chain) != MAX_RECORDS:
+        raise AdmissionDenied("journal rotation requires a full verified window")
+    digest, tip = chain[-1]
+    if tip["sequence"] >= _MAX_SEQUENCE:
+        raise AdmissionDenied("release journal sequence exhausted")
+    return json.dumps({**tip, "version": 3, "sequence": tip["sequence"] + 1,
+                       "previous_sha256": digest},
+                      sort_keys=True, separators=(",", ":")).encode("ascii")
 
 
 @dataclass(frozen=True)
@@ -110,7 +154,7 @@ class RemoteReleasePolicy:
     def __init__(self, tls, public_key_path, key_fingerprint, anchor_sequence, anchor_sha256,
                  *, custody_path=None):
         if (not isinstance(tls, JournalTLS) or not is_sha256(key_fingerprint)
-                or type(anchor_sequence) is not int or not 1 <= anchor_sequence <= MAX_RECORDS
+                or type(anchor_sequence) is not int or not 1 <= anchor_sequence <= _MAX_SEQUENCE
                 or not is_sha256(anchor_sha256)):
             raise AdmissionDenied("independent release journal anchor and key required")
         self.tls = tls
@@ -121,7 +165,7 @@ class RemoteReleasePolicy:
         self._observed = (anchor_sequence, anchor_sha256)
         self._lock = Lock()
         self._custody = (None if custody_path is None else
-                         DurableReleaseAnchor(custody_path, MAX_RECORDS))
+                         DurableReleaseAnchor(custody_path, _MAX_SEQUENCE))
 
     def verify(self, *, manifest_digest, approval_sha256, reviewer_fingerprint,
                release_witness_fingerprint, now=None):
@@ -132,12 +176,13 @@ class RemoteReleasePolicy:
                        if self._custody is None else self._custody.locked(self.key_fingerprint))
             with custody as (stored, commit):
                 anchors = ((self.anchor_sequence, self.anchor_sha256), self._observed, stored)
-                if any(len(chain) < sequence or chain[sequence - 1][0] != digest
+                index = journal_index(chain)
+                if any(not contains_anchor(index, sequence, digest)
                        for sequence, digest in anchors):
                     raise AdmissionDenied("release journal rollback or fork from trusted anchor")
                 # Retain authenticated history even when the tip revokes,
                 # expires, or applies to a different release.
-                observed = (len(chain), chain[-1][0])
+                observed = (chain[-1][1]["sequence"], chain[-1][0])
                 commit(*observed)
                 self._observed = observed
                 return check_release_decision(

@@ -146,3 +146,100 @@ def test_durable_tip_denies_replay_after_both_processes_reopen(journal, tmp_path
         with pytest.raises(AdmissionDenied, match="anchor unavailable"):
             open_policy(port).verify(**EXPECTED)
         assert not anchor.exists()
+
+
+def test_rotation_near_limit_preserves_revocation_and_anchors(journal, tmp_path):
+    import json
+    from preview_release_journal import MAX_RECORDS, RemoteReleasePolicy, rotation_checkpoint
+
+    for _ in range(MAX_RECORDS - 1):
+        journal.append()
+    with pytest.raises(AdmissionDenied, match="full verified window"):
+        rotation_checkpoint(journal.entries, journal.policy_key.read_bytes(), journal.fingerprint)
+    journal.append("revoke")
+    archive = list(journal.entries)
+    boundary = journal.hashes[-1]
+    with journal.server() as port:
+        old = journal.policy(port, 1)
+        with pytest.raises(AdmissionDenied, match="explicitly revoked"):
+            old.verify(**EXPECTED)
+        journal.rotate()
+        with pytest.raises(AdmissionDenied, match="rollback or fork"):
+            old.verify(**EXPECTED)
+        with pytest.raises(AdmissionDenied, match="explicitly revoked"):
+            journal.policy(port, MAX_RECORDS).verify(**EXPECTED)
+        journal.append()
+        assert journal.policy(port, MAX_RECORDS).verify(**EXPECTED) == MAX_RECORDS + 2
+        assert len(journal.entries) == 3
+
+    journal.publish(archive)
+    with journal.server() as port:
+        # A new process retaining an anchor inside the rotated generation
+        # cannot accept a valid old generation, even with valid signatures.
+        policy = RemoteReleasePolicy(journal.endpoint(port), journal.policy_key,
+                                     journal.fingerprint, MAX_RECORDS + 1,
+                                     journal.hashes[MAX_RECORDS])
+        with pytest.raises(AdmissionDenied, match="rollback or fork"):
+            policy.verify(**EXPECTED)
+
+
+@pytest.mark.parametrize("change", [
+    {"decision": "allow"}, {"expires_at": 1}, {"approval_sha256": "0" * 64},
+])
+def test_signed_rotation_cannot_renew_or_change_decision(journal, change):
+    from preview_release_journal import MAX_RECORDS
+
+    for _ in range(MAX_RECORDS - 1):
+        journal.append()
+    journal.append("revoke")
+    journal.rotate(**change)
+    with journal.server() as port:
+        with pytest.raises(AdmissionDenied, match="HTTPS response rejected"):
+            journal.policy(port, MAX_RECORDS).verify(**EXPECTED)
+
+
+def test_second_rotation_accepts_only_the_matching_boundary(journal):
+    from preview_release_journal import MAX_RECORDS, RemoteReleasePolicy
+
+    for _ in range(MAX_RECORDS):
+        journal.append()
+    journal.rotate()
+    for _ in range(MAX_RECORDS - 2):
+        journal.append()
+    boundary = len(journal.hashes)
+    assert len(journal.entries) == MAX_RECORDS
+    assert journal.rotate() == boundary + 1
+    with journal.server() as port:
+        assert journal.policy(port, boundary).verify(**EXPECTED) == boundary + 1
+        wrong = RemoteReleasePolicy(journal.endpoint(port), journal.policy_key,
+                                    journal.fingerprint, boundary, "0" * 64)
+        with pytest.raises(AdmissionDenied, match="rollback or fork"):
+            wrong.verify(**EXPECTED)
+
+
+def test_offline_rotation_cli_uses_existing_signer_and_never_overwrites(journal, tmp_path):
+    import base64
+    import json
+    import subprocess
+    from preview_release_journal import MAX_RECORDS, verify_journal
+
+    for _ in range(MAX_RECORDS):
+        journal.append()
+    script = Path(__file__).resolve().parents[1] / "scripts/wfs_rotate_release_journal.py"
+    args = ["--journal", str(journal.journal), "--policy-key", str(journal.policy_key),
+            "--policy-fingerprint", journal.fingerprint]
+    before = journal.journal.read_bytes()
+    message = tmp_path / "bridge.bin"
+    sig = tmp_path / "bridge.sig"
+    candidate = tmp_path / "candidate.json"
+    subprocess.run([sys.executable, str(script), "prepare", *args,
+                    "--output", str(message)], check=True, timeout=10)
+    sig.write_bytes(base64.b64encode(journal.signer.sign(message.read_bytes())))
+    assemble = [sys.executable, str(script), "assemble", *args, "--signature", str(sig)]
+    subprocess.run([*assemble, "--output", str(candidate)], check=True, timeout=10)
+    chain = verify_journal(json.loads(candidate.read_bytes())["entries"],
+                           journal.policy_key.read_bytes(), journal.fingerprint)
+    assert chain[-1][1]["sequence"] == MAX_RECORDS + 1
+    assert subprocess.run([*assemble, "--output", str(journal.journal)],
+                          capture_output=True, timeout=10).returncode != 0
+    assert journal.journal.read_bytes() == before

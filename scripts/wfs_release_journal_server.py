@@ -10,7 +10,7 @@ from threading import Lock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "backend"))
 from preview_admission_v2 import AdmissionDenied
 from preview_oci_layout import is_sha256, json_object, sha256
-from preview_release_journal import MAX_BODY, ROUTE, verify_journal
+from preview_release_journal import MAX_BODY, ROUTE, journal_index, verify_journal
 from preview_signature import _read_trusted
 
 
@@ -19,7 +19,7 @@ def serve(bind, port, cert, key, client_ca, client_fingerprint,
     if not is_sha256(client_fingerprint):
         raise ValueError("independent client certificate pin required")
     guard = Lock()
-    observed = []
+    observed = {}
     public = _read_trusted(policy_key, 4096)
 
     class Handler(BaseHTTPRequestHandler):
@@ -37,10 +37,15 @@ def serve(bind, port, cert, key, client_ca, client_fingerprint,
                     if set(document) != {"entries"}:
                         raise AdmissionDenied("invalid journal document")
                     chain = verify_journal(document["entries"], public, policy_fingerprint)
-                    digests = [digest for digest, _ in chain]
-                    if digests[:len(observed)] != observed:
-                        raise AdmissionDenied("release journal cannot replace published history")
-                    observed[:] = digests
+                    digests = journal_index(chain)
+                    if observed:
+                        tip = max(observed)
+                        if digests.get(tip) != observed[tip] or any(
+                                observed[sequence] != digests[sequence]
+                                for sequence in observed.keys() & digests.keys()):
+                            raise AdmissionDenied("release journal cannot replace published history")
+                    observed.clear()
+                    observed.update(digests)
             except (OSError, ValueError):
                 self.send_error(503, "current signed release journal unavailable")
                 return

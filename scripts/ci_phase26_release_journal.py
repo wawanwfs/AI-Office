@@ -16,7 +16,7 @@ from cryptography.hazmat.primitives.asymmetric.ed25519 import Ed25519PrivateKey
 from cryptography.x509.oid import ExtendedKeyUsageOID, NameOID
 
 from preview_oci_layout import PLATFORM, sha256
-from preview_release_journal import GENESIS, ROUTE, JournalTLS, RemoteReleasePolicy, encode_entry
+from preview_release_journal import GENESIS, ROUTE, JournalTLS, RemoteReleasePolicy, encode_entry, rotation_checkpoint
 from preview_release_policy import checkpoint_message
 
 SERVER = Path(__file__).with_name("wfs_release_journal_server.py").resolve()
@@ -84,7 +84,7 @@ class JournalFixture:
         if now is None:
             now = int(time.time())
         raw = json.dumps({
-            "version": 2, "sequence": len(self.entries) + 1,
+            "version": 2, "sequence": len(self.hashes) + 1,
             "previous_sha256": self.hashes[-1] if self.hashes else GENESIS,
             "manifest_digest": self.manifest, "approval_sha256": self.approval,
             "platform": PLATFORM, "decision": decision,
@@ -94,7 +94,17 @@ class JournalFixture:
             self.signer.sign(checkpoint_message(raw, chained=True)))))
         self.hashes.append(sha256(raw))
         self.publish(self.entries)
-        return len(self.entries)
+        return len(self.hashes)
+
+    def rotate(self, **changes):
+        raw = rotation_checkpoint(self.entries, self.policy_key.read_bytes(), self.fingerprint)
+        if changes:
+            raw = json.dumps({**json.loads(raw), **changes}, sort_keys=True).encode("ascii")
+        self.entries = [self.entries[-1], encode_entry(raw, base64.b64encode(
+            self.signer.sign(checkpoint_message(raw, chained=True, rotation=True))))]
+        self.hashes.append(sha256(raw))
+        self.publish(self.entries)
+        return len(self.hashes)
 
     def publish(self, entries):
         temp = self.journal.with_suffix(".tmp")
