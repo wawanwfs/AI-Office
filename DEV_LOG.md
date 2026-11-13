@@ -7911,3 +7911,10 @@
 - Test baru effects_robot_idle.test.js (5): guard non-finite, jendela kedip, sapuan dada, osilasi status/antena, deterministik + kontinuitas seam.
 - Verifikasi: vitest 371 file, 4169 passed + 6 skipped (+5); build PWA exit 0; dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 709KB, colors=11167 nonbg=0.992, hygiene 41 refs 0 missing).
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
+## 13/11/2026 23:25 WIB — Siklus 492: pedestal dasar kampus bernapas (pedestalBreath)
+- Gap visual: glow rim cyan & lip emas pedestal (identitas dek kampus, terlihat di zoom home) statis konstan — elemen scene terakhir tanpa animasi setelah tanaman 487, espresso 488, printer 489, water cooler 490, robot 491.
+- Fix: pedestalBreath(elapsed) di parts/effects.js (murni, diuji unit): glow rim bernapas 0.55–0.95 siklus 3.4 dtk (tak mati total), lip emas shimmer 0.35–0.55 dengan siklus 1.7× lebih lambat agar tak sinkron. Kontrak waktu-nyata, di-tick di gate ambient (485) → hidup di GPU lambat.
+- OfficeScene: tick pedestalBreath di gate ambient (guard __pedestal.glow/lip; lip.material.transparent=true).
+- Test baru effects_pedestal_breath.test.js (5): guard non-finite netral, rentang glow/lip, seam periodik glow T & lip 1.7T, deterministik.
+- Verifikasi: vitest 372 file, 4174 passed + 6 skipped (+5); build PWA exit 0; rsync dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 706KB, colors=11150 nonbg=0.992, hygiene 41 refs 0 missing).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.

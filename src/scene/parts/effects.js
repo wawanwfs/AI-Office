@@ -610,6 +610,20 @@ export const ROBOT_BEACON_HZ = 0.8;   // napas halo antena
 
 const clamp01 = (v) => (v < 0 ? 0 : v > 1 ? 1 : v);
 
+// ── Siklus 492: pedestal dasar kampus bernapas ────────────────────────────
+// Glow rim cyan & lip emas pedestal statis konstan — elemen identitas dek
+// kampus tak bergerak. Nilai murni waktu-nyata (elapsed), tanpa state →
+// diuji unit; penerapan material di gate ambient OfficeScene.
+export const PEDESTAL_GLOW_SEC = 3.4; // satu napas glow rim
+
+export function pedestalBreath(elapsed) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0;
+  const w = (hz) => 0.5 + 0.5 * Math.sin(t * hz * Math.PI * 2);
+  const glow = 0.55 + 0.4 * w(1 / PEDESTAL_GLOW_SEC);           // 0.55…0.95
+  const lip = 0.35 + 0.2 * w(1 / (PEDESTAL_GLOW_SEC * 1.7));    // 0.35…0.55
+  return { glow, lip };
+}
+
 export function robotIdle(elapsed) {
   const t = Number.isFinite(elapsed) ? elapsed : 0;
   // Mata: terbuka penuh, menutup cepat di ujung tiap siklus (ease in-out).
