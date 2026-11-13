@@ -826,3 +826,23 @@ export function panelBreath(elapsed) {
   const micro = w(PANEL_BREATH_SEC * 2.77); // ≈2.2 dtk — rasio tak sinkron
   return 0.80 + 0.17 * main + 0.03 * micro; // 0.80…1.0, tak padam
 }
+
+// ── Siklus 505: kafe — glow kulkas snack & LED espresso bernapas (cafeGlow) ──
+// Dua aksen brand kafe masih beku (setelah uap espresso 488): glow panel kulkas
+// snack (fridgeGlow 0x4FC3F7, MB konstan) & lampu status mesin espresso (emG
+// 0x10E5A0). Napas kulkas 0.60…1.0 siklus 3.3 dtk (dingin, pelan) + LED siap
+// flicker cepat 0.55…1.0 siklus 1.3 dtk (rasio ≈2.54× tak sinkron vs semua
+// siklus lampu lain) — keduanya tak pernah padam total.
+export const FRIDGE_GLOW_SEC = 3.3;  // napas glow kulkas snack
+export const ESPRESSO_LED_SEC = 1.3; // kedip lampu siap mesin espresso
+
+export function cafeGlowBreath(elapsed) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0; // netral (sin 0 → 0.5)
+  const w = (sec) => 0.5 + 0.5 * Math.sin((t / sec) * Math.PI * 2);
+  const main = w(FRIDGE_GLOW_SEC);
+  const micro = w(FRIDGE_GLOW_SEC * 2.54); // ≈1.3 dtk — LED espresso
+  return {
+    fridge: 0.60 + 0.34 * main + 0.06 * micro, // 0.60…1.0, tak padam
+    led: 0.55 + 0.38 * w(ESPRESSO_LED_SEC) + 0.07 * micro, // 0.55…1.0
+  };
+}
