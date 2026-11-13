@@ -245,3 +245,152 @@ def test_optional_index_platform_still_requires_verified_config(tmp_path):
     image(archive, index_arch=None, arch="arm64")
     with pytest.raises(AdmissionDenied, match="config platform mismatch"):
         verify_layout(archive, frontend=review()["frontend"], api_sha256=sha256(API))
+
+
+def promotion(args, **overrides):
+    from preview_oci_promotion import ApprovedOCIRelease
+    return ApprovedOCIRelease(**{
+        "archive_path": args["archive"], "approval_path": args["approval_path"],
+        "signature_path": args["signature_path"], "witness_key_path": args["witness_key_path"],
+        "approval_sha256": args["trusted_approval_sha256"],
+        "witness_fingerprint": args["trusted_witness_fingerprint"],
+        **overrides,
+    })
+
+
+def test_promotion_reads_verified_sealed_bytes_not_mutable_archive(signed, monkeypatch):
+    import errno
+    import os
+
+    from preview_oci_promotion import load_verified_image
+    from preview_sealed_build import linux_sealing_supported
+    if not linux_sealing_supported():
+        pytest.skip("Linux kernel seals required")
+    args, sign = signed
+    import time
+    now = int(time.time())
+    args["trusted_approval_sha256"] = sign(issued_at=now - 10, expires_at=now + 600)
+    release = promotion(args)
+    source_bytes = args["archive"].read_bytes()
+    calls = []
+
+    def docker(binary, argv, *, stdin=None, timeout=25):
+        calls.append((binary, argv))
+        if argv[:2] == ["image", "load"]:
+            with pytest.raises(OSError) as denied:
+                os.pwrite(stdin.fileno(), b"x", 0)
+            assert denied.value.errno == errno.EPERM
+            with tarfile.open(fileobj=stdin, mode="r:") as transport:
+                manifest = json.loads(transport.extractfile("manifest.json").read())
+                assert manifest[0]["RepoTags"] == []
+                index = json.loads(transport.extractfile("index.json").read())
+                assert index["manifests"][0]["digest"] == checked.manifest_digest
+                names = [manifest[0]["Config"], *manifest[0]["Layers"]]
+                hashes = [checked.config_digest, *checked.layer_digests]
+                assert names == ["blobs/sha256/" + digest[7:] for digest in hashes]
+                for name, expected in zip(names, hashes):
+                    assert "sha256:" + sha256(transport.extractfile(name).read()) == expected
+                exact = transport.extractfile("blobs/sha256/" + checked.manifest_digest[7:]).read()
+                assert "sha256:" + sha256(exact) == checked.manifest_digest
+            from types import SimpleNamespace
+            return SimpleNamespace(stdout=f"Loaded image ID: {checked.config_digest}\n".encode())
+        else:
+            from types import SimpleNamespace
+            assert argv[-1] == checked.config_digest
+            return SimpleNamespace(stdout=encoded({
+                "Id": checked.config_digest, "Os": "linux", "Architecture": "amd64",
+                "RootFS": {"Type": "layers", "Layers": list(checked.diff_ids)},
+            }))
+
+    monkeypatch.setattr("preview_oci_promotion._docker", docker)
+    with release.open_verified(review(), "a" * 64) as (snapshot, checked, archive_sha):
+        assert archive_sha == sha256(source_bytes)
+        with pytest.raises(OSError) as denied:
+            os.pwrite(snapshot.fileno(), b"x", 0)
+        assert denied.value.errno == errno.EPERM
+        args["archive"].write_bytes(b"unapproved replacement")
+        load_verified_image("docker", snapshot, checked)
+    assert [argv[:2] for _, argv in calls] == [["image", "load"], ["image", "inspect"]]
+
+
+def test_promotion_rejects_valid_old_approval_against_current_pin(signed):
+    import time
+
+    from preview_sealed_build import linux_sealing_supported
+    if not linux_sealing_supported():
+        pytest.skip("Linux kernel seals required")
+    args, sign = signed
+    now = int(time.time())
+    sign(issued_at=now - 10, expires_at=now + 600)
+    old_record = args["approval_path"].read_bytes()
+    old_sig = args["signature_path"].read_bytes()
+    current = sign(issued_at=now - 5, expires_at=now + 700)
+    release = promotion(args, approval_sha256=current)
+    args["approval_path"].write_bytes(old_record)
+    args["signature_path"].write_bytes(old_sig)
+    with pytest.raises(AdmissionDenied, match="pinned current approval"):
+        with release.open_verified(review(), "a" * 64):
+            pytest.fail("superseded release was opened")
+
+
+def test_promotion_native_host_never_opens_archive(signed, monkeypatch):
+    args, _ = signed
+    args["archive"].unlink()
+    monkeypatch.setattr("preview_oci_promotion.linux_sealing_supported", lambda: False)
+    with pytest.raises(AdmissionDenied, match="requires Linux memfd"):
+        with promotion(args).open_verified(review(), "a" * 64):
+            pytest.fail("unsupported host opened an OCI archive")
+
+
+@pytest.mark.parametrize("wrong", ["config", "platform", "diff_ids"])
+def test_rejects_mismatched_docker_image(wrong, candidate, monkeypatch):
+    from preview_oci_promotion import verify_engine_image
+    checked = verify_layout(candidate[0], frontend=review()["frontend"], api_sha256=sha256(API))
+    details = {"Id": checked.config_digest, "Os": "linux", "Architecture": "amd64",
+               "RootFS": {"Type": "layers", "Layers": list(checked.diff_ids)}}
+    if wrong == "config":
+        details["Id"] = checked.manifest_digest
+    elif wrong == "platform":
+        details["Architecture"] = "arm64"
+    else:
+        details["RootFS"]["Layers"].reverse()
+    monkeypatch.setattr("preview_oci_promotion._inspect", lambda *args: details)
+    with pytest.raises(AdmissionDenied, match="platform and DiffIDs"):
+        verify_engine_image("docker", checked, checked.config_digest)
+
+
+@pytest.mark.parametrize("wrong", ["image", "project", "mount", "runtime_id", "stopped"])
+def test_rejects_mismatched_running_container(wrong, candidate, monkeypatch):
+    from preview_oci_promotion import verify_api_container
+    checked = verify_layout(candidate[0], frontend=review()["frontend"], api_sha256=sha256(API))
+    runtime_id = "b" * 64
+    details = {"Id": runtime_id, "Image": checked.config_digest,
+               "Config": {"Labels": {"com.docker.compose.project": "alpha",
+                                     "com.docker.compose.service": "api"}},
+               "HostConfig": {"ReadonlyRootfs": True}, "State": {"Running": True}, "Mounts": []}
+    if wrong == "image":
+        details["Image"] = checked.manifest_digest
+    elif wrong == "project":
+        details["Config"]["Labels"]["com.docker.compose.project"] = "bravo"
+    elif wrong == "mount":
+        details["Mounts"] = [{"Type": "bind", "Destination": "/app/dist"}]
+    elif wrong == "runtime_id":
+        details["Id"] = "c" * 64
+    else:
+        details["State"]["Running"] = False
+    monkeypatch.setattr("preview_oci_promotion._inspect", lambda *args: details)
+    with pytest.raises(AdmissionDenied, match="does not match approved OCI release"):
+        verify_api_container("docker", runtime_id, "alpha", checked.config_digest)
+
+
+def test_containerd_engine_id_requires_approved_manifest_descriptor(candidate, monkeypatch):
+    from preview_oci_promotion import verify_engine_image
+    checked = verify_layout(candidate[0], frontend=review()["frontend"], api_sha256=sha256(API))
+    details = {"Id": checked.manifest_digest, "Os": "linux", "Architecture": "amd64",
+               "Descriptor": {"digest": checked.manifest_digest, "mediaType": MANIFEST},
+               "RootFS": {"Type": "layers", "Layers": list(checked.diff_ids)}}
+    monkeypatch.setattr("preview_oci_promotion._inspect", lambda *args: details)
+    assert verify_engine_image("docker", checked, checked.manifest_digest) == checked.manifest_digest
+    details["Descriptor"]["digest"] = checked.config_digest
+    with pytest.raises(AdmissionDenied, match="descriptor differs"):
+        verify_engine_image("docker", checked, checked.manifest_digest)

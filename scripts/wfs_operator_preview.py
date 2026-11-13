@@ -14,6 +14,7 @@ import sys
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"backend"))
 from preview_manager import TemplatePreviewManager, PreviewDenied
+from preview_oci_promotion import ApprovedOCIRelease
 from preview_signature import verify_review_signature
 from preview_authority import SignedPreviewAuthority
 from preview_witness import SignedReviewerCheckpoint
@@ -73,6 +74,12 @@ def main():
         help="independently archived earlier log tree size; 0 for genesis")
     parser.add_argument("--trusted-previous-tree-root",required=True,
         help="independently archived earlier tree root SHA256; empty-tree for 0")
+    parser.add_argument("--oci-archive",help="reviewed Linux/amd64 OCI layout tar")
+    parser.add_argument("--oci-approval",help="current release witness approval JSON")
+    parser.add_argument("--oci-signature",help="detached release witness signature")
+    parser.add_argument("--oci-witness-key",help="release witness Ed25519 public PEM")
+    parser.add_argument("--trusted-oci-approval-sha256",help="out-of-band current approval pin")
+    parser.add_argument("--trusted-oci-witness-fingerprint",help="out-of-band release witness pin")
     parser.add_argument("--discard-data",action="store_true",
                         help="required to remove disposable PostgreSQL volumes")
     args=parser.parse_args()
@@ -82,6 +89,11 @@ def main():
         parser.error("start requires --port")
     if args.action!="start" and args.port is not None:
         parser.error("--port is only used for start")
+    oci_inputs=(args.oci_archive,args.oci_approval,args.oci_signature,args.oci_witness_key,
+                args.trusted_oci_approval_sha256,args.trusted_oci_witness_fingerprint)
+    if not all(oci_inputs) and (any(oci_inputs) or args.action in ("start","logs","restart")):
+        parser.error("all six OCI release and independent pin flags are required")
+    oci_release=ApprovedOCIRelease(*oci_inputs) if all(oci_inputs) else None
     state=Path(args.state_root).absolute()
     if state.is_symlink():
         parser.error("symlinked state directory denied")
@@ -137,7 +149,7 @@ def main():
     )
     manager=TemplatePreviewManager(state/"registry.db",template,
         enabled=True,reviewed_files=approved_hashes,
-        reviewer_authority=authority)
+        reviewer_authority=authority,oci_release=oci_release)
     if args.action=="status":
         result=manager.status(args.project)
     else:
