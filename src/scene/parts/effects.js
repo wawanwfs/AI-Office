@@ -162,6 +162,21 @@ export function shouldRedrawClock(frame, every = CLOCK_REDRAW_EVERY) {
   return Number.isFinite(frame) && frame % every === 0;
 }
 
+// ── Siklus 485: efek ambient ikut kontrak WAKTU-NYATA ──────────────────────
+// Gate lama frame-count (tiap 3 frame ≈ 20×/dtk @60FPS). Di GPU lambat (Swift
+// Shader 0.3–1.5 FPS) frame ke-3 butuh 2–13 dtk → ring denyut, visor, label
+// duduk & animasi karakter beku lama. Kini gate waktu AMBIENT_SEC=3/60 s —
+// paritas laju @60FPS identik dgn gate lama.
+export const AMBIENT_SEC = 3 / 60;   // = AMBIENT_EVERY(3)/60 s @60FPS
+export function ambientTimeGate() { return makeTimeGate(AMBIENT_SEC); }
+
+// ── Siklus 485: bubble obrolan ikut kontrak WAKTU-NYATA ────────────────────
+// Tick bubble lama frame-count (tiap 3 frame); fade/naik sudah kontrak waktu
+// via akumulasi dt, tapi TICK-nya beku di GPU lambat → bubble muncul tapi
+// diam/naik tersendat 2–13 dtk. Gate waktu BUBBLE_SEC=3/60 s (paritas @60FPS).
+export const BUBBLE_SEC = 3 / 60;    // = BUBBLE_EVERY(3)/60 s @60FPS
+export function bubbleTimeGate() { return makeTimeGate(BUBBLE_SEC); }
+
 // Throttle kedip LED server room: 70+ LED di-update tiap frame padahal blink
 // lambat (sin dengan sp 2–6 rad/s) → cukup ~20×/dtk, tak terlihat bedanya.
 export const LED_UPDATE_EVERY = 3;

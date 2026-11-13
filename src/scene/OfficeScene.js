@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, pulseFx, shouldUpdateBubbles, charMotion, applyCharMotion } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -1702,6 +1702,8 @@ let __ledGate=ledTimeGate();
 let __clockGate=clockTimeGate();
 let __shadowGate=shadowTimeGate(); // siklus 483: refresh shadow berbasis waktu
 let __labelGate=labelRelayoutTimeGate(); // siklus 484: relayout label berbasis waktu
+let __ambientGate=ambientTimeGate(); // siklus 485: efek ambient berbasis waktu
+let __bubbleGate=bubbleTimeGate();   // siklus 485: tick bubble berbasis waktu
 let __dustAcc=0; // akumulasi waktu NYATA antar tick dust (siklus 264 — pola relayoutDelta)
 function checkConversations(){
   // Logika pasangan terdekat di parts/chat_check.js (murni + unit test).
@@ -1734,9 +1736,9 @@ function checkConversations(){
 }
 
 let bubbleAcc = 0; // akumulasi dt antar tick bubble (throttle ~20×/dtk)
-function updateBubbles(delta){
+function updateBubbles(delta, elapsed){
   bubbleAcc += delta;
-  if (!shouldUpdateBubbles(frame)) return;
+  if (!shouldUpdateBubbles(frame) && !__bubbleGate(elapsed)) return;
   updateBubblesPure(chatBubbles, bubbleAcc, { remove: (b)=>{ office.remove(b.sprite); disposeBubble(b); } });
   bubbleAcc = 0;
 }
@@ -1834,7 +1836,7 @@ function animate(){
   updateWalkers(delta);
 
   // Water cooler convos
-  checkConversations();updateBubbles(delta);autoTalk();
+  checkConversations();updateBubbles(delta, elapsed);autoTalk();
   // Shift
   updateShift(timeOfDay);
   // ── Auto-advance waktu simulasi: tanpa ini jam HUD statis selamanya dan seluruh
@@ -1860,7 +1862,7 @@ function animate(){
   pulseRing.material.opacity=pf.opacity;
   // Efek ambient berbasis elapsed di-throttle ~20×/dtk (AMBIENT_EVERY=3):
   // ring, visor, label duduk, label NX, dan animasi hidup karakter duduk (napas, ketik, lirik layar)
-  if(shouldUpdateAmbient(frame)){
+  if(shouldUpdateAmbient(frame) || __ambientGate(elapsed)){
     const fx=ambientFx(elapsed);
     ringMat.opacity=fx.ring;
     helmetVisor.material.opacity=fx.visor;
