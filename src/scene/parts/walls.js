@@ -220,6 +220,8 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   drawWallLogo(l);
   const lt=new THREE.CanvasTexture(lc);lt.anisotropy=4;uiTexture(lt);
   const logo=new THREE.Mesh(new THREE.PlaneGeometry(8.6,2.69), uiMaterial(new THREE.MeshBasicMaterial({map:lt})));
+  // Siklus 496: logo transparan agar glow sorot (logoGlow) bisa bernapas via OfficeScene.
+  logo.material.transparent=true;
   logo.position.set(1.0,2.55,13.24);logo.rotation.y=Math.PI;logo.renderOrder=5;office.add(logo);__wallObjs.push(logo);
   W(B(8.8,2.9,.1),new THREE.MeshBasicMaterial({color:0x14243D}),1.0,2.55,13.36);
   // lampu sorot di atas logo
@@ -228,6 +230,9 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
     W(B(.3,.04,.1),new THREE.MeshBasicMaterial({color:0xFFE9A8}),x,3.93,13.1);
   });
   const spot=new THREE.PointLight(0xFFE2A0,.9,8,1.5);spot.position.set(1,3.4,12.2);office.add(spot);
+  // Siklus 496: ekspor refs logo & sorot agar OfficeScene bisa menghidupkannya.
+  const logoFx={ logo, spot, bulbs:[] };
+  [-2,1,4].forEach(x=>{ const b=W(B(.3,.04,.1),new THREE.MeshBasicMaterial({color:0xFFE9A8}),x,3.93,13.1); b.material.transparent=true; logoFx.bulbs.push(b); });
 
   // ---- Jendela sky-view di dinding belakang (sisi kanan logo, area kosong) ----
   [6.6,10.8].forEach(x=>{
@@ -270,5 +275,5 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   [[6.6],[10.8]].forEach(([x])=>sh(x,2.6,13.27,Math.PI,3.4,1.9));                                                              // belakang
   [[-3.4],[1.4]].forEach(([z])=>sh(-16.79,2.5,z,Math.PI/2,3.0,1.9));                                                           // kiri
   tagTrimMeshes();
-  return { wallDefs, get collected(){return collected}, paintWallNight, paintTrimNight, get wallTexCount(){return wallTexPaints.length}, get wallTexPaints(){return wallTexPaints}, get trimCount(){return trimPaints.length}, get trimPaints(){return trimPaints}, get flowerDay(){return FLW}, get flowerNight(){return FLW_NIGHT} };
+  return { wallDefs, logoFx, get collected(){return collected}, paintWallNight, paintTrimNight, get wallTexCount(){return wallTexPaints.length}, get wallTexPaints(){return wallTexPaints}, get trimCount(){return trimPaints.length}, get trimPaints(){return trimPaints}, get flowerDay(){return FLW}, get flowerNight(){return FLW_NIGHT} };
 }

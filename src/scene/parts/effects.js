@@ -696,3 +696,21 @@ export function deckNeonBreath(elapsed) {
     step: w(STEP_STRIP_SEC),
   };
 }
+
+// ── Siklus 496: logo WFS & sorot dinding belakang bernapas (wallLogoBreath) ──
+// Logo besar (identitas utama dinding belakang, terlihat di zoom home) & tiga
+// bulb lampu sorotnya konstan penuh — elemen brand terakhir yang statis (setelah
+// deck neon 495). Bulb berkedip hangat, cahaya PointLight mengikuti, logo
+// bernapas lembut 0.6…1.0 — tak pernah padam total.
+export const LOGO_BULB_SEC = 1.9;   // kedip bulb (rasio tak sinkron dgn lampu 5.2)
+export const LOGO_GLOW_SEC = 3.7;   // napas logo
+
+export function wallLogoBreath(elapsed) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0; // netral
+  const w = (sec) => 0.5 + 0.5 * Math.sin((t / sec) * Math.PI * 2);
+  const bulb = 0.72 + 0.28 * w(LOGO_BULB_SEC);   // 0.72…1.0
+  return {
+    bulb,                                        // dipetakan ke bulb & spot
+    glow: 0.6 + 0.4 * w(LOGO_GLOW_SEC),          // 0.6…1.0 — tak padam
+  };
+}

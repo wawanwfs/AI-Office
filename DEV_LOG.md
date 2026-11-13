@@ -7939,3 +7939,11 @@
 - Test baru effects_deck_neon_breath.test.js (5): guard non-finite netral (sin 0 → 0.5), rentang 0…1 + peta caller ≥0.45, deterministik + seam periodik 19T, puncak/lembah eksak konstanta, rasio siklus tak sinkron.
 - Verifikasi: vitest 375 file, 4192 passed + 6 skipped (+5, +1 file); build PWA exit 0; dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 708KB, colors=11388 nonbg=0.992, hygiene 41 refs 0 missing).
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
+## 14/11/2026 01:55 WIB — Siklus 496: logo WFS & lampu sorot dinding belakang bernapas (wallLogoBreath)
+- Gap visual: logo besar WFS PROJECT (dinding belakang, identitas utama di zoom home) + 3 bulb lampu sorot & PointLight-nya konstan penuh — elemen brand terakhir yang statis (setelah deck neon 495).
+- Fix: wallLogoBreath(elapsed) di parts/effects.js (murni, diuji unit): bulb & sorot berkedip hangat 0.72…1.0 siklus 1.9 dtk (tak sinkron dgn lampu lounge 5.2), PointLight ikut (0.9×), logo bernapas lembut 0.6…1.0 siklus 3.7 dtk — tak pernah padam total. Kontrak waktu-nyata, di-tick di gate ambient (485).
+- walls.js: logo.material.transparent=true; ekspor refs logoFx {logo, spot, bulbs[3]}. OfficeScene: tick wallLogoBreath di gate ambient (guard logoFx.logo).
+- Bug ketemu saat uji: argumen w() awalnya di-pass sebagai frekuensi (w(1/SEC)) padahal w mengambil detik — koreksi jadi w(SEC), tertangkap test kontrak puncak/lembah eksak.
+- Test baru effects_wall_logo_breath.test.js (5): guard non-finite netral, rentang + tak padam, deterministik, seam periodik, konstanta kontrak puncak/lembah eksak.
+- Verifikasi: vitest 376 file, 4198 passed + 6 skipped (+5, +1 file); build PWA exit 0; dist → ~/wfs-hq (9503 /app/ = 200); e2e_err.py OK (agents=26, cam/wall=True, init_failed=False, errs=[], shot 705KB, colors=11116 nonbg=0.992, hygiene 41 refs 0 missing).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
