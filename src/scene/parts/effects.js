@@ -764,3 +764,19 @@ export function floorLampBreath(elapsed) {
   const micro = w(FLOOR_LAMP_SEC * 2.87); // ≈1.5 dtk — rasio tak sinkron
   return 0.76 + 0.20 * main + 0.04 * micro; // 0.76…1.0, tak padam
 }
+
+// ── Siklus 500: lampu glow resepsionis bernapas (receptionLightBreath) ──────
+// PointLight biru bawah meja resepsionis (rcLight, 0x4D9FFF, .4 konstan) —
+// sumber cahaya statis terakhir (setelah floorLampBreath 499). Nilai murni
+// waktu-nyata (elapsed) → diuji unit; penerapan di gate ambient OfficeScene.
+// Rentang 0.74…1.0 — tak pernah padam (resepsi harus tetap terbaca), gelombang
+// utama 3.6 dtk + mikro 1.64 dtk (rasio 2.2× tak sinkron, pola 493/498/499).
+export const RECEPTION_LIGHT_SEC = 3.6; // gelombang utama napas lampu resepsi
+
+export function receptionLightBreath(elapsed) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0; // netral (sin 0 → 0.5)
+  const w = (sec) => 0.5 + 0.5 * Math.sin((t / sec) * Math.PI * 2);
+  const main = w(RECEPTION_LIGHT_SEC);
+  const micro = w(RECEPTION_LIGHT_SEC * 2.2); // ≈1.64 dtk — rasio tak sinkron
+  return 0.74 + 0.22 * main + 0.04 * micro; // 0.74…1.0, tak padam
+}
