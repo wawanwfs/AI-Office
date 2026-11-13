@@ -104,3 +104,45 @@ def test_independent_anchor_rejects_signed_alternate_history(journal):
                                      journal.fingerprint, 1, original)
         with pytest.raises(AdmissionDenied, match="rollback or fork"):
             policy.verify(**EXPECTED)
+
+
+@pytest.mark.skipif(not sys.platform.startswith("linux"), reason="Linux anchor custody")
+def test_durable_tip_denies_replay_after_both_processes_reopen(journal, tmp_path):
+    import json
+    from preview_release_journal import RemoteReleasePolicy
+
+    journal.append()
+    old = list(journal.entries)
+    folder = tmp_path / "custody"
+    folder.mkdir(mode=0o700)
+    anchor = folder / "anchor.json"
+    anchor.write_text(json.dumps({"version": 1, "sequence": 1,
+                                  "key_fingerprint": journal.fingerprint,
+                                  "sha256": journal.hashes[0]}))
+    anchor.chmod(0o600)
+
+    def open_policy(port):
+        return RemoteReleasePolicy(journal.endpoint(port), journal.policy_key,
+                                   journal.fingerprint, 1, journal.hashes[0],
+                                   custody_path=anchor)
+
+    with journal.server() as port:
+        assert open_policy(port).verify(**EXPECTED) == 1
+        journal.append("revoke")
+        with pytest.raises(AdmissionDenied, match="explicitly revoked"):
+            open_policy(port).verify(**EXPECTED)
+        assert json.loads(anchor.read_text())["sequence"] == 2
+    journal.publish(old)
+    with journal.server() as port:
+        with pytest.raises(AdmissionDenied, match="rollback or fork"):
+            open_policy(port).verify(**EXPECTED)
+        journal.publish(journal.entries)
+        journal.append()
+        assert open_policy(port).verify(**EXPECTED) == 3
+        anchor.chmod(0o644)
+        with pytest.raises(AdmissionDenied, match="0600 regular file"):
+            open_policy(port).verify(**EXPECTED)
+        anchor.unlink()
+        with pytest.raises(AdmissionDenied, match="anchor unavailable"):
+            open_policy(port).verify(**EXPECTED)
+        assert not anchor.exists()
