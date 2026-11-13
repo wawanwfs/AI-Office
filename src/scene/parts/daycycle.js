@@ -392,7 +392,23 @@ export function createShift(ctx) {
   function sendToLunch() {
     phase = 'lunch';
     agentData.forEach((ad) => {
-      if (ad.state !== 'sitting') return;
+      if (ad.state !== 'sitting') {
+        // Siklus 472: agen yang sedang di perjalanan (walking_out/walking_back)
+        // saat window lunch buka ikut ke kafe — dulu mereka MELEWATKAN lunch
+        // (flag lunch tak terpasang, status badge salah, okupansi kafe kurang,
+        // e2e_inspector_floor flaky bila agen fokus sedang trip jam 12:00).
+        if (ad.state !== 'walking_out' && ad.state !== 'walking_back') return;
+        ad.lunch = true;
+        ad.state = 'walking_out'; // handler walking_back mengabaikan flag lunch → paksa jalur kafe
+        ad.collab = null; ad.partner = null;
+        const spot = (ctx.isCampus && typeof campusLunchSpot === 'function')
+          ? campusLunchSpot(rng)
+          : lunchSpot(rng);
+        ad.walkTarget = spot;
+        ad._route = null; // recalc rute koridor dari posisi sekarang
+        ad.walkPause = lunchPause(rng);
+        return;
+      }
       ad.sittingChar.visible = false; ad.walker.visible = true;
       ad.walker.position.set(ad.home.x, ad.home.y || 0, ad.home.z);
       ad.lunch = true;

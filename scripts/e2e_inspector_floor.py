@@ -237,10 +237,23 @@ def main():
 
         # 12:00 — lunch window: agen jalan ke Executive Cafe L3 (z≈5.6).
         # Walker ~1.3 m/s (WALK_SPEED) + rute koridor: perjalanan L1→L3 bisa ~40 dtk.
-        ev("window.__setTime(720)")
+        # Siklus 472: sim clock berjalan 1 mnt sim / 5 dtk nyata (sim_clock.js) —
+        # window lunch (60 mnt sim = 300 dtk nyata) habis saat loop 60 dtk →
+        # lunch_end memulangkan agen sebelum tiba di L3 → FAIL flaky-by-clock.
+        # Setiap iterasi setTime(720) MENAHAN jam di awal window (mode manual
+        # 8 dtk resume — jendela tak lewat selama polling).
         floor_final = None
         scene_final = {}
         for _ in range(40):
+            # Siklus 472b: setTime bisa GAGAL SENYAP (Runtime.evaluate timeout →
+            # ev()={}) → clock melaju melewati 780 → endLunch memulangkan agen →
+            # FAIL flaky. Ulangi sampai __dbg().t terkonfirmasi di 720.
+            for _try in range(4):
+                ev("window.__setTime(720)")
+                t = ev("window.__dbg?window.__dbg().t:-1").get("value")
+                if isinstance(t, (int, float)) and abs(t - 720) < 1:
+                    break
+                time.sleep(0.5)
             time.sleep(1.5)
             st = ev("(()=>{const e=(window.__agentData||[])[0];if(!e)return '{}';const z=e.walker&&e.walker.visible?e.walker.position.z:(e.sittingChar?e.sittingChar.position.z:null);return JSON.stringify({z,state:e.state,lunch:!!e.lunch})})()").get("value", "{}")
             try:

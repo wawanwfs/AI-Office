@@ -175,6 +175,36 @@ describe('createShift — mesin fase shift (eksekusi efek)', () => {
     s.dispose();
   });
 
+  // Siklus 472: agen yang sedang di perjalanan saat window lunch buka ikut ke
+  // kafe (dulu MELEWATKAN lunch — flag tak terpasang, badge salah, okupansi
+  // kafe kurang, e2e_inspector_floor flaky).
+  it('sendToLunch: agen walking_out/walking_back saat window buka ikut ke kafe (lunch flag + retarget)', () => {
+    const ctx = shiftCtx();
+    ctx.isCampus = true;
+    ctx.agentData[0].state = 'walking_out';
+    ctx.agentData[0].collab = { lines: [] };
+    ctx.agentData[0].partner = { agent: { name: 'X' }, home: { x: 1, z: 0 } };
+    ctx.agentData[1].state = 'walking_back';
+    ctx.agentData[2].state = 'meeting';   // rapat TIDAK diganggu
+    ctx.agentData[3].state = 'offsite';   // offsite TIDAK diganggu
+    const s = createShift(ctx);
+    s.update(SHIFT.LUNCH_START);
+    const a = ctx.agentData[0], b = ctx.agentData[1];
+    expect(a.lunch).toBe(true);
+    expect(a.state).toBe('walking_out');
+    expect(a.collab).toBeNull();
+    expect(a.walkTarget.x).toBeGreaterThanOrEqual(CAMPUS_LUNCH_SPOT.x - CAMPUS_LUNCH_SPOT.jitterX);
+    expect(a.walkTarget.x).toBeLessThanOrEqual(CAMPUS_LUNCH_SPOT.x + CAMPUS_LUNCH_SPOT.jitterX);
+    expect(a.walkTarget.z).toBeGreaterThanOrEqual(CAMPUS_LUNCH_SPOT.z - CAMPUS_LUNCH_SPOT.jitterZ);
+    expect(a.walkTarget.z).toBeLessThanOrEqual(CAMPUS_LUNCH_SPOT.z + CAMPUS_LUNCH_SPOT.jitterZ);
+    expect(b.lunch).toBe(true);
+    expect(b.state).toBe('walking_out');
+    expect(b.walkTarget.z).toBeGreaterThanOrEqual(CAMPUS_LUNCH_SPOT.z - CAMPUS_LUNCH_SPOT.jitterZ);
+    expect(ctx.agentData[2].state).toBe('meeting');
+    expect(ctx.agentData[3].state).toBe('offsite');
+    s.dispose();
+  });
+
   it('sendToLunch: agen duduk jadi walker visible → walking_out, target depan bar stools, lunch flag', () => {
     const ctx = shiftCtx();
     ctx.agentData[0].state = 'sitting';

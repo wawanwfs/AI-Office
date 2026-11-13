@@ -238,11 +238,15 @@ def main():
         # koridor + Grand Staircase) — di SwiftShader ~1.5 FPS perjalanan bisa
         # >60 dtk. Break saat badge L3 naik ≥3 dari baseline (walker benar-benar
         # menyeberang), BUKAN sekadar hitungan absolut (baseline L3 sudah 8).
-        ev("window.__setTime(720)")
+        # Siklus 472: sim clock 1 mnt sim / 5 dtk nyata → window lunch (300 dtk
+        # nyata) bisa habis saat polling → lunch_end memulangkan agen → FAIL
+        # flaky. setTime(720) per iterasi MENAHAN jam di awal window (resume
+        # manual 8 dtk) sehingga jendela tak lewat selama pengukuran.
         occ_final = None
         cafe = {}
         base_l3 = json.loads(occ_initial).get("L3", 0)
         for _ in range(50):
+            ev("window.__setTime(720)")
             time.sleep(1.5)
             cafe = ev("(()=>{const d=window.__agentData||[];"
                       "const c=d.filter(e=>e.lunch).length;"
