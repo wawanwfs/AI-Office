@@ -1,6 +1,7 @@
 """Authenticated read-only transport for a bounded signed release journal."""
 import base64
 import binascii
+from contextlib import nullcontext
 from dataclasses import dataclass
 from http.client import HTTPException, HTTPSConnection
 import json
@@ -12,6 +13,7 @@ from urllib.parse import urlsplit
 from preview_admission_v2 import AdmissionDenied
 from preview_oci_layout import is_sha256, json_object, sha256
 from preview_release_policy import check_release_decision, verify_signed_checkpoint
+from preview_release_anchor import DurableReleaseAnchor
 from preview_signature import _read_trusted
 
 ROUTE = "/v1/oci-release-journal"
@@ -102,11 +104,11 @@ class JournalTLS:
 class RemoteReleasePolicy:
     """Verify authenticated publication and its externally anchored history.
 
-    On each invocation the caller supplies an external anchor. The in-memory
-    high-water mark also protects later checks in the same process, not
-    another process or simultaneous rollback of the operator's external pins.
+    A provisioned custody file optionally retains the verified high-water
+    mark outside SQLite. The external anchor is always checked as well.
     """
-    def __init__(self, tls, public_key_path, key_fingerprint, anchor_sequence, anchor_sha256):
+    def __init__(self, tls, public_key_path, key_fingerprint, anchor_sequence, anchor_sha256,
+                 *, custody_path=None):
         if (not isinstance(tls, JournalTLS) or not is_sha256(key_fingerprint)
                 or type(anchor_sequence) is not int or not 1 <= anchor_sequence <= MAX_RECORDS
                 or not is_sha256(anchor_sha256)):
@@ -118,21 +120,29 @@ class RemoteReleasePolicy:
         self.anchor_sha256 = anchor_sha256
         self._observed = (anchor_sequence, anchor_sha256)
         self._lock = Lock()
+        self._custody = (None if custody_path is None else
+                         DurableReleaseAnchor(custody_path, MAX_RECORDS))
 
     def verify(self, *, manifest_digest, approval_sha256, reviewer_fingerprint,
                release_witness_fingerprint, now=None):
         with self._lock:
             chain = verify_journal(self.tls.fetch(), _read_trusted(self.public_key_path, 4096),
                                    self.key_fingerprint)
-            sequence, digest = self._observed
-            if len(chain) < sequence or chain[sequence - 1][0] != digest:
-                raise AdmissionDenied("release journal rollback or fork from trusted anchor")
-            # Record authenticated new history even when the tip revokes,
-            # expires, or applies to another manifest.
-            self._observed = (len(chain), chain[-1][0])
-            return check_release_decision(
-                chain[-1][1], manifest_digest=manifest_digest, approval_sha256=approval_sha256,
-                reviewer_fingerprint=reviewer_fingerprint,
-                release_witness_fingerprint=release_witness_fingerprint,
-                policy_key_fingerprint=self.key_fingerprint,
-                minimum_sequence=sequence, now=now)
+            custody = (nullcontext((self._observed, lambda *args: None))
+                       if self._custody is None else self._custody.locked(self.key_fingerprint))
+            with custody as (stored, commit):
+                anchors = ((self.anchor_sequence, self.anchor_sha256), self._observed, stored)
+                if any(len(chain) < sequence or chain[sequence - 1][0] != digest
+                       for sequence, digest in anchors):
+                    raise AdmissionDenied("release journal rollback or fork from trusted anchor")
+                # Retain authenticated history even when the tip revokes,
+                # expires, or applies to a different release.
+                observed = (len(chain), chain[-1][0])
+                commit(*observed)
+                self._observed = observed
+                return check_release_decision(
+                    chain[-1][1], manifest_digest=manifest_digest, approval_sha256=approval_sha256,
+                    reviewer_fingerprint=reviewer_fingerprint,
+                    release_witness_fingerprint=release_witness_fingerprint,
+                    policy_key_fingerprint=self.key_fingerprint,
+                    minimum_sequence=max(sequence for sequence, _ in anchors), now=now)

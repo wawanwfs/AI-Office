@@ -629,3 +629,16 @@ left alone, and data deletion still requires explicit authorization.
 - [Phase 26 scoped gate](docs/REA_PHASE26.md)
 - [Phase 26 mTLS journal runbook](docs/PHASE26_RELEASE_JOURNAL_RUNBOOK.md)
 - [Next Phase 27 implementation prompt](docs/NEXT_PHASE27_PROMPT.md)
+
+## Phase 27 — Linux custody acceptance and durable journal tip
+
+A disposable Linux CI check exercises kernel-enforced UID and socket
+permissions, independently verifies the real OCI archive, and compares
+the builder's sealed context against the released build input. The
+operator can persist its authenticated journal tip in a private file
+separate from preview SQLite, so restarting the publisher and operator
+does not make an already observed older decision valid again.
+
+- [Phase 27 scoped gate](docs/REA_PHASE27.md)
+- [Phase 27 Linux custody runbook](docs/PHASE27_LINUX_CUSTODY_RUNBOOK.md)
+- [Next Phase 28 implementation prompt](docs/NEXT_PHASE28_PROMPT.md)

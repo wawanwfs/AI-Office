@@ -29,6 +29,7 @@ from ci_phase19_sealed_build import prove_sealed_build
 from ci_phase23_oci_release import prepare_oci_release
 from ci_phase25_release_policy import DisposableReleasePolicySigner
 from ci_phase26_release_journal import JournalFixture
+from preview_release_journal import RemoteReleasePolicy
 from preview_authority import SignedPreviewAuthority
 from preview_signature import canonical_review_bytes
 from preview_root_authority import canonical_roster_bytes
@@ -540,10 +541,18 @@ try:
                              release_proof["manifest_digest"], release.approval_sha256)
     journal.append()
     old_entries = list(journal.entries)
+    # Separate from registry.db and retained across both process restarts.
+    custody_dir = root / "journal-custody"
+    custody_dir.mkdir(mode=0o700)
+    custody = custody_dir / "head.json"
+    custody.write_text(json.dumps({"version": 1, "key_fingerprint": journal.fingerprint,
+                                   "sequence": 1, "sha256": journal.hashes[0]}), encoding="ascii")
+    custody.chmod(0o600)
     with closing(sqlite3.connect(registry)) as db, closing(sqlite3.connect(backup)) as saved:
         db.backup(saved)
     with journal.server() as journal_port:
-        remote = journal.policy(journal_port, 1)
+        remote = RemoteReleasePolicy(journal.endpoint(journal_port), journal.policy_key,
+                                     journal.fingerprint, 1, journal.hashes[0], custody_path=custody)
         remote_manager = open_manager(release, remote)
         for tenant, tenant_port, tenant_token, other in zip(names, ports, tokens, (token_b, token_a)):
             assert remote_manager.restart(tenant, tenant_token)["phase"] == "running"
@@ -563,12 +572,22 @@ try:
             raise AssertionError("remote journal served shortened history")
         except AdmissionDenied as exc:
             assert "HTTPS response rejected" in str(exc)
+    # Restart the publisher from shortened history. Its process-local
+    # memory is gone, and a new operator uses the original external anchor.
+    assert json.loads(custody.read_text())["sequence"] == 2
+    with journal.server() as restarted_port:
+        reopened = RemoteReleasePolicy(journal.endpoint(restarted_port), journal.policy_key,
+                                       journal.fingerprint, 1, journal.hashes[0],
+                                       custody_path=custody)
+        try:
+            open_manager(release, reopened).restart(project, token)
+            raise AssertionError("durable journal floor lost across restarts")
+        except AdmissionDenied as exc:
+            assert "rollback or fork" in str(exc)
         journal.publish(journal.entries)
         journal.append()
-        # Reopened operator with the newly provisioned anchor and verified
-        # extension resumes the already running preview without data loss.
-        assert open_manager(release, journal.policy(journal_port, 3)).restart(
-            project, token)["phase"] == "running"
+        assert open_manager(release, reopened).restart(project, token)["phase"] == "running"
+        assert json.loads(custody.read_text())["sequence"] == 3
     try:
         remote_manager.restart(project, token)
         raise AssertionError("unavailable journal did not block restart")
@@ -582,6 +601,32 @@ try:
         "running_service_left_intact_on_outage": True,
         "independent_host_or_custody_proved": False,
     }
+    proof["phase27_durable_anchor"] = {
+        "revocation_tip_persisted": True, "replay_denied_after_both_restarts": True,
+        "sqlite_restore_did_not_change_floor": True, "verified_extension_recovers": True,
+    }
+    if os.environ.get("WFS_DISPOSABLE_LINUX_CUSTODY_CI") == "1":
+        release_files = proof["phase23_oci_release"]
+        (release_root / "pins.json").write_text(json.dumps({
+            "trusted_approval_sha256": release.approval_sha256,
+            "trusted_witness_fingerprint": release.witness_fingerprint,
+            "trusted_reviewer_fingerprint": fingerprint,
+            "trusted_review_sha256": release_files["review_sha256"],
+        }))
+        custody_check = subprocess.run([
+            "sudo", "-n", sys.executable, str(repo / "scripts/ci_phase27_linux_custody.py"),
+            "--disposable-ci", "--source", str(reviewed_root / "api.py"),
+            "--client-key", str(journal.root / "client-key.pem"), "--release", str(release_root),
+            "--staged", str(manager.snapshots.path(names[0]).parents[2]),
+            "--backend", str(repo / "backend"), "--operator-uid", str(os.geteuid()),
+            "--operator-gid", str(os.getegid()), "--operator-groups", *map(str, os.getgroups()),
+        ], capture_output=True, text=True, timeout=90)
+        if custody_check.returncode:
+            raise AssertionError("Linux custody probe failed: " + custody_check.stderr[-3000:])
+        custody_proof = json.loads(custody_check.stdout)
+        assert custody_proof["roles"]["verifier"]["verified_oci_manifest"] == release_proof["manifest_digest"]
+        assert custody_proof["roles"]["builder"]["sealed_build_context_sha256"] == release_files["sealed_context_sha256"]
+        proof["phase27_linux_custody"] = custody_proof
     proof["phase11_docker_compose_context"]="signed project-scoped staged copy"
     # Runtime firewall evidence: BOTH preview bridges must be internal,
     # API still reachable on host loopback, and the running API must fail

@@ -93,6 +93,8 @@ def main():
     parser.add_argument("--release-journal-client-cert",help="operator TLS client certificate PEM")
     parser.add_argument("--release-journal-client-key",help="operator TLS client key PEM")
     parser.add_argument("--release-journal-server-sha256",help="pinned server leaf DER SHA-256")
+    parser.add_argument("--release-journal-anchor-state",
+                        help="separately provisioned Linux durable high-water file")
     parser.add_argument("--discard-data",action="store_true",
                         help="required to remove disposable PostgreSQL volumes")
     args=parser.parse_args()
@@ -113,10 +115,18 @@ def main():
     remote=(args.release_journal_url,args.release_journal_ca,args.release_journal_client_cert,
             args.release_journal_client_key,args.release_journal_server_sha256)
     release_policy=None
+    if args.release_journal_anchor_state and not any(remote):
+        parser.error("durable journal state requires the remote journal")
     if any(remote):
         if any(files) or not all(remote+shared):
             parser.error("remote journal requires mTLS, pins and no offline checkpoint files")
-        release_policy=RemoteReleasePolicy(JournalTLS(*remote),*shared)
+        if args.release_journal_anchor_state:
+            custody = Path(args.release_journal_anchor_state).resolve()
+            registry_root = Path(args.state_root).resolve()
+            if custody.is_relative_to(registry_root):
+                parser.error("journal custody must be outside the preview state root")
+        release_policy=RemoteReleasePolicy(JournalTLS(*remote),*shared,
+                                           custody_path=args.release_journal_anchor_state)
     elif any(value is not None for value in files+shared) or args.action in ("start","logs","restart"):
         if not all(files+shared):
             parser.error("all six release policy checkpoint and independent pin flags are required")
