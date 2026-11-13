@@ -847,6 +847,25 @@ export function cafeGlowBreath(elapsed) {
   };
 }
 
+// ── Siklus 508: lampu wajah layar meja 26 agen bernapas (screenGlowBreath) ──
+// Setiap meja punya PointLight warna agen (0.35 konstan, sLight di buildDesk)
+// — cahaya terakhir yang masih beku (setelah 12 efek cahaya/plakat 492–507).
+// Berkedip halus seperti layar aktif: 0.78…1.0, gelombang utama 3.4 dtk +
+// mikro 1.42 dtk (rasio 2.61× tak sinkron vs 11 siklus lain), stagger fase
+// 0.37 dtk per agen agar layar bergantian hidup — tak pernah padam.
+export const SCREEN_GLOW_SEC = 3.4;    // gelombang utama layar
+export const SCREEN_STAGGER_SEC = 0.37; // jeda fase per agen
+
+export function screenGlowBreath(elapsed, i = 0) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0; // netral (sin 0 → 0.5)
+  const idx = Number.isFinite(i) ? i : 0;
+  const tt = t + idx * SCREEN_STAGGER_SEC;
+  const w = (sec) => 0.5 + 0.5 * Math.sin((tt / sec) * Math.PI * 2);
+  const main = w(SCREEN_GLOW_SEC);
+  const micro = w(SCREEN_GLOW_SEC * 2.61); // ≈1.42 dtk — rasio tak sinkron
+  return 0.78 + 0.17 * main + 0.05 * micro; // 0.78…1.0, tak padam
+}
+
 // ── Siklus 507: plakat lantai L1/L2/L3 bernapas (badgeBreath) ──────────────
 // Tiga plakat arsitektural (LEVEL 01/02/03, canvas 640×112 + stroke aksen)
 // ditampilkan opasitas konstan — plat brand terakhir yang beku. Napas halus
