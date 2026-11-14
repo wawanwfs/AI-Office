@@ -27,7 +27,7 @@ const UI_SITES = [
   ['scene/parts/cafe.js', /const menuTex = uiTexture\(new THREE\.CanvasTexture\(mbc\)\)/], // menu board (siklus 518: tex disimpan utk redraw highlight)
   ['scene/parts/reception.js', /uiTexture\(t\); return t/], // logo resepsionis
   ['scene/parts/walls.js', /lt\.anisotropy=4;uiTexture\(lt\)/], // logo dinding
-  ['scene/parts/walls.js', /map:uiTexture\(new THREE\.CanvasTexture\(nc\)\)/], // papan sambutan
+  ['scene/parts/walls.js', /const welcomeTex = uiTexture\(new THREE\.CanvasTexture\(nc\)\)/], // papan sambutan (siklus 519)
   ['scene/parts/flooring.js', /const zt=uiTexture\(new THREE\.CanvasTexture\(zc\)\)/], // label zona
   ['scene/parts/terraces.js', /const tex = uiTexture\(new THREE\.CanvasTexture\(cv\)\)/], // sign lantai
 ]
@@ -50,7 +50,7 @@ const UI_MATS = [
   ['scene/parts/cafe.js', /const mb = new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{ map: menuTex \}\)\)/], // menu board
   ['scene/parts/reception.js', /const rcLogoMesh = new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{ map: wfsLogoTex, transparent: true \}\)\)/], // logo resepsionis
   ['scene/parts/walls.js', /const logo=new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{map:lt\}\)\)/], // logo dinding
-  ['scene/parts/walls.js', /const sign=new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{map:uiTexture\(new THREE\.CanvasTexture\(nc\)\)\}\)\)/], // papan sambutan
+  ['scene/parts/walls.js', /const sign=new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{map:welcomeTex\}\)\)/], // papan sambutan (siklus 519)
   ['scene/parts/flooring.js', /new THREE\.Sprite\(uiMaterial\(new THREE\.SpriteMaterial\(\{map:zt/], // label zona
   ['scene/parts/terraces.js', /const m = new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{ map: tex, transparent: true \}\)\)/], // sign lantai
 ]

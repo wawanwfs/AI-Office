@@ -73,7 +73,7 @@ import { SCENE_ID_TO_NAME } from './parts/agent_identity.js';
 import { BADGE_COLORS, statusPollActions } from './parts/status_poll.js';
 import { updateBubbles as updateBubblesPure, disposeBubble } from './parts/bubbles.js';
 import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canvas.js';
-import { drawMenuBoard } from './parts/sign_canvas.js';
+import { drawMenuBoard, drawWelcomeSign, welcomeTaglineIdx } from './parts/sign_canvas.js';
 import { drawTvDashboard } from './parts/tv_canvas.js';
 import { looksOf } from './parts/character_looks.js';
 import { AGENTS, AGENTS_EXTRA, allAgents as allAgentsFn } from './parts/agents_spec.js';
@@ -1440,6 +1440,7 @@ const __headphones=[];
 office.traverse((o)=>{ if(o.isMesh&&o.userData&&Number.isFinite(o.userData.__hpBasis)) __headphones.push(o); });
 // siklus 518: highlight menu kafe — indeks terakhir digambar (redraw saat berubah)
 let __menuHiLast=-1;
+let __welcomeTagLast=0; // siklus 519: tagline papan sambutan terakhir yg digambar
 
 // --- TANAMAN BESI tambahan di sudut ---
 addPlant(11.6,-8.5,true);
@@ -2059,6 +2060,16 @@ function animate(){
         __menuHiLast=mh;
         drawMenuBoard(__cafe.menuCtx, mh);
         __cafe.menuTex.needsUpdate=true;
+      }
+    }
+    // siklus 519: papan sambutan — subjudul tagline berganti (judul tetap).
+    // Redraw kanvas hanya saat indeks berubah (bukan tiap frame).
+    if(__wallsRt&&__wallsRt.welcomeCtx&&__wallsRt.welcomeTex){
+      const wt=welcomeTaglineIdx(elapsed);
+      if(wt!==__welcomeTagLast){
+        __welcomeTagLast=wt;
+        drawWelcomeSign(__wallsRt.welcomeCtx, wt);
+        __wallsRt.welcomeTex.needsUpdate=true;
       }
     }
     ringMat.opacity=fx.ring;

@@ -29,9 +29,30 @@ export function drawPoster(p, txt, col) {
   txt.split('\n').forEach((l, i) => p.fillText(l, 128, 150 + i * 56));
 }
 
-export function drawWelcomeSign(n) {
+// Siklus 519: subjudul berganti bergaya tagline — daftar frasa sambutan
+// berputar tiap WELCOME_TAGLINE_SEC dtk (deterministik dari elapsed; judul
+// WFS PROJECT tetap). Guard non-finite → frasa pertama.
+export const WELCOME_TAGLINE_SEC = 4.4;
+const WELCOME_TAGLINES = [
+  'Selamat Datang \u00b7 Welcome',
+  'Innovation \u00b7 Kolaborasi \u00b7 Karya',
+  'AI Office \u00b7 26 Agents On Duty',
+];
+
+export function welcomeTaglineIdx(elapsed) {
+  if (!Number.isFinite(elapsed)) return 0;
+  const n = WELCOME_TAGLINES.length;
+  const idx = Math.floor(elapsed / WELCOME_TAGLINE_SEC) % n;
+  return ((idx % n) + n) % n; // aman utk elapsed negatif
+}
+
+export function drawWelcomeSign(n, taglineIdx = 0) {
+  const safeIdx = Number.isInteger(taglineIdx) && taglineIdx >= 0 && taglineIdx < WELCOME_TAGLINES.length
+    ? taglineIdx : 0;
   n.fillStyle = '#0F1B2E'; n.fillRect(0, 0, 1024, 320);
   n.strokeStyle = '#D4AF37'; n.lineWidth = 10; n.strokeRect(10, 10, 1004, 300);
   n.fillStyle = '#FBBF24'; n.font = '900 130px "Segoe UI",Arial,sans-serif'; n.textAlign = 'center'; n.fillText('WFS PROJECT', 512, 150);
-  n.fillStyle = '#FFFFFF'; n.font = '600 60px "Segoe UI",Arial,sans-serif'; n.fillText('Selamat Datang \u00b7 Welcome', 512, 250);
+  n.fillStyle = '#FFFFFF'; n.font = '600 60px "Segoe UI",Arial,sans-serif'; n.fillText(WELCOME_TAGLINES[safeIdx], 512, 250);
 }
+
+export function welcomeTaglines() { return WELCOME_TAGLINES.slice(); }

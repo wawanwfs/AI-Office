@@ -249,7 +249,8 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   // ---- Papan sambutan di dinding kiri ----
   const nc=document.createElement('canvas');nc.width=1024;nc.height=320;const n=nc.getContext('2d');
   drawWelcomeSign(n);
-  const sign=new THREE.Mesh(new THREE.PlaneGeometry(3.6,1.125), uiMaterial(new THREE.MeshBasicMaterial({map:uiTexture(new THREE.CanvasTexture(nc))})));
+  const welcomeTex = uiTexture(new THREE.CanvasTexture(nc)); // siklus 519: tagline berganti
+  const sign=new THREE.Mesh(new THREE.PlaneGeometry(3.6,1.125), uiMaterial(new THREE.MeshBasicMaterial({map:welcomeTex})));
   sign.position.set(-16.8,2.6,5.4);sign.renderOrder=5;sign.rotation.y=Math.PI/2;office.add(sign);__wallObjs.push(sign);
 
   // ---- Jendela di dinding kiri ----
@@ -275,5 +276,5 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   [[6.6],[10.8]].forEach(([x])=>sh(x,2.6,13.27,Math.PI,3.4,1.9));                                                              // belakang
   [[-3.4],[1.4]].forEach(([z])=>sh(-16.79,2.5,z,Math.PI/2,3.0,1.9));                                                           // kiri
   tagTrimMeshes();
-  return { wallDefs, logoFx, get collected(){return collected}, paintWallNight, paintTrimNight, get wallTexCount(){return wallTexPaints.length}, get wallTexPaints(){return wallTexPaints}, get trimCount(){return trimPaints.length}, get trimPaints(){return trimPaints}, get flowerDay(){return FLW}, get flowerNight(){return FLW_NIGHT} };
+  return { wallDefs, logoFx, welcomeCtx: n, welcomeTex, get collected(){return collected}, paintWallNight, paintTrimNight, get wallTexCount(){return wallTexPaints.length}, get wallTexPaints(){return wallTexPaints}, get trimCount(){return trimPaints.length}, get trimPaints(){return trimPaints}, get flowerDay(){return FLW}, get flowerNight(){return FLW_NIGHT} };
 }
