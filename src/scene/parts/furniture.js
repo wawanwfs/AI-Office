@@ -104,9 +104,10 @@ export function createFurniture(ctx /* hooks disiapkan utk ekstensi */) {
     cv.width = CANVAS_W; cv.height = CANVAS_H;
     const g = cv.getContext('2d');
     drawPoster(g, p.c, p.t);
-    const plane = new THREE.Mesh(new THREE.PlaneGeometry(POSTER_W, POSTER_H), uiMaterial(new THREE.MeshBasicMaterial({ map: uiTexture(new THREE.CanvasTexture(cv)) })));
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(POSTER_W, POSTER_H), uiMaterial(new THREE.MeshBasicMaterial({ map: uiTexture(new THREE.CanvasTexture(cv)), transparent: true })));
     plane.position.set(p.x + posterOffsetFor(p), POSTER_Y, p.z);
     plane.rotation.y = posterFacingFor(p);
+    (plane.userData = plane.userData || {}).__poster = true; // siklus 509: napas poster dinding
     office.add(plane);
   });
 

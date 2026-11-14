@@ -45,8 +45,8 @@ const UI_MATS = [
   ['scene/OfficeScene.js', /const wallTitle=new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{map:wtt,transparent:true\}\)\)/], // judul dinding
   ['scene/OfficeScene.js', /new THREE\.Sprite\(uiMaterial\(new THREE\.SpriteMaterial\(\{\s*map: short\.tex/],
   ['scene/OfficeScene.js', /new THREE\.Sprite\(uiMaterial\(new THREE\.SpriteMaterial\(\{map:btex/],
-  ['scene/parts/furniture.js', /const plane = new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{ map: uiTexture\(new THREE\.CanvasTexture\(cv\)\) \}\)\)/], // poster dinding
-  ['scene/parts/decor.js', /const pm = new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{ map: uiTexture\(new THREE\.CanvasTexture\(pc\)\) \}\)\)/], // poster motivasi
+  ['scene/parts/furniture.js', /const plane = new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{ map: uiTexture\(new THREE\.CanvasTexture\(cv\)\), transparent: true \}\)\)/], // poster dinding
+  ['scene/parts/decor.js', /const pm = new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{ map: uiTexture\(new THREE\.CanvasTexture\(pc\)\), transparent: true \}\)\)/], // poster motivasi
   ['scene/parts/cafe.js', /const mb = new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{ map: uiTexture\(new THREE\.CanvasTexture\(mbc\)\) \}\)\)/], // menu board
   ['scene/parts/reception.js', /const rcLogoMesh = new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{ map: wfsLogoTex, transparent: true \}\)\)/], // logo resepsionis
   ['scene/parts/walls.js', /const logo=new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{map:lt\}\)\)/], // logo dinding

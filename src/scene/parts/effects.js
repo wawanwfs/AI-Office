@@ -898,3 +898,22 @@ export function rackEdgeBreath(elapsed) {
   const micro = w(RACK_EDGE_SEC * 2.41); // ≈1.7 dtk — rasio tak sinkron
   return 0.50 + 0.42 * main + 0.08 * micro; // 0.50…1.0, tak padam
 }
+
+// ── Siklus 509: poster motivasi dinding bernapas (posterBreath) ────────────
+// 10 poster dinding (8 slogan samping/belakang/depan di furniture.js + 2 besar
+// di decor.js) tampil opasitas penuh konstan — dekorasi dinding terakhir yang
+// beku (setelah plakat 507). Napas halus 0.84…1.0 gelombang utama 3.35 dtk +
+// mikro 9.11 dtk (rasio 2.72× tak sinkron vs 13 siklus lain), stagger fase
+// 0.41 dtk per poster agar slogan bergantian "menyala" — tak pernah pudar habis.
+export const POSTER_BREATH_SEC = 3.35;   // gelombang utama napas poster
+export const POSTER_STAGGER_SEC = 0.41;  // jeda fase antar poster
+
+export function posterBreath(elapsed, i = 0) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0; // netral (sin 0 → 0.5)
+  const idx = Number.isFinite(i) ? i : 0;
+  const tt = t + idx * POSTER_STAGGER_SEC;
+  const w = (sec) => 0.5 + 0.5 * Math.sin((tt / sec) * Math.PI * 2);
+  const main = w(POSTER_BREATH_SEC);
+  const micro = w(POSTER_BREATH_SEC * 2.72); // ≈9.11 dtk — rasio tak sinkron
+  return 0.84 + 0.13 * main + 0.03 * micro; // 0.84…1.0, tak pudar habis
+}

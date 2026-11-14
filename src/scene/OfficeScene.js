@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath, downlightBreath, serverHum, floorLampBreath, receptionLightBreath, tubeLightBreath, pendantBreath, panelBreath, cafeGlowBreath, rackEdgeBreath, badgeBreath, screenGlowBreath } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath, downlightBreath, serverHum, floorLampBreath, receptionLightBreath, tubeLightBreath, pendantBreath, panelBreath, cafeGlowBreath, rackEdgeBreath, badgeBreath, screenGlowBreath, posterBreath } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -1416,6 +1416,11 @@ const __decorObj=createDecor({ THREE, office, M });
 // ambient (kontrak waktu-nyata siklus 485) bersama efek ambient lainnya.
 const __plants=__decorObj&&Array.isArray(__decorObj.plants)?__decorObj.plants:[];
 
+// Siklus 509: semua poster dinding (8 slogan furniture + 2 besar decor) dikumpulkan
+// sekali di init — traverse tiap frame mahal; urutan stabil utk stagger fase napas.
+const __posters=[];
+office.traverse((o)=>{ if(o.isMesh&&o.userData&&o.userData.__poster) __posters.push(o); });
+
 // --- TANAMAN BESI tambahan di sudut ---
 addPlant(11.6,-8.5,true);
 addPlant(-11.6,8.8,true);
@@ -1980,6 +1985,11 @@ function animate(){
     // HANYA siang; mode neon set intensitas 0.6 sendiri via NEON.screenLight.
     if(!cyberpunkMode&&screenLights.length){
       screenLights.forEach((l,i)=>{ if(l) l.intensity=0.35*screenGlowBreath(elapsed,i); });
+    }
+    // siklus 509: poster motivasi dinding bernapas (posterBreath) — stagger fase
+    // 0.41 dtk per poster; refs dikumpulkan SEKALI di init (urutan stabil).
+    if(!cyberpunkMode&&__posters.length){
+      __posters.forEach((p,i)=>{ if(p&&p.material) p.material.opacity=posterBreath(elapsed,i); });
     }
     ringMat.opacity=fx.ring;
     helmetVisor.material.opacity=fx.visor;
