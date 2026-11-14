@@ -501,8 +501,11 @@ export function addDeskTrinkets(ctx, desks) {
       for (let l = 0; l < 2; l++) put(0.06, 0.1 + rng.r(0, 0.06), 0.06, 0x57a85b, d.x - 0.55 + rng.r(-0.02, 0.02), 0.88 + l * 0.07, d.z + 0.2);
     }
     if (i % 2 === 0 && i < 8) {
-      const b = put(0.22, 0.03, 0.16, 0x2f3236, d.x - 0.5, 0.82, d.z - 0.1); b.rotation.z = 0.15;
-      [-1, 1].forEach((s) => put(0.07, 0.09, 0.09, 0x1d1f22, d.x - 0.5 + s * 0.11, 0.8, d.z - 0.1));
+      // headphone set: band + 2 earcup — semua mesh diberi basis Y (__hpBasis)
+      // agar ikut terangkat bersama via headphonePick (siklus 517).
+      const tagHp = (m) => { (m.userData = m.userData || {}).__hpBasis = m.position.y; return m; };
+      tagHp(put(0.22, 0.03, 0.16, 0x2f3236, d.x - 0.5, 0.82, d.z - 0.1)).rotation.z = 0.15;
+      [-1, 1].forEach((s) => tagHp(put(0.07, 0.09, 0.09, 0x1d1f22, d.x - 0.5 + s * 0.11, 0.8, d.z - 0.1)));
     }
   });
 }
@@ -1080,4 +1083,35 @@ export function markerPick(elapsed, i = 0) {
   const s = Math.sin(phase * Math.PI * 2);
   const lift = Math.max(0, s) * Math.max(0, s); // smooth 0…1
   return MARKER_LIFT_UP * lift;
+}
+
+// ── Siklus 517: headphone meja sesekali "diambil-dipakai" (headphonePick) ──
+// 8 set headphone di meja (addDeskTrinkets, meja genap < 8) tergeletak konstan
+// — benda terakhir di area meja kerja yang beku. Efek headphonePick(elapsed, i):
+// tiap set sesekali seluruh grup terangkat 0 → 0.05 unit (diambil-dipakai) lalu
+// kembali ke meja — pola markerPick 515 / cupLift 514: slot global panjang +
+// fase hash deterministik, hanya sebagian kecil aktif per slot (≈25%), tak
+// sinkron antar set & vs 21 siklus lain (slot 47 dtk ≠ marker 33, cup 41,
+// mag 29, buku 37).
+export const HEADPHONE_CYCLE_SEC = 47.0;  // periode slot global semua headphone
+export const HEADPHONE_LIFT_UP = 0.05;    // tinggi angkat maksimum set headphone
+
+// hash kecil deterministik 0…1 dari indeks (bukan Math.random — replays uji aman)
+const headphoneHash = (i) => {
+  const x = Math.sin((Number.isFinite(i) ? i : 0) * 83.7 + 19.3) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+export function headphonePick(elapsed, i = 0) {
+  if (!Number.isFinite(elapsed)) return 0; // waktu rusak → netral total
+  if (!Number.isFinite(i)) return 0;       // indeks rusak → netral total
+  const h = headphoneHash(i);
+  // fase personal: offset slot hash → set aktif di detik berbeda dlm slot
+  const phase = ((elapsed / HEADPHONE_CYCLE_SEC) + h) % 1;
+  // hanya sebagian kecil set aktif per slot (≈25%)
+  if (h > 0.25) return 0;
+  // gerakan angkat-turun dalam slot: sin setengah-siklus → 0 → 1 → 0
+  const s = Math.sin(phase * Math.PI * 2);
+  const lift = Math.max(0, s) * Math.max(0, s); // smooth 0…1
+  return HEADPHONE_LIFT_UP * lift;
 }
