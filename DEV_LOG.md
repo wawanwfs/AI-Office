@@ -1,3 +1,11 @@
+## 14/11/2026 22:48 WIB — Siklus 525: layar monitor resepsionis LIVE
+- Gap: rcScreenGlow = kotak MeshBasic 0x0A1628 datar — satu-satunya layar kosong di kantor.
+- Fix: kanvas 256×160 + painter murni baru `parts/lobby_screen.js` (jam simulasi 900 54px, judul WFS · LOBBY, fase kantor via officeStatusAt, jumlah agen); material uiTexture+uiMaterial (tanpa tone-map shift); refs {lobbyCtx, lobbyTex, lobbyScreen} diekspos.
+- OfficeScene: redraw keyed per menit-sim (lobbyScreenKey, ~1 repaint/5 dtk nyata) — pola siklus 522/524.
+- Bug visual ditemukan via shot zoom: plane layar awal z=RCZ+.075 TERTANAM di dalam body monitor (body z 6.565..6.595) → layar tampil kosong; digeser ke z=RCZ+.12 (6.62) di depan wajah body.
+- Verifikasi deterministik via CDP: mesh plane 0.55×0.35 @ (7.6,1.35,6.62) ada di Scene, texture.image = kanvas, getImageData → 448 px teks putih (kanvas berisi teks live). Vitest 405 file / 4401 passed + 6 skipped; build PWA exit 0; dist→~/wfs-hq; e2e_err_probe OK (agents=26, init_failed=False, errs=[], shot 704KB, hygiene 41 refs 0 missing).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push — deploy key belum didaftarkan; (d) keputusan omniroute.
+
 ## 13/11/2026 18:05 WIB — Siklus 483: refresh shadow map kontrak WAKTU-NYATA (pola 481/482)
 - Gap: gate refresh shadow map masih frame-count (tiap 10 frame ≈ 6×/dtk @60FPS). Di GPU lambat frame ke-10 butuh 3–30 dtk → bayangan agen beku lama sebelum refresh.
 - Fix: shadowTimeGate (SHADOW_REFRESH_SEC=1/6) di parts/effects.js; OfficeScene __shadowGate persist antar frame, di-OR dgn gate frame-count lama (kedua jalur tetap diuji). Test baru effects_shadow_time_gate.test.js (4: paritas @60FPS, refresh @1FPS tiap frame, guard non-numerik, kontrak lama).

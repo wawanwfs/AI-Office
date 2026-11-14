@@ -5,6 +5,7 @@
 // Footprint meja didaftarkan ke OBSTACLES agar agen tak berjalan menembus meja.
 import { OBSTACLES } from './obstacles.js';
 import { uiTexture, uiMaterial } from './ui_colorspace.js';
+import { LS_W, LS_H, drawLobbyScreen } from './lobby_screen.js'; // siklus 525: layar lobi live
 
 export function createReception({ THREE, office, M, MB, drawResepsiLogo, makeLabel, buildChar, looksOf, blobMat }) {
   const reception = new THREE.Group();
@@ -55,8 +56,20 @@ export function createReception({ THREE, office, M, MB, drawResepsiLogo, makeLab
   const rcMonBody = new THREE.Mesh(new THREE.BoxGeometry(.6, .4, .03), M(0x2A2A2A));
   rcMonBody.position.set(RCX - .4, 1.35, RCZ + .08); reception.add(rcMonBody);
   // Screen glow
+  // Siklus 525: layar monitor resepsionis LIVE — dulu kotak 0x0A1628 datar
+  // (satu-satunya layar kosong di kantor). Kanvas 256×160 + painter murni
+  // lobby_screen.js (jam simulasi + fase kantor + jumlah agen); refs
+  // {lobbyCtx, lobbyTex} diekspos utk redraw per menit-sim dari OfficeScene.
   const rcScreenGlow = new THREE.Mesh(new THREE.BoxGeometry(.55, .35, .01), MB(0x0A1628));
   rcScreenGlow.position.set(RCX - .4, 1.35, RCZ + .06); reception.add(rcScreenGlow);
+  const lobbyCv = document.createElement('canvas'); lobbyCv.width = LS_W; lobbyCv.height = LS_H;
+  const lobbyCtx = lobbyCv.getContext('2d');
+  const lobbyTex = uiTexture(new THREE.CanvasTexture(lobbyCv)); lobbyTex.minFilter = THREE.LinearFilter;
+  if (lobbyCtx) drawLobbyScreen(lobbyCtx, { minutes: null, agents: 0 }); // frame awal aman ('--:--' — dipaint ulang OfficeScene saat init); guard harness tanpa ctx
+  // Wajah layar menghadap +Z ke pengunjung (menempel di wajah glow z+0.06 → 0.075)
+  const lobbyScreen = new THREE.Mesh(new THREE.PlaneGeometry(.55, .35), uiMaterial(new THREE.MeshBasicMaterial({ map: lobbyTex })));
+  lobbyScreen.position.set(RCX - .4, 1.35, RCZ + .12); // di depan wajah body monitor (body 6.565..6.595 — dulu 6.575 TERTANAM di dalam body)
+  reception.add(lobbyScreen);
 
   // Keyboard + mouse
   const rcKb = new THREE.Mesh(new THREE.BoxGeometry(.3, .02, .1), M(0x333333));
@@ -94,5 +107,5 @@ export function createReception({ THREE, office, M, MB, drawResepsiLogo, makeLab
 
   office.add(reception);
 
-  return { reception, rcLight, nexusChar, nxLabel, nexusAgent, rcGlow, rcScreenGlow };
+  return { reception, rcLight, nexusChar, nxLabel, nexusAgent, rcGlow, rcScreenGlow, lobbyCtx, lobbyTex, lobbyScreen };
 }

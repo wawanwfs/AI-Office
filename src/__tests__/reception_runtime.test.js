@@ -108,7 +108,11 @@ describe('createReception — meja resepsionis kantor 3D', () => {
     expect(logo.material.transparent).toBe(true)
     expect(logo.position.z).toBeCloseTo(RCZ + 0.31)
     const front = refs.reception.children.filter((k) => k.material && k.material.map)
-    expect(front.length).toBe(2) // dua sisi
+    // siklus 525: + layar lobi live (plane .55×.35 map lobbyTex menghadap +Z) → 3 sisi bermaterial map
+    expect(front.length).toBe(3)
+    const lobbyPlane = front.find((k) => k.geometry.args[0] === 0.55 && k.geometry.args[1] === 0.35)
+    expect(lobbyPlane).toBeTruthy()
+    expect(lobbyPlane.position).toMatchObject({ x: RCX - 0.4, y: 1.35, z: RCZ + 0.12 }) // siklus 525: di depan wajah body monitor (dulu 6.575 tertanam)
   })
 
   it('glow strip MB 0x4D9FFF di y=.05 + PointLight 0x4D9FFF intensity .4 distance 3.5 decay 2 di (RCX,.1,RCZ+.5)', async () => {

@@ -38,6 +38,7 @@ import { drawSky, drawGlassSheen } from './parts/sky_canvas.js';
 import { drawWoodFloor, drawAoStrip } from './parts/floor_canvas.js';
 import { drawCeiling } from './parts/ceiling_canvas.js';
 import { drawResepsiLogo, drawWallLogo, drawWallTitle, TITLE_NIGHT, TITLE_DAY, wallTaglineIdx } from './parts/logo_canvas.js';
+import { drawLobbyScreen, lobbyScreenKey } from './parts/lobby_screen.js'; // siklus 525: layar resepsionis live
 import { drawPoster } from './parts/poster_canvas.js';
 import { createWalls } from './parts/walls.js';
 import { drawBlobShadow } from './parts/blob_canvas.js';
@@ -1450,6 +1451,11 @@ let __posterSloganLast=-1;
 // siklus 524: poster dinding (8, furniture) — kanvas+tekstur, indeks teks terakhir
 const __wallPosters=__furn&&Array.isArray(__furn.wallPosterCanvases)?__furn.wallPosterCanvases:[];
 let __wallPosterLast=-1;
+// siklus 525: layar monitor resepsionis live — refs dari reception; kunci menit-sim
+// terakhir yang digambar (redraw hanya saat menit berganti, pola 518/519/523).
+const __lobbyCtx=__rc&&__rc.lobbyCtx?__rc.lobbyCtx:null;
+const __lobbyTex=__rc&&__rc.lobbyTex?__rc.lobbyTex:null;
+let __lobbyKeyLast=null;
 
 // --- TANAMAN BESI tambahan di sudut ---
 addPlant(11.6,-8.5,true);
@@ -1902,6 +1908,16 @@ function animate(){
     // lunch, meeting tetap hidup) tapi __light.apply TIDAK boleh menimpa palet
     // gelap — dulu ini menimpa neon tiap tick (mode gelap "perang" dgn siang).
     if(__sim.stepped){timeOfDay=__sim.time;if(!cyberpunkMode)__light.apply(timeOfDay);}
+    // siklus 525: layar resepsionis ikut jam simulasi — redraw hanya saat menit-sim
+    // berganti (kunci lobbyScreenKey; ~1 repaint / 5 dtk nyata, bukan tiap frame).
+    if(__lobbyCtx&&__lobbyTex){
+      const lk=lobbyScreenKey(timeOfDay);
+      if(lk!==__lobbyKeyLast){
+        __lobbyKeyLast=lk;
+        drawLobbyScreen(__lobbyCtx,{minutes:timeOfDay,agents:agentData.length});
+        __lobbyTex.needsUpdate=true;
+      }
+    }
   }
 
   // cincin denyut agent utama — via pulseFx (murni, diuji unit)
