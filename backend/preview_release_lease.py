@@ -10,6 +10,7 @@ from threading import Thread
 import time
 
 from preview_admission_v2 import AdmissionDenied
+from preview_boot_identity import current_boot_id, lease_matches_boot
 from preview_oci_approval import verify_release_approval
 from preview_oci_layout import sha256
 from preview_release_journal import RemoteReleasePolicy
@@ -45,13 +46,20 @@ def _signed_expiry(manager, record):
 
 
 def _write_deadline(manager, record, deadline):
+    boot_id = current_boot_id()
+    if boot_id is None:
+        raise AdmissionDenied("Linux boot identity unavailable for lease")
     with closing(manager._db()) as db:
-        return db.execute(
-            "UPDATE wfs_preview_instances SET lease_deadline=? "
+        updated = db.execute(
+            "UPDATE wfs_preview_instances SET lease_deadline=?,lease_boot_id=? "
             "WHERE project_id=? AND phase='running' AND api_container_id=? "
-            "AND oci_approval_sha256=? AND lease_deadline IS ?",
-            (deadline, record["project_id"], record["api_container_id"],
-             record["oci_approval_sha256"], record["lease_deadline"])).rowcount == 1
+            "AND oci_approval_sha256=? AND lease_deadline IS ? AND lease_boot_id IS ?",
+            (deadline, boot_id, record["project_id"], record["api_container_id"],
+             record["oci_approval_sha256"], record["lease_deadline"],
+             record["lease_boot_id"])).rowcount
+    if updated == 1:
+        record.update(lease_deadline=deadline, lease_boot_id=boot_id)
+    return updated == 1
 
 
 def _docker(manager, *args):
@@ -69,9 +77,9 @@ def _suspend(manager, record):
             claimed = db.execute(
                 "UPDATE wfs_preview_instances SET phase='uncertain',lease_deadline=0,lease_suspended=1 "
                 "WHERE project_id=? AND phase='running' AND api_container_id=? "
-                "AND oci_approval_sha256=? AND lease_deadline IS ?",
+                "AND oci_approval_sha256=? AND lease_deadline IS ? AND lease_boot_id IS ?",
                 (project, record["api_container_id"], record["oci_approval_sha256"],
-                 record["lease_deadline"])).rowcount
+                 record["lease_deadline"], record["lease_boot_id"])).rowcount
         if claimed != 1:
             raise AdmissionDenied("preview changed before suspension; reconcile")
     elif not (record["phase"] == "uncertain" and record["lease_suspended"]
@@ -110,10 +118,10 @@ def _watch(manager, record, *, startup=False):
     if old is None and not startup:
         if not _write_deadline(manager, record, 0):
             raise AdmissionDenied("preview changed before lease watch")
-        record["lease_deadline"] = 0
-    elif old is not None and old <= wall:
-        _suspend(manager, record)
-        return "lease-expired"
+    elif old is not None:
+        if old <= wall or not lease_matches_boot(record["lease_boot_id"]):
+            _suspend(manager, record)
+            return "lease-expired" if old <= wall else "lease-boot-changed"
     deadline = steady + min(LEASE_SECONDS, old - wall if old is not None else LEASE_SECONDS)
     next_check = steady
     signed_deadline = None
@@ -155,7 +163,6 @@ def _watch(manager, record, *, startup=False):
         persisted = min(expires, wall + deadline - now)
         if not _write_deadline(manager, record, persisted):
             raise AdmissionDenied("preview changed during lease renewal")
-        record["lease_deadline"] = persisted
         signed_deadline = expires
         next_check = now + POLL_SECONDS
     _suspend(manager, record)

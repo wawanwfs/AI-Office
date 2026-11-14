@@ -1006,6 +1006,64 @@ print('outbound IPv4 denied for both targets')
         "durable_journal_floor_preserved": True,
     }
 
+    from ci_phase32_systemd_preview import prove_systemd_preview
+    from preview_proxy import PreviewRegistryReader
+
+    reviewed_manifest_path = root / "systemd-review.json"
+    reviewed_manifest_path.write_text(json.dumps(reviewed_files))
+    p32_head = journal.append()
+    with journal.server() as systemd_port:
+        endpoint = journal.endpoint(systemd_port)
+        params = {
+            "project": names[0], "state-root": root,
+            "reviewed-manifest": reviewed_manifest_path,
+            "reviewer-public-key": reviewer_pem, "review-signature": signature,
+            "trusted-reviewer-fingerprint": fingerprint, "reviewer-policy": reviewer_policy,
+            "trusted-policy-sha256": hashlib.sha256(original_policy).hexdigest(),
+            "roster-root-public-key": roster_root_pem, "roster-root-signature": roster_root_sig,
+            "trusted-roster-root-fingerprint": roster_root_fp,
+            "witness-public-key": witness_pem, "witness-receipt": witness_receipt,
+            "witness-signature": witness_sig, "trusted-witness-fingerprint": witness_fp,
+            "trusted-checkpoint-sha256": hashlib.sha256(witness_receipt.read_bytes()).hexdigest(),
+            "log-head": log_head, "log-head-signature": log_signature, "log-public-key": log_public,
+            "log-leaf-inventory": log_inventory, "log-compact-proof": log_compact,
+            "trusted-log-head-sha256": hashlib.sha256(log_head.read_bytes()).hexdigest(),
+            "trusted-log-fingerprint": log_fingerprint, "trusted-previous-tree-size": 0,
+            "trusted-previous-tree-root": hashlib.sha256(b"").hexdigest(),
+            "oci-archive": release.archive_path, "oci-approval": release.approval_path,
+            "oci-signature": release.signature_path, "oci-witness-key": release.witness_key_path,
+            "trusted-oci-approval-sha256": release.approval_sha256,
+            "trusted-oci-witness-fingerprint": release.witness_fingerprint,
+            "release-policy-public-key": journal.policy_key,
+            "trusted-release-policy-fingerprint": journal.fingerprint,
+            "minimum-release-policy-sequence": MAX_RECORDS,
+            "trusted-release-policy-sha256": boundary,
+            "release-journal-url": endpoint.url, "release-journal-ca": endpoint.ca_path,
+            "release-journal-client-cert": endpoint.client_cert_path,
+            "release-journal-client-key": endpoint.client_key_path,
+            "release-journal-server-sha256": endpoint.server_fingerprint,
+            "release-journal-anchor-state": custody,
+        }
+        # CLI custody is independently provisioned outside --state-root.
+        import shutil
+        private_custody = Path(tempfile.mkdtemp(prefix="wfs-phase32-custody-"))
+        try:
+            independent_state = private_custody / "head.json"
+            shutil.copyfile(custody, independent_state)
+            independent_state.chmod(0o600)
+            params["release-journal-anchor-state"] = independent_state
+            cli = ["--approved"] + [
+                item for key, value in params.items() for item in ("--" + key, str(value))]
+            proof["phase32_systemd_lease"] = prove_systemd_preview(
+                cli=cli, token=tokens[0], project=names[0], port=ports[0], state=root,
+                registry=manager.status, reader=PreviewRegistryReader(root / "registry.db"),
+                check_health=lambda: health(ports[0], tokens[0], tokens[1]),
+                neighbor_check=lambda: health(ports[1], tokens[1], tokens[0]))
+            assert json.loads(independent_state.read_text())["sequence"] == p32_head
+            proof["phase32_systemd_lease"]["durable_journal_floor_preserved"] = True
+        finally:
+            shutil.rmtree(private_custody)
+
 finally:
     errors=[]
     for project,token in zip(names,tokens):

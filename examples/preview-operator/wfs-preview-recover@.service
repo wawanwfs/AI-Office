@@ -1,0 +1,19 @@
+[Unit]
+Description=WFS signed preview lease recovery for %i
+After=docker.service network-online.target
+Wants=docker.service network-online.target
+StartLimitIntervalSec=60
+StartLimitBurst=4
+
+[Service]
+Type=exec
+User=wfs-preview-operator
+SupplementaryGroups=docker
+ExecStart=/etc/wfs-preview/recover-%i
+KillMode=control-group
+Restart=on-failure
+RestartSec=1s
+TimeoutStopSec=10s
+
+[Install]
+WantedBy=multi-user.target

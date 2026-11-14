@@ -12,17 +12,19 @@ from preview_proxy import PreviewProxyUnavailable, PreviewRegistryReader
 
 
 @pytest.fixture
-def registered(tmp_path):
+def registered(tmp_path, monkeypatch):
+    monkeypatch.setattr(lease, "current_boot_id", lambda: "test-boot")
+    monkeypatch.setattr("preview_boot_identity.current_boot_id", lambda: "test-boot")
     registry = tmp_path / "registry.db"
     with closing(sqlite3.connect(registry, isolation_level=None)) as db:
         db.executescript("""
             CREATE TABLE wfs_preview_instances(
               project_id TEXT PRIMARY KEY, port INTEGER, phase TEXT, compose_name TEXT,
-              api_container_id TEXT, oci_approval_sha256 TEXT, lease_deadline REAL,
+              api_container_id TEXT, oci_approval_sha256 TEXT, lease_deadline REAL, lease_boot_id TEXT,
               lease_suspended INTEGER DEFAULT 0);
         """)
-        db.execute("INSERT INTO wfs_preview_instances VALUES(?,?,?,?,?,?,?,0)",
-                   ("tenant-a", 19010, "running", "test-project", "1"*64, "2"*64, None))
+        db.execute("INSERT INTO wfs_preview_instances VALUES(?,?,?,?,?,?,?,?,0)",
+                   ("tenant-a", 19010, "running", "test-project", "1"*64, "2"*64, None, None))
         db.row_factory = sqlite3.Row
         record = dict(db.execute("SELECT * FROM wfs_preview_instances").fetchone())
     return SimpleNamespace(_db=lambda: sqlite3.connect(registry, isolation_level=None),
@@ -130,3 +132,19 @@ def test_recovers_if_worker_died_after_claiming_suspension(registered, monkeypat
     with closing(manager._db()) as db:
         assert db.execute("SELECT phase FROM wfs_preview_instances").fetchone() == ("stopped",)
     assert stopped == ["3" * 64, "1" * 64]
+
+
+def test_previous_boot_lease_denied_even_with_future_deadline(registered, monkeypatch):
+    manager, record = registered
+    expiry = time.time() + 15
+    with closing(manager._db()) as db:
+        db.execute("UPDATE wfs_preview_instances SET lease_deadline=?,lease_boot_id=?",
+                   (expiry, "previous-boot"))
+    record.update(lease_deadline=expiry, lease_boot_id="previous-boot")
+    with pytest.raises(PreviewProxyUnavailable):
+        PreviewRegistryReader(manager.registry).port("tenant-a")
+    monkeypatch.setattr(lease, "_signed_expiry", lambda *_: pytest.fail("old boot renewed"))
+    suspended = []
+    monkeypatch.setattr(lease, "_suspend", lambda _, state: suspended.append(state))
+    assert lease._watch(manager, record) == "lease-boot-changed"
+    assert suspended == [record]

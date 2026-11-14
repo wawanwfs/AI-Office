@@ -686,3 +686,14 @@ stopping PostgreSQL.
 - [Phase 31 scoped gate](docs/REA_PHASE31.md)
 - [Phase 31 supervisor runbook](docs/PHASE31_SUPERVISED_LEASE_RUNBOOK.md)
 - [Next Phase 32 implementation prompt](docs/NEXT_PHASE32_PROMPT.md)
+
+## Phase 32 — recover the preview supervisor with systemd
+
+A recovery-only service can replace the whole supervisor and worker
+group without starting a new preview. Watched leases are bound to the
+current Linux boot, and an elapsed lease stops serving without deleting
+PostgreSQL data from the running database.
+
+- [Phase 32 scoped gate](docs/REA_PHASE32.md)
+- [Phase 32 systemd runbook](docs/PHASE32_SYSTEMD_LEASE_RUNBOOK.md)
+- [Next Phase 33 implementation prompt](docs/NEXT_PHASE33_PROMPT.md)

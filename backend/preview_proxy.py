@@ -12,6 +12,7 @@ import time
 
 import httpx
 from project_rbac import ident
+from preview_boot_identity import lease_matches_boot
 
 
 class PreviewProxyUnavailable(PermissionError):
@@ -51,7 +52,9 @@ class PreviewRegistryReader:
             raise PreviewProxyUnavailable("operator registry not readable") from exc
         if (row is None or row["phase"] != "running" or
                 ("lease_deadline" in row.keys() and row["lease_deadline"] is not None
-                 and not time.time() < row["lease_deadline"])):
+                 and (not time.time() < row["lease_deadline"]
+                      or "lease_boot_id" not in row.keys()
+                      or not lease_matches_boot(row["lease_boot_id"])))):
             raise PreviewProxyUnavailable("preview not running or not approved")
         port = row["port"]
         if isinstance(port, bool) or not isinstance(port, int) or not 19000 <= port <= 22000:
