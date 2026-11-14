@@ -917,3 +917,33 @@ export function posterBreath(elapsed, i = 0) {
   const micro = w(POSTER_BREATH_SEC * 2.72); // ≈9.11 dtk — rasio tak sinkron
   return 0.84 + 0.13 * main + 0.03 * micro; // 0.84…1.0, tak pudar habis
 }
+
+// ── Siklus 510: rak buku "hidup" — buku sesekali meluncur keluar & kembali ──
+// Rak buku dinding kiri belakang (bookshelf.js, ~40 buku warna acak) sepenuhnya
+// statis — dekorasi interior terakhir yang beku (setelah poster 509). Efek
+// bookNudge(elapsed, i): tiap buku punya siklus panjang ACAK-deterministik
+// (hash i) di dalam slot waktu global; dalam slot aktifnya buku meluncur keluar
+// (sumbu Z lokal rak = X dunia) ~0.09 unit lalu kembali — seperti diambil-ditaruh
+// oleh agen. Tak sinkron antar buku & vs 14 siklus lain (fase hash × golden).
+export const BOOK_CYCLE_SEC = 37.0;   // periode slot global semua buku
+export const BOOK_STAGGER_SEC = 0.9;  // panjang gerakan keluar-masuk per buku
+
+// hash kecil deterministik 0…1 dari indeks buku (bukan Math.random — replays uji)
+const bookHash = (i) => {
+  const x = Math.sin((Number.isFinite(i) ? i : 0) * 127.1 + 311.7) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+export function bookNudge(elapsed, i = 0) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0;
+  const idx = Number.isFinite(i) ? i : 0;
+  const h = bookHash(idx);
+  // fase personal: offset slot hash → buku aktif di detik berbeda dlm slot global
+  const phase = ((t / BOOK_CYCLE_SEC) + h) % 1;
+  // hanya sebagian kecil slot aktif (≈ 1 dari ~7 buku per slot): ambang hash
+  if (h > 0.15) return 0;
+  // gerakan keluar-masuk dalam slot: sin setengah-siklus → 0 → 1 → 0
+  const s = Math.sin(phase * Math.PI * 2);
+  const nudge = Math.max(0, s) * Math.max(0, s) * (s > 0 ? 1 : 0); // smooth 0…1
+  return 0.09 * clamp01(nudge);
+}

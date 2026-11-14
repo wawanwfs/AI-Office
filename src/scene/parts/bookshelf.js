@@ -24,6 +24,7 @@ export function createBookshelf({ THREE, office, M, rng, blobMat }) {
       const bw = .09 + rng.r(0, .07);
       const bk = new THREE.Mesh(new THREE.BoxGeometry(.34, rng.r(.28, .4), bw), M(rng.pick(bookCols)));
       bk.position.set(SBX + .02, .35 + lvl * .55 + .17, bz + bw / 2); shelf.add(bk);
+      bk.userData = bk.userData || {}; bk.userData.__book = bk.position.x; // siklus 510: basis X utk bookNudge
       books.push(bk);
       bz += bw + .015;
     }
