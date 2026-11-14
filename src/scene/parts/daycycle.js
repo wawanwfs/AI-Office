@@ -76,6 +76,24 @@ export function createLighting(ctx) {
     if (skyCanvas.__needsUpdate) skyCanvas.__needsUpdate();
   }
 
+  // ── Siklus 521: awan langit siang bergerak (cloudDrift) ──
+  // Paritas paintStars: repaint kanvas skyTex SIANG saja tiap SKY_DAY_REDRAW_SEC
+  // (3 dtk — drift awan lambat, cukup; hemat GPU sama dgn bintang 501). starTime
+  // analog skyTime = akumulasi detik siang → posisi awan kontinu. drawSky(elapsed)
+  // menerima skyTime; guard skyNight (siang saja) & skyCanvas (harness lama aman).
+  const SKY_DAY_REDRAW_SEC = 3;
+  let skyAcc = 0;
+  let skyTime = 0;
+  function paintClouds(dt) {
+    if (!skyCanvas || skyNight) return;
+    skyAcc += dt; skyTime += dt;
+    if (skyAcc < SKY_DAY_REDRAW_SEC) return;
+    skyAcc = 0;
+    const c2 = skyCanvas.getContext('2d');
+    drawSky(c2, skyTime);
+    if (skyCanvas.__needsUpdate) skyCanvas.__needsUpdate();
+  }
+
   // ── Siklus 165: dinding kantor ikut siang↔malam ──
   // Dinding atas & wainscot = MeshBasicMaterial (tidak bergantung pencahayaan)
   // dgn tekstur palet siang — tanpa ini dinding tetap terang penuh saat malam
@@ -209,7 +227,7 @@ export function createLighting(ctx) {
     // lama. Callback opsional (tanpa mode manual — slider React punya jalurnya).
     onTime && onTime(min);
   }
-  return { apply, resync, paintStars, get minutes() { return current; }, get skyNight() { return skyNight; }, get wallNight() { return wallNight; }, get trimNight() { return trimNight; }, get boardNight() { return boardNight; }, get titleNight() { return titleNight; }, get ceilNight() { return ceilNight; } };
+  return { apply, resync, paintStars, paintClouds, get minutes() { return current; }, get skyNight() { return skyNight; }, get wallNight() { return wallNight; }, get trimNight() { return trimNight; }, get boardNight() { return boardNight; }, get titleNight() { return titleNight; }, get ceilNight() { return ceilNight; } };
 }
 
 // ── Mode neon: kumpulan "saklar" yang didaftarkan, bukan pemindaian seluruh scene ──

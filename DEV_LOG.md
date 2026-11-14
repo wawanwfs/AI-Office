@@ -8103,3 +8103,10 @@
 - Test baru effects_glass_shimmer.test.js (5): guard netral, rentang ×basis .10…0.26 tak padam, kontrak rumus eksak (kekeliruan fase i=0 dianggap 0 padahal hash 0.5 → tertangkap test & dikoreksi), tak sinkron antar panel, tak sinkron vs 3.0 dtk.
 - Verifikasi: vitest 400 file, 4350 passed + 6 skipped (+5, +1 file); build PWA exit 0; dist → ~/wfs-hq; e2e_err.py OK (agents=26, zone=5, cam/wall=True, init_failed=False, errs=[], shot 692KB >500KB, colors=10604 nonbg=0.992, hygiene 41 refs 0 missing).
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
+## 14/11/2026 16:01 WIB — Siklus 521: awan langit jendela siang bergerak (cloudDrift, efek ke-26)
+- Gap visual: kanvas skyTex siang (drawSky, 256x128, dipakai 15 jendela depan/kanan/belakang/kiri) digambar sekali - 4 awan ellipse putih beku permanen; malam sudah hidup (bintang kedip 501) tapi siang beku (efek ke-26).
+- Fix: SKY_CLOUDS/SKY_CLOUD_SPEED [1.6,2.4,1.1,2.0] px/dtk + cloudOffset(i, elapsed) murni di sky_canvas.js - drift kanan, wrap modulo 256+lebar (keluar kanan -> masuk kiri), guard non-finite -> posisi awal; drawSky(x, elapsed=0) default 0 = posisi awal identik kode lama (regresi test posisi awan lolos).
+- daycycle.js: paintClouds(dt) paritas paintStars 501 - repaint kanvas SIANG saja tiap SKY_DAY_REDRAW_SEC=3 dtk dgn skyTime akumulasi (kontinu), guard skyNight & skyCanvas; OfficeScene: panggil paintClouds(delta) sebaris paintStars.
+- Test baru sky_cloud_drift.test.js (11): posisi awal regresi, guard non-finite, deterministik + drift positif, laju antar-awan beda, rentang wrap, struktur 4 ellipse/4 fill, elapsed mengubah posisi, paintClouds repaint 3 dtk siang + NO-OP malam + guard harness.
+- Verifikasi: vitest 401 file, 4361 passed + 6 skipped (+11, +1 file); build PWA exit 0; dist -> ~/wfs-hq; e2e_err.py OK (agents=26, zone=5, init_failed=False, errs=[], shot 687KB, colors=10246 nonbg=0.992, hygiene 41 refs 0 missing).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
