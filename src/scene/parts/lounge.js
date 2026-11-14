@@ -66,7 +66,9 @@ export function createLounge(ctx) {
   magRack.position.set(11.9, .225, 7.0); lounge.add(magRack);
   const mags = [0xF4511E, 0x1E88E5, 0x43A047].map((c, i) => {
     const b = new THREE.Mesh(new THREE.BoxGeometry(.06, .22, .28), M(c));
-    b.position.set(11.72, .36, 7.0 - (i - 1) * .0); b.rotation.z = 0; lounge.add(b); return b;
+    b.position.set(11.72, .36, 7.0 - (i - 1) * .0); b.rotation.z = 0; lounge.add(b);
+    (b.userData = b.userData || {}).__magBasis = 0; // siklus 513: basis sudut utk magTilt
+    return b;
   });
   const tvFrame = new THREE.Mesh(new THREE.BoxGeometry(.06, .75, 1.3), M(0x101418));
   tvFrame.position.set(12.35, 2.0, 6.4); lounge.add(tvFrame);

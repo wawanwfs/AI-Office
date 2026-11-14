@@ -988,3 +988,33 @@ export function zoneBreath(elapsed, i = 0) {
   const micro = w(ZONE_BREATH_SEC * 2.6); // ≈8.32 dtk — rasio tak sinkron
   return 0.82 + 0.13 * main + 0.05 * micro; // 0.82…1.0
 }
+
+// ── Siklus 513: majalah di meja lounge & sofa sesekali "dibaca" (magTilt) ──
+// 5 majalah flat (3 di magRack lounge + 2 di sofa L3) condong konstan 0° —
+// benda terakhir di area santai yang beku (setelah rak buku 510). Efek
+// magTilt(elapsed, i): tiap majalah sesekali terangkat & terbuka sedikit
+// (rotasi Z lokal 0 → −0.18 rad = diangkat-dibaca) lalu kembali rata — pola
+// bookNudge 510: slot global panjang + fase hash deterministik, hanya sebagian
+// kecil aktif per slot (≈15%), tak sinkron antar majalah & vs 17 siklus lain.
+export const MAG_CYCLE_SEC = 29.0;   // periode slot global semua majalah
+export const MAG_TILT_RAD = 0.18;    // sudut angkat maksimum majalah
+
+// hash kecil deterministik 0…1 dari indeks (bukan Math.random — replays uji aman)
+const magHash = (i) => {
+  const x = Math.sin((Number.isFinite(i) ? i : 0) * 91.7 + 27.19) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+export function magTilt(elapsed, i = 0) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0;
+  const idx = Number.isFinite(i) ? i : 0;
+  const h = magHash(idx);
+  // fase personal: offset slot hash → majalah aktif di detik berbeda dlm slot
+  const phase = ((t / MAG_CYCLE_SEC) + h) % 1;
+  // hanya sebagian kecil majalah aktif per slot (≈15%)
+  if (h > 0.15) return 0;
+  // gerakan angkat-membaca dalam slot: sin setengah-siklus → 0 → 1 → 0
+  const s = Math.sin(phase * Math.PI * 2);
+  const lift = Math.max(0, s) * Math.max(0, s); // smooth 0…1
+  return MAG_TILT_RAD * lift;
+}

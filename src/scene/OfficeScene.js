@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath, downlightBreath, serverHum, floorLampBreath, receptionLightBreath, tubeLightBreath, pendantBreath, panelBreath, cafeGlowBreath, rackEdgeBreath, badgeBreath, screenGlowBreath, posterBreath, bookNudge, trophyPulse, zoneBreath } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath, downlightBreath, serverHum, floorLampBreath, receptionLightBreath, tubeLightBreath, pendantBreath, panelBreath, cafeGlowBreath, rackEdgeBreath, badgeBreath, screenGlowBreath, posterBreath, bookNudge, trophyPulse, zoneBreath, magTilt } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -1422,6 +1422,10 @@ const __posters=[];
 office.traverse((o)=>{ if(o.isMesh&&o.userData&&o.userData.__poster) __posters.push(o); });
 const __zonePatches=[];
 office.traverse((o)=>{ if(o.isMesh&&o.userData&&o.userData.__zone!==undefined) __zonePatches.push(o); });
+// Siklus 513: semua majalah (3 lounge + 2 sofa) dikumpulkan sekali di init —
+// traverse per frame mahal; urutan stabil utk fase hash magTilt.
+const __mags=[];
+office.traverse((o)=>{ if(o.isMesh&&o.userData&&Number.isFinite(o.userData.__magBasis)) __mags.push(o); });
 
 // --- TANAMAN BESI tambahan di sudut ---
 addPlant(11.6,-8.5,true);
@@ -2011,6 +2015,11 @@ function animate(){
     // sekali di init (traverse sekali), × basis opasitas zona (__zone).
     if(__zonePatches.length){
       __zonePatches.forEach((p,i)=>{ if(p&&p.material) p.material.opacity=(p.userData.__zone||.55)*zoneBreath(elapsed,i); });
+    }
+    // siklus 513: majalah lounge & sofa sesekali "dibaca" (magTilt) — angkat &
+    // kembali rata; basis sudut di userData.__magBasis (0 = flat).
+    if(__mags.length){
+      __mags.forEach((m,i)=>{ if(m) m.rotation.z=(m.userData.__magBasis||0)+magTilt(elapsed,i); });
     }
     ringMat.opacity=fx.ring;
     helmetVisor.material.opacity=fx.visor;

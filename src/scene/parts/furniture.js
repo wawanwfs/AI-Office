@@ -77,6 +77,7 @@ export function createFurniture(ctx /* hooks disiapkan utk ekstensi */) {
   [[0xff5252, -0.15, 0.2], [0x448aff, 0.15, -0.15]].forEach(([c, dz, ry]) => {
     const mag = box(0.3, 0.016, 0.22, M(c), SX - 0.72, 0.4, SZ + dz, sofa);
     mag.rotation.y = ry;
+    (mag.userData = mag.userData || {}).__magBasis = 0; // siklus 513: basis sudut utk magTilt
   });
   sofa.position.y = 1.20; // Lantai 3
   office.add(sofa);
