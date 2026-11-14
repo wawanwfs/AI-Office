@@ -80,7 +80,7 @@ class JournalFixture:
             setattr(self, role.replace("-", "_") + "_pin",
                     sha256(cert.public_bytes(serialization.Encoding.DER)))
 
-    def append(self, decision="allow", *, now=None):
+    def append(self, decision="allow", *, now=None, lifetime=540):
         if now is None:
             now = int(time.time())
         raw = json.dumps({
@@ -88,7 +88,7 @@ class JournalFixture:
             "previous_sha256": self.hashes[-1] if self.hashes else GENESIS,
             "manifest_digest": self.manifest, "approval_sha256": self.approval,
             "platform": PLATFORM, "decision": decision,
-            "issued_at": now, "expires_at": now + 540,
+            "issued_at": now, "expires_at": now + lifetime,
         }, sort_keys=True).encode("ascii")
         self.entries.append(encode_entry(raw, base64.b64encode(
             self.signer.sign(checkpoint_message(raw, chained=True)))))

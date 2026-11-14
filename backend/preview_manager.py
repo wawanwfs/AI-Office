@@ -115,6 +115,10 @@ class TemplatePreviewManager:
                 db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN oci_approval_sha256 TEXT")
             if "api_container_id" not in columns:
                 db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN api_container_id TEXT")
+            if "lease_deadline" not in columns:
+                db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN lease_deadline REAL")
+            if "lease_suspended" not in columns:
+                db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN lease_suspended INTEGER NOT NULL DEFAULT 0")
         self._enforce_epoch(self.authority.verify(self.reviewed_manifest))
 
     def _enforce_epoch(self, decision):
@@ -255,7 +259,7 @@ class TemplatePreviewManager:
             db.execute("UPDATE wfs_preview_instances SET phase=? WHERE project_id=?",
                        (state,project_id))
 
-    def _claim_transition(self, project_id, allowed):
+    def _claim_transition(self, project_id, allowed, *, require_unwatched=False):
         """Fenced state transition: at most one concurrent Docker mutation.
 
         begin-immediate makes a second operator/worker fail closed rather
@@ -265,10 +269,12 @@ class TemplatePreviewManager:
         db=self._db()
         try:
             db.execute("BEGIN IMMEDIATE")
-            row=db.execute("SELECT phase FROM wfs_preview_instances WHERE project_id=?",
+            row=db.execute("SELECT phase,lease_deadline FROM wfs_preview_instances WHERE project_id=?",
                            (project_id,)).fetchone()
             if row is None or row["phase"] not in allowed:
                 raise PreviewDenied("preview state changed or is uncertain; reconcile first")
+            if require_unwatched and row["lease_deadline"] is not None:
+                raise PreviewDenied("restart denied for watched preview; suspend and start with fresh approval")
             db.execute("UPDATE wfs_preview_instances SET phase='uncertain' WHERE project_id=?",
                        (project_id,))
             db.commit()
@@ -373,7 +379,8 @@ class TemplatePreviewManager:
                     db.execute(
                         "UPDATE wfs_preview_instances SET api_image_id=?,ingress_image_id=?, "
                         "api_frontend_sealed=1,oci_manifest_digest=?,oci_config_digest=?,oci_approval_sha256=?, "
-                        "api_container_id=NULL WHERE project_id=? AND phase='uncertain'",
+                        "api_container_id=NULL,lease_deadline=NULL,lease_suspended=0 "
+                        "WHERE project_id=? AND phase='uncertain'",
                         (image_id, ingress["image_id"], checked.manifest_digest,
                          checked.config_digest, self.oci_release.approval_sha256, project_id))
                 record=self.status(project_id)
@@ -423,7 +430,7 @@ class TemplatePreviewManager:
                 if self._runtime_id(record, token) != record["api_container_id"]:
                     raise AdmissionDenied("registered preview API container changed")
                 self._check_release_policy(checked)
-                self._claim_transition(project_id,("running",))
+                self._claim_transition(project_id,("running",),require_unwatched=True)
                 self._invoke(record,token,["restart"])
                 if self._runtime_id(record, token) != record["api_container_id"]:
                     raise AdmissionDenied("restarted preview API container changed")
@@ -433,7 +440,7 @@ class TemplatePreviewManager:
                         "WHERE project_id=? AND phase='uncertain'",
                         (self.oci_release.approval_sha256, project_id))
         else:
-            self._claim_transition(project_id,("running",))
+            self._claim_transition(project_id,("running",),require_unwatched=True)
             self._invoke(record,token,["restart"])
             self._phase(project_id,"running")
         return self.status(project_id)
@@ -442,7 +449,7 @@ class TemplatePreviewManager:
         record=self.status(project_id)
         if allow_data_loss is not True:
             raise PreviewDenied("explicit disposable volume deletion approval required")
-        if record["phase"]=="stopped":
+        if record["phase"]=="stopped" and not record["lease_suspended"]:
             return record
         if record["phase"]=="reserved":
             # Never started, so there is no Docker volume to delete.
@@ -452,11 +459,12 @@ class TemplatePreviewManager:
             raise AdmissionDenied("sealed preview operator requires Linux memfd")
         if not isinstance(token,str) or len(token)<32 or not token.isascii():
             raise PreviewDenied("operator-supplied ephemeral token required")
-        self._claim_transition(project_id,("running","uncertain"))
+        self._claim_transition(project_id,("running","uncertain","stopped")
+                               if record["lease_suspended"] else ("running","uncertain"))
         self._invoke(record,token,["down","--volumes","--remove-orphans"])
         self.snapshots.discard_after_authorized_stop(project_id)
         with closing(self._db()) as db:
             db.execute(
-                "UPDATE wfs_preview_instances SET phase='stopped',api_container_id=NULL "
-                "WHERE project_id=? AND phase='uncertain'", (project_id,))
+                "UPDATE wfs_preview_instances SET phase='stopped',api_container_id=NULL, "
+                "lease_deadline=NULL,lease_suspended=0 WHERE project_id=? AND phase='uncertain'", (project_id,))
         return self.status(project_id)

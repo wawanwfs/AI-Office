@@ -8,6 +8,7 @@ from contextlib import closing
 from pathlib import Path
 import re
 import sqlite3
+import time
 
 import httpx
 from project_rbac import ident
@@ -41,15 +42,18 @@ class PreviewRegistryReader:
         try:
             with closing(sqlite3.connect(self.uri, uri=True, timeout=2)) as db:
                 db.execute("PRAGMA query_only=ON")
+                db.row_factory = sqlite3.Row
                 row = db.execute(
-                    "SELECT port, phase FROM wfs_preview_instances WHERE project_id=?",
+                    "SELECT * FROM wfs_preview_instances WHERE project_id=?",
                     (project_id,),
                 ).fetchone()
         except sqlite3.Error as exc:
             raise PreviewProxyUnavailable("operator registry not readable") from exc
-        if not row or row[1] != "running":
+        if (row is None or row["phase"] != "running" or
+                ("lease_deadline" in row.keys() and row["lease_deadline"] is not None
+                 and not time.time() < row["lease_deadline"])):
             raise PreviewProxyUnavailable("preview not running or not approved")
-        port = row[0]
+        port = row["port"]
         if isinstance(port, bool) or not isinstance(port, int) or not 19000 <= port <= 22000:
             raise PreviewProxyUnavailable("operator registry port out of range")
         return port

@@ -32,7 +32,7 @@ def frontend_sha256(frontend):
                              separators=(",", ":"), allow_nan=False).encode("ascii"))
 
 
-def verify_release(archive, *, approval_path, signature_path,
+def verify_release_approval(*, approval_path, signature_path,
                    witness_key_path, trusted_approval_sha256,
                    trusted_witness_fingerprint, trusted_reviewer_fingerprint,
                    trusted_review_sha256, review_path=None, review_manifest=None,
@@ -90,7 +90,12 @@ def verify_release(archive, *, approval_path, signature_path,
     if (not isinstance(frontend, dict) or not isinstance(sources, dict)
             or not hmac.compare_digest(frontend_sha256(frontend), approval["frontend_sha256"])):
         raise AdmissionDenied("OCI approval does not match reviewed frontend inventory")
-    return verify_layout(archive, frontend=frontend, api_sha256=sources.get("api.py"),
+    return approval, frontend, sources.get("api.py")
+
+
+def verify_release(archive, **options):
+    approval, frontend, api_sha256 = verify_release_approval(**options)
+    return verify_layout(archive, frontend=frontend, api_sha256=api_sha256,
                          approved_manifest=approval["manifest_digest"])
 
 

@@ -188,6 +188,69 @@ def reviewed_snapshot_runner(argv,**kwargs):
     deadline=kwargs.pop("timeout",120)
     return subprocess.run(argv,timeout=240 if deadline>240 else deadline,**kwargs)
 
+def prove_release_lease(project, port, token, other, mode, on_active):
+    from concurrent.futures import ThreadPoolExecutor
+    from preview_release_lease import watch_preview_release
+    from preview_proxy import PreviewRegistryReader, PreviewProxyUnavailable
+
+    record = manager.status(project)
+    compose = record["compose_name"]
+    database = manager._invoke(record, token, ["ps", "-q", "db"]).strip()
+    assert database
+    db_cmd = ["docker", "exec", database, "psql", "-U", "wfsdemo",
+              "-d", "wfsdemo", "-Atq", "-c"]
+
+    def sql(statement):
+        return subprocess.run(db_cmd + [statement], check=True, text=True,
+                              capture_output=True, timeout=15).stdout.strip()
+
+    sql("CREATE TABLE phase30_probe (value integer); INSERT INTO phase30_probe VALUES (30)")
+    sequence = journal.append(lifetime=12 if mode == "expiry" else 540)
+    with journal.server() as journal_port:
+        policy = RemoteReleasePolicy(journal.endpoint(journal_port), journal.policy_key,
+                                     journal.fingerprint, MAX_RECORDS, boundary,
+                                     custody_path=custody)
+        watcher = open_manager(release, policy)
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(watch_preview_release, watcher, project)
+            try:
+                for _ in range(50):
+                    if future.done():
+                        raise AssertionError(f"watch ended before readiness: {future.result()}")
+                    deadline = watcher.status(project)["lease_deadline"]
+                    if deadline and deadline > time.time():
+                        break
+                    time.sleep(.1)
+                else:
+                    raise AssertionError("lease was not renewed")
+                assert PreviewRegistryReader(watcher.registry).port(project) == port
+                assert health(port, token, other)
+                on_active()
+            finally:
+                if mode == "revoke":
+                    journal.append("revoke")
+            result = future.result(timeout=25)
+            assert result in ("release-check-denied", "lease-expired")
+            if mode == "revoke":
+                assert result == "release-check-denied"
+        final = watcher.status(project)
+        assert final["phase"] == "stopped" and final["lease_suspended"] == 1
+        assert sql("SELECT value FROM phase30_probe") == "30"
+        assert json.loads(custody.read_text())["sequence"] == sequence + (mode == "revoke")
+        try:
+            PreviewRegistryReader(watcher.registry).port(project)
+            raise AssertionError("gateway kept admitting suspended preview")
+        except PreviewProxyUnavailable:
+            pass
+        with httpx.Client(timeout=1, trust_env=False) as client:
+            try:
+                client.get(f"http://127.0.0.1:{port}/api/health").raise_for_status()
+                raise AssertionError("suspended preview still reachable")
+            except (httpx.TransportError, httpx.HTTPStatusError):
+                pass
+        assert watcher.status(project)["compose_name"] == compose
+
+
 def open_manager(oci_release=None, release_policy=None):
     return TemplatePreviewManager(root/"registry.db",
         reviewed_root/"compose.yaml",enabled=True,reviewed_files=reviewed_files,
@@ -806,13 +869,25 @@ print('outbound IPv4 denied for both targets')
     finally:
         reviewer_policy.write_bytes(original_policy)
     assert manager.status(names[0])["phase"]=="running"
+    prove_release_lease(names[0], ports[0], tokens[0], tokens[1], "revoke",
+                        lambda: health(ports[1], tokens[1], tokens[0]))
+    assert health(ports[1], tokens[1], tokens[0])
+    prove_release_lease(names[1], ports[1], tokens[1], tokens[0], "expiry", lambda: None)
+    proof["phase30_release_lease"] = {
+        "signed_revocation_stops_ingress_and_api": True,
+        "signed_expiry_stops_ingress_and_api": True,
+        "postgres_data_retained_in_both_tenants": True,
+        "other_tenant_unaffected_by_first_suspension": True,
+        "gateway_and_loopback_fail_closed": True,
+        "durable_journal_floor_preserved": True,
+    }
 
 finally:
     errors=[]
     for project,token in zip(names,tokens):
         try:
             status=manager.status(project)
-            if status["phase"] in ("running","uncertain"):
+            if status["phase"] in ("running","uncertain") or status["lease_suspended"]:
                 manager.stop(project,token,allow_data_loss=True)
             if manager.status(project)["phase"]=="stopped":
                 continue

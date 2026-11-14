@@ -665,3 +665,13 @@ only the runtime operator can connect to its Docker socket.
 - [Phase 29 scoped gate](docs/REA_PHASE29.md)
 - [Phase 29 BuildKit runbook](docs/PHASE29_ROOTLESS_BUILDKIT_RUNBOOK.md)
 - [Next Phase 30 implementation prompt](docs/NEXT_PHASE30_PROMPT.md)
+
+## Phase 30 — bounded preview release lease
+
+An opt-in local operator watch renews a bounded lease against the
+existing mTLS journal. Revoked or expired approvals suspend the tenant's
+ingress and API without deleting volumes or stopping PostgreSQL.
+
+- [Phase 30 scoped gate](docs/REA_PHASE30.md)
+- [Phase 30 lease runbook](docs/PHASE30_RELEASE_LEASE_RUNBOOK.md)
+- [Next Phase 31 implementation prompt](docs/NEXT_PHASE31_PROMPT.md)
