@@ -29,7 +29,10 @@ export function createZones(ctx){
     const zoneFloorY = { 1: L1_Y, 2: L2_Y, 3: L3_Y }[floorOf(z.z)];
     const patch=new THREE.Mesh(new THREE.BoxGeometry(z.w,.02,z.d),
       new THREE.MeshLambertMaterial({color:z.color,transparent:true,opacity:z.op||.55}));
-    patch.position.set(z.x, zoneFloorY + .015, z.z);patch.receiveShadow=true;office.add(patch);
+    patch.position.set(z.x, zoneFloorY + .015, z.z);patch.receiveShadow=true;
+    patch.userData = patch.userData || {}; // stub test tanpa init userData
+    patch.userData.__zone = z.op || .55; // siklus 512: basis opasitas utk zoneBreath
+    office.add(patch);
     const zc=document.createElement('canvas');zc.width=512;zc.height=96;
     const zx=zc.getContext('2d');
     zx.fillStyle='rgba(5,10,22,0.75)';

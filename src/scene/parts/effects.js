@@ -970,3 +970,21 @@ export function trophyPulse(elapsed) {
     ringIn: 0.05 + 0.03 * w(TROPHY_RING_SEC),   // 0.05…0.08, cincin dalam
   };
 }
+
+// ── Siklus 512: patch warna zona lantai bernapas (zoneBreath) ──
+// 5 patch zona (DEV DESK, MEETING, WELCOME & LOUNGE, CAFÉ, SERVER ROOM) punya
+// opasitas konstan — area warna terakhir yang beku (setelah trofi 511).
+// zoneBreath(elapsed, i): napas halus 0.82…1.0 × basis opasitas zona, gelombang
+// utama 3.2 dtk + mikro 8.32 dtk (rasio 2.6× tak sinkron vs 16 siklus lain),
+// stagger fase 0.55 dtk per zona agar bergantian hidup. Tak pernah padam
+// (fungsional: penanda area) — cukup halus agar tak melelahkan mata.
+export const ZONE_BREATH_SEC = 3.2; // gelombang utama napas zona
+
+export function zoneBreath(elapsed, i = 0) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0; // netral (sin 0 → 0.5)
+  const idx = Number.isFinite(i) ? i : 0;
+  const w = (sec) => 0.5 + 0.5 * Math.sin(((t - idx * 0.55) / sec) * Math.PI * 2);
+  const main = w(ZONE_BREATH_SEC);
+  const micro = w(ZONE_BREATH_SEC * 2.6); // ≈8.32 dtk — rasio tak sinkron
+  return 0.82 + 0.13 * main + 0.05 * micro; // 0.82…1.0
+}
