@@ -10,8 +10,8 @@ import httpx
 from preview_proxy import PreviewProxyUnavailable
 
 
-def _command(*args, timeout=25):
-    result = subprocess.run(args, text=True, capture_output=True, timeout=timeout)
+def _command(*args):
+    result = subprocess.run(args, text=True, capture_output=True, timeout=25)
     if result.returncode:
         raise RuntimeError(f"{args[0]} command failed: {result.stderr[-2000:]}")
     return result.stdout.strip()
