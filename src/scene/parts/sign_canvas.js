@@ -4,14 +4,23 @@
 //  - drawWelcomeSign(ctx)    : papan sambutan dinding kiri (1024×320)
 // Urutan & parameter perintah gambar identik kode inline lama di OfficeScene.
 
-export function drawMenuBoard(c) {
+export function drawMenuBoard(c, highlightIdx = -1) {
+  // Siklus 518: baris menu ter-highlight (indeks 0…2, default -1 = tak ada)
+  // digambar lebih terang — berganti tiap MENU_HIGHLIGHT_SEC via menuHighlight().
+  const hi = Number.isInteger(highlightIdx) && highlightIdx >= 0 && highlightIdx < 3 ? highlightIdx : -1;
   c.fillStyle = '#1A1A2E'; c.fillRect(0, 0, 256, 140);
   c.strokeStyle = '#F59E0B'; c.lineWidth = 6; c.strokeRect(3, 3, 250, 134);
   c.font = 'bold 26px sans-serif'; c.fillStyle = '#F59E0B'; c.fillText('WFS CAFÉ', 34, 40);
-  c.font = '15px monospace'; c.fillStyle = '#EEE';
-  c.fillText('Kopi susu      15k', 26, 75);
-  c.fillText('Americano     18k', 26, 100);
-  c.fillText('Matcha latte  22k', 26, 125);
+  c.font = '15px monospace';
+  const rows = [
+    ['Kopi susu      15k', 75],
+    ['Americano     18k', 100],
+    ['Matcha latte  22k', 125],
+  ];
+  rows.forEach(([txt, y], i) => {
+    c.fillStyle = i === hi ? '#FFE082' : '#EEE'; // highlight kuning hangat vs putih
+    c.fillText(txt, 26, y);
+  });
 }
 
 export function drawPoster(p, txt, col) {

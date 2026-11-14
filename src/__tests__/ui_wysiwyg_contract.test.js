@@ -24,7 +24,7 @@ const UI_SITES = [
   ['scene/OfficeScene.js', /const btex=uiTexture\(new THREE\.CanvasTexture\(bc\)\)/], // bubble chat
   ['scene/parts/furniture.js', /map: uiTexture\(new THREE\.CanvasTexture\(cv\)\)/], // poster dinding
   ['scene/parts/decor.js', /map: uiTexture\(new THREE\.CanvasTexture\(pc\)\)/], // poster motivasi
-  ['scene/parts/cafe.js', /map: uiTexture\(new THREE\.CanvasTexture\(mbc\)\)/], // menu board
+  ['scene/parts/cafe.js', /const menuTex = uiTexture\(new THREE\.CanvasTexture\(mbc\)\)/], // menu board (siklus 518: tex disimpan utk redraw highlight)
   ['scene/parts/reception.js', /uiTexture\(t\); return t/], // logo resepsionis
   ['scene/parts/walls.js', /lt\.anisotropy=4;uiTexture\(lt\)/], // logo dinding
   ['scene/parts/walls.js', /map:uiTexture\(new THREE\.CanvasTexture\(nc\)\)/], // papan sambutan
@@ -47,7 +47,7 @@ const UI_MATS = [
   ['scene/OfficeScene.js', /new THREE\.Sprite\(uiMaterial\(new THREE\.SpriteMaterial\(\{map:btex/],
   ['scene/parts/furniture.js', /const plane = new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{ map: uiTexture\(new THREE\.CanvasTexture\(cv\)\), transparent: true \}\)\)/], // poster dinding
   ['scene/parts/decor.js', /const pm = new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{ map: uiTexture\(new THREE\.CanvasTexture\(pc\)\), transparent: true \}\)\)/], // poster motivasi
-  ['scene/parts/cafe.js', /const mb = new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{ map: uiTexture\(new THREE\.CanvasTexture\(mbc\)\) \}\)\)/], // menu board
+  ['scene/parts/cafe.js', /const mb = new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{ map: menuTex \}\)\)/], // menu board
   ['scene/parts/reception.js', /const rcLogoMesh = new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{ map: wfsLogoTex, transparent: true \}\)\)/], // logo resepsionis
   ['scene/parts/walls.js', /const logo=new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{map:lt\}\)\)/], // logo dinding
   ['scene/parts/walls.js', /const sign=new THREE\.Mesh\([^;]*?uiMaterial\(new THREE\.MeshBasicMaterial\(\{map:uiTexture\(new THREE\.CanvasTexture\(nc\)\)\}\)\)/], // papan sambutan

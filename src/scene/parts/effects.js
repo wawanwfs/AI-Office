@@ -1115,3 +1115,19 @@ export function headphonePick(elapsed, i = 0) {
   const lift = Math.max(0, s) * Math.max(0, s); // smooth 0…1
   return HEADPHONE_LIFT_UP * lift;
 }
+
+// ── Siklus 518: papan menu kafe — highlight item berganti (menuHighlight) ──
+// Kanvas menu WFS CAFÉ (sign_canvas.js drawMenuBoard) 100% statis: judul, 3
+// baris menu, tak pernah berubah — satu-satunya kanvas kafe tanpa kehidupan
+// (setelah uap 488, glow 505). Efek murni menuHighlight(elapsed): indeks item
+// menu yang di-highlight berputar setiap MENU_HIGHLIGHT_SEC dtk (3 item →
+// rotasi lambat seperti layar kasir); dipakai drawMenuBoard(elapsed) untuk
+// menggambar baris ter-highlight lebih terang. Guard non-finite netral (0).
+export const MENU_HIGHLIGHT_SEC = 3.2; // periode ganti highlight per item
+
+export function menuHighlight(elapsed) {
+  if (!Number.isFinite(elapsed)) return 0; // waktu rusak → item pertama
+  const n = 3; // jumlah item menu kafe
+  const idx = Math.floor(elapsed / MENU_HIGHLIGHT_SEC) % n;
+  return ((idx % n) + n) % n; // aman utk elapsed negatif
+}

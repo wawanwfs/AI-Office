@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath, downlightBreath, serverHum, floorLampBreath, receptionLightBreath, tubeLightBreath, pendantBreath, panelBreath, cafeGlowBreath, rackEdgeBreath, badgeBreath, screenGlowBreath, posterBreath, bookNudge, trophyPulse, zoneBreath, magTilt, cupLift, markerPick, headphonePick } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath, downlightBreath, serverHum, floorLampBreath, receptionLightBreath, tubeLightBreath, pendantBreath, panelBreath, cafeGlowBreath, rackEdgeBreath, badgeBreath, screenGlowBreath, posterBreath, bookNudge, trophyPulse, zoneBreath, magTilt, cupLift, markerPick, headphonePick, menuHighlight } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -73,6 +73,7 @@ import { SCENE_ID_TO_NAME } from './parts/agent_identity.js';
 import { BADGE_COLORS, statusPollActions } from './parts/status_poll.js';
 import { updateBubbles as updateBubblesPure, disposeBubble } from './parts/bubbles.js';
 import { BUBBLE_W, BUBBLE_H, drawBubble, bubbleScale } from './parts/bubble_canvas.js';
+import { drawMenuBoard } from './parts/sign_canvas.js';
 import { drawTvDashboard } from './parts/tv_canvas.js';
 import { looksOf } from './parts/character_looks.js';
 import { AGENTS, AGENTS_EXTRA, allAgents as allAgentsFn } from './parts/agents_spec.js';
@@ -1437,6 +1438,8 @@ office.traverse((o)=>{ if(o.isMesh&&o.userData&&Number.isFinite(o.userData.__mar
 // siklus 517: headphone meja — refs dikumpulkan sekali di init (traverse sekali)
 const __headphones=[];
 office.traverse((o)=>{ if(o.isMesh&&o.userData&&Number.isFinite(o.userData.__hpBasis)) __headphones.push(o); });
+// siklus 518: highlight menu kafe — indeks terakhir digambar (redraw saat berubah)
+let __menuHiLast=-1;
 
 // --- TANAMAN BESI tambahan di sudut ---
 addPlant(11.6,-8.5,true);
@@ -2046,6 +2049,17 @@ function animate(){
     // band + 2 earcup terangkat bersama; basis tinggi di userData.__hpBasis.
     if(__headphones.length){
       __headphones.forEach((h,i)=>{ if(h) h.position.y=(Number.isFinite(h.userData&&h.userData.__hpBasis)?h.userData.__hpBasis:0.82)+headphonePick(elapsed,i); });
+    }
+    // siklus 518: papan menu kafe — baris ter-highlight berganti (menuHighlight).
+    // Redraw kanvas hanya saat indeks berubah (bukan tiap frame); needsUpdate
+    // agar tekstur 3D ikut segar (pola drawTv 109).
+    if(__cafe&&__cafe.menuCtx&&__cafe.menuTex){
+      const mh=menuHighlight(elapsed);
+      if(mh!==__menuHiLast){
+        __menuHiLast=mh;
+        drawMenuBoard(__cafe.menuCtx, mh);
+        __cafe.menuTex.needsUpdate=true;
+      }
     }
     ringMat.opacity=fx.ring;
     helmetVisor.material.opacity=fx.visor;

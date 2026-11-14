@@ -59,8 +59,10 @@ export function createCafe(ctx) {
   }
   // Menu board above counter
   const mbc = document.createElement('canvas'); mbc.width = 256; mbc.height = 140;
-  drawMenuBoard(mbc.getContext('2d'));
-  const mb = new THREE.Mesh(new THREE.PlaneGeometry(1.7, .95), uiMaterial(new THREE.MeshBasicMaterial({ map: uiTexture(new THREE.CanvasTexture(mbc)) })));
+  const mbg = mbc.getContext('2d');
+  const menuTex = uiTexture(new THREE.CanvasTexture(mbc)); // siklus 518: highlight berganti
+  drawMenuBoard(mbg); // gambar awal (tanpa highlight)
+  const mb = new THREE.Mesh(new THREE.PlaneGeometry(1.7, .95), uiMaterial(new THREE.MeshBasicMaterial({ map: menuTex })));
   mb.position.set(CFX, 2.3, CFZ + .35); cafe.add(mb);
   const mbB = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.05, .04), M(0x2A2A2A));
   mbB.position.set(CFX, 2.3, CFZ + .32); cafe.add(mbB);
@@ -90,5 +92,5 @@ export function createCafe(ctx) {
   const frG = new THREE.Mesh(new THREE.BoxGeometry(.4, .5, .02), MB(0x4FC3F7));
   frG.position.set(CFX + 2.5, .72, CFZ + .06); cafe.add(frG);
   office.add(cafe);
-  return { cafe, CFX, CFZ, c1, c2, ct1, ct2, em, emG, steam, kt, cups, menuBoard: mb, menuBoardBack: mbB, stools, fridge: fr, fridgeGlow: frG };
+  return { cafe, CFX, CFZ, c1, c2, ct1, ct2, em, emG, steam, kt, cups, menuBoard: mb, menuBoardBack: mbB, menuCtx: mbg, menuTex, stools, fridge: fr, fridgeGlow: frG };
 }
