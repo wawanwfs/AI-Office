@@ -654,3 +654,14 @@ windows after it has durably observed the new one.
 - [Phase 28 scoped gate](docs/REA_PHASE28.md)
 - [Phase 28 rotation runbook](docs/PHASE28_JOURNAL_ROTATION_RUNBOOK.md)
 - [Next Phase 29 implementation prompt](docs/NEXT_PHASE29_PROMPT.md)
+
+## Phase 29 — separate rootless BuildKit acceptance
+
+The disposable Linux acceptance workflow builds the promoted OCI image
+through a private BuildKit socket under a separate UID. An independent
+non-root process checks the OCI layout before synthetic approval, and
+only the runtime operator can connect to its Docker socket.
+
+- [Phase 29 scoped gate](docs/REA_PHASE29.md)
+- [Phase 29 BuildKit runbook](docs/PHASE29_ROOTLESS_BUILDKIT_RUNBOOK.md)
+- [Next Phase 30 implementation prompt](docs/NEXT_PHASE30_PROMPT.md)
