@@ -14,7 +14,8 @@ import sys
 
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]/"backend"))
 from preview_manager import TemplatePreviewManager, PreviewDenied
-from preview_release_lease import watch_preview_release
+from preview_release_lease import (recover_preview_supervision, supervise_preview_release,
+                                   watch_preview_release)
 from preview_oci_promotion import ApprovedOCIRelease
 from preview_release_policy import SignedReleasePolicy
 from preview_release_journal import JournalTLS, RemoteReleasePolicy
@@ -26,7 +27,7 @@ from preview_transparency import SignedTransparencyEvidence
 
 def main():
     parser=argparse.ArgumentParser(description="WFS isolated template preview operator")
-    parser.add_argument("action",choices=("start","status","logs","restart","stop","watch-release"))
+    parser.add_argument("action",choices=("start","status","logs","restart","stop","watch-release","start-supervised","recover-supervised"))
     parser.add_argument("--project",required=True)
     parser.add_argument("--port",type=int,help="19000-22000; required only on start")
     parser.add_argument("--state-root",required=True,help="private local disposable directory")
@@ -101,13 +102,13 @@ def main():
     args=parser.parse_args()
     if not args.approved:
         parser.error("local operator approval (--approved) is mandatory")
-    if args.action=="start" and args.port is None:
-        parser.error("start requires --port")
-    if args.action!="start" and args.port is not None:
-        parser.error("--port is only used for start")
+    if args.action in ("start","start-supervised") and args.port is None:
+        parser.error("start and start-supervised require --port")
+    if args.action not in ("start","start-supervised") and args.port is not None:
+        parser.error("--port is only used for start and start-supervised")
     oci_inputs=(args.oci_archive,args.oci_approval,args.oci_signature,args.oci_witness_key,
                 args.trusted_oci_approval_sha256,args.trusted_oci_witness_fingerprint)
-    if not all(oci_inputs) and (any(oci_inputs) or args.action in ("start","logs","restart","watch-release")):
+    if not all(oci_inputs) and (any(oci_inputs) or args.action in ("start","logs","restart","watch-release","start-supervised","recover-supervised")):
         parser.error("all six OCI release and independent pin flags are required")
     oci_release=ApprovedOCIRelease(*oci_inputs) if all(oci_inputs) else None
     shared=(args.release_policy_public_key,args.trusted_release_policy_fingerprint,
@@ -116,8 +117,8 @@ def main():
     remote=(args.release_journal_url,args.release_journal_ca,args.release_journal_client_cert,
             args.release_journal_client_key,args.release_journal_server_sha256)
     release_policy=None
-    if args.action == "watch-release" and (not all(remote) or not args.release_journal_anchor_state):
-        parser.error("watch-release requires mTLS and provisioned durable journal custody")
+    if args.action in ("watch-release","start-supervised","recover-supervised") and (not all(remote) or not args.release_journal_anchor_state):
+        parser.error("lease supervision requires mTLS and provisioned durable journal custody")
     if args.release_journal_anchor_state and not any(remote):
         parser.error("durable journal state requires the remote journal")
     if any(remote):
@@ -130,7 +131,7 @@ def main():
                 parser.error("journal custody must be outside the preview state root")
         release_policy=RemoteReleasePolicy(JournalTLS(*remote),*shared,
                                            custody_path=args.release_journal_anchor_state)
-    elif any(value is not None for value in files+shared) or args.action in ("start","logs","restart","watch-release"):
+    elif any(value is not None for value in files+shared) or args.action in ("start","logs","restart","watch-release","start-supervised","recover-supervised"):
         if not all(files+shared):
             parser.error("all six release policy checkpoint and independent pin flags are required")
         pub,fingerprint,floor,head=shared
@@ -195,12 +196,16 @@ def main():
         result=manager.status(args.project)
     elif args.action=="watch-release":
         result=watch_preview_release(manager,args.project)
+    elif args.action=="recover-supervised":
+        result=recover_preview_supervision(manager,args.project)
     else:
         token=os.environ.get("WFS_PREVIEW_TEST_TOKEN","")
         if not token:
             parser.error("WFS_PREVIEW_TEST_TOKEN must be explicitly provided in environment")
         if args.action=="start":
             result=manager.start(args.project,args.port,token)
+        elif args.action=="start-supervised":
+            result=supervise_preview_release(manager,args.project,args.port,token)
         elif args.action=="logs":
             result=manager.logs(args.project,token)
         elif args.action=="restart":
