@@ -37,7 +37,7 @@ import { paintRing } from './parts/ring_canvas.js';
 import { drawSky, drawGlassSheen } from './parts/sky_canvas.js';
 import { drawWoodFloor, drawAoStrip } from './parts/floor_canvas.js';
 import { drawCeiling } from './parts/ceiling_canvas.js';
-import { drawResepsiLogo, drawWallTitle, TITLE_NIGHT, TITLE_DAY } from './parts/logo_canvas.js';
+import { drawResepsiLogo, drawWallLogo, drawWallTitle, TITLE_NIGHT, TITLE_DAY, wallTaglineIdx } from './parts/logo_canvas.js';
 import { drawPoster } from './parts/poster_canvas.js';
 import { createWalls } from './parts/walls.js';
 import { drawBlobShadow } from './parts/blob_canvas.js';
@@ -1442,6 +1442,7 @@ office.traverse((o)=>{ if(o.isMesh&&o.userData&&Number.isFinite(o.userData.__hpB
 // siklus 518: highlight menu kafe — indeks terakhir digambar (redraw saat berubah)
 let __menuHiLast=-1;
 let __welcomeTagLast=0; // siklus 519: tagline papan sambutan terakhir yg digambar
+let __wallTagLast=0; // siklus 523: tagline logo dinding belakang terakhir yg digambar
 // siklus 522: poster lounge dinding belakang — kanvas+tekstur dari decor,
 // indeks slogan terakhir yg digambar (redraw saat berubah, pola 518/519).
 const __loungePosters=__decorObj&&Array.isArray(__decorObj.posterCanvases)?__decorObj.posterCanvases:[];
@@ -1956,6 +1957,16 @@ function animate(){
       const sp=__wallsRt.logoFx.spot;
       if(sp) sp.intensity=0.9*lg.bulb;
       if(Array.isArray(__wallsRt.logoFx.bulbs)) __wallsRt.logoFx.bulbs.forEach((b)=>{ if(b&&b.material){ b.material.opacity=lg.bulb; } });
+      // siklus 523: tagline logo dinding belakang berganti (redraw kanvas hanya
+      // saat indeks berubah — pola welcomeTex 519; guard canvasCtx/canvasTex).
+      if(__wallsRt.logoFx.canvasCtx&&__wallsRt.logoFx.canvasTex){
+        const wt=wallTaglineIdx(elapsed);
+        if(wt!==__wallTagLast){
+          __wallTagLast=wt;
+          drawWallLogo(__wallsRt.logoFx.canvasCtx, wt);
+          __wallsRt.logoFx.canvasTex.needsUpdate=true;
+        }
+      }
     }
     // siklus 497: downlight arsitektural dek L1/L2/L3 bernapas (downlightBreath)
     if(__terraces&&Array.isArray(__terraces.downlights)&&__terraces.downlights.length){

@@ -216,9 +216,13 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   };
   window.__wallState=()=>window.__wallLast;
   // ---- LOGO WFS PROJECT besar di dinding belakang ----
+  const logoFx={ logo:null, spot:null, bulbs:[] };
   const lc=document.createElement('canvas');lc.width=2048;lc.height=640;const l=lc.getContext('2d');
   drawWallLogo(l);
   const lt=new THREE.CanvasTexture(lc);lt.anisotropy=4;uiTexture(lt);
+  // Siklus 523: kanvas+tekstur logo diekspos via logoFx — redraw tagline saat
+  // wallTaglineIdx berubah (pola welcomeTex 519 / posterCanvases 522).
+  logoFx.canvasCtx=l; logoFx.canvasTex=lt;
   const logo=new THREE.Mesh(new THREE.PlaneGeometry(8.6,2.69), uiMaterial(new THREE.MeshBasicMaterial({map:lt})));
   // Siklus 496: logo transparan agar glow sorot (logoGlow) bisa bernapas via OfficeScene.
   logo.material.transparent=true;
@@ -231,7 +235,7 @@ export function createWalls({ THREE, office, skyTex, glassSheen, fl, ceil, skyWi
   });
   const spot=new THREE.PointLight(0xFFE2A0,.9,8,1.5);spot.position.set(1,3.4,12.2);office.add(spot);
   // Siklus 496: ekspor refs logo & sorot agar OfficeScene bisa menghidupkannya.
-  const logoFx={ logo, spot, bulbs:[] };
+  logoFx.logo=logo; logoFx.spot=spot;
   [-2,1,4].forEach(x=>{ const b=W(B(.3,.04,.1),new THREE.MeshBasicMaterial({color:0xFFE9A8}),x,3.93,13.1); b.material.transparent=true; logoFx.bulbs.push(b); });
 
   // ---- Jendela sky-view di dinding belakang (sisi kanan logo, area kosong) ----

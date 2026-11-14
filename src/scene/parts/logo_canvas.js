@@ -15,7 +15,27 @@ export function drawResepsiLogo(ctx) {
 }
 
 // Logo besar dinding belakang 2048x640 (hexagon gradien + W + WFS + PROJECT + tagline)
-export function drawWallLogo(ctx) {
+// Siklus 523: tagline dinding belakang BERGANTI (taglineIdx 0…3) — 4 misi
+// berputar deterministik tiap WALL_TAGLINE_SEC dtk (paritas welcomeTagline 519
+// & posterSlogan 522). Judul/logo/hex tak tersentuh — hanya baris tagline.
+export const WALL_TAGLINE_SEC = 5.6;
+const WALL_TAGLINES = [
+  'SOFTWARE HOUSE  \u00b7  AI TEAM',
+  'BUILD \u00b7 SHIP \u00b7 ITERATE',
+  '26 AGENTS ON DUTY \u00b7 24/7',
+  'CRAFTED WITH AI \u00b7 WFS',
+];
+export function wallTaglineIdx(elapsed) {
+  if (!Number.isFinite(elapsed)) return 0;
+  const n = WALL_TAGLINES.length;
+  const idx = Math.floor(elapsed / WALL_TAGLINE_SEC) % n;
+  return ((idx % n) + n) % n; // aman utk elapsed negatif
+}
+export function wallTaglines() { return WALL_TAGLINES.slice(); }
+
+export function drawWallLogo(ctx, taglineIdx = 0) {
+  const safeIdx = Number.isInteger(taglineIdx) && taglineIdx >= 0 && taglineIdx < WALL_TAGLINES.length
+    ? taglineIdx : 0;
   ctx.fillStyle='#0F1B2E';ctx.fillRect(0,0,2048,640);
   ctx.strokeStyle='#D4AF37';ctx.lineWidth=14;ctx.strokeRect(12,12,2024,616);
   const hex=(cx,cy,r)=>{ctx.beginPath();for(let i=0;i<6;i++){const a=Math.PI/6+i*Math.PI/3;ctx.lineTo(cx+r*Math.cos(a),cy+r*Math.sin(a));}ctx.closePath();};
@@ -27,7 +47,7 @@ export function drawWallLogo(ctx) {
   ctx.textAlign='left';ctx.textBaseline='alphabetic';
   ctx.fillStyle='#FFFFFF';ctx.font='900 310px "Segoe UI",Arial,sans-serif';ctx.fillText('WFS',610,290);
   ctx.fillStyle='#FBBF24';ctx.font='800 170px "Segoe UI",Arial,sans-serif';ctx.fillText('PROJECT',616,470);
-  ctx.fillStyle='rgba(255,255,255,.75)';ctx.font='600 62px "Segoe UI",Arial,sans-serif';ctx.fillText('SOFTWARE HOUSE  \u00b7  AI TEAM',620,570);
+  ctx.fillStyle='rgba(255,255,255,.75)';ctx.font='600 62px "Segoe UI",Arial,sans-serif';ctx.fillText(WALL_TAGLINES[safeIdx],620,570);
 }
 
 // Judul dinding 1024x200 (teks WFS + PROJECT, latar transparan). Siklus 168:
