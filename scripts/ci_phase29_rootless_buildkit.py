@@ -110,13 +110,17 @@ def run_fixture(expected):
         root.chmod(0o711)
         name = root.name
         home = root / "builder"
-        subprocess.run(["/usr/sbin/useradd", "--create-home", "--home-dir", str(home),
-                        "--shell", "/usr/sbin/nologin", name], check=True, timeout=30)
         try:
+            subprocess.run([
+                "/usr/sbin/useradd", "--uid", "27220", "--user-group",
+                "--no-log-init", "--no-create-home", "--home-dir", str(home),
+                "--shell", "/usr/sbin/nologin", name,
+            ], stdin=subprocess.DEVNULL, stdout=sys.stderr, check=True, timeout=60)
             account = pwd.getpwnam(name)
             if account.pw_uid in (0, operator_uid) or account.pw_gid == sock.st_gid:
                 raise RuntimeError("builder principal overlaps runtime operator")
-            home.chmod(0o700)
+            home.mkdir(mode=0o700)
+            os.chown(home, account.pw_uid, account.pw_gid)
             helper = root / "build.py"
             shutil.copyfile(__file__, helper)
             helper.chmod(0o444)
@@ -176,8 +180,13 @@ def run_fixture(expected):
                 "daemon_user_namespace_verified": True, "daemon_stopped": True,
             }), file=sys.stderr)
         finally:
-            subprocess.run(["/usr/sbin/userdel", "--remove", name],
-                           check=True, timeout=30)
+            try:
+                pwd.getpwnam(name)
+            except KeyError:
+                pass
+            else:
+                subprocess.run(["/usr/sbin/userdel", name], stdin=subprocess.DEVNULL,
+                               stdout=sys.stderr, check=True, timeout=30)
 
 
 def verify_child(root):
