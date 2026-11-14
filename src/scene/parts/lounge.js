@@ -37,6 +37,7 @@ export function createLounge(ctx) {
   mag.position.set(9.4, .45, 6.35); mag.rotation.y = .4; lounge.add(mag);
   const mug = new THREE.Mesh(new THREE.CylinderGeometry(.04, .035, .08, 8), M(0xFAFAFA));
   mug.position.set(9.75, .475, 6.5); lounge.add(mug);
+  (mug.userData = mug.userData || {}).__cupBasis = .475; // siklus 516: basis Y utk cupLift (mug lounge ikut sesekali "diambil-diminum")
   // 2 kursi santai menghadap sofa/meja
   const armChair = (cx, cz, ry) => {
     const g = new THREE.Group();

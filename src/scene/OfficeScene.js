@@ -2032,7 +2032,7 @@ function animate(){
     // siklus 514: cangkir kafe sesekali "diambil-diminum" (cupLift) — angkat &
     // kembali turun; basis tinggi di userData.__cupBasis.
     if(__cups.length){
-      __cups.forEach((c,i)=>{ if(c) c.position.y=(c.userData.__cupBasis||1.03)+cupLift(elapsed,i); });
+      __cups.forEach((c,i)=>{ if(c) c.position.y=(Number.isFinite(c.userData&&c.userData.__cupBasis)?c.userData.__cupBasis:1.03)+cupLift(elapsed,i); });
     }
     // siklus 515: spidol whiteboard sesekali "diambil menulis" (markerPick) —
     // angkat & kembali ke baki; basis tinggi di userData.__markerBasis.

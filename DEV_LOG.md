@@ -8069,3 +8069,10 @@
 - Test baru effects_marker_pick.test.js (6): guard non-finite → 0, rentang 0…0.03, jarang aktif (<50% per slot), deterministik + tak sinkron antar item, tak sinkron vs slot cup 41 dtk, kontrak integrasi stub mesh (basis + pick).
 - Verifikasi: vitest 395 file, 4315 passed + 6 skipped (+6, +1 file); build PWA exit 0; dist → ~/wfs-hq; e2e_err.py OK (agents=26, zone=5, cam/wall=True, init_failed=False, errs=[], shot 692KB, colors=10529 nonbg=0.992, hygiene 41 refs 0 missing).
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
+## 14/11/2026 12:15 WIB — Siklus 516: mug lounge ikut cupLift + guard basis numerik
+- Gap visual: mug putih di coffee table lounge (lounge.js, y=.475) masih statis — satu-satunya cangkir yang belum bernapas setelah cupLift 514 hanya mencakup 3 cangkir kafe (21 efek kini hidup).
+- Fix: lounge.js mug diberi userData.__cupBasis = .475 → ikut slot cupLift eksisting (CUP_CYCLE_SEC 41 dtk, fase hash deterministik) tanpa efek/slot baru — tak menambah siklus; hash item ke-4 (indeks 3) menghasilkan fase berbeda dari 3 cangkir kafe.
+- OfficeScene.js: fallback basis __cupBasis diperkuat `Number.isFinite(basis) ? basis : 1.03` (dulu `|| 1.03` — basis 0 fiktif lolos; mug lounge .475 aman keduanya, tapi guard kini eksplisit).
+- Test baru effects_cup_lounge.test.js (5): guard non-finite → 0, rentang 0…0.045, jarang aktif (<50% per slot), deterministik + tak sinkron antar item, kontrak basis numerik.
+- Verifikasi: vitest 396 file, 4320 passed + 6 skipped (+5, +1 file); build PWA exit 0; dist → ~/wfs-hq; e2e_err.py OK (agents=26, zone=5, cam/wall=True, init_failed=False, errs=[], shot 672KB >500KB, colors=9044 nonbg=0.992, hygiene 41 refs 0 missing). Catatan: script shot.sh hilang dari scratch — bukti visual memakai screenshot bawaan e2e probe.
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
