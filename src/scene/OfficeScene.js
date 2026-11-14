@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath, downlightBreath, serverHum, floorLampBreath, receptionLightBreath, tubeLightBreath, pendantBreath, panelBreath, cafeGlowBreath, rackEdgeBreath, badgeBreath, screenGlowBreath, posterBreath, bookNudge, trophyPulse, zoneBreath, magTilt, cupLift, markerPick, headphonePick, menuHighlight, glassShimmer } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath, downlightBreath, serverHum, floorLampBreath, receptionLightBreath, tubeLightBreath, pendantBreath, panelBreath, cafeGlowBreath, rackEdgeBreath, badgeBreath, screenGlowBreath, posterBreath, bookNudge, trophyPulse, zoneBreath, magTilt, cupLift, markerPick, headphonePick, menuHighlight, glassShimmer, posterSloganIdx, posterSloganFor } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -38,6 +38,7 @@ import { drawSky, drawGlassSheen } from './parts/sky_canvas.js';
 import { drawWoodFloor, drawAoStrip } from './parts/floor_canvas.js';
 import { drawCeiling } from './parts/ceiling_canvas.js';
 import { drawResepsiLogo, drawWallTitle, TITLE_NIGHT, TITLE_DAY } from './parts/logo_canvas.js';
+import { drawPoster } from './parts/poster_canvas.js';
 import { createWalls } from './parts/walls.js';
 import { drawBlobShadow } from './parts/blob_canvas.js';
 import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelScale, drawLabelText } from './parts/label_spec.js';
@@ -1441,6 +1442,10 @@ office.traverse((o)=>{ if(o.isMesh&&o.userData&&Number.isFinite(o.userData.__hpB
 // siklus 518: highlight menu kafe — indeks terakhir digambar (redraw saat berubah)
 let __menuHiLast=-1;
 let __welcomeTagLast=0; // siklus 519: tagline papan sambutan terakhir yg digambar
+// siklus 522: poster lounge dinding belakang — kanvas+tekstur dari decor,
+// indeks slogan terakhir yg digambar (redraw saat berubah, pola 518/519).
+const __loungePosters=__decorObj&&Array.isArray(__decorObj.posterCanvases)?__decorObj.posterCanvases:[];
+let __posterSloganLast=-1;
 
 // --- TANAMAN BESI tambahan di sudut ---
 addPlant(11.6,-8.5,true);
@@ -2077,6 +2082,21 @@ function animate(){
         __welcomeTagLast=wt;
         drawWelcomeSign(__wallsRt.welcomeCtx, wt);
         __wallsRt.welcomeTex.needsUpdate=true;
+      }
+    }
+    // siklus 522: poster lounge dinding belakang — slogan & warna berganti
+    // (drawPoster dipanggil ulang hanya saat indeks berubah; offset fase
+    // per-poster via posterSloganFor agar kedua poster tak seragam).
+    if(__loungePosters.length){
+      const ps=posterSloganIdx(elapsed);
+      if(ps!==__posterSloganLast){
+        __posterSloganLast=ps;
+        __loungePosters.forEach((pc,i)=>{
+          if(!pc||!pc.cv||!pc.tex) return;
+          const [txt,col]=posterSloganFor(i,ps);
+          drawPoster(pc.cv.getContext('2d'), col, txt); // painter: (ctx, color, text)
+          pc.tex.needsUpdate=true;
+        });
       }
     }
     ringMat.opacity=fx.ring;

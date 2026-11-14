@@ -9,13 +9,18 @@ export function createDecor(ctx) {
   const add = (m) => office.add(m);
 
   // Poster motivasi (teks, warna, x) — kanvas 256×340 + plane 1.1×1.45 di dinding belakang
-  const posterMeshes = [['SHIP IT', '#F59E0B', 3.0], ['CODE\nCOFFEE', '#F472B6', 5.2]].map(([txt, col, x]) => {
+  // Siklus 522: teks/warna poster berganti slogan (drawPoster dipanggil ulang
+  // dari OfficeScene saat posterSloganIdx berubah) — kanvas + tekstur diekspos.
+  const POSTER_BASE = [['SHIP IT', '#F59E0B', 3.0], ['CODE\nCOFFEE', '#F472B6', 5.2]];
+  const posterCanvases = [];
+  const posterMeshes = POSTER_BASE.map(([txt, col, x], pi) => {
     const pc = document.createElement('canvas'); pc.width = 256; pc.height = 340;
-    drawPoster(pc.getContext('2d'), txt, col);
-    const pm = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.45), uiMaterial(new THREE.MeshBasicMaterial({ map: uiTexture(new THREE.CanvasTexture(pc)), transparent: true })));
+    drawPoster(pc.getContext('2d'), col, txt); // painter (ctx, color, text) — dulu arg tertukar (bug visual poster lounge)
+    const pTex = uiTexture(new THREE.CanvasTexture(pc));
+    const pm = new THREE.Mesh(new THREE.PlaneGeometry(1.1, 1.45), uiMaterial(new THREE.MeshBasicMaterial({ map: pTex, transparent: true })));
     pm.position.set(x + 5.0, 2.4, 9.2); pm.rotation.y = Math.PI;
     (pm.userData = pm.userData || {}).__poster = true; // siklus 509: napas poster dinding
-    add(pm); return pm;
+    add(pm); posterCanvases.push({ cv: pc, tex: pTex }); return pm;
   });
 
   // Tanaman besar di sudut (pot + 5 helai daun per tanaman)
@@ -50,5 +55,5 @@ export function createDecor(ctx) {
   const loungeLight = new THREE.PointLight(0xFFC97A, .9, 9, 1.6);
   loungeLight.position.set(-9.5, 2.4, -1); add(loungeLight);
 
-  return { posterMeshes, plants, partitions, rug, rugInner, loungeLight };
+  return { posterMeshes, posterCanvases, plants, partitions, rug, rugInner, loungeLight };
 }

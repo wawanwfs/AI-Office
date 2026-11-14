@@ -1143,3 +1143,35 @@ export function menuHighlight(elapsed) {
   const idx = Math.floor(elapsed / MENU_HIGHLIGHT_SEC) % n;
   return ((idx % n) + n) % n; // aman utk elapsed negatif
 }
+
+// ── Siklus 522: slogan dinding belakang berganti bergilir ───────────────
+// Dua draf sengaja berbeda: poster 0 ("SHIP IT", amber) & poster 1
+// ("CODE\nCOFFEE", pink) digambar dengan offset indeks +1 — keduanya berganti
+// dgn fase saling terbalik (saat 0 menampilkan draf 0, 1 menampilkan draf 1).
+export const POSTER_SLOGANS = [
+  ['SHIP IT', '#F59E0B'],
+  ['CODE\nCOFFEE', '#F472B6'],
+  ['BUILD\nDAILY', '#38BDF8'],
+  ['SHIP\nVALUE', '#34D399'],
+];
+export const POSTER_SLOGANS_COUNT = POSTER_SLOGANS.length;
+const POSTER_SLOGAN_IDX0 = [0, 1]; // fase awal per poster (offset draf)
+
+export function posterSloganFor(i, idx) {
+  if (!Number.isInteger(i) || i < 0 || i >= POSTER_SLOGAN_IDX0.length) return POSTER_SLOGANS[0].slice();
+  if (!Number.isInteger(idx) || idx < 0 || idx >= POSTER_SLOGANS_COUNT) return POSTER_SLOGANS[POSTER_SLOGAN_IDX0[i]].slice();
+  const k = (POSTER_SLOGAN_IDX0[i] + idx) % POSTER_SLOGANS_COUNT;
+  return POSTER_SLOGANS[k].slice();
+}
+
+// ── Siklus 522: poster lounge dinding belakang berganti slogan ──────────
+// 2 poster motivasi besar (decor.js, drawPoster) digambar sekali — teks beku
+// permanen. posterSloganIdx(elapsed) murni: indeks slogan berputar tiap
+// POSTER_SLOGAN_SEC dtk, deterministik, guard non-finite → 0, aman negatif
+// (paritas welcomeTaglineIdx 519 & menuHighlight 518).
+export const POSTER_SLOGAN_SEC = 6.0;
+export function posterSloganIdx(elapsed) {
+  if (!Number.isFinite(elapsed)) return 0;
+  const idx = Math.floor(elapsed / POSTER_SLOGAN_SEC) % POSTER_SLOGANS_COUNT;
+  return ((idx % POSTER_SLOGANS_COUNT) + POSTER_SLOGANS_COUNT) % POSTER_SLOGANS_COUNT;
+}
