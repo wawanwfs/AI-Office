@@ -1,7 +1,7 @@
 // Lantai zona & label area — ditulis ulang dari data tabel.
 import { L1_Y, L2_Y, L3_Y, floorOf } from './floor_elevation.js';
 import { ZONES, zoneLabelY, zoneLabelScale } from './floor_zones.js';
-import { drawZoneLabel } from './zone_label_canvas.js';
+import { drawZoneLabel, drawZoneLive, ZL_BG, ZL_BORDER } from './zone_label_canvas.js';
 import { uiTexture, uiMaterial } from './ui_colorspace.js';
 
 // Auto-shrink font label zona: mulai 44px, turun 2px per langkah sampai teks
@@ -35,11 +35,11 @@ export function createZones(ctx){
     office.add(patch);
     const zc=document.createElement('canvas');zc.width=512;zc.height=96;
     const zx=zc.getContext('2d');
-    zx.fillStyle='rgba(5,10,22,0.75)';
+    zx.fillStyle=ZL_BG;
     zx.beginPath();zx.roundRect(4,4,504,88,20);zx.fill();
-    zx.strokeStyle='#F59E0B';zx.lineWidth=3;zx.stroke();
+    zx.strokeStyle=ZL_BORDER;zx.lineWidth=3;zx.stroke();
     fitZoneLabel(zx,z.label);
-    drawZoneLabel(zx,z.label);
+    drawZoneLabel(zx,z.label); // siklus 527: awal tanpa badge (fallback identik lama)
     const zt=uiTexture(new THREE.CanvasTexture(zc));zt.minFilter=THREE.LinearFilter;
     const zl=new THREE.Sprite(uiMaterial(new THREE.SpriteMaterial({map:zt,transparent:true,depthTest:false})));
     zl.center.set(.5,1);
@@ -56,6 +56,11 @@ export function createZones(ctx){
     zl.position.set(z.x,1.15,zly);office.add(zl);
     (window.__zoneLabels=window.__zoneLabels||[]).push(zl); // dipakai anti-tumpuk label
     zl.userData.label=z.label;
+    // Siklus 527: refs redraw live — kanvas + data AABB zona utk penghitung agen
+    zl.userData.zoneRect={x:z.x,z:z.z,w:z.w,d:z.d};
+    zl.userData.__zcv=zc; zl.userData.__zctx=zx;
+    zl.userData.__ztex=zt;
+    zl.userData.__zfit=zoneLabelScale(z.label);
     (window.__zoneBase=window.__zoneBase||new Map()).set(zl,{y:zl.position.y,x:zl.position.x,z:zl.position.z});
   });
 }

@@ -5,7 +5,7 @@ import { DetRNG, sceneRng } from '../lib/rng.js';
 import { buildRobot } from './parts/robot.js';
 import { createLighting, createNeonMode, createShift } from './parts/daycycle.js';
 import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
-import { createZones } from './parts/flooring.js';
+import { createZones, fitZoneLabel } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
 import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath, downlightBreath, serverHum, floorLampBreath, receptionLightBreath, tubeLightBreath, pendantBreath, panelBreath, cafeGlowBreath, rackEdgeBreath, badgeBreath, screenGlowBreath, posterBreath, bookNudge, trophyPulse, zoneBreath, magTilt, cupLift, markerPick, headphonePick, menuHighlight, glassShimmer, posterSloganIdx, posterSloganFor, wallPosterIdx, wallPosterTextFor, floorBadgeIdx, floorMissionTextFor } from './parts/effects.js';
@@ -43,6 +43,7 @@ import { drawPoster } from './parts/poster_canvas.js';
 import { createWalls } from './parts/walls.js';
 import { drawBlobShadow } from './parts/blob_canvas.js';
 import { LABEL_Y, LABEL_FULL, LABEL_SHORT, labelScale, drawLabelText } from './parts/label_spec.js';
+import { drawZoneLive, zoneAgentCount } from './parts/zone_label_canvas.js'; // siklus 527
 import { WALK_DESTINATIONS, CAMPUS_WALK_DESTINATIONS } from './parts/walk_destinations.js';
 import { OBSTACLES } from './parts/obstacles.js';
 import {
@@ -1453,6 +1454,10 @@ let __posterSloganLast=-1;
 const __wallPosters=__furn&&Array.isArray(__furn.wallPosterCanvases)?__furn.wallPosterCanvases:[];
 let __wallPosterLast=-1;
 let __floorBadgeLast=-1; // siklus 526: kunci redraw plakat lantai
+// siklus 527: badge live label zona — jumlah agen per zona (dipisah koma agar
+// satu angka berganti tak memicu redraw semua zona; redraw per sprite saat
+// count-nya berubah, cek di dalam loop).
+const __zoneLiveLast=new Map();
 // siklus 525: layar monitor resepsionis live — refs dari reception; kunci menit-sim
 // terakhir yang digambar (redraw hanya saat menit berganti, pola 518/519/523).
 const __lobbyCtx=__rc&&__rc.lobbyCtx?__rc.lobbyCtx:null;
@@ -2156,6 +2161,26 @@ function animate(){
           bc.tex.needsUpdate=true;
         });
       }
+    }
+    // siklus 527: badge live label zona — jumlah agen di area tiap zona.
+    // Kanvas label digambar ulang HANYA saat jumlah zona itu berubah (cek
+    // __zoneLiveLast per sprite); latar/bingkai repaint identik flooring.js.
+    if(Array.isArray(window.__zoneLabels)){
+      window.__zoneLabels.forEach((zl)=>{
+        if(!zl||!zl.userData) return;
+        const u=zl.userData;
+        if(!u.__zcv||!u.__zctx||!u.__ztex||!u.zoneRect||!u.label) return;
+        const n=zoneAgentCount(u.zoneRect,agentData);
+        if(__zoneLiveLast.get(zl)===n) return; // tak berubah → no-op (hemat GPU)
+        __zoneLiveLast.set(zl,n);
+        const zx=u.__zctx;
+        zx.fillStyle='rgba(5,10,22,0.75)';
+        zx.beginPath();zx.roundRect(4,4,504,88,20);zx.fill();
+        zx.strokeStyle='#F59E0B';zx.lineWidth=3;zx.stroke();
+        fitZoneLabel(zx,u.label);
+        drawZoneLive(zx,u.label,n);
+        u.__ztex.needsUpdate=true;
+      });
     }
     ringMat.opacity=fx.ring;
     helmetVisor.material.opacity=fx.visor;
