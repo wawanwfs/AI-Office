@@ -66,6 +66,7 @@ export function createMeetingRoom(ctx, glassMat) {
     const item = put(B(m.w, m.h, m.d), M(m.color), m.x, m.y, m.z);
     item.userData.isWhiteboardAccessory = true;
     item.userData.__keep = 1;
+    item.userData.__markerBasis = m.y; // siklus 515: basis tinggi utk markerPick
   });
 
   const redraw = () => {

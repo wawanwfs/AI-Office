@@ -1050,3 +1050,34 @@ export function magTilt(elapsed, i = 0) {
   const lift = Math.max(0, s) * Math.max(0, s); // smooth 0…1
   return MAG_TILT_RAD * lift;
 }
+
+// ── Siklus 515: spidol whiteboard sesekali "diambil menulis" (markerPick) ──
+// 4 spidol + penghapus di baki whiteboard rapat (room.js via markerItems)
+// tergeletak konstan — benda terakhir di ruang meeting yang beku (setelah lampu
+// gantung 503). Efek markerPick(elapsed, i): tiap spidol sesekali terangkat
+// 0 → 0.03 unit (diambil menulis) lalu kembali ke baki — pola cupLift 514:
+// slot global panjang + fase hash deterministik, hanya sebagian kecil aktif
+// per slot (≈20%), tak sinkron antar spidol & vs 19 siklus lain (slot 33 dtk
+// ≠ cup 41, mag 29, buku 37).
+export const MARKER_CYCLE_SEC = 33.0;  // periode slot global semua spidol
+export const MARKER_LIFT_UP = 0.03;    // tinggi angkat maksimum spidol
+
+// hash kecil deterministik 0…1 dari indeks (bukan Math.random — replays uji aman)
+const markerHash = (i) => {
+  const x = Math.sin((Number.isFinite(i) ? i : 0) * 73.3 + 41.7) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+export function markerPick(elapsed, i = 0) {
+  if (!Number.isFinite(elapsed)) return 0; // waktu rusak → netral total
+  if (!Number.isFinite(i)) return 0;       // indeks rusak → netral total
+  const h = markerHash(i);
+  // fase personal: offset slot hash → spidol aktif di detik berbeda dlm slot
+  const phase = ((elapsed / MARKER_CYCLE_SEC) + h) % 1;
+  // hanya sebagian kecil spidol aktif per slot (≈20%)
+  if (h > 0.2) return 0;
+  // gerakan angkat-turun dalam slot: sin setengah-siklus → 0 → 1 → 0
+  const s = Math.sin(phase * Math.PI * 2);
+  const lift = Math.max(0, s) * Math.max(0, s); // smooth 0…1
+  return MARKER_LIFT_UP * lift;
+}

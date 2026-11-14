@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath, downlightBreath, serverHum, floorLampBreath, receptionLightBreath, tubeLightBreath, pendantBreath, panelBreath, cafeGlowBreath, rackEdgeBreath, badgeBreath, screenGlowBreath, posterBreath, bookNudge, trophyPulse, zoneBreath, magTilt, cupLift } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath, downlightBreath, serverHum, floorLampBreath, receptionLightBreath, tubeLightBreath, pendantBreath, panelBreath, cafeGlowBreath, rackEdgeBreath, badgeBreath, screenGlowBreath, posterBreath, bookNudge, trophyPulse, zoneBreath, magTilt, cupLift, markerPick } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -1430,6 +1430,10 @@ office.traverse((o)=>{ if(o.isMesh&&o.userData&&Number.isFinite(o.userData.__mag
 // frame mahal; urutan stabil utk fase hash cupLift.
 const __cups=[];
 office.traverse((o)=>{ if(o.isMesh&&o.userData&&Number.isFinite(o.userData.__cupBasis)) __cups.push(o); });
+// siklus 515: spidol & penghapus baki whiteboard (markerPick) — kumpul sekali
+// di init, bukan per frame; urutan stabil utk fase hash markerPick.
+const __markers=[];
+office.traverse((o)=>{ if(o.isMesh&&o.userData&&Number.isFinite(o.userData.__markerBasis)) __markers.push(o); });
 
 // --- TANAMAN BESI tambahan di sudut ---
 addPlant(11.6,-8.5,true);
@@ -2029,6 +2033,11 @@ function animate(){
     // kembali turun; basis tinggi di userData.__cupBasis.
     if(__cups.length){
       __cups.forEach((c,i)=>{ if(c) c.position.y=(c.userData.__cupBasis||1.03)+cupLift(elapsed,i); });
+    }
+    // siklus 515: spidol whiteboard sesekali "diambil menulis" (markerPick) —
+    // angkat & kembali ke baki; basis tinggi di userData.__markerBasis.
+    if(__markers.length){
+      __markers.forEach((m,i)=>{ if(m) m.position.y=(m.userData.__markerBasis||1.64)+markerPick(elapsed,i); });
     }
     ringMat.opacity=fx.ring;
     helmetVisor.material.opacity=fx.visor;
