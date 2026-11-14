@@ -117,6 +117,8 @@ class TemplatePreviewManager:
                 db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN api_container_id TEXT")
             if "lease_deadline" not in columns:
                 db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN lease_deadline REAL")
+            if "lease_boot_id" not in columns:
+                db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN lease_boot_id TEXT")
             if "lease_suspended" not in columns:
                 db.execute("ALTER TABLE wfs_preview_instances ADD COLUMN lease_suspended INTEGER NOT NULL DEFAULT 0")
         self._enforce_epoch(self.authority.verify(self.reviewed_manifest))
@@ -383,7 +385,7 @@ class TemplatePreviewManager:
                     db.execute(
                         "UPDATE wfs_preview_instances SET api_image_id=?,ingress_image_id=?, "
                         "api_frontend_sealed=1,oci_manifest_digest=?,oci_config_digest=?,oci_approval_sha256=?, "
-                        "api_container_id=NULL,lease_deadline=?,lease_suspended=0 "
+                        "api_container_id=NULL,lease_deadline=?,lease_boot_id=NULL,lease_suspended=0 "
                         "WHERE project_id=? AND phase='uncertain'",
                         (image_id, ingress["image_id"], checked.manifest_digest,
                          checked.config_digest, self.oci_release.approval_sha256,
@@ -471,5 +473,5 @@ class TemplatePreviewManager:
         with closing(self._db()) as db:
             db.execute(
                 "UPDATE wfs_preview_instances SET phase='stopped',api_container_id=NULL, "
-                "lease_deadline=NULL,lease_suspended=0 WHERE project_id=? AND phase='uncertain'", (project_id,))
+                "lease_deadline=NULL,lease_boot_id=NULL,lease_suspended=0 WHERE project_id=? AND phase='uncertain'", (project_id,))
         return self.status(project_id)
