@@ -184,6 +184,18 @@ export function shouldUpdateLeds(frame, every = LED_UPDATE_EVERY) {
   return Number.isFinite(frame) && frame % every === 0;
 }
 // Murni: opacity satu LED pada waktu elapsed (dipakai loop LED + unit test).
+// Siklus 520: partisi kaca antar tim berkilau halus (glassShimmer) — opacity
+// konstan .18 kini bernapas lembut 0.13…0.23 per panel, fase hash deterministik.
+export const GLASS_SHIMMER_SEC = 5.1;
+export const GLASS_SHIMMER_MICRO = 2.3; // rasio 5.1/2.3 tak sinkron vs siklus lain
+export function glassShimmer(elapsed, i = 0) {
+  if (!Number.isFinite(elapsed) || !Number.isFinite(i)) return 1; // netral × basis
+  const phase = (Math.sin(i * 43758.5453) * 0.5 + 0.5) * 6.283185;
+  const w = 0.5 + 0.5 * Math.sin((elapsed / GLASS_SHIMMER_SEC) * 6.283185 + phase)
+                  * Math.cos((elapsed / GLASS_SHIMMER_MICRO) * 6.283185 + phase * 0.7);
+  return 0.13 / 0.18 + (0.23 - 0.13) / 0.18 * (0.5 + 0.5 * w); // multiplier utk basis .18
+}
+
 export function ledOpacity(L, elapsed) {
   if (!L || !Number.isFinite(elapsed) || !Number.isFinite(L.sp) || !Number.isFinite(L.ph) || !Number.isFinite(L.on)) return 0;
   return Math.sin(elapsed * L.sp + L.ph) > L.on ? 1 : 0.12;

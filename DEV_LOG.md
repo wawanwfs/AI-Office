@@ -8097,3 +8097,9 @@
 - Test baru effects_welcome_tagline.test.js (8): guard netral, rentang 0…2, rotasi eksak per slot, aman negatif, rotasi merata, + 3 kontrak drawWelcomeSign (default/idx tak valid → tagline 1, semua idx sesuai daftar, font/warna tetap). Kontrak WYSIWYG ui_wysiwyg_contract (2 asersi walls.js) diikuti pola welcomeTex; 2 kekeliruan awal pola regex tertangkap test & dikoreksi.
 - Verifikasi: vitest 399 file, 4345 passed + 6 skipped (+8, +1 file); build PWA exit 0; dist → ~/wfs-hq; e2e_err.py OK (agents=26, zone=5, cam/wall=True, init_failed=False, errs=[], shot 701KB >500KB, colors=10809 nonbg=0.992, hygiene 41 refs 0 missing).
 - Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
+## 14/11/2026 14:55 WIB — Siklus 520: partisi kaca antar tim berkilau (glassShimmer)
+- Gap visual: 3 partisi kaca antar tim (decor.js, BoxGeometry .04×.9×2.2, opacity konstan .18) beku — elemen dekorasi terakhir yang statis (efek ke-25).
+- Fix: glassShimmer(elapsed, i) murni di parts/effects.js — kilau 0.13…0.23 utama 5.1 dtk × mikro 2.3 dtk (rasio tak sinkron vs 24 siklus lain), fase hash deterministik per panel (sin·43758.5453); guard non-finite → netral (×1). OfficeScene: tick di gate ambient, opacity = .18 × glassShimmer per panel.
+- Test baru effects_glass_shimmer.test.js (5): guard netral, rentang ×basis .10…0.26 tak padam, kontrak rumus eksak (kekeliruan fase i=0 dianggap 0 padahal hash 0.5 → tertangkap test & dikoreksi), tak sinkron antar panel, tak sinkron vs 3.0 dtk.
+- Verifikasi: vitest 400 file, 4350 passed + 6 skipped (+5, +1 file); build PWA exit 0; dist → ~/wfs-hq; e2e_err.py OK (agents=26, zone=5, cam/wall=True, init_failed=False, errs=[], shot 692KB >500KB, colors=10604 nonbg=0.992, hygiene 41 refs 0 missing).
+- Sisa backlog (butuh keputusan user): (a) cutover :8787-Docker; (b) saas-dibantuin push - deploy key belum didaftarkan; (d) keputusan omniroute.
