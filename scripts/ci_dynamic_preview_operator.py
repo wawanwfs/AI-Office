@@ -355,6 +355,15 @@ try:
     release_root.mkdir(mode=0o700)
     release, proof["phase23_oci_release"] = prepare_oci_release(
         manager.snapshots, names[0], fingerprint, release_root)
+    built = proof["phase23_oci_release"]
+    before_images = subprocess.run(
+        ["docker", "image", "ls", "--all", "--no-trunc", "--format", "{{.ID}}"],
+        capture_output=True, text=True, check=True, timeout=20).stdout.splitlines()
+    assert not ({built["manifest_digest"], built["config_digest"]} & set(before_images))
+    proof["phase29_rootless_buildkit"] = {
+        **built["isolated_builder"], "oci_absent_from_runtime_before_promotion": True,
+        "single_disposable_host": True,
+    }
     try:
         open_manager(release).start(names[0], ports[0], tokens[0])
         raise AssertionError("missing release policy accepted")
@@ -777,6 +786,7 @@ print('outbound IPv4 denied for both targets')
             assert readonly.headers["x-frame-options"]=="DENY"
             assert gateway.get(base+project+"/preview/api/events",
                                headers=auth[i]).status_code==409
+    proof["phase29_rootless_buildkit"]["operator_only_promotion_two_tenants"] = True
     proof["authenticated_preview_http_two_tenants"]=True
     proof["upstream_public_bearer_not_forwarded"]=True
     proof["operator_registry_read_only"]=True

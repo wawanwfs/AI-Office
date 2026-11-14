@@ -3,7 +3,6 @@ import base64
 import json
 import os
 from pathlib import Path
-import secrets
 import subprocess
 import sys
 import time
@@ -18,41 +17,57 @@ from preview_sealed_build import seal_reviewed_preview_context
 from preview_signature import canonical_review_bytes
 
 
+def _supervisor(*args):
+    return ["sudo", "-n", sys.executable, "-I", "-B",
+            str(Path(__file__).with_name("ci_phase29_rootless_buildkit.py")),
+            "--disposable-ci", *args]
+
+
 def _export(snapshots, project, destination):
-    builder = "wfs-phase23-ci-" + secrets.token_hex(6)
-    docker = ["docker", "buildx"]
-    env = {key: os.environ[key] for key in (
-        "PATH", "HOME", "DOCKER_HOST", "DOCKER_CONFIG", "XDG_RUNTIME_DIR", "USER"
-    ) if key in os.environ}
-    subprocess.run(docker + ["create", "--driver", "docker-container", "--name", builder],
-                   env=env, check=True, timeout=30)
-    try:
-        with seal_reviewed_preview_context(snapshots, project) as context:
-            context.verify()
-            os.lseek(context.fd, 0, os.SEEK_SET)
-            args = docker + [
-                "build", "--builder", builder, "--platform", PLATFORM,
-                "--provenance=false", "--sbom=false", "--progress=plain",
-                "--output", "type=oci,compression=gzip,dest=-",
-                "--file", "Dockerfile.api", "-",
-            ]
-            with os.fdopen(os.dup(context.fd), "rb") as sealed_input:
-                with destination.open("xb") as output:
-                    subprocess.run(args, stdin=sealed_input, stdout=output,
-                                   env=env, check=True, timeout=300)
-            context.verify()
-            return context.tar_sha256
-    finally:
-        subprocess.run(docker + ["rm", builder], env=env, check=True, timeout=45)
+    with seal_reviewed_preview_context(snapshots, project) as context:
+        context.verify()
+        os.lseek(context.fd, 0, os.SEEK_SET)
+        with os.fdopen(os.dup(context.fd), "rb") as sealed_input:
+            with destination.open("xb") as output:
+                result = subprocess.run(
+                    _supervisor("--context-sha256", context.tar_sha256),
+                    stdin=sealed_input, stdout=output, stderr=subprocess.PIPE,
+                    timeout=430)
+        diagnostics = result.stderr.decode("utf-8", "replace")
+        if result.returncode:
+            print(diagnostics[-12000:], file=sys.stderr)
+            raise RuntimeError("separate rootless BuildKit export failed")
+        context.verify()
+        prefix = "WFS_ROOTLESS_BUILDKIT "
+        receipt, = (json.loads(line[len(prefix):]) for line in diagnostics.splitlines()
+                    if line.startswith(prefix))
+        assert receipt["sealed_context_sha256"] == context.tar_sha256
+        assert receipt["operator_uid"] == os.geteuid()
+        return receipt
+
+
+def _verify_distinct_principal(archive, review):
+    with archive.open("rb") as source:
+        result = subprocess.run(
+            _supervisor("--verify-review", json.dumps(review, separators=(",", ":"))),
+            stdin=source, capture_output=True, timeout=105)
+    if result.returncode:
+        print(result.stderr.decode("utf-8", "replace")[-3000:], file=sys.stderr)
+        raise RuntimeError("distinct OCI verifier rejected the build result")
+    return json.loads(result.stdout)
 
 
 def prepare_oci_release(snapshots, project, source_reviewer_fingerprint, root):
     """No production keys: ephemeral CI signs an already verified archive."""
     archive = root / "reviewed-preview.oci.tar"
-    context_sha256 = _export(snapshots, project, archive)
+    build_receipt = _export(snapshots, project, archive)
     review = snapshots.reviewed
     checked = verify_layout(archive, frontend=review["frontend"],
                             api_sha256=review["sources"]["api.py"])
+    verifier_receipt = _verify_distinct_principal(archive, review)
+    assert verifier_receipt["manifest_digest"] == checked.manifest_digest
+    assert verifier_receipt["config_digest"] == checked.config_digest
+    assert verifier_receipt["verifier_uid"] not in (0, os.geteuid(), build_receipt["daemon_uid"])
     review_sha256 = sha256(canonical_review_bytes(review))
     now = int(time.time())
     approval = {
@@ -96,7 +111,8 @@ def prepare_oci_release(snapshots, project, source_reviewer_fingerprint, root):
     assert result["manifest_digest"] != result["config_digest"]
     release = ApprovedOCIRelease(archive, paths["approval-path"], paths["signature-path"],
                                  paths["witness-key-path"], sha256(raw), fingerprint)
-    return release, {**result, "sealed_context_sha256": context_sha256,
+    return release, {**result, "sealed_context_sha256": build_receipt["sealed_context_sha256"],
+            "isolated_builder": {**build_receipt, **verifier_receipt},
             "review_sha256": review_sha256, "frontend_sha256": approval["frontend_sha256"],
             "approval_sha256": sha256(raw), "witness_fingerprint": fingerprint,
             "verifier_process_separate_from_builder": True,

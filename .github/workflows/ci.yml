@@ -353,6 +353,24 @@ jobs:
         env:
           PYTHONPATH: backend
         run: python -m pytest backend/test_reference_log_gossip.py -q
+      - name: Provision pinned BuildKit and distro rootless helpers
+        env:
+          WFS_BUILDKIT_VERSION: v0.35.0
+          WFS_BUILDKIT_SHA256: 37b3befbed28fb72a44d72bf42362c268610386c42feafa27cb45ee0b531369c
+        run: |
+          sudo -n apt-get update -qq
+          rootless_packages=(uidmap slirp4netns)
+          if [[ ! -x /usr/bin/rootlesskit ]]; then rootless_packages+=(rootlesskit); fi
+          sudo -n apt-get install -y -qq --no-install-recommends "${rootless_packages[@]}"
+          buildkit_tmp="$(mktemp -d)"
+          trap 'rm -rf "$buildkit_tmp"' EXIT
+          curl --fail --silent --show-error --location --retry 3 --max-time 90 \
+            "https://github.com/moby/buildkit/releases/download/${WFS_BUILDKIT_VERSION}/buildkit-${WFS_BUILDKIT_VERSION}.linux-amd64.tar.gz" \
+            --output "$buildkit_tmp/buildkit.tar.gz"
+          printf '%s  %s\n' "$WFS_BUILDKIT_SHA256" "$buildkit_tmp/buildkit.tar.gz" | sha256sum --check --strict
+          tar -xzf "$buildkit_tmp/buildkit.tar.gz" -C "$buildkit_tmp" bin/buildkitd bin/buildctl bin/buildkit-runc
+          sudo -n install -D -m 0755 -t /opt/wfs-phase29/bin \
+            "$buildkit_tmp/bin/buildkitd" "$buildkit_tmp/bin/buildctl" "$buildkit_tmp/bin/buildkit-runc"
       - name: Real Docker Compose template-managed two-project lifecycle
         env:
           WFS_DISPOSABLE_LINUX_CUSTODY_CI: '1'
