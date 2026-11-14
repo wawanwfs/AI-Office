@@ -5,7 +5,6 @@ import json
 from contextlib import nullcontext
 from dataclasses import dataclass
 from http.client import HTTPException, HTTPSConnection
-import json
 from pathlib import Path
 import ssl
 from threading import Lock
@@ -167,8 +166,15 @@ class RemoteReleasePolicy:
         self._custody = (None if custody_path is None else
                          DurableReleaseAnchor(custody_path, _MAX_SEQUENCE))
 
-    def verify(self, *, manifest_digest, approval_sha256, reviewer_fingerprint,
-               release_witness_fingerprint, now=None):
+    @property
+    def durable_custody_enabled(self):
+        return self._custody is not None
+
+    def verify(self, **pins):
+        return self.verify_checkpoint(**pins)["sequence"]
+
+    def verify_checkpoint(self, *, manifest_digest, approval_sha256, reviewer_fingerprint,
+                          release_witness_fingerprint, now=None):
         with self._lock:
             chain = verify_journal(self.tls.fetch(), _read_trusted(self.public_key_path, 4096),
                                    self.key_fingerprint)
@@ -185,9 +191,10 @@ class RemoteReleasePolicy:
                 observed = (chain[-1][1]["sequence"], chain[-1][0])
                 commit(*observed)
                 self._observed = observed
-                return check_release_decision(
+                check_release_decision(
                     chain[-1][1], manifest_digest=manifest_digest, approval_sha256=approval_sha256,
                     reviewer_fingerprint=reviewer_fingerprint,
                     release_witness_fingerprint=release_witness_fingerprint,
                     policy_key_fingerprint=self.key_fingerprint,
                     minimum_sequence=max(sequence for sequence, _ in anchors), now=now)
+                return chain[-1][1]
