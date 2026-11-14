@@ -947,3 +947,26 @@ export function bookNudge(elapsed, i = 0) {
   const nudge = Math.max(0, s) * Math.max(0, s) * (s > 0 ? 1 : 0); // smooth 0…1
   return 0.09 * clamp01(nudge);
 }
+
+// ── Siklus 511: trofi helm meja utama & cincin lantai lead bernapas (trophyPulse) ──
+// Elemen brand meja agent lead terakhir yang beku (setelah buku 510): visor helm
+// trofi (0x4D9FFF), PointLight helm, floorRing & ringInner (2 cincin 0x4D9FFF)
+// semuanya opasitas/intensitas konstan. trophyPulse(elapsed): visor berdenyut
+// seperti beacon 0.45…1.0 gelombang utama 2.6 dtk + mikro 8.6 dtk (rasio 3.31×
+// tak sinkron vs 15 siklus lain); cincin luar pakai denyut lambat terpisah
+// ringBreath 0.10…0.20 (6.9 dtk, rasio 2.66×) agar lantai "bernapas" pelan tak
+// menarik perhatian — tak pernah padam total (identitas brand biru lead desk).
+export const TROPHY_PULSE_SEC = 2.6;    // denyut utama visor + light helm
+export const TROPHY_RING_SEC = 6.9;     // napas lambat cincin lantai
+
+export function trophyPulse(elapsed) {
+  const t = Number.isFinite(elapsed) ? elapsed : 0; // netral (sin 0 → 0.5)
+  const w = (sec) => 0.5 + 0.5 * Math.sin((t / sec) * Math.PI * 2);
+  const main = w(TROPHY_PULSE_SEC);
+  const micro = w(TROPHY_PULSE_SEC * 3.31); // ≈8.606 dtk — rasio tak sinkron
+  return {
+    visor: 0.45 + 0.47 * main + 0.08 * micro,   // 0.45…1.0, beacon helm
+    ring: 0.10 + 0.075 * main + 0.025 * micro,  // 0.10…0.20, cincin luar
+    ringIn: 0.05 + 0.03 * w(TROPHY_RING_SEC),   // 0.05…0.08, cincin dalam
+  };
+}

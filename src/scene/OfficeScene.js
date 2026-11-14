@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath, downlightBreath, serverHum, floorLampBreath, receptionLightBreath, tubeLightBreath, pendantBreath, panelBreath, cafeGlowBreath, rackEdgeBreath, badgeBreath, screenGlowBreath, posterBreath, bookNudge } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath, downlightBreath, serverHum, floorLampBreath, receptionLightBreath, tubeLightBreath, pendantBreath, panelBreath, cafeGlowBreath, rackEdgeBreath, badgeBreath, screenGlowBreath, posterBreath, bookNudge, trophyPulse } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -1624,6 +1624,7 @@ const helmetBody=new THREE.Mesh(new THREE.BoxGeometry(.12,.12,.1),M(0xDDDDDD));
 helmetBody.position.set(leadDesk.x+.55,.87,leadDesk.z+.2);office.add(helmetBody);
 const helmetVisor=new THREE.Mesh(new THREE.BoxGeometry(.1,.04,.02),MB(0x4D9FFF));
 helmetVisor.position.set(leadDesk.x+.55,.88,leadDesk.z+.15);office.add(helmetVisor);
+helmetVisor.material.transparent=true;helmetVisor.userData.__trophy=true; // siklus 511: beacon bernapas
 // Tiny helmet glow
 const helmetGlow=new THREE.PointLight(0x4D9FFF,0.15,1,2);
 helmetGlow.position.set(leadDesk.x+.55,.9,leadDesk.z+.15);office.add(helmetGlow);
@@ -1876,6 +1877,14 @@ function animate(){
   const pf=pulseFx(elapsed);
   pulseRing.scale.set(pf.scale,1,pf.scale);
   pulseRing.material.opacity=pf.opacity;
+  // siklus 511: trofi helm & cincin lantai meja lead bernapas (trophyPulse)
+  if(helmetVisor&&helmetVisor.userData&&helmetVisor.userData.__trophy&&helmetVisor.material){
+    const tp=trophyPulse(elapsed);
+    helmetVisor.material.opacity=tp.visor;
+    helmetGlow.intensity=0.15*tp.visor;
+    if(floorRing&&floorRing.material) floorRing.material.opacity=tp.ring;
+    if(ringInner&&ringInner.material) ringInner.material.opacity=tp.ringIn;
+  }
   // Efek ambient berbasis elapsed di-throttle ~20×/dtk (AMBIENT_EVERY=3):
   // ring, visor, label duduk, label NX, dan animasi hidup karakter duduk (napas, ketik, lirik layar)
   if(shouldUpdateAmbient(frame) || __ambientGate(elapsed)){
