@@ -8,7 +8,7 @@ import { floorElevationAt, floorOf } from './parts/floor_elevation.js';
 import { createZones } from './parts/flooring.js';
 import { createMeeting } from './parts/meeting.js';
 import { createMotion } from './parts/motion.js';
-import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath, downlightBreath, serverHum, floorLampBreath, receptionLightBreath, tubeLightBreath, pendantBreath, panelBreath, cafeGlowBreath, rackEdgeBreath, badgeBreath, screenGlowBreath, posterBreath, bookNudge, trophyPulse, zoneBreath, magTilt, cupLift, markerPick, headphonePick, menuHighlight, glassShimmer, posterSloganIdx, posterSloganFor, wallPosterIdx, wallPosterTextFor } from './parts/effects.js';
+import { drawScreenFrame, createDriftingPages, addDeskTrinkets, shouldRedrawScreenAt, screenTickGate, SCREEN_REDRAW_EVERY, shouldRefreshShadow, shouldRelayoutLabels, labelRelayoutTimeGate, shouldRedrawClock, clockTimeGate, shadowTimeGate, shouldUpdateLeds, ledTimeGate, ledOpacity, shouldUpdateDust, dustTimeGate, dustY, DUST_UPDATE_EVERY, DUST_RATE, DUST_RATE_X, shouldUpdateAmbient, ambientFx, ambientTimeGate, pulseFx, shouldUpdateBubbles, bubbleTimeGate, charMotion, applyCharMotion, plantSway, coffeeSteam, printerCycle, coolerBubbles, robotIdle, pedestalBreath, lampFlicker, receptionGlow, deckNeonBreath, wallLogoBreath, downlightBreath, serverHum, floorLampBreath, receptionLightBreath, tubeLightBreath, pendantBreath, panelBreath, cafeGlowBreath, rackEdgeBreath, badgeBreath, screenGlowBreath, posterBreath, bookNudge, trophyPulse, zoneBreath, magTilt, cupLift, markerPick, headphonePick, menuHighlight, glassShimmer, posterSloganIdx, posterSloganFor, wallPosterIdx, wallPosterTextFor, floorBadgeIdx, floorMissionTextFor } from './parts/effects.js';
 import { uiTexture, uiMaterial } from './parts/ui_colorspace.js';
 import { overlapPass, sweepClampRounds, worldPerPx, labelWorldOffset, accumulateZoneAnti, zoneViewportGuard, buildAgentPts, buildZonePts, buildBubblePts, resetZoneBaseOffsets, PX_PER_TAN, VIEW_TOP_MARGIN, VIEW_BOT_MARGIN, ZONE_TOP_EXTRA, PAD_X_ZONE } from './parts/label_overlap.js';
 import { applyZoneLod } from './parts/zone_lod.js';
@@ -68,6 +68,7 @@ import { createServerRoom } from './parts/serverroom.js';
 import { createLounge } from './parts/lounge.js';
 import { createStructure } from './parts/structure.js';
 import { createTerraces } from './parts/terraces.js';
+import { drawFloorBadge } from './parts/floor_badge_canvas.js'; // siklus 526
 import { createPedestal } from './parts/pedestal.js';
 import { chatPhrases, COLLAB_PAIRS, pickCollab, clampBubbleText, LINE_SEC, autoTalkDelay, autoTalkText } from './parts/dialog.js';
 import { agentIdMap, buildRunningByAgent } from './parts/running_tasks.js';
@@ -1451,6 +1452,7 @@ let __posterSloganLast=-1;
 // siklus 524: poster dinding (8, furniture) — kanvas+tekstur, indeks teks terakhir
 const __wallPosters=__furn&&Array.isArray(__furn.wallPosterCanvases)?__furn.wallPosterCanvases:[];
 let __wallPosterLast=-1;
+let __floorBadgeLast=-1; // siklus 526: kunci redraw plakat lantai
 // siklus 525: layar monitor resepsionis live — refs dari reception; kunci menit-sim
 // terakhir yang digambar (redraw hanya saat menit berganti, pola 518/519/523).
 const __lobbyCtx=__rc&&__rc.lobbyCtx?__rc.lobbyCtx:null;
@@ -2139,6 +2141,19 @@ function animate(){
           if(!pc||!pc.cv||!pc.tex) return;
           drawPoster(pc.cv.getContext('2d'), pc.col, wallPosterTextFor(pc.idx,wp));
           pc.tex.needsUpdate=true;
+        });
+      }
+    }
+    // siklus 526: 3 plakat lantai (LEVEL 01–03) — teks misi berganti; warna
+    // aksen & label level tetap, redraw hanya saat indeks berubah (pola 524).
+    if(__terraces&&Array.isArray(__terraces.badgeCanvases)&&__terraces.badgeCanvases.length){
+      const fb=floorBadgeIdx(elapsed);
+      if(fb!==__floorBadgeLast){
+        __floorBadgeLast=fb;
+        __terraces.badgeCanvases.forEach((bc,i)=>{
+          if(!bc||!bc.cv||!bc.tex) return;
+          drawFloorBadge(bc.cv.getContext('2d'), bc.accent, bc.level, floorMissionTextFor(i,fb));
+          bc.tex.needsUpdate=true;
         });
       }
     }

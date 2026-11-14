@@ -29,7 +29,7 @@ class Light extends Obj {
   }
 }
 class Mesh extends Obj {
-  constructor(g, m) { super(); this.geometry = g; this.material = m; this.isMesh = true }
+  constructor(g, m) { super(); this.geometry = g; this.material = m; this.isMesh = true; this.userData = {} }
 }
 const THREE = {
   Mesh, Group: Obj, BoxGeometry: Geom, PlaneGeometry: Geom, CylinderGeometry: Geom, SphereGeometry: Geom, PointLight: Light,

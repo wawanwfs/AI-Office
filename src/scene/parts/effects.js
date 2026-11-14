@@ -1202,3 +1202,33 @@ export function wallPosterIdx(elapsed) {
   const idx = Math.floor(elapsed / WALL_POSTER_SEC) % WALL_SLOGANS_COUNT;
   return ((idx % WALL_SLOGANS_COUNT) + WALL_SLOGANS_COUNT) % WALL_SLOGANS_COUNT;
 }
+
+// ── Siklus 526: 3 plakat lantai (LEVEL 01–03) berganti misi ────────────────
+// Plakat beriluminasi (terraces.js, kanvas 640×112) digambar sekali — teks
+// misi beku permanen. Warna aksen & label level TETAP (identitas visual);
+// hanya TEKS misi yang berputar dari kolam FLOOR_MISSIONS, offset fase =
+// indeks plakat agar 3 plakat tak pernah seragam bersamaan.
+export const FLOOR_MISSIONS = [
+  'DATACENTER, AI LAB & TECH OPS',      // teks awal LEVEL 01
+  'CORE ENGINEERING & PRODUCT STUDIO',  // teks awal LEVEL 02
+  'EXECUTIVE PENTHOUSE & FOUNDER SUITE', // teks awal LEVEL 03
+  'SHIP VALUE EVERY SPRINT',
+  '26 AGENTS ON DUTY · 24/7',
+  'BUILD · TEST · DEPLOY',
+];
+export const FLOOR_MISSIONS_COUNT = FLOOR_MISSIONS.length;
+
+export function floorMissionTextFor(i, idx) {
+  if (!Number.isInteger(i) || i < 0 || i >= FLOOR_MISSIONS_COUNT) return FLOOR_MISSIONS[0];
+  if (!Number.isInteger(idx) || idx < 0 || idx >= FLOOR_MISSIONS_COUNT) return FLOOR_MISSIONS[i];
+  return FLOOR_MISSIONS[(i + idx) % FLOOR_MISSIONS_COUNT];
+}
+
+// Paritas wallPosterIdx 524 — periode beda (8.5 dtk ≠ 7/6/5.6/4.4/3.2) agar
+// siklus kanvas tak sinkron dgn slot redraw lain.
+export const FLOOR_BADGE_SEC = 8.5;
+export function floorBadgeIdx(elapsed) {
+  if (!Number.isFinite(elapsed)) return 0;
+  const idx = Math.floor(elapsed / FLOOR_BADGE_SEC) % FLOOR_MISSIONS_COUNT;
+  return ((idx % FLOOR_MISSIONS_COUNT) + FLOOR_MISSIONS_COUNT) % FLOOR_MISSIONS_COUNT;
+}

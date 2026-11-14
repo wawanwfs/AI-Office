@@ -5,10 +5,12 @@ import { drawTerrazzo } from './floor_canvas.js';
 import { L1_Y, L2_Y, L3_Y, floorElevationAt } from './floor_elevation.js';
 import { uiTexture, uiMaterial } from './ui_colorspace.js';
 import { AMBER_ACCENT, CYAN_NEON, GREEN_ACCENT } from '../../lib/ui_palette.js';
+import { drawFloorBadge, FB_W, FB_H } from './floor_badge_canvas.js'; // siklus 526
 export { L1_Y, L2_Y, L3_Y, floorElevationAt };
 
 export function createTerraces({ THREE, office, M, MB }) {
   const terraces = new THREE.Group();
+  const badgeCanvases = []; // siklus 526: refs redraw plakat (cv, tex, meta)
 
   // Koleksi lampu & strip LED untuk sinkronisasi mode Gelap / Terang
   const stepStrips = [];
@@ -27,28 +29,14 @@ export function createTerraces({ THREE, office, M, MB }) {
   // Helper Pembuat Plakat Lantai Beriluminasi
   const createFloorBadge = (text, levelText, accentColor) => {
     const cv = document.createElement('canvas');
-    cv.width = 640;
-    cv.height = 112;
+    cv.width = FB_W;
+    cv.height = FB_H;
     const ctx = cv.getContext('2d');
-    if (ctx) {
-      ctx.fillStyle = 'rgba(6, 12, 26, 0.94)';
-      ctx.roundRect ? ctx.roundRect(4, 4, 632, 104, 16) : ctx.rect(4, 4, 632, 104);
-      ctx.fill();
-      ctx.strokeStyle = accentColor;
-      ctx.lineWidth = 3.5;
-      ctx.stroke();
-
-      ctx.fillStyle = accentColor;
-      ctx.font = 'bold 24px "DM Mono", monospace';
-      ctx.fillText(levelText, 28, 42);
-
-      ctx.fillStyle = '#FFFFFF';
-      ctx.font = 'bold 26px "DM Sans", sans-serif';
-      ctx.fillText(text, 28, 82);
-    }
+    if (ctx) drawFloorBadge(ctx, accentColor, levelText, text);
     const tex = uiTexture(new THREE.CanvasTexture(cv));
     const m = new THREE.Mesh(new THREE.PlaneGeometry(4.2, 0.74), uiMaterial(new THREE.MeshBasicMaterial({ map: tex, transparent: true })));
     m.rotation.x = -Math.PI / 2;
+    badgeCanvases.push({ cv, tex, level: levelText, accent: accentColor }); // siklus 526
     return m;
   };
 
@@ -82,6 +70,7 @@ export function createTerraces({ THREE, office, M, MB }) {
 
   // Plakat Lantai 1 (Paling bawah layar)
   const badgeL1 = createFloorBadge('DATACENTER, AI LAB & TECH OPS', 'LEVEL 01', AMBER_ACCENT);
+  badgeL1.userData.__badge = { idx: 0, level: 'LEVEL 01', accent: AMBER_ACCENT }; // siklus 526
   badgeL1.position.set(-8.5, 0.02, -12.0);
   terraces.add(badgeL1);
 
@@ -249,6 +238,7 @@ export function createTerraces({ THREE, office, M, MB }) {
 
   // Plakat Lantai 2
   const badgeL2 = createFloorBadge('CORE ENGINEERING & PRODUCT STUDIO', 'LEVEL 02', CYAN_NEON);
+  badgeL2.userData.__badge = { idx: 1, level: 'LEVEL 02', accent: CYAN_NEON }; // siklus 526
   badgeL2.position.set(-8.5, L2_Y + 0.02, 0.2);
   terraces.add(badgeL2);
 
@@ -299,6 +289,7 @@ export function createTerraces({ THREE, office, M, MB }) {
 
   // Plakat Lantai 3 (Paling atas di layar)
   const badgeL3 = createFloorBadge('EXECUTIVE PENTHOUSE & FOUNDER SUITE', 'LEVEL 03', GREEN_ACCENT);
+  badgeL3.userData.__badge = { idx: 2, level: 'LEVEL 03', accent: GREEN_ACCENT }; // siklus 526
   badgeL3.position.set(-8.5, L3_Y + 0.02, 5.8);
   terraces.add(badgeL3);
 
@@ -383,6 +374,7 @@ export function createTerraces({ THREE, office, M, MB }) {
     ledLines,
     downlights: [l1Downlight, l2Downlight, l3Downlight], // siklus 497
     badges: [badgeL1, badgeL2, badgeL3], // siklus 507: refs napas plakat
+    badgeCanvases, // siklus 526: refs redraw teks plakat
     setMode,
   };
 }
