@@ -99,18 +99,24 @@ export function createFurniture(ctx /* hooks disiapkan utk ekstensi */) {
   office.add(pantry);
 
   // ── Poster dinding samping (slogan WFS) — data di parts/poster_spec.js ──
+  // Siklus 524: teks poster dinding berganti (wallPosterIdx) — kanvas+tekstur
+  // diekspos utk redraw dari OfficeScene (pola posterCanvases decor 522).
+  const wallPosterCanvases = [];
   POSTERS.forEach((p) => {
     box(0.04, 0.72, 0.52, M(0x262a31), p.x, POSTER_Y, p.z, office, true);
     const cv = document.createElement('canvas');
     cv.width = CANVAS_W; cv.height = CANVAS_H;
     const g = cv.getContext('2d');
     drawPoster(g, p.c, p.t);
-    const plane = new THREE.Mesh(new THREE.PlaneGeometry(POSTER_W, POSTER_H), uiMaterial(new THREE.MeshBasicMaterial({ map: uiTexture(new THREE.CanvasTexture(cv)), transparent: true })));
+    // siklus 524: tekstur disimpan utk redraw teks berganti (wallPosterIdx)
+    const pTex = uiTexture(new THREE.CanvasTexture(cv));
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(POSTER_W, POSTER_H), uiMaterial(new THREE.MeshBasicMaterial({ map: pTex, transparent: true })));
     plane.position.set(p.x + posterOffsetFor(p), POSTER_Y, p.z);
     plane.rotation.y = posterFacingFor(p);
     (plane.userData = plane.userData || {}).__poster = true; // siklus 509: napas poster dinding
+    wallPosterCanvases.push({ cv, tex: pTex, col: p.c, idx: POSTERS.indexOf(p) }); // siklus 524: redraw teks
     office.add(plane);
   });
 
-  return { addPlant, dispenser, printer, printerFx: { leds: [led1], sheet }, sofa, pantry };
+  return { addPlant, dispenser, printer, printerFx: { leds: [led1], sheet }, sofa, pantry, wallPosterCanvases };
 }

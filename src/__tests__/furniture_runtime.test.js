@@ -184,7 +184,7 @@ describe('createFurniture — perabot kantor 3D', () => {
 
   it('return refs berisi semua bagian yang bisa dipakai scene', async () => {
     const { refs } = await build()
-    expect(Object.keys(refs).sort()).toEqual(['addPlant', 'dispenser', 'pantry', 'printer', 'printerFx', 'sofa'])
+    expect(Object.keys(refs).sort()).toEqual(['addPlant', 'dispenser', 'pantry', 'printer', 'printerFx', 'sofa', 'wallPosterCanvases'])
     expect(typeof refs.addPlant).toBe('function')
     expect(refs.dispenser).toBeTruthy()
   })

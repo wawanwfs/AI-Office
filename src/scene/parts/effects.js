@@ -1175,3 +1175,30 @@ export function posterSloganIdx(elapsed) {
   const idx = Math.floor(elapsed / POSTER_SLOGAN_SEC) % POSTER_SLOGANS_COUNT;
   return ((idx % POSTER_SLOGANS_COUNT) + POSTER_SLOGANS_COUNT) % POSTER_SLOGANS_COUNT;
 }
+
+// ── Siklus 524: 8 poster dinding samping/depan/belakang berganti teks ────
+// Poster dinding (furniture.js, kanvas 120×160) digambar sekali — hanya
+// bernapas via opacity (posterBreath 509), teksnya beku permanen. Warna
+// bingkai/aksen TETAP per poster (identitas visual dipertahankan); hanya
+// TEKS yang berputar dari kolam slogan yang sama dgn spesifikasi awal —
+// offset fase = indeks poster, sehingga 8 poster tak pernah seragam.
+export const WALL_SLOGANS = [
+  'SHIP IT', 'KUALITAS DULU', 'BUILD DAILY', 'TEST EVERYTHING',
+  'WFS PROJECT', 'FOKUS', 'SELESAIKAN', 'ANTAR TEPAT WAKTU',
+];
+export const WALL_SLOGANS_COUNT = WALL_SLOGANS.length;
+
+export function wallPosterTextFor(i, idx) {
+  if (!Number.isInteger(i) || i < 0 || i >= WALL_SLOGANS_COUNT) return WALL_SLOGANS[0];
+  if (!Number.isInteger(idx) || idx < 0 || idx >= WALL_SLOGANS_COUNT) return WALL_SLOGANS[i];
+  return WALL_SLOGANS[(i + idx) % WALL_SLOGANS_COUNT];
+}
+
+// Paritas posterSloganIdx 522 — periode beda (7 dtk ≠ 6/5.6/4.4/3.2) agar
+// siklus kanvas tak sinkron dgn slot redraw lain.
+export const WALL_POSTER_SEC = 7.0;
+export function wallPosterIdx(elapsed) {
+  if (!Number.isFinite(elapsed)) return 0;
+  const idx = Math.floor(elapsed / WALL_POSTER_SEC) % WALL_SLOGANS_COUNT;
+  return ((idx % WALL_SLOGANS_COUNT) + WALL_SLOGANS_COUNT) % WALL_SLOGANS_COUNT;
+}
