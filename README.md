@@ -675,3 +675,14 @@ ingress and API without deleting volumes or stopping PostgreSQL.
 - [Phase 30 scoped gate](docs/REA_PHASE30.md)
 - [Phase 30 lease runbook](docs/PHASE30_RELEASE_LEASE_RUNBOOK.md)
 - [Next Phase 31 implementation prompt](docs/NEXT_PHASE31_PROMPT.md)
+
+## Phase 31 — supervised preview startup
+
+The Linux operator can start with gateway admission closed until the
+first signed lease is verified. The supervisor replaces crashed workers
+without resetting the deadline and suspends expired previews without
+stopping PostgreSQL.
+
+- [Phase 31 scoped gate](docs/REA_PHASE31.md)
+- [Phase 31 supervisor runbook](docs/PHASE31_SUPERVISED_LEASE_RUNBOOK.md)
+- [Next Phase 32 implementation prompt](docs/NEXT_PHASE32_PROMPT.md)

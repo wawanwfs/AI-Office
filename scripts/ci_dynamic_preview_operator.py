@@ -251,6 +251,110 @@ def prove_release_lease(project, port, token, other, mode, on_active):
         assert watcher.status(project)["compose_name"] == compose
 
 
+def prove_supervised_start(project, port, token, other, neighbor_check):
+    import signal
+    from preview_release_lease import supervise_preview_release
+    from preview_proxy import PreviewRegistryReader, PreviewProxyUnavailable
+
+    fixture_project = project
+    reader = PreviewRegistryReader(manager.registry)
+    worker_pids = []
+    rows = {}
+
+    def denied():
+        try:
+            reader.port(fixture_project)
+        except PreviewProxyUnavailable:
+            return True
+        return False
+
+    def status():
+        return manager.status(fixture_project)
+
+    def wait_lease(after):
+        for _ in range(100):
+            end = status()["lease_deadline"]
+            if end and end > max(time.time(), after):
+                return end
+            time.sleep(.05)
+        raise AssertionError("supervised worker did not renew its lease")
+
+    def worker_started(pid):
+        worker_pids.append(pid)
+        attempt = len(worker_pids)
+        if attempt == 1:
+            deadline = wait_lease(0)
+            assert reader.port(project) == port
+            assert health(port, token, other)
+            record = status()
+            database = manager._invoke(record, token, ["ps", "-q", "db"]).strip()
+            rows["database"] = database
+            sql(database, "CREATE TABLE phase31_probe (value integer); "
+                          "INSERT INTO phase31_probe VALUES (31)")
+            # Terminate a real worker process and let its supervisor replace it.
+            rows["first_deadline"] = max(deadline, status()["lease_deadline"])
+            os.kill(pid, signal.SIGKILL)
+        elif attempt == 2:
+            wait_lease(rows["first_deadline"] + .1)
+            assert health(port, token, other)
+            assert status()["api_container_id"] == rows["api"]
+            os.kill(pid, signal.SIGKILL)
+            # Hold the supervisor's reap/replacement briefly to exercise an
+            # elapsed persisted lease with no worker running.
+            deadline = status()["lease_deadline"]
+            while time.time() < deadline + .1:
+                time.sleep(.1)
+            assert denied()
+            neighbor_check()
+        elif attempt != 3:
+            raise AssertionError("unexpected supervisor retry")
+
+    def sql(database, statement):
+        return subprocess.run(["docker", "exec", database, "psql", "-U", "wfsdemo",
+                               "-d", "wfsdemo", "-Atq", "-c", statement],
+                              check=True, text=True, capture_output=True, timeout=15).stdout.strip()
+
+    # The same mTLS journal and durable state used in Phases 27–30.
+    head = journal.append()
+    with journal.server() as journal_port:
+        policy = RemoteReleasePolicy(journal.endpoint(journal_port), journal.policy_key,
+                                     journal.fingerprint, MAX_RECORDS, boundary,
+                                     custody_path=custody)
+        supervisor = open_manager(release, policy)
+
+        original_runner = supervisor.runner
+
+        def gated_runner(argv, **kwargs):
+            if "up" in argv:
+                current = status()
+                assert current["phase"] == "uncertain" and current["lease_deadline"] == 0
+                assert denied()
+                rows["startup_gate"] = True
+            return original_runner(argv, **kwargs)
+
+        supervisor.runner = gated_runner
+
+        def observe_start_and_worker(pid):
+            if not worker_pids:
+                rows["api"] = status()["api_container_id"]
+            worker_started(pid)
+
+        result = supervise_preview_release(supervisor, project, port, token,
+                                           on_worker=observe_start_and_worker)
+        assert rows["startup_gate"] and len(set(worker_pids)) == 3
+        assert result["phase"] == "stopped" and result["lease_suspended"] == 1
+        assert result["lease_deadline"] == 0 and denied()
+        assert json.loads(custody.read_text())["sequence"] == head
+        assert sql(rows["database"], "SELECT value FROM phase31_probe") == "31"
+        neighbor_check()
+        with httpx.Client(timeout=1, trust_env=False) as client:
+            try:
+                client.get(f"http://127.0.0.1:{port}/api/health").raise_for_status()
+                raise AssertionError("elapsed supervised preview still reachable")
+            except (httpx.TransportError, httpx.HTTPStatusError):
+                pass
+
+
 def open_manager(oci_release=None, release_policy=None):
     return TemplatePreviewManager(root/"registry.db",
         reviewed_root/"compose.yaml",enabled=True,reviewed_files=reviewed_files,
@@ -879,6 +983,26 @@ print('outbound IPv4 denied for both targets')
         "postgres_data_retained_in_both_tenants": True,
         "other_tenant_unaffected_by_first_suspension": True,
         "gateway_and_loopback_fail_closed": True,
+        "durable_journal_floor_preserved": True,
+    }
+
+    # Re-admit the second tenant using the next current signed decision,
+    # then exercise the supervised startup path for the first tenant.
+    journal.append()
+    with journal.server() as neighbor_port:
+        neighbor_policy = RemoteReleasePolicy(
+            journal.endpoint(neighbor_port), journal.policy_key, journal.fingerprint,
+            MAX_RECORDS, boundary, custody_path=custody)
+        open_manager(release, neighbor_policy).start(names[1], ports[1], tokens[1])
+    assert health(ports[1], tokens[1], tokens[0])
+    prove_supervised_start(names[0], ports[0], tokens[0], tokens[1],
+                           lambda: health(ports[1], tokens[1], tokens[0]))
+    proof["phase31_supervised_lease"] = {
+        "supervised_start_from_signed_release": True,
+        "worker_sigkill_recovered_before_deadline": True,
+        "expired_worker_lease_not_renewed_after_restart": True,
+        "gateway_failed_closed_before_replacement": True,
+        "postgres_row_and_neighbor_tenant_preserved": True,
         "durable_journal_floor_preserved": True,
     }
 

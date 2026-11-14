@@ -1,5 +1,6 @@
 """Operator-only bounded watch for one signed, disposable preview instance."""
 from contextlib import closing
+from multiprocessing import get_context
 from pathlib import Path
 from queue import Empty, Queue
 import os
@@ -63,15 +64,19 @@ def _suspend(manager, record):
     compose = manager._compose_name(project)
     if compose != record["compose_name"]:
         raise AdmissionDenied("invalid registered Compose project")
-    with closing(manager._db()) as db:
-        claimed = db.execute(
-            "UPDATE wfs_preview_instances SET phase='uncertain',lease_deadline=0,lease_suspended=1 "
-            "WHERE project_id=? AND phase='running' AND api_container_id=? "
-            "AND oci_approval_sha256=? AND lease_deadline IS ?",
-            (project, record["api_container_id"], record["oci_approval_sha256"],
-             record["lease_deadline"])).rowcount
-    if claimed != 1:
-        raise AdmissionDenied("preview changed before suspension; reconcile")
+    if record["phase"] == "running":
+        with closing(manager._db()) as db:
+            claimed = db.execute(
+                "UPDATE wfs_preview_instances SET phase='uncertain',lease_deadline=0,lease_suspended=1 "
+                "WHERE project_id=? AND phase='running' AND api_container_id=? "
+                "AND oci_approval_sha256=? AND lease_deadline IS ?",
+                (project, record["api_container_id"], record["oci_approval_sha256"],
+                 record["lease_deadline"])).rowcount
+        if claimed != 1:
+            raise AdmissionDenied("preview changed before suspension; reconcile")
+    elif not (record["phase"] == "uncertain" and record["lease_suspended"]
+              and record["lease_deadline"] == 0):
+        raise AdmissionDenied("no pending lease suspension to reconcile")
     # Exact project and service labels, no mutable Compose files, token,
     # release approval, volume command, or broad daemon-wide stop.
     def containers(service, include_stopped):
@@ -97,16 +102,16 @@ def _suspend(manager, record):
         raise AdmissionDenied("preview changed during suspension; reconcile")
 
 
-def _watch(manager, record):
+def _watch(manager, record, *, startup=False):
     wall, steady = time.time(), time.monotonic()
-    old = record["lease_deadline"]
+    old = None if startup and record["lease_deadline"] == 0 else record["lease_deadline"]
     # A new watch closes gateway reads until the first authenticated check.
     # A replacement watch cannot renew an already expired persisted lease.
-    if old is None:
+    if old is None and not startup:
         if not _write_deadline(manager, record, 0):
             raise AdmissionDenied("preview changed before lease watch")
         record["lease_deadline"] = 0
-    elif old <= wall:
+    elif old is not None and old <= wall:
         _suspend(manager, record)
         return "lease-expired"
     deadline = steady + min(LEASE_SECONDS, old - wall if old is not None else LEASE_SECONDS)
@@ -157,13 +162,17 @@ def _watch(manager, record):
     return reason
 
 
-def watch_preview_release(manager, project):
-    """Run in the foreground under the trusted Docker operator until suspension."""
+def _require_durable(manager):
     if (not manager.sealed_runtime or not linux_sealing_supported()
             or manager.oci_release is None
             or not isinstance(manager.release_policy, RemoteReleasePolicy)
             or not manager.release_policy.durable_custody_enabled):
         raise AdmissionDenied("lease watch requires sealed OCI and a durable mTLS journal")
+
+
+def watch_preview_release(manager, project, *, _startup=False, _recover=False, _stop=False):
+    """Run in the foreground under the trusted Docker operator until suspension."""
+    _require_durable(manager)
     project = ident(project)
     lock = Path(manager.registry.parent) / (manager._compose_name(project) + ".lease-lock")
     with os.fdopen(os.open(lock, os.O_RDWR | os.O_CREAT | os.O_NOFOLLOW, 0o600), "r+b") as fd:
@@ -172,6 +181,56 @@ def watch_preview_release(manager, project):
         except BlockingIOError as exc:
             raise AdmissionDenied("preview lease watch is already active") from exc
         record = manager.status(project)
-        if record["phase"] != "running" or not _CONTAINER_ID.fullmatch(record["api_container_id"] or ""):
+        if record["phase"] == "stopped" and record["lease_suspended"]:
+            return "already-suspended"
+        if not _CONTAINER_ID.fullmatch(record["api_container_id"] or ""):
+            raise AdmissionDenied("lease watch requires a registered OCI preview")
+        if record["phase"] == "uncertain" and record["lease_suspended"]:
+            _suspend(manager, record)
+            return "suspension-reconciled"
+        if record["phase"] != "running":
             raise AdmissionDenied("lease watch requires a running registered OCI preview")
-        return _watch(manager, record)
+        if _recover and record["lease_deadline"] is None:
+            raise AdmissionDenied("no supervised lease to recover")
+        if _stop:
+            _suspend(manager, record)
+            return "worker-retries-exhausted"
+        return _watch(manager, record, startup=_startup)
+
+
+def _watch_worker(manager, project, startup):
+    watch_preview_release(manager, project, _startup=startup, _recover=True)
+
+
+def supervise_preview_release(manager, project, port, token, *, on_worker=None):
+    """Start with gateway admission closed, then supervise a replaceable Linux worker.
+
+    Call only from a single-threaded foreground operator. A worker exit cannot
+    recreate a bootstrap lease. A stopped preview is never started again here.
+    """
+    _require_durable(manager)
+    manager.start(project, port, token, supervised=True)
+    return recover_preview_supervision(manager, project, on_worker=on_worker, _startup=True)
+
+
+def recover_preview_supervision(manager, project, *, on_worker=None, _startup=False):
+    """Attach supervision without starting containers or recreating an expired lease."""
+    _require_durable(manager)
+    ctx = get_context("fork")
+    for attempt in range(4):
+        worker = ctx.Process(target=_watch_worker, args=(manager, project, _startup and attempt == 0))
+        worker.start()
+        try:
+            if on_worker is not None:
+                on_worker(worker.pid)
+            worker.join()
+            if worker.exitcode == 0:
+                return manager.status(project)
+        finally:
+            if worker.is_alive():
+                worker.kill()
+                worker.join()
+            worker.close()
+    # Keep gateway fail-closed and attempt the same tenant-scoped stop.
+    watch_preview_release(manager, project, _recover=True, _stop=True)
+    return manager.status(project)

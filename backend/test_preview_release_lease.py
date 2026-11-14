@@ -86,3 +86,47 @@ def test_suspend_checks_project_and_api_id_and_only_stops_api_ingress(registered
     assert not any({"rm", "down", "volume", "db"} & set(cmd) for cmd in commands)
     with pytest.raises(AdmissionDenied, match="changed before suspension"):
         lease._suspend(manager, record)
+
+
+def test_supervised_bootstrap_needs_signed_check_but_recovery_cannot_bootstrap(
+        registered, monkeypatch):
+    manager, record = registered
+    with closing(manager._db()) as db:
+        db.execute("UPDATE wfs_preview_instances SET lease_deadline=0")
+    record["lease_deadline"] = 0
+    checks, stops = [], []
+
+    def denied(*_):
+        checks.append(True)
+        raise AdmissionDenied("no current signed approval")
+
+    monkeypatch.setattr(lease, "_signed_expiry", denied)
+    monkeypatch.setattr(lease, "_suspend", lambda _, state: stops.append(state.copy()))
+    assert lease._watch(manager, record, startup=True) == "release-check-denied"
+    assert lease._watch(manager, record) == "lease-expired"
+    assert len(checks) == 1 and len(stops) == 2
+    with pytest.raises(PreviewProxyUnavailable):
+        PreviewRegistryReader(manager.registry).port("tenant-a")
+
+
+def test_recovers_if_worker_died_after_claiming_suspension(registered, monkeypatch):
+    manager, record = registered
+    with closing(manager._db()) as db:
+        db.execute("UPDATE wfs_preview_instances SET phase='uncertain', "
+                   "lease_suspended=1,lease_deadline=0")
+    record.update(phase="uncertain", lease_suspended=1, lease_deadline=0)
+    stopped = []
+
+    def docker(_, *args):
+        if args[:2] == ("container", "stop"):
+            stopped.extend(args[4:])
+            return ""
+        if "--all" not in args and stopped:
+            return ""
+        return ("1" if args[-1].endswith("=api") else "3") * 64 + "\n"
+
+    monkeypatch.setattr(lease, "_docker", docker)
+    lease._suspend(manager, record)
+    with closing(manager._db()) as db:
+        assert db.execute("SELECT phase FROM wfs_preview_instances").fetchone() == ("stopped",)
+    assert stopped == ["3" * 64, "1" * 64]

@@ -361,9 +361,13 @@ class TemplatePreviewManager:
             raise PreviewDenied("Docker command failed; reconciliation required")
         return str(result.stdout or "")[-16384:]
 
-    def start(self,project_id,port,token):
+    def start(self,project_id,port,token,*,supervised=False):
         if not isinstance(token,str) or len(token)<32 or not token.isascii():
             raise PreviewDenied("operator-supplied ephemeral token required")
+        if supervised and (not self.sealed_runtime
+                           or not isinstance(self.release_policy, RemoteReleasePolicy)
+                           or not self.release_policy.durable_custody_enabled):
+            raise AdmissionDenied("supervised startup requires a durable mTLS journal")
         if self.sealed_runtime:
             # Deny invalid release evidence before reserving or contacting Docker.
             with self._approved_release() as (snapshot, checked, _):
@@ -379,10 +383,11 @@ class TemplatePreviewManager:
                     db.execute(
                         "UPDATE wfs_preview_instances SET api_image_id=?,ingress_image_id=?, "
                         "api_frontend_sealed=1,oci_manifest_digest=?,oci_config_digest=?,oci_approval_sha256=?, "
-                        "api_container_id=NULL,lease_deadline=NULL,lease_suspended=0 "
+                        "api_container_id=NULL,lease_deadline=?,lease_suspended=0 "
                         "WHERE project_id=? AND phase='uncertain'",
                         (image_id, ingress["image_id"], checked.manifest_digest,
-                         checked.config_digest, self.oci_release.approval_sha256, project_id))
+                         checked.config_digest, self.oci_release.approval_sha256,
+                         0 if supervised else None, project_id))
                 record=self.status(project_id)
                 # Preparation can take time. Recheck before activating containers.
                 self._check_release_policy(checked)
