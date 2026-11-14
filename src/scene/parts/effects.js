@@ -999,6 +999,38 @@ export function zoneBreath(elapsed, i = 0) {
 export const MAG_CYCLE_SEC = 29.0;   // periode slot global semua majalah
 export const MAG_TILT_RAD = 0.18;    // sudut angkat maksimum majalah
 
+// ── Siklus 514: cangkir kafe sesekali "diambil-diminum" (cupLift) ──
+// 3 cangkir di counter kafe (cafe.js) tergeletak konstan — benda terakhir di
+// area kafe yang beku (setelah uap espresso 488 & glow kulkas 505). Efek
+// cupLift(elapsed, i): tiap cangkir sesekali terangkat 0 → 0.045 unit (diambil)
+// lalu kembali turun — pola magTilt 513: slot global panjang + fase hash
+// deterministik, hanya sebagian kecil aktif per slot (≈25%), tak sinkron antar
+// cangkir & vs 18 siklus lain (slot 41 dtk ≠ mag 29, buku 37, poster 3.35).
+export const CUP_CYCLE_SEC = 41.0;   // periode slot global semua cangkir
+export const CUP_LIFT_UP = 0.045;    // tinggi angkat maksimum cangkir
+
+// hash kecil deterministik 0…1 dari indeks (bukan Math.random — replays uji aman)
+const cupHash = (i) => {
+  const x = Math.sin((Number.isFinite(i) ? i : 0) * 57.7 + 91.3) * 43758.5453;
+  return x - Math.floor(x);
+};
+
+export function cupLift(elapsed, i = 0) {
+  if (!Number.isFinite(elapsed)) return 0; // waktu rusak → netral total (guard eksplisit)
+  if (!Number.isFinite(i)) return 0;       // indeks rusak → netral total
+  const t = elapsed;
+  const idx = i;
+  const h = cupHash(idx);
+  // fase personal: offset slot hash → cangkir aktif di detik berbeda dlm slot
+  const phase = ((t / CUP_CYCLE_SEC) + h) % 1;
+  // hanya sebagian kecil cangkir aktif per slot (≈25%)
+  if (h > 0.25) return 0;
+  // gerakan angkat-turun dalam slot: sin setengah-siklus → 0 → 1 → 0
+  const s = Math.sin(phase * Math.PI * 2);
+  const lift = Math.max(0, s) * Math.max(0, s); // smooth 0…1
+  return CUP_LIFT_UP * lift;
+}
+
 // hash kecil deterministik 0…1 dari indeks (bukan Math.random — replays uji aman)
 const magHash = (i) => {
   const x = Math.sin((Number.isFinite(i) ? i : 0) * 91.7 + 27.19) * 43758.5453;

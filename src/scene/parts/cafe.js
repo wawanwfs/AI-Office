@@ -55,6 +55,7 @@ export function createCafe(ctx) {
   for (let i = 0; i < 3; i++) {
     const cup = new THREE.Mesh(new THREE.CylinderGeometry(.04, .035, .06, 8), M(i === 0 ? 0xEF5350 : 0xFAFAFA));
     cup.position.set(CFX + .5 + i * .22, 1.03, CFZ + .15); cafe.add(cup); cups.push(cup);
+    (cup.userData = cup.userData || {}).__cupBasis = 1.03; // siklus 514: basis Y utk cupLift
   }
   // Menu board above counter
   const mbc = document.createElement('canvas'); mbc.width = 256; mbc.height = 140;
